@@ -25,9 +25,9 @@ Human specs: `docs/patterns/api-resource-conventions.md`, `docs/patterns/nullabl
 
 `expandable:"true"` fields are **`null` unless the client passed `?include=<key>`**. When included, populate from a real `BatchGet<X>ByIDs` loader. **Never fabricate** stubs or default enum/status fields.
 
-Mechanically: presenter leaves expandables `nil`, stashes the FK id in load meta (`resourcekit.GetLoadMeta(ctx).Set(...)`). Register a `SubField` with `Target`, `ExtractIDs`, `Populate`. The resolver only `Populate`s requested keys.
+Mechanically: presenter leaves expandables `nil`, stashes the FK id in load meta (`include.GetLoadMeta(ctx).Set(...)`, `github.com/open-mrp/apikit/include`). Register a `SubField` with `Target`, `ExtractIDs`, `Populate`. The resolver only `Populate`s requested keys.
 
-- Register fields in `pkg/endpoint/include_definitions.go`.
+- Register fields in `pkg/resource/include_definitions.go`.
 - Declare the allowed set on the endpoint via `IncludesFor`. Unlisted keys → `ParameterInvalidError`.
 - Fetch expensive data only when `appctx.IsIncludeRequested(ctx, key)` (nil include context returns true — backward compat).
 
@@ -51,7 +51,7 @@ Net accept/reject:
 | Type | absent | `null` | `""` | value |
 |---|---|---|---|---|
 | `T` + required | 400 | 400 | depends | set |
-| `field.Optional[T]` | unset | **400 cannot be null** | **400 must not be blank** | set |
+| `field.Optional[T]` | unset | **422 cannot be null** | **422 must not be blank** | set |
 | `field.Clearable[T]` | unset | **clear** | set `""` | set |
 
-Service-layer: `Value() (T, bool)`, `Ptr() *T`; Clearable via `field.*ClearableToProto` and, in core-service, `field.*ClearableFromProto` + `BackfillUnsetPtr`. Samples: `field.Some(v)` / `field.Set(v)`, never `&field.Optional[T]{}`.
+Service-layer: `Value() (T, bool)`, `Ptr() *T`; Clearable via `fieldpb.*ClearableToProto` (`shared/fieldpb`) and, in core-service, `fieldpb.*ClearableFromProto` + `BackfillUnsetPtr`. Samples: `field.Some(v)` / `field.Set(v)`, never `&field.Optional[T]{}`.

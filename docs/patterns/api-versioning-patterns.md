@@ -4,36 +4,34 @@ This is the canonical reference for how we version the public API: what a versio
 
 **The contract: a pinned consumer never breaks.** A client that pins `OpenMRP-Version` keeps getting byte-compatible request and response shapes for as long as that version is supported — no matter how the latest API evolves underneath it. The only way a pinned client ever sees a behavior change is when its version is deliberately deprecated and removed, which is a planned, communicated event — never a side effect of shipping a feature.
 
-> **Worked example.** `1.0.forge-preview.2` changed `account_user`: the duplicated profile fields (`name`, `email`, `username`, `image_url`) moved onto an expandable full `user` sub-resource. Callers pinned to `1.0.forge-preview.1` still receive the old shape — hoisted profile fields and a `user` entity reference — via the transformer in `services/api-gateway/internal/versiontransforms/`. That migration exercises every mechanism in this doc and is referenced throughout.
+> **Current pair.** `1.0.forge` is `Latest`; `1.0.forge-preview.9` is the only other supported version. Its callers are served by the `1.0.forge` → `1.0.forge-preview.9` transformers in `services/api-gateway/internal/versiontransforms/`.
 
 ---
 
 ## 1. The version scheme
 
-Versions live in `shared/version/version.go`.
+The mechanism is `github.com/open-mrp/apikit/version`. OpenMRP's versions live in `shared/apiversion/apiversion.go`, which registers them with `version.RegisterVersions` at init.
 
 | Format | Example | Meaning |
 |--------|---------|---------|
 | `<minor>.<patch>.<codename>` | `1.0.forge` | Stable release |
-| `<minor>.<patch>.<codename>-preview.<n>` | `1.0.forge-preview.2` | Preview iteration (sorts before its stable release) |
+| `<minor>.<patch>.<codename>-preview.<n>` | `1.0.forge-preview.9` | Preview iteration (sorts before its stable release) |
 
-Ordering is `minor → patch → codename → preview`, with previews before stables (`APIVersion.Before` implements this). Three package-level declarations define the universe:
+Ordering is `minor → patch → codename → preview`, with previews before stables (`APIVersion.Before` implements this). The registered versions define the universe:
 
 ```go
-V1_0_Forge_Preview2 = APIVersion{Version: "1.0.forge-preview.2", ...}
-V1_0_Forge_Preview1 = APIVersion{Version: "1.0.forge-preview.1", ...}
+V1_0_Forge          = version.MustNew("1.0.forge")
+V1_0_Forge_Preview9 = version.MustNew("1.0.forge-preview.9") // DeprecatedAt set
 
-// Latest is the shape the backend natively produces and consumes.
-Latest = V1_0_Forge_Preview2
-
-// Supported is every version the gateway will accept, newest to oldest.
-// Removal from this slice IS deprecation enforcement: requests for a
-// version not listed here are rejected with a 400 before reaching any
-// endpoint.
-Supported = []APIVersion{V1_0_Forge_Preview2, V1_0_Forge_Preview1}
+func init() {
+	version.SetHeader("OpenMRP-Version")
+	version.RegisterVersions(V1_0_Forge, V1_0_Forge_Preview9)
+}
 ```
 
-Every request must carry a valid `OpenMRP-Version` header. `VersionMiddleware` (`services/api-gateway/internal/middleware/version_middleware.go`) rejects missing or unsupported versions with a 400, parses the header against `Supported`, stores the result in the request context (`appctx.WithAPIVersion`), and echoes the version back in the response header.
+`version.Latest()` returns the newest registered version, the shape the backend natively produces and consumes. `version.Supported()` returns every registered version, newest first. Removal from the registered set IS deprecation enforcement: requests for an unregistered version are rejected with a 400 before reaching any endpoint.
+
+Every request must carry a valid `OpenMRP-Version` header. `middleware.Version` (`apikit/middleware/version.go`) rejects missing or unsupported versions with a 400, parses the header against `version.Supported()`, stores the result in the request context (`appctx.WithAPIVersion`), and echoes the version back in the response header.
 
 ---
 
@@ -53,46 +51,48 @@ The backend — services, repositories, protos, `apiresource` structs, the OpenA
                             handlers / services / protos
 ```
 
-Both directions run inside `APIEndpoint.Execute` (`services/api-gateway/pkg/endpoint/api_endpoint.go`) for any endpoint that declares an `ObjectType`:
+Both directions run inside `APIEndpoint.Execute` (`apikit/endpoint/api_endpoint.go`) for any endpoint that declares an `ObjectType`, and for every endpoint when a transformer lists `version.AnyObjectType`:
 
 - **Request upgrade.** Before the JSON body is decoded, `version.TransformRequest(requestVersion, Latest, objectType, body)` rewrites the old-shape body into the latest shape. Validation, decoding, and the handler only ever see latest-shaped input.
 - **Response downgrade.** After the handler returns and includes are resolved, the response is marshalled to a `map[string]any` and `version.Transform(Latest, requestVersion, objectType, payload)` rewrites it into the requested version's shape before `RespondWithJSON`.
 
 There is intentionally **no** response-transform middleware. An earlier `VersionTransformMiddleware` existed but was never wired and has been deleted; transformation lives in `Execute` so it runs after include resolution (the data it needs is present) and inside the same code path that owns request logging and error handling. Do not reintroduce a middleware variant.
 
-**Endpoints must declare `ObjectType`.** An endpoint without `ObjectType` is invisible to the transformer chain — acceptable only for endpoints whose payloads have never changed across supported versions. When you change a resource's shape, audit that every endpoint returning it (including action endpoints that return the resource) declares the `ObjectType`.
+**Endpoints must declare `ObjectType`.** An endpoint without `ObjectType` is invisible to resource-specific transformers — acceptable only for endpoints whose payloads have never changed across supported versions. When you change a resource's shape, audit that every endpoint returning it (including action endpoints that return the resource) declares the `ObjectType`.
 
 ---
 
 ## 3. Transformers
 
-A transformer bridges exactly **two adjacent versions** and implements `version.Transformer` (`shared/version/transformer.go`):
+A transformer bridges exactly **two adjacent versions** and implements `version.Transformer` (`apikit/version/transformer.go`):
 
 ```go
 type Transformer interface {
-	FromVersion() APIVersion              // the newer version
-	ToVersion() APIVersion                // the older version
-	ObjectTypes() []constants.ObjectType  // payload roots this transformer inspects
+	FromVersion() APIVersion       // the newer version
+	ToVersion() APIVersion         // the older version
+	ObjectTypes() []object.Type    // payload roots this transformer inspects
 	// Downgrade a response payload (newer → older shape).
-	Transform(objectType constants.ObjectType, data map[string]any) map[string]any
+	Transform(objectType object.Type, data map[string]any) map[string]any
 	// Upgrade a request payload (older → newer shape).
-	TransformRequest(objectType constants.ObjectType, data map[string]any) map[string]any
+	TransformRequest(objectType object.Type, data map[string]any) map[string]any
 }
 ```
+
+Listing `version.AnyObjectType` in `ObjectTypes()` applies a transformer to every response and request, for a change made to every endpoint at once (the list envelope, the deleted stub). Implement the optional `version.ErrorDowngrader` (`TransformError(status, body)`) when a version changed error bodies or statuses.
 
 The registry (`version.DefaultRegistry`) **chains** transformers: a client three versions behind gets each adjacent transformer applied in sequence — newest-to-oldest for responses, oldest-to-newest for requests. You never write a "v5 → v2" transformer; you write v5→v4, v4→v3, v3→v2 and the registry composes them. This keeps each transformer small and lets versions be retired from the old end of the chain without touching the rest.
 
 ### Where transformers live
 
-`services/api-gateway/internal/versiontransforms/`, one file per transformer, named after the resource and version pair (e.g. `transform_account_user_forge_preview_2_to_1.go`). Each file registers itself:
+`services/api-gateway/internal/versiontransforms/`, one file per transformer, named `transform_<resource>_forge_to_forge_preview_9.go`. Each file registers itself:
 
 ```go
 func init() {
-	version.Register(&accountUserForgePreview2To1{})
+	version.RegisterTransformer(deletedForgeToPreview9{})
 }
 ```
 
-The package is blank-imported in `services/api-gateway/cmd/run.go` (same pattern as `resourceregistry`), so registration happens at startup. Transformers are gateway concerns — they reshape wire JSON — which is why they do not live in `shared/version` (that package owns only the mechanism).
+The package is blank-imported in `services/api-gateway/cmd/run.go` (same pattern as `resourceregistry`), so registration happens at startup. Transformers are gateway concerns — they reshape wire JSON — which is why they do not live in `shared/apiversion` (that package only declares the versions).
 
 ### Rules for writing a transformer
 
@@ -103,10 +103,10 @@ The package is blank-imported in `services/api-gateway/cmd/run.go` (same pattern
 
 ### Forced includes: when the old shape needs data the new shape gates
 
-The preview.2 account_user change moved data behind `?include=user` — but preview.1 responses carried that data unconditionally. A preview.1 client cannot ask for an include it has never heard of, so the transformer declares the dependency by implementing the optional `version.IncludeForcer` interface:
+When a new version moves data behind an include (say `?include=user`) that the older version carried unconditionally, an older client cannot ask for an include it has never heard of, so the transformer declares the dependency by implementing the optional `version.IncludeForcer` interface:
 
 ```go
-func (t *accountUserForgePreview2To1) ForcedIncludes(objectType constants.ObjectType) []string {
+func (t accountUserForgeToPreview9) ForcedIncludes(objectType object.Type) []string {
 	if objectType == constants.ObjectTypeAccountUser {
 		return []string{"user"} // resolve user so the downgrade can hoist real data
 	}
@@ -116,7 +116,7 @@ func (t *accountUserForgePreview2To1) ForcedIncludes(objectType constants.Object
 
 `Execute` merges forced keys into the include tree for old-version requests (after client-supplied include validation), so the resolver loads the real sub-resource and the downgrade hoists real values. The cost is an extra batched loader call per old-version request — acceptable, and it disappears when the old version is retired.
 
-**Root vs. nested forced keys.** A root-level forced key (no dot) is applied unconditionally — use it when the old version carried the data without any include (e.g. `responsible_user` on transactions, which preview.1 inlined). A *nested* forced key (contains a dot, e.g. `defaults.sales_rep.user`) is applied **only when the client requested its parent path** — forcing it unconditionally would expand sub-resources the caller never asked for, which is itself a shape change. So `ForcedIncludes(customer) = ["defaults.sales_rep.user"]` means: *if* a preview.1 caller asked for `defaults.sales_rep`, also resolve its user so the downgrade can hoist the profile fields preview.1 carried there; if they didn't ask, nothing changes. `Execute` enforces this rule mechanically (it checks `includeTree.Has(parent)` before adding a dotted key).
+**Root vs. nested forced keys.** A root-level forced key (no dot) is applied unconditionally — use it when the old version carried the data without any include. A *nested* forced key (contains a dot, e.g. `defaults.sales_rep.user`) is applied **only when the client requested its parent path** — forcing it unconditionally would expand sub-resources the caller never asked for, which is itself a shape change. So `ForcedIncludes(customer) = ["defaults.sales_rep.user"]` means: *if* an older-version caller asked for `defaults.sales_rep`, also resolve its user so the downgrade can hoist the profile fields the older version carried there; if they didn't ask, nothing changes. `Execute` enforces this rule mechanically (it checks `includeTree.Has(parent)` before adding a dotted key).
 
 ---
 
@@ -126,7 +126,7 @@ Anything that could alter what a pinned client observes. If a change is on this 
 
 - Removing or renaming a field (request or response).
 - Changing a field's type, format, nullability, or enum value set.
-- Moving data behind an include that was previously unconditional (the preview.2 case).
+- Moving data behind an include that was previously unconditional.
 - Changing a default, a status code, an error `type`/`param`, or pagination semantics.
 - Tightening request validation in a way that rejects previously accepted bodies.
 - Changing the meaning of an existing parameter or field, even with the same shape.
@@ -146,11 +146,9 @@ When in doubt, treat it as breaking. The cost of an unnecessary transformer is s
 
 ## 5. Shipping a new version: the checklist
 
-Using preview.2 as the template — every step below has a concrete counterpart in that migration:
-
-1. **Declare the version** in `shared/version/version.go`: add the constant, prepend to `Supported`, point `Latest` at it. Update `shared/version/version_test.go` (`TestLatest`, supported-strings assertions).
+1. **Declare the version** in `shared/apiversion/apiversion.go`: add the constant and pass it to `version.RegisterVersions` (the newest registered version is `version.Latest()`).
 2. **Change the backend to the new shape only.** Resources (`pkg/resource/`), loaders, registries, endpoints, protos, services — all speak the new shape. No version conditionals anywhere below the gateway edge.
-3. **Write the transformer(s)** in `services/api-gateway/internal/versiontransforms/`: one per changed resource, `FromVersion` = new, `ToVersion` = previous. Recursive walk; all embedding parent object types listed; `ForcedIncludes` where the downgrade needs gated data; identity `TransformRequest` if requests are unchanged. Unit-test the downgrade for single, list, nested, and data-missing cases, plus a `version.Transform`/`version.ForcedIncludes` end-to-end test through the default registry.
+3. **Write the transformer(s)** in `services/api-gateway/internal/versiontransforms/`: one per changed resource, `FromVersion` = new, `ToVersion` = previous. Recursive walk; all embedding parent object types listed; `ForcedIncludes` where the downgrade needs gated data; identity `TransformRequest` if requests are unchanged. Unit-test the downgrade for single, list, nested, and data-missing cases, plus a `version.Transform`/`version.ForcedIncludes` end-to-end test through `version.DefaultRegistry`.
 4. **Audit `ObjectType` coverage** on every endpoint that returns or accepts the changed resource.
 5. **Update e2e to the new contract**: bump `defaultAPIVersion` in `tests/e2e/api/client_test.go`; rewrite shape assertions for the new version.
 6. **Add version-compat e2e tests** (`tests/e2e/api/version_compat_<resource>_test.go`): pin a client to the previous version via `apiClient.WithAPIVersion(...)` and assert the *old* shape end-to-end — list, get, create, patch — plus one test asserting the latest version is unaffected by the transformer. These tests are the executable definition of "no breaking changes"; they stay green until the old version is removed.
@@ -167,7 +165,7 @@ Support is intentionally finite — the transformer chain should stay short. Dep
 
 **Phase 2 — remove.** In one change:
 
-1. Remove the version's constant from `Supported` in `shared/version/version.go` (keep the constant itself only if a remaining transformer references it; otherwise delete it). From this moment the gateway rejects the version with a 400 `unsupported API version` — that is the entire enforcement mechanism.
+1. Remove the version from `version.RegisterVersions` in `shared/apiversion/apiversion.go` (keep the constant itself only if a remaining transformer references it; otherwise delete it). From this moment the gateway rejects the version with a 400 `unsupported API version` — that is the entire enforcement mechanism.
 2. Delete the transformer(s) whose `ToVersion` is the removed version, and their unit tests.
 3. Delete the version-compat e2e tests pinned to it.
 4. Remove any `MinVersion` guards that referenced it.
@@ -185,5 +183,5 @@ A removed version is **gone**: requests for it fail loudly rather than being sil
 - The backend speaks `Latest` only; versioning is a gateway-edge transformation.
 - Transformers bridge adjacent versions and are composed by the registry; they reshape real data and never fabricate.
 - Every shape-changing release ships with: the transformer, its unit tests, and pinned version-compat e2e tests.
-- Deprecation is explicit: removal from `Supported` → 400, never a silent shape change.
+- Deprecation is explicit: removal from the registered versions → 400, never a silent shape change.
 - The OpenAPI spec and SDKs track `Latest`; old versions live entirely in `versiontransforms/` and their compat tests.

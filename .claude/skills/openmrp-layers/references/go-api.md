@@ -12,11 +12,13 @@ Inter-service transport is gRPC; async is RabbitMQ via outbox/inbox.
   `endpoint_*.go` per operation declaring `APIEndpoint[Req,Resp]` via
   `Materialize()`; plus `service.go` (thin gRPC translator) and
   `presenter.go` (proto → apiresource).
-- `pkg/endpoint` — the generic execution engine; `Execute`
-  (`pkg/endpoint/api_endpoint.go:159`) runs the whole HTTP lifecycle.
-- `internal/` — `router/` (custom mux), `middleware/` (auth, idempotency,
-  rate limit, logging, cors, version, sandbox, subscription, recover),
-  `http/` (bind/validate/respond), `grpc/` (outbound helpers),
+- `github.com/open-mrp/apikit/endpoint` (imported as `apiendpoint`) — the
+  generic execution engine; `APIEndpoint.Execute` (`api_endpoint.go`) runs
+  the whole HTTP lifecycle. Bind/validate/respond is `apikit/transport`.
+- `internal/` — `router/` (route groups on `apikit/router`), `middleware/`
+  (auth, platform, sandbox, subscription, idempotency store; generic
+  idempotency, rate limit, request log, cors, version, recover come from
+  `apikit/middleware`), `grpc/` (outbound helpers),
   `resourceloaders/`, `infrastructure/` (the gateway's OWN sqlc/repos for
   request logs + outbox).
 - `grpc-client/` — typed clients per backend service.
@@ -59,16 +61,16 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
   the gateway (docs/patterns/authentication-patterns.md:20-23).
 - **Shape validation** — `validate` tags on request structs
   (`endpoints/units/endpoint_create_unit.go:15-36`), enforced centrally in
-  `Execute`: unknown-field rejection (:292), explicit-null rejection (:305),
-  empty-PATCH rejection (:311), enum validation (:318), `validate.Validate`
-  (:323). Binding via `internal/http/handler.go:350`.
+  `Execute`: unknown-field rejection, explicit-null rejection, empty-PATCH
+  rejection, enum validation, `validate.Validate` (`apikit/validate`).
+  Binding via `apikit/transport` (`handler.go`).
 - **Business validation** — service layer only, e.g. zero-denominator and
   duplicate-name checks in `unit_service.go:179-227`. Never duplicated at
   the edge (AGENTS.md:102).
 - **Idempotency, two tiers**:
-  - Client-facing: `IdempotencyMiddleware`
-    (`internal/middleware/idempotency_middleware.go:179`) — POST/PATCH only,
-    scope+body hashes (`shared/idempotency/hash.go`), keys stored via
+  - Client-facing: `apikit/middleware` idempotency (store in
+    `internal/middleware/idempotency_store.go`) — POST/PATCH only,
+    scope+body hashes (`apikit/idempotency/hash.go`), keys stored via
     platform-service; handles REPLAY / IN_PROGRESS / HASH_MISMATCH / NEW;
     stores the buffered response before the client sees it.
   - Internal: every mutating gRPC handler wraps
@@ -79,7 +81,7 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
     DB and switches on `RecoveryPoint` — success cached inside the tx
     (`unit_service.go:195-259`).
 - **Transactions** — service-owned `withTx` (`unit_service.go:87-100`) →
-  shared generic `db.TransactionManager` (`shared/db/transaction.go`), which
+  shared generic `db.TransactionManager` (`apikit/db/transaction.go`), which
   builds a tx-scoped RepoFactory from `sqlc.Queries.WithTx(tx)`. Mediators
   and repositories never open transactions.
 - **Mutation/SQL** — repositories only, via sqlc queries
@@ -89,19 +91,19 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
   (started in `cmd/run.go`) drains to RabbitMQ; consumers in
   `internal/event/*_consumer.go` wrap `messaging.NewInboxConsumer` for
   de-dup; `InboxPurger` cleans up. Engine: `shared/messaging/`.
-- **Pagination** — HMAC cursors (`shared/pagination`), key set at startup
+- **Pagination** — HMAC cursors (`apikit/pagination`), key set at startup
   (`run.go:46`). Repository decodes/encodes cursors; gateway maps proto
   PageInfo via `grpcutil.MapProtoPageInfo` (`internal/grpc/page_info.go`).
-- **Errors** — all layers return `*apierror.APIError` (`shared/errors`);
-  HTTP mapping `GetHTTPStatusCode` (`api_error.go:398-684`); lossless gRPC
+- **Errors** — all layers return `*apierror.APIError` (`apikit/apierror`;
+  OpenMRP business codes in `shared/apperr`); HTTP status is
+  `code.Status()` (`apierror/codes.go`); lossless gRPC
   crossing via the `__API_ERROR__:` marker
   (`shared/contracts/grpc.go:21-22,157,103-123`).
 - **Logging/redaction/request IDs/rate limits** — gateway middleware;
-  `sensitive:"true"` fields stripped by `shared/redact` (computed per
-  endpoint, `api_endpoint.go:152-157`); request IDs `shared/appctx`; the
-  request-log ID doubles as fallback idempotency key
-  (`api_endpoint.go:187-189`); in-memory `RateLimitMiddleware` with backoff
-  + jitter.
+  `sensitive:"true"` fields stripped by `apikit/redact` (computed per
+  endpoint in `api_endpoint.go`); request IDs `apikit/appctx`; the
+  request-log ID doubles as fallback idempotency key; in-memory rate
+  limiting (`apikit/middleware/rate_limit.go`) with backoff + jitter.
 
 ## Dependency direction
 
@@ -121,8 +123,8 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
    registers groups; middleware order (`:34-45`): Tracing → IPBlock →
    Platform → Logging → CORS → RateLimit → **Auth** → Subscription →
    SandboxBilling → Version → **Idempotency** → Recover.
-2. Mux dispatch (`router.go:63-101`) → `APIEndpoint.Execute`
-   (`api_endpoint.go:159`): bind → redact/log → decode → validate → call
+2. Mux dispatch (`apikit/router`) → `APIEndpoint.Execute`
+   (`apikit/endpoint/api_endpoint.go`): bind → redact/log → decode → validate → call
    `ServiceHandler`.
 3. Gateway translator `unitSvcImpl.CreateUnit`
    (`endpoints/units/service.go:101`) → `grpcutil.CallRPC` →
@@ -135,7 +137,7 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
 6. `unitRepoImpl.Create` (`unit_repository.go:254`) → sqlc `InsertUnit` →
    error mapping → re-read.
 7. Back out: domain → proto → gateway → resourceloaders → apiresource →
-   `RespondWithJSON` 201 + `Location` (`api_endpoint.go:362-396`).
+   `RespondWithJSON` 201 + `Location` (`apikit/endpoint/api_endpoint.go`).
 
 ## Stated rules worth holding reviews to
 

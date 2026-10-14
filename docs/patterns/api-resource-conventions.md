@@ -107,7 +107,7 @@ type MyResource struct {
 Any API resource field that is an array of other resources (sub-resources) MUST use the `List[T]` type (`*List[T]` in Go), not a raw slice. The JSON shape is always `{ "object": "list", "page_info": { ... }, "data": [ ... ] }`. This keeps responses consistent and allows future pagination of sub-resource lists if needed.
 
 - For **embedded lists** that are not paginated, use `NewList(items, PageInfo{})` with an empty `PageInfo`.
-- The same `List[T]` type is used for both top-level paginated list endpoints and for embedded sub-resource arrays; for embedded lists, `page_info` is typically empty (e.g. `next_cursor: null`, `has_next_page: false`).
+- The same `List[T]` type is used for both top-level paginated list endpoints and for embedded sub-resource arrays; for embedded lists, `page_info` is typically empty (`next_page_url: null`, `previous_page_url: null`).
 
 ```go
 // Good — sub-resource array as List
@@ -162,7 +162,7 @@ func (*MyResource) SchemaExample() any {
 
 Shared documentation fixtures live under `services/api-gateway/pkg/resource/` as `Sample*` constants (IDs and names) and `Sample<Resource>` values. Use those constants for every foreign key and identifier that appears in OpenAPI examples so path parameters, query filters, request bodies, and response payloads describe one coherent scenario.
 
-Request types that submit JSON bodies should implement `contracts.DocumentedType` with `SchemaExample()` built from `apiexample.ValidateAndMarshalToMap`. Prefer required JSON fields only; omit optional filters unless they clarify the docs example. Do not introduce ad hoc type IDs in samples—always reference `apiresource.Sample*` IDs—so examples stay consistent with the response graph for that resource family.
+Request types that submit JSON bodies should implement `apiexample.Documented` (`github.com/open-mrp/apikit/example`) with `SchemaExample()` built from `apiexample.ValidateAndMarshalToMap`. Prefer required JSON fields only; omit optional filters unless they clarify the docs example. Do not introduce ad hoc type IDs in samples—always reference `apiresource.Sample*` IDs—so examples stay consistent with the response graph for that resource family.
 
 When adding a new resource, add `Sample*ID` and `Sample*` in `pkg/resource` first, wire endpoint request samples to those constants, then rely on the OpenAPI generator (`tools/apidocs`) for path/query examples where applicable.
 
@@ -177,15 +177,13 @@ Paginated list endpoints return a `List[T]` wrapper. The same `List[T]` type is 
     "object": "list",
     "page_info": {
         "next_page_url": "/v1/...?cursor=...",
-        "previous_page_url": null,
-        "has_next_page": true,
-        "has_prev_page": false
+        "previous_page_url": null
     },
     "data": [...]
 }
 ```
 
-Use `apiresource.NewList(items, pageInfo)` to construct list responses in presenters. For embedded (non-paginated) sub-resource lists, use `apiresource.NewList(items, apiresource.PageInfo{})`.
+`apiresource.List`/`PageInfo` are aliases of `object.List`/`PageInfo` (`github.com/open-mrp/apikit/object`). Use `apiresource.NewList(items, pageInfo)` to construct list responses in presenters. For embedded (non-paginated) sub-resource lists, use `apiresource.NewList(items, apiresource.PageInfo{})`.
 
 ## Include Subresources
 
@@ -221,12 +219,12 @@ When expanded, a list field is a List with `object`, `page_info`, and `data`; wh
 
 ### Registering Includes
 
-Register the expandable fields for each resource type in `pkg/endpoint/include_definitions.go`:
+Register the expandable fields for each resource type in `services/api-gateway/pkg/resource/include_definitions.go` (registration goes through `apiendpoint.RegisterIncludes` from `github.com/open-mrp/apikit/endpoint`):
 
 ```go
-RegisterIncludes(&ObjectIncludes{
+registerIncludes(&apiendpoint.ObjectIncludes{
     ObjectType: constants.ObjectTypeAgentRun,
-    Fields: []IncludeFieldDef{
+    Fields: []apiendpoint.IncludeFieldDef{
         {Key: "actions", ObjectType: constants.ObjectTypeAgentAction},
         {Key: "definition", ObjectType: constants.ObjectTypeAgentDefinition},
         {Key: "steps", ObjectType: constants.ObjectTypeAgentRunStep},
@@ -271,11 +269,11 @@ expandable field left `nil`, and stashes only the foreign-key **id** for each re
 request-scoped load meta:
 
 ```go
-resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoice, inv.ID, "order_id", orderID)
+include.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoice, inv.ID, "order_id", orderID)
 ```
 
 When the client requests `?include=<key>`, the include resolver
-(`pkg/resourcekit/resolver.go`) runs the registered `SubField`'s `ExtractIDs` (which reads the
+(`apikit/include/resolver.go`) runs the registered `SubField`'s `ExtractIDs` (which reads the
 stashed id), batches a loader call (`BatchGet<X>ByIDs`) to fetch the **real** record from the
 source service, and runs `Populate` to write it onto the parent. An expandable field the client
 did **not** request is never touched, so it serializes as `null`.

@@ -8,8 +8,8 @@ description: Convert a heavy bulk write endpoint (bulk create or bulk upsert) fr
 Heavy multi-row write fan-outs must not block a request. Per Dane's passively-safe-API
 doctrine, they validate synchronously, record a **job**, return `202 Accepted` with a
 `Location` header, and a worker executes them; the client polls the job. The job
-machinery (`domain.JobSvc`, `JobSvcFactory`, `GET /v1/core/jobs/{id}`,
-`POST /v1/core/jobs/{id}/cancel`,
+machinery (`domain.JobSvc`, `JobSvcFactory`, `GET /v1/core/async-jobs/{id}`,
+`POST /v1/core/async-jobs/{id}/actions/cancel`,
 `db.NullableRawMessage`) already exists. Each entity's bulk logic lives in its own
 `internal/service/<entity>_bulk_service.go`. The exemplars:
 `production_run_bulk_service.go` (bulk create, with `AcceptResults`) and
@@ -20,9 +20,9 @@ machinery (`domain.JobSvc`, `JobSvcFactory`, `GET /v1/core/jobs/{id}`,
 1. **Accept** (synchronous, in the request): authorize, validate structure, resolve
    fuzzy references to IDs (fail fast with a row-indexed 400), record the resolved rows
    on a job **inside the outbox transaction**, enqueue only `{job_id}`, return
-   `202` with **the canonical `Job` resource** (`object: "job"`) +
-   `Location: /v1/core/jobs/{id}`. There is **no** per-operation response object — every
-   async operation returns the same `Job` the client then polls (per Dane's Stripe
+   `202` with **the canonical `AsyncJob` resource** (`object: "async_job"`) +
+   `Location: /v1/core/async-jobs/{id}`. There is **no** per-operation response object — every
+   async operation returns the same `AsyncJob` the client then polls (per Dane's Stripe
    review: shared canonical objects, not operation-specific response types).
 2. **Execute** (a consumer → service method): load the job, guard against a settled
    one, run the writes in one transaction, settle the job **in that same transaction**,
@@ -34,14 +34,14 @@ machinery (`domain.JobSvc`, `JobSvcFactory`, `GET /v1/core/jobs/{id}`,
 its own SAVEPOINT, so a bad row rolls back only itself and the good rows still commit. A
 completed job carries its successes in `results` and its per-row failures in the Job's
 `errors` field. Every `errors` entry is `{index, error}` where `error` is the SAME
-canonical error object a synchronous error response carries (`apierror.ResponseError`,
-via `APIError.ToResponseError()`) — never a bespoke shape. The job therefore
+canonical error object a synchronous error response carries (`apierror.ErrorObject`,
+via `APIError.Object()`) — never a bespoke shape. The job therefore
 **completes** even when some (or all) rows fail — `completed` means "processed", not
 "all succeeded", so a client must read `errors`. Only an infrastructure failure (the bulk read, a doomed transaction, recording
 the completion) rolls the whole batch back and **fails** the job.
 
 **What "fails" actually means.** The bulk consumer classifies the failure before
-deciding, on `APIError.IsTransient` (`apierror.IsTransientError` — server-side errors,
+deciding, on `APIError.IsTransient` (copied from the code's spec in `apikit/apierror` — server-side errors,
 `idempotency_in_progress`, `rate_limit_exceeded`):
 
 - **Transient** → the error is returned, so the delivery runs the broker-level
@@ -88,7 +88,7 @@ are **tag-free domain types**, and they stay typed through every layer:
 | service (`Write`, `AcceptResults`, `FailJob`) | builds `[]domain.JobResult` / `[]domain.JobError` — **never marshals** |
 | repository (`job_repository.go`) | `encodeJSONList`/`decodeJSONList` — the JSON column is storage, so its encoding lives here and nowhere else |
 | gRPC handler | `jobResultsToProto`/`jobErrorsToProto` → `JobResultList`/`JobErrorList` |
-| gateway presenter | `jobResultsFromProto`/`jobErrorsFromProto` → `apiresource.JobResult`/`JobError`, which own the snake_case HTTP tags |
+| gateway presenter | `jobResultsFromProto` → `apiresource.AsyncJobResult` (alias of apikit's `object.AsyncJobResult`), which owns the snake_case HTTP tags |
 
 The two halves are carried differently on purpose, and the rule is **share a type where
 one exists, define a proto message where none can**:
@@ -99,7 +99,7 @@ one exists, define a proto message where none can**:
   `constants.JobResultAction`, whose `EnumValues()` the schema generator picks up, so it
   is a first-class SDK model.
 - **Errors are the canonical error object as JSON** in `JobErrorInfo.error`. Both
-  services already import `apierror.ResponseError` from `shared/`, so mirroring it into
+  services already import `apierror.ErrorObject` from `github.com/open-mrp/apikit/apierror`, so mirroring it into
   proto would only create a second definition to hand-maintain. Marshaling and
   unmarshaling the one shared type is drift-proof by construction, and the bytes are
   identical to the `error` object a synchronous failure returns. (This was briefly a
@@ -183,11 +183,11 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
 6. **Proto** (`proto/core/core_<entity>.proto`): response → `{ JobInfo job = 1; }`
    (`import "core/core_jobs.proto"`). The gRPC handler maps `*domain.Job` with the
    shared `jobToProto` (same package as the entity handler) and returns `{ Job: … }`.
-7. **Gateway**: the service returns `*apiresource.Job` via `jobep.JobFromProto(resp.GetJob())`
+7. **Gateway**: the service returns `*apiresource.AsyncJob` via `jobep.JobFromProto(resp.GetJob())`
    (`import jobep ".../endpoints/jobs"`) — there is **no** per-entity response resource
-   or `ObjectType`. The endpoint's response type is `*apiresource.Job`, with
-   `SuccessStatusCode: http.StatusAccepted`, `ObjectType: constants.ObjectTypeJob`, and
-   `LocationFunc → /v1/core/jobs/{resp.ID}`. **Delete** the entity's now-dead
+   or `ObjectType`. The endpoint's response type is `*apiresource.AsyncJob`, with
+   `SuccessStatusCode: http.StatusAccepted`, `ObjectType: constants.ObjectTypeAsyncJob`, and
+   `LocationFunc → /v1/core/async-jobs/{resp.ID}`. **Delete** the entity's now-dead
    `bulk_upsert_<entity>_response` `ObjectType` (const + `IsValid` + `AllObjectTypes`)
    and any leftover response resource/`Sample`.
 8. **Regenerate**: `make proto`, `make sqlc core-service` (only if queries changed),
@@ -198,7 +198,7 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
 - **Accept-phase errors are IDENTICAL across every bulk operation.** One shape, no
   per-entity dialects — a client that learned to read a bad `machines` request must read a
   bad `production_steps` request the same way. `Validate` and every accept-phase resolver
-  accumulate into an `apierror.RowErrors` (`shared/errors/row_errors.go`) and end with
+  accumulate into an `apierror.RowErrors` (`apikit/apierror/rows.go`) and end with
   `return rowErrs.Summary(<the spec's EntityName>)`, which renders
   `Invalid <entity plural> — <param>: <clause>; <param>: <clause>.` and puts the **first**
   offending param on the error. Three parts are load-bearing:
@@ -215,7 +215,7 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
   - **`AddValidation(index, param, clause)` takes a bare clause** — lowercase, no trailing
     period, and **not** prefixed with the param; `Summary` does the `"param: "` prefixing so
     the format cannot drift per entity. The accumulator keeps each failure whole as an
-    `apierror.RowError` (`{index, ResponseError}`), so `Entries()` yields the same array a
+    `apierror.RowError` (`{Index, Error}`, `Error` an `ErrorObject`), so `Entries()` yields the same array a
     job's `errors` carries — `Summary` is a rendering of intact data, not the only copy.
 
   This applies to shared resolvers too (`resolveObjectIdentifiers`,
@@ -256,12 +256,12 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
   so the guard refuses further writes. If the side effect can run in-tx, fold it into
   `Write` instead and it becomes a row error like any other.
 - **`errors` entries are `domain.JobError{Index, Error}` — the ONLY shape.** `Error` is
-  `apierror.ResponseError` (`shared/errors`), the platform's client-facing error object,
+  `apierror.ErrorObject` (`apikit/apierror`), the platform's client-facing error object,
   the same one every synchronous error envelope carries; build entries with
-  `newRowError(i, apiErr)` (→ `apiErr.ToResponseError()`). A whole-job failure
+  `newRowError(i, apiErr)` (→ `apiErr.Object()`). A whole-job failure
   (`FailJob`) records one entry with no `Index`. Never mint a parallel error shape —
-  and specifically, never mirror `ResponseError` into proto: both services import it
-  from `shared/`, so it crosses gRPC as its own JSON and stays one definition. A *failed*
+  and specifically, never mirror `ErrorObject` into proto: both services import it
+  from apikit, so it crosses gRPC as its own JSON and stays one definition. A *failed*
   RPC is different and unrelated: that error rides the gRPC status via
   `ConvertAPIErrorToGRPC`'s `__API_ERROR__:` marker. Job errors are data on a
   *successful* response, which is why they need a representation of their own at all.
@@ -286,7 +286,7 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
   `jobs:read` would silently dead-letter any non-admin.
 - **Authorization stays on the endpoint's own domain** (e.g. `production_steps:*`). The
   `jobs` domain only needs `jobs:read`/`jobs:delete` seeded in `shared/db/seed/0004_auth.sql`.
-- **`LocationFunc` fires on 202 as well as 201** (`api_endpoint.go`). Set `SDKMethodKey`
+- **`LocationFunc` fires on 202 as well as 201** (`apikit/endpoint/api_endpoint.go`). Set `SDKMethodKey`
   if the verb-derived SDK method name reads wrong (e.g. DELETE-that-cancels → `cancel`).
 - **Validations that need existing rows move to the execute phase** — e.g. a
   create-only field rule that reads matched rows becomes an async **job failure**, not
@@ -327,10 +327,10 @@ don't "fix" one silently inside an unrelated conversion — they're deliberate f
    row-indexed shape means a failed row moves to `errors` rather than lingering as a
    phantom success.
 3. ~~`errors` has two shapes~~ **Fixed 2026-07-22**: every entry is now
-   `{index?, error: <canonical ResponseError>}` (see the rule above).
+   `{index?, error: <canonical ErrorObject>}` (see the rule above).
 4. ~~Results wire structs live per-service, untyped in SDKs~~ **Fixed 2026-07-23**:
    results and errors are domain types mapped onto the resource — results via a proto
-   message, errors as the shared `ResponseError`'s own JSON — so the service layer
+   message, errors as the shared `ErrorObject`'s own JSON — so the service layer
    marshals nothing and both are first-class SDK models. (The remaining generality
    question — a non-row-oriented job type whose results aren't `[]JobResult` — is
    deferred until such a type exists; it would need a discriminated `results` on the
@@ -344,4 +344,4 @@ don't "fix" one silently inside an unrelated conversion — they're deliberate f
    (`docs/patterns/canonical-log-patterns.md`), so an AMQP-driven execution emits no
    canonical record — the span is the only structured account of what happened, and the
    consumer falls back to `log.Printf`. A consumer-side equivalent belongs in
-   `shared/logging`, not in ad-hoc `slog` calls scattered through the services it drives.
+   `shared/grpclog`, not in ad-hoc `slog` calls scattered through the services it drives.

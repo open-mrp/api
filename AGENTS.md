@@ -63,9 +63,9 @@ Not breaking — ships straight on `Latest`: new endpoints, new **response** fie
 
 The backend only ever speaks `Latest` — no version conditionals anywhere below the gateway edge. Older versions exist purely as edge transformations in `services/api-gateway/internal/versiontransforms/`. A shape-changing change is not complete until all of these ship with it:
 
-1. The new version declared in `shared/version/version.go` (constant added, prepended to `Supported`, `Latest` repointed) with `version_test.go` updated.
+1. The new version declared in `shared/apiversion/apiversion.go` (constant added and passed to `version.RegisterVersions`; the newest registered version is `version.Latest()`).
 2. The transformer(s), `FromVersion` = new and `ToVersion` = previous, with unit tests covering single, list, nested, and data-missing payloads.
-3. `ObjectType` declared on **every** endpoint that returns or accepts the changed resource — an endpoint without it is invisible to the transformer chain and leaks the new shape.
+3. `ObjectType` declared on **every** endpoint that returns or accepts the changed resource — an endpoint without it is invisible to resource transformers and leaks the new shape.
 4. `ForcedIncludes` wherever the old shape needs data the new shape gates behind an include.
 5. Version-compat e2e tests (`tests/e2e/api/version_compat_<resource>_test.go`) pinned to the previous version.
 6. `make openapi` re-run and the regenerated spec committed.
@@ -125,11 +125,13 @@ services/[name]/
 (this is not exhaustive)
 
 - **contracts/**: gRPC interceptors, identity propagation, API error encoding
-- **errors/**: Centralized API error types with HTTP/gRPC mapping
+- **apperr/**: OpenMRP's business error codes (limit_exceeded, payment_required, api_key_revoked, …) on top of `github.com/open-mrp/apikit/apierror`
 - **id/**: Custom ID generation with entity prefixes (usr*, acct*, org\_, etc.)
 - **messaging/**: RabbitMQ integration with outbox/inbox patterns
 - **db/**: Database pool management and migrations
 - **constants/**: Domain enums (AccountMode, RoleType, PlanCode, etc.)
+
+Generic framework packages (`apierror`, `field`, `pagination`, `appctx`, `tracing`, `idempotency`, `redact`, `version`, `endpoint`, `include`, …) come from `github.com/open-mrp/apikit`.
 
 ### Key Patterns
 
@@ -272,7 +274,7 @@ Expandable subresources (`expandable:"true"`) follow exactly one contract — th
 - **Real data only when included.** When `?include=<key>` is requested, the field is populated by a registered loader that fetches the **real** record from the source service (the `BatchGet<X>ByIDs` loader pattern in `internal/resourceloaders/`). What we serialize is exactly what the source returned — nothing invented.
 - **Never fabricate.** Do not build "stub" / placeholder subresources, do not default enum or status fields to plausible-looking values (`status: "issued"`, `priority: "normal"`, unit `ratio_numerator: "1"`, etc.), and do not hand-assemble a partial subresource from whatever foreign keys happen to be on the parent proto. If the real value is not available, the answer is `null`, not a guess.
 
-Mechanically: the presenter builds the resource with expandable fields left `nil` and stashes only the foreign-key **id** into the request-scoped load meta (`resourcekit.GetLoadMeta(ctx).Set(parentObjectType, parent.ID, "<fk>_id", id)`). The field is registered as a `SubField` in `internal/resourceregistry/registered_*.go` with a `Target`, an `ExtractIDs` that reads the stashed id, and a `Populate` that writes `loaded[id]` onto the parent. The include resolver only runs `Populate` for includes the client actually requested — so an un-requested field is never touched and serializes as `null`. There is no post-hoc "collapse" step that hides fabricated data; whatever the presenter puts on an expandable field ships to the client, which is exactly why presenters must never put fabricated data there.
+Mechanically: the presenter builds the resource with expandable fields left `nil` and stashes only the foreign-key **id** into the request-scoped load meta (`include.GetLoadMeta(ctx).Set(parentObjectType, parent.ID, "<fk>_id", id)`). The field is registered as a `SubField` in `internal/resourceregistry/registered_*.go` with a `Target`, an `ExtractIDs` that reads the stashed id, and a `Populate` that writes `loaded[id]` onto the parent. The include resolver only runs `Populate` for includes the client actually requested — so an un-requested field is never touched and serializes as `null`. There is no post-hoc "collapse" step that hides fabricated data; whatever the presenter puts on an expandable field ships to the client, which is exactly why presenters must never put fabricated data there.
 
 ## Typical gRPC Handler Shape
 
@@ -314,7 +316,7 @@ The gRPC handlers are just responsible for transport concerns. They do not handl
 ctx, span := unitSvcTracer.Start(ctx, "service.unit.create")
 defer span.End()
 
-identity, ok := appctx.GetIdentityFromContext(ctx)
+identity, ok := appctx.Identity[*types.Identity](ctx)
 if !ok || identity == nil {
     return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 }
@@ -361,7 +363,7 @@ case domain.RecoveryPointStarted:
             return apiErr
         }
         if exists {
-            return apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")
+            return apierror.NewConflictErrorWithParam("name", "A unit with this name already exists.")
         }
 
         exists, apiErr = txRepo.ExistsByAbbreviation(txCtx, params.AccountID, params.Abbreviation, nil)
@@ -369,7 +371,7 @@ case domain.RecoveryPointStarted:
             return apiErr
         }
         if exists {
-            return apierror.NewConflictErrorWithParam("A unit with this abbreviation already exists.", "abbreviation")
+            return apierror.NewConflictErrorWithParam("abbreviation", "A unit with this abbreviation already exists.")
         }
 
         created, apiErr := txRepo.Create(txCtx, unitID, params)
@@ -421,7 +423,7 @@ rather than:
 ```
 
 8. New endpoints should be added to the openapi spec generator.
-9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
+9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`apikit/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
 10. Any breaking change to an existing public request or response shape requires a new API version plus a transformer in `services/api-gateway/internal/versiontransforms/`. See the non-negotiable section at the top of this file and the `api-versioning` skill.
 11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches the existing data. Never revert queries or seeds to "`A` = parent." See the `production-step-graph` skill.
 

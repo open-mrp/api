@@ -47,6 +47,6 @@ The interceptor wraps the handler call, so "last in the chain" means it is the i
 
 ## Reference Files
 
-- `shared/logging/canonical.go` — interceptor implementation and attribute builder
+- `shared/grpclog/canonical.go` — interceptor implementation and attribute builder
 - `shared/contracts/grpc_server.go` — default interceptor chain configuration
-- `shared/appctx/` — context value getters used by the canonical logger
+- `github.com/open-mrp/apikit/appctx` and `shared/omrpctx` — context value getters used by the canonical logger

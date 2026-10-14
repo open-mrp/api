@@ -5,7 +5,8 @@
 **Status in this repo**: this IS the framework this repo runs on — the
 article describes the pattern built here for OpenMRP's 400+ endpoint API.
 Live code: `services/api-gateway/endpoints/<resource>/` (endpoint
-definitions), `shared/field` (`Optional`/`Clearable`), `shared/idempotency`.
+definitions), and from `github.com/open-mrp/apikit`: `endpoint` (imported as
+`apiendpoint`; `Execute`), `field` (`Optional`/`Clearable`), `idempotency`.
 All new endpoints must use it; never hand-roll an HTTP handler.
 
 ## Problem

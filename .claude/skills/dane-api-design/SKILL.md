@@ -87,8 +87,8 @@ orphaned foreign state — regardless of crashes, retries, or outages.
 
 This repo's own registry pattern — endpoints as struct literals, one generic
 `Execute` handling bind/validate/respond for every endpoint
-(`services/api-gateway/endpoints/`, `shared/field` for `field.Optional` /
-`field.Clearable`). New endpoints MUST go through the framework: declare a
+(`services/api-gateway/endpoints/` on `github.com/open-mrp/apikit/endpoint`,
+`apikit/field` for `field.Optional` / `field.Clearable`). New endpoints MUST go through the framework: declare a
 `Materialize()` endpoint + request/response types with tags; never hand-roll
 a handler. Cross-cutting concerns belong in `Execute`, once.
 

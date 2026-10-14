@@ -3,7 +3,7 @@
 Request and response bodies, bulk payloads, and cached responses are large, unbounded, and read
 rarely. Kept in MySQL they dominate the table size and the buffer pool, and evict the rows that
 queries actually read. They live in the payloads bucket instead, and the owning row keeps a key.
-`shared/blobstore` is the only way in and out.
+`github.com/open-mrp/apikit/blobstore` is the only way in and out.
 
 ## Rules
 
@@ -45,7 +45,7 @@ queries actually read. They live in the payloads bucket instead, and the owning 
 ## Moving existing rows
 
 Rows written before a document moved to the bucket are moved by a background backfill on
-`shared/db/backfill`, never by a deploy-time migration (see `database-migrations.md`). Once it
+`apikit/db/backfill`, never by a deploy-time migration (see `database-migrations.md`). Once it
 reports complete, a later release drops the old columns, and that rebuild copies only the slim rows.
 `request_log` went this way: its bodies now exist only in the bucket. A log with no
 `payload_key` had no bodies, and its body includes read as `{}`.

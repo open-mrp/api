@@ -18,7 +18,7 @@ Any JSON field in an incoming request body is in exactly one of three states:
 | **Null** | `{"note": null}` | "Set this to null / clear it." |
 | **Value** | `{"note": "hi"}` | "Set this to this value." |
 
-Plain Go types collapse two of these into one. Unmarshal `{}` or `{"note": null}` into a `*string` and you get `nil` **both times** — Go cannot tell *absent* from *null*. Unmarshal into a `string` and both give `""` — indistinguishable from a real empty string. That lost bit of information is the entire reason `field.Optional` and `field.Clearable` exist: they carry a custom `UnmarshalJSON` that records *which* of the three states actually arrived.
+Plain Go types collapse two of these into one. Unmarshal `{}` or `{"note": null}` into a `*string` and you get `nil` **both times** — Go cannot tell *absent* from *null*. Unmarshal into a `string` and both give `""` — indistinguishable from a real empty string. That lost bit of information is the entire reason `field.Optional` and `field.Clearable` (`github.com/open-mrp/apikit/field`) exist: they carry a custom `UnmarshalJSON` that records *which* of the three states actually arrived.
 
 ---
 
@@ -133,24 +133,24 @@ This is the rule that looks arbitrary until you know it:
 
 ## What each type accepts at runtime
 
-The gateway request pipeline (in `services/api-gateway/pkg/endpoint/api_endpoint.go`, `Execute`) runs, in order:
+The gateway request pipeline (in `github.com/open-mrp/apikit/endpoint`, `APIEndpoint.Execute`) runs, in order:
 
 1. **`DecodeJSONInto`** → `encoding/json` unmarshal. Each wrapper's custom `UnmarshalJSON` fires here.
-   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `DecodeJSONInto` names the field from the body with `field.BadValuePath` and returns a field-named `400 "Field 'x' cannot be null."` (`Execute` falls back to `field.ExplicitNullField`).
-   - A value of the wrong type, or a malformed timestamp, inside a wrapper is a `400 invalid_format` whose `param` is the value's JSON path (`quantity.value`, `lines[1].quantity`). The wrapper decodes its value with its own `json.Unmarshal`, so the decoder's error carries no field; `field.BadValuePath` re-reads the body to find it.
+   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `DecodeJSONInto` names the field from the body with `field.BadValuePath` and returns a field-named `422 validation_failed` (`invalid_format`, "Field 'x' cannot be null.") (`Execute` falls back to `field.ExplicitNullField`).
+   - A value of the wrong type, or a malformed timestamp, inside a wrapper is a `422 validation_failed` whose `invalid_format` field error names is the value's JSON path (`quantity.value`, `lines[1].quantity`). The wrapper decodes its value with its own `json.Unmarshal`, so the decoder's error carries no field; `field.BadValuePath` re-reads the body to find it.
    - `field.Clearable[T].UnmarshalJSON(null)` records the **clear** state (no error).
 2. **`validate.ApplySlicePresenceFlags`** — legacy `Has*` companions for a few slice fields.
 3. **`validate.RejectExplicitJSONNulls`** — the guard for everything that is *not* a wrapper:
    - **Bare `*T` + `omitempty`**: rejects explicit `null` **and** blank/whitespace strings.
    - **`field.Clearable[T]`**: skipped (it accepts `null` by design).
-   - **`field.Optional[T]`**: `null` was already rejected at step 1; this pass additionally rejects a present-but-**blank** string, so `{"name": ""}` is a `400 "Field 'x' must not be blank."` rather than silently setting `""`. (This applies uniformly to create and update Optional fields.)
+   - **`field.Optional[T]`**: `null` was already rejected at step 1; this pass additionally rejects a present-but-**blank** string, so `{"name": ""}` is a `422` ("Field 'x' must not be blank.") rather than silently setting `""`. (This applies uniformly to create and update Optional fields.)
 
 Net behavior, by type:
 
 | Type | `{}` (absent) | `{"x": null}` | `{"x": ""}` | `{"x": "v"}` |
 |------|---------------|---------------|-------------|--------------|
-| `T` + `required` | `400` (required) | `400` | depends on `validate` | set |
-| `field.Optional[T]` | unset (OK) | **`400` cannot be null** | **`400` must not be blank** | set |
+| `T` + `required` | `422` (required) | `422` | depends on `validate` | set |
+| `field.Optional[T]` | unset (OK) | **`422` cannot be null** | **`422` must not be blank** | set |
 | `field.Clearable[T]` | unset (OK) | **clear** | set to `""` | set |
 
 ---
@@ -163,8 +163,8 @@ if v, ok := req.Name.Value(); ok { /* provided */ }
 pbReq.Name = req.Name.Ptr()            // *T: non-nil only when set
 
 // field.Clearable[T]
-pbReq.Note = field.StringClearableToProto(req.Note) // -> proto StringPatch; nil when unset
-note := field.StringClearableFromProto(pb.Note)     // core-service: back to Clearable
+pbReq.Note = fieldpb.StringClearableToProto(req.Note) // -> proto StringPatch; nil when unset
+note := fieldpb.StringClearableFromProto(pb.Note)     // core-service: back to Clearable
 note = note.BackfillUnsetPtr(existing)              // unset -> existing; clear and set kept
 val := note.StringPtrAfterBackfill(existing)         // clear -> nil; set -> &v; unset -> existing
 ```
@@ -193,7 +193,7 @@ You never set `required`/`nullable` by hand — the generator reads the type + t
 
 **PATCH, settable but not clearable:** `field.Optional[T]` + `json:"x,omitzero"`. Read with `.Ptr()`/`.Value()`.
 
-**PATCH, clearable (nullable column):** `field.Clearable[T]` + `json:"x,omitzero"`. Map with the `field.*ClearableToProto` helpers; in core-service read it back with `field.*ClearableFromProto` and backfill. `make openapi`.
+**PATCH, clearable (nullable column):** `field.Clearable[T]` + `json:"x,omitzero"`. Map with the `fieldpb.*ClearableToProto` helpers (`shared/fieldpb`); in core-service read it back with `fieldpb.*ClearableFromProto` and backfill. `make openapi`.
 
 **Value that carries a unit:** the shared fragment — `apirequest.RateInput` / `QuantityInput` / `AddressInput` — not its parts as sibling scalars. On PATCH, `field.Optional[apirequest.RateInput]` (replaced whole).
 

@@ -34,4 +34,4 @@ Every gRPC unary call emits exactly one INFO `slog` record with `type=canonical-
 6. ClientIP
 7. **CanonicalLog — must be last**
 
-It reads `request_id`, identity, and `account_mode` that upstream interceptors set. Last in the chain = innermost wrapper: run the handler, then log. Implementation: `shared/logging/canonical.go`.
+It reads `request_id`, identity, and `account_mode` that upstream interceptors set. Last in the chain = innermost wrapper: run the handler, then log. Implementation: `shared/grpclog/canonical.go`.

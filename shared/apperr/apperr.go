@@ -27,6 +27,10 @@ const (
 	CodeVerificationRequired apierror.Code = "verification_required"
 	// CodeCurrencyNotSupported is a currency code the API does not accept yet.
 	CodeCurrencyNotSupported apierror.Code = "currency_not_supported"
+	// CodeResourceArchived is a field naming an archived resource on a create or update. Existing references stay valid.
+	CodeResourceArchived apierror.Code = "resource_archived"
+	// CodeInvalidStateTransition is a lifecycle action the record's current status does not allow.
+	CodeInvalidStateTransition apierror.Code = "invalid_state_transition"
 )
 
 // QuotaInfo is the `quota` member of a limit_exceeded error, so a client can show usage or an upgrade prompt.
@@ -62,6 +66,10 @@ func init() {
 			Description: "An unverified account can't do this yet. A person must verify the account first."},
 		{Code: CodeCurrencyNotSupported, Type: apierror.TypeInvalidRequest, Status: http.StatusUnprocessableEntity,
 			Description: "The currency is not supported. Only usd is accepted."},
+		{Code: CodeResourceArchived, Type: apierror.TypeInvalidRequest, Status: http.StatusUnprocessableEntity,
+			Description: "A field names an archived resource. Archived resources stay on the records already using them but can't be newly assigned. Choose an active one, or set the resource's status back to active."},
+		{Code: CodeInvalidStateTransition, Type: apierror.TypeInvalidRequest, Status: http.StatusConflict,
+			Description: "The action isn't allowed from the record's current status. Retrieve the record to see its status and the actions it allows."},
 	} {
 		apierror.Register(s)
 	}
@@ -106,4 +114,19 @@ func NewVerificationRequiredError(message string) *apierror.APIError {
 func NewCurrencyNotSupportedError(param, message string) *apierror.APIError {
 	return apierror.New(CodeCurrencyNotSupported, message,
 		apierror.WithFieldErrors(apierror.Field(param, CodeCurrencyNotSupported, message)))
+}
+
+// ResourceArchivedField is the field error for param naming an archived resource, for collecting into one 422.
+func ResourceArchivedField(param, message string) apierror.FieldError {
+	return apierror.Field(param, CodeResourceArchived, message)
+}
+
+// NewResourceArchivedError is a 422 on param for assigning an archived resource.
+func NewResourceArchivedError(param, message string) *apierror.APIError {
+	return apierror.New(CodeResourceArchived, message, apierror.WithFieldErrors(ResourceArchivedField(param, message)))
+}
+
+// NewInvalidStateTransitionError is a 409 for a lifecycle action the record's current status does not allow.
+func NewInvalidStateTransitionError(message string) *apierror.APIError {
+	return apierror.New(CodeInvalidStateTransition, message)
 }

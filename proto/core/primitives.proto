@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+// Value shapes shared by resources across services: who acted, business days and address snapshots.
+package core;
+
+option go_package = "shared/proto/core;core";
+
+// Who caused a record. type is a constants.ActorType: user, api_key, agent, device or system.
+message Actor {
+  string type = 1;
+  // Unset for system.
+  optional string id = 2;
+  // Display name, when the sender resolved it.
+  optional string name = 3;
+  // The client an API key belongs to, such as an integration's name. Only for api_key.
+  optional string client = 4;
+}
+
+// A business day (an `_on` field): a calendar date with no time or zone.
+message Date {
+  int32 year = 1;
+  // 1 to 12.
+  int32 month = 2;
+  int32 day = 3;
+}
+
+// Parent field absent → no change. clear=true → NULL. Otherwise value is written.
+message DatePatch {
+  bool clear = 1;
+  optional Date value = 2;
+}
+
+// An address as a document printed it, copied when the document was created. address_id is the saved address it
+// was copied from, unset for an address given inline.
+message AddressSnapshot {
+  optional string address_id = 1;
+  string name = 2;
+  optional string line_1 = 3;
+  optional string line_2 = 4;
+  optional string city = 5;
+  optional string state = 6;
+  optional string postal_code = 7;
+  string country = 8;
+  optional string phone = 9;
+  optional string email = 10;
+}

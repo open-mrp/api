@@ -101,15 +101,11 @@ func (m *analyticsSvcImpl) ListOpenOrderLines(ctx context.Context, req *ListOpen
 	for i, l := range resp.GetLines() {
 		unit := reportUnit(l.Unit)
 		lines[i] = apiresource.OpenOrderLine{
-			Object: constants.ObjectTypeOpenOrderLine,
-			ID:     l.GetId(),
-			Item:   &apiresource.AnalyticsItem{ID: l.GetItemId(), Object: constants.ObjectTypeItem, Sku: l.GetSku(), Description: l.Description},
-			Unit:   unit,
-			UnitPrice: &apiresource.UnitPrice{
-				Amount:   l.GetUnitPrice(),
-				Currency: constants.CurrencyUSD,
-				PerUnit:  unit,
-			},
+			Object:              constants.ObjectTypeOpenOrderLine,
+			ID:                  l.GetId(),
+			Item:                &apiresource.AnalyticsItem{ID: l.GetItemId(), Object: constants.ObjectTypeItem, Sku: l.GetSku(), Description: l.Description},
+			Unit:                unit,
+			UnitPrice:           apiresource.NewUnitPrice(l.GetUnitPrice(), l.GetUnitPriceDenominatorUnitId()),
 			QuantityBackOrdered: openOrderQuantity(l.GetQuantityBackOrdered(), unit),
 			QuantityInvoiced:    openOrderQuantity(l.GetQuantityInvoiced(), unit),
 			TotalOrdered:        apiresource.NewMoney(l.GetTotalOrdered()),

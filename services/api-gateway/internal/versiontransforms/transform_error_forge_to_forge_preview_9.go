@@ -1,0 +1,69 @@
+package versiontransforms
+
+import (
+	"net/http"
+
+	"github.com/open-mrp/apikit/object"
+	"github.com/open-mrp/apikit/version"
+)
+
+// forge reshaped the error object (an errors list on every error, no request_log_url, quota only on
+// limit_exceeded), made validation failures 422 with the failing fields listed under validation_failed, renamed
+// rate_limit_exceeded to rate_limited, and gave idempotency key reuse and in-use deletes their own codes. preview.9
+// callers get the error as preview.9 sent it: 400 for invalid input, a single failing field's own code at the top,
+// and the old code names.
+type errorForgeToPreview9 struct {
+	forgeToPreview9
+	noRequestChange
+}
+
+func init() {
+	version.RegisterTransformer(errorForgeToPreview9{})
+}
+
+// It changes no successful response; errors go through TransformError.
+func (errorForgeToPreview9) ObjectTypes() []object.Type { return nil }
+
+func (errorForgeToPreview9) Transform(_ object.Type, data map[string]any) map[string]any {
+	return data
+}
+
+var preview9ErrorCodes = map[string]string{
+	"rate_limited":           "rate_limit_exceeded",
+	"idempotency_key_reused": "validation_failed",
+	"resource_in_use":        "resource_conflict",
+}
+
+func (errorForgeToPreview9) TransformError(status int, body map[string]any) (int, map[string]any) {
+	e, ok := body["error"].(map[string]any)
+	if !ok {
+		return status, body
+	}
+	code, _ := e["code"].(string)
+	fields, _ := e["errors"].([]any)
+	switch {
+	case code == "validation_failed" && len(fields) == 1:
+		// preview.9 reported a single failing field under its own code, missing_field or invalid_format.
+		if field, ok := fields[0].(map[string]any); ok {
+			if fieldCode, ok := field["code"].(string); ok && fieldCode != "" {
+				e["code"] = fieldCode
+			}
+		}
+	case code == "parameter_invalid" && e["param"] == nil:
+		// A body that does not parse was a validation failure in preview.9.
+		e["code"] = "validation_failed"
+	default:
+		if old, ok := preview9ErrorCodes[code]; ok {
+			e["code"] = old
+		}
+	}
+	if status == http.StatusUnprocessableEntity {
+		status = http.StatusBadRequest
+	}
+	delete(e, "errors")
+	if _, ok := e["quota"]; !ok {
+		e["quota"] = nil
+	}
+	e["request_log_url"] = nil
+	return status, body
+}

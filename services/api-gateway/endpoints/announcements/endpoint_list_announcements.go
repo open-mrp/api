@@ -17,7 +17,6 @@ import (
 // Request to list the caller's active announcements.
 type ListAnnouncementsRequest struct {
 	object.ListRequest
-
 }
 
 // Lists the announcements currently active for the caller, newest first.

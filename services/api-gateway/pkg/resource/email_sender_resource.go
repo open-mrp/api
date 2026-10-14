@@ -40,8 +40,8 @@ type EmailSender struct {
 }
 
 var SampleEmailSender = &EmailSender{
-	ID:            SampleEmailSenderID,
-	Object:        constants.ObjectTypeEmailSender,
+	ID:          SampleEmailSenderID,
+	Object:      constants.ObjectTypeEmailSender,
 	EmailDomain: SampleEmailDomain,
 	LocalPart:   "orders",
 	Address:     "orders@support.acme.com",

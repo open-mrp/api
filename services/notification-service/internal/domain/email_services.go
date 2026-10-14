@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	apierror "github.com/open-mrp/apikit/apierror"
 )
@@ -15,8 +16,8 @@ type EmailBridgeSvc interface {
 	VerifyDomain(ctx context.Context, id string) (*EmailDomain, *apierror.APIError)
 	// DeleteDomain deregisters a domain (deleting its SES identity) once it has no inboxes bound to it.
 	DeleteDomain(ctx context.Context, id string) *apierror.APIError
-	// RecheckPendingDomains verifies up to limit pending domains across every account, least recently checked first, and returns how many became verified.
-	RecheckPendingDomains(ctx context.Context, limit int32) (int, *apierror.APIError)
+	// RecheckPendingDomains verifies up to limit pending domains across every account that weren't checked in the last interval, least recently checked first, and returns how many became verified.
+	RecheckPendingDomains(ctx context.Context, interval time.Duration, limit int32) (int, *apierror.APIError)
 
 	CreateInbox(ctx context.Context, input CreateEmailInboxInput) (*EmailInbox, *apierror.APIError)
 	ListInboxes(ctx context.Context, page PageRequest) (Page[*EmailInbox], *apierror.APIError)

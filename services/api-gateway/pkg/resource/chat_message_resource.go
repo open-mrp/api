@@ -139,8 +139,8 @@ var SampleMessage = &Message{
 		Object: constants.ObjectTypeChatMessageRelated,
 		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},
 	},
-	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Message) SchemaExample() any {

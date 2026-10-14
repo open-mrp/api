@@ -228,7 +228,6 @@ func TestCovMessagingAnnouncements_ListLimitValidation(t *testing.T) {
 	requireStatus(t, 200, status, nil)
 }
 
-
 func TestCovMessagingAnnouncements_UnknownIncludeRejected(t *testing.T) {
 	t.Parallel()
 	user := notifUserClient(t)

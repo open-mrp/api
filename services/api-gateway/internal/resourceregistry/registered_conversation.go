@@ -63,7 +63,6 @@ func populateParticipantsOnConversation(ctx context.Context, parent any, _ map[s
 	c.Participants = v.(*apiresource.List[apiresource.ConversationParticipant])
 }
 
-
 func populateLastMessageOnConversation(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Conversation)
 	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeConversation, c.ID, "last_message")

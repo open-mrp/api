@@ -65,14 +65,14 @@ type Announcement struct {
 }
 
 var SampleAnnouncement = &Announcement{
-	ID:        SampleAnnouncementID,
-	Object:    constants.ObjectTypeAnnouncement,
-	Scope:     constants.AnnouncementScopeAccount,
-	Category:  constants.NotificationCategoryOrderUpdated,
-	Status:    constants.NotificationStatusUnseen,
-	Title:     "Scheduled maintenance",
-	Body:      new("The platform will be briefly unavailable tonight at 2am UTC."),
-	Priority:  constants.NotificationPriorityNormal,
+	ID:       SampleAnnouncementID,
+	Object:   constants.ObjectTypeAnnouncement,
+	Scope:    constants.AnnouncementScopeAccount,
+	Category: constants.NotificationCategoryOrderUpdated,
+	Status:   constants.NotificationStatusUnseen,
+	Title:    "Scheduled maintenance",
+	Body:     new("The platform will be briefly unavailable tonight at 2am UTC."),
+	Priority: constants.NotificationPriorityNormal,
 	Related: &AnnouncementRelated{
 		Object: constants.ObjectTypeAnnouncementRelated,
 		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},

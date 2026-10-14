@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
@@ -268,6 +269,30 @@ func TestVerifyDomain_LeavesConfiguredMailFromAlone(t *testing.T) {
 
 	_, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
 	require.Nil(t, apiErr)
+}
+
+// The background recheck verifies a pending domain in its own account, and touches each domain it checks first so one SES keeps failing on can't starve the rest.
+func TestRecheckPendingDomains(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mailFrom := "mail.theirco.com"
+	pending := &domain.EmailDomain{ID: "emdn_p", AccountID: "ac_other", Domain: "theirco.com", Status: domain.EmailDomainStatusPending, MailFromDomain: &mailFrom}
+	domainRepo := repositorymock.NewMockEmailDomainRepo(ctrl)
+	gomock.InOrder(
+		domainRepo.EXPECT().ListPending(gomock.Any(), gomock.Any(), int32(20)).Return([]*domain.EmailDomain{pending}, nil),
+		domainRepo.EXPECT().Touch(gomock.Any(), "emdn_p").Return(nil),
+		domainRepo.EXPECT().MarkVerified(gomock.Any(), "emdn_p", "ac_other").Return(nil),
+	)
+	domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_p", "ac_other").Return(&domain.EmailDomain{
+		ID: "emdn_p", AccountID: "ac_other", Domain: "theirco.com", Status: domain.EmailDomainStatusVerified, MailFromDomain: &mailFrom,
+	}, nil)
+
+	svc := newEmailBridgeSvc(t, nil, nil, &stubIdentityProvider{verified: true})
+	svc.repoFactory = repoFactoryWithDomainRepo(t, ctrl, domainRepo)
+	svc.txManager = passthroughTx{f: svc.repoFactory}
+
+	n, apiErr := svc.RecheckPendingDomains(context.Background(), 5*time.Minute, 20)
+	require.Nil(t, apiErr)
+	assert.Equal(t, 1, n)
 }
 
 // repoFactoryWithDomainRepo builds a factory over a domain repo whose SetMailFromDomain expectations are the assertion, rather than the permissive AnyTimes() the shared helper installs.

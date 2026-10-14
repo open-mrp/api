@@ -149,14 +149,6 @@ func SetEmailBridgeClient(c notifpb.EmailBridgeServiceClient) {
 	emailBridgeClient = c
 }
 
-// orEmptyStrSlice normalizes a nil slice to a non-nil empty slice so required array fields serialize as `[]` rather than `null`.
-func orEmptyStrSlice(s []string) []string {
-	if s == nil {
-		return []string{}
-	}
-	return s
-}
-
 // ownerShellFromAccountID builds an Owner shell without a stub Account. nil/empty → system-owned; non-empty → account-owned with Account left nil (populated only when owner.account is explicitly included).
 func ownerShellFromAccountID(accountID *string) *apiresource.Owner {
 	if accountID == nil || *accountID == "" {

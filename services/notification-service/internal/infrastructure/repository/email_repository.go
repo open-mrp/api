@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
@@ -107,10 +108,10 @@ func (r *emailDomainRepoImpl) ListPage(ctx context.Context, accountID string, pa
 	return out, nil
 }
 
-func (r *emailDomainRepoImpl) ListPending(ctx context.Context, limit int32) ([]*domain.EmailDomain, *apierror.APIError) {
+func (r *emailDomainRepoImpl) ListPending(ctx context.Context, checkedBefore time.Time, limit int32) ([]*domain.EmailDomain, *apierror.APIError) {
 	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.list_pending")
 	defer span.End()
-	rows, err := r.db.ListPendingEmailDomains(ctx, limit)
+	rows, err := r.db.ListPendingEmailDomains(ctx, sqlc.ListPendingEmailDomainsParams{CheckedBefore: checkedBefore, Limit: limit})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

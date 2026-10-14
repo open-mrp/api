@@ -29,9 +29,10 @@ ORDER BY created_at DESC, id DESC
 LIMIT ?;
 
 -- name: ListPendingEmailDomains :many
--- Pending domains across every account, least recently checked first, for the background verifier.
+-- Pending domains across every account not checked since the cutoff, least recently checked first, for the
+-- background verifier. Served by email_domain_status_updated_idx.
 SELECT * FROM email_domain
-WHERE status = 'pending'
+WHERE status = 'pending' AND updated_at < sqlc.arg('checked_before')
 ORDER BY updated_at ASC, id ASC
 LIMIT ?;
 

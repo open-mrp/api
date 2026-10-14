@@ -28,8 +28,8 @@ type EmailDomainRepo interface {
 	GetByDomain(ctx context.Context, domain string) (*EmailDomain, *apierror.APIError)
 	// ListPage returns one keyset page of the account's domains, newest first.
 	ListPage(ctx context.Context, accountID string, page KeysetPage) ([]*EmailDomain, *apierror.APIError)
-	// ListPending returns pending domains across every account, least recently checked first.
-	ListPending(ctx context.Context, limit int32) ([]*EmailDomain, *apierror.APIError)
+	// ListPending returns pending domains across every account last checked before checkedBefore, least recently checked first.
+	ListPending(ctx context.Context, checkedBefore time.Time, limit int32) ([]*EmailDomain, *apierror.APIError)
 	// Touch records that a domain was just re-checked.
 	Touch(ctx context.Context, id string) *apierror.APIError
 	MarkVerified(ctx context.Context, id, accountID string) *apierror.APIError

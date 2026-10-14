@@ -74,7 +74,6 @@ func populateAuthorOnMessage(ctx context.Context, parent any, _ map[string]any) 
 	m.Author = v.(*apiresource.Actor)
 }
 
-
 func populateAttachmentsOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)
 	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "attachments")

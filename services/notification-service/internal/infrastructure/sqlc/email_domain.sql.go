@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/open-mrp/apikit/db"
 )
@@ -203,14 +204,20 @@ func (q *Queries) ListEmailDomainsPage(ctx context.Context, arg ListEmailDomains
 
 const listPendingEmailDomains = `-- name: ListPendingEmailDomains :many
 SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
-WHERE status = 'pending'
+WHERE status = 'pending' AND updated_at < ?
 ORDER BY updated_at ASC, id ASC
 LIMIT ?
 `
 
-// Pending domains across every account, least recently checked first, for the background verifier.
-func (q *Queries) ListPendingEmailDomains(ctx context.Context, limit int32) ([]EmailDomain, error) {
-	rows, err := q.db.QueryContext(ctx, listPendingEmailDomains, limit)
+type ListPendingEmailDomainsParams struct {
+	CheckedBefore time.Time
+	Limit         int32
+}
+
+// Pending domains across every account not checked since the cutoff, least recently checked first, for the
+// background verifier. Served by email_domain_status_updated_idx.
+func (q *Queries) ListPendingEmailDomains(ctx context.Context, arg ListPendingEmailDomainsParams) ([]EmailDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingEmailDomains, arg.CheckedBefore, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

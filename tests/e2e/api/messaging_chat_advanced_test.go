@@ -69,7 +69,6 @@ func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
 	assert.Empty(t, want, "every conversation is reachable by paging")
 }
 
-
 func TestChat_ListConversationsForBothParticipantsAndTypeFilter(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)

@@ -172,13 +172,13 @@ func (*ConversationParticipant) SchemaExample() any {
 }
 
 var SampleConversation = &Conversation{
-	ID:            SampleConversationID,
-	Object:        constants.ObjectTypeConversation,
-	Type:          constants.ConversationTypeDM,
-	Audience:      constants.ConversationAudienceInternal,
-	Status:        constants.ConversationStatusActive,
-	LegalHold:     new(constants.LegalHoldStatusReleased),
-	Participants:  NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
+	ID:           SampleConversationID,
+	Object:       constants.ObjectTypeConversation,
+	Type:         constants.ConversationTypeDM,
+	Audience:     constants.ConversationAudienceInternal,
+	Status:       constants.ConversationStatusActive,
+	LegalHold:    new(constants.LegalHoldStatusReleased),
+	Participants: NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
 	Related: &ConversationRelated{
 		Object: constants.ObjectTypeConversationRelated,
 		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},

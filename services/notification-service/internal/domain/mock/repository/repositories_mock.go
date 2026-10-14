@@ -212,18 +212,18 @@ func (mr *MockEmailDomainRepoMockRecorder) ListPage(ctx, accountID, page any) *g
 }
 
 // ListPending mocks base method.
-func (m *MockEmailDomainRepo) ListPending(ctx context.Context, limit int32) ([]*domain.EmailDomain, *apierror.APIError) {
+func (m *MockEmailDomainRepo) ListPending(ctx context.Context, checkedBefore time.Time, limit int32) ([]*domain.EmailDomain, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPending", ctx, limit)
+	ret := m.ctrl.Call(m, "ListPending", ctx, checkedBefore, limit)
 	ret0, _ := ret[0].([]*domain.EmailDomain)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListPending indicates an expected call of ListPending.
-func (mr *MockEmailDomainRepoMockRecorder) ListPending(ctx, limit any) *gomock.Call {
+func (mr *MockEmailDomainRepoMockRecorder) ListPending(ctx, checkedBefore, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPending", reflect.TypeOf((*MockEmailDomainRepo)(nil).ListPending), ctx, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPending", reflect.TypeOf((*MockEmailDomainRepo)(nil).ListPending), ctx, checkedBefore, limit)
 }
 
 // MarkVerified mocks base method.

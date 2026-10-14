@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
@@ -206,11 +207,11 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 }
 
 // RecheckPendingDomains is the background half of verification: pending domains are re-checked so a customer who published their records never has to come back and press Verify.
-func (s *emailBridgeSvcImpl) RecheckPendingDomains(ctx context.Context, limit int32) (int, *apierror.APIError) {
+func (s *emailBridgeSvcImpl) RecheckPendingDomains(ctx context.Context, interval time.Duration, limit int32) (int, *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.recheck_pending_domains")
 	defer span.End()
 	repo := s.repoFactory.NewEmailDomainRepo()
-	pending, apiErr := repo.ListPending(ctx, limit)
+	pending, apiErr := repo.ListPending(ctx, time.Now().Add(-interval), limit)
 	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
@@ -220,7 +221,8 @@ func (s *emailBridgeSvcImpl) RecheckPendingDomains(ctx context.Context, limit in
 		if apiErr := repo.Touch(ctx, dom.ID); apiErr != nil {
 			return verified, tracing.Trace(span, apiErr)
 		}
-		after, apiErr := s.verifyDomain(ctx, dom, dom.AccountID)
+		// The check is the scheduler's, acting on the domain's account, so its audit event has an actor.
+		after, apiErr := s.verifyDomain(omrpctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, dom.AccountID), dom, dom.AccountID)
 		if apiErr != nil {
 			continue
 		}

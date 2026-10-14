@@ -26,8 +26,8 @@ type ActorRef struct {
 }
 
 var SampleActorRef = &ActorRef{
-	Type: constants.ActorTypeAPIKey,
-	ID:   new(SampleAPIKeyID),
+	Type:   constants.ActorTypeAPIKey,
+	ID:     new(SampleAPIKeyID),
 	Name:   new("Order sync"),
 	Client: new("Claude Code"),
 }

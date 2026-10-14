@@ -123,7 +123,7 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 

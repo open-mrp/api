@@ -307,7 +307,7 @@ func (r *registrationSessionRepoImpl) ListByUserID(ctx context.Context, userID s
 	if cursor != nil {
 		cur, err := pagination.DecodeCursor(*cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+			return nil, pagination.PageInfo{}, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 

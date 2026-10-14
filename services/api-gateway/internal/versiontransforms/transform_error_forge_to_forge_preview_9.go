@@ -2,6 +2,7 @@ package versiontransforms
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/open-mrp/apikit/object"
 	"github.com/open-mrp/apikit/version"
@@ -28,6 +29,8 @@ func (errorForgeToPreview9) Transform(_ object.Type, data map[string]any) map[st
 	return data
 }
 
+const badCursorMessage = "Invalid pagination cursor."
+
 var preview9ErrorCodes = map[string]string{
 	"rate_limited":           "rate_limit_exceeded",
 	"idempotency_key_reused": "validation_failed",
@@ -48,7 +51,14 @@ func (errorForgeToPreview9) TransformError(status int, body map[string]any) (int
 			if fieldCode, ok := field["code"].(string); ok && fieldCode != "" {
 				e["code"] = fieldCode
 			}
+			// preview.9 rejected a body enum outside its set as an invalid parameter.
+			if message, _ := field["message"].(string); field["code"] == "invalid_format" && strings.HasPrefix(message, "Field '") && strings.Contains(message, "' must be one of: ") {
+				e["code"] = "parameter_invalid"
+			}
 		}
+	case code == "parameter_invalid" && e["param"] == "cursor" && e["message"] == badCursorMessage:
+		// forge reports a bad cursor as an invalid query parameter; preview.9 reported it as a field in the wrong format.
+		e["code"] = "invalid_format"
 	case code == "parameter_invalid" && e["param"] == nil:
 		// A body that does not parse was a validation failure in preview.9.
 		e["code"] = "validation_failed"

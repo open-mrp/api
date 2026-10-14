@@ -67,7 +67,7 @@ func decodeListCursor(cursor *string) (*pagination.StringCursor, *apierror.APIEr
 	}
 	c, err := pagination.DecodeStringCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+		return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 	}
 	return &c, nil
 }

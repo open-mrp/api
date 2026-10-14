@@ -140,9 +140,9 @@ func TestCovCoreEmailLogs_InvalidCursor(t *testing.T) {
 	statusCode, body, err := apiClient.GetListRaw(emailLogsPath, url.Values{"cursor": {"not-a-real-cursor"}})
 	require.NoError(t, err)
 	require.NotEqual(t, 200, statusCode, "GET %s?cursor=not-a-real-cursor should not silently succeed", emailLogsPath)
-	assert.Equal(t, 422, statusCode, "GET %s?cursor=not-a-real-cursor should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
-	if statusCode == 422 {
-		requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assert.Equal(t, 400, statusCode, "GET %s?cursor=not-a-real-cursor should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
+	if statusCode == 400 {
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 

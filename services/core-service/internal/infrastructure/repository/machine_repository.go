@@ -248,7 +248,7 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 
 	cur, err := pagination.DecodeStringCursor(*params.Cursor)
 	if err != nil {
-		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+		return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 	}
 
 	if cur.Direction == pagination.DirectionBackward {
@@ -502,7 +502,7 @@ func (r *machineRepoImpl) ListItems(ctx context.Context, params domain.ListMachi
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor."))
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor."))
 		}
 		cur = &decoded
 	}

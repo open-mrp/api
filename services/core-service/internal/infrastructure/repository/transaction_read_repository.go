@@ -387,7 +387,7 @@ func decodeTransactionCursor(cursor *string) (*pagination.StringCursor, *apierro
 	}
 	cur, err := pagination.DecodeStringCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+		return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 	}
 	return &cur, nil
 }

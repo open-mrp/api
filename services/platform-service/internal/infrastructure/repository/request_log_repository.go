@@ -205,7 +205,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 	if filter.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*filter.Cursor)
 		if err != nil {
-			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cur = &decoded
 		cursorDir = &decoded.Direction

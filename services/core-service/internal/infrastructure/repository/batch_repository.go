@@ -482,7 +482,7 @@ func (r *batchRepoImpl) findByScanningStation(ctx context.Context, params domain
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cur, cursorDir = &decoded, &decoded.Direction
 	}

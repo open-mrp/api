@@ -120,12 +120,14 @@ func TestPreview9_ErrorShapeAndStatus(t *testing.T) {
 	assert.Equal(t, "validation_failed", body["error"].(map[string]any)["code"])
 
 	for forge, preview := range map[*apierror.APIError]string{
-		apierror.NewRateLimitedError("slow down"):               "rate_limit_exceeded",
-		apierror.NewIdempotencyKeyReusedError("k"):              "validation_failed",
-		apierror.NewInUseError("in use"):                        "resource_conflict",
-		apierror.NewParameterInvalidError("", "bad JSON"):       "validation_failed",
-		apierror.NewParameterInvalidError("limit", "bad limit"): "parameter_invalid",
-		apierror.NewNotFoundError("missing"):                    "resource_not_found",
+		apierror.NewRateLimitedError("slow down"):                                   "rate_limit_exceeded",
+		apierror.NewIdempotencyKeyReusedError("k"):                                  "validation_failed",
+		apierror.NewInUseError("in use"):                                            "resource_conflict",
+		apierror.NewParameterInvalidError("", "bad JSON"):                           "validation_failed",
+		apierror.NewParameterInvalidError("limit", "bad limit"):                     "parameter_invalid",
+		apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor."):   "invalid_format",
+		apierror.NewInvalidFormatError("kind", "Field 'kind' must be one of: a, b"): "parameter_invalid",
+		apierror.NewNotFoundError("missing"):                                        "resource_not_found",
 	} {
 		_, body := errorBody(t, forge)
 		assert.Equal(t, preview, body["error"].(map[string]any)["code"], string(forge.Code))

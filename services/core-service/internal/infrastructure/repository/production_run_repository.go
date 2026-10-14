@@ -653,7 +653,7 @@ func paginateByCreatedAt[T any](items []T, createdAt func(T) time.Time, idOf fun
 	if cursor != nil && *cursor != "" {
 		cur, err := pagination.DecodeStringCursor(*cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
+			return nil, pagination.PageInfo{}, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 		found := false

@@ -146,7 +146,7 @@ func (r *portalRegistrationSessionRepoImpl) ListSessions(ctx context.Context, pa
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor."))
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor."))
 		}
 		cursorDir = &cur.Direction
 

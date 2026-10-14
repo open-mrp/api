@@ -143,7 +143,7 @@ func (r *hubspotSyncRepoImpl) ListRecords(ctx context.Context, params domain.Lis
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor."))
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor."))
 		}
 		after = sql.NullString{String: cur.ID, Valid: true}
 	}

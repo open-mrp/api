@@ -2,6 +2,21 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## 1.0.forge
+
+The first stable version. Of the previews, only 1.0.forge-preview.9 is still served; it is deprecated, so its responses carry a `Deprecation` header. Earlier previews are no longer accepted.
+
+### Breaking changes
+
+- **Error object.** Every error carries `errors`, the list of failing fields, and `doc_url`; `request_log_url` is gone, and `quota` appears only on `limit_exceeded`. Validation failures are 422 `validation_failed` with every failing field in `errors` (`param` is the first); a field's `missing_field` or `invalid_format` is the code of its entry. A body that does not parse is 400 `parameter_invalid`. Reusing an `Idempotency-Key` with a different request is 422 `idempotency_key_reused`. `rate_limit_exceeded` is now `rate_limited`. New codes: `resource_in_use` (409), `verification_required` (403), `currency_not_supported` (422).
+  - Older versions: 1.0.forge-preview.9 keeps the previous error object and statuses.
+- **Lists.** `limit` defaults to 25 and is at most 100. `page_info` drops `has_next_page` and `has_prev_page`: another page exists exactly when `next_page_url` or `previous_page_url` is present.
+  - Older versions: 1.0.forge-preview.9 keeps the booleans, and a `limit` over 100 is read as 100.
+- **Deletes.** Every DELETE answers 200 with `{id, object, deleted: true}`. A repeated delete is still 410.
+  - Older versions: 1.0.forge-preview.9 keeps the empty object.
+- **Async jobs.** Background work is an `async_job` at `/v1/core/async-jobs/{id}`, canceled with `POST /v1/core/async-jobs/{id}/actions/cancel`. Its rows are `async_job_result`, its export `async_job_export`, its statuses `queued`, `running`, `completed`, `failed` and `canceled`, and `cancelled_at` is `canceled_at`.
+  - Older versions: 1.0.forge-preview.9 keeps `job`, the old statuses and its `/v1/core/jobs` routes.
+
 ## 1.0.forge-preview.9
 
 ### Breaking changes

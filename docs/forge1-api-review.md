@@ -19,9 +19,9 @@ Finalizing a resource in this review also means clearing `Preview: true` on all 
 
 These came out of a single resource review but apply everywhere. Implement once in the framework where possible, then sweep. The framework is `apikit` (see Shared API kit below).
 
-- [ ] **Page size: default 25, max 100.** `apiresource.PaginationRequest.Limit` is `default:"100" validate:"min=1,max=1000"` → `default:"25" validate:"min=1,max=100"`. Audit dashboard callers that pass `limit` > 100 (dropdowns, exports) before shipping; they must paginate. (Payment terms review.)
-- [ ] **Drop `page_info` booleans.** Remove `has_next_page` and `has_prev_page`. Another page exists exactly when `next_page_url` or `previous_page_url` is present; the booleans repeat that.
-- [ ] **Delete returns a deleted stub.** Replace `*apiresource.EmptyResource` on every DELETE with a `DeletedResource` `{ "id", "object", "deleted": true }` where `object` is the deleted resource's object type. 200 status. Replayed delete stays 410. (Payment terms review.)
+- [x] **Page size: default 25, max 100.** `apiresource.PaginationRequest.Limit` is `default:"100" validate:"min=1,max=1000"` → `default:"25" validate:"min=1,max=100"`. Audit dashboard callers that pass `limit` > 100 (dropdowns, exports) before shipping; they must paginate. (Payment terms review.)
+- [x] **Drop `page_info` booleans.** Remove `has_next_page` and `has_prev_page`. Another page exists exactly when `next_page_url` or `previous_page_url` is present; the booleans repeat that.
+- [x] **Delete returns a deleted stub.** Replace `*apiresource.EmptyResource` on every DELETE with a `DeletedResource` `{ "id", "object", "deleted": true }` where `object` is the deleted resource's object type. 200 status. Replayed delete stays 410. (Payment terms review.)
 - [ ] **Delete is blocked while referenced.** Deleting a resource that other records still reference returns 409 with a new error code `resource_in_use`; the message points to archiving. Each resource's review lists the references to probe. (Payment terms review.)
 - [ ] **No soft delete by default.** Delete is a hard delete guarded by `resource_in_use`; no new `deleted_at` columns. Existing soft deletes (`carrier`, `item`, `message`, `message_attachment`, `operating_calendar`) move to hard delete unless that resource's review justifies keeping it. `deleted_record` (tombstone for 410 replays) is not soft delete and stays. (Product lines review.)
 - [ ] **`status` only where it earns its cost.** Add archivable `status` only when long-lived records reference the resource *and* users routinely need to stop new use without rewriting history; otherwise just block delete while in use. (Product lines review.)
@@ -1245,7 +1245,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - `POST …/actions/cancel` closes the unfulfilled remainder and keeps history. Delete stays for untouched drafts.
   - A `quote` resource is additive later.
 - [ ] **X7 Outbound webhooks: not part of forge.1.** Deferred. When they're designed, event types and payloads follow the API version of the subscribing endpoint.
-- [ ] **X8 Error object:** `{ type, code, message, param, is_transient, errors: [{ param, code, message }] }`.
+- [x] **X8 Error object:** `{ type, code, message, param, is_transient, errors: [{ param, code, message }] }`.
   - `param` names the parameter or field the error is about, or is null. `errors` lists every field failure on a 422, and `param` is the first of them; `errors` is empty otherwise.
   - `is_transient` stays (a documented exception to the no-booleans rule).
   - Bulk rows and async job results use the same error object instead of a string.
@@ -1543,6 +1543,9 @@ Pre-release changes (X/Y)
 - Sales order `estimate` → `draft`; new `canceled` status + cancel action on sales orders, POs and runs.
 - Operation `setup_time` is per run; methods gain `output_quantity`; items gain `default_manufacturing_method`.
 - Errors carry an `errors[]` list for 422s (show every field error); bulk/job row errors are objects.
+- Validation failures are 422 `validation_failed` (was 400); a single failing field's `missing_field` / `invalid_format` now appears only on its `errors[]` entry. A body that does not parse is 400 `parameter_invalid`. Reusing an idempotency key with a different body is 422 `idempotency_key_reused`. `rate_limit_exceeded` → `rate_limited`. The error object has `errors` and `doc_url` and no `request_log_url`; `quota` appears only on `limit_exceeded`.
+- Async jobs: `/v1/core/jobs/{id}` → `/v1/core/async-jobs/{id}`, `POST …/cancel` → `POST /v1/core/async-jobs/{id}/actions/cancel`; `object: "job"` → `"async_job"` (rows `async_job_result`, export `async_job_export`); statuses `created` / `started` / `cancelled` → `queued` / `running` / `canceled`, `cancelled_at` → `canceled_at`. Async-job agent tools are `retrieve_async_job` / `cancel_async_job`.
+- Clients pinned to `1.0.forge-preview.9` keep the old shapes for these through transformers, and get a `Deprecation` header.
 - Applications use `source` / `target`.
 - Lines gain an optional `discount` and snapshot `stocking_quantity`; order units can carry a per-item `quantity`; the `sales` section is allowed on materials and parts.
 

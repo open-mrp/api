@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -48,4 +49,18 @@ func (r *scanningStationQueryRepoImpl) FindType(ctx context.Context, accountID, 
 	}
 
 	return stationType, nil
+}
+
+func (r *scanningStationQueryRepoImpl) FindOperatorCheckIn(ctx context.Context, accountID, id string) (constants.OperatorCheckInRequirement, *apierror.APIError) {
+	ctx, span := scanningStationQueryRepoTracer.Start(ctx, "repository.scanning_station_query.find_operator_check_in")
+	defer span.End()
+
+	code, err := r.queries.GetScanningStationOperatorCheckIn(ctx, sqlc.GetScanningStationOperatorCheckInParams{
+		ID:        id,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return constants.OperatorCheckInRequirement(code), nil
 }

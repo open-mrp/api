@@ -105,25 +105,34 @@ func (s *Tool) StringPtr() *string                { return stringPtrEnum(s) }
 func (m *Model) StringPtr() *string               { return stringPtrEnum(m) }
 func (t *ModelTier) StringPtr() *string           { return stringPtrEnum(t) }
 
-func (m *AuditAction) StringPtr() *string               { return stringPtrEnum(m) }
-func (m *DeletedRecordResourceType) StringPtr() *string { return stringPtrEnum(m) }
-func (m *AgentRunStatus) StringPtr() *string            { return stringPtrEnum(m) }
-func (m *DeliveryStatus) StringPtr() *string            { return stringPtrEnum(m) }
-func (m *ItemTypeCode) StringPtr() *string              { return stringPtrEnum(m) }
-func (m *InventoryActionType) StringPtr() *string       { return stringPtrEnum(m) }
-func (o *InventoryUpdateOperation) StringPtr() *string  { return stringPtrEnum(o) }
-func (m *PriorityCode) StringPtr() *string              { return stringPtrEnum(m) }
-func (s *PaymentTermStatus) StringPtr() *string         { return stringPtrEnum(s) }
-func (s *SupplierMaterialStatus) StringPtr() *string    { return stringPtrEnum(s) }
-func (m *OwnerType) StringPtr() *string                 { return stringPtrEnum(m) }
-func (m *CustomerPortalVisibility) StringPtr() *string  { return stringPtrEnum(m) }
-func (s *LocationTypeCode) StringPtr() *string          { return stringPtrEnum(s) }
-func (c *LabelSizeCode) StringPtr() *string             { return stringPtrEnum(c) }
-func (c *LabelTypeCode) StringPtr() *string             { return stringPtrEnum(c) }
-func (c *ServiceLevelCode) StringPtr() *string          { return stringPtrEnum(c) }
-func (o *OperatorRequirement) StringPtr() *string       { return stringPtrEnum(o) }
-func (m *AddressType) StringPtr() *string               { return stringPtrEnum(m) }
-func (m *AddressValidationStatus) StringPtr() *string   { return stringPtrEnum(m) }
+func (m *AuditAction) StringPtr() *string                { return stringPtrEnum(m) }
+func (m *DeletedRecordResourceType) StringPtr() *string  { return stringPtrEnum(m) }
+func (m *AgentRunStatus) StringPtr() *string             { return stringPtrEnum(m) }
+func (m *DeliveryStatus) StringPtr() *string             { return stringPtrEnum(m) }
+func (m *ItemTypeCode) StringPtr() *string               { return stringPtrEnum(m) }
+func (m *InventoryActionType) StringPtr() *string        { return stringPtrEnum(m) }
+func (o *InventoryUpdateOperation) StringPtr() *string   { return stringPtrEnum(o) }
+func (m *PriorityCode) StringPtr() *string               { return stringPtrEnum(m) }
+func (s *PaymentTermStatus) StringPtr() *string          { return stringPtrEnum(s) }
+func (s *SupplierMaterialStatus) StringPtr() *string     { return stringPtrEnum(s) }
+func (m *OwnerType) StringPtr() *string                  { return stringPtrEnum(m) }
+func (m *CustomerPortalVisibility) StringPtr() *string   { return stringPtrEnum(m) }
+func (s *LocationTypeCode) StringPtr() *string           { return stringPtrEnum(s) }
+func (c *LabelSizeCode) StringPtr() *string              { return stringPtrEnum(c) }
+func (c *LabelTypeCode) StringPtr() *string              { return stringPtrEnum(c) }
+func (c *ServiceLevelCode) StringPtr() *string           { return stringPtrEnum(c) }
+func (o *OperatorRequirement) StringPtr() *string        { return stringPtrEnum(o) }
+func (v *OperatorCheckInRequirement) StringPtr() *string { return stringPtrEnum(v) }
+func (v *OperatorCheckInStatus) StringPtr() *string      { return stringPtrEnum(v) }
+func (v *ReleaseRequirement) StringPtr() *string         { return stringPtrEnum(v) }
+func (v *ReleaseEnforcement) StringPtr() *string         { return stringPtrEnum(v) }
+func (v *BatchSignatureType) StringPtr() *string         { return stringPtrEnum(v) }
+func (v *BatchSignatureDecision) StringPtr() *string     { return stringPtrEnum(v) }
+func (v *SignatureCapacity) StringPtr() *string          { return stringPtrEnum(v) }
+func (v *ChecklistAnswer) StringPtr() *string            { return stringPtrEnum(v) }
+func (v *ReleaseOperatorSigning) StringPtr() *string     { return stringPtrEnum(v) }
+func (m *AddressType) StringPtr() *string                { return stringPtrEnum(m) }
+func (m *AddressValidationStatus) StringPtr() *string    { return stringPtrEnum(m) }
 func (m *CustomerParentAccountStatus) StringPtr() *string {
 	return stringPtrEnum(m)
 }

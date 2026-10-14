@@ -20,11 +20,13 @@ const (
 	SysPropertyTypeCodeSsccCount SysPropertyTypeCode = "sscc_count"
 	// SysPropertyTypeCodeProductionRunNumber is the type code for production run numbers.
 	SysPropertyTypeCodeProductionRunNumber SysPropertyTypeCode = "production_run_number"
+	// SysPropertyTypeCodeReleaseLotNumber is the type code for the lots final releases assign.
+	SysPropertyTypeCodeReleaseLotNumber SysPropertyTypeCode = "release_lot_number"
 )
 
 func (m SysPropertyTypeCode) IsValid() bool {
 	switch m {
-	case SysPropertyTypeCodeTransactionNumber, SysPropertyTypeCodeSettlementNumber, SysPropertyTypeCodeSalesOrderNumber, SysPropertyTypeCodePurchaseOrderNumber, SysPropertyTypeCodeSupplierNumber, SysPropertyTypeCodeCustomerNumber, SysPropertyTypeCodeSsccCount, SysPropertyTypeCodeProductionRunNumber:
+	case SysPropertyTypeCodeTransactionNumber, SysPropertyTypeCodeSettlementNumber, SysPropertyTypeCodeSalesOrderNumber, SysPropertyTypeCodePurchaseOrderNumber, SysPropertyTypeCodeSupplierNumber, SysPropertyTypeCodeCustomerNumber, SysPropertyTypeCodeSsccCount, SysPropertyTypeCodeProductionRunNumber, SysPropertyTypeCodeReleaseLotNumber:
 		return true
 	default:
 		return false
@@ -41,5 +43,6 @@ func (m SysPropertyTypeCode) EnumValues() []string {
 		string(SysPropertyTypeCodeCustomerNumber),
 		string(SysPropertyTypeCodeSsccCount),
 		string(SysPropertyTypeCodeProductionRunNumber),
+		string(SysPropertyTypeCodeReleaseLotNumber),
 	}
 }

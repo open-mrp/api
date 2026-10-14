@@ -500,25 +500,59 @@ type BackfillProgress struct {
 }
 
 type Batch struct {
-	ID                string
-	CreatedAt         time.Time
-	ClosedAt          sql.NullTime
-	UpdatedAt         time.Time
-	AccountID         string
-	ItemID            string
-	QuantityID        string
-	ScanningStationID sql.NullString
-	SecondsQuantityID sql.NullString
-	WasteQuantityID   sql.NullString
-	ProductionStepID  sql.NullString
-	ProductionRunID   sql.NullString
-	ScannedAt         sql.NullTime
-	LocationID        sql.NullString
+	ID                    string
+	CreatedAt             time.Time
+	ClosedAt              sql.NullTime
+	UpdatedAt             time.Time
+	AccountID             string
+	ItemID                string
+	QuantityID            string
+	ScanningStationID     sql.NullString
+	SecondsQuantityID     sql.NullString
+	WasteQuantityID       sql.NullString
+	ProductionStepID      sql.NullString
+	ProductionRunID       sql.NullString
+	ScannedAt             sql.NullTime
+	LocationID            sql.NullString
+	OperatorAccountUserID sql.NullString
+	ReleaseLotID          sql.NullString
+}
+
+type BatchCountAdjustment struct {
+	ID             string
+	AccountID      string
+	BatchID        string
+	ClosingBatchID string
+	PreviousValue  string
+	CountedValue   string
+	UnitID         string
+	CreatedAt      time.Time
 }
 
 type BatchFlow struct {
 	A string
 	B string
+}
+
+type BatchSignature struct {
+	ID                  string
+	AccountID           string
+	BatchID             string
+	ProductionStepID    string
+	ProductionRunID     sql.NullString
+	TypeCode            string
+	DecisionCode        string
+	CapacityCode        string
+	SignerAccountUserID string
+	SignerName          string
+	SignerRoleName      sql.NullString
+	Checklist           json.RawMessage
+	Note                sql.NullString
+	ActorID             string
+	ActorType           string
+	SignedAt            time.Time
+	LotID               sql.NullString
+	LotNumber           sql.NullString
 }
 
 type BatchesMachine struct {
@@ -738,14 +772,19 @@ type DemandOverrideType struct {
 }
 
 type Department struct {
-	ID          string
-	Name        string
-	Notes       sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	LocationID  sql.NullString
-	AccountID   string
-	LaborRateID sql.NullString
+	ID                         string
+	Name                       string
+	Notes                      sql.NullString
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	LocationID                 sql.NullString
+	AccountID                  string
+	LaborRateID                sql.NullString
+	ReleaseRequirementCode     string
+	ReleaseEnforcementCode     string
+	ReleaseRationale           sql.NullString
+	ReleaseChecklist           json.RawMessage
+	ReleaseOperatorSigningCode string
 }
 
 type DocApiKey struct {
@@ -1493,6 +1532,17 @@ type OperatingCalendarClosure struct {
 	Name                string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+type OperatorCheckIn struct {
+	ID                string
+	AccountID         string
+	ScanningStationID string
+	AccountUserID     string
+	OperatorName      string
+	CheckedInAt       time.Time
+	ExpiresAt         time.Time
+	CheckedOutAt      sql.NullTime
 }
 
 type OrderDiscount struct {
@@ -2342,6 +2392,7 @@ type ScanningStation struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 }
 
 type ScanningStationType struct {
@@ -2463,6 +2514,17 @@ type ShippingTermFreeShippingRule struct {
 	ShippingTermID  string
 	CarrierOptionID string
 	CreatedAt       time.Time
+}
+
+type SigningPin struct {
+	UserID         string
+	PinHash        string
+	IsTemporary    bool
+	FailedAttempts int32
+	LockedUntil    sql.NullTime
+	SetAt          time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type StorageLocation struct {

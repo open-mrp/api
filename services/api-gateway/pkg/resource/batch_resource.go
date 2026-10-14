@@ -116,6 +116,10 @@ type Batch struct {
 	//
 	// Only batches created by a production run have one; batches created by a move, merge, or split do not.
 	ProductionRun *ProductionRunReference `json:"production_run"`
+	// The account user checked in at the scanning station when the batch was scanned.
+	//
+	// `null` when nobody was checked in. Stations that require a check-in never scan without one.
+	Operator *Entity `json:"operator"`
 	// Machines used to produce the batch, each named with its serial number as the handle.
 	Machines *List[Entity] `json:"machines"`
 	// Lot numbers that trace the batch's consumed materials and its production run.

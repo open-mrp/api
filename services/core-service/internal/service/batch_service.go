@@ -436,6 +436,50 @@ func sameInstant(a, b *time.Time) bool {
 // The ledger reversal is deliberately not part of this: it fans out across receipts, issues,
 // allocations and reservations, and holding a scanning station's request open for it is the reason
 // the forward path already runs behind a message too.
+// checkCorrectionSigned refuses to undo a scan at a step that requires a sign-off unless a supervisor
+// or quality inspector has signed a correction for the batch since it was scanned. A batch already
+// released there must have the release withdrawn first, so the record never shows a release of a
+// scan that no longer stands.
+func (s *batchSvcImpl) checkCorrectionSigned(ctx context.Context, accountID string, batch *domain.Batch) *apierror.APIError {
+	if batch.ProductionStep == nil || batch.DepartmentID == nil || batch.ScannedAt == nil {
+		return nil
+	}
+	policy, apiErr := s.repos.NewReleasePolicyRepo().Get(ctx, accountID, *batch.DepartmentID)
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil
+		}
+		return apiErr
+	}
+	if policy.Requirement == constants.ReleaseRequirementNone {
+		return nil
+	}
+
+	signatures, apiErr := s.repos.NewBatchSignatureRepo().ListForBatch(ctx, accountID, batch.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	var latestRelease, latestCorrection *domain.BatchSignature
+	for _, signature := range signatures {
+		if signature.ProductionStepID != batch.ProductionStep.ID || signature.SignedAt.Before(*batch.ScannedAt) {
+			continue
+		}
+		if latestRelease == nil && signature.Type.IsRelease() {
+			latestRelease = signature
+		}
+		if latestCorrection == nil && signature.Type == constants.BatchSignatureTypeCorrection {
+			latestCorrection = signature
+		}
+	}
+	if latestRelease != nil && latestRelease.Decision == constants.BatchSignatureDecisionApproved {
+		return apierror.NewResourceConflictError("This batch has been signed off. Withdraw the sign-off with a rejection before undoing its scan.")
+	}
+	if latestCorrection == nil || latestCorrection.Decision != constants.BatchSignatureDecisionApproved {
+		return apierror.NewCorrectionSignatureRequiredError("Undoing this scan needs a supervisor or quality inspector to sign a correction first.")
+	}
+	return nil
+}
+
 func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, accountID string, batch *domain.Batch) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.undo")
 	defer span.End()
@@ -475,6 +519,9 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 		txBatchRepo := txSvc.repos.NewBatchRepo()
 
 		if apiErr := txSvc.holdForUndo(txCtx, accountID, batch, inputBatchIDs); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txSvc.checkCorrectionSigned(txCtx, accountID, batch); apiErr != nil {
 			return apiErr
 		}
 

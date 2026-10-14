@@ -90,6 +90,11 @@ INSERT IGNORE INTO permission (id, code, name, permission_group_code, descriptio
 INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
     ('billing', 'billing', 'Billing', 'admin', 'See agent spend and the monthly agent spending cap; update sets the cap.', NOW(), NOW());
 
+-- Mirrors data migration 00017_add_release_permissions.
+INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
+    ('batch_releases', 'batch_releases', 'Batch Releases', 'production', 'Sign batches off at production steps that require a supervisor release, in your own department. Only create applies.', NOW(), NOW()),
+    ('quality_releases', 'quality_releases', 'Quality Releases', 'production', 'Sign quality and final releases of batches at any production step. Only create applies.', NOW(), NOW());
+
 -- Roles
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
     ('rl_mtg88e6u6fbu', 'Admin', 'admin', NULL, NOW(), NOW()),
@@ -173,7 +178,9 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_agentm0', 'rl_mtg88e6u6fbu', 'agent_memories', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_alerts0', 'rl_mtg88e6u6fbu', 'alerts', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_costs00', 'rl_mtg88e6u6fbu', 'costs', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedadm_billng0', 'rl_mtg88e6u6fbu', 'billing', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedadm_billng0', 'rl_mtg88e6u6fbu', 'billing', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_btrls0', 'rl_mtg88e6u6fbu', 'batch_releases', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_qlrls0', 'rl_mtg88e6u6fbu', 'quality_releases', 1, 1, 1, 1, NOW(), NOW());
 
 -- Sales Rep role permissions (sales_orders + receive/manage own notifications). jobs:read is the baseline every non-admin role needs to poll the 202 of any async operation; updatePermissions.ts grants it the same way in deployed databases.
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES

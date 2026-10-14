@@ -2776,32 +2776,34 @@ func (x *BaseBatchInfo) GetLots() []*BatchLotInfo {
 }
 
 type BatchInfo struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ItemId              string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	ItemSku             string                 `protobuf:"bytes,3,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
-	Quantity            *BatchQuantityInfo     `protobuf:"bytes,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Seconds             *BatchQuantityInfo     `protobuf:"bytes,5,opt,name=seconds,proto3,oneof" json:"seconds,omitempty"`
-	Waste               *BatchQuantityInfo     `protobuf:"bytes,6,opt,name=waste,proto3,oneof" json:"waste,omitempty"`
-	ScanningStationId   *string                `protobuf:"bytes,7,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
-	ScanningStationName *string                `protobuf:"bytes,8,opt,name=scanning_station_name,json=scanningStationName,proto3,oneof" json:"scanning_station_name,omitempty"`
-	ProductionStepId    *string                `protobuf:"bytes,9,opt,name=production_step_id,json=productionStepId,proto3,oneof" json:"production_step_id,omitempty"`
-	ProductionStepName  *string                `protobuf:"bytes,10,opt,name=production_step_name,json=productionStepName,proto3,oneof" json:"production_step_name,omitempty"`
-	ProductionRunId     *string                `protobuf:"bytes,11,opt,name=production_run_id,json=productionRunId,proto3,oneof" json:"production_run_id,omitempty"`
-	ProductionRunNumber *string                `protobuf:"bytes,12,opt,name=production_run_number,json=productionRunNumber,proto3,oneof" json:"production_run_number,omitempty"`
-	Machines            []*LightMachineInfo    `protobuf:"bytes,13,rep,name=machines,proto3" json:"machines,omitempty"`
-	ClosedAt            *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=closed_at,json=closedAt,proto3,oneof" json:"closed_at,omitempty"`
-	ScannedAt           *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=scanned_at,json=scannedAt,proto3,oneof" json:"scanned_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DepartmentId        *string                `protobuf:"bytes,18,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	DepartmentName      *string                `protobuf:"bytes,22,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
-	Lots                []*BatchLotInfo        `protobuf:"bytes,19,rep,name=lots,proto3" json:"lots,omitempty"`
-	InputBatchIds       []string               `protobuf:"bytes,20,rep,name=input_batch_ids,json=inputBatchIds,proto3" json:"input_batch_ids,omitempty"`
-	OutputBatchIds      []string               `protobuf:"bytes,21,rep,name=output_batch_ids,json=outputBatchIds,proto3" json:"output_batch_ids,omitempty"`
-	ItemDescription     *string                `protobuf:"bytes,23,opt,name=item_description,json=itemDescription,proto3,oneof" json:"item_description,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ItemId                string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	ItemSku               string                 `protobuf:"bytes,3,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
+	Quantity              *BatchQuantityInfo     `protobuf:"bytes,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Seconds               *BatchQuantityInfo     `protobuf:"bytes,5,opt,name=seconds,proto3,oneof" json:"seconds,omitempty"`
+	Waste                 *BatchQuantityInfo     `protobuf:"bytes,6,opt,name=waste,proto3,oneof" json:"waste,omitempty"`
+	ScanningStationId     *string                `protobuf:"bytes,7,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
+	ScanningStationName   *string                `protobuf:"bytes,8,opt,name=scanning_station_name,json=scanningStationName,proto3,oneof" json:"scanning_station_name,omitempty"`
+	ProductionStepId      *string                `protobuf:"bytes,9,opt,name=production_step_id,json=productionStepId,proto3,oneof" json:"production_step_id,omitempty"`
+	ProductionStepName    *string                `protobuf:"bytes,10,opt,name=production_step_name,json=productionStepName,proto3,oneof" json:"production_step_name,omitempty"`
+	ProductionRunId       *string                `protobuf:"bytes,11,opt,name=production_run_id,json=productionRunId,proto3,oneof" json:"production_run_id,omitempty"`
+	ProductionRunNumber   *string                `protobuf:"bytes,12,opt,name=production_run_number,json=productionRunNumber,proto3,oneof" json:"production_run_number,omitempty"`
+	Machines              []*LightMachineInfo    `protobuf:"bytes,13,rep,name=machines,proto3" json:"machines,omitempty"`
+	ClosedAt              *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=closed_at,json=closedAt,proto3,oneof" json:"closed_at,omitempty"`
+	ScannedAt             *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=scanned_at,json=scannedAt,proto3,oneof" json:"scanned_at,omitempty"`
+	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DepartmentId          *string                `protobuf:"bytes,18,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	DepartmentName        *string                `protobuf:"bytes,22,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
+	Lots                  []*BatchLotInfo        `protobuf:"bytes,19,rep,name=lots,proto3" json:"lots,omitempty"`
+	InputBatchIds         []string               `protobuf:"bytes,20,rep,name=input_batch_ids,json=inputBatchIds,proto3" json:"input_batch_ids,omitempty"`
+	OutputBatchIds        []string               `protobuf:"bytes,21,rep,name=output_batch_ids,json=outputBatchIds,proto3" json:"output_batch_ids,omitempty"`
+	ItemDescription       *string                `protobuf:"bytes,23,opt,name=item_description,json=itemDescription,proto3,oneof" json:"item_description,omitempty"`
+	OperatorAccountUserId *string                `protobuf:"bytes,24,opt,name=operator_account_user_id,json=operatorAccountUserId,proto3,oneof" json:"operator_account_user_id,omitempty"`
+	OperatorName          *string                `protobuf:"bytes,25,opt,name=operator_name,json=operatorName,proto3,oneof" json:"operator_name,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *BatchInfo) Reset() {
@@ -2991,6 +2993,20 @@ func (x *BatchInfo) GetOutputBatchIds() []string {
 func (x *BatchInfo) GetItemDescription() string {
 	if x != nil && x.ItemDescription != nil {
 		return *x.ItemDescription
+	}
+	return ""
+}
+
+func (x *BatchInfo) GetOperatorAccountUserId() string {
+	if x != nil && x.OperatorAccountUserId != nil {
+		return *x.OperatorAccountUserId
+	}
+	return ""
+}
+
+func (x *BatchInfo) GetOperatorName() string {
+	if x != nil && x.OperatorName != nil {
+		return *x.OperatorName
 	}
 	return ""
 }
@@ -6402,8 +6418,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"_closed_atB\r\n" +
 	"\v_scanned_atB\x10\n" +
 	"\x0e_department_idB\x12\n" +
-	"\x10_department_name\"\xdc\n" +
-	"\n" +
+	"\x10_department_name\"\xf3\v\n" +
 	"\tBatchInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
@@ -6432,7 +6447,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x04lots\x18\x13 \x03(\v2\x12.core.BatchLotInfoR\x04lots\x12&\n" +
 	"\x0finput_batch_ids\x18\x14 \x03(\tR\rinputBatchIds\x12(\n" +
 	"\x10output_batch_ids\x18\x15 \x03(\tR\x0eoutputBatchIds\x12.\n" +
-	"\x10item_description\x18\x17 \x01(\tH\fR\x0fitemDescription\x88\x01\x01B\n" +
+	"\x10item_description\x18\x17 \x01(\tH\fR\x0fitemDescription\x88\x01\x01\x12<\n" +
+	"\x18operator_account_user_id\x18\x18 \x01(\tH\rR\x15operatorAccountUserId\x88\x01\x01\x12(\n" +
+	"\roperator_name\x18\x19 \x01(\tH\x0eR\foperatorName\x88\x01\x01B\n" +
 	"\n" +
 	"\b_secondsB\b\n" +
 	"\x06_wasteB\x16\n" +
@@ -6447,7 +6464,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\v_scanned_atB\x10\n" +
 	"\x0e_department_idB\x12\n" +
 	"\x10_department_nameB\x13\n" +
-	"\x11_item_description\"A\n" +
+	"\x11_item_descriptionB\x1b\n" +
+	"\x19_operator_account_user_idB\x10\n" +
+	"\x0e_operator_name\"A\n" +
 	"\fBatchLotInfo\x12\x1d\n" +
 	"\n" +
 	"lot_number\x18\x01 \x01(\tR\tlotNumber\x12\x12\n" +

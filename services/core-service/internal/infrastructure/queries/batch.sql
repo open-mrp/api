@@ -32,7 +32,10 @@ SELECT
     ps.id AS production_step_id,
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
-    pr.number AS production_run_number
+    pr.number AS production_run_number,
+    b.operator_account_user_id,
+    COALESCE(ou.name, ou.username) AS operator_name,
+    rl.lot_number AS release_lot_number
 FROM batch b
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
@@ -45,6 +48,9 @@ LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
 LEFT JOIN production_step ps ON b.production_step_id = ps.id
 LEFT JOIN production_run pr ON b.production_run_id = pr.id
+LEFT JOIN account_user oau ON b.operator_account_user_id = oau.id
+LEFT JOIN `user` ou ON oau.user_id = ou.id
+LEFT JOIN lot rl ON rl.id = b.release_lot_id
 WHERE b.id = sqlc.arg('id')
 AND b.account_id = sqlc.arg('account_id');
 
@@ -450,3 +456,28 @@ ORDER BY id;
 -- name: DeleteBatchCountAdjustmentsByClosingBatch :exec
 DELETE FROM batch_count_adjustment
 WHERE account_id = sqlc.arg('account_id') AND closing_batch_id = sqlc.arg('closing_batch_id');
+
+-- name: UpdateBatchOperator :exec
+UPDATE batch SET operator_account_user_id = sqlc.narg('operator_account_user_id'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
+
+-- name: SetBatchReleaseLot :exec
+UPDATE batch SET release_lot_id = sqlc.arg('release_lot_id'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
+
+-- name: GetBatchReleaseLot :one
+SELECT l.id, l.lot_number, l.item_id, l.manufactured_at
+FROM batch b
+JOIN lot l ON l.id = b.release_lot_id
+WHERE b.id = sqlc.arg('id') AND b.account_id = sqlc.arg('account_id');
+
+-- name: InsertReleaseLot :exec
+INSERT INTO lot (id, account_id, item_id, lot_number, manufactured_at, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'), sqlc.arg('lot_number'), sqlc.arg('manufactured_at'), NOW(3), NOW(3));
+
+-- AllocateNextReleaseLotNumber takes the account's next release lot sequence number. The counter row
+-- lock holds until the transaction ends, so concurrent final releases queue rather than share a number.
+-- name: AllocateNextReleaseLotNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'release_lot_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);

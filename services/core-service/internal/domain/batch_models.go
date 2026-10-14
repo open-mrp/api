@@ -61,6 +61,12 @@ type LightMachine struct {
 	DepartmentID *string
 }
 
+// LightOperator is the account user who was working at a station.
+type LightOperator struct {
+	AccountUserID string
+	Name          string
+}
+
 // BatchQuantity represents a quantity with a unit.
 type BatchQuantity struct {
 	ID      string
@@ -86,14 +92,18 @@ type Batch struct {
 	DepartmentName  *string               `audit:"department_name"`
 	ProductionStep  *LightProductionStep  `audit:"production_step"`
 	ProductionRun   *LightProductionRun   `audit:"production_run"`
-	Machines        []LightMachine
-	Lots            []BatchLot
-	InputBatchIDs   []string
-	OutputBatchIDs  []string
-	ClosedAt        *time.Time `audit:"closed_at"`
-	ScannedAt       *time.Time `audit:"scanned_at"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// Operator is who was checked in at the station when the batch was scanned.
+	Operator *LightOperator
+	// ReleaseLotNumber is the finished-goods lot the batch's final release assigned.
+	ReleaseLotNumber *string
+	Machines         []LightMachine
+	Lots             []BatchLot
+	InputBatchIDs    []string
+	OutputBatchIDs   []string
+	ClosedAt         *time.Time `audit:"closed_at"`
+	ScannedAt        *time.Time `audit:"scanned_at"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // BaseBatch is a lighter version of Batch used for mutation responses.

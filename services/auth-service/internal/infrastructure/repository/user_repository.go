@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var userRepoTracer = tracing.GetTracer("auth-service.user_repository")
@@ -106,4 +107,45 @@ func (r *userRepoImpl) FindLastUsedAccountID(ctx context.Context, userID string)
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &accountID, nil
+}
+
+func (r *userRepoImpl) FindAccountUser(ctx context.Context, accountID, accountUserID string) (*domain.SigningAccountUser, *apierror.APIError) {
+	ctx, span := userRepoTracer.Start(ctx, "repository.user.find_account_user")
+	defer span.End()
+
+	row, err := r.db.FindAccountUserInAccount(ctx, sqlc.FindAccountUserInAccountParams{
+		ID:        accountUserID,
+		AccountID: accountID,
+	})
+	return signingAccountUserFromRow(span, row, err)
+}
+
+func (r *userRepoImpl) FindAccountUserByUserID(ctx context.Context, accountID, userID string) (*domain.SigningAccountUser, *apierror.APIError) {
+	ctx, span := userRepoTracer.Start(ctx, "repository.user.find_account_user_by_user_id")
+	defer span.End()
+
+	row, err := r.db.FindAccountUserByUserIDInAccount(ctx, sqlc.FindAccountUserByUserIDInAccountParams{
+		UserID:    userID,
+		AccountID: accountID,
+	})
+	return signingAccountUserFromRow(span, sqlc.FindAccountUserInAccountRow(row), err)
+}
+
+func signingAccountUserFromRow(span trace.Span, row sqlc.FindAccountUserInAccountRow, err error) (*domain.SigningAccountUser, *apierror.APIError) {
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil, apierror.NewResourceNotFoundError("Account user not found.")
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &domain.SigningAccountUser{
+		ID:           row.ID,
+		UserID:       row.UserID,
+		AccountID:    row.AccountID,
+		DepartmentID: db.StringFromNullString(row.DepartmentID),
+		StatusCode:   row.StatusCode,
+		Name:         db.StringFromNullString(row.Name),
+		Username:     db.StringFromNullString(row.Username),
+	}, nil
 }

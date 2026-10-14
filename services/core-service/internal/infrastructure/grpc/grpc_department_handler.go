@@ -50,6 +50,7 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 			Name:                s.Name,
 			Type:                s.Type,
 			OperatorRequirement: s.OperatorRequirement,
+			OperatorCheckIn:     s.OperatorCheckIn,
 			CreatedAt:           timestamppb.New(s.CreatedAt),
 			UpdatedAt:           timestamppb.New(s.UpdatedAt),
 		}

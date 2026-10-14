@@ -22,3 +22,15 @@ UPDATE user SET hashed_password = ? WHERE id = ?;
 -- name: CreateUser :exec
 INSERT INTO user (id, email, name, hashed_password, status_code, created_at, updated_at)
 VALUES (?, ?, ?, ?, 'active', NOW(3), NOW(3));
+
+-- name: FindAccountUserInAccount :one
+SELECT account_user.id, account_user.user_id, account_user.account_id, account_user.department_id, account_user.status_code, `user`.name, `user`.username
+FROM account_user
+JOIN `user` ON `user`.id = account_user.user_id
+WHERE account_user.id = ? AND account_user.account_id = ?;
+
+-- name: FindAccountUserByUserIDInAccount :one
+SELECT account_user.id, account_user.user_id, account_user.account_id, account_user.department_id, account_user.status_code, `user`.name, `user`.username
+FROM account_user
+JOIN `user` ON `user`.id = account_user.user_id
+WHERE account_user.user_id = ? AND account_user.account_id = ?;

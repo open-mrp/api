@@ -43,6 +43,11 @@ type UpdateScanningStationRequest struct {
 	// - `none`: no additional operator check is required.
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement field.Optional[constants.OperatorRequirement] `json:"operator_requirement,omitzero"`
+	// Whether the station scans only while an operator is checked in.
+	//
+	// - `optional`: scans record the checked-in operator when there is one.
+	// - `required`: scans are refused while nobody is checked in.
+	OperatorCheckIn field.Optional[constants.OperatorCheckInRequirement] `json:"operator_check_in,omitzero"`
 }
 
 var sampleUpdateScanningStationName = "Station B"

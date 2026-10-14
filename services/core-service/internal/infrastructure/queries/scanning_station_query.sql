@@ -7,6 +7,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -37,6 +38,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -68,6 +70,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -98,6 +101,7 @@ INSERT INTO scanning_station (
     label_size_code,
     label_type_code,
     material_check_required,
+    operator_check_in_code,
     department_id,
     account_id,
     created_at,
@@ -110,6 +114,7 @@ INSERT INTO scanning_station (
     sqlc.narg('label_size_code'),
     sqlc.narg('label_type_code'),
     sqlc.arg('material_check_required'),
+    sqlc.arg('operator_check_in_code'),
     sqlc.arg('department_id'),
     sqlc.arg('account_id'),
     NOW(3),
@@ -132,6 +137,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -151,6 +157,7 @@ UPDATE scanning_station SET
     label_size_code = sqlc.narg('label_size_code'),
     label_type_code = sqlc.narg('label_type_code'),
     material_check_required = COALESCE(sqlc.narg('material_check_required'), material_check_required),
+    operator_check_in_code = COALESCE(sqlc.narg('operator_check_in_code'), operator_check_in_code),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -189,6 +196,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -211,6 +219,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     ss.account_id,
@@ -225,3 +234,7 @@ AND (
 )
 ORDER BY ss.created_at DESC, ss.id DESC
 LIMIT ?;
+
+-- name: GetScanningStationOperatorCheckIn :one
+SELECT operator_check_in_code FROM scanning_station
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');

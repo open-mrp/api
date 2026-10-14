@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreBatchReleaseService runs electronic sign-offs: the release a department
+// requires, the signatures batches receive, and operators checked in at stations.
+package core;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreBatchReleaseService {
+  // GetReleasePolicy returns the sign-off a department requires.
+  rpc GetReleasePolicy(GetReleasePolicyRequest) returns (ReleasePolicyInfo);
+
+  // UpdateReleasePolicy replaces the sign-off a department requires.
+  rpc UpdateReleasePolicy(UpdateReleasePolicyRequest) returns (ReleasePolicyInfo);
+
+  // ListEligibleSigners returns who may sign a batch off in its department, and in which capacities.
+  rpc ListEligibleSigners(ListEligibleSignersRequest) returns (ListEligibleSignersResponse);
+
+  // ListBatchSignatures returns a batch's signatures, newest first.
+  rpc ListBatchSignatures(ListBatchSignaturesRequest) returns (ListBatchSignaturesResponse);
+
+  // SignBatch records an electronic signature on a batch at the step it is at.
+  rpc SignBatch(SignBatchRequest) returns (BatchSignatureInfo);
+
+  // CheckInOperator identifies who is working at a scanning station.
+  rpc CheckInOperator(CheckInOperatorRequest) returns (OperatorCheckInInfo);
+
+  // CheckOutOperator ends a check-in.
+  rpc CheckOutOperator(CheckOutOperatorRequest) returns (OperatorCheckInInfo);
+
+  // GetActiveOperatorCheckIn returns who is checked in at a station now.
+  rpc GetActiveOperatorCheckIn(GetActiveOperatorCheckInRequest) returns (OperatorCheckInInfo);
+}
+
+message ReleasePolicyInfo {
+  string department_id = 1;
+  string requirement = 2;
+  string enforcement = 3;
+  optional string rationale = 4;
+  repeated string checklist = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  string operator_signing = 7;
+  string department_name = 8;
+}
+
+message GetReleasePolicyRequest {
+  string department_id = 1;
+}
+
+message UpdateReleasePolicyRequest {
+  string department_id = 1;
+  string requirement = 2;
+  string enforcement = 3;
+  optional string rationale = 4;
+  repeated string checklist = 5;
+  string operator_signing = 6;
+}
+
+message ListEligibleSignersRequest {
+  string batch_id = 1;
+}
+
+message EligibleSignerInfo {
+  string account_user_id = 1;
+  string name = 2;
+  string role_name = 3;
+  repeated string capacities = 4;
+}
+
+message ListEligibleSignersResponse {
+  repeated EligibleSignerInfo signers = 1;
+}
+
+message ChecklistResponseInfo {
+  string prompt = 1;
+  string answer = 2;
+}
+
+message BatchSignatureInfo {
+  string id = 1;
+  string batch_id = 2;
+  string production_step_id = 3;
+  optional string production_run_id = 4;
+  string type = 5;
+  string decision = 6;
+  string capacity = 7;
+  string signer_account_user_id = 8;
+  string signer_name = 9;
+  optional string signer_role_name = 10;
+  repeated ChecklistResponseInfo checklist = 11;
+  optional string note = 12;
+  string actor_id = 13;
+  string actor_type = 14;
+  google.protobuf.Timestamp signed_at = 15;
+  optional string lot_id = 16;
+  optional string lot_number = 17;
+}
+
+message ListBatchSignaturesRequest {
+  string batch_id = 1;
+}
+
+message ListBatchSignaturesResponse {
+  repeated BatchSignatureInfo signatures = 1;
+}
+
+message SignBatchRequest {
+  string batch_id = 1;
+  // Only "correction" is sent; a release's type follows from the step.
+  optional string type = 2;
+  string decision = 3;
+  optional string capacity = 4;
+  string signer_account_user_id = 5;
+  string pin = 6;
+  repeated ChecklistResponseInfo checklist = 7;
+  optional string note = 8;
+}
+
+message OperatorCheckInInfo {
+  string id = 1;
+  string scanning_station_id = 2;
+  string account_user_id = 3;
+  string operator_name = 4;
+  string status = 5;
+  google.protobuf.Timestamp checked_in_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  optional google.protobuf.Timestamp checked_out_at = 8;
+}
+
+message CheckInOperatorRequest {
+  string scanning_station_id = 1;
+  string account_user_id = 2;
+  string pin = 3;
+}
+
+message CheckOutOperatorRequest {
+  string scanning_station_id = 1;
+  string id = 2;
+}
+
+message GetActiveOperatorCheckInRequest {
+  string scanning_station_id = 1;
+}

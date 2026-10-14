@@ -671,3 +671,85 @@ func (mr *MockIdempotencyMedMockRecorder) UpsertIdempotencyKey(ctx, identity any
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertIdempotencyKey", reflect.TypeOf((*MockIdempotencyMed)(nil).UpsertIdempotencyKey), ctx, identity)
 }
+
+// MockSigningPinMed is a mock of SigningPinMed interface.
+type MockSigningPinMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockSigningPinMedMockRecorder
+	isgomock struct{}
+}
+
+// MockSigningPinMedMockRecorder is the mock recorder for MockSigningPinMed.
+type MockSigningPinMedMockRecorder struct {
+	mock *MockSigningPinMed
+}
+
+// NewMockSigningPinMed creates a new mock instance.
+func NewMockSigningPinMed(ctrl *gomock.Controller) *MockSigningPinMed {
+	mock := &MockSigningPinMed{ctrl: ctrl}
+	mock.recorder = &MockSigningPinMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSigningPinMed) EXPECT() *MockSigningPinMedMockRecorder {
+	return m.recorder
+}
+
+// Check mocks base method.
+func (m *MockSigningPinMed) Check(ctx context.Context, userID, pin string) (*domain.SigningPinCheck, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Check", ctx, userID, pin)
+	ret0, _ := ret[0].(*domain.SigningPinCheck)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Check indicates an expected call of Check.
+func (mr *MockSigningPinMedMockRecorder) Check(ctx, userID, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockSigningPinMed)(nil).Check), ctx, userID, pin)
+}
+
+// RecordFailure mocks base method.
+func (m *MockSigningPinMed) RecordFailure(ctx context.Context, pin *domain.SigningPin) (*domain.SigningPinFailure, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordFailure", ctx, pin)
+	ret0, _ := ret[0].(*domain.SigningPinFailure)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RecordFailure indicates an expected call of RecordFailure.
+func (mr *MockSigningPinMedMockRecorder) RecordFailure(ctx, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordFailure", reflect.TypeOf((*MockSigningPinMed)(nil).RecordFailure), ctx, pin)
+}
+
+// ResetFailures mocks base method.
+func (m *MockSigningPinMed) ResetFailures(ctx context.Context, pin *domain.SigningPin) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetFailures", ctx, pin)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ResetFailures indicates an expected call of ResetFailures.
+func (mr *MockSigningPinMedMockRecorder) ResetFailures(ctx, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetFailures", reflect.TypeOf((*MockSigningPinMed)(nil).ResetFailures), ctx, pin)
+}
+
+// Save mocks base method.
+func (m *MockSigningPinMed) Save(ctx context.Context, userID, pin string, isTemporary bool) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", ctx, userID, pin, isTemporary)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockSigningPinMedMockRecorder) Save(ctx, userID, pin, isTemporary any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockSigningPinMed)(nil).Save), ctx, userID, pin, isTemporary)
+}

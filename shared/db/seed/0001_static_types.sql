@@ -110,6 +110,7 @@ INSERT IGNORE INTO sys_property_type (id, code, name, created_at, updated_at) VA
     ('sypptp_01seedponumber0', 'purchase_order_number', 'Purchase Order Number', NOW(), NOW()),
     ('sypptp_01seedsupnumber', 'supplier_number', 'Supplier Number', NOW(), NOW()),
     ('sypptp_01seedcustnumbr', 'customer_number', 'Customer Number', NOW(), NOW()),
+    ('sypptp_01seedrellotnm', 'release_lot_number', 'Release Lot Number', NOW(), NOW()),
     ('sypptp_01seedsscccount', 'sscc_count', 'Sscc Count', NOW(), NOW());
 
 -- storage_location_type

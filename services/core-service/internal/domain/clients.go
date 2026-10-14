@@ -19,6 +19,9 @@ type IncompleteRegistrationSession struct {
 type CoreAuthClient interface {
 	// GetIncompleteRegistrationSession returns the user's most recent incomplete registration session, or (nil, nil) if none exists.
 	GetIncompleteRegistrationSession(ctx context.Context, userID string) (*IncompleteRegistrationSession, *apierror.APIError)
+
+	// VerifySigningPin checks an account user's signing PIN in the caller's account and returns the signer as they are now. Fails with signing_pin_invalid, signing_pin_locked, signing_pin_not_set or signing_pin_change_required.
+	VerifySigningPin(ctx context.Context, accountUserID, pin string) (*Signer, *apierror.APIError)
 }
 
 // ShippoCarrierAccount represents a carrier account registered with Shippo.

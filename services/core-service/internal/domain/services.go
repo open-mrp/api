@@ -1859,3 +1859,43 @@ type OperatingCalendarSvc interface {
 	CreateOperatingCalendarClosure(ctx context.Context, calendarID string, closedOn time.Time, name string) (*OperatingCalendarClosure, *apierror.APIError)
 	DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError
 }
+
+// BatchReleaseSvc runs electronic sign-offs: the release a production step requires, the signatures
+// batches receive, and the operators checked in at scanning stations.
+type BatchReleaseSvc interface {
+	// GetReleasePolicy returns the sign-off a department requires.
+	GetReleasePolicy(ctx context.Context, departmentID string) (*ReleasePolicy, *apierror.APIError)
+
+	// UpdateReleasePolicy replaces the sign-off a department requires.
+	//
+	//  1. Validate the requirement, enforcement and checklist prompts.
+	//  2. Under an idempotency key, write the policy and publish its audit change.
+	UpdateReleasePolicy(ctx context.Context, params UpdateReleasePolicyParams) (*ReleasePolicy, *apierror.APIError)
+
+	// ListEligibleSigners returns who may sign a batch off in its department, and in which capacities, leaving out the operator who scanned it when the department needs someone else to sign.
+	ListEligibleSigners(ctx context.Context, batchID string) ([]EligibleSigner, *apierror.APIError)
+
+	// ListBatchSignatures returns a batch's signatures, newest first.
+	ListBatchSignatures(ctx context.Context, batchID string) ([]*BatchSignature, *apierror.APIError)
+
+	// SignBatch records an electronic signature on a batch at the step it is at.
+	//
+	//  1. Validate the request and work out the signature's type and capacity from the step's requirement.
+	//  2. Under an idempotency key, check the signer's PIN, then that they may sign in that capacity.
+	//  3. An approving final release also needs every upstream sign-off to exist.
+	//  4. Write the signature and its audit event, and cache the response, in one transaction.
+	SignBatch(ctx context.Context, params SignBatchParams) (*BatchSignature, *apierror.APIError)
+
+	// CheckInOperator identifies who is working at a station, by their signing PIN.
+	//
+	//  1. Under an idempotency key, check the station and the operator's PIN.
+	//  2. End whoever was checked in at the station and check the operator in.
+	//  3. Publish the audit event and cache the response in the same transaction.
+	CheckInOperator(ctx context.Context, params CheckInOperatorParams) (*OperatorCheckIn, *apierror.APIError)
+
+	// CheckOutOperator ends a check-in at a station.
+	CheckOutOperator(ctx context.Context, scanningStationID, checkInID string) (*OperatorCheckIn, *apierror.APIError)
+
+	// GetActiveOperatorCheckIn returns who is checked in at a station now.
+	GetActiveOperatorCheckIn(ctx context.Context, scanningStationID string) (*OperatorCheckIn, *apierror.APIError)
+}

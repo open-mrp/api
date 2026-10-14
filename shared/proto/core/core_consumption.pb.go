@@ -1218,6 +1218,7 @@ type LightScanningStationInfo struct {
 	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	OperatorRequirement string                 `protobuf:"bytes,6,opt,name=operator_requirement,json=operatorRequirement,proto3" json:"operator_requirement,omitempty"`
+	OperatorCheckIn     string                 `protobuf:"bytes,7,opt,name=operator_check_in,json=operatorCheckIn,proto3" json:"operator_check_in,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1290,6 +1291,13 @@ func (x *LightScanningStationInfo) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *LightScanningStationInfo) GetOperatorRequirement() string {
 	if x != nil {
 		return x.OperatorRequirement
+	}
+	return ""
+}
+
+func (x *LightScanningStationInfo) GetOperatorCheckIn() string {
+	if x != nil {
+		return x.OperatorCheckIn
 	}
 	return ""
 }
@@ -1394,6 +1402,7 @@ type ScanningStationInfo struct {
 	ProductionSteps     []*LightProductionStepInfo `protobuf:"bytes,10,rep,name=production_steps,json=productionSteps,proto3" json:"production_steps,omitempty"`
 	CreatedAt           *timestamppb.Timestamp     `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp     `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	OperatorCheckIn     string                     `protobuf:"bytes,15,opt,name=operator_check_in,json=operatorCheckIn,proto3" json:"operator_check_in,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1524,6 +1533,13 @@ func (x *ScanningStationInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *ScanningStationInfo) GetOperatorCheckIn() string {
+	if x != nil {
+		return x.OperatorCheckIn
+	}
+	return ""
 }
 
 type ListScanningStationsRequest struct {
@@ -1840,6 +1856,7 @@ type CreateScanningStationRequest struct {
 	LabelSizeCode       *string                `protobuf:"bytes,6,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
 	LabelTypeCode       *string                `protobuf:"bytes,7,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
 	Includes            []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	OperatorCheckIn     *string                `protobuf:"bytes,9,opt,name=operator_check_in,json=operatorCheckIn,proto3,oneof" json:"operator_check_in,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1930,6 +1947,13 @@ func (x *CreateScanningStationRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreateScanningStationRequest) GetOperatorCheckIn() string {
+	if x != nil && x.OperatorCheckIn != nil {
+		return *x.OperatorCheckIn
+	}
+	return ""
+}
+
 type CreateScanningStationResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ScanningStation *ScanningStationInfo   `protobuf:"bytes,1,opt,name=scanning_station,json=scanningStation,proto3" json:"scanning_station,omitempty"`
@@ -1983,6 +2007,7 @@ type UpdateScanningStationRequest struct {
 	LabelTypeCode       *StringPatch           `protobuf:"bytes,5,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
 	OperatorRequirement *string                `protobuf:"bytes,6,opt,name=operator_requirement,json=operatorRequirement,proto3,oneof" json:"operator_requirement,omitempty"`
 	Includes            []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	OperatorCheckIn     *string                `protobuf:"bytes,8,opt,name=operator_check_in,json=operatorCheckIn,proto3,oneof" json:"operator_check_in,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2064,6 +2089,13 @@ func (x *UpdateScanningStationRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateScanningStationRequest) GetOperatorCheckIn() string {
+	if x != nil && x.OperatorCheckIn != nil {
+		return *x.OperatorCheckIn
+	}
+	return ""
 }
 
 type UpdateScanningStationResponse struct {
@@ -6360,7 +6392,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\a_lot_idB\r\n" +
 	"\v_lot_numberB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\"\xfb\x01\n" +
+	"\f_rejected_at\"\xa7\x02\n" +
 	"\x18LightScanningStationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -6369,7 +6401,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
-	"\x14operator_requirement\x18\x06 \x01(\tR\x13operatorRequirement\"\xd1\x02\n" +
+	"\x14operator_requirement\x18\x06 \x01(\tR\x13operatorRequirement\x12*\n" +
+	"\x11operator_check_in\x18\a \x01(\tR\x0foperatorCheckIn\"\xd1\x02\n" +
 	"\x17LightProductionStepInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
@@ -6384,7 +6417,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10_leveling_factorB\r\n" +
 	"\v_allowancesB\r\n" +
 	"\v_created_atB\r\n" +
-	"\v_updated_at\"\x93\x06\n" +
+	"\v_updated_at\"\xbf\x06\n" +
 	"\x13ScanningStationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -6402,7 +6435,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
+	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
+	"\x11operator_check_in\x18\x0f \x01(\tR\x0foperatorCheckInB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_codeB\x18\n" +
@@ -6427,7 +6461,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"b\n" +
 	"\x1aGetScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xe1\x02\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xa8\x03\n" +
 	"\x1cCreateScanningStationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05notes\x18\x02 \x01(\tH\x00R\x05notes\x88\x01\x01\x12\x12\n" +
@@ -6436,12 +6470,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\rdepartment_id\x18\x05 \x01(\tR\fdepartmentId\x12+\n" +
 	"\x0flabel_size_code\x18\x06 \x01(\tH\x01R\rlabelSizeCode\x88\x01\x01\x12+\n" +
 	"\x0flabel_type_code\x18\a \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludesB\b\n" +
+	"\bincludes\x18\b \x03(\tR\bincludes\x12/\n" +
+	"\x11operator_check_in\x18\t \x01(\tH\x03R\x0foperatorCheckIn\x88\x01\x01B\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
-	"\x10_label_type_code\"e\n" +
+	"\x10_label_type_codeB\x14\n" +
+	"\x12_operator_check_in\"e\n" +
 	"\x1dCreateScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\x9d\x03\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xe4\x03\n" +
 	"\x1cUpdateScanningStationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
@@ -6449,12 +6485,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0flabel_size_code\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\rlabelSizeCode\x88\x01\x01\x12>\n" +
 	"\x0flabel_type_code\x18\x05 \x01(\v2\x11.core.StringPatchH\x03R\rlabelTypeCode\x88\x01\x01\x126\n" +
 	"\x14operator_requirement\x18\x06 \x01(\tH\x04R\x13operatorRequirement\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12/\n" +
+	"\x11operator_check_in\x18\b \x01(\tH\x05R\x0foperatorCheckIn\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_codeB\x17\n" +
-	"\x15_operator_requirement\"e\n" +
+	"\x15_operator_requirementB\x14\n" +
+	"\x12_operator_check_in\"e\n" +
 	"\x1dUpdateScanningStationResponse\x12D\n" +
 	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\".\n" +
 	"\x1cDeleteScanningStationRequest\x12\x0e\n" +

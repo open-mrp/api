@@ -847,7 +847,7 @@ func (q *Queries) ListMachinesByDepartmentIDs(ctx context.Context, arg ListMachi
 }
 
 const listScanningStationsByDepartmentID = `-- name: ListScanningStationsByDepartmentID :many
-SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
+SELECT id, name, scanning_station_type_code, material_check_required, operator_check_in_code, created_at, updated_at
 FROM scanning_station
 WHERE department_id = ?
 AND account_id = ?
@@ -864,6 +864,7 @@ type ListScanningStationsByDepartmentIDRow struct {
 	Name                    string
 	ScanningStationTypeCode string
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 }
@@ -882,6 +883,7 @@ func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg Li
 			&i.Name,
 			&i.ScanningStationTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -899,7 +901,7 @@ func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg Li
 }
 
 const listScanningStationsByDepartmentIDs = `-- name: ListScanningStationsByDepartmentIDs :many
-SELECT id, name, scanning_station_type_code, material_check_required, department_id, created_at, updated_at
+SELECT id, name, scanning_station_type_code, material_check_required, operator_check_in_code, department_id, created_at, updated_at
 FROM scanning_station
 WHERE department_id IN (/*SLICE:department_ids*/?)
 AND account_id = ?
@@ -916,6 +918,7 @@ type ListScanningStationsByDepartmentIDsRow struct {
 	Name                    string
 	ScanningStationTypeCode string
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -946,6 +949,7 @@ func (q *Queries) ListScanningStationsByDepartmentIDs(ctx context.Context, arg L
 			&i.Name,
 			&i.ScanningStationTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

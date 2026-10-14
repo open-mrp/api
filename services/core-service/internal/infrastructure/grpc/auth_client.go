@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/auth"
@@ -65,4 +66,35 @@ func (c *CoreAuthClient) GetIncompleteRegistrationSession(ctx context.Context, u
 		Step:      resp.Session.Step,
 		CreatedAt: resp.Session.CreatedAt.AsTime(),
 	}, nil
+}
+
+func (c *CoreAuthClient) VerifySigningPin(ctx context.Context, accountUserID, pin string) (*domain.Signer, *apierror.APIError) {
+	ctx = rpc.PrepareServiceCallCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, authClientTracer, "auth_client.verify_signing_pin", authServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.VerifySigningPinResponse, error) {
+			return c.client.VerifySigningPin(ctx, &pb.VerifySigningPinRequest{
+				AccountUserId: accountUserID,
+				Pin:           pin,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	signer := &domain.Signer{
+		AccountUserID: resp.AccountUserId,
+		UserID:        resp.UserId,
+		Name:          resp.Name,
+		RoleName:      resp.RoleName,
+		IsAdmin:       resp.RoleTypeCode == string(constants.RoleTypeAdmin),
+		Permissions:   make(map[string]bool, len(resp.Permissions)),
+	}
+	if resp.DepartmentId != "" {
+		signer.DepartmentID = &resp.DepartmentId
+	}
+	for _, permission := range resp.Permissions {
+		signer.Permissions[permission] = true
+	}
+	return signer, nil
 }

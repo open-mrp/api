@@ -223,6 +223,20 @@ func (mr *MockRepoFactoryMockRecorder) NewBatchRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewBatchRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewBatchRepo))
 }
 
+// NewBatchSignatureRepo mocks base method.
+func (m *MockRepoFactory) NewBatchSignatureRepo() domain.BatchSignatureRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewBatchSignatureRepo")
+	ret0, _ := ret[0].(domain.BatchSignatureRepo)
+	return ret0
+}
+
+// NewBatchSignatureRepo indicates an expected call of NewBatchSignatureRepo.
+func (mr *MockRepoFactoryMockRecorder) NewBatchSignatureRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewBatchSignatureRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewBatchSignatureRepo))
+}
+
 // NewCarrierRepo mocks base method.
 func (m *MockRepoFactory) NewCarrierRepo() domain.CarrierRepo {
 	m.ctrl.T.Helper()
@@ -655,6 +669,20 @@ func (m *MockRepoFactory) NewOperatingCalendarRepo() domain.OperatingCalendarRep
 func (mr *MockRepoFactoryMockRecorder) NewOperatingCalendarRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOperatingCalendarRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewOperatingCalendarRepo))
+}
+
+// NewOperatorCheckInRepo mocks base method.
+func (m *MockRepoFactory) NewOperatorCheckInRepo() domain.OperatorCheckInRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewOperatorCheckInRepo")
+	ret0, _ := ret[0].(domain.OperatorCheckInRepo)
+	return ret0
+}
+
+// NewOperatorCheckInRepo indicates an expected call of NewOperatorCheckInRepo.
+func (mr *MockRepoFactoryMockRecorder) NewOperatorCheckInRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOperatorCheckInRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewOperatorCheckInRepo))
 }
 
 // NewOrderDiscountRepo mocks base method.
@@ -1117,6 +1145,20 @@ func (m *MockRepoFactory) NewRegistrationRepo() domain.RegistrationRepo {
 func (mr *MockRepoFactoryMockRecorder) NewRegistrationRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRegistrationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRegistrationRepo))
+}
+
+// NewReleasePolicyRepo mocks base method.
+func (m *MockRepoFactory) NewReleasePolicyRepo() domain.ReleasePolicyRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewReleasePolicyRepo")
+	ret0, _ := ret[0].(domain.ReleasePolicyRepo)
+	return ret0
+}
+
+// NewReleasePolicyRepo indicates an expected call of NewReleasePolicyRepo.
+func (mr *MockRepoFactoryMockRecorder) NewReleasePolicyRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewReleasePolicyRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewReleasePolicyRepo))
 }
 
 // NewRolePermissionRepo mocks base method.

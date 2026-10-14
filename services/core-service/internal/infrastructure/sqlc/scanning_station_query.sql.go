@@ -78,6 +78,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     ss.account_id,
@@ -108,6 +109,7 @@ type ExportScanningStationsRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	AccountID               string
@@ -138,6 +140,7 @@ func (q *Queries) ExportScanningStations(ctx context.Context, arg ExportScanning
 			&i.LabelSizeCode,
 			&i.LabelTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
 			&i.AccountID,
@@ -184,6 +187,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -210,6 +214,7 @@ type FindScanningStationsByNamesRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	DepartmentCreatedAt     sql.NullTime
@@ -249,6 +254,7 @@ func (q *Queries) FindScanningStationsByNames(ctx context.Context, arg FindScann
 			&i.LabelSizeCode,
 			&i.LabelTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
 			&i.DepartmentCreatedAt,
@@ -279,6 +285,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -305,6 +312,7 @@ type GetScanningStationRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	DepartmentCreatedAt     sql.NullTime
@@ -325,6 +333,7 @@ func (q *Queries) GetScanningStation(ctx context.Context, arg GetScanningStation
 		&i.LabelSizeCode,
 		&i.LabelTypeCode,
 		&i.MaterialCheckRequired,
+		&i.OperatorCheckInCode,
 		&i.DepartmentID,
 		&i.DepartmentName,
 		&i.DepartmentCreatedAt,
@@ -334,6 +343,23 @@ func (q *Queries) GetScanningStation(ctx context.Context, arg GetScanningStation
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getScanningStationOperatorCheckIn = `-- name: GetScanningStationOperatorCheckIn :one
+SELECT operator_check_in_code FROM scanning_station
+WHERE id = ? AND account_id = ?
+`
+
+type GetScanningStationOperatorCheckInParams struct {
+	ID        string
+	AccountID string
+}
+
+func (q *Queries) GetScanningStationOperatorCheckIn(ctx context.Context, arg GetScanningStationOperatorCheckInParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getScanningStationOperatorCheckIn, arg.ID, arg.AccountID)
+	var operator_check_in_code string
+	err := row.Scan(&operator_check_in_code)
+	return operator_check_in_code, err
 }
 
 const getScanningStationType = `-- name: GetScanningStationType :one
@@ -362,6 +388,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -388,6 +415,7 @@ type GetScanningStationsByIDsRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	DepartmentCreatedAt     sql.NullTime
@@ -425,6 +453,7 @@ func (q *Queries) GetScanningStationsByIDs(ctx context.Context, arg GetScanningS
 			&i.LabelSizeCode,
 			&i.LabelTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
 			&i.DepartmentCreatedAt,
@@ -455,11 +484,13 @@ INSERT INTO scanning_station (
     label_size_code,
     label_type_code,
     material_check_required,
+    operator_check_in_code,
     department_id,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -482,6 +513,7 @@ type InsertScanningStationParams struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	AccountID               string
 }
@@ -495,6 +527,7 @@ func (q *Queries) InsertScanningStation(ctx context.Context, arg InsertScanningS
 		arg.LabelSizeCode,
 		arg.LabelTypeCode,
 		arg.MaterialCheckRequired,
+		arg.OperatorCheckInCode,
 		arg.DepartmentID,
 		arg.AccountID,
 	)
@@ -581,6 +614,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -619,6 +653,7 @@ type ListScanningStationsBackwardRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	DepartmentCreatedAt     sql.NullTime
@@ -653,6 +688,7 @@ func (q *Queries) ListScanningStationsBackward(ctx context.Context, arg ListScan
 			&i.LabelSizeCode,
 			&i.LabelTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
 			&i.DepartmentCreatedAt,
@@ -683,6 +719,7 @@ SELECT
     ss.label_size_code,
     ss.label_type_code,
     ss.material_check_required,
+    ss.operator_check_in_code,
     ss.department_id,
     d.name AS department_name,
     d.created_at AS department_created_at,
@@ -722,6 +759,7 @@ type ListScanningStationsForwardRow struct {
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
 	MaterialCheckRequired   bool
+	OperatorCheckInCode     string
 	DepartmentID            string
 	DepartmentName          sql.NullString
 	DepartmentCreatedAt     sql.NullTime
@@ -757,6 +795,7 @@ func (q *Queries) ListScanningStationsForward(ctx context.Context, arg ListScann
 			&i.LabelSizeCode,
 			&i.LabelTypeCode,
 			&i.MaterialCheckRequired,
+			&i.OperatorCheckInCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
 			&i.DepartmentCreatedAt,
@@ -785,6 +824,7 @@ UPDATE scanning_station SET
     label_size_code = ?,
     label_type_code = ?,
     material_check_required = COALESCE(?, material_check_required),
+    operator_check_in_code = COALESCE(?, operator_check_in_code),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -796,6 +836,7 @@ type UpdateScanningStationParams struct {
 	LabelSizeCode         sql.NullString
 	LabelTypeCode         sql.NullString
 	MaterialCheckRequired sql.NullBool
+	OperatorCheckInCode   sql.NullString
 	ID                    string
 	AccountID             string
 }
@@ -807,6 +848,7 @@ func (q *Queries) UpdateScanningStation(ctx context.Context, arg UpdateScanningS
 		arg.LabelSizeCode,
 		arg.LabelTypeCode,
 		arg.MaterialCheckRequired,
+		arg.OperatorCheckInCode,
 		arg.ID,
 		arg.AccountID,
 	)

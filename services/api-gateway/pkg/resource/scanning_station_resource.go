@@ -47,6 +47,11 @@ type ScanningStation struct {
 	// - `none`: no additional operator check is required.
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement"`
+	// Whether the station scans only while an operator is checked in.
+	//
+	// - `optional`: scans record the checked-in operator when there is one.
+	// - `required`: scans are refused while nobody is checked in.
+	OperatorCheckIn constants.OperatorCheckInRequirement `json:"operator_check_in" validate:"required"`
 	// The department this scanning station belongs to.
 	//
 	// Assigned when the station is created and cannot be reassigned afterward.
@@ -72,6 +77,7 @@ var SampleScanningStation = &ScanningStation{
 	LabelSizeCode:       new(constants.LabelSizeCodeTwoByFour),
 	LabelTypeCode:       new(constants.LabelTypeCodeTraveler),
 	OperatorRequirement: constants.OperatorRequirementNone,
+	OperatorCheckIn:     constants.OperatorCheckInRequired,
 	Department:          nil,
 	ProductionSteps:     nil,
 	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),

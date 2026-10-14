@@ -10,13 +10,14 @@ import (
 
 type ScanningStation struct {
 	ID                  string
-	Name                string                        `audit:"name"`
-	Notes               *string                       `audit:"notes"`
-	Type                constants.ScanningStationType `audit:"type"`
-	LabelSizeCode       *string                       `audit:"label_size_code"`
-	LabelTypeCode       *string                       `audit:"label_type_code"`
-	OperatorRequirement constants.OperatorRequirement `audit:"operator_requirement"`
-	DepartmentID        string                        `audit:"department_id"`
+	Name                string                               `audit:"name"`
+	Notes               *string                              `audit:"notes"`
+	Type                constants.ScanningStationType        `audit:"type"`
+	LabelSizeCode       *string                              `audit:"label_size_code"`
+	LabelTypeCode       *string                              `audit:"label_type_code"`
+	OperatorRequirement constants.OperatorRequirement        `audit:"operator_requirement"`
+	OperatorCheckIn     constants.OperatorCheckInRequirement `audit:"operator_check_in"`
+	DepartmentID        string                               `audit:"department_id"`
 	DepartmentName      string
 	DepartmentCreatedAt *time.Time
 	DepartmentUpdatedAt *time.Time
@@ -71,8 +72,10 @@ type CreateScanningStationParams struct {
 	LabelSizeCode       *string
 	LabelTypeCode       *string
 	OperatorRequirement constants.OperatorRequirement
-	DepartmentID        string
-	Includes            []string
+	// OperatorCheckIn defaults to optional when empty.
+	OperatorCheckIn constants.OperatorCheckInRequirement
+	DepartmentID    string
+	Includes        []string
 }
 
 type UpdateScanningStationParams struct {
@@ -83,6 +86,7 @@ type UpdateScanningStationParams struct {
 	LabelSizeCode       field.Clearable[string]
 	LabelTypeCode       field.Clearable[string]
 	OperatorRequirement *constants.OperatorRequirement
+	OperatorCheckIn     *constants.OperatorCheckInRequirement
 	Includes            []string
 }
 

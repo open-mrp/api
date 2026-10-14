@@ -43,6 +43,15 @@ sql:
             go_type:
               import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
+          # NULL when the step has no release checklist, or the signature answered none.
+          - column: "department.release_checklist"
+            go_type:
+              import: "github.com/open-mrp/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "batch_signature.checklist"
+            go_type:
+              import: "github.com/open-mrp/api/shared/db"
+              type: "NullableRawMessage"
           - column: "hubspot_sync_job.counts"
             go_type:
               import: "github.com/open-mrp/api/shared/db"

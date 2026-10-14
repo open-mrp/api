@@ -283,6 +283,8 @@ message BatchInfo {
   repeated string input_batch_ids = 20;
   repeated string output_batch_ids = 21;
   optional string item_description = 23;
+  optional string operator_account_user_id = 24;
+  optional string operator_name = 25;
 }
 message BatchLotInfo {
   string lot_number = 1;

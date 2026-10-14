@@ -43,6 +43,14 @@ func boolToOperatorRequirement(v bool) constants.OperatorRequirement {
 	return constants.OperatorRequirementNone
 }
 
+// operatorCheckInOrDefault fills in the column default for a station created without saying.
+func operatorCheckInOrDefault(r constants.OperatorCheckInRequirement) constants.OperatorCheckInRequirement {
+	if r == "" {
+		return constants.OperatorCheckInOptional
+	}
+	return r
+}
+
 func operatorRequirementToBool(r constants.OperatorRequirement) bool {
 	return r == constants.OperatorRequirementMaterialCheck
 }
@@ -53,6 +61,7 @@ func mapScanningStationForwardRow(row sqlc.ListScanningStationsForwardRow) *doma
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -85,6 +94,7 @@ func mapScanningStationBackwardRow(row sqlc.ListScanningStationsBackwardRow) *do
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -117,6 +127,7 @@ func mapFindScanningStationsByNamesRow(row sqlc.FindScanningStationsByNamesRow) 
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -264,6 +275,7 @@ func mapExportScanningStationRow(row sqlc.ExportScanningStationsRow) *domain.Sca
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -312,6 +324,7 @@ func mapGetScanningStationRow(row sqlc.GetScanningStationRow) *domain.ScanningSt
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -366,6 +379,7 @@ func mapGetScanningStationsByIDsRow(row sqlc.GetScanningStationsByIDsRow) *domai
 		Name:                row.Name,
 		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
 		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(row.OperatorCheckInCode),
 		DepartmentID:        row.DepartmentID,
 		AccountID:           row.AccountID,
 		CreatedAt:           row.CreatedAt,
@@ -430,6 +444,7 @@ func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params 
 		LabelSizeCode:           toNullString(params.LabelSizeCode),
 		LabelTypeCode:           toNullString(params.LabelTypeCode),
 		MaterialCheckRequired:   operatorRequirementToBool(params.OperatorRequirement),
+		OperatorCheckInCode:     string(operatorCheckInOrDefault(params.OperatorCheckIn)),
 		DepartmentID:            params.DepartmentID,
 		AccountID:               params.AccountID,
 	})
@@ -458,6 +473,12 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 			v := operatorRequirementToBool(*params.OperatorRequirement)
 			return &v
 		}()),
+		OperatorCheckInCode: func() gosql.NullString {
+			if params.OperatorCheckIn == nil {
+				return gosql.NullString{}
+			}
+			return gosql.NullString{String: string(*params.OperatorCheckIn), Valid: true}
+		}(),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

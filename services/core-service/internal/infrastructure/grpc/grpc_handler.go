@@ -244,6 +244,10 @@ func RegisterProductionScheduleService(server *grpc.Server, productionScheduleSv
 	pb.RegisterCoreProductionScheduleServiceServer(server, handler)
 }
 
+func RegisterBatchReleaseService(server *grpc.Server, batchReleaseSvc domain.BatchReleaseSvc) {
+	pb.RegisterCoreBatchReleaseServiceServer(server, &batchReleaseGRPCHandler{batchReleaseSvc: batchReleaseSvc})
+}
+
 func RegisterMachineDowntimeService(server *grpc.Server, machineDowntimeSvc domain.MachineDowntimeSvc) {
 	machineDowntimeHandler := &machineDowntimeGRPCHandler{
 		machineDowntimeSvc: machineDowntimeSvc,

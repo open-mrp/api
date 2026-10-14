@@ -75,6 +75,32 @@ type PasswordSvc interface {
 	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
 }
 
+type SigningPinSvc interface {
+	// SetSigningPin sets the caller's own signing PIN, replacing any PIN they had, including a temporary one.
+	//
+	// Side effects:
+	//   - Clears failed attempts and any lockout.
+	SetSigningPin(ctx context.Context, pin string) *apierror.APIError
+
+	// SetTemporarySigningPin sets a PIN for an account user in the caller's account that must be changed on first use.
+	SetTemporarySigningPin(ctx context.Context, accountUserID, pin string) *apierror.APIError
+
+	// ClearSigningPin removes an account user's signing PIN, so they must set a new one before signing.
+	ClearSigningPin(ctx context.Context, accountUserID string) *apierror.APIError
+
+	// ChangeSigningPin replaces an account user's PIN after checking their current one.
+	//
+	// Side effects:
+	//   - A wrong current PIN counts toward the lockout.
+	ChangeSigningPin(ctx context.Context, accountUserID, currentPin, newPin string) *apierror.APIError
+
+	// VerifySigningPin checks an account user's signing PIN and returns who signed.
+	//
+	// Side effects:
+	//   - A wrong PIN counts toward the lockout; a correct one clears the count.
+	VerifySigningPin(ctx context.Context, accountUserID, pin string) (*VerifiedSigner, *apierror.APIError)
+}
+
 type CreateRegistrationSessionInput struct {
 	Email    string
 	PlanCode string

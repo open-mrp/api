@@ -76,6 +76,7 @@ func ScanningStationFromLightProto(ss *pb.LightScanningStationInfo) *apiresource
 		Name:                ss.Name,
 		Type:                constants.ScanningStationType(ss.Type),
 		OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(ss.OperatorCheckIn),
 		CreatedAt:           grpcutil.TimestampToTime(ss.CreatedAt),
 		UpdatedAt:           grpcutil.TimestampToTime(ss.UpdatedAt),
 	}
@@ -89,6 +90,7 @@ func ScanningStationFromProto(ss *pb.ScanningStationInfo) *apiresource.ScanningS
 		Notes:               ss.Notes,
 		Type:                constants.ScanningStationType(ss.Type),
 		OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(ss.OperatorCheckIn),
 		CreatedAt:           grpcutil.TimestampToTime(ss.CreatedAt),
 		UpdatedAt:           grpcutil.TimestampToTime(ss.UpdatedAt),
 	}

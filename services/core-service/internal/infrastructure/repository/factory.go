@@ -227,6 +227,18 @@ func (r *repoFactoryImpl) NewMachineStatusRepo() domain.MachineStatusRepo {
 	return NewMachineStatusRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewBatchSignatureRepo() domain.BatchSignatureRepo {
+	return NewBatchSignatureRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewOperatorCheckInRepo() domain.OperatorCheckInRepo {
+	return NewOperatorCheckInRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewReleasePolicyRepo() domain.ReleasePolicyRepo {
+	return NewReleasePolicyRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewMachineDowntimeRepo() domain.MachineDowntimeRepo {
 	return NewMachineDowntimeRepo(r.queries)
 }

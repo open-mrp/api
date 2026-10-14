@@ -47,6 +47,14 @@ const (
 
 	// ErrorCodeAgentSpendingCapReached indicates the account has reached its configured monthly agent (LLM) spending cap, so the run was refused. The caller must raise or remove the cap to continue running agents.
 	ErrorCodeAgentSpendingCapReached ErrorCode = "agent_spending_cap_reached"
+	// ErrorCodeSigningPINInvalid indicates the signing PIN entered for an electronic signature or operator check-in is wrong.
+	ErrorCodeSigningPINInvalid ErrorCode = "signing_pin_invalid" // #nosec G101 - This is an error code constant, not a hardcoded credential
+	// ErrorCodeSigningPINLocked indicates too many wrong signing PINs were entered for this person; signing is locked for a while.
+	ErrorCodeSigningPINLocked ErrorCode = "signing_pin_locked" // #nosec G101 - This is an error code constant, not a hardcoded credential
+	// ErrorCodeSigningPINNotSet indicates the person has no signing PIN yet and must set one before signing or checking in.
+	ErrorCodeSigningPINNotSet ErrorCode = "signing_pin_not_set" // #nosec G101 - This is an error code constant, not a hardcoded credential
+	// ErrorCodeSigningPINChangeRequired indicates the person's signing PIN is a temporary one an admin set and must be changed before it can be used.
+	ErrorCodeSigningPINChangeRequired ErrorCode = "signing_pin_change_required" // #nosec G101 - This is an error code constant, not a hardcoded credential
 
 	// --- Validation errors (400) ---
 
@@ -69,6 +77,14 @@ const (
 	ErrorCodeResourceExists ErrorCode = "resource_exists"
 	// ErrorCodeResourceConflict indicates a state conflict that prevents the operation (e.g. duplicate username, optimistic locking failure).
 	ErrorCodeResourceConflict ErrorCode = "resource_conflict"
+	// ErrorCodeBatchReleaseRequired indicates a batch can't move on until it is signed off at its production step, or until every sign-off its lineage requires exists.
+	ErrorCodeBatchReleaseRequired ErrorCode = "batch_release_required"
+	// ErrorCodeBatchOnHold indicates a batch's latest sign-off rejected it, so it can't move on until a later sign-off approves it.
+	ErrorCodeBatchOnHold ErrorCode = "batch_on_hold"
+	// ErrorCodeCorrectionSignatureRequired indicates a scan can't be undone until a supervisor or quality inspector signs a correction for its batch.
+	ErrorCodeCorrectionSignatureRequired ErrorCode = "correction_signature_required"
+	// ErrorCodeOperatorCheckInRequired indicates the scanning station requires an operator to check in before it can scan.
+	ErrorCodeOperatorCheckInRequired ErrorCode = "operator_check_in_required"
 	// ErrorCodeResourceGone indicates the resource existed but has been permanently deleted.
 	ErrorCodeResourceGone ErrorCode = "resource_gone"
 
@@ -133,6 +149,8 @@ func (c ErrorCode) IsValid() bool {
 	case ErrorCodeExpiredToken, ErrorCodeExpiredAPIKey, ErrorCodeRevokedAPIKey,
 		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms, ErrorCodePaymentRequired,
 		ErrorCodeAgentSpendingCapReached,
+		ErrorCodeSigningPINInvalid, ErrorCodeSigningPINLocked, ErrorCodeSigningPINNotSet, ErrorCodeSigningPINChangeRequired,
+		ErrorCodeBatchReleaseRequired, ErrorCodeBatchOnHold, ErrorCodeCorrectionSignatureRequired, ErrorCodeOperatorCheckInRequired,
 		ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeMethodNotAllowed, ErrorCodeRequestTooLarge, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
 		ErrorCodeResourceConflict, ErrorCodeResourceGone, ErrorCodeIdempotencyInProgress,
@@ -158,6 +176,14 @@ func (c ErrorCode) EnumValues() []string {
 		string(ErrorCodeInsufficientPerms),
 		string(ErrorCodePaymentRequired),
 		string(ErrorCodeAgentSpendingCapReached),
+		string(ErrorCodeSigningPINInvalid),
+		string(ErrorCodeSigningPINLocked),
+		string(ErrorCodeSigningPINNotSet),
+		string(ErrorCodeSigningPINChangeRequired),
+		string(ErrorCodeBatchReleaseRequired),
+		string(ErrorCodeBatchOnHold),
+		string(ErrorCodeCorrectionSignatureRequired),
+		string(ErrorCodeOperatorCheckInRequired),
 		string(ErrorCodeValidationFailed),
 		string(ErrorCodeMissingField),
 		string(ErrorCodeInvalidFormat),
@@ -502,6 +528,46 @@ func NewAgentSpendingCapReachedError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeAgentSpendingCapReached, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLAgentSpendingCap))
 }
 
+// NewSigningPINInvalidError creates a 403 Forbidden error when the signing PIN entered for a signature or check-in is wrong.
+func NewSigningPINInvalidError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeSigningPINInvalid, ErrorTypeInvalidRequest, publicMessage, "", WithParam("pin"), WithDocURL(docURLSigningPINInvalid))
+}
+
+// NewSigningPINLockedError creates a 429 Too Many Requests error when signing is locked for a person after too many wrong PINs.
+func NewSigningPINLockedError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeSigningPINLocked, ErrorTypeInvalidRequest, publicMessage, "", WithParam("pin"), WithDocURL(docURLSigningPINLocked))
+}
+
+// NewSigningPINNotSetError creates a 409 Conflict error when the person has no signing PIN yet.
+func NewSigningPINNotSetError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeSigningPINNotSet, ErrorTypeInvalidRequest, publicMessage, "", WithParam("pin"), WithDocURL(docURLSigningPINNotSet))
+}
+
+// NewSigningPINChangeRequiredError creates a 409 Conflict error when the person's PIN is a temporary one that must be changed before use.
+func NewSigningPINChangeRequiredError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeSigningPINChangeRequired, ErrorTypeInvalidRequest, publicMessage, "", WithParam("pin"), WithDocURL(docURLSigningPINChangeRequired))
+}
+
+// NewBatchReleaseRequiredError creates a 409 Conflict error when a batch, or a batch in its lineage, still needs a sign-off its production step requires.
+func NewBatchReleaseRequiredError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeBatchReleaseRequired, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLBatchReleaseRequired))
+}
+
+// NewBatchOnHoldError creates a 409 Conflict error when a batch's latest sign-off rejected it.
+func NewBatchOnHoldError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeBatchOnHold, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLBatchOnHold))
+}
+
+// NewCorrectionSignatureRequiredError creates a 409 Conflict error when undoing a scan needs a signed correction first.
+func NewCorrectionSignatureRequiredError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeCorrectionSignatureRequired, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLCorrectionSignatureRequired))
+}
+
+// NewOperatorCheckInRequiredError creates a 409 Conflict error when a station that requires an operator scans with nobody checked in.
+func NewOperatorCheckInRequiredError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeOperatorCheckInRequired, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLOperatorCheckInRequired))
+}
+
 // NewRegistrationClosedError creates a 403 Forbidden error when public registration for a plan code has reached its capacity.
 func NewRegistrationClosedError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeRegistrationClosed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRegistrationClosed))
@@ -688,7 +754,7 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		ErrorCodeRevokedAPIKey,
 		ErrorCodeInvalidCredentials:
 		return http.StatusUnauthorized
-	case ErrorCodeInsufficientPerms, ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed:
+	case ErrorCodeInsufficientPerms, ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed, ErrorCodeSigningPINInvalid:
 		return http.StatusForbidden
 	case ErrorCodePaymentRequired, ErrorCodeAgentSpendingCapReached:
 		return http.StatusPaymentRequired
@@ -705,9 +771,11 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		return http.StatusNotFound
 	case ErrorCodeResourceGone:
 		return http.StatusGone
-	case ErrorCodeResourceExists, ErrorCodeResourceConflict, ErrorCodeIdempotencyInProgress:
+	case ErrorCodeResourceExists, ErrorCodeResourceConflict, ErrorCodeIdempotencyInProgress,
+		ErrorCodeSigningPINNotSet, ErrorCodeSigningPINChangeRequired, ErrorCodeBatchReleaseRequired,
+		ErrorCodeBatchOnHold, ErrorCodeCorrectionSignatureRequired, ErrorCodeOperatorCheckInRequired:
 		return http.StatusConflict
-	case ErrorCodeRateLimitExceeded:
+	case ErrorCodeRateLimitExceeded, ErrorCodeSigningPINLocked:
 		return http.StatusTooManyRequests
 	case ErrorCodeSvcUnavailable:
 		return http.StatusServiceUnavailable

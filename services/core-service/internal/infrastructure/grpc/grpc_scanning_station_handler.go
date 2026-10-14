@@ -22,6 +22,7 @@ func scanningStationToProto(ss *domain.ScanningStation) *pb.ScanningStationInfo 
 		LabelSizeCode:       ss.LabelSizeCode,
 		LabelTypeCode:       ss.LabelTypeCode,
 		OperatorRequirement: string(ss.OperatorRequirement),
+		OperatorCheckIn:     string(ss.OperatorCheckIn),
 		DepartmentId:        ss.DepartmentID,
 		DepartmentName:      ss.DepartmentName,
 		CreatedAt:           timestamppb.New(ss.CreatedAt),
@@ -172,6 +173,7 @@ func (h *gRPCHandler) CreateScanningStation(ctx context.Context, req *pb.CreateS
 		LabelTypeCode:       nilLabelWhenEmpty(req.LabelTypeCode),
 		OperatorRequirement: constants.OperatorRequirement(req.OperatorRequirement),
 		DepartmentID:        req.DepartmentId,
+		OperatorCheckIn:     constants.OperatorCheckInRequirement(req.GetOperatorCheckIn()),
 		Includes:            req.Includes,
 	}
 
@@ -204,6 +206,13 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 				return nil
 			}
 			v := constants.OperatorRequirement(*req.OperatorRequirement)
+			return &v
+		}(),
+		OperatorCheckIn: func() *constants.OperatorCheckInRequirement {
+			if req.OperatorCheckIn == nil {
+				return nil
+			}
+			v := constants.OperatorCheckInRequirement(*req.OperatorCheckIn)
 			return &v
 		}(),
 		Includes: req.Includes,

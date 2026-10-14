@@ -6191,6 +6191,21 @@ func (m *MockBatchRepo) EXPECT() *MockBatchRepoMockRecorder {
 	return m.recorder
 }
 
+// AllocateReleaseLotSequence mocks base method.
+func (m *MockBatchRepo) AllocateReleaseLotSequence(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllocateReleaseLotSequence", ctx, accountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AllocateReleaseLotSequence indicates an expected call of AllocateReleaseLotSequence.
+func (mr *MockBatchRepoMockRecorder) AllocateReleaseLotSequence(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateReleaseLotSequence", reflect.TypeOf((*MockBatchRepo)(nil).AllocateReleaseLotSequence), ctx, accountID)
+}
+
 // Close mocks base method.
 func (m *MockBatchRepo) Close(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6364,6 +6379,20 @@ func (m *MockBatchRepo) CreateMany(ctx context.Context, batches []domain.NewBatc
 func (mr *MockBatchRepoMockRecorder) CreateMany(ctx, batches any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMany", reflect.TypeOf((*MockBatchRepo)(nil).CreateMany), ctx, batches)
+}
+
+// CreateReleaseLot mocks base method.
+func (m *MockBatchRepo) CreateReleaseLot(ctx context.Context, accountID, batchID, itemID string, lot domain.ReleaseLot, manufacturedAt time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateReleaseLot", ctx, accountID, batchID, itemID, lot, manufacturedAt)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateReleaseLot indicates an expected call of CreateReleaseLot.
+func (mr *MockBatchRepoMockRecorder) CreateReleaseLot(ctx, accountID, batchID, itemID, lot, manufacturedAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReleaseLot", reflect.TypeOf((*MockBatchRepo)(nil).CreateReleaseLot), ctx, accountID, batchID, itemID, lot, manufacturedAt)
 }
 
 // Delete mocks base method.
@@ -6590,6 +6619,21 @@ func (mr *MockBatchRepoMockRecorder) FindPossibleNextSteps(ctx, accountID, scann
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPossibleNextSteps", reflect.TypeOf((*MockBatchRepo)(nil).FindPossibleNextSteps), ctx, accountID, scanningStationID, batchID)
 }
 
+// GetReleaseLot mocks base method.
+func (m *MockBatchRepo) GetReleaseLot(ctx context.Context, accountID, batchID string) (*domain.ReleaseLot, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReleaseLot", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*domain.ReleaseLot)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetReleaseLot indicates an expected call of GetReleaseLot.
+func (mr *MockBatchRepoMockRecorder) GetReleaseLot(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReleaseLot", reflect.TypeOf((*MockBatchRepo)(nil).GetReleaseLot), ctx, accountID, batchID)
+}
+
 // HasScanReceipt mocks base method.
 func (m *MockBatchRepo) HasScanReceipt(ctx context.Context, accountID, batchID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6603,6 +6647,21 @@ func (m *MockBatchRepo) HasScanReceipt(ctx context.Context, accountID, batchID s
 func (mr *MockBatchRepoMockRecorder) HasScanReceipt(ctx, accountID, batchID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasScanReceipt", reflect.TypeOf((*MockBatchRepo)(nil).HasScanReceipt), ctx, accountID, batchID)
+}
+
+// ListBasesByIDs mocks base method.
+func (m *MockBatchRepo) ListBasesByIDs(ctx context.Context, accountID string, batchIDs []string) ([]*domain.BaseBatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBasesByIDs", ctx, accountID, batchIDs)
+	ret0, _ := ret[0].([]*domain.BaseBatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListBasesByIDs indicates an expected call of ListBasesByIDs.
+func (mr *MockBatchRepoMockRecorder) ListBasesByIDs(ctx, accountID, batchIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBasesByIDs", reflect.TypeOf((*MockBatchRepo)(nil).ListBasesByIDs), ctx, accountID, batchIDs)
 }
 
 // LockScan mocks base method.
@@ -6705,6 +6764,20 @@ func (m *MockBatchRepo) RevertCountAdjustmentsByClosingBatch(ctx context.Context
 func (mr *MockBatchRepoMockRecorder) RevertCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevertCountAdjustmentsByClosingBatch", reflect.TypeOf((*MockBatchRepo)(nil).RevertCountAdjustmentsByClosingBatch), ctx, accountID, closingBatchID)
+}
+
+// SetOperator mocks base method.
+func (m *MockBatchRepo) SetOperator(ctx context.Context, accountID, batchID string, operatorAccountUserID *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOperator", ctx, accountID, batchID, operatorAccountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetOperator indicates an expected call of SetOperator.
+func (mr *MockBatchRepoMockRecorder) SetOperator(ctx, accountID, batchID, operatorAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOperator", reflect.TypeOf((*MockBatchRepo)(nil).SetOperator), ctx, accountID, batchID, operatorAccountUserID)
 }
 
 // SplitTally mocks base method.
@@ -6949,6 +7022,21 @@ func NewMockScanningStationQueryRepo(ctrl *gomock.Controller) *MockScanningStati
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockScanningStationQueryRepo) EXPECT() *MockScanningStationQueryRepoMockRecorder {
 	return m.recorder
+}
+
+// FindOperatorCheckIn mocks base method.
+func (m *MockScanningStationQueryRepo) FindOperatorCheckIn(ctx context.Context, accountID, id string) (constants.OperatorCheckInRequirement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindOperatorCheckIn", ctx, accountID, id)
+	ret0, _ := ret[0].(constants.OperatorCheckInRequirement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindOperatorCheckIn indicates an expected call of FindOperatorCheckIn.
+func (mr *MockScanningStationQueryRepoMockRecorder) FindOperatorCheckIn(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOperatorCheckIn", reflect.TypeOf((*MockScanningStationQueryRepo)(nil).FindOperatorCheckIn), ctx, accountID, id)
 }
 
 // FindType mocks base method.
@@ -21402,4 +21490,284 @@ func (m *MockPortalDomainRepo) UpdateProviderState(ctx context.Context, portalDo
 func (mr *MockPortalDomainRepoMockRecorder) UpdateProviderState(ctx, portalDomainID, status, dnsRecords any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProviderState", reflect.TypeOf((*MockPortalDomainRepo)(nil).UpdateProviderState), ctx, portalDomainID, status, dnsRecords)
+}
+
+// MockBatchSignatureRepo is a mock of BatchSignatureRepo interface.
+type MockBatchSignatureRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockBatchSignatureRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockBatchSignatureRepoMockRecorder is the mock recorder for MockBatchSignatureRepo.
+type MockBatchSignatureRepoMockRecorder struct {
+	mock *MockBatchSignatureRepo
+}
+
+// NewMockBatchSignatureRepo creates a new mock instance.
+func NewMockBatchSignatureRepo(ctrl *gomock.Controller) *MockBatchSignatureRepo {
+	mock := &MockBatchSignatureRepo{ctrl: ctrl}
+	mock.recorder = &MockBatchSignatureRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBatchSignatureRepo) EXPECT() *MockBatchSignatureRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockBatchSignatureRepo) Create(ctx context.Context, signature *domain.BatchSignature) (*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, signature)
+	ret0, _ := ret[0].(*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockBatchSignatureRepoMockRecorder) Create(ctx, signature any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBatchSignatureRepo)(nil).Create), ctx, signature)
+}
+
+// Get mocks base method.
+func (m *MockBatchSignatureRepo) Get(ctx context.Context, accountID, id string) (*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, id)
+	ret0, _ := ret[0].(*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockBatchSignatureRepoMockRecorder) Get(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBatchSignatureRepo)(nil).Get), ctx, accountID, id)
+}
+
+// ListForBatch mocks base method.
+func (m *MockBatchSignatureRepo) ListForBatch(ctx context.Context, accountID, batchID string) ([]*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForBatch", ctx, accountID, batchID)
+	ret0, _ := ret[0].([]*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListForBatch indicates an expected call of ListForBatch.
+func (mr *MockBatchSignatureRepoMockRecorder) ListForBatch(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForBatch", reflect.TypeOf((*MockBatchSignatureRepo)(nil).ListForBatch), ctx, accountID, batchID)
+}
+
+// ListForBatches mocks base method.
+func (m *MockBatchSignatureRepo) ListForBatches(ctx context.Context, accountID string, batchIDs []string) ([]*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForBatches", ctx, accountID, batchIDs)
+	ret0, _ := ret[0].([]*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListForBatches indicates an expected call of ListForBatches.
+func (mr *MockBatchSignatureRepoMockRecorder) ListForBatches(ctx, accountID, batchIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForBatches", reflect.TypeOf((*MockBatchSignatureRepo)(nil).ListForBatches), ctx, accountID, batchIDs)
+}
+
+// ListRunStepReleases mocks base method.
+func (m *MockBatchSignatureRepo) ListRunStepReleases(ctx context.Context, accountID, productionRunID, productionStepID string) ([]*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRunStepReleases", ctx, accountID, productionRunID, productionStepID)
+	ret0, _ := ret[0].([]*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRunStepReleases indicates an expected call of ListRunStepReleases.
+func (mr *MockBatchSignatureRepoMockRecorder) ListRunStepReleases(ctx, accountID, productionRunID, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRunStepReleases", reflect.TypeOf((*MockBatchSignatureRepo)(nil).ListRunStepReleases), ctx, accountID, productionRunID, productionStepID)
+}
+
+// ListSignerCandidates mocks base method.
+func (m *MockBatchSignatureRepo) ListSignerCandidates(ctx context.Context, accountID string) ([]domain.SignerCandidate, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSignerCandidates", ctx, accountID)
+	ret0, _ := ret[0].([]domain.SignerCandidate)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSignerCandidates indicates an expected call of ListSignerCandidates.
+func (mr *MockBatchSignatureRepoMockRecorder) ListSignerCandidates(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSignerCandidates", reflect.TypeOf((*MockBatchSignatureRepo)(nil).ListSignerCandidates), ctx, accountID)
+}
+
+// MockOperatorCheckInRepo is a mock of OperatorCheckInRepo interface.
+type MockOperatorCheckInRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockOperatorCheckInRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockOperatorCheckInRepoMockRecorder is the mock recorder for MockOperatorCheckInRepo.
+type MockOperatorCheckInRepoMockRecorder struct {
+	mock *MockOperatorCheckInRepo
+}
+
+// NewMockOperatorCheckInRepo creates a new mock instance.
+func NewMockOperatorCheckInRepo(ctrl *gomock.Controller) *MockOperatorCheckInRepo {
+	mock := &MockOperatorCheckInRepo{ctrl: ctrl}
+	mock.recorder = &MockOperatorCheckInRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOperatorCheckInRepo) EXPECT() *MockOperatorCheckInRepoMockRecorder {
+	return m.recorder
+}
+
+// CheckOut mocks base method.
+func (m *MockOperatorCheckInRepo) CheckOut(ctx context.Context, accountID, id string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckOut", ctx, accountID, id)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CheckOut indicates an expected call of CheckOut.
+func (mr *MockOperatorCheckInRepoMockRecorder) CheckOut(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckOut", reflect.TypeOf((*MockOperatorCheckInRepo)(nil).CheckOut), ctx, accountID, id)
+}
+
+// Create mocks base method.
+func (m *MockOperatorCheckInRepo) Create(ctx context.Context, checkIn *domain.OperatorCheckIn) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, checkIn)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockOperatorCheckInRepoMockRecorder) Create(ctx, checkIn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOperatorCheckInRepo)(nil).Create), ctx, checkIn)
+}
+
+// EndOpenForStation mocks base method.
+func (m *MockOperatorCheckInRepo) EndOpenForStation(ctx context.Context, accountID, scanningStationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EndOpenForStation", ctx, accountID, scanningStationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// EndOpenForStation indicates an expected call of EndOpenForStation.
+func (mr *MockOperatorCheckInRepoMockRecorder) EndOpenForStation(ctx, accountID, scanningStationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndOpenForStation", reflect.TypeOf((*MockOperatorCheckInRepo)(nil).EndOpenForStation), ctx, accountID, scanningStationID)
+}
+
+// Get mocks base method.
+func (m *MockOperatorCheckInRepo) Get(ctx context.Context, accountID, id string) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, id)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockOperatorCheckInRepoMockRecorder) Get(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockOperatorCheckInRepo)(nil).Get), ctx, accountID, id)
+}
+
+// GetLatestForStation mocks base method.
+func (m *MockOperatorCheckInRepo) GetLatestForStation(ctx context.Context, accountID, scanningStationID string) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestForStation", ctx, accountID, scanningStationID)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLatestForStation indicates an expected call of GetLatestForStation.
+func (mr *MockOperatorCheckInRepoMockRecorder) GetLatestForStation(ctx, accountID, scanningStationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestForStation", reflect.TypeOf((*MockOperatorCheckInRepo)(nil).GetLatestForStation), ctx, accountID, scanningStationID)
+}
+
+// MockReleasePolicyRepo is a mock of ReleasePolicyRepo interface.
+type MockReleasePolicyRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockReleasePolicyRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockReleasePolicyRepoMockRecorder is the mock recorder for MockReleasePolicyRepo.
+type MockReleasePolicyRepoMockRecorder struct {
+	mock *MockReleasePolicyRepo
+}
+
+// NewMockReleasePolicyRepo creates a new mock instance.
+func NewMockReleasePolicyRepo(ctrl *gomock.Controller) *MockReleasePolicyRepo {
+	mock := &MockReleasePolicyRepo{ctrl: ctrl}
+	mock.recorder = &MockReleasePolicyRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockReleasePolicyRepo) EXPECT() *MockReleasePolicyRepoMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockReleasePolicyRepo) Get(ctx context.Context, accountID, departmentID string) (*domain.ReleasePolicy, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, departmentID)
+	ret0, _ := ret[0].(*domain.ReleasePolicy)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockReleasePolicyRepoMockRecorder) Get(ctx, accountID, departmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockReleasePolicyRepo)(nil).Get), ctx, accountID, departmentID)
+}
+
+// ListByDepartmentIDs mocks base method.
+func (m *MockReleasePolicyRepo) ListByDepartmentIDs(ctx context.Context, accountID string, departmentIDs []string) (map[string]*domain.ReleasePolicy, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByDepartmentIDs", ctx, accountID, departmentIDs)
+	ret0, _ := ret[0].(map[string]*domain.ReleasePolicy)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByDepartmentIDs indicates an expected call of ListByDepartmentIDs.
+func (mr *MockReleasePolicyRepoMockRecorder) ListByDepartmentIDs(ctx, accountID, departmentIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByDepartmentIDs", reflect.TypeOf((*MockReleasePolicyRepo)(nil).ListByDepartmentIDs), ctx, accountID, departmentIDs)
+}
+
+// Update mocks base method.
+func (m *MockReleasePolicyRepo) Update(ctx context.Context, accountID string, params domain.UpdateReleasePolicyParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, accountID, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockReleasePolicyRepoMockRecorder) Update(ctx, accountID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockReleasePolicyRepo)(nil).Update), ctx, accountID, params)
 }

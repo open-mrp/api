@@ -367,3 +367,42 @@ type IdempotencyMed interface {
 	//  2. Persist it as the cached response and mark the key finished.
 	CacheSuccessResponse(ctx context.Context, typeID string, data any) *apierror.APIError
 }
+
+// SigningPinCheck is the outcome of comparing an entered PIN with the stored one.
+type SigningPinCheck struct {
+	Pin     *SigningPin
+	Matched bool
+}
+
+// SigningPinFailure is a person's lockout state after a wrong PIN was counted.
+type SigningPinFailure struct {
+	FailedAttempts int
+	LockedUntil    *time.Time
+}
+
+type SigningPinMed interface {
+	// Check compares pin with the user's signing PIN without recording the outcome.
+	//
+	// 1. Load the user's PIN; fail with signing_pin_not_set when they have none.
+	// 2. Fail with signing_pin_locked while a lockout is in force.
+	// 3. Compare pin with the stored bcrypt hash.
+	Check(ctx context.Context, userID, pin string) (*SigningPinCheck, *apierror.APIError)
+
+	// RecordFailure counts one wrong PIN against the PIN that was checked and returns the resulting lockout state.
+	//
+	// 1. Count the attempt in a single statement; the fifth wrong PIN in a row locks signing for 15 minutes and restarts the count.
+	// 2. Reload the PIN to report whether this attempt locked it.
+	RecordFailure(ctx context.Context, pin *SigningPin) (*SigningPinFailure, *apierror.APIError)
+
+	// ResetFailures clears the failed attempts a correct PIN follows.
+	//
+	// 1. Skip the write when nothing is counted.
+	// 2. Otherwise clear the count and any expired lockout.
+	ResetFailures(ctx context.Context, pin *SigningPin) *apierror.APIError
+
+	// Save hashes pin and stores it as the user's signing PIN.
+	//
+	// 1. Hash pin with bcrypt.
+	// 2. Replace the user's PIN, clearing failed attempts and any lockout.
+	Save(ctx context.Context, userID, pin string, isTemporary bool) *apierror.APIError
+}

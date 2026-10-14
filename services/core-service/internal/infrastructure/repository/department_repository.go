@@ -134,6 +134,7 @@ func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domai
 			Name:                s.Name,
 			Type:                s.ScanningStationTypeCode,
 			OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
+			OperatorCheckIn:     s.OperatorCheckInCode,
 			CreatedAt:           s.CreatedAt,
 			UpdatedAt:           s.UpdatedAt,
 		}
@@ -210,6 +211,7 @@ func (r *departmentRepoImpl) GetByIDs(ctx context.Context, accountID string, ids
 				Name:                s.Name,
 				Type:                s.ScanningStationTypeCode,
 				OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
+				OperatorCheckIn:     s.OperatorCheckInCode,
 				CreatedAt:           s.CreatedAt,
 				UpdatedAt:           s.UpdatedAt,
 			})
@@ -305,6 +307,7 @@ func (r *departmentRepoImpl) attachExportChildren(ctx context.Context, accountID
 			Name:                s.Name,
 			Type:                s.ScanningStationTypeCode,
 			OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
+			OperatorCheckIn:     s.OperatorCheckInCode,
 			CreatedAt:           s.CreatedAt,
 			UpdatedAt:           s.UpdatedAt,
 		})

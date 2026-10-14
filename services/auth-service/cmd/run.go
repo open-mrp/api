@@ -143,11 +143,16 @@ func Run(
 	registrationSessionConfig.OperatorEmail = cfg.OperatorEmail
 	registrationSessionSvc := service.NewRegistrationSessionSvc(registrationSessionConfig)
 
+	signingPinConfig := service.BuildSigningPinSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
+	signingPinConfig.TxManager = txManager
+	signingPinSvc := service.NewSigningPinSvc(signingPinConfig)
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err
 	}
-	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc, registrationSessionSvc)
+
+	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc, registrationSessionSvc, signingPinSvc)
 
 	logger.Info("Auth service started", "port", cfg.Port)
 

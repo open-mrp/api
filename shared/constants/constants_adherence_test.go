@@ -260,6 +260,8 @@ var typeRegistry = map[string]any{
 	"PickSort":                        PickSort(""),
 	"PickSearchMatch":                 PickSearchMatch(""),
 	"PaymentTermStatus":               PaymentTermStatus(""),
+	"ArchiveStatus":                   ArchiveStatus(""),
+	"PauseStatus":                     PauseStatus(""),
 	"OwnerType":                       OwnerType(""),
 	"CreatedByRelation":               CreatedByRelation(""),
 	"CustomerPortalVisibility":        CustomerPortalVisibility(""),

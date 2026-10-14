@@ -238,7 +238,7 @@ func (suite *ProductionRunBulkCreateTestSuite) expectIdempotencyStarted(typeID s
 		DoAndReturn(func(_ context.Context, params domain.CreateJobServiceParams) (*domain.Job, *apierror.APIError) {
 			// Echo the accept-time results onto the returned job, as the real CreateJob
 			// persists then reads back: a create's pre-generated ids ride home on it.
-			return &domain.Job{ID: genTestID(suite.T(), id.JobIDPrefix), Results: params.Results}, nil
+			return &domain.Job{ID: genTestID(suite.T(), id.AsyncJobIDPrefix), Results: params.Results}, nil
 		}).
 		AnyTimes()
 }
@@ -490,7 +490,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Idem
 	code := 202
 	cachedRunID := genTestID(suite.T(), id.ProductionRunIDPrefix)
 	cached := &domain.Job{
-		ID: genTestID(suite.T(), id.JobIDPrefix),
+		ID: genTestID(suite.T(), id.AsyncJobIDPrefix),
 		Results: []domain.RowResult{
 			runRowResult(0, cachedRunID, []string{genTestID(suite.T(), id.BatchIDPrefix)}),
 		},
@@ -581,7 +581,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Reco
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	resolvedUserID := genTestID(suite.T(), id.AccountUserIDPrefix)
 	creatorID := genTestID(suite.T(), id.AccountUserIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	run := validBulkCreateProductionRunParams(suite.T())
 
 	suite.expectResponsibleUserResolved(accountID, run.ResponsibleUserID, resolvedUserID)
@@ -665,7 +665,7 @@ func validBulkCreateEvent(t *testing.T) bulkCreateEventFixture {
 // the writes do, and TestExecuteBulkCreateProductionRuns_JobLifecycle asserts the
 // marks themselves.
 func (suite *ProductionRunBulkCreateTestSuite) executeEvent(event bulkCreateEventFixture) *apierror.APIError {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 
 	suite.expectJobLoaded(jobID, event, nil)
 	suite.jobSvc.EXPECT().StartJob(gomock.Any(), gomock.Any()).Return(time.Now(), nil).AnyTimes()
@@ -754,7 +754,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// executeCapturing runs the single-run event and returns what the job was completed
 	// with. A per-row write failure is recorded, not propagated: the job completes.
 	executeCapturing := func(event bulkCreateEventFixture) (jobLifecycleCalls, *apierror.APIError) {
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		suite.expectJobLoaded(jobID, event, nil)
 		var calls jobLifecycleCalls
 		suite.captureJobLifecycle(jobID, &calls)
@@ -895,7 +895,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// it got without querying each one.
 	suite.Run("success marks started then completed with results", func() {
 		event := validBulkCreateEvent(suite.T())
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		suite.expectJobLoaded(jobID, event, nil)
 		suite.expectRunWritesSucceed(event)
 
@@ -922,7 +922,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// and does not roll back the rows that did write.
 	suite.Run("write failure is recorded and the job completes", func() {
 		event := validBulkCreateEvent(suite.T())
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		writeErr := apierror.NewValidationError("write failed")
 		suite.expectJobLoaded(jobID, event, nil)
 		suite.productionRunRepo.EXPECT().
@@ -953,7 +953,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// row writable: the whole batch rolls back and the job fails rather than completing.
 	suite.Run("number allocation failure fails the job", func() {
 		event := validBulkCreateEvent(suite.T())
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		allocErr := apierror.NewValidationError("allocation failed")
 		suite.expectJobLoaded(jobID, event, nil)
 		suite.productionRunRepo.EXPECT().
@@ -974,7 +974,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// time: no write is stubbed here, so any attempt to write fails the test.
 	suite.Run("settled job is not executed again", func() {
 		event := validBulkCreateEvent(suite.T())
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		accountID := event.AccountID
 		completedAt := time.Now().UTC()
 		suite.expectJobLoaded(jobID, event, &domain.Job{
@@ -993,7 +993,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 	// that retry has to be allowed to run the writes.
 	suite.Run("previously failed job is retried", func() {
 		event := validBulkCreateEvent(suite.T())
-		jobID := genTestID(suite.T(), id.JobIDPrefix)
+		jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 		accountID := event.AccountID
 		failedAt := time.Now().UTC()
 		suite.expectJobLoaded(jobID, event, &domain.Job{

@@ -139,7 +139,7 @@ func (s *jobSvcImpl) StageJobItems(ctx context.Context, items json.RawMessage) (
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.stage_items")
 	defer span.End()
 
-	jobID, apiErr := id.GenID(id.JobIDPrefix, nil)
+	jobID, apiErr := id.GenID(id.AsyncJobIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -167,7 +167,7 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 
 	jobID := params.JobID
 	if jobID == "" {
-		generated, apiErr := id.GenID(id.JobIDPrefix, nil)
+		generated, apiErr := id.GenID(id.AsyncJobIDPrefix, nil)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}

@@ -140,7 +140,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCreateJob_MintsTheIDItReturns() {
 
 	suite.Nil(apiErr)
 	suite.NotNil(job)
-	suite.True(strings.HasPrefix(job.ID, string(id.JobIDPrefix)+"_"), "job id %q should carry the job prefix", job.ID)
+	suite.True(strings.HasPrefix(job.ID, string(id.AsyncJobIDPrefix)+"_"), "job id %q should carry the job prefix", job.ID)
 	suite.Equal(job.ID, written.JobID)
 	suite.Equal(constants.JobTypeBulkCreate, written.Type)
 	suite.Equal(accountID, written.AccountID)
@@ -158,7 +158,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCreateJob_AsksForNoJobsPermission
 	suite.jobRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	suite.jobRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any(), accountID).
-		Return(&domain.Job{ID: genTestID(suite.T(), id.JobIDPrefix)}, nil).
+		Return(&domain.Job{ID: genTestID(suite.T(), id.AsyncJobIDPrefix)}, nil).
 		Times(1)
 
 	job, apiErr := suite.jobSvc.CreateJob(ctx, domain.CreateJobServiceParams{
@@ -190,7 +190,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCreateJob_RejectsUnknownType() {
 // Reading a job is the one thing a client does with one directly, so it is the one
 // place a jobs permission is asked for.
 func (suite *JobSvcSystemSurfaceTestSuite) TestGetJob_RequiresReadPermission() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, map[string]bool{"production_runs:create": true})
 
@@ -208,7 +208,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestGetJob_RequiresReadPermission() {
 // allowed to start async work would need jobs:read too, and the ones without it would
 // get a 202 and then silence.
 func (suite *JobSvcSystemSurfaceTestSuite) TestGetJobForExecution_AsksForNoJobsPermission() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, map[string]bool{"production_runs:create": true})
 	stored := storedJob(jobID, accountID)
@@ -224,7 +224,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestGetJobForExecution_AsksForNoJobsP
 // Skipping the permission does not skip the tenant: the worker's read is scoped to
 // the account it is acting for, the same as the client's.
 func (suite *JobSvcSystemSurfaceTestSuite) TestGetJobForExecution_StillScopesToTheActingAccount() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -243,7 +243,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestGetJobForExecution_StillScopesToT
 // The read is scoped to the account the caller is acting for, so a job ID from
 // another tenant reads as absent rather than as someone else's work.
 func (suite *JobSvcSystemSurfaceTestSuite) TestGetJob_ScopesToTheActingAccount() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, map[string]bool{"jobs:read": true})
 	stored := storedJob(jobID, accountID)
@@ -293,7 +293,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_StampOnlyTheirOwnTime
 
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {
-			jobID := genTestID(suite.T(), id.JobIDPrefix)
+			jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 			var captured domain.UpdateJobRepositoryParams
 			suite.expectTransition(jobID, accountID, nil, &captured)
 
@@ -321,7 +321,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_StampOnlyTheirOwnTime
 // absent, or another tenant's, it matches no rows and reports no error. Without the
 // read first, a mark aimed at the wrong job would look like it landed.
 func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectAMarkOnAJobThatIsNotThere() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -339,7 +339,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectAMarkOnAJobThat
 
 // A settled job is done being written to.
 func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectASettledJob() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -357,7 +357,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectASettledJob() {
 
 // CompleteJob carries the outcome a client polling the job reads back.
 func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_RecordsResults() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -382,7 +382,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_RecordsResults() {
 // permission. It also returns the job rather than nothing: the row is not removed,
 // and its new state is what the caller asked for.
 func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_SettlesTheJobAndReturnsIt() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, map[string]bool{"jobs:delete": true})
 
@@ -404,7 +404,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_SettlesTheJobAndReturns
 // Reading a job is not license to stop it. The identity here can see the job but
 // holds no jobs:delete.
 func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_RequiresDeletePermission() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, map[string]bool{"jobs:read": true})
 
@@ -420,7 +420,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_RequiresDeletePermissio
 // stops in-flight work from committing: the completion is the last thing inside the
 // writes' transaction, so refusing it rolls that transaction back.
 func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_StopsAnInFlightJobFromCompleting() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -443,7 +443,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_StopsAnInFlightJobFromC
 // UPDATE matches no row. Zero rows affected is the authoritative "already settled" — the
 // completion is refused, which rolls its write transaction back so no data is committed.
 func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RefuseWhenGuardedUpdateMatchesNoRow() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -493,7 +493,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_RecordsAReadableReason() 
 
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {
-			jobID := genTestID(suite.T(), id.JobIDPrefix)
+			jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 			var captured domain.UpdateJobRepositoryParams
 			suite.expectTransition(jobID, accountID, nil, &captured)
 
@@ -514,7 +514,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_RecordsAReadableReason() 
 // A failed job stays retryable: the inbox redelivers on error, and that retry has to
 // be allowed to run. Only a settled job is terminal.
 func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_LeavesTheJobRetryable() {
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 
@@ -536,7 +536,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_LeavesTheJobRetryable() {
 func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_CapsTheRowResultsItRecords() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 
 	// Failures sit at the end of the request, behind more written rows than the cap
 	// allows, so a naive head-of-list trim would drop every one of them.
@@ -576,7 +576,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_CapsTheRowResultsItRe
 func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_KeepsEveryRowUnderTheCap() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 
 	results := []domain.RowResult{{Index: 0, ID: "pr_1", Status: constants.JobResultStatusCreated}}
 

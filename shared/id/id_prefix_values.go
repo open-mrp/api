@@ -156,6 +156,21 @@ const (
 	VocShift        = "sf"
 	VocPolicy       = "pc"
 	VocFinished     = "fi"
+	VocWork         = "wk"
+	VocCenter       = "cc"
+	VocOperation    = "oe"
+	VocList         = "ls"
+	VocRule         = "rw"
+	VocCredit       = "cx"
+	VocNote         = "nt"
+	VocApplication  = "aa"
+	VocMovement     = "mv"
+	VocDevice       = "dx"
+	VocPairing      = "pa"
+	VocSubscription = "sk"
+	VocVersion      = "vr"
+	VocCall         = "ck"
+	VocTemplate     = "tt"
 )
 
 // IDPrefixes contains all the type ID prefix values used in the system. This serves as a centralized reference for all type ID prefix values. These constants can be used when creating new type ID structs or for validation.
@@ -513,7 +528,7 @@ var (
 
 	// Messaging-related prefix values
 	MessageIDPrefix                 = apikitid.ComposePrefix(VocMessage)
-	JobIDPrefix                     = apikitid.ComposePrefix(VocJob)
+	AsyncJobIDPrefix                = apikitid.ComposePrefix(VocJob)
 	ConversationIDPrefix            = apikitid.ComposePrefix(VocConversation)
 	ConversationParticipantIDPrefix = apikitid.ComposePrefix(VocConversation, VocPart)
 	MessagingGroupIDPrefix          = apikitid.ComposePrefix(VocConversation, VocGroup)
@@ -530,4 +545,32 @@ var (
 	SupportRouteIDPrefix            = apikitid.ComposePrefix(VocSupport, VocRoute)
 	ReplyDraftIDPrefix              = apikitid.ComposePrefix(VocReply, VocDraft)
 	ConversationLinkIDPrefix        = apikitid.ComposePrefix(VocConversation, VocLink)
+
+	// forge.1 resources, registered up front so the units that build them never edit this list. A resource renamed from an older table (work center from department, supplier item from supplier material, device from scanning station) keeps its rows' existing IDs; only new rows take the new prefix. Bills and supplier credits are invoices and credit notes read by the other party, so they share those IDs.
+	JobIDPrefix                 = apikitid.ComposePrefix(VocProduction, VocJob)
+	WorkOrderIDPrefix           = apikitid.ComposePrefix(VocWork, VocOrder)
+	ManufacturingMethodIDPrefix = apikitid.ComposePrefix(VocProduction, VocMethod)
+	MethodOperationIDPrefix     = apikitid.ComposePrefix(VocMethod, VocOperation)
+	MethodMaterialIDPrefix      = apikitid.ComposePrefix(VocMethod, VocMaterial)
+	PriceListIDPrefix           = apikitid.ComposePrefix(VocPrice, VocList)
+	PriceListRuleIDPrefix       = apikitid.ComposePrefix(VocPrice, VocList, VocRule)
+	CreditNoteIDPrefix          = apikitid.ComposePrefix(VocCredit, VocNote)
+	PaymentIDPrefix             = apikitid.ComposePrefix(VocPayment)
+	ApplicationIDPrefix         = apikitid.ComposePrefix(VocApplication)
+	SupplierItemIDPrefix        = apikitid.ComposePrefix(VocSupplier, VocItem)
+	InventoryMovementIDPrefix   = apikitid.ComposePrefix(VocInventory, VocMovement)
+	LotSizeDefaultIDPrefix      = apikitid.ComposePrefix(VocLot, VocSize)
+	BatchScanIDPrefix           = apikitid.ComposePrefix(VocBatch, VocScanning)
+	WorkCenterIDPrefix          = apikitid.ComposePrefix(VocWork, VocCenter)
+	DeviceIDPrefix              = apikitid.ComposePrefix(VocDevice)
+	DevicePairingIDPrefix       = apikitid.ComposePrefix(VocDevice, VocPairing)
+	NoteIDPrefix                = apikitid.ComposePrefix(VocNote)
+	SubscriptionIDPrefix        = apikitid.ComposePrefix(VocSubscription)
+	AgentIDPrefix               = apikitid.ComposePrefix(VocAgent)
+	AgentVersionIDPrefix        = apikitid.ComposePrefix(VocAgent, VocVersion)
+	ToolIDPrefix                = apikitid.ComposePrefix(VocTool)
+	ToolCallIDPrefix            = apikitid.ComposePrefix(VocTool, VocCall)
+	AgentSignUpIDPrefix         = apikitid.ComposePrefix(VocAgent, VocRegistration)
+	RoleTemplateIDPrefix        = apikitid.ComposePrefix(VocRole, VocTemplate)
+	DemandAdjustmentIDPrefix    = apikitid.ComposePrefix(VocDemand, VocAdjustment)
 )

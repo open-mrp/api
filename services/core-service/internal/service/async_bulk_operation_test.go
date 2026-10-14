@@ -162,7 +162,7 @@ func (suite *AsyncBulkEngineTestSuite) startedKey() {
 // the requested work.
 func (suite *AsyncBulkEngineTestSuite) TestEnqueue_RecordsResolvedRowsOnAJob() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 
 	suite.accountUserRepo.EXPECT().ResolveAccountUserID(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -196,7 +196,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_RecordsResolvedRowsOnAJob() {
 // rather than leaving created_by empty — retrieve-job expands it as an actor.
 func (suite *AsyncBulkEngineTestSuite) TestEnqueue_AttributesAnAPIKeyAsCreatedBy() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	actorID := genTestID(suite.T(), id.APIKeyIDPrefix)
 	roleCode := string(constants.RoleTypeAdmin)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
@@ -252,7 +252,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_ValidationFailureRaisesNoJob(
 // A replay hands back the job the first attempt raised, even when the references it used are gone: the key is read before anything resolves.
 func (suite *AsyncBulkEngineTestSuite) TestEnqueue_ReplayDoesNotResolveAgain() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 
 	code := 202
@@ -299,7 +299,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_EmptyRejected() {
 func expectInlineJobPayloads(t *testing.T, jobSvc *servicemock.MockJobSvc) {
 	jobSvc.EXPECT().StageJobItems(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, items json.RawMessage) (*domain.StagedJobItems, *apierror.APIError) {
-			return &domain.StagedJobItems{JobID: genTestID(t, id.JobIDPrefix), JobItems: items}, nil
+			return &domain.StagedJobItems{JobID: genTestID(t, id.AsyncJobIDPrefix), JobItems: items}, nil
 		}).AnyTimes()
 	jobSvc.EXPECT().GetJobItems(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, job *domain.Job) (json.RawMessage, *apierror.APIError) {
@@ -321,7 +321,7 @@ func (suite *AsyncBulkEngineTestSuite) loadJob(jobID, accountID string, rows []f
 // the write and completing with the results the write produced.
 func (suite *AsyncBulkEngineTestSuite) TestExecute_WritesRowsThenCompletesWithResults() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 	rows := []fakeRow{{Name: "a"}}
 
@@ -367,7 +367,7 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_WritesRowsThenCompletesWithRe
 // one gets swallowed.
 func (suite *AsyncBulkEngineTestSuite) TestExecute_AfterCommitFailureLeavesTheJobCompleted() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 
 	suite.loadJob(jobID, accountID, []fakeRow{{Name: "a"}}, nil)
@@ -412,7 +412,7 @@ func failedRows(results []domain.RowResult) []domain.RowResult {
 // and the job is completed (not failed).
 func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithErrors() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 
 	suite.loadJob(jobID, accountID, []fakeRow{{Name: "a"}, {Name: "b"}}, nil)
@@ -453,7 +453,7 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithEr
 // outside the rolled-back transaction.
 func (suite *AsyncBulkEngineTestSuite) TestExecute_WriteFailureFailsTheJob() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 	writeErr := apierror.NewValidationError("write failed")
 
@@ -476,7 +476,7 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_WriteFailureFailsTheJob() {
 // to run the spec would fail this test.
 func (suite *AsyncBulkEngineTestSuite) TestExecute_SettledJobIsSkipped() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
-	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
 	ctx := internalProductionStepCtx(accountID)
 
 	completedAt := time.Now().UTC()

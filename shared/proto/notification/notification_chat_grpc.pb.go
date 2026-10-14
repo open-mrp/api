@@ -26,6 +26,7 @@ const (
 	ChatService_CreateConversation_FullMethodName          = "/notification.ChatService/CreateConversation"
 	ChatService_ListConversations_FullMethodName           = "/notification.ChatService/ListConversations"
 	ChatService_GetConversation_FullMethodName             = "/notification.ChatService/GetConversation"
+	ChatService_DeleteConversation_FullMethodName          = "/notification.ChatService/DeleteConversation"
 	ChatService_BatchGetConversations_FullMethodName       = "/notification.ChatService/BatchGetConversations"
 	ChatService_ContactSupport_FullMethodName              = "/notification.ChatService/ContactSupport"
 	ChatService_GetSupportAvailability_FullMethodName      = "/notification.ChatService/GetSupportAvailability"
@@ -91,6 +92,8 @@ type ChatServiceClient interface {
 	ListConversations(ctx context.Context, in *ListConversationsRequest, opts ...grpc.CallOption) (*ListConversationsResponse, error)
 	// GetConversation returns one conversation (with participants) the caller belongs to.
 	GetConversation(ctx context.Context, in *GetConversationRequest, opts ...grpc.CallOption) (*ConversationInfo, error)
+	// Permanently deletes a conversation the caller shares with no other person.
+	DeleteConversation(ctx context.Context, in *DeleteConversationRequest, opts ...grpc.CallOption) (*ChatAck, error)
 	// BatchGetConversations returns the requested conversations the caller belongs to (for ?include= expansion). Conversations the caller cannot access are omitted.
 	BatchGetConversations(ctx context.Context, in *BatchGetConversationsRequest, opts ...grpc.CallOption) (*BatchGetConversationsResponse, error)
 	// ContactSupport returns (creating if needed) the calling customer's support conversation.
@@ -225,6 +228,16 @@ func (c *chatServiceClient) GetConversation(ctx context.Context, in *GetConversa
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConversationInfo)
 	err := c.cc.Invoke(ctx, ChatService_GetConversation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) DeleteConversation(ctx context.Context, in *DeleteConversationRequest, opts ...grpc.CallOption) (*ChatAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChatAck)
+	err := c.cc.Invoke(ctx, ChatService_DeleteConversation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -771,6 +784,8 @@ type ChatServiceServer interface {
 	ListConversations(context.Context, *ListConversationsRequest) (*ListConversationsResponse, error)
 	// GetConversation returns one conversation (with participants) the caller belongs to.
 	GetConversation(context.Context, *GetConversationRequest) (*ConversationInfo, error)
+	// Permanently deletes a conversation the caller shares with no other person.
+	DeleteConversation(context.Context, *DeleteConversationRequest) (*ChatAck, error)
 	// BatchGetConversations returns the requested conversations the caller belongs to (for ?include= expansion). Conversations the caller cannot access are omitted.
 	BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error)
 	// ContactSupport returns (creating if needed) the calling customer's support conversation.
@@ -889,6 +904,9 @@ func (UnimplementedChatServiceServer) ListConversations(context.Context, *ListCo
 }
 func (UnimplementedChatServiceServer) GetConversation(context.Context, *GetConversationRequest) (*ConversationInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConversation not implemented")
+}
+func (UnimplementedChatServiceServer) DeleteConversation(context.Context, *DeleteConversationRequest) (*ChatAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteConversation not implemented")
 }
 func (UnimplementedChatServiceServer) BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetConversations not implemented")
@@ -1120,6 +1138,24 @@ func _ChatService_GetConversation_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).GetConversation(ctx, req.(*GetConversationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_DeleteConversation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteConversationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).DeleteConversation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_DeleteConversation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).DeleteConversation(ctx, req.(*DeleteConversationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2096,6 +2132,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConversation",
 			Handler:    _ChatService_GetConversation_Handler,
+		},
+		{
+			MethodName: "DeleteConversation",
+			Handler:    _ChatService_DeleteConversation_Handler,
 		},
 		{
 			MethodName: "BatchGetConversations",

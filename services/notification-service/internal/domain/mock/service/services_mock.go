@@ -415,18 +415,18 @@ func (mr *MockConversationSvcMockRecorder) Leave(ctx, conversationID any) *gomoc
 }
 
 // ListBlocks mocks base method.
-func (m *MockConversationSvc) ListBlocks(ctx context.Context) ([]*domain.MessageBlock, *apierror.APIError) {
+func (m *MockConversationSvc) ListBlocks(ctx context.Context, page domain.PageRequest) (domain.Page[*domain.MessageBlock], *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListBlocks", ctx)
-	ret0, _ := ret[0].([]*domain.MessageBlock)
+	ret := m.ctrl.Call(m, "ListBlocks", ctx, page)
+	ret0, _ := ret[0].(domain.Page[*domain.MessageBlock])
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListBlocks indicates an expected call of ListBlocks.
-func (mr *MockConversationSvcMockRecorder) ListBlocks(ctx any) *gomock.Call {
+func (mr *MockConversationSvcMockRecorder) ListBlocks(ctx, page any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBlocks", reflect.TypeOf((*MockConversationSvc)(nil).ListBlocks), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBlocks", reflect.TypeOf((*MockConversationSvc)(nil).ListBlocks), ctx, page)
 }
 
 // ListContacts mocks base method.
@@ -445,18 +445,18 @@ func (mr *MockConversationSvcMockRecorder) ListContacts(ctx, query any) *gomock.
 }
 
 // ListConversationLinks mocks base method.
-func (m *MockConversationSvc) ListConversationLinks(ctx context.Context, conversationID string) ([]*domain.ConversationLink, *apierror.APIError) {
+func (m *MockConversationSvc) ListConversationLinks(ctx context.Context, conversationID string, page domain.PageRequest) (domain.Page[*domain.ConversationLink], *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListConversationLinks", ctx, conversationID)
-	ret0, _ := ret[0].([]*domain.ConversationLink)
+	ret := m.ctrl.Call(m, "ListConversationLinks", ctx, conversationID, page)
+	ret0, _ := ret[0].(domain.Page[*domain.ConversationLink])
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListConversationLinks indicates an expected call of ListConversationLinks.
-func (mr *MockConversationSvcMockRecorder) ListConversationLinks(ctx, conversationID any) *gomock.Call {
+func (mr *MockConversationSvcMockRecorder) ListConversationLinks(ctx, conversationID, page any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConversationLinks", reflect.TypeOf((*MockConversationSvc)(nil).ListConversationLinks), ctx, conversationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConversationLinks", reflect.TypeOf((*MockConversationSvc)(nil).ListConversationLinks), ctx, conversationID, page)
 }
 
 // ListConversations mocks base method.
@@ -520,18 +520,18 @@ func (mr *MockConversationSvcMockRecorder) ListMessages(ctx, input any) *gomock.
 }
 
 // ListMessagingGroups mocks base method.
-func (m *MockConversationSvc) ListMessagingGroups(ctx context.Context) ([]*domain.MessagingGroup, *apierror.APIError) {
+func (m *MockConversationSvc) ListMessagingGroups(ctx context.Context, page domain.PageRequest) (domain.Page[*domain.MessagingGroup], *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListMessagingGroups", ctx)
-	ret0, _ := ret[0].([]*domain.MessagingGroup)
+	ret := m.ctrl.Call(m, "ListMessagingGroups", ctx, page)
+	ret0, _ := ret[0].(domain.Page[*domain.MessagingGroup])
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListMessagingGroups indicates an expected call of ListMessagingGroups.
-func (mr *MockConversationSvcMockRecorder) ListMessagingGroups(ctx any) *gomock.Call {
+func (mr *MockConversationSvcMockRecorder) ListMessagingGroups(ctx, page any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessagingGroups", reflect.TypeOf((*MockConversationSvc)(nil).ListMessagingGroups), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessagingGroups", reflect.TypeOf((*MockConversationSvc)(nil).ListMessagingGroups), ctx, page)
 }
 
 // ListReplyDrafts mocks base method.

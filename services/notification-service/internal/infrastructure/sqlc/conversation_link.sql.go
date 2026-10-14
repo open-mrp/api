@@ -99,3 +99,63 @@ func (q *Queries) ListConversationLinks(ctx context.Context, arg ListConversatio
 	}
 	return items, nil
 }
+
+const listConversationLinksPage = `-- name: ListConversationLinksPage :many
+SELECT id, account_id, conversation_id, resource_type, resource_id, created_by_participant_id, created_at FROM conversation_link
+WHERE conversation_id = ? AND account_id = ?
+  AND (
+    ? IS NULL
+    OR created_at > ?
+    OR (created_at = ? AND id > ?)
+  )
+ORDER BY created_at ASC, id ASC
+LIMIT ?
+`
+
+type ListConversationLinksPageParams struct {
+	ConversationID  string
+	AccountID       string
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+// One keyset page of a conversation's links, oldest first.
+func (q *Queries) ListConversationLinksPage(ctx context.Context, arg ListConversationLinksPageParams) ([]ConversationLink, error) {
+	rows, err := q.db.QueryContext(ctx, listConversationLinksPage,
+		arg.ConversationID,
+		arg.AccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ConversationLink
+	for rows.Next() {
+		var i ConversationLink
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.ConversationID,
+			&i.ResourceType,
+			&i.ResourceID,
+			&i.CreatedByParticipantID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

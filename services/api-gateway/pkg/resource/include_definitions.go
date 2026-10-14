@@ -976,7 +976,15 @@ func init() {
 		ObjectType: constants.ObjectTypeEmailInbox,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
+			{Key: "group", ObjectType: constants.ObjectTypeMessagingGroup},
 			{Key: "agent_config", ObjectType: constants.ObjectTypeAgentDefinition},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeEmailSender,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
 		},
 	})
 }

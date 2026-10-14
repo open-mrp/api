@@ -10,37 +10,29 @@ import (
 
 const SampleEmailDomainID = "emdom_2rk3omr8vshb"
 
-// A domain registered with the email bridge for sending and receiving mail.
+// A domain you send email from.
 //
-// After registration the domain starts in `pending`; publish the returned DKIM records, then poll the verify action until it flips to `verified`.
+// Publish `dns_records` at your DNS provider. Verification runs automatically; Verify checks now.
 type EmailDomain struct {
 	// Email domain ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_domain"`
-	// The fully-qualified domain name (e.g. `support.acme.com`).
+	// The fully qualified domain name, such as `support.acme.com`. Unique across OpenMRP, case-insensitive.
 	Domain string `json:"domain" validate:"required"`
 	// Verification status.
 	//
-	// - `pending`: registered and awaiting DKIM confirmation.
-	// - `verified`: DKIM confirmed; the domain can send mail.
+	// - `pending`: waiting for the DNS records to be published. Pending domains are checked automatically.
+	// - `verified`: the records are in place; the domain can send mail.
 	// - `failed`: verification could not be completed.
 	//
 	// Inboxes can only be created on a `verified` domain.
 	Status constants.EmailDomainStatus `json:"status" validate:"required"`
-	// The DKIM tokens that must be published in your DNS before the domain can be verified.
+	// The DNS records to publish at your DNS provider: one CNAME per DKIM signing key, then the MX and TXT (SPF) records of the bounce subdomain.
 	//
-	// Publish each token as a CNAME record on the domain, then call the verify action to confirm them.
-	DkimTokens []string `json:"dkim_tokens"`
-	// The subdomain used as the envelope return path for mail sent from this domain.
-	//
-	// Publishing the two records below makes the return path match the sender address. Until you do, mail clients show your mail as coming from your address "via amazonses.com".
-	MailFromDomain *string `json:"mail_from_domain"`
-	// The MX record to publish on `mail_from_domain`, for delivery of bounces and complaints.
-	MailFromMxRecord *string `json:"mail_from_mx_record"`
-	// The SPF record to publish as a TXT record on `mail_from_domain`.
-	MailFromSpfRecord *string `json:"mail_from_spf_record"`
-	// When the domain's DKIM verification was confirmed.
+	// Until the bounce records are published, mail clients may show your mail as sent "via amazonses.com".
+	DNSRecords []EmailDNSRecord `json:"dns_records" validate:"required"`
+	// When the domain was verified.
 	VerifiedAt *time.Time `json:"verified_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -48,14 +40,28 @@ type EmailDomain struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// A DNS record to publish for an email domain.
+type EmailDNSRecord struct {
+	// The record type: `CNAME`, `MX` or `TXT`.
+	Type constants.EmailDNSRecordType `json:"type" validate:"required"`
+	// The record name (host) to publish.
+	Name string `json:"name" validate:"required"`
+	// The record value to publish.
+	Value string `json:"value" validate:"required"`
+}
+
 var SampleEmailDomain = &EmailDomain{
-	ID:         SampleEmailDomainID,
-	Object:     constants.ObjectTypeEmailDomain,
-	Domain:     "support.acme.com",
-	Status:     "pending",
-	DkimTokens: []string{"abc123._domainkey.support.acme.com", "def456._domainkey.support.acme.com"},
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:     SampleEmailDomainID,
+	Object: constants.ObjectTypeEmailDomain,
+	Domain: "support.acme.com",
+	Status: constants.EmailDomainStatusPending,
+	DNSRecords: []EmailDNSRecord{
+		{Type: constants.EmailDNSRecordTypeCNAME, Name: "abc123._domainkey.support.acme.com", Value: "abc123.dkim.amazonses.com"},
+		{Type: constants.EmailDNSRecordTypeMX, Name: "mail.support.acme.com", Value: "10 feedback-smtp.us-east-1.amazonses.com"},
+		{Type: constants.EmailDNSRecordTypeTXT, Name: "mail.support.acme.com", Value: "v=spf1 include:amazonses.com ~all"},
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*EmailDomain) SchemaExample() any {

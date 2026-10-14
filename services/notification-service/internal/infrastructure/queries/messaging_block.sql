@@ -24,3 +24,15 @@ SELECT EXISTS(
 SELECT * FROM messaging_block
 WHERE blocker_account_user_id = ?
 ORDER BY created_at DESC;
+
+-- name: ListBlocksPage :many
+-- One keyset page of the caller's blocks, newest first.
+SELECT * FROM messaging_block
+WHERE blocker_account_user_id = sqlc.arg('blocker_account_user_id')
+  AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR created_at < sqlc.narg('cursor_created_at')
+    OR (created_at = sqlc.narg('cursor_created_at') AND id < sqlc.narg('cursor_id'))
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?;

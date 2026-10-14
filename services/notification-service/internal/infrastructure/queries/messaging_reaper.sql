@@ -46,14 +46,3 @@ LIMIT ?;
 -- Deletes a single attachment row after its S3 object has been removed.
 DELETE FROM message_attachment WHERE id = ?;
 
--- name: PurgeTombstonedMessages :execrows
--- Hard-deletes messages tombstoned longer than the retention window, but only once all their
--- attachments are gone (attachments are purged first so their S3 objects are deleted). Messages in
--- conversations under legal hold are exempt until the hold clears. Served by message_purge_idx
--- (deleted_at).
-DELETE FROM message
-WHERE deleted_at IS NOT NULL
-  AND deleted_at < (NOW(3) - INTERVAL ? HOUR)
-  AND NOT EXISTS (SELECT 1 FROM conversation c WHERE c.id = message.conversation_id AND c.legal_hold = 1)
-  AND NOT EXISTS (SELECT 1 FROM message_attachment WHERE message_attachment.message_id = message.id)
-LIMIT ?;

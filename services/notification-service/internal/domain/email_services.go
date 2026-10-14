@@ -9,25 +9,27 @@ import (
 // EmailBridgeSvc owns the self-serve email-domain verification flow and inbox CRUD that back the chat↔email bridge. All methods are account-scoped via the caller identity.
 type EmailBridgeSvc interface {
 	CreateDomain(ctx context.Context, domain string) (*EmailDomain, *apierror.APIError)
-	ListDomains(ctx context.Context) ([]*EmailDomain, *apierror.APIError)
+	ListDomains(ctx context.Context, page PageRequest) (Page[*EmailDomain], *apierror.APIError)
 	GetDomain(ctx context.Context, id string) (*EmailDomain, *apierror.APIError)
 	// VerifyDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
 	VerifyDomain(ctx context.Context, id string) (*EmailDomain, *apierror.APIError)
 	// DeleteDomain deregisters a domain (deleting its SES identity) once it has no inboxes bound to it.
 	DeleteDomain(ctx context.Context, id string) *apierror.APIError
+	// RecheckPendingDomains verifies up to limit pending domains across every account, least recently checked first, and returns how many became verified.
+	RecheckPendingDomains(ctx context.Context, limit int32) (int, *apierror.APIError)
 
 	CreateInbox(ctx context.Context, input CreateEmailInboxInput) (*EmailInbox, *apierror.APIError)
-	ListInboxes(ctx context.Context) ([]*EmailInbox, *apierror.APIError)
+	ListInboxes(ctx context.Context, page PageRequest) (Page[*EmailInbox], *apierror.APIError)
 	GetInbox(ctx context.Context, id string) (*EmailInbox, *apierror.APIError)
 	UpdateInbox(ctx context.Context, id string, input UpdateEmailInboxInput) (*EmailInbox, *apierror.APIError)
 	DeleteInbox(ctx context.Context, id string) *apierror.APIError
 
 	// GetSender returns the outbound identity the account's merchant-facing mail sends as. Returns a not-found error when none is configured; that mail then sends from the platform address.
 	GetSender(ctx context.Context) (*AccountEmailSender, *apierror.APIError)
-	// SetSender configures the account's outbound identity on one of its verified domains.
-	SetSender(ctx context.Context, input UpsertAccountEmailSenderInput) (*AccountEmailSender, *apierror.APIError)
-	// DeleteSender clears the account's outbound identity, returning its mail to the platform address.
-	DeleteSender(ctx context.Context) *apierror.APIError
+	// UpdateSender changes the account's outbound identity, creating it on one of its verified domains when none exists.
+	UpdateSender(ctx context.Context, input UpdateAccountEmailSenderInput) (*AccountEmailSender, *apierror.APIError)
+	// DeleteSender clears the account's outbound identity, returning its mail to the platform address, and returns the deleted sender's ID.
+	DeleteSender(ctx context.Context) (string, *apierror.APIError)
 }
 
 // EmailIdentityProvider abstracts the SES domain-identity operations behind the self-serve verification flow: registering a customer domain (enabling DKIM, returning the CNAME tokens the customer must publish) and polling whether SES has confirmed it.

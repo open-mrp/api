@@ -88,10 +88,15 @@ func (r *emailDomainRepoImpl) GetByDomain(ctx context.Context, dom string) (*dom
 	return emailDomainFromRow(row), nil
 }
 
-func (r *emailDomainRepoImpl) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailDomain, *apierror.APIError) {
-	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.list_by_account")
+func (r *emailDomainRepoImpl) ListPage(ctx context.Context, accountID string, page domain.KeysetPage) ([]*domain.EmailDomain, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.list_page")
 	defer span.End()
-	rows, err := r.db.ListEmailDomainsByAccount(ctx, accountID)
+	rows, err := r.db.ListEmailDomainsPage(ctx, sqlc.ListEmailDomainsPageParams{
+		AccountID:       accountID,
+		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
+		CursorID:        db.NullStringPtr(page.CursorID),
+		Limit:           page.Limit,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -100,6 +105,29 @@ func (r *emailDomainRepoImpl) ListByAccount(ctx context.Context, accountID strin
 		out = append(out, emailDomainFromRow(row))
 	}
 	return out, nil
+}
+
+func (r *emailDomainRepoImpl) ListPending(ctx context.Context, limit int32) ([]*domain.EmailDomain, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.list_pending")
+	defer span.End()
+	rows, err := r.db.ListPendingEmailDomains(ctx, limit)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.EmailDomain, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, emailDomainFromRow(row))
+	}
+	return out, nil
+}
+
+func (r *emailDomainRepoImpl) Touch(ctx context.Context, id string) *apierror.APIError {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.touch")
+	defer span.End()
+	if apiErr := db.MapSQLError(r.db.TouchEmailDomain(ctx, id)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *emailDomainRepoImpl) MarkVerified(ctx context.Context, id, accountID string) *apierror.APIError {
@@ -307,10 +335,15 @@ func (r *emailInboxRepoImpl) GetByIDSystem(ctx context.Context, id string) (*dom
 	return emailInboxFromRow(row), nil
 }
 
-func (r *emailInboxRepoImpl) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailInbox, *apierror.APIError) {
-	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.list_by_account")
+func (r *emailInboxRepoImpl) ListPage(ctx context.Context, accountID string, page domain.KeysetPage) ([]*domain.EmailInbox, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.list_page")
 	defer span.End()
-	rows, err := r.db.ListEmailInboxesByAccount(ctx, accountID)
+	rows, err := r.db.ListEmailInboxesPage(ctx, sqlc.ListEmailInboxesPageParams{
+		AccountID:       accountID,
+		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
+		CursorID:        db.NullStringPtr(page.CursorID),
+		Limit:           page.Limit,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

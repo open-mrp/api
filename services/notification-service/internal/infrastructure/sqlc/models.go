@@ -516,6 +516,17 @@ type Batch struct {
 	LocationID        sql.NullString
 }
 
+type BatchCountAdjustment struct {
+	ID             string
+	AccountID      string
+	BatchID        string
+	ClosingBatchID string
+	PreviousValue  string
+	CountedValue   string
+	UnitID         string
+	CreatedAt      time.Time
+}
+
 type BatchFlow struct {
 	A string
 	B string
@@ -603,28 +614,29 @@ type Consumption struct {
 }
 
 type Conversation struct {
-	ID                     string
-	AccountID              string
-	Type                   string
-	Audience               string
-	Title                  sql.NullString
-	GroupID                sql.NullString
-	TopicResourceType      sql.NullString
-	TopicResourceID        sql.NullString
-	CreatedByParticipantID sql.NullString
-	NextSequence           int64
-	LastMessageID          sql.NullString
-	LastMessageAt          sql.NullTime
-	IsArchived             bool
-	LegalHold              bool
-	WorkflowStatus         sql.NullString
-	AssigneeResourceType   sql.NullString
-	AssigneeResourceID     sql.NullString
-	EmailInboxID           sql.NullString
-	EmailExternalAddress   sql.NullString
-	Metadata               db.NullableRawMessage
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                      string
+	AccountID               string
+	Type                    string
+	Audience                string
+	Title                   sql.NullString
+	GroupID                 sql.NullString
+	TopicResourceType       sql.NullString
+	TopicResourceID         sql.NullString
+	CreatedByParticipantID  sql.NullString
+	NextSequence            int64
+	LastMessageID           sql.NullString
+	LastMessageAt           sql.NullTime
+	IsArchived              bool
+	LegalHold               bool
+	WorkflowStatus          sql.NullString
+	AssigneeResourceType    sql.NullString
+	AssigneeResourceID      sql.NullString
+	EmailInboxID            sql.NullString
+	EmailExternalAddress    sql.NullString
+	Metadata                db.NullableRawMessage
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	ContinuesConversationID sql.NullString
 }
 
 type ConversationDmKey struct {

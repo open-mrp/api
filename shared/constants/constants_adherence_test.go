@@ -295,6 +295,7 @@ var typeRegistry = map[string]any{
 	"TransactionAllocationStatus":     TransactionAllocationStatus(""),
 	"EmailInboxStatus":                EmailInboxStatus(""),
 	"EmailDomainStatus":               EmailDomainStatus(""),
+	"EmailDNSRecordType":              EmailDNSRecordType(""),
 	"DuplicateCheckType":              DuplicateCheckType(""),
 	"ItemReconcileType":               ItemReconcileType(""),
 	"OnboardingStatus":                OnboardingStatus(""),

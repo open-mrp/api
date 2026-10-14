@@ -6,8 +6,9 @@ package chatmap
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -293,6 +294,37 @@ func AttachmentFromProto(ctx context.Context, a *pb.AttachmentInfo) apiresource.
 			apiresource.NewEntity(*a.ResourceId, constants.ObjectType(*a.ResourceType), nil, nil))
 	}
 	return result
+}
+
+// MessagingGroupFromProto maps a roster proto to its API resource. Member actors carry id + type only; display names are hydrated separately.
+func MessagingGroupFromProto(g *pb.MessagingGroupInfo) apiresource.MessagingGroup {
+	members := make([]apiresource.MessagingGroupMember, 0, len(g.Members))
+	for _, m := range g.Members {
+		var actor *apiresource.Actor
+		switch m.MemberType {
+		case string(constants.ActorTypeAgent):
+			if m.AgentConfigId != nil {
+				actor = apiresource.NewActor(*m.AgentConfigId, constants.ActorTypeAgent, nil, nil)
+			}
+		default:
+			if m.AccountUserId != nil {
+				actor = apiresource.NewActor(*m.AccountUserId, constants.ActorTypeUser, nil, nil)
+			}
+		}
+		members = append(members, apiresource.MessagingGroupMember{
+			ID:     m.Id,
+			Object: constants.ObjectTypeMessagingGroupMember,
+			Actor:  actor,
+		})
+	}
+	return apiresource.MessagingGroup{
+		ID:        g.Id,
+		Object:    constants.ObjectTypeMessagingGroup,
+		Name:      g.Name,
+		Members:   apiresource.NewList(members, apiresource.PageInfo{}),
+		CreatedAt: TsToTime(g.CreatedAt),
+		UpdatedAt: TsToTime(g.UpdatedAt),
+	}
 }
 
 // TsToTime converts a proto timestamp to time.Time (zero value when nil).

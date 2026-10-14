@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
@@ -103,27 +104,32 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 	}
 }
 
-func (s *conversationSvcImpl) ListMessagingGroups(ctx context.Context) ([]*domain.MessagingGroup, *apierror.APIError) {
+func (s *conversationSvcImpl) ListMessagingGroups(ctx context.Context, req domain.PageRequest) (domain.Page[*domain.MessagingGroup], *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.list")
 	defer span.End()
 
 	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionRead)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.MessagingGroup]{}, tracing.Trace(span, apiErr)
+	}
+	keyset, limit, apiErr := keysetPage(req)
+	if apiErr != nil {
+		return domain.Page[*domain.MessagingGroup]{}, tracing.Trace(span, apiErr)
 	}
 	groupRepo := s.repoFactory.NewMessagingGroupRepo()
-	groups, apiErr := groupRepo.List(ctx, accountID)
+	groups, apiErr := groupRepo.ListPage(ctx, accountID, keyset)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.MessagingGroup]{}, tracing.Trace(span, apiErr)
 	}
-	for _, g := range groups {
+	page := finishPage(groups, limit, func(g *domain.MessagingGroup) (time.Time, string) { return g.UpdatedAt, g.ID })
+	for _, g := range page.Items {
 		members, apiErr := groupRepo.ListMembers(ctx, g.ID)
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+			return domain.Page[*domain.MessagingGroup]{}, tracing.Trace(span, apiErr)
 		}
 		g.Members = members
 	}
-	return groups, nil
+	return page, nil
 }
 
 func (s *conversationSvcImpl) GetMessagingGroup(ctx context.Context, groupID string) (*domain.MessagingGroup, *apierror.APIError) {

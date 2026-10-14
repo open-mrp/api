@@ -37,7 +37,7 @@ func newRouter(cfg *BaseConfig) *router {
 		TrustedProxyHops: cfg.TrustedProxyHops,
 		SkipPaths:        []string{"/healthz"},
 		MaxBodyBytes:     omrpctx.MaxLoggedBodyBytes,
-	})(gatewaymw.RequestedVersion(versiontransforms.RoutePreview9Jobs(r.Router)))
+	})(gatewaymw.RequestedVersion(versiontransforms.RoutePreview9Jobs(versiontransforms.RoutePreview9Messaging(r.Router))))
 	return r
 }
 

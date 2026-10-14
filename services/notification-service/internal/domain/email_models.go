@@ -35,6 +35,43 @@ type EmailDomain struct {
 	UpdatedAt         time.Time
 }
 
+// DNSRecord is one record a customer publishes at their DNS provider.
+type DNSRecord struct {
+	Type  string
+	Name  string
+	Value string
+}
+
+const (
+	DNSRecordTypeCNAME = "CNAME"
+	DNSRecordTypeMX    = "MX"
+	DNSRecordTypeTXT   = "TXT"
+)
+
+// sesDKIMHost is the zone Easy DKIM tokens resolve under, the same in every SES region.
+const sesDKIMHost = "dkim.amazonses.com"
+
+// DNSRecords lists every record the customer publishes for the domain: one DKIM CNAME per token, then the MAIL FROM MX and SPF records once MAIL FROM is configured.
+func (d *EmailDomain) DNSRecords() []DNSRecord {
+	records := make([]DNSRecord, 0, len(d.DkimTokens)+2)
+	for _, token := range d.DkimTokens {
+		records = append(records, DNSRecord{
+			Type:  DNSRecordTypeCNAME,
+			Name:  token + "._domainkey." + d.Domain,
+			Value: token + "." + sesDKIMHost,
+		})
+	}
+	if d.MailFromDomain != nil && *d.MailFromDomain != "" {
+		if d.MailFromMXRecord != "" {
+			records = append(records, DNSRecord{Type: DNSRecordTypeMX, Name: *d.MailFromDomain, Value: d.MailFromMXRecord})
+		}
+		if d.MailFromSPFRecord != "" {
+			records = append(records, DNSRecord{Type: DNSRecordTypeTXT, Name: *d.MailFromDomain, Value: d.MailFromSPFRecord})
+		}
+	}
+	return records
+}
+
 // mailFromSubdomainLabel is the label prefixed to a customer's domain for the envelope Return-Path (mail.example.com). A subdomain is required: SES refuses to use a root domain as MAIL FROM when that domain also receives mail, which every bridged domain does.
 const mailFromSubdomainLabel = "mail"
 
@@ -84,6 +121,16 @@ type UpsertAccountEmailSenderInput struct {
 	LocalPart     string
 	FromName      *string
 	ReplyTo       *string
+}
+
+// UpdateAccountEmailSenderInput changes the account's outbound identity, creating it when none exists. Nil fields keep their current values; EmailDomainID and LocalPart are required when creating. A Clear flag removes that optional field.
+type UpdateAccountEmailSenderInput struct {
+	EmailDomainID *string
+	LocalPart     *string
+	FromName      *string
+	ClearFromName bool
+	ReplyTo       *string
+	ClearReplyTo  bool
 }
 
 type EmailInbox struct {

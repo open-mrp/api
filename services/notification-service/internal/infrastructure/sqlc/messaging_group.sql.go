@@ -223,6 +223,63 @@ func (q *Queries) ListMessagingGroups(ctx context.Context, accountID string) ([]
 	return items, nil
 }
 
+const listMessagingGroupsPage = `-- name: ListMessagingGroupsPage :many
+SELECT id, account_id, name, created_by_account_user_id, created_at, updated_at FROM messaging_group
+WHERE account_id = ?
+  AND (
+    ? IS NULL
+    OR updated_at < ?
+    OR (updated_at = ? AND id < ?)
+  )
+ORDER BY updated_at DESC, id DESC
+LIMIT ?
+`
+
+type ListMessagingGroupsPageParams struct {
+	AccountID       string
+	CursorUpdatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+// One keyset page of an account's rosters, most recently updated first.
+func (q *Queries) ListMessagingGroupsPage(ctx context.Context, arg ListMessagingGroupsPageParams) ([]MessagingGroup, error) {
+	rows, err := q.db.QueryContext(ctx, listMessagingGroupsPage,
+		arg.AccountID,
+		arg.CursorUpdatedAt,
+		arg.CursorUpdatedAt,
+		arg.CursorUpdatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MessagingGroup
+	for rows.Next() {
+		var i MessagingGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Name,
+			&i.CreatedByAccountUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const touchMessagingGroup = `-- name: TouchMessagingGroup :exec
 UPDATE messaging_group
 SET updated_at = NOW(3)

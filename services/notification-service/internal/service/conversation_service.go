@@ -3629,15 +3629,23 @@ func (s *conversationSvcImpl) Unblock(ctx context.Context, blockedAccountUserID 
 	return nil
 }
 
-func (s *conversationSvcImpl) ListBlocks(ctx context.Context) ([]*domain.MessageBlock, *apierror.APIError) {
+func (s *conversationSvcImpl) ListBlocks(ctx context.Context, req domain.PageRequest) (domain.Page[*domain.MessageBlock], *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.list_blocks")
 	defer span.End()
 
 	_, callerAcus, _, apiErr := s.caller(ctx)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewBlockRepo().List(ctx, callerAcus)
+	keyset, limit, apiErr := keysetPage(req)
+	if apiErr != nil {
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
+	}
+	blocks, apiErr := s.repoFactory.NewBlockRepo().ListPage(ctx, callerAcus, keyset)
+	if apiErr != nil {
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
+	}
+	return finishPage(blocks, limit, func(b *domain.MessageBlock) (time.Time, string) { return b.CreatedAt, b.ID }), nil
 }
 
 // ListContacts returns the caller's messaging directory. A customer relation actor never sees the individual staff of the vendor account — they get a single "support" contact. Internal actors get the active account_users in their account (including themselves, since a self-DM is allowed), filtered by a case-insensitive name substring.

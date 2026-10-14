@@ -24,6 +24,18 @@ SELECT * FROM email_inbox
 WHERE account_id = ?
 ORDER BY created_at DESC, id DESC;
 
+-- name: ListEmailInboxesPage :many
+-- One keyset page of an account's inboxes, newest first.
+SELECT * FROM email_inbox
+WHERE account_id = sqlc.arg('account_id')
+  AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR created_at < sqlc.narg('cursor_created_at')
+    OR (created_at = sqlc.narg('cursor_created_at') AND id < sqlc.narg('cursor_id'))
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?;
+
 -- name: CountEmailInboxesByDomain :one
 SELECT COUNT(*) FROM email_inbox
 WHERE account_id = ? AND email_domain_id = ?;

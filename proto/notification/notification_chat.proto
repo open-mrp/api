@@ -16,6 +16,8 @@ service ChatService {
   rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
   // GetConversation returns one conversation (with participants) the caller belongs to.
   rpc GetConversation(GetConversationRequest) returns (ConversationInfo);
+  // Permanently deletes a conversation the caller shares with no other person.
+  rpc DeleteConversation(DeleteConversationRequest) returns (ChatAck);
   // BatchGetConversations returns the requested conversations the caller belongs to (for ?include= expansion). Conversations the caller cannot access are omitted.
   rpc BatchGetConversations(BatchGetConversationsRequest) returns (BatchGetConversationsResponse);
   // ContactSupport returns (creating if needed) the calling customer's support conversation.
@@ -265,7 +267,10 @@ message UnblockRequest {
   string blocked_account_user_id = 1;
 }
 
-message ListBlocksRequest {}
+message ListBlocksRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
 
 message BlockInfo {
   string id = 1;
@@ -277,6 +282,7 @@ message BlockInfo {
 
 message ListBlocksResponse {
   repeated BlockInfo blocks = 1;
+  PageInfo page_info = 2;
 }
 
 message ListContactsRequest {
@@ -344,6 +350,8 @@ message ConversationInfo {
   // The reusable roster (messaging_group.id) this conversation was seeded from, if any. Provenance
   // only — members were snapshotted at create time and are not driven by the group thereafter.
   optional string group_id = 24;
+  // The conversation this one picks up from, if any.
+  optional string continues_conversation_id = 25;
 }
 
 message ParticipantInfo {
@@ -443,6 +451,10 @@ message CreateConversationRequest {
   optional string group_id = 6;
   // Group members to seat with the role each starts with, validated as UpdateParticipantRole validates a role.
   repeated ConversationParticipantRoleInput participants = 7;
+  // The conversation this one picks up from. The caller must be able to read it.
+  optional string continues_conversation_id = 8;
+  // A first message the caller posts as soon as the conversation exists.
+  optional string message_body = 9;
 }
 
 message ConversationParticipantRoleInput {
@@ -454,7 +466,14 @@ message ListConversationsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string type = 3;
+  // active (default) | hidden | all: the caller's own hidden state.
   string status = 4;
+  // Only conversations that also seat any of these account users.
+  repeated string participant_account_user_ids = 5;
+}
+
+message DeleteConversationRequest {
+  string conversation_id = 1;
 }
 
 message ListConversationsResponse {
@@ -570,10 +589,13 @@ message RemoveConversationLinkRequest {
 
 message ListConversationLinksRequest {
   string conversation_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
 }
 
 message ListConversationLinksResponse {
   repeated ConversationLinkInfo links = 1;
+  PageInfo page_info = 2;
 }
 
 message CreateReplyDraftRequest {
@@ -635,10 +657,14 @@ message CreateMessagingGroupRequest {
   repeated string member_agent_config_ids = 3;
 }
 
-message ListMessagingGroupsRequest {}
+message ListMessagingGroupsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
 
 message ListMessagingGroupsResponse {
   repeated MessagingGroupInfo groups = 1;
+  PageInfo page_info = 2;
 }
 
 message GetMessagingGroupRequest {

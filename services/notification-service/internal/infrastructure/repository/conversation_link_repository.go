@@ -58,13 +58,16 @@ func (r *conversationLinkRepoImpl) Delete(ctx context.Context, linkID, conversat
 	return rows > 0, nil
 }
 
-func (r *conversationLinkRepoImpl) List(ctx context.Context, conversationID, accountID string) ([]*domain.ConversationLink, *apierror.APIError) {
-	ctx, span := conversationLinkRepoTracer.Start(ctx, "repository.conversation_link.list")
+func (r *conversationLinkRepoImpl) ListPage(ctx context.Context, conversationID, accountID string, page domain.KeysetPage) ([]*domain.ConversationLink, *apierror.APIError) {
+	ctx, span := conversationLinkRepoTracer.Start(ctx, "repository.conversation_link.list_page")
 	defer span.End()
 
-	rows, err := r.db.ListConversationLinks(ctx, sqlc.ListConversationLinksParams{
-		ConversationID: conversationID,
-		AccountID:      accountID,
+	rows, err := r.db.ListConversationLinksPage(ctx, sqlc.ListConversationLinksPageParams{
+		ConversationID:  conversationID,
+		AccountID:       accountID,
+		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
+		CursorID:        db.NullStringPtr(page.CursorID),
+		Limit:           page.Limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

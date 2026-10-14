@@ -24,7 +24,7 @@ type EmailInbox struct {
 	// - `disabled`: the inbox stays provisioned and keeps its history, but inbound mail is dropped without being threaded.
 	Status constants.EmailInboxStatus `json:"status" validate:"required"`
 	// The domain this inbox belongs to.
-	EmailDomain *EmailDomain `json:"email_domain" validate:"required" expandable:"true"`
+	EmailDomain *EmailDomain `json:"email_domain" expandable:"true"`
 	// The full inbox address (e.g. `support@acme.com`).
 	Address string `json:"address" validate:"required"`
 	// A forwarding address on an OpenMRP-owned domain that also routes to this inbox.
@@ -52,7 +52,7 @@ type EmailInbox struct {
 	// The messaging group (roster) whose members are added to every conversation this inbox opens.
 	//
 	// Its members join each new email thread so the team can read, edit, and approve replies alongside the bound agent. Membership is captured when the thread opens, so later edits to the group only affect conversations opened after the change.
-	GroupID *string `json:"group_id"`
+	Group *MessagingGroup `json:"group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -73,6 +73,7 @@ var SampleEmailInbox = &EmailInbox{
 	Status:             "active",
 	AgentConfig:        SampleAgentDefinition,
 	AgentTriggerPolicy: &sampleEmailInboxTriggerPolicy,
+	Group:              SampleMessagingGroup,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

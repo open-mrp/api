@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -23,6 +24,13 @@ func init() {
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractEmailDomainIDFromInbox,
 				Populate:    populateEmailDomainOnInbox,
+			},
+			{
+				Key:         "group",
+				Target:      constants.ObjectTypeMessagingGroup,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  extractGroupIDFromInbox,
+				Populate:    populateGroupOnInbox,
 			},
 			{
 				Key:         "agent_config",
@@ -52,6 +60,26 @@ func populateEmailDomainOnInbox(ctx context.Context, parent any, loaded map[stri
 	}
 	if v, ok := loaded[id]; ok {
 		i.EmailDomain = v.(*apiresource.EmailDomain)
+	}
+}
+
+func extractGroupIDFromInbox(ctx context.Context, parent any) []string {
+	i := parent.(*apiresource.EmailInbox)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeEmailInbox, i.ID, "group_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateGroupOnInbox(ctx context.Context, parent any, loaded map[string]any) {
+	i := parent.(*apiresource.EmailInbox)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeEmailInbox, i.ID, "group_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		i.Group = v.(*apiresource.MessagingGroup)
 	}
 }
 

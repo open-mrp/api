@@ -10,6 +10,7 @@ package notification;
 option go_package = "shared/proto/notification;notification";
 
 import "google/protobuf/timestamp.proto";
+import "notification/notification_messaging.proto";
 
 service EmailBridgeService {
   // CreateEmailDomain registers a customer-owned domain with SES (Easy DKIM) and returns the DKIM
@@ -95,6 +96,14 @@ message EmailDomainInfo {
   google.protobuf.Timestamp verified_at = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  // Every DNS record the customer publishes for the domain: the DKIM CNAMEs, then the MAIL FROM MX and SPF TXT.
+  repeated EmailDnsRecord dns_records = 12;
+}
+
+message EmailDnsRecord {
+  string type = 1; // CNAME | MX | TXT
+  string name = 2;
+  string value = 3;
 }
 
 message EmailInboxInfo {
@@ -140,10 +149,14 @@ message CreateEmailDomainRequest {
   string domain = 1;
 }
 
-message ListEmailDomainsRequest {}
+message ListEmailDomainsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
 
 message ListEmailDomainsResponse {
   repeated EmailDomainInfo domains = 1;
+  PageInfo page_info = 2;
 }
 
 message GetEmailDomainRequest {
@@ -168,10 +181,14 @@ message CreateEmailInboxRequest {
   optional string group_id = 7;
 }
 
-message ListEmailInboxesRequest {}
+message ListEmailInboxesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
 
 message ListEmailInboxesResponse {
   repeated EmailInboxInfo inboxes = 1;
+  PageInfo page_info = 2;
 }
 
 message GetEmailInboxRequest {
@@ -194,15 +211,21 @@ message DeleteEmailInboxRequest {
 
 message GetEmailSenderRequest {}
 
+// SetEmailSenderRequest updates the account's sender, creating it when none exists. Unset fields keep their
+// current values; email_domain_id and local_part are required when creating.
 message SetEmailSenderRequest {
-  string email_domain_id = 1;
-  string local_part = 2;
+  optional string email_domain_id = 1;
+  optional string local_part = 2;
   optional string from_name = 3;
   optional string reply_to = 4;
+  bool clear_from_name = 5;
+  bool clear_reply_to = 6;
 }
 
 message DeleteEmailSenderRequest {}
 
 message EmailBridgeAck {
   bool ok = 1;
+  // The deleted resource's ID, when the call deleted one.
+  string id = 2;
 }

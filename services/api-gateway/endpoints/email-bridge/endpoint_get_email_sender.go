@@ -29,6 +29,7 @@ func (e *GetEmailSenderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetEmai
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailSender,
+		IncludeConfig:     emailSenderIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError) {
 			return svc.(EmailBridgeSvc).GetSender

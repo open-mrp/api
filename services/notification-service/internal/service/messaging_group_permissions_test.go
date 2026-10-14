@@ -50,7 +50,7 @@ func TestMessagingGroups_RequireTheirMessagingPermission(t *testing.T) {
 			return e
 		}},
 		{"list", "messaging:read", func(s *conversationSvcImpl, ctx context.Context) *apierror.APIError {
-			_, e := s.ListMessagingGroups(ctx)
+			_, e := s.ListMessagingGroups(ctx, domain.PageRequest{})
 			return e
 		}},
 		{"get", "messaging:read", func(s *conversationSvcImpl, ctx context.Context) *apierror.APIError {
@@ -112,14 +112,15 @@ func TestMessagingGroups_PermittedCallerProceeds(t *testing.T) {
 	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
 	notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), "us_caller", "ac_team").Return("acus_caller", nil)
 	groupRepo := repositorymock.NewMockMessagingGroupRepo(ctrl)
-	groupRepo.EXPECT().List(gomock.Any(), "ac_team").Return(nil, nil)
+	groupRepo.EXPECT().ListPage(gomock.Any(), "ac_team", domain.KeysetPage{Limit: 26}).Return(nil, nil)
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewNotificationRepo().Return(notifRepo)
 	factory.EXPECT().NewMessagingGroupRepo().Return(groupRepo)
 	svc := &conversationSvcImpl{repoFactory: factory}
 
-	groups, apiErr := svc.ListMessagingGroups(groupCallerCtx(types.IdentityRelationTypeInternal, "messaging:read"))
+	page, apiErr := svc.ListMessagingGroups(groupCallerCtx(types.IdentityRelationTypeInternal, "messaging:read"), domain.PageRequest{})
 
 	require.Nil(t, apiErr)
-	assert.Empty(t, groups)
+	assert.Empty(t, page.Items)
+	assert.Nil(t, page.NextCursor)
 }

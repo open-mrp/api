@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/mail"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
@@ -151,21 +152,25 @@ func (s *emailBridgeSvcImpl) CreateDomain(ctx context.Context, domainName string
 	return s.withMailFromRecords(dom), nil
 }
 
-func (s *emailBridgeSvcImpl) ListDomains(ctx context.Context) ([]*domain.EmailDomain, *apierror.APIError) {
+func (s *emailBridgeSvcImpl) ListDomains(ctx context.Context, req domain.PageRequest) (domain.Page[*domain.EmailDomain], *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.list_domains")
 	defer span.End()
 	accountID, apiErr := s.accountID(ctx)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.EmailDomain]{}, tracing.Trace(span, apiErr)
 	}
-	domains, apiErr := s.repoFactory.NewEmailDomainRepo().ListByAccount(ctx, accountID)
+	keyset, limit, apiErr := keysetPage(req)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.EmailDomain]{}, tracing.Trace(span, apiErr)
+	}
+	domains, apiErr := s.repoFactory.NewEmailDomainRepo().ListPage(ctx, accountID, keyset)
+	if apiErr != nil {
+		return domain.Page[*domain.EmailDomain]{}, tracing.Trace(span, apiErr)
 	}
 	for _, dom := range domains {
 		s.withMailFromRecords(dom)
 	}
-	return domains, nil
+	return finishPage(domains, limit, func(d *domain.EmailDomain) (time.Time, string) { return d.CreatedAt, d.ID }), nil
 }
 
 func (s *emailBridgeSvcImpl) GetDomain(ctx context.Context, domainID string) (*domain.EmailDomain, *apierror.APIError) {
@@ -193,6 +198,43 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	verified, apiErr := s.verifyDomain(ctx, dom, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return verified, nil
+}
+
+// RecheckPendingDomains is the background half of verification: pending domains are re-checked so a customer who published their records never has to come back and press Verify.
+func (s *emailBridgeSvcImpl) RecheckPendingDomains(ctx context.Context, limit int32) (int, *apierror.APIError) {
+	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.recheck_pending_domains")
+	defer span.End()
+	repo := s.repoFactory.NewEmailDomainRepo()
+	pending, apiErr := repo.ListPending(ctx, limit)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	verified := 0
+	for _, dom := range pending {
+		// Touch first so a domain SES keeps failing on still rotates to the back of the queue.
+		if apiErr := repo.Touch(ctx, dom.ID); apiErr != nil {
+			return verified, tracing.Trace(span, apiErr)
+		}
+		after, apiErr := s.verifyDomain(ctx, dom, dom.AccountID)
+		if apiErr != nil {
+			continue
+		}
+		if after.Status == domain.EmailDomainStatusVerified {
+			verified++
+		}
+	}
+	return verified, nil
+}
+
+// verifyDomain polls SES for one domain, records MAIL FROM and verification when they change, and returns the domain as it now stands.
+func (s *emailBridgeSvcImpl) verifyDomain(ctx context.Context, dom *domain.EmailDomain, accountID string) (*domain.EmailDomain, *apierror.APIError) {
+	domainID := dom.ID
+	var apiErr *apierror.APIError
 	// Verify doubles as the repair path for the best-effort MAIL FROM setup in CreateDomain: a domain
 	// registered before custom MAIL FROM existed, or one whose SES call failed at creation, would
 	// otherwise keep the amazonses.com Return-Path forever with no way to fix it through the API.
@@ -202,7 +244,7 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 	if dom.Status != domain.EmailDomainStatusVerified {
 		markVerified, apiErr = s.identityProvider.DomainVerified(ctx, dom.Domain)
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+			return nil, apiErr
 		}
 	}
 	if mailFrom == nil && !markVerified {
@@ -230,7 +272,7 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeEmailDomain, domainID, audit.ComputeChanges(dom, after))
 	})
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 	return s.withMailFromRecords(verifiedDom), nil
 }
@@ -355,14 +397,22 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.Creat
 	return inbox, nil
 }
 
-func (s *emailBridgeSvcImpl) ListInboxes(ctx context.Context) ([]*domain.EmailInbox, *apierror.APIError) {
+func (s *emailBridgeSvcImpl) ListInboxes(ctx context.Context, req domain.PageRequest) (domain.Page[*domain.EmailInbox], *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.list_inboxes")
 	defer span.End()
 	accountID, apiErr := s.accountID(ctx)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.EmailInbox]{}, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewEmailInboxRepo().ListByAccount(ctx, accountID)
+	keyset, limit, apiErr := keysetPage(req)
+	if apiErr != nil {
+		return domain.Page[*domain.EmailInbox]{}, tracing.Trace(span, apiErr)
+	}
+	inboxes, apiErr := s.repoFactory.NewEmailInboxRepo().ListPage(ctx, accountID, keyset)
+	if apiErr != nil {
+		return domain.Page[*domain.EmailInbox]{}, tracing.Trace(span, apiErr)
+	}
+	return finishPage(inboxes, limit, func(i *domain.EmailInbox) (time.Time, string) { return i.CreatedAt, i.ID }), nil
 }
 
 func (s *emailBridgeSvcImpl) GetInbox(ctx context.Context, inboxID string) (*domain.EmailInbox, *apierror.APIError) {
@@ -481,12 +531,52 @@ func (s *emailBridgeSvcImpl) GetSender(ctx context.Context) (*domain.AccountEmai
 	return sender, nil
 }
 
-func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertAccountEmailSenderInput) (*domain.AccountEmailSender, *apierror.APIError) {
-	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.set_sender")
+func (s *emailBridgeSvcImpl) UpdateSender(ctx context.Context, update domain.UpdateAccountEmailSenderInput) (*domain.AccountEmailSender, *apierror.APIError) {
+	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.update_sender")
 	defer span.End()
 	accountID, apiErr := s.accountID(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	current, apiErr := s.repoFactory.NewAccountEmailSenderRepo().GetByAccount(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	var input domain.UpsertAccountEmailSenderInput
+	if current != nil {
+		input = domain.UpsertAccountEmailSenderInput{EmailDomainID: current.EmailDomainID, LocalPart: current.LocalPart, FromName: current.FromName, ReplyTo: current.ReplyTo}
+	} else {
+		var missing []apierror.FieldError
+		if update.EmailDomainID == nil {
+			missing = append(missing, apierror.Field("email_domain_id", apierror.CodeMissingField, "An email domain is required to set up a sender."))
+		}
+		if update.LocalPart == nil {
+			missing = append(missing, apierror.Field("local_part", apierror.CodeMissingField, "A mailbox name is required to set up a sender."))
+		}
+		if len(missing) > 0 {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Set up a sender with an email domain and a mailbox name.", missing...))
+		}
+	}
+	domainChanged := current == nil
+	if update.EmailDomainID != nil {
+		domainChanged = domainChanged || *update.EmailDomainID != input.EmailDomainID
+		input.EmailDomainID = *update.EmailDomainID
+	}
+	if update.LocalPart != nil {
+		input.LocalPart = *update.LocalPart
+	}
+	switch {
+	case update.ClearFromName:
+		input.FromName = nil
+	case update.FromName != nil:
+		input.FromName = update.FromName
+	}
+	switch {
+	case update.ClearReplyTo:
+		input.ReplyTo = nil
+	case update.ReplyTo != nil:
+		input.ReplyTo = update.ReplyTo
 	}
 
 	input.LocalPart = strings.ToLower(strings.TrimSpace(input.LocalPart))
@@ -510,13 +600,15 @@ func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertA
 		input.ReplyTo = &trimmed
 	}
 
-	// The domain has to be this account's, and verified — SES rejects an identity it has not confirmed, so accepting an unverified one here would bounce every merchant email later instead of failing now.
-	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, input.EmailDomainID, accountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if dom.Status != domain.EmailDomainStatusVerified {
-		return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("email_domain_id", "Verify this domain before sending from it."))
+	// A new domain has to be this account's, and verified — SES rejects an identity it has not confirmed, so accepting an unverified one here would bounce every merchant email later instead of failing now.
+	if domainChanged {
+		dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, input.EmailDomainID, accountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if dom.Status != domain.EmailDomainStatusVerified {
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("email_domain_id", "Verify this domain before sending from it."))
+		}
 	}
 
 	senderID, apiErr := id.GenID(id.EmailSenderIDPrefix, nil)
@@ -554,13 +646,14 @@ func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertA
 	return sender, nil
 }
 
-func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context) *apierror.APIError {
+func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context) (string, *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.delete_sender")
 	defer span.End()
 	accountID, apiErr := s.accountID(ctx)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return "", tracing.Trace(span, apiErr)
 	}
+	var deletedID string
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		repo := f.NewAccountEmailSenderRepo()
 		existing, apiErr := repo.GetByAccount(txCtx, accountID)
@@ -574,12 +667,13 @@ func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context) *apierror.APIErro
 		if !deleted || existing == nil {
 			return apierror.NewNotFoundError("No email sender is configured for this account.")
 		}
+		deletedID = existing.ID
 		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionDelete, constants.ObjectTypeEmailSender, existing.ID, audit.ComputeChanges(existing, (*domain.AccountEmailSender)(nil)))
 	})
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return "", tracing.Trace(span, apiErr)
 	}
-	return nil
+	return deletedID, nil
 }
 
 // isValidLocalPart accepts the conservative subset of RFC 5322 local parts that survives every mail system in practice: letters, digits, and the separators dot, hyphen, underscore and plus, not leading or trailing. Quoted forms and the rarer specials are rejected rather than escaped.

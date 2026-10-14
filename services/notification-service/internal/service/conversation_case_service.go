@@ -244,15 +244,23 @@ func (s *conversationSvcImpl) RemoveConversationLink(ctx context.Context, conver
 }
 
 // ListConversationLinks lists a conversation's secondary business-record links.
-func (s *conversationSvcImpl) ListConversationLinks(ctx context.Context, conversationID string) ([]*domain.ConversationLink, *apierror.APIError) {
+func (s *conversationSvcImpl) ListConversationLinks(ctx context.Context, conversationID string, req domain.PageRequest) (domain.Page[*domain.ConversationLink], *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.list_links")
 	defer span.End()
 
 	accountID, _, apiErr := s.requireCaseAdmin(ctx, conversationID, types.ActionRead)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.ConversationLink]{}, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewConversationLinkRepo().List(ctx, conversationID, accountID)
+	keyset, limit, apiErr := keysetPage(req)
+	if apiErr != nil {
+		return domain.Page[*domain.ConversationLink]{}, tracing.Trace(span, apiErr)
+	}
+	links, apiErr := s.repoFactory.NewConversationLinkRepo().ListPage(ctx, conversationID, accountID, keyset)
+	if apiErr != nil {
+		return domain.Page[*domain.ConversationLink]{}, tracing.Trace(span, apiErr)
+	}
+	return finishPage(links, limit, func(l *domain.ConversationLink) (time.Time, string) { return l.CreatedAt, l.ID }), nil
 }
 
 // ListConversationsByResource lists conversations linked to a business record (topic anchor or link).

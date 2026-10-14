@@ -10,14 +10,17 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to list the account's registered email domains.
-type ListEmailDomainsRequest struct{}
+type ListEmailDomainsRequest struct {
+	object.ListRequest
+}
 
-// Returns the account's registered email domains.
+// Returns a list of your email domains.
 //
-// Every domain is returned in a single response; this list is not paginated.
+// The domains are sorted by creation date, newest first.
 type ListEmailDomainsEndpoint struct{}
 
 func (e *ListEmailDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailDomainsRequest, *apiresource.List[apiresource.EmailDomain]] {

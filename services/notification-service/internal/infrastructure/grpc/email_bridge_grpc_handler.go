@@ -79,15 +79,15 @@ func (h *emailBridgeGRPCHandler) ListEmailDomains(ctx context.Context, req *pb.L
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	domains, apiErr := h.emailBridgeSvc.ListDomains(ctx)
+	page, apiErr := h.emailBridgeSvc.ListDomains(ctx, domain.PageRequest{Cursor: req.Cursor, Limit: req.Limit})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	out := make([]*pb.EmailDomainInfo, 0, len(domains))
-	for _, d := range domains {
+	out := make([]*pb.EmailDomainInfo, 0, len(page.Items))
+	for _, d := range page.Items {
 		out = append(out, emailDomainToProto(d))
 	}
-	return &pb.ListEmailDomainsResponse{Domains: out}, nil
+	return &pb.ListEmailDomainsResponse{Domains: out, PageInfo: pageInfoToProto(page.NextCursor)}, nil
 }
 
 func (h *emailBridgeGRPCHandler) GetEmailDomain(ctx context.Context, req *pb.GetEmailDomainRequest) (*pb.EmailDomainInfo, error) {
@@ -145,15 +145,15 @@ func (h *emailBridgeGRPCHandler) ListEmailInboxes(ctx context.Context, req *pb.L
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	inboxes, apiErr := h.emailBridgeSvc.ListInboxes(ctx)
+	page, apiErr := h.emailBridgeSvc.ListInboxes(ctx, domain.PageRequest{Cursor: req.Cursor, Limit: req.Limit})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	out := make([]*pb.EmailInboxInfo, 0, len(inboxes))
-	for _, i := range inboxes {
+	out := make([]*pb.EmailInboxInfo, 0, len(page.Items))
+	for _, i := range page.Items {
 		out = append(out, h.emailInboxToProto(i))
 	}
-	return &pb.ListEmailInboxesResponse{Inboxes: out}, nil
+	return &pb.ListEmailInboxesResponse{Inboxes: out, PageInfo: pageInfoToProto(page.NextCursor)}, nil
 }
 
 func (h *emailBridgeGRPCHandler) GetEmailInbox(ctx context.Context, req *pb.GetEmailInboxRequest) (*pb.EmailInboxInfo, error) {
@@ -210,11 +210,13 @@ func (h *emailBridgeGRPCHandler) SetEmailSender(ctx context.Context, req *pb.Set
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	sender, apiErr := h.emailBridgeSvc.SetSender(ctx, domain.UpsertAccountEmailSenderInput{
+	sender, apiErr := h.emailBridgeSvc.UpdateSender(ctx, domain.UpdateAccountEmailSenderInput{
 		EmailDomainID: req.EmailDomainId,
 		LocalPart:     req.LocalPart,
 		FromName:      req.FromName,
+		ClearFromName: req.ClearFromName,
 		ReplyTo:       req.ReplyTo,
+		ClearReplyTo:  req.ClearReplyTo,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -226,10 +228,11 @@ func (h *emailBridgeGRPCHandler) DeleteEmailSender(ctx context.Context, req *pb.
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	if apiErr := h.emailBridgeSvc.DeleteSender(ctx); apiErr != nil {
+	deletedID, apiErr := h.emailBridgeSvc.DeleteSender(ctx)
+	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	return &pb.EmailBridgeAck{Ok: true}, nil
+	return &pb.EmailBridgeAck{Ok: true, Id: deletedID}, nil
 }
 
 func emailDomainToProto(d *domain.EmailDomain) *pb.EmailDomainInfo {
@@ -249,7 +252,15 @@ func emailDomainToProto(d *domain.EmailDomain) *pb.EmailDomainInfo {
 		out.MailFromMxRecord = &d.MailFromMXRecord
 		out.MailFromSpfRecord = &d.MailFromSPFRecord
 	}
+	for _, r := range d.DNSRecords() {
+		out.DnsRecords = append(out.DnsRecords, &pb.EmailDnsRecord{Type: r.Type, Name: r.Name, Value: r.Value})
+	}
 	return out
+}
+
+// pageInfoToProto is the page info of a forward-only keyset page.
+func pageInfoToProto(next *string) *pb.PageInfo {
+	return &pb.PageInfo{NextCursor: next, HasNextPage: next != nil}
 }
 
 func emailSenderToProto(s *domain.AccountEmailSender) *pb.EmailSenderInfo {

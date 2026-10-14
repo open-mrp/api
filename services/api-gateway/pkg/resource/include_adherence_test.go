@@ -30,6 +30,7 @@ var includeAdherenceResources = map[constants.ObjectType]any{
 	constants.ObjectTypeCustomer:                  Customer{},
 	constants.ObjectTypeDepartment:                Department{},
 	constants.ObjectTypeEmailInbox:                EmailInbox{},
+	constants.ObjectTypeEmailSender:               EmailSender{},
 	constants.ObjectTypeInvoice:                   Invoice{},
 	constants.ObjectTypeItem:                      Item{},
 	constants.ObjectTypeItemCategory:              ItemCategory{},

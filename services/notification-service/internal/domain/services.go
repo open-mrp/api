@@ -68,7 +68,7 @@ type ConversationSvc interface {
 	// Unblock removes a block the caller created.
 	Unblock(ctx context.Context, blockedAccountUserID string) *apierror.APIError
 	// ListBlocks lists the account_users the caller has blocked.
-	ListBlocks(ctx context.Context) ([]*MessageBlock, *apierror.APIError)
+	ListBlocks(ctx context.Context, page PageRequest) (Page[*MessageBlock], *apierror.APIError)
 
 	// ── Messaging directory + abuse reports (§12.4, §12.10) ──
 
@@ -140,7 +140,7 @@ type ConversationSvc interface {
 	// RemoveConversationLink removes a business-record link from a conversation by link id.
 	RemoveConversationLink(ctx context.Context, conversationID, linkID string) *apierror.APIError
 	// ListConversationLinks lists a conversation's secondary business-record links.
-	ListConversationLinks(ctx context.Context, conversationID string) ([]*ConversationLink, *apierror.APIError)
+	ListConversationLinks(ctx context.Context, conversationID string, page PageRequest) (Page[*ConversationLink], *apierror.APIError)
 	// ListConversationsByResource lists conversations linked to a business record (topic anchor or link).
 	ListConversationsByResource(ctx context.Context, resourceType, resourceID string, limit int32) ([]*Conversation, *apierror.APIError)
 	// CreateReplyDraft proposes a customer-reply draft on an external case (draft-first; not sent). The
@@ -169,7 +169,7 @@ type ConversationSvc interface {
 	// CreateMessagingGroup creates a named roster of users and/or agents in the caller's account.
 	CreateMessagingGroup(ctx context.Context, input CreateMessagingGroupInput) (*MessagingGroup, *apierror.APIError)
 	// ListMessagingGroups returns the account's rosters (with members), most-recently-updated first.
-	ListMessagingGroups(ctx context.Context) ([]*MessagingGroup, *apierror.APIError)
+	ListMessagingGroups(ctx context.Context, page PageRequest) (Page[*MessagingGroup], *apierror.APIError)
 	// GetMessagingGroup returns one roster (with members) in the caller's account.
 	GetMessagingGroup(ctx context.Context, groupID string) (*MessagingGroup, *apierror.APIError)
 	// UpdateMessagingGroup renames a roster.

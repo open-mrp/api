@@ -13,3 +13,15 @@ WHERE id = ? AND conversation_id = ? AND account_id = ?;
 SELECT * FROM conversation_link
 WHERE conversation_id = ? AND account_id = ?
 ORDER BY created_at ASC, id ASC;
+
+-- name: ListConversationLinksPage :many
+-- One keyset page of a conversation's links, oldest first.
+SELECT * FROM conversation_link
+WHERE conversation_id = sqlc.arg('conversation_id') AND account_id = sqlc.arg('account_id')
+  AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR created_at > sqlc.narg('cursor_created_at')
+    OR (created_at = sqlc.narg('cursor_created_at') AND id > sqlc.narg('cursor_id'))
+  )
+ORDER BY created_at ASC, id ASC
+LIMIT ?;

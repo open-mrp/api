@@ -148,29 +148,3 @@ func (q *Queries) PurgeStaleNotifications(ctx context.Context, arg PurgeStaleNot
 	}
 	return result.RowsAffected()
 }
-
-const purgeTombstonedMessages = `-- name: PurgeTombstonedMessages :execrows
-DELETE FROM message
-WHERE deleted_at IS NOT NULL
-  AND deleted_at < (NOW(3) - INTERVAL ? HOUR)
-  AND NOT EXISTS (SELECT 1 FROM conversation c WHERE c.id = message.conversation_id AND c.legal_hold = 1)
-  AND NOT EXISTS (SELECT 1 FROM message_attachment WHERE message_attachment.message_id = message.id)
-LIMIT ?
-`
-
-type PurgeTombstonedMessagesParams struct {
-	Column1 interface{}
-	Limit   int32
-}
-
-// Hard-deletes messages tombstoned longer than the retention window, but only once all their
-// attachments are gone (attachments are purged first so their S3 objects are deleted). Messages in
-// conversations under legal hold are exempt until the hold clears. Served by message_purge_idx
-// (deleted_at).
-func (q *Queries) PurgeTombstonedMessages(ctx context.Context, arg PurgeTombstonedMessagesParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, purgeTombstonedMessages, arg.Column1, arg.Limit)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}

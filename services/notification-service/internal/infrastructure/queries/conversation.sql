@@ -1,8 +1,8 @@
 -- name: CreateConversation :exec
 INSERT INTO conversation (
     id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id,
-    created_by_participant_id, next_sequence, metadata, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(3), NOW(3));
+    continues_conversation_id, created_by_participant_id, next_sequence, metadata, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(3), NOW(3));
 
 -- name: GetConversationByID :one
 SELECT * FROM conversation
@@ -86,8 +86,15 @@ WHERE c.account_id = sqlc.arg('account_id')
   AND (
     (sqlc.narg('status') IS NULL OR sqlc.narg('status') = 'active') AND p.hidden_at IS NULL
     OR sqlc.narg('status') = 'hidden' AND p.hidden_at IS NOT NULL
+    OR sqlc.narg('status') = 'all'
   )
   AND (sqlc.narg('type') IS NULL OR c.type = sqlc.narg('type'))
+  -- Conversations that also seat any of the given account users, served by cvpt_conv_user_uq.
+  AND (sqlc.arg('include_participant_filter') = 0 OR EXISTS (
+    SELECT 1 FROM conversation_participant op
+    WHERE op.conversation_id = c.id AND op.membership = 'active'
+      AND op.account_user_id IN (sqlc.slice('participant_account_user_ids'))
+  ))
   -- Conversations with no messages have no last_message_at and sort after every other row, so a
   -- cursor taken in that tail pages them by id alone.
   AND (
@@ -152,10 +159,10 @@ SET legal_hold = sqlc.arg('legal_hold'), updated_at = NOW(3)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: RedactConversationMessages :execrows
--- GDPR redaction: clears the body/preview of every non-deleted message in the conversation while
--- keeping the row as an audit shell. The row is left non-tombstoned so the reaper retains the shell.
+-- GDPR redaction: tombstones every live message in the conversation. The rows stay in the timeline
+-- with their content cleared.
 UPDATE message
-SET body = NULL, preview = NULL, edited_at = NOW(3), updated_at = NOW(3)
+SET body = NULL, preview = NULL, deleted_at = NOW(3), updated_at = NOW(3)
 WHERE conversation_id = sqlc.arg('conversation_id') AND deleted_at IS NULL;
 
 -- name: ListConversationAttachments :many
@@ -299,3 +306,39 @@ WHERE c.account_id = sqlc.arg('account_id')
   )
 ORDER BY c.last_message_at DESC, c.id DESC
 LIMIT ?;
+
+-- name: CountPersonParticipantsOtherThan :one
+-- Active people in a conversation other than the given account user. Agents and the system are not people.
+SELECT COUNT(*) FROM conversation_participant
+WHERE conversation_id = ? AND membership = 'active'
+  AND participant_type IN ('user', 'customer')
+  AND (account_user_id IS NULL OR account_user_id <> ?);
+
+-- name: SupportRouteUsesConversation :one
+SELECT EXISTS (
+    SELECT 1 FROM support_route WHERE account_id = ? AND group_conversation_id = ?
+) AS used;
+
+-- name: DeleteConversationMessages :execrows
+DELETE FROM message WHERE conversation_id = ?;
+
+-- name: DeleteConversationAttachmentRows :exec
+DELETE a FROM message_attachment a
+JOIN message m ON m.id = a.message_id
+WHERE m.conversation_id = ?;
+
+-- name: DeleteConversationParticipants :exec
+DELETE FROM conversation_participant WHERE conversation_id = ?;
+
+-- name: DeleteConversationLinks :exec
+DELETE FROM conversation_link WHERE conversation_id = ?;
+
+-- name: DeleteConversationReports :exec
+DELETE FROM messaging_report WHERE conversation_id = ?;
+
+-- name: DeleteConversationNotificationsForRecipient :exec
+-- Served by nf_recipient_conversation_idx.
+DELETE FROM notification WHERE recipient_account_user_id = ? AND conversation_id = ?;
+
+-- name: DeleteConversation :execrows
+DELETE FROM conversation WHERE id = ? AND account_id = ?;

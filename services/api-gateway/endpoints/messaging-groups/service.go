@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -170,34 +170,6 @@ func memberActors(g *apiresource.MessagingGroup) []*apiresource.Actor {
 	return actors
 }
 
-// messagingGroupFromProto maps a roster proto to its API resource. Member actors carry id + type
-// only; display names are hydrated separately.
 func messagingGroupFromProto(g *pb.MessagingGroupInfo) apiresource.MessagingGroup {
-	members := make([]apiresource.MessagingGroupMember, 0, len(g.Members))
-	for _, m := range g.Members {
-		var actor *apiresource.Actor
-		switch m.MemberType {
-		case string(constants.ActorTypeAgent):
-			if m.AgentConfigId != nil {
-				actor = apiresource.NewActor(*m.AgentConfigId, constants.ActorTypeAgent, nil, nil)
-			}
-		default:
-			if m.AccountUserId != nil {
-				actor = apiresource.NewActor(*m.AccountUserId, constants.ActorTypeUser, nil, nil)
-			}
-		}
-		members = append(members, apiresource.MessagingGroupMember{
-			ID:     m.Id,
-			Object: constants.ObjectTypeMessagingGroupMember,
-			Actor:  actor,
-		})
-	}
-	return apiresource.MessagingGroup{
-		ID:        g.Id,
-		Object:    constants.ObjectTypeMessagingGroup,
-		Name:      g.Name,
-		Members:   apiresource.NewList(members, apiresource.PageInfo{}),
-		CreatedAt: g.CreatedAt.AsTime(),
-		UpdatedAt: g.UpdatedAt.AsTime(),
-	}
+	return chatmap.MessagingGroupFromProto(g)
 }

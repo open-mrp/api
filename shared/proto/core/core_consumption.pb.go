@@ -1000,7 +1000,8 @@ type DeliveryLineInfo struct {
 	UpdatedAt                           *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The purchase order line the goods were ordered on, reached through the receiving line this
 	// delivery line was stocked against.
-	OrderLineId   string `protobuf:"bytes,25,opt,name=order_line_id,json=orderLineId,proto3" json:"order_line_id,omitempty"`
+	OrderLineId   string     `protobuf:"bytes,25,opt,name=order_line_id,json=orderLineId,proto3" json:"order_line_id,omitempty"`
+	UnitCost      *UnitPrice `protobuf:"bytes,26,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1208,6 +1209,13 @@ func (x *DeliveryLineInfo) GetOrderLineId() string {
 		return x.OrderLineId
 	}
 	return ""
+}
+
+func (x *DeliveryLineInfo) GetUnitCost() *UnitPrice {
+	if x != nil {
+		return x.UnitCost
+	}
+	return nil
 }
 
 type LightScanningStationInfo struct {
@@ -6202,7 +6210,7 @@ var File_core_core_consumption_proto protoreflect.FileDescriptor
 
 const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\"\xef\x02\n" +
+	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a\x17core/value_shapes.proto\"\xef\x02\n" +
 	"\x18CreateConsumptionRequest\x12,\n" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12%\n" +
@@ -6315,7 +6323,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\f_rejected_atB\x15\n" +
 	"\x13_receiving_order_idB\x19\n" +
 	"\x17_receiving_order_numberB\x19\n" +
-	"\x17_receiving_order_status\"\x84\v\n" +
+	"\x17_receiving_order_status\"\xb2\v\n" +
 	"\x10DeliveryLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1e\n" +
@@ -6350,7 +6358,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
-	"\rorder_line_id\x18\x19 \x01(\tR\vorderLineIdB\n" +
+	"\rorder_line_id\x18\x19 \x01(\tR\vorderLineId\x12,\n" +
+	"\tunit_cost\x18\x1a \x01(\v2\x0f.core.UnitPriceR\bunitCostB\n" +
 	"\n" +
 	"\b_item_idB\v\n" +
 	"\t_item_skuB\x13\n" +
@@ -6937,11 +6946,12 @@ var file_core_core_consumption_proto_goTypes = []any{
 	(*ConsumptionInfo)(nil),                                // 95: core.ConsumptionInfo
 	(*timestamppb.Timestamp)(nil),                          // 96: google.protobuf.Timestamp
 	(*PageInfo)(nil),                                       // 97: core.PageInfo
-	(*JobInfo)(nil),                                        // 98: core.JobInfo
-	(*StringPatch)(nil),                                    // 99: core.StringPatch
-	(*ObjectIdentifier)(nil),                               // 100: core.ObjectIdentifier
-	(*StringListPatch)(nil),                                // 101: core.StringListPatch
-	(*CustomerAddressProto)(nil),                           // 102: core.CustomerAddressProto
+	(*UnitPrice)(nil),                                      // 98: core.UnitPrice
+	(*JobInfo)(nil),                                        // 99: core.JobInfo
+	(*StringPatch)(nil),                                    // 100: core.StringPatch
+	(*ObjectIdentifier)(nil),                               // 101: core.ObjectIdentifier
+	(*StringListPatch)(nil),                                // 102: core.StringListPatch
+	(*CustomerAddressProto)(nil),                           // 103: core.CustomerAddressProto
 }
 var file_core_core_consumption_proto_depIdxs = []int32{
 	95,  // 0: core.CreateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
@@ -6968,94 +6978,95 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	96,  // 21: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
 	96,  // 22: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
 	96,  // 23: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 24: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 25: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 26: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 27: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 28: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
-	96,  // 29: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
-	14,  // 30: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
-	96,  // 31: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 32: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15,  // 33: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	97,  // 34: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
-	98,  // 35: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
-	15,  // 36: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15,  // 37: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	99,  // 38: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
-	99,  // 39: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
-	99,  // 40: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
-	15,  // 41: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	100, // 42: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
-	99,  // 43: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
-	99,  // 44: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
-	27,  // 45: core.BulkUpsertScanningStationsRequest.scanning_stations:type_name -> core.UpsertScanningStationInput
-	98,  // 46: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
-	15,  // 47: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	33,  // 48: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	96,  // 49: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 50: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 51: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 52: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	34,  // 53: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	97,  // 54: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	98,  // 55: core.ExportLocationsResponse.job:type_name -> core.JobInfo
-	34,  // 56: core.GetLocationResponse.location:type_name -> core.LocationInfo
-	34,  // 57: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	99,  // 58: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
-	101, // 59: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
-	34,  // 60: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
-	35,  // 61: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	97,  // 62: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
-	35,  // 63: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
-	34,  // 64: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
-	100, // 65: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
-	100, // 66: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
-	53,  // 67: core.BulkUpsertLocationsRequest.locations:type_name -> core.BulkUpsertLocationInput
-	98,  // 68: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
-	96,  // 69: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 70: core.SupplierSummaryProto.updated_at:type_name -> google.protobuf.Timestamp
-	102, // 71: core.SupplierSummaryProto.bill_to_address:type_name -> core.CustomerAddressProto
-	102, // 72: core.SupplierSummaryProto.ship_to_address:type_name -> core.CustomerAddressProto
-	102, // 73: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	102, // 74: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	96,  // 75: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 76: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 77: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	96,  // 78: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
-	56,  // 79: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	97,  // 80: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
-	57,  // 81: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
-	58,  // 82: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
-	58,  // 83: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
-	57,  // 84: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 85: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 86: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	56,  // 87: core.BatchGetSuppliersByIDsResponse.suppliers:type_name -> core.SupplierSummaryProto
-	96,  // 88: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 89: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	72,  // 90: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	97,  // 91: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	72,  // 92: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	72,  // 93: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	72,  // 94: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
-	96,  // 95: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 96: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	84,  // 97: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	94,  // 98: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	83,  // 99: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	85,  // 100: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	96,  // 101: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	86,  // 102: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	87,  // 103: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	87,  // 104: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	88,  // 105: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	89,  // 106: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	107, // [107:107] is the sub-list for method output_type
-	107, // [107:107] is the sub-list for method input_type
-	107, // [107:107] is the sub-list for extension type_name
-	107, // [107:107] is the sub-list for extension extendee
-	0,   // [0:107] is the sub-list for field type_name
+	98,  // 24: core.DeliveryLineInfo.unit_cost:type_name -> core.UnitPrice
+	96,  // 25: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 26: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 27: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 28: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 29: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	96,  // 30: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	14,  // 31: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
+	96,  // 32: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 33: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15,  // 34: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	97,  // 35: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
+	99,  // 36: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
+	15,  // 37: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15,  // 38: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	100, // 39: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
+	100, // 40: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
+	100, // 41: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
+	15,  // 42: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	101, // 43: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
+	100, // 44: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
+	100, // 45: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
+	27,  // 46: core.BulkUpsertScanningStationsRequest.scanning_stations:type_name -> core.UpsertScanningStationInput
+	99,  // 47: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
+	15,  // 48: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	33,  // 49: core.LocationInfo.children:type_name -> core.LocationChildInfo
+	96,  // 50: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 51: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 52: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 53: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	34,  // 54: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
+	97,  // 55: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	99,  // 56: core.ExportLocationsResponse.job:type_name -> core.JobInfo
+	34,  // 57: core.GetLocationResponse.location:type_name -> core.LocationInfo
+	34,  // 58: core.CreateLocationResponse.location:type_name -> core.LocationInfo
+	100, // 59: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
+	102, // 60: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
+	34,  // 61: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
+	35,  // 62: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
+	97,  // 63: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	35,  // 64: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
+	34,  // 65: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
+	101, // 66: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
+	101, // 67: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
+	53,  // 68: core.BulkUpsertLocationsRequest.locations:type_name -> core.BulkUpsertLocationInput
+	99,  // 69: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
+	96,  // 70: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 71: core.SupplierSummaryProto.updated_at:type_name -> google.protobuf.Timestamp
+	103, // 72: core.SupplierSummaryProto.bill_to_address:type_name -> core.CustomerAddressProto
+	103, // 73: core.SupplierSummaryProto.ship_to_address:type_name -> core.CustomerAddressProto
+	103, // 74: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	103, // 75: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	96,  // 76: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 77: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 78: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	96,  // 79: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	56,  // 80: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
+	97,  // 81: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	57,  // 82: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
+	58,  // 83: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
+	58,  // 84: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
+	57,  // 85: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
+	57,  // 86: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	57,  // 87: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	56,  // 88: core.BatchGetSuppliersByIDsResponse.suppliers:type_name -> core.SupplierSummaryProto
+	96,  // 89: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 90: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	72,  // 91: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	97,  // 92: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	72,  // 93: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	72,  // 94: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	72,  // 95: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
+	96,  // 96: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 97: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	84,  // 98: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	94,  // 99: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	83,  // 100: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	85,  // 101: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	96,  // 102: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	86,  // 103: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	87,  // 104: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	87,  // 105: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	88,  // 106: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	89,  // 107: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	108, // [108:108] is the sub-list for method output_type
+	108, // [108:108] is the sub-list for method input_type
+	108, // [108:108] is the sub-list for extension type_name
+	108, // [108:108] is the sub-list for extension extendee
+	0,   // [0:108] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }
@@ -7068,6 +7079,7 @@ func file_core_core_consumption_proto_init() {
 	file_core_core_items_proto_init()
 	file_core_core_fuzzy_identifiers_proto_init()
 	file_core_core_async_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_consumption_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[6].OneofWrappers = []any{}

@@ -57,7 +57,7 @@ func (e *AnalyzeCustomerPricingEndpoint) Materialize() *apiendpoint.APIEndpoint[
 func customerPricingIncludeConfig() *apiendpoint.IncludeConfig {
 	cfg := apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 		ObjectType: constants.ObjectTypeCustomerPricingFinding,
-		Fields:     []string{"customer", "product_line", "attributes", "unit_price.numerator_unit", "unit_price.denominator_unit"},
+		Fields:     []string{"customer", "product_line", "attributes"},
 	})
 	// Roots must be addressable: the resolver writes the loaded relation back onto each finding.
 	cfg.ExtractRoots = func(resp any) []any {

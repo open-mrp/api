@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/value_shapes.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -70,6 +71,7 @@ message ShippingCaseInfo {
   string freight_weight_unit_offset_denominator = 35;
   google.protobuf.Timestamp freight_weight_unit_created_at = 36;
   google.protobuf.Timestamp freight_weight_unit_updated_at = 37;
+  Money freight_amount = 43;
 }
 
 // Get shipping case
@@ -85,10 +87,10 @@ message GetShippingCaseResponse {
 message UpdateShippingCaseRequest {
   string id = 1;
   optional string tracking_number = 2;
-  optional string freight_amount_value = 3;
-  optional string freight_amount_unit_id = 4;
+  reserved 3, 4;
   optional string freight_weight_value = 5;
   optional string freight_weight_unit_id = 6;
+  Money freight_amount = 7;
 }
 
 message UpdateShippingCaseResponse {

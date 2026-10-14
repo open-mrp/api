@@ -42,7 +42,7 @@ func presentProductionCosts(req *AnalyzeProductionCostsRequest, resp *pb.Analyze
 		units[u.GetId()] = reportUnit(u)
 	}
 	cost := func(c *pb.ProductionCostProto) *apiresource.ProductionCost {
-		produced := make([]apiresource.ComputedQuantity, len(c.GetProduced()))
+		produced := make([]apiresource.Quantity, len(c.GetProduced()))
 		for i, p := range c.GetProduced() {
 			produced[i] = *openOrderQuantity(p.GetValue(), units[p.GetUnitId()])
 		}

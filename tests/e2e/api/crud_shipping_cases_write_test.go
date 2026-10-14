@@ -22,7 +22,7 @@ const sb5CaseID = "shcs_01seedsb5_c1_000"
 // Reads one shipping case, with its freight_weight expanded.
 func readShippingCase(t *testing.T, caseID string) map[string]any {
 	t.Helper()
-	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+caseID, url.Values{"include": {"freight_weight.unit"}})
+	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+caseID, url.Values{"include": {"freight_weight"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	return parseJSON(body)
@@ -34,10 +34,9 @@ func caseFreightWeight(t *testing.T, caseID string) (float64, string) {
 	t.Helper()
 	weight := jsonObject(readShippingCase(t, caseID), "freight_weight")
 	require.NotNil(t, weight, "freight_weight must expand")
-	unitID := ""
-	if unit := jsonObject(weight, "unit"); unit != nil {
-		unitID = jsonField(unit, "id")
-	}
+	unit := jsonObject(weight, "unit")
+	require.NotNil(t, unit, "freight_weight carries its unit")
+	unitID := jsonField(unit, "id")
 	measure, err := strconv.ParseFloat(jsonField(weight, "value"), 64)
 	require.NoError(t, err, "freight weight parses as a number")
 	return measure, unitID

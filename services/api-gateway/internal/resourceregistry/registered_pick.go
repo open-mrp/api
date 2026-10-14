@@ -74,18 +74,6 @@ func init() {
 			// The quantities are already attached by the presenter; Target + ExtractRefs exist so
 			// the resolver can recurse into them and hydrate their unit via LoadUnits (the unit FK
 			// is stashed on each Quantity in stashPickLineDetailMeta).
-			{
-				Key:         "quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityRefFromPickLine,
-			},
-			{
-				Key:         "ordered_quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractOrderedQuantityRefFromPickLine,
-			},
 		},
 	})
 }
@@ -187,22 +175,6 @@ func populateLinesOnPick(ctx context.Context, parent any, _ map[string]any) {
 		return
 	}
 	p.Lines = v.(*apiresource.List[apiresource.PickLine])
-}
-
-func extractQuantityRefFromPickLine(_ context.Context, parent any) []any {
-	p := parent.(*apiresource.PickLine)
-	if p.Quantity == nil {
-		return nil
-	}
-	return []any{p.Quantity}
-}
-
-func extractOrderedQuantityRefFromPickLine(_ context.Context, parent any) []any {
-	p := parent.(*apiresource.PickLine)
-	if p.OrderedQuantity == nil {
-		return nil
-	}
-	return []any{p.OrderedQuantity}
 }
 
 // Runs after Populate has attached the line, so the resolver has something to descend into.

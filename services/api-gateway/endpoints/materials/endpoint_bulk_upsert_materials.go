@@ -44,12 +44,11 @@ type UpsertMaterialInput struct {
 	// Expected lead time quantity. When omitted on create it defaults to a zero quantity in
 	// the category's base unit.
 	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
-	// Selling price per unit. Numerator must be a currency unit, denominator the per-unit
-	// basis. Defaults to a zero rate in the category's base unit on create; unchanged when
+	// Selling price per unit; `per_unit_id` must not be a currency unit. Defaults to a zero price per the category's base unit on create; unchanged when
 	// omitted on update.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same currency-vs-non-currency rule as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the material, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertMaterialProperty `json:"properties" default:"[]" validate:"dive"`

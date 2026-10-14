@@ -84,6 +84,10 @@ func (r *analyticsRepoImpl) GetSalesEntries(ctx context.Context, params domain.A
 		if row.Unit.Valid {
 			unit = row.Unit.String
 		}
+		unitID := ""
+		if row.UnitID.Valid {
+			unitID = row.UnitID.String
+		}
 
 		entries[i] = domain.SalesEntry{
 			ID:                  row.ID,
@@ -114,6 +118,7 @@ func (r *analyticsRepoImpl) GetSalesEntries(ctx context.Context, params domain.A
 			CategoryName:        row.CategoryName,
 			ProductLine:         productLine,
 			Unit:                unit,
+			UnitID:              unitID,
 			QuantityInvoiced:    decimalToFloat64(row.QuantityInvoiced),
 			TotalInvoiced:       decimalToFloat64(row.TotalInvoiced),
 			TotalCost:           decimalToFloat64(row.TotalCost),
@@ -854,19 +859,20 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 		availableToPromise := onHand.Sub(reservedMap[m.ItemID]).Sub(open)
 
 		display := materialUnit{
-			name: m.BaseUnitName, abbreviation: m.BaseUnitAbbreviation, dimension: m.BaseUnitType,
+			id: m.BaseUnitID, name: m.BaseUnitName, abbreviation: m.BaseUnitAbbreviation, dimension: m.BaseUnitType,
 			ratioNumerator: m.BaseUnitRatioNumerator, ratioDenominator: m.BaseUnitRatioDenominator,
 			offsetNumerator: m.BaseUnitOffsetNumerator, offsetDenominator: m.BaseUnitOffsetDenominator,
 		}
 		var orderPoint *domain.MaterialBaseQuantity
 		if m.OrderPointValue.Valid && m.OrderPointUnitRatioNumerator.Valid {
 			display = materialUnit{
-				name: m.OrderPointUnitName.String, abbreviation: m.OrderPointUnitAbbreviation.String, dimension: m.OrderPointUnitType.String,
+				id: m.OrderPointUnitID.String, name: m.OrderPointUnitName.String, abbreviation: m.OrderPointUnitAbbreviation.String, dimension: m.OrderPointUnitType.String,
 				ratioNumerator: m.OrderPointUnitRatioNumerator.String, ratioDenominator: m.OrderPointUnitRatioDenominator.String,
 				offsetNumerator: m.OrderPointUnitOffsetNumerator.String, offsetDenominator: m.OrderPointUnitOffsetDenominator.String,
 			}
 			orderPoint = &domain.MaterialBaseQuantity{
 				Measure:          decimalToFloat64(m.OrderPointValue),
+				UnitID:           display.id,
 				UnitName:         display.name,
 				UnitAbbreviation: display.abbreviation,
 				UnitType:         display.dimension,
@@ -876,6 +882,7 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 		if m.LeadTimeValue.Valid && m.LeadTimeUnitName.Valid {
 			leadTime = &domain.MaterialBaseQuantity{
 				Measure:          decimalToFloat64(m.LeadTimeValue),
+				UnitID:           m.LeadTimeUnitID.String,
 				UnitName:         m.LeadTimeUnitName.String,
 				UnitAbbreviation: m.LeadTimeUnitAbbreviation.String,
 				UnitType:         m.LeadTimeUnitType.String,
@@ -921,14 +928,14 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 
 // materialUnit is a unit a material's stock is stated in, with the ratio and offset that convert from its dimension's base unit.
 type materialUnit struct {
-	name, abbreviation, dimension                                        string
+	id, name, abbreviation, dimension                                        string
 	ratioNumerator, ratioDenominator, offsetNumerator, offsetDenominator string
 }
 
 // quantity states an amount held in the dimension's base unit in this unit, as the dashboard's updateUnit converted it.
 func (u materialUnit) quantity(base decimal.Decimal) domain.MaterialBaseQuantity {
 	measure, _ := fromDimensionBase(base, u.ratioNumerator, u.ratioDenominator, u.offsetNumerator, u.offsetDenominator).Float64()
-	return domain.MaterialBaseQuantity{Measure: measure, UnitName: u.name, UnitAbbreviation: u.abbreviation, UnitType: u.dimension}
+	return domain.MaterialBaseQuantity{Measure: measure, UnitID: u.id, UnitName: u.name, UnitAbbreviation: u.abbreviation, UnitType: u.dimension}
 }
 
 // fromDimensionBase converts an amount in its dimension's base unit into a unit with the given ratio and offset. A malformed or zero ratio leaves the amount as it is.
@@ -1060,6 +1067,7 @@ func (r *analyticsRepoImpl) GetOrderQuantitiesByProductLines(ctx context.Context
 		out[i] = domain.OrderQuantityByProductLineRow{
 			ProductLineID:    row.ProductLineID,
 			TotalQuantity:    decimalToFloat64(row.TotalQuantity),
+			UnitID:           row.UnitID,
 			UnitAbbreviation: row.UnitAbbreviation,
 			UnitType:         row.UnitType,
 			BaseRatio:        decimalToFloat64(row.BaseRatio),

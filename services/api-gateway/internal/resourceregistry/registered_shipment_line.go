@@ -29,13 +29,6 @@ func init() {
 				ExtractIDs:  extractItemIDFromShipmentLine,
 				Populate:    populateItemOnShipmentLine,
 			},
-			{
-				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
-				Key:         "quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityRefFromShipmentLine,
-			},
 		},
 	})
 }
@@ -58,14 +51,6 @@ func populateItemOnShipmentLine(ctx context.Context, parent any, loaded map[stri
 	if v, ok := loaded[id]; ok {
 		l.Item = v.(*apiresource.Item)
 	}
-}
-
-func extractQuantityRefFromShipmentLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.ShipmentLine)
-	if l.Quantity == nil {
-		return nil
-	}
-	return []any{l.Quantity}
 }
 
 func populateSalesOrderLineOnShipmentLine(ctx context.Context, parent any, _ map[string]any) {

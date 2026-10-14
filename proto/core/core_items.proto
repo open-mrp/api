@@ -9,6 +9,7 @@ import "core/core_async.proto";
 import "core/core_identity_context.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message GetItemInventoryResponse {
@@ -142,10 +143,11 @@ message UpsertPartInput {
   optional string description = 2;
   optional string notes = 3;
   ObjectIdentifier category = 4;
-  // unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
-  // basis. CreateRateInput is defined in core_analytics.proto.
-  optional CreateRateInput unit_price = 5;
-  optional CreateRateInput unit_cost = 6;
+  // unit_price / unit_cost: per_unit_id must not be a currency unit.
+  reserved 5;
+  UnitPrice unit_price = 8;
+  reserved 6;
+  UnitPrice unit_cost = 9;
   repeated UpsertItemPropertyInput properties = 7;
 }
 message BulkUpsertPartsRequest {
@@ -162,8 +164,10 @@ message UpsertProductInput {
   ObjectIdentifier category = 5;
   ObjectIdentifier product_line = 6;
   optional bool is_portal_ready = 7;
-  optional CreateRateInput unit_price = 8;
-  optional CreateRateInput unit_cost = 9;
+  reserved 8;
+  UnitPrice unit_price = 11;
+  reserved 9;
+  UnitPrice unit_cost = 12;
   repeated UpsertItemPropertyInput properties = 10;
 }
 message BulkUpsertProductsRequest {
@@ -180,10 +184,11 @@ message UpsertMaterialInput {
   // order_point / lead_time: QuantityInput is defined in core_analytics.proto.
   optional QuantityInput order_point = 5;
   optional QuantityInput lead_time = 6;
-  // unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
-  // basis. CreateRateInput is defined in core_analytics.proto.
-  optional CreateRateInput unit_price = 7;
-  optional CreateRateInput unit_cost = 8;
+  // unit_price / unit_cost: per_unit_id must not be a currency unit.
+  reserved 7;
+  UnitPrice unit_price = 10;
+  reserved 8;
+  UnitPrice unit_cost = 11;
   repeated UpsertItemPropertyInput properties = 9;
 }
 message BulkUpsertMaterialsRequest {

@@ -277,7 +277,7 @@ func dashAnalyticsReadSales(t *testing.T, client *Client, body map[string]any, g
 	t.Helper()
 	var v dashAnalyticsSalesView
 	summary := mustPutAnalytics(t, client, salesSummaryPath, nil, body)
-	v.revenue = computedValue(t, jsonObject(summary, "overall"), "revenue")
+	v.revenue = reportMoneyAmount(t, jsonObject(summary, "overall"), "revenue")
 	v.invoiceCount = jsonField(jsonObject(summary, "overall"), "invoice_count")
 	for _, g := range listRows(t, mustPutAnalytics(t, client, salesBreakdownPath, url.Values{"limit": {"100"}}, dashAnalyticsWith(body, map[string]any{"group_by": groupBy}))) {
 		v.groupKeys = append(v.groupKeys, jsonField(g, "key"))
@@ -436,11 +436,11 @@ func TestDashAnalytics_OpenOrderReportsShowTenantBNoneOfTheSellersBook(t *testin
 	body := map[string]any{"customer_ids": []string{customer}}
 	tenantB := getTenantBClient()
 
-	assert.Equal(t, "6", computedValue(t, mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body), "ordered"), "precondition: the seller sees its order")
+	assert.Equal(t, "6", reportMoneyAmount(t, mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body), "ordered"), "precondition: the seller sees its order")
 	status, _, raw := openOrderLines(t, apiClient, orderID)
 	requireStatus(t, 200, status, raw)
 
-	assert.Equal(t, "0", computedValue(t, mustPutAnalytics(t, tenantB, openOrdersSummaryPath, nil, body), "ordered"))
+	assert.Equal(t, "0", reportMoneyAmount(t, mustPutAnalytics(t, tenantB, openOrdersSummaryPath, nil, body), "ordered"))
 	assert.Empty(t, listRows(t, mustPutAnalytics(t, tenantB, openOrdersBreakdownPath, nil, body)))
 	assert.Empty(t, listRows(t, mustPutAnalytics(t, tenantB, openOrdersPath, nil, body)))
 	for _, row := range listRows(t, mustPutAnalytics(t, tenantB, openOrdersPath, url.Values{"limit": {"100"}}, nil)) {
@@ -703,7 +703,7 @@ func dashAnalyticsAccountPrice(t *testing.T, customerID, productLineID, value st
 	created := createAndCleanup(t, accountPricesPath, map[string]any{
 		"recipient_account_id": customerID,
 		"product_line_id":      productLineID,
-		"rate":                 map[string]any{"value": value, "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+		"rate":                 map[string]any{"value": value, "unit_id": dollarUnitID, "per_unit_id": SeedUnitID},
 	})
 	return jsonField(created, "id")
 }
@@ -730,7 +730,7 @@ func TestDashAnalytics_CustomerPricingFiltersByCustomerAndGroup(t *testing.T) {
 	assert.Contains(t, []string{"below_peer_median", "below_peer_median_and_target_margin"}, jsonField(f, "reason"))
 	assert.Equal(t, "direct", jsonField(f, "origin"))
 	assert.Equal(t, low, entityID(f, "customer"))
-	assert.True(t, decimal.RequireFromString("250.005").Equal(decimal.RequireFromString(jsonField(jsonObject(f, "peer_median_price"), "value"))),
+	assert.True(t, decimal.RequireFromString("250.005").Equal(decimal.RequireFromString(jsonField(jsonObject(f, "peer_median_price"), "amount"))),
 		"the median of the group's two prices: %v", f["peer_median_price"])
 
 	byGroup := findings(apiClient, map[string]any{"customer_group_ids": []string{group}})

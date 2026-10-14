@@ -3,10 +3,14 @@ package shippingcaseep
 import (
 	"context"
 	"fmt"
+
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -76,8 +80,7 @@ func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *Updat
 	pbReq := &pb.UpdateShippingCaseRequest{
 		Id:                  req.ShippingCaseID,
 		TrackingNumber:      trackingNumberToProto(req.TrackingNumber),
-		FreightAmountValue:  req.FreightAmountValue.Ptr(),
-		FreightAmountUnitId: req.FreightAmountUnitID.Ptr(),
+		FreightAmount:       apirequest.OptionalMoneyToProto(req.FreightAmount),
 		FreightWeightValue:  req.FreightWeightValue.Ptr(),
 		FreightWeightUnitId: req.FreightWeightUnitID.Ptr(),
 	}
@@ -193,45 +196,9 @@ func stashShippingCaseMeta(meta *include.LoadMeta, sc *pb.ShippingCaseInfo) {
 		meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment_id", sc.ShipmentId)
 	}
 
-	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_amount", &apiresource.Quantity{
-		ID:           sc.FreightAmountId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        sc.FreightAmountValue,
-		DisplayValue: apiresource.FormatDisplayValue(sc.FreightAmountValue, sc.FreightAmountUnitAbbreviation, sc.FreightAmountUnitType),
-		Unit: &apiresource.Unit{
-			ID:                sc.FreightAmountUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              sc.FreightAmountUnitName,
-			Abbreviation:      sc.FreightAmountUnitAbbreviation,
-			Type:              constants.UnitType(sc.FreightAmountUnitType),
-			RatioNumerator:    sc.FreightAmountUnitRatioNumerator,
-			RatioDenominator:  sc.FreightAmountUnitRatioDenominator,
-			OffsetNumerator:   sc.FreightAmountUnitOffsetNumerator,
-			OffsetDenominator: sc.FreightAmountUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitUpdatedAt),
-		},
-	})
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_amount", resourceloaders.MoneyFromProto(sc.FreightAmount))
 
-	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_weight", &apiresource.Quantity{
-		ID:           sc.FreightWeightId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        sc.FreightWeightValue,
-		DisplayValue: apiresource.FormatDisplayValue(sc.FreightWeightValue, sc.FreightWeightUnitAbbreviation, sc.FreightWeightUnitType),
-		Unit: &apiresource.Unit{
-			ID:                sc.FreightWeightUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              sc.FreightWeightUnitName,
-			Abbreviation:      sc.FreightWeightUnitAbbreviation,
-			Type:              constants.UnitType(sc.FreightWeightUnitType),
-			RatioNumerator:    sc.FreightWeightUnitRatioNumerator,
-			RatioDenominator:  sc.FreightWeightUnitRatioDenominator,
-			OffsetNumerator:   sc.FreightWeightUnitOffsetNumerator,
-			OffsetDenominator: sc.FreightWeightUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitUpdatedAt),
-		},
-	})
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_weight", apiresource.NewQuantity(sc.FreightWeightValue, sc.FreightWeightUnitId))
 }
 
 // Puts a tracking number on the wire, where core reads an empty string as the client's null.

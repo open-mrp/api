@@ -141,7 +141,7 @@ var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 				ItemID:     field.Some(apiresource.SampleItemID),
 				ProductSKU: "RAW-100",
 				Quantity:   apirequest.QuantityInput{Value: "500", UnitID: apiresource.SampleUnitID},
-				UnitPrice:  apirequest.RateInput{Value: "12.50", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID},
+				UnitPrice:  apirequest.UnitPriceInput{Amount: "12.50", Currency: "usd", PerUnitID: apiresource.SampleUnitID},
 			},
 		},
 	},

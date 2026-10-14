@@ -126,8 +126,8 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 		"carrier_billing_type":     "third_party",
 		"carrier_billing_account":  "ACCT-12345",
 		"credit_limit": map[string]any{
-			"value":   "7500.00",
-			"unit_id": SeedUnitID,
+			"amount":   "7500.00",
+			"currency": "usd",
 		},
 		"bill_to_address": map[string]any{
 			"name":    name + " Billing",
@@ -186,8 +186,8 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"carrier_billing_type":     "third_party",
 			"carrier_billing_account":  "ACCT-12345",
 			"credit_limit": map[string]any{
-				"value":   "10000.00",
-				"unit_id": SeedUnitID,
+				"amount":   "10000.00",
+				"currency": "usd",
 			},
 			"bill_to_address": map[string]any{
 				"name":    name + " Billing",
@@ -284,12 +284,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	// credit_limit
 	cl := jsonObject(got, "credit_limit")
 	require.NotNil(t, cl, "credit_limit should be expanded after create")
-	assert.Equal(t, "quantity", jsonField(cl, "object"))
-	assert.Equal(t, "10000", jsonField(cl, "value"))
-	assert.NotEmpty(t, jsonField(cl, "id"))
-	// unit is an expandable sub-resource of a quantity: null unless explicitly
-	// requested (the abbreviation is still conveyed via display_value).
-	assert.Nil(t, cl["unit"], "credit_limit.unit should be null without an explicit unit include")
+	assert.Equal(t, map[string]any{"amount": "10000.00", "currency": "usd"}, cl)
 
 	// ── UPDATE with different values for changeable fields ──
 
@@ -308,8 +303,8 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"carrier_billing_type":    "sender",
 			"carrier_billing_account": "ACCT-99999",
 			"credit_limit": map[string]any{
-				"value":   "25000.50",
-				"unit_id": SeedUnitID,
+				"amount":   "25000.50",
+				"currency": "usd",
 			},
 		},
 		newIdempotencyKey(),
@@ -396,7 +391,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	// Updated credit_limit
 	updCL := jsonObject(updated, "credit_limit")
 	require.NotNil(t, updCL, "credit_limit should be expanded after update")
-	assert.Equal(t, "25000.5", jsonField(updCL, "value"))
+	assert.Equal(t, map[string]any{"amount": "25000.50", "currency": "usd"}, updCL)
 
 	// ── CLEAR all nullable fields by sending null ──
 
@@ -842,21 +837,14 @@ func TestCustomers_IncludeCreditLimit(t *testing.T) {
 	// Create a customer with a credit limit.
 	payload := validCustomerBody(uniqueName("e2e-cust-cl-inc"))
 	payload["credit_limit"] = map[string]any{
-		"value":   "5000.00",
-		"unit_id": SeedUnitID,
+		"amount":   "5000.00",
+		"currency": "usd",
 	}
 	cust := createAndCleanup(t, customersPath+"?include=credit_limit", payload)
 
 	cl := jsonObject(cust, "credit_limit")
 	require.NotNil(t, cl, "credit_limit should be present with ?include=credit_limit")
-	assert.Equal(t, "quantity", jsonField(cl, "object"))
-	assert.Equal(t, "5000", jsonField(cl, "value"))
-	assert.NotEmpty(t, jsonField(cl, "display_value"))
-	assert.NotEmpty(t, jsonField(cl, "id"))
-
-	// unit is an expandable sub-resource of a quantity: null unless explicitly
-	// requested. The unit abbreviation is still conveyed via display_value.
-	assert.Nil(t, cl["unit"], "credit_limit.unit should be null without an explicit unit include")
+	assert.Equal(t, map[string]any{"amount": "5000.00", "currency": "usd"}, cl, "money is its amount and currency, nothing more")
 }
 
 func TestCustomers_IncludeCreditLimitNullWhenNotSet(t *testing.T) {
@@ -865,6 +853,25 @@ func TestCustomers_IncludeCreditLimitNullWhenNotSet(t *testing.T) {
 	// Create a customer without a credit limit.
 	cust := createAndCleanup(t, customersPath+"?include=credit_limit", validCustomerBody(uniqueName("e2e-cust-cl-nil")))
 	assertNilField(t, cust, "credit_limit")
+}
+
+// Money is dollars only: any other currency is refused on create and on update, naming the field.
+func TestCustomers_CreditLimitRejectsAnUnsupportedCurrency(t *testing.T) {
+	t.Parallel()
+	euros := map[string]any{"amount": "5000.00", "currency": "eur"}
+
+	payload := validCustomerBody(uniqueName("e2e-cust-cl-eur"))
+	payload["credit_limit"] = euros
+	status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
+
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-cl-eur-upd")))
+	status, body, err = apiClient.Patch(customersPath+"/"+jsonField(cust, "id"), map[string]any{"credit_limit": euros}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
 }
 
 // ──────────────────────────────────────────────

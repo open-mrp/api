@@ -56,22 +56,22 @@ func quoteLineAt(t *testing.T, respBody []byte, idx int) map[string]any {
 	return line
 }
 
-// quoteUnitPriceAt posts a quote and returns the unit_price value of line idx as a float.
+// quoteUnitPriceAt posts a quote and returns the unit_price amount of line idx as a float.
 func quoteUnitPriceAt(t *testing.T, respBody []byte, idx int) float64 {
 	t.Helper()
 	line := quoteLineAt(t, respBody, idx)
 	unitPrice, _ := line["unit_price"].(map[string]any)
 	require.NotNil(t, unitPrice, "line %d should have a unit_price", idx)
-	got, err := strconv.ParseFloat(fmt.Sprint(unitPrice["value"]), 64)
-	require.NoError(t, err, "unit_price.value should parse: %v", unitPrice["value"])
+	assert.Equal(t, "usd", jsonField(unitPrice, "currency"), "line %d unit_price.currency", idx)
+	got, err := strconv.ParseFloat(fmt.Sprint(unitPrice["amount"]), 64)
+	require.NoError(t, err, "unit_price.amount should parse: %v", unitPrice["amount"])
 	return got
 }
 
 func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 	t.Parallel()
 	lockPricingRead(t)
-	// A line item's unit_price shares the computed_rate shape with quote-freight: its
-	// numerator/denominator units must come back fully presented, not as bare {id, object}.
+	// The unit a line's price is per must come back fully presented, not as a bare {id, object}.
 	body := map[string]any{
 		"buyer_account_id": SeedCustomerAccountID,
 		"lines":            []map[string]any{quoteLine(seedNonContractProductID, "1", SeedUnitID)},
@@ -82,8 +82,9 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 
 	unitPrice := jsonObject(quoteLineAt(t, respBody, 0), "unit_price")
 	require.NotNil(t, unitPrice, "line has a unit_price")
-	assertFullyPresentedUnit(t, jsonObject(unitPrice, "numerator_unit"), "numerator_unit")
-	assertFullyPresentedUnit(t, jsonObject(unitPrice, "denominator_unit"), "denominator_unit")
+	assert.NotEmpty(t, jsonField(unitPrice, "amount"), "unit_price.amount")
+	assert.Equal(t, "usd", jsonField(unitPrice, "currency"), "unit_price.currency")
+	assertFullyPresentedUnit(t, jsonObject(unitPrice, "per_unit"), "per_unit")
 }
 
 func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *testing.T) {
@@ -91,8 +92,8 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *test
 	lockPricingRead(t)
 	// The unit a line's price is quoted in depends on the discount that wins: customer2's
 	// per-pair account price (18.45/pair) beats the volume discount and is returned in its
-	// native per-pair unit — NOT the ordered carton unit. That discount-driven denominator
-	// unit (which does not come from the request) is exactly the one that used to come back
+	// native per-pair unit — NOT the ordered carton unit. That discount-driven per unit
+	// (which does not come from the request) is exactly the one that used to come back
 	// as a bare {id, object}. It must be fully presented.
 	body := map[string]any{
 		"buyer_account_id": seedCustomer2AccountID,
@@ -106,12 +107,11 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *test
 	require.NotNil(t, unitPrice, "line has a unit_price")
 	assert.InDelta(t, 18.45, quoteUnitPriceAt(t, respBody, 0), 0.001, "account price (per pair) beats the volume discount")
 
-	denominator := jsonObject(unitPrice, "denominator_unit")
+	perUnit := jsonObject(unitPrice, "per_unit")
 	// The discount changed the unit away from the ordered carton to the account price's pair.
-	assert.Equal(t, "un_01seedpair000000000", jsonField(denominator, "id"),
-		"the discount drives a per-pair denominator, not the ordered carton unit")
-	assertFullyPresentedUnit(t, jsonObject(unitPrice, "numerator_unit"), "numerator_unit")
-	assertFullyPresentedUnit(t, denominator, "denominator_unit")
+	assert.Equal(t, "un_01seedpair000000000", jsonField(perUnit, "id"),
+		"the discount prices per pair, not per the ordered carton unit")
+	assertFullyPresentedUnit(t, perUnit, "per_unit")
 }
 
 func TestQuoteSalesOrderPrices_ListPriceWhenNoContract(t *testing.T) {
@@ -287,5 +287,5 @@ func TestQuoteSalesOrderPrices_AccountPriceBeatsVolumeDiscount(t *testing.T) {
 	// The price is returned in its native per-pair unit (not converted to the ordered
 	// carton), which the frontend resolves to display "18.45 / pair".
 	unitPrice := jsonObject(quoteLineAt(t, respBody, 0), "unit_price")
-	assert.Equal(t, "un_01seedpair000000000", jsonField(jsonObject(unitPrice, "denominator_unit"), "id"))
+	assert.Equal(t, "un_01seedpair000000000", jsonField(jsonObject(unitPrice, "per_unit"), "id"))
 }

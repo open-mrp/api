@@ -41,7 +41,7 @@ func inventoryReceiptSummaryQuery(params domain.AnalyzeInventoryReceiptsParams) 
     g.storage_location_id, sl.name, g.lot_id, l.lot_number,
     g.owner_account_id, oa.name, g.holder_account_id, ha.name,
     g.remaining, g.value, g.oldest, g.newest,
-    bu.abbreviation, bu.name, bu.unit_dimension_code,
+    bu.id, bu.abbreviation, bu.name, bu.unit_dimension_code,
     cn.abbreviation, cn.name, cn.unit_dimension_code
 FROM (
     SELECT /*+ NO_MERGE(r) */
@@ -113,13 +113,14 @@ func (r *analyticsRepoImpl) GetInventoryReceiptAnalytics(ctx context.Context, pa
 			lotID, lotNumber                  sql.NullString
 			remaining, value                  sql.NullString
 			oldest, newest                    sql.NullTime
-			unitAbbr, unitName, unitType      sql.NullString
+			unitID, unitAbbr, unitName        sql.NullString
+			unitType                          sql.NullString
 			costAbbr, costName, costType      sql.NullString
 		)
 		if err := rows.Scan(&e.ItemID, &e.ProductSku, &description, &locationID, &location, &lotID, &lotNumber,
 			&e.OwnerAccountID, &e.OwnerAccountName, &e.HolderAccountID, &e.HolderAccountName,
 			&remaining, &value, &oldest, &newest,
-			&unitAbbr, &unitName, &unitType, &costAbbr, &costName, &costType); err != nil {
+			&unitID, &unitAbbr, &unitName, &unitType, &costAbbr, &costName, &costType); err != nil {
 			return nil, tracing.Trace(span, db.MapSQLError(err))
 		}
 		e.ProductDescription = nullStringPtr(description)
@@ -133,7 +134,7 @@ func (r *analyticsRepoImpl) GetInventoryReceiptAnalytics(ctx context.Context, pa
 			e.WeightedAverageUnitCost = v / e.RemainingQuantity
 		}
 		e.OldestReceiptAt, e.NewestReceiptAt = nullTimePtr(oldest), nullTimePtr(newest)
-		e.Unit, e.UnitName, e.UnitType = unitAbbr.String, unitName.String, unitType.String
+		e.UnitID, e.Unit, e.UnitName, e.UnitType = unitID.String, unitAbbr.String, unitName.String, unitType.String
 		e.CostNumeratorUnitAbbreviation, e.CostNumeratorUnitName, e.CostNumeratorUnitType = costAbbr.String, costName.String, costType.String
 		// The cost is carried per base unit, so its denominator is the base unit.
 		e.CostDenominatorUnitAbbreviation, e.CostDenominatorUnitName, e.CostDenominatorUnitType = unitAbbr.String, unitName.String, unitType.String

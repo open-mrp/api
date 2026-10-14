@@ -28,9 +28,9 @@ func TestAccountPrices_UpdateIsIdempotent(t *testing.T) {
 	key := newIdempotencyKey()
 	rate := func(value string) map[string]any {
 		return map[string]any{
-			"value":               value,
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       value,
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		}
 	}
 

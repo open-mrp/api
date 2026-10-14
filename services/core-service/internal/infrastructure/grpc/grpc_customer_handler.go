@@ -107,14 +107,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 
 	// A credit limit whose unit row is missing cannot be stated, so it reads as none instead of failing the whole customer.
 	if c.CreditLimitID != nil && c.CreditLimitUnitID != nil {
-		p.CreditLimit = &pb.CustomerCreditLimitProto{
-			Id:               *c.CreditLimitID,
-			Value:            *c.CreditLimitValue,
-			UnitId:           *c.CreditLimitUnitID,
-			UnitAbbreviation: *c.CreditLimitUnitAbbreviation,
-			UnitName:         *c.CreditLimitUnitName,
-			UnitType:         *c.CreditLimitUnitType,
-		}
+		p.CreditLimit = moneyToProto(*c.CreditLimitValue)
 	}
 
 	if c.DefaultCarrierID != nil {
@@ -400,6 +393,8 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.CreateCustomerParams{
 		Name:                  req.Name,
 		Number:                req.Number,
@@ -423,8 +418,6 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
-		CreditLimitValue:      req.CreditLimitValue,
-		CreditLimitUnitID:     req.CreditLimitUnitId,
 		Includes:              req.Includes,
 	}
 
@@ -433,6 +426,14 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 	}
 	if req.ShipToAddress != nil {
 		params.ShipToAddress = protoCustomerAddressInputToCreateParams(req.ShipToAddress)
+	}
+	if creditLimit := money.quantity("credit_limit", req.CreditLimit); creditLimit != nil {
+		params.CreditLimitValue = &creditLimit.Value
+		params.CreditLimitUnitID = &creditLimit.UnitID
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	customer, apiErr := h.customerSvc.CreateCustomer(ctx, params)
@@ -452,6 +453,8 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
+
+	money := newMoneyRows(ctx)
 
 	params := domain.UpdateCustomerParams{
 		CustomerAccountID:        req.Id,
@@ -480,8 +483,12 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
 		CarrierBillingAccount:    fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
-		CreditLimit:              fieldpb.QuantityClearableFromProto(req.CreditLimit),
+		CreditLimit:              money.fieldPatch("credit_limit", req.CreditLimit),
 		Includes:                 req.Includes,
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	customer, apiErr := h.customerSvc.UpdateCustomer(ctx, params)

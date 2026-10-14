@@ -38,8 +38,8 @@ type UpdateProductRequest struct {
 	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
 	// New selling price per unit.
 	//
-	// The numerator unit must be a currency unit and the denominator unit must not be. The new rate replaces the price on the product's backing item.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// `per_unit_id` must not be a currency unit. The new price replaces the price on the product's backing item.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// ID of the item category to move the product to.
 	//
 	// The move is the one Change Item Category makes: the category has to be a product category and has to carry the properties of every attribute the product already has, and the product's rate units switch to the category's base unit while their numbers stay as they were. It is applied before the other fields in the request, so a `unit_price` sent alongside is written after it.
@@ -55,7 +55,7 @@ var sampleUpdateProductRequest = &UpdateProductRequest{
 	Description:      field.Set(sampleUpdateProductDescription),
 	Notes:            field.Set(sampleUpdateProductNotes),
 	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
-	UnitPrice:        field.Some(apirequest.RateInput{Value: "219.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitPrice:        field.Some(apirequest.UnitPriceInput{Amount: "219.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	CategoryID:       field.Some(apiresource.SampleItemCategoryID),
 }
 

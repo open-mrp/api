@@ -6,6 +6,7 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_async.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message GetAccountContextRequest {
@@ -498,7 +499,8 @@ message CustomerProto {
   optional CustomerLightCustomerProto parent_account = 26;
   google.protobuf.Timestamp created_at = 27;
   google.protobuf.Timestamp updated_at = 28;
-  optional CustomerCreditLimitProto credit_limit = 29;
+  reserved 29;
+  Money credit_limit = 34;
   repeated CustomerLightCustomerProto child_accounts = 30;
   // Calendar days between an order being issued and it being due to ship, for this customer specifically.
   optional int32 default_lead_time_days = 31;
@@ -583,14 +585,6 @@ message CustomerLightCustomerProto {
   optional google.protobuf.Timestamp created_at = 4;
   optional google.protobuf.Timestamp updated_at = 5;
 }
-message CustomerCreditLimitProto {
-  string id = 1;
-  string value = 2;
-  string unit_id = 3;
-  string unit_abbreviation = 4;
-  string unit_name = 5;
-  string unit_type = 6;
-}
 message ListCustomersRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -669,12 +663,12 @@ message CreateCustomerRequest {
   optional string carrier_billing_account = 22;
   optional CreateCustomerAddressInput bill_to_address = 23;
   optional CreateCustomerAddressInput ship_to_address = 24;
-  optional string credit_limit_value = 25;
-  optional string credit_limit_unit_id = 26;
+  reserved 25, 26;
   repeated string includes = 27;
   optional int32 default_lead_time_days = 28;
   optional string receive_calendar_id = 29;
   optional string fulfillment_policy_code = 30;
+  Money credit_limit = 31;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -704,7 +698,8 @@ message UpdateCustomerRequest {
   optional string carrier_billing_type = 22;
   optional StringPatch carrier_billing_account = 23;
   bool has_customer_price_group_ids = 24;
-  optional QuantityPatch credit_limit = 25;
+  reserved 25;
+  MoneyPatch credit_limit = 32;
   repeated string includes = 26;
   optional Int32Patch default_lead_time_days = 27;
   StringPatch receive_calendar_id = 30;
@@ -835,6 +830,7 @@ message RealizedMarginFindingProto {
   optional string gross_margin = 12;
   int32 line_count = 13;
   string reason = 14;
+  string unit_id = 15;
 }
 
 message AnalyzeRealizedMarginsResponse {
@@ -917,6 +913,7 @@ message BaseQuantityUnitProto {
   string name = 1;
   string abbreviation = 2;
   string type = 3;
+  string id = 4;
 }
 message BaseQuantity {
   double measure = 1;

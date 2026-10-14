@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "core/core.proto";
 import "core/core_receiving.proto";
+import "core/value_shapes.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -232,6 +233,8 @@ message PurchaseOrderLineInfo {
   google.protobuf.Timestamp updated_at = 28;
   // Delivery lines booked against the line, oldest first (populated when "lines.delivery_lines" is included).
   repeated PurchaseOrderLineDeliveryLineInfo delivery_lines = 31;
+  UnitPrice unit_price = 32;
+  UnitPrice unit_cost = 33;
 }
 
 // PurchaseOrderLineDeliveryLineInfo is a delivery line booked against a purchase order line.
@@ -347,12 +350,10 @@ message CreatePurchaseOrderLineInput {
   optional string product_description = 4;
   string quantity_value = 5;
   string quantity_unit_id = 6;
-  string unit_price_value = 7;
-  string unit_price_numerator_unit_id = 8;
-  string unit_price_denominator_unit_id = 9;
-  optional string unit_cost_value = 10;
-  optional string unit_cost_numerator_unit_id = 11;
-  optional string unit_cost_denominator_unit_id = 12;
+  reserved 7, 8, 9;
+  UnitPrice unit_price = 13;
+  reserved 10, 11, 12;
+  UnitPrice unit_cost = 14;
 }
 
 message CreatePurchaseOrderResponse {
@@ -410,12 +411,10 @@ message CreatePurchaseOrderLineRequest {
   optional string product_description = 5;
   string quantity_value = 6;
   string quantity_unit_id = 7;
-  string unit_price_value = 8;
-  string unit_price_numerator_unit_id = 9;
-  string unit_price_denominator_unit_id = 10;
-  optional string unit_cost_value = 11;
-  optional string unit_cost_numerator_unit_id = 12;
-  optional string unit_cost_denominator_unit_id = 13;
+  reserved 8, 9, 10;
+  UnitPrice unit_price = 14;
+  reserved 11, 12, 13;
+  UnitPrice unit_cost = 15;
 }
 
 message CreatePurchaseOrderLineResponse {
@@ -431,12 +430,10 @@ message UpdatePurchaseOrderLineRequest {
   optional string product_description = 6;
   optional string quantity_value = 7;
   optional string quantity_unit_id = 8;
-  optional string unit_price_value = 9;
-  optional string unit_price_numerator_unit_id = 10;
-  optional string unit_price_denominator_unit_id = 11;
-  optional string unit_cost_value = 12;
-  optional string unit_cost_numerator_unit_id = 13;
-  optional string unit_cost_denominator_unit_id = 14;
+  reserved 9, 10, 11;
+  UnitPrice unit_price = 15;
+  reserved 12, 13, 14;
+  UnitPrice unit_cost = 16;
 }
 
 message UpdatePurchaseOrderLineResponse {

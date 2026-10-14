@@ -563,7 +563,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsNonCurrencyNumeratorOnUni
 	s.Nil(result)
 	s.NotNil(err)
 	s.Equal(apierror.CodeValidationFailed, err.Code)
-	s.Equal("unit_cost.numerator_unit_id", err.Param)
+	s.Equal("unit_cost.currency", err.Param)
 }
 
 func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnitPrice() {
@@ -590,7 +590,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnit
 	s.Nil(result)
 	s.NotNil(err)
 	s.Equal(apierror.CodeValidationFailed, err.Code)
-	s.Equal("unit_price.denominator_unit_id", err.Param)
+	s.Equal("unit_price.per_unit_id", err.Param)
 }
 
 func (s *ProductSvcTestSuite) TestCreateProduct_MissingIdentity() {

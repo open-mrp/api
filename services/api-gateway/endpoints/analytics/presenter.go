@@ -6,7 +6,6 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
@@ -113,32 +112,27 @@ func AnalyzeOpenBatchesPresenter(resp *pb.AnalyzeOpenBatchesResponse) *apiresour
 }
 
 func quantityFromProto(q *pb.BaseQuantity) *apiresource.Quantity {
+	if q == nil || q.Unit == nil {
+		return nil
+	}
+	value := strconv.FormatFloat(q.Measure, 'f', -1, 64)
+	return apiresource.NewQuantity(apiresource.NormalizeQuantityValue(value, q.Unit.Type), q.Unit.Id)
+}
+
+// moneyFromProto presents an amount the report summed in the account's currency.
+func moneyFromProto(q *pb.BaseQuantity) *apiresource.Money {
 	if q == nil {
 		return nil
 	}
+	return apiresource.NewMoney(apiresource.NormalizeMonetaryQuantityValue(strconv.FormatFloat(q.Measure, 'f', -1, 64)))
+}
 
-	var unitAbbreviation, unitType string
-	var unit *apiresource.Unit
-	if q.Unit != nil {
-		unitAbbreviation = q.Unit.Abbreviation
-		unitType = q.Unit.Type
-		unit = &apiresource.Unit{
-			Object:       constants.ObjectTypeUnit,
-			Name:         q.Unit.Name,
-			Abbreviation: unitAbbreviation,
-			Type:         constants.UnitType(unitType),
-		}
+// unitPriceFromProto presents a cost per unit the report computed as money over a quantity.
+func unitPriceFromProto(r *pb.AnalyticsRateProto) *apiresource.UnitPrice {
+	if r == nil || r.Numerator == nil || r.Denominator == nil || r.Denominator.Unit == nil {
+		return nil
 	}
-
-	valueStr := strconv.FormatFloat(q.Measure, 'f', -1, 64)
-	qid, _ := id.GenID(id.QuantityIDPrefix, nil)
-	return &apiresource.Quantity{
-		ID:           qid,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        apiresource.NormalizeQuantityValue(valueStr, unitType),
-		DisplayValue: apiresource.FormatDisplayValue(valueStr, unitAbbreviation, unitType),
-		Unit:         unit,
-	}
+	return apiresource.NewUnitPrice(apiresource.NormalizeRateValue(strconv.FormatFloat(r.Numerator.Measure, 'f', -1, 64)), r.Denominator.Unit.Id)
 }
 
 func AnalyzeDeliveriesPresenter(resp *pb.AnalyzeDeliveriesResponse) *apiresource.AnalyzeDeliveriesResponse {
@@ -413,15 +407,12 @@ func AnalyzeInventoryReceiptsPresenter(resp *pb.AnalyzeInventoryReceiptsResponse
 				Sku:         e.Item.Sku,
 				Description: ptrStringOrNil(e.Item.Description),
 			},
-			OwnerAccount:      apiresource.NewEntity(e.OwnerAccount.Id, constants.ObjectTypeAccount, &e.OwnerAccount.Name, nil),
-			HolderAccount:     apiresource.NewEntity(e.HolderAccount.Id, constants.ObjectTypeAccount, &e.HolderAccount.Name, nil),
-			RemainingQuantity: quantityFromProto(e.RemainingQuantity),
-			WeightedAverageUnitCost: &apiresource.AnalyticsRate{
-				Numerator:   quantityFromProto(e.WeightedAverageUnitCost.Numerator),
-				Denominator: quantityFromProto(e.WeightedAverageUnitCost.Denominator),
-			},
-			OldestReceiptAt: grpcutil.TimestampToTimePtr(e.OldestReceiptAt),
-			NewestReceiptAt: grpcutil.TimestampToTimePtr(e.NewestReceiptAt),
+			OwnerAccount:            apiresource.NewEntity(e.OwnerAccount.Id, constants.ObjectTypeAccount, &e.OwnerAccount.Name, nil),
+			HolderAccount:           apiresource.NewEntity(e.HolderAccount.Id, constants.ObjectTypeAccount, &e.HolderAccount.Name, nil),
+			RemainingQuantity:       quantityFromProto(e.RemainingQuantity),
+			WeightedAverageUnitCost: unitPriceFromProto(e.WeightedAverageUnitCost),
+			OldestReceiptAt:         grpcutil.TimestampToTimePtr(e.OldestReceiptAt),
+			NewestReceiptAt:         grpcutil.TimestampToTimePtr(e.NewestReceiptAt),
 		}
 
 		if e.Location != nil {
@@ -435,7 +426,7 @@ func AnalyzeInventoryReceiptsPresenter(resp *pb.AnalyzeInventoryReceiptsResponse
 			}
 		}
 		if e.InventoryValue != nil {
-			entry.InventoryValue = quantityFromProto(e.InventoryValue)
+			entry.InventoryValue = moneyFromProto(e.InventoryValue)
 		}
 
 		entries[i] = entry
@@ -656,44 +647,11 @@ func AnalyzeWeeksOfSalesPresenter(resp *pb.AnalyzeWeeksOfSalesResponse) *apireso
 		onHandValueStr := strconv.FormatFloat(item.QuantityOnHand, 'f', -1, 64)
 		avgSalesValueStr := strconv.FormatFloat(item.AverageSalesQuantity, 'f', -1, 64)
 
-		onHandID, _ := id.GenID(id.QuantityIDPrefix, nil)
-		avgSalesID, _ := id.GenID(id.QuantityIDPrefix, nil)
-
 		items[i] = apiresource.WeeksOfSalesItem{
-			ProductLine: apiresource.NewEntity(item.ProductLineId, constants.ObjectTypeProductLine, &item.ProductLineName, nil),
-			QuantityOnHand: &apiresource.Quantity{
-				ID:     onHandID,
-				Object: constants.ObjectTypeQuantity,
-				Value:  apiresource.NormalizeQuantityValue(onHandValueStr, item.QuantityOnHandUnitType),
-				DisplayValue: apiresource.FormatDisplayValue(
-					onHandValueStr,
-					item.QuantityOnHandUnitAbbreviation,
-					item.QuantityOnHandUnitType,
-				),
-				Unit: &apiresource.Unit{
-					Object:       constants.ObjectTypeUnit,
-					Name:         item.QuantityOnHandUnitAbbreviation,
-					Abbreviation: item.QuantityOnHandUnitAbbreviation,
-					Type:         constants.UnitType(item.QuantityOnHandUnitType),
-				},
-			},
-			AverageSalesQuantity: &apiresource.Quantity{
-				ID:     avgSalesID,
-				Object: constants.ObjectTypeQuantity,
-				Value:  apiresource.NormalizeQuantityValue(avgSalesValueStr, item.AverageSalesQuantityUnitType),
-				DisplayValue: apiresource.FormatDisplayValue(
-					avgSalesValueStr,
-					item.AverageSalesQuantityUnitAbbreviation,
-					item.AverageSalesQuantityUnitType,
-				),
-				Unit: &apiresource.Unit{
-					Object:       constants.ObjectTypeUnit,
-					Name:         item.AverageSalesQuantityUnitAbbreviation,
-					Abbreviation: item.AverageSalesQuantityUnitAbbreviation,
-					Type:         constants.UnitType(item.AverageSalesQuantityUnitType),
-				},
-			},
-			WeeksOfSales: item.WeeksOfSales,
+			ProductLine:          apiresource.NewEntity(item.ProductLineId, constants.ObjectTypeProductLine, &item.ProductLineName, nil),
+			QuantityOnHand:       apiresource.NewQuantity(apiresource.NormalizeQuantityValue(onHandValueStr, item.QuantityOnHandUnitType), item.QuantityOnHandUnitId),
+			AverageSalesQuantity: apiresource.NewQuantity(apiresource.NormalizeQuantityValue(avgSalesValueStr, item.AverageSalesQuantityUnitType), item.AverageSalesQuantityUnitId),
+			WeeksOfSales:         item.WeeksOfSales,
 		}
 	}
 

@@ -658,7 +658,7 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 		return []map[string]any{{
 			"product_id": SeedProductID,
 			"quantity":   map[string]any{"value": "1", "unit_id": SeedUnitID},
-			"unit_price": map[string]any{"value": "999.00", "numerator_unit_id": "dollar", "denominator_unit_id": SeedUnitID},
+			"unit_price": map[string]any{"amount": "999.00", "currency": "usd", "per_unit_id": SeedUnitID},
 		}}
 	}
 
@@ -683,7 +683,9 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 		require.True(t, ok)
 		price := jsonObject(first, "unit_price")
 		require.NotNil(t, price)
-		assert.Equal(t, "999.000000000000000000000000000000", jsonField(price, "value"), "an internal actor's unit_price override must be honored")
+		assert.Equal(t, "999.00", jsonField(price, "amount"), "an internal actor's unit_price override must be honored")
+		assert.Equal(t, "usd", jsonField(price, "currency"))
+		assert.Equal(t, SeedUnitID, jsonField(jsonObject(price, "per_unit"), "id"))
 	})
 
 	t.Run("CustomerActorOverrideIgnored", func(t *testing.T) {
@@ -715,7 +717,8 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 		require.True(t, ok)
 		price := jsonObject(first, "unit_price")
 		require.NotNil(t, price)
-		assert.NotEqual(t, "999.000000000000000000000000000000", jsonField(price, "value"), "a customer actor's unit_price override must be ignored, not honored")
+		assert.NotEmpty(t, jsonField(price, "amount"))
+		assert.NotEqual(t, "999.00", jsonField(price, "amount"), "a customer actor's unit_price override must be ignored, not honored")
 	})
 }
 

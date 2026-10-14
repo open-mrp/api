@@ -5962,8 +5962,8 @@ type ItemInfo struct {
 	Notes         *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	ItemTypeCode  string                 `protobuf:"bytes,5,opt,name=item_type_code,json=itemTypeCode,proto3" json:"item_type_code,omitempty"`
 	Category      *ItemCategoryInfo      `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
-	UnitValue     *RateInfo              `protobuf:"bytes,7,opt,name=unit_value,json=unitValue,proto3" json:"unit_value,omitempty"`
-	UnitCost      *RateInfo              `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	UnitValue     *UnitPrice             `protobuf:"bytes,15,opt,name=unit_value,json=unitValue,proto3" json:"unit_value,omitempty"`
+	UnitCost      *UnitPrice             `protobuf:"bytes,16,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	BurnRate      *RateInfo              `protobuf:"bytes,9,opt,name=burn_rate,json=burnRate,proto3" json:"burn_rate,omitempty"`
 	AccountId     string                 `protobuf:"bytes,10,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	IsDirty       bool                   `protobuf:"varint,11,opt,name=is_dirty,json=isDirty,proto3" json:"is_dirty,omitempty"`
@@ -6046,14 +6046,14 @@ func (x *ItemInfo) GetCategory() *ItemCategoryInfo {
 	return nil
 }
 
-func (x *ItemInfo) GetUnitValue() *RateInfo {
+func (x *ItemInfo) GetUnitValue() *UnitPrice {
 	if x != nil {
 		return x.UnitValue
 	}
 	return nil
 }
 
-func (x *ItemInfo) GetUnitCost() *RateInfo {
+func (x *ItemInfo) GetUnitCost() *UnitPrice {
 	if x != nil {
 		return x.UnitCost
 	}
@@ -6601,7 +6601,7 @@ var File_core_core_accounts_carriers_proto protoreflect.FileDescriptor
 
 const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
-	"!core/core_accounts_carriers.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x15core/core_patch.proto\"O\n" +
+	"!core/core_accounts_carriers.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x15core/core_patch.proto\x1a\x17core/value_shapes.proto\"O\n" +
 	"\x17GetStripeStatusResponse\x124\n" +
 	"\x16has_stripe_integration\x18\x01 \x01(\bR\x14hasStripeIntegration\"\xc2\x01\n" +
 	"\x12AdjustmentTypeInfo\x12\x0e\n" +
@@ -7173,17 +7173,17 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
-	"\v_color_code\"\xd4\x04\n" +
+	"\v_color_code\"\xe2\x04\n" +
 	"\bItemInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
 	"\x05notes\x18\x04 \x01(\tH\x01R\x05notes\x88\x01\x01\x12$\n" +
 	"\x0eitem_type_code\x18\x05 \x01(\tR\fitemTypeCode\x122\n" +
-	"\bcategory\x18\x06 \x01(\v2\x16.core.ItemCategoryInfoR\bcategory\x12-\n" +
+	"\bcategory\x18\x06 \x01(\v2\x16.core.ItemCategoryInfoR\bcategory\x12.\n" +
 	"\n" +
-	"unit_value\x18\a \x01(\v2\x0e.core.RateInfoR\tunitValue\x12+\n" +
-	"\tunit_cost\x18\b \x01(\v2\x0e.core.RateInfoR\bunitCost\x12+\n" +
+	"unit_value\x18\x0f \x01(\v2\x0f.core.UnitPriceR\tunitValue\x12,\n" +
+	"\tunit_cost\x18\x10 \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12+\n" +
 	"\tburn_rate\x18\t \x01(\v2\x0e.core.RateInfoR\bburnRate\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\n" +
@@ -7197,7 +7197,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"attributes\x18\x0e \x03(\v2\x17.core.ItemAttributeInfoR\n" +
 	"attributesB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notes\"\xee\x04\n" +
+	"\x06_notesJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xee\x04\n" +
 	"\x10ListItemsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -7373,6 +7373,7 @@ var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*JobInfo)(nil),                              // 107: core.JobInfo
 	(*Int32Patch)(nil),                           // 108: core.Int32Patch
 	(*UnitInfo)(nil),                             // 109: core.UnitInfo
+	(*UnitPrice)(nil),                            // 110: core.UnitPrice
 }
 var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	104, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -7461,8 +7462,8 @@ var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	104, // 83: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
 	104, // 84: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	91,  // 85: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	90,  // 86: core.ItemInfo.unit_value:type_name -> core.RateInfo
-	90,  // 87: core.ItemInfo.unit_cost:type_name -> core.RateInfo
+	110, // 86: core.ItemInfo.unit_value:type_name -> core.UnitPrice
+	110, // 87: core.ItemInfo.unit_cost:type_name -> core.UnitPrice
 	90,  // 88: core.ItemInfo.burn_rate:type_name -> core.RateInfo
 	104, // 89: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
 	104, // 90: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
@@ -7489,6 +7490,7 @@ func file_core_core_accounts_carriers_proto_init() {
 	file_core_core_async_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_patch_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_accounts_carriers_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[6].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[7].OneofWrappers = []any{}

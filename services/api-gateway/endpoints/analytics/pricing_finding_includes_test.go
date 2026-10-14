@@ -74,8 +74,8 @@ func TestPresentPricingAnalysis_LeavesExpandablesUnset(t *testing.T) {
 	if finding.UnitPrice == nil {
 		t.Fatal("unit price should always be present")
 	}
-	if finding.UnitPrice.DisplayValue != "$8.00 / pr" {
-		t.Errorf("display value = %q, want %q", finding.UnitPrice.DisplayValue, "$8.00 / pr")
+	if finding.UnitPrice.Amount != "8.0000" || finding.UnitPrice.Currency != constants.CurrencyUSD || finding.UnitPrice.PerUnit == nil || finding.UnitPrice.PerUnit.ID != "un_pair" {
+		t.Errorf("unit price = %+v, want 8.0000 usd per un_pair", finding.UnitPrice)
 	}
 	if finding.Reason != constants.PricingFindingReasonBelowTargetMargin {
 		t.Errorf("reason = %q, want below_target_margin", finding.Reason)
@@ -134,8 +134,8 @@ func TestPricingFindingIncludes_AttributesRoundTrip(t *testing.T) {
 	}
 }
 
-// A unit loaded for the price attaches to every rate on the finding, so the peer median is labeled on the same basis as the price it is compared against.
-func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
+// The peer median is priced per the same unit as the price it is compared against.
+func TestPresentPricingAnalysis_PeerMedianSharesThePriceUnit(t *testing.T) {
 	ctx := include.WithLoadMeta(context.Background())
 	median := "10.0000"
 	fraction := "0.2000"
@@ -144,19 +144,8 @@ func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
 	if finding.PeerMedianPrice == nil {
 		t.Fatal("expected the flagged finding to carry a peer median")
 	}
-
-	sub := subFieldNamed(t, constants.ObjectTypeCustomerPricingFinding, "unit_price.denominator_unit")
-	ids := sub.ExtractIDs(ctx, finding)
-	if len(ids) != 1 || ids[0] != "un_pair" {
-		t.Fatalf("extracted %v, want [un_pair]", ids)
-	}
-
-	sub.Populate(ctx, finding, map[string]any{"un_pair": &apiresource.Unit{ID: "un_pair", Abbreviation: "pr"}})
-	if finding.UnitPrice.DenominatorUnit == nil {
-		t.Error("unit price denominator unit was not populated")
-	}
-	if finding.PeerMedianPrice.DenominatorUnit == nil {
-		t.Error("peer median denominator unit was not populated")
+	if finding.PeerMedianPrice.PerUnit == nil || finding.PeerMedianPrice.PerUnit.ID != "un_pair" {
+		t.Errorf("peer median per unit = %+v, want un_pair", finding.PeerMedianPrice.PerUnit)
 	}
 }
 
@@ -176,6 +165,7 @@ func realizedFindingForIncludes(t *testing.T) (context.Context, *apiresource.Rea
 			CustomerGroupId:         "acgp_1",
 			ItemId:                  "it_1",
 			ProductLineId:           "pl_1",
+			UnitId:                  "un_pair",
 			UnitAbbreviation:        "pr",
 			QuantityInvoiced:        "100",
 			Revenue:                 "1000.00",
@@ -226,18 +216,18 @@ func TestRealizedMarginFindingIncludes_RoundTrip(t *testing.T) {
 	}
 }
 
-// Money has no currency unit in the invoiced-sales payload, so it must render as a bare amount rather than inventing a symbol; the invoiced quantity does know its unit and keeps it.
+// The invoiced quantity and the prices are counted in the finding's unit; the money is usd.
 func TestPresentRealizedMargins_ComputedAmounts(t *testing.T) {
 	_, finding := realizedFindingForIncludes(t)
 
-	if finding.QuantityInvoiced.DisplayValue != "100.00 pr" {
-		t.Errorf("quantity display = %q, want %q", finding.QuantityInvoiced.DisplayValue, "100.00 pr")
+	if finding.QuantityInvoiced.Value != "100.0000" || finding.QuantityInvoiced.Unit == nil || finding.QuantityInvoiced.Unit.ID != "un_pair" {
+		t.Errorf("quantity invoiced = %+v, want 100.0000 in un_pair", finding.QuantityInvoiced)
 	}
-	if finding.Revenue.DisplayValue != "1000.00" {
-		t.Errorf("revenue display = %q, want an unadorned amount", finding.Revenue.DisplayValue)
+	if finding.Revenue.Amount != "1000.00" || finding.Revenue.Currency != constants.CurrencyUSD {
+		t.Errorf("revenue = %+v, want 1000.00 usd", finding.Revenue)
 	}
-	if finding.AverageUnitPrice.DisplayValue != "10.00 / pr" {
-		t.Errorf("average price display = %q, want %q", finding.AverageUnitPrice.DisplayValue, "10.00 / pr")
+	if finding.AverageUnitPrice.Amount != "10.0000" || finding.AverageUnitPrice.PerUnit == nil || finding.AverageUnitPrice.PerUnit.ID != "un_pair" {
+		t.Errorf("average price = %+v, want 10.0000 per un_pair", finding.AverageUnitPrice)
 	}
 	if finding.Customer != nil || finding.Item != nil {
 		t.Error("expandable relations must be nil until the include resolver populates them")

@@ -38,6 +38,7 @@ func shippingCaseToProto(sc *domain.ShippingCase) *pb.ShippingCaseInfo {
 		CreatedAt:                          timestamppb.New(sc.CreatedAt),
 		UpdatedAt:                          timestamppb.New(sc.UpdatedAt),
 		FreightAmountId:                    sc.FreightAmountID,
+		FreightAmount:                      freightAmountToProto(sc.FreightAmountID, sc.FreightAmountValue),
 		FreightAmountValue:                 sc.FreightAmountValue,
 		FreightAmountUnitId:                sc.FreightAmountUnitID,
 		FreightAmountUnitName:              sc.FreightAmountUnitName,
@@ -99,11 +100,20 @@ func (h *shippingCaseGRPCHandler) UpdateShippingCase(ctx context.Context, req *p
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+	var freightAmountValue, freightAmountUnitID *string
+	if amount := money.quantity("freight_amount", req.FreightAmount); amount != nil {
+		freightAmountValue, freightAmountUnitID = &amount.Value, &amount.UnitID
+	}
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := domain.UpdateShippingCaseParams{
 		ShippingCaseID:      req.Id,
 		TrackingNumber:      trackingNumberFromProto(req.TrackingNumber),
-		FreightAmountValue:  req.FreightAmountValue,
-		FreightAmountUnitID: req.FreightAmountUnitId,
+		FreightAmountValue:  freightAmountValue,
+		FreightAmountUnitID: freightAmountUnitID,
 		FreightWeightValue:  req.FreightWeightValue,
 		FreightWeightUnitID: req.FreightWeightUnitId,
 	}
@@ -166,4 +176,12 @@ func (h *shippingCaseGRPCHandler) GetShippingCaseLabel(ctx context.Context, req 
 	return &pb.GetShippingCaseLabelResponse{
 		Url: url,
 	}, nil
+}
+
+// freightAmountToProto presents a case's freight charge, or nil when the case has none.
+func freightAmountToProto(id, value string) *pb.Money {
+	if id == "" {
+		return nil
+	}
+	return moneyToProto(value)
 }

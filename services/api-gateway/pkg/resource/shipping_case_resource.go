@@ -37,7 +37,7 @@ type ShippingCase struct {
 	// Freight cost charged for this case.
 	//
 	// Starts at zero when the case is created, and is reset to zero if the shipment is voided.
-	FreightAmount *Quantity `json:"freight_amount" expandable:"true"`
+	FreightAmount *Money `json:"freight_amount" expandable:"true"`
 	// Shipping weight of this case.
 	FreightWeight *Quantity `json:"freight_weight" expandable:"true"`
 	// The shipment this case belongs to.
@@ -69,19 +69,10 @@ var SampleShippingCase = &ShippingCase{
 	SSCC:           new("003456789000000018"),
 	TrackingNumber: new("1Z999AA10123456784"),
 	ShippedAt:      timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
-	FreightAmount: &Quantity{
-		ID:           SampleQuantityID,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "12.500000000000000000000000000000",
-		DisplayValue: "$12.50",
-		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
-	},
+	FreightAmount:  &Money{Amount: "12.50", Currency: constants.CurrencyUSD},
 	FreightWeight: &Quantity{
-		ID:           SampleQuantityID,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "5.000000000000000000000000000000",
-		DisplayValue: "5 lb",
-		Unit:         newSampleUnit("Pound", "lb", constants.UnitTypeMass),
+		Value: "5.000000000000000000000000000000",
+		Unit:  newSampleUnit("Pound", "lb", constants.UnitTypeMass),
 	},
 	Shipment:  nil,
 	Carrier:   nil,

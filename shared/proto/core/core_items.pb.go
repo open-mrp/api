@@ -1476,15 +1476,13 @@ func (x *UpsertItemPropertyInput) GetValue() string {
 }
 
 type UpsertPartInput struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Sku         string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
-	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes       *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Category    *ObjectIdentifier      `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
-	// unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
-	// basis. CreateRateInput is defined in core_analytics.proto.
-	UnitPrice     *CreateRateInput           `protobuf:"bytes,5,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	UnitCost      *CreateRateInput           `protobuf:"bytes,6,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Sku           string                     `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description   *string                    `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes         *string                    `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Category      *ObjectIdentifier          `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
+	UnitPrice     *UnitPrice                 `protobuf:"bytes,8,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost      *UnitPrice                 `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	Properties    []*UpsertItemPropertyInput `protobuf:"bytes,7,rep,name=properties,proto3" json:"properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1548,14 +1546,14 @@ func (x *UpsertPartInput) GetCategory() *ObjectIdentifier {
 	return nil
 }
 
-func (x *UpsertPartInput) GetUnitPrice() *CreateRateInput {
+func (x *UpsertPartInput) GetUnitPrice() *UnitPrice {
 	if x != nil {
 		return x.UnitPrice
 	}
 	return nil
 }
 
-func (x *UpsertPartInput) GetUnitCost() *CreateRateInput {
+func (x *UpsertPartInput) GetUnitCost() *UnitPrice {
 	if x != nil {
 		return x.UnitCost
 	}
@@ -1666,8 +1664,8 @@ type UpsertProductInput struct {
 	Category      *ObjectIdentifier          `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
 	ProductLine   *ObjectIdentifier          `protobuf:"bytes,6,opt,name=product_line,json=productLine,proto3" json:"product_line,omitempty"`
 	IsPortalReady *bool                      `protobuf:"varint,7,opt,name=is_portal_ready,json=isPortalReady,proto3,oneof" json:"is_portal_ready,omitempty"`
-	UnitPrice     *CreateRateInput           `protobuf:"bytes,8,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	UnitCost      *CreateRateInput           `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	UnitPrice     *UnitPrice                 `protobuf:"bytes,11,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost      *UnitPrice                 `protobuf:"bytes,12,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	Properties    []*UpsertItemPropertyInput `protobuf:"bytes,10,rep,name=properties,proto3" json:"properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1752,14 +1750,14 @@ func (x *UpsertProductInput) GetIsPortalReady() bool {
 	return false
 }
 
-func (x *UpsertProductInput) GetUnitPrice() *CreateRateInput {
+func (x *UpsertProductInput) GetUnitPrice() *UnitPrice {
 	if x != nil {
 		return x.UnitPrice
 	}
 	return nil
 }
 
-func (x *UpsertProductInput) GetUnitCost() *CreateRateInput {
+func (x *UpsertProductInput) GetUnitCost() *UnitPrice {
 	if x != nil {
 		return x.UnitCost
 	}
@@ -1868,12 +1866,10 @@ type UpsertMaterialInput struct {
 	Notes       *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	Category    *ObjectIdentifier      `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
 	// order_point / lead_time: QuantityInput is defined in core_analytics.proto.
-	OrderPoint *QuantityInput `protobuf:"bytes,5,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
-	LeadTime   *QuantityInput `protobuf:"bytes,6,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
-	// unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
-	// basis. CreateRateInput is defined in core_analytics.proto.
-	UnitPrice     *CreateRateInput           `protobuf:"bytes,7,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	UnitCost      *CreateRateInput           `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	OrderPoint    *QuantityInput             `protobuf:"bytes,5,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
+	LeadTime      *QuantityInput             `protobuf:"bytes,6,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
+	UnitPrice     *UnitPrice                 `protobuf:"bytes,10,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost      *UnitPrice                 `protobuf:"bytes,11,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	Properties    []*UpsertItemPropertyInput `protobuf:"bytes,9,rep,name=properties,proto3" json:"properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1951,14 +1947,14 @@ func (x *UpsertMaterialInput) GetLeadTime() *QuantityInput {
 	return nil
 }
 
-func (x *UpsertMaterialInput) GetUnitPrice() *CreateRateInput {
+func (x *UpsertMaterialInput) GetUnitPrice() *UnitPrice {
 	if x != nil {
 		return x.UnitPrice
 	}
 	return nil
 }
 
-func (x *UpsertMaterialInput) GetUnitCost() *CreateRateInput {
+func (x *UpsertMaterialInput) GetUnitCost() *UnitPrice {
 	if x != nil {
 		return x.UnitCost
 	}
@@ -6153,7 +6149,7 @@ var File_core_core_items_proto protoreflect.FileDescriptor
 
 const file_core_core_items_proto_rawDesc = "" +
 	"\n" +
-	"\x15core/core_items.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\"\xe7\x01\n" +
+	"\x15core/core_items.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a\x17core/value_shapes.proto\"\xe7\x01\n" +
 	"\x18GetItemInventoryResponse\x12+\n" +
 	"\aon_hand\x18\x01 \x01(\v2\x12.core.QuantityInfoR\x06onHand\x12.\n" +
 	"\breserved\x18\x02 \x01(\v2\x12.core.QuantityInfoR\breserved\x12D\n" +
@@ -6276,27 +6272,24 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\aresults\x18\x01 \x03(\v2\x1a.core.BulkCreateItemResultR\aresults\"C\n" +
 	"\x17UpsertItemPropertyInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\x83\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\xdc\x02\n" +
 	"\x0fUpsertPartInput\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x122\n" +
-	"\bcategory\x18\x04 \x01(\v2\x16.core.ObjectIdentifierR\bcategory\x129\n" +
+	"\bcategory\x18\x04 \x01(\v2\x16.core.ObjectIdentifierR\bcategory\x12.\n" +
 	"\n" +
-	"unit_price\x18\x05 \x01(\v2\x15.core.CreateRateInputH\x02R\tunitPrice\x88\x01\x01\x127\n" +
-	"\tunit_cost\x18\x06 \x01(\v2\x15.core.CreateRateInputH\x03R\bunitCost\x88\x01\x01\x12=\n" +
+	"unit_price\x18\b \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\t \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12=\n" +
 	"\n" +
 	"properties\x18\a \x03(\v2\x1d.core.UpsertItemPropertyInputR\n" +
 	"propertiesB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notesB\r\n" +
-	"\v_unit_priceB\f\n" +
-	"\n" +
-	"_unit_cost\"E\n" +
+	"\x06_notesJ\x04\b\x05\x10\x06J\x04\b\x06\x10\a\"E\n" +
 	"\x16BulkUpsertPartsRequest\x12+\n" +
 	"\x05parts\x18\x01 \x03(\v2\x15.core.UpsertPartInputR\x05parts\":\n" +
 	"\x17BulkUpsertPartsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xa4\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xfd\x03\n" +
 	"\x12UpsertProductInput\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12\x17\n" +
 	"\x04type\x18\x02 \x01(\tH\x00R\x04type\x88\x01\x01\x12%\n" +
@@ -6304,10 +6297,10 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x05notes\x18\x04 \x01(\tH\x02R\x05notes\x88\x01\x01\x122\n" +
 	"\bcategory\x18\x05 \x01(\v2\x16.core.ObjectIdentifierR\bcategory\x129\n" +
 	"\fproduct_line\x18\x06 \x01(\v2\x16.core.ObjectIdentifierR\vproductLine\x12+\n" +
-	"\x0fis_portal_ready\x18\a \x01(\bH\x03R\risPortalReady\x88\x01\x01\x129\n" +
+	"\x0fis_portal_ready\x18\a \x01(\bH\x03R\risPortalReady\x88\x01\x01\x12.\n" +
 	"\n" +
-	"unit_price\x18\b \x01(\v2\x15.core.CreateRateInputH\x04R\tunitPrice\x88\x01\x01\x127\n" +
-	"\tunit_cost\x18\t \x01(\v2\x15.core.CreateRateInputH\x05R\bunitCost\x88\x01\x01\x12=\n" +
+	"unit_price\x18\v \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\f \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12=\n" +
 	"\n" +
 	"properties\x18\n" +
 	" \x03(\v2\x1d.core.UpsertItemPropertyInputR\n" +
@@ -6315,14 +6308,12 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x05_typeB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x12\n" +
-	"\x10_is_portal_readyB\r\n" +
-	"\v_unit_priceB\f\n" +
-	"\n" +
-	"_unit_cost\"Q\n" +
+	"\x10_is_portal_readyJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"\"Q\n" +
 	"\x19BulkUpsertProductsRequest\x124\n" +
 	"\bproducts\x18\x01 \x03(\v2\x18.core.UpsertProductInputR\bproducts\"=\n" +
 	"\x1aBulkUpsertProductsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x97\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xf0\x03\n" +
 	"\x13UpsertMaterialInput\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
@@ -6330,10 +6321,11 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\bcategory\x18\x04 \x01(\v2\x16.core.ObjectIdentifierR\bcategory\x129\n" +
 	"\vorder_point\x18\x05 \x01(\v2\x13.core.QuantityInputH\x02R\n" +
 	"orderPoint\x88\x01\x01\x125\n" +
-	"\tlead_time\x18\x06 \x01(\v2\x13.core.QuantityInputH\x03R\bleadTime\x88\x01\x01\x129\n" +
+	"\tlead_time\x18\x06 \x01(\v2\x13.core.QuantityInputH\x03R\bleadTime\x88\x01\x01\x12.\n" +
 	"\n" +
-	"unit_price\x18\a \x01(\v2\x15.core.CreateRateInputH\x04R\tunitPrice\x88\x01\x01\x127\n" +
-	"\tunit_cost\x18\b \x01(\v2\x15.core.CreateRateInputH\x05R\bunitCost\x88\x01\x01\x12=\n" +
+	"unit_price\x18\n" +
+	" \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\v \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12=\n" +
 	"\n" +
 	"properties\x18\t \x03(\v2\x1d.core.UpsertItemPropertyInputR\n" +
 	"propertiesB\x0e\n" +
@@ -6341,10 +6333,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x06_notesB\x0e\n" +
 	"\f_order_pointB\f\n" +
 	"\n" +
-	"_lead_timeB\r\n" +
-	"\v_unit_priceB\f\n" +
-	"\n" +
-	"_unit_cost\"U\n" +
+	"_lead_timeJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"U\n" +
 	"\x1aBulkUpsertMaterialsRequest\x127\n" +
 	"\tmaterials\x18\x01 \x03(\v2\x19.core.UpsertMaterialInputR\tmaterials\">\n" +
 	"\x1bBulkUpsertMaterialsResponse\x12\x1f\n" +
@@ -6821,7 +6810,7 @@ var file_core_core_items_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),                 // 102: google.protobuf.Timestamp
 	(*ItemInfo)(nil),                              // 103: core.ItemInfo
 	(*ObjectIdentifier)(nil),                      // 104: core.ObjectIdentifier
-	(*CreateRateInput)(nil),                       // 105: core.CreateRateInput
+	(*UnitPrice)(nil),                             // 105: core.UnitPrice
 	(*JobInfo)(nil),                               // 106: core.JobInfo
 	(*QuantityInput)(nil),                         // 107: core.QuantityInput
 	(*PageInfo)(nil),                              // 108: core.PageInfo
@@ -6845,23 +6834,23 @@ var file_core_core_items_proto_depIdxs = []int32{
 	19,  // 13: core.BulkCreateItemsRequest.items:type_name -> core.BulkCreateItemInput
 	21,  // 14: core.BulkCreateItemsResponse.results:type_name -> core.BulkCreateItemResult
 	104, // 15: core.UpsertPartInput.category:type_name -> core.ObjectIdentifier
-	105, // 16: core.UpsertPartInput.unit_price:type_name -> core.CreateRateInput
-	105, // 17: core.UpsertPartInput.unit_cost:type_name -> core.CreateRateInput
+	105, // 16: core.UpsertPartInput.unit_price:type_name -> core.UnitPrice
+	105, // 17: core.UpsertPartInput.unit_cost:type_name -> core.UnitPrice
 	23,  // 18: core.UpsertPartInput.properties:type_name -> core.UpsertItemPropertyInput
 	24,  // 19: core.BulkUpsertPartsRequest.parts:type_name -> core.UpsertPartInput
 	106, // 20: core.BulkUpsertPartsResponse.job:type_name -> core.JobInfo
 	104, // 21: core.UpsertProductInput.category:type_name -> core.ObjectIdentifier
 	104, // 22: core.UpsertProductInput.product_line:type_name -> core.ObjectIdentifier
-	105, // 23: core.UpsertProductInput.unit_price:type_name -> core.CreateRateInput
-	105, // 24: core.UpsertProductInput.unit_cost:type_name -> core.CreateRateInput
+	105, // 23: core.UpsertProductInput.unit_price:type_name -> core.UnitPrice
+	105, // 24: core.UpsertProductInput.unit_cost:type_name -> core.UnitPrice
 	23,  // 25: core.UpsertProductInput.properties:type_name -> core.UpsertItemPropertyInput
 	27,  // 26: core.BulkUpsertProductsRequest.products:type_name -> core.UpsertProductInput
 	106, // 27: core.BulkUpsertProductsResponse.job:type_name -> core.JobInfo
 	104, // 28: core.UpsertMaterialInput.category:type_name -> core.ObjectIdentifier
 	107, // 29: core.UpsertMaterialInput.order_point:type_name -> core.QuantityInput
 	107, // 30: core.UpsertMaterialInput.lead_time:type_name -> core.QuantityInput
-	105, // 31: core.UpsertMaterialInput.unit_price:type_name -> core.CreateRateInput
-	105, // 32: core.UpsertMaterialInput.unit_cost:type_name -> core.CreateRateInput
+	105, // 31: core.UpsertMaterialInput.unit_price:type_name -> core.UnitPrice
+	105, // 32: core.UpsertMaterialInput.unit_cost:type_name -> core.UnitPrice
 	23,  // 33: core.UpsertMaterialInput.properties:type_name -> core.UpsertItemPropertyInput
 	30,  // 34: core.BulkUpsertMaterialsRequest.materials:type_name -> core.UpsertMaterialInput
 	106, // 35: core.BulkUpsertMaterialsResponse.job:type_name -> core.JobInfo
@@ -6946,6 +6935,7 @@ func file_core_core_items_proto_init() {
 	file_core_core_identity_context_proto_init()
 	file_core_core_analytics_proto_init()
 	file_core_core_accounts_carriers_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_items_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[9].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[17].OneofWrappers = []any{}

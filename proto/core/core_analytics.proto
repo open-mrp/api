@@ -8,6 +8,7 @@ import "core/core_patch.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_identity_context.proto";
 import "core/core_async.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message QuarterlyDataProto {
@@ -302,8 +303,10 @@ message ShippingTermInfo {
   string id = 1;
   string name = 2;
   string type = 3;
-  optional QuantityInfo flat_rate = 4;
-  optional QuantityInfo minimum_order_value = 5;
+  reserved 4;
+  Money flat_rate = 10;
+  reserved 5;
+  Money minimum_order_value = 11;
   repeated ServiceLevelInfo free_shipping_service_levels = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
@@ -330,16 +333,13 @@ message QuantityInput {
   string value = 1;
   string unit_id = 2;
 }
-message CreateRateInput {
-  string value = 1;
-  string numerator_unit_id = 2;
-  string denominator_unit_id = 3;
-}
 message CreateShippingTermRequest {
   string name = 1;
   string type = 2;
-  optional QuantityInput flat_rate = 3;
-  optional QuantityInput minimum_order_value = 4;
+  reserved 3;
+  Money flat_rate = 7;
+  reserved 4;
+  Money minimum_order_value = 8;
   repeated string free_shipping_service_level_ids = 5;
   repeated string includes = 6;
 }
@@ -350,8 +350,10 @@ message UpdateShippingTermRequest {
   string id = 1;
   optional string name = 2;
   optional string type = 3;
-  optional QuantityPatch flat_rate = 4;
-  optional QuantityPatch minimum_order_value = 5;
+  reserved 4;
+  MoneyPatch flat_rate = 8;
+  reserved 5;
+  MoneyPatch minimum_order_value = 9;
   optional StringListPatch free_shipping_service_level_ids = 6;
   repeated string includes = 7;
 }

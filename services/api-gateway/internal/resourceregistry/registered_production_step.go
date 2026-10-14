@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -36,10 +37,6 @@ func init() {
 			},
 			{Key: "in_steps", Populate: populateInStepsOnProductionStep},
 			{Key: "out_steps", Populate: populateOutStepsOnProductionStep},
-			// The rates are always on the step; these let the resolver descend to their units.
-			{Key: "labor_rate", Target: constants.ObjectTypeRate, ExtractRefs: extractLaborRateRefFromProductionStep},
-			{Key: "labor_time", Target: constants.ObjectTypeRate, ExtractRefs: extractLaborTimeRefFromProductionStep},
-			{Key: "overhead_rate", Target: constants.ObjectTypeRate, ExtractRefs: extractOverheadRateRefFromProductionStep},
 		},
 	})
 
@@ -48,7 +45,6 @@ func init() {
 		Load:       resourceloaders.LoadProductions,
 		Subs: []include.SubField{
 			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromProduction, Populate: populateProducedItemOnProduction},
-			{Key: "quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: extractQuantityRefFromProduction},
 		},
 	})
 }
@@ -183,36 +179,6 @@ func populateProducedItemOnProduction(ctx context.Context, parent any, loaded ma
 	if v, ok := loaded[id]; ok {
 		p.ProducedItem = v.(*apiresource.Item)
 	}
-}
-
-func extractLaborRateRefFromProductionStep(_ context.Context, parent any) []any {
-	return rateRef(parent.(*apiresource.ProductionStep).LaborRate)
-}
-
-func extractLaborTimeRefFromProductionStep(_ context.Context, parent any) []any {
-	return rateRef(parent.(*apiresource.ProductionStep).LaborTime)
-}
-
-func extractOverheadRateRefFromProductionStep(_ context.Context, parent any) []any {
-	return rateRef(parent.(*apiresource.ProductionStep).OverheadRate)
-}
-
-func rateRef(r *apiresource.Rate) []any {
-	if r == nil {
-		return nil
-	}
-	return []any{r}
-}
-
-func extractQuantityRefFromProduction(_ context.Context, parent any) []any {
-	return quantityRef(parent.(*apiresource.ProductionOutput).Quantity)
-}
-
-func quantityRef(q *apiresource.Quantity) []any {
-	if q == nil {
-		return nil
-	}
-	return []any{q}
 }
 
 func extractMachineRefsFromProductionStep(_ context.Context, parent any) []any {

@@ -57,9 +57,9 @@ func TestSalesOrder_IssuedLinePriceEdit_LeavesReservationAlone(t *testing.T) {
 
 	status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID+"/lines/"+lineID, map[string]any{
 		"unit_price": map[string]any{
-			"value":               "7.50",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "7.50",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)

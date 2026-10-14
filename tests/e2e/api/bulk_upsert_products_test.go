@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/shared/id"
@@ -112,8 +113,8 @@ func TestProducts_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	item := catalogItem(t, productsPath, id)
 	assert.Equal(t, "full product description", jsonField(item, "description"))
 	assert.Equal(t, "full product notes", jsonField(item, "notes"))
-	assert.Equal(t, "9.99", catalogRateValue(t, productsPath, id, "item.unit_value"))
-	assert.Equal(t, "4.50", catalogRateValue(t, productsPath, id, "item.unit_cost"))
+	assert.Equal(t, "9.99", catalogPriceAmount(t, productsPath, id, "item.unit_value"))
+	assert.Equal(t, "4.50", catalogPriceAmount(t, productsPath, id, "item.unit_cost"))
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 
@@ -126,9 +127,9 @@ func TestProducts_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
 		"sku":      uniqueName("e2e-bup-prod-badrate"),
 		"category": map[string]any{"id": SeedItemCategoryID},
 		"unit_price": map[string]any{
-			"value":               "1.00",
-			"numerator_unit_id":   currencyUnitID,
-			"denominator_unit_id": currencyUnitID, // must not be currency
+			"amount":      "1.00",
+			"currency":    "usd",
+			"per_unit_id": currencyUnitID, // must not be currency
 		},
 	})
 	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
@@ -302,8 +303,8 @@ func TestProducts_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	item := catalogItem(t, productsPath, productID)
 	assert.Equal(t, "updated description", jsonField(item, "description"))
 	assert.Equal(t, "updated notes", jsonField(item, "notes"))
-	assert.Equal(t, "12.34", catalogRateValue(t, productsPath, productID, "item.unit_value"))
-	assert.Equal(t, "6.66", catalogRateValue(t, productsPath, productID, "item.unit_cost"))
+	assert.Equal(t, "12.34", catalogPriceAmount(t, productsPath, productID, "item.unit_value"))
+	assert.Equal(t, "6.66", catalogPriceAmount(t, productsPath, productID, "item.unit_cost"))
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 
@@ -324,4 +325,19 @@ func TestProducts_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
 
 	assert.Len(t, created, 1)
 	assert.Len(t, updated, 1)
+}
+
+// catalogPriceAmount reads a product's item price (item.unit_value or item.unit_cost) and returns its amount,
+// asserting it is in dollars per the unit bulkCurrencyRate prices in.
+func catalogPriceAmount(t *testing.T, basePath, id, priceInclude string) string {
+	t.Helper()
+	status, body, err := apiClient.GetListRaw(basePath+"/"+id, url.Values{"include": {priceInclude}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	key := strings.TrimPrefix(priceInclude, "item.")
+	price := jsonObject(jsonObject(parseJSON(body), "item"), key)
+	require.NotNil(t, price, "%s should be populated with ?include=%s", key, priceInclude)
+	assert.Equal(t, "usd", jsonField(price, "currency"), key)
+	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(price, "per_unit"), "id"), key)
+	return jsonField(price, "amount")
 }

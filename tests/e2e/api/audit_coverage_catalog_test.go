@@ -69,6 +69,8 @@ func auditEventsFor(t *testing.T, resourceID, resourceType, action string) []map
 	return events
 }
 
+// requireRateChange asserts an audited price. The audit diff keeps the stored rate's shape: a value
+// over a currency unit and a per unit.
 func requireRateChange(t *testing.T, change map[string]any, wantValue string) {
 	t.Helper()
 	newValue, ok := change["new_value"].(map[string]any)
@@ -232,7 +234,7 @@ func TestAuditCoverage_CustomerCreditLimitOnlyPatch(t *testing.T) {
 	t.Parallel()
 
 	body := validCustomerBody(uniqueName("e2e-audit-credit"))
-	body["credit_limit"] = map[string]any{"value": "1000", "unit_id": SeedUnitID}
+	body["credit_limit"] = map[string]any{"amount": "1000", "currency": "usd"}
 	status, raw, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, raw)
@@ -240,7 +242,7 @@ func TestAuditCoverage_CustomerCreditLimitOnlyPatch(t *testing.T) {
 	defer apiClient.Delete(customersPath + "/" + customerID)
 
 	status, raw, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{
-		"credit_limit": map[string]any{"value": "2500", "unit_id": SeedUnitID},
+		"credit_limit": map[string]any{"amount": "2500", "currency": "usd"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)

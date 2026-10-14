@@ -421,11 +421,11 @@ type InventoryReceiptSummaryEntry struct {
 	// The weighted average unit cost.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	WeightedAverageUnitCost *AnalyticsRate `json:"weighted_average_unit_cost" sensitive:"cost"`
+	WeightedAverageUnitCost *UnitPrice `json:"weighted_average_unit_cost" sensitive:"cost"`
 	// The inventory value.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	InventoryValue *Quantity `json:"inventory_value" sensitive:"cost"`
+	InventoryValue *Money `json:"inventory_value" sensitive:"cost"`
 	// The date of the oldest receipt.
 	OldestReceiptAt *time.Time `json:"oldest_receipt_at"`
 	// The date of the newest receipt.
@@ -452,14 +452,6 @@ type AnalyticsLot struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=lot"`
 	// The lot number.
 	Number string `json:"number" validate:"required"`
-}
-
-// AnalyticsRate represents a rate with numerator and denominator quantities.
-type AnalyticsRate struct {
-	// The numerator quantity.
-	Numerator *Quantity `json:"numerator" validate:"required"`
-	// The denominator quantity.
-	Denominator *Quantity `json:"denominator" validate:"required"`
 }
 
 // AnalyzeNewCustomersResponse represents the response from the analyze new customers endpoint.
@@ -995,9 +987,9 @@ type CustomerPricingFinding struct {
 	// The attributes narrowing the price; empty when it covers the whole product line.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// The contracted price.
-	UnitPrice *ComputedRate `json:"unit_price" validate:"required"`
+	UnitPrice *UnitPrice `json:"unit_price" validate:"required"`
 	// Median contracted price across every customer with a price for the same product line, attributes and per-unit basis. Null when no other customer has a comparable price.
-	PeerMedianPrice *ComputedRate `json:"peer_median_price"`
+	PeerMedianPrice *UnitPrice `json:"peer_median_price"`
 	// How far below the peer median this price sits, as a fraction between 0 and 1. Null when there is no peer median.
 	BelowPeerMedianFraction *string `json:"below_peer_median_fraction" format:"decimal"`
 	// Gross margin at this price, as a fraction between 0 and 1. Null when no comparable cost could be established.
@@ -1049,17 +1041,17 @@ type RealizedMarginFinding struct {
 	// The product line the item belongs to.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 	// Quantity invoiced over the window.
-	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
+	QuantityInvoiced *Quantity `json:"quantity_invoiced" validate:"required"`
 	// Revenue invoiced over the window.
-	Revenue *ComputedQuantity `json:"revenue" validate:"required"`
+	Revenue *Money `json:"revenue" validate:"required"`
 	// Cost of goods for the quantity invoiced.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	Cost *ComputedQuantity `json:"cost" validate:"required" sensitive:"cost"`
+	Cost *Money `json:"cost" validate:"required" sensitive:"cost"`
 	// Revenue divided by quantity: the price actually achieved across the window.
-	AverageUnitPrice *ComputedRate `json:"average_unit_price" validate:"required"`
+	AverageUnitPrice *UnitPrice `json:"average_unit_price" validate:"required"`
 	// Median achieved price for this item across every customer that bought it. Null when no other customer bought it.
-	PeerMedianPrice *ComputedRate `json:"peer_median_price"`
+	PeerMedianPrice *UnitPrice `json:"peer_median_price"`
 	// Number of invoiced lines behind these totals.
 	LineCount int `json:"line_count"`
 	// How far below the peer median this customer's achieved price sits, as a fraction between 0 and 1. Null when there is no peer median.

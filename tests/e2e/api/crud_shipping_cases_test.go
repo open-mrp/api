@@ -26,13 +26,8 @@ func TestShippingCases_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	got := parseJSON(body)
 	assert.Nil(t, got["carrier"], "carrier should be null without ?include=carrier")
 	assert.Nil(t, got["shipment"], "shipment should be null without ?include=shipment")
-	// freight_amount/weight are quantity wrappers; unit subfield should be null by default
-	if fa := jsonObject(got, "freight_amount"); fa != nil {
-		assert.Nil(t, fa["unit"], "freight_amount.unit should be null without ?include=freight_amount.unit")
-	}
-	if fw := jsonObject(got, "freight_weight"); fw != nil {
-		assert.Nil(t, fw["unit"], "freight_weight.unit should be null without ?include=freight_weight.unit")
-	}
+	assertNilField(t, got, "freight_amount")
+	assertNilField(t, got, "freight_weight")
 }
 
 func TestShippingCases_IncludeCarrier(t *testing.T) {
@@ -71,32 +66,43 @@ func TestShippingCases_IncludeShipment(t *testing.T) {
 		"the included shipment carries its priority, not a partial stub")
 }
 
-func TestShippingCases_IncludeFreightAmountUnit(t *testing.T) {
+// The freight amount is money, so it names its currency rather than a unit.
+func TestShippingCases_IncludeFreightAmount(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+SeedShippingCaseID, url.Values{"include": {"freight_amount.unit"}})
+	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+SeedShippingCaseID, url.Values{"include": {"freight_amount"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	if fa := jsonObject(got, "freight_amount"); fa != nil {
-		if unit := jsonObject(fa, "unit"); unit != nil {
-			assert.Equal(t, "unit", jsonField(unit, "object"))
-			assert.NotEmpty(t, jsonField(unit, "id"))
-		}
+	if fa := jsonObject(parseJSON(body), "freight_amount"); fa != nil {
+		assert.NotEmpty(t, jsonField(fa, "amount"))
+		assert.Equal(t, "usd", jsonField(fa, "currency"))
+		assert.NotContains(t, fa, "unit", "money carries a currency, not a unit")
 	}
 }
 
-func TestShippingCases_IncludeFreightWeightUnit(t *testing.T) {
+// The freight weight always carries its unit; there is no separate unit include.
+func TestShippingCases_IncludeFreightWeightCarriesItsUnit(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+SeedShippingCaseID, url.Values{"include": {"freight_weight.unit"}})
+	status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+SeedShippingCaseID, url.Values{"include": {"freight_weight"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	if fw := jsonObject(got, "freight_weight"); fw != nil {
-		if unit := jsonObject(fw, "unit"); unit != nil {
-			assert.Equal(t, "unit", jsonField(unit, "object"))
-			assert.NotEmpty(t, jsonField(unit, "id"))
-		}
+	if fw := jsonObject(parseJSON(body), "freight_weight"); fw != nil {
+		assert.NotEmpty(t, jsonField(fw, "value"))
+		unit := jsonObject(fw, "unit")
+		require.NotNil(t, unit, "the unit comes with the weight")
+		assert.Equal(t, "unit", jsonField(unit, "object"))
+		assert.NotEmpty(t, jsonField(unit, "id"))
+	}
+}
+
+func TestShippingCases_UnitIncludesAreRejected(t *testing.T) {
+	t.Parallel()
+	for _, include := range []string{"freight_amount.unit", "freight_weight.unit"} {
+		status, body, err := apiClient.GetListRaw(shippingCasesPath+"/"+SeedShippingCaseID, url.Values{"include": {include}})
+		require.NoError(t, err)
+		requireStatus(t, 400, status, body)
+		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+		assertErrorParam(t, errObj, "include[]")
 	}
 }

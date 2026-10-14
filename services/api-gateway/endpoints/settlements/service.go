@@ -3,6 +3,7 @@ package settlementep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -238,20 +239,12 @@ func transactionAllocationFromProto(meta *include.LoadMeta, a *pb.TransactionAll
 		return apiresource.TransactionAllocation{}
 	}
 
-	// The currency the amount is counted in is a record of its own — stashed as an id so
-	// `allocations.amount.unit` resolves it in full.
-	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
 	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
-		ID:     a.Id,
-		Object: constants.ObjectTypeTransactionAllocation,
-		Amount: &apiresource.Quantity{
-			ID:           a.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        a.AmountValue,
-			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		},
+		ID:        a.Id,
+		Object:    constants.ObjectTypeTransactionAllocation,
+		Amount:    apiresource.NewQuantity(a.AmountValue, a.AmountUnitId),
 		Note:      a.Note,
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),

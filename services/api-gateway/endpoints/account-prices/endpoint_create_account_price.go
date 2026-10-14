@@ -24,7 +24,7 @@ type CreateAccountPriceRequest struct {
 	ProductLineID string `json:"product_line_id" validate:"required"`
 	// The price the recipient pays.
 	//
-	// The numerator unit is typically a currency and the denominator is the quantity unit being priced, so a matching order line takes both its unit price and its price units from this rate exactly as entered.
+	// The unit is typically a currency and the per-unit is the quantity unit being priced, so a matching order line takes both its unit price and its price units from this rate exactly as entered.
 	Rate apirequest.RateInput `json:"rate" validate:"required"`
 	// Item category IDs to record on this price.
 	//
@@ -40,9 +40,9 @@ var sampleCreateAccountPriceRequest = &CreateAccountPriceRequest{
 	RecipientAccountID: apiresource.SampleAccountID,
 	ProductLineID:      apiresource.SampleProductLineID,
 	Rate: apirequest.RateInput{
-		Value:             apiresource.SampleRateValue,
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
+		Value:             "25.50",
+		UnitID:    apiresource.SampleUnitID,
+		PerUnitID: apiresource.SampleUnitID,
 	},
 	CategoryIDs:  []string{apiresource.SampleItemCategoryID},
 	AttributeIDs: []string{apiresource.SampleAttributeID},

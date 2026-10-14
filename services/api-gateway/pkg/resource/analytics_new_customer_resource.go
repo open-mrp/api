@@ -23,8 +23,8 @@ type NewCustomer struct {
 	Location *string `json:"location"`
 	// Name of the customer's default sales rep, or null when it has none.
 	SalesRepName *string `json:"sales_rep_name"`
-	// Lifetime sales: sales order lines priced above zero, outside the shipping and misc product lines. `value` is exact, unrounded.
-	LifetimeRevenue *ComputedQuantity `json:"lifetime_revenue" validate:"required"`
+	// Lifetime sales: sales order lines priced above zero, outside the shipping and misc product lines. `amount` is exact, unrounded.
+	LifetimeRevenue *Money `json:"lifetime_revenue" validate:"required"`
 	// When the customer's first such order was issued.
 	FirstOrderedAt time.Time `json:"first_ordered_at" validate:"required"`
 	// When the customer was added.

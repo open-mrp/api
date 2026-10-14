@@ -41,19 +41,18 @@ func TestProductLineLot_RoundTripsWithItsUnit(t *testing.T) {
 	assertNilField(t, parseJSON(body), "default_lot")
 
 	status, body, err = apiClient.GetListRaw(productLinesPath+"/"+jsonField(created, "id"),
-		url.Values{"include": {"default_lot", "default_lot.unit"}})
+		url.Values{"include": {"default_lot"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	lot := jsonObject(parseJSON(body), "default_lot")
 	require.NotNil(t, lot, "default_lot must expand: %s", string(body))
-	assert.Equal(t, "quantity", jsonField(lot, "object"))
-	assert.NotEmpty(t, jsonField(lot, "id"))
+	assertValueShapeBare(t, lot, "default_lot")
 	assert.Equal(t, "60", jsonField(lot, "value"))
 
-	// The unit is what makes the number mean something, so it has to be resolvable.
+	// The unit is what makes the number mean something, so it always comes with it.
 	unit := jsonObject(lot, "unit")
-	require.NotNil(t, unit, "default_lot.unit must expand")
+	require.NotNil(t, unit, "default_lot carries its unit")
 	assert.Equal(t, SeedPairUnitID, jsonField(unit, "id"))
 	assert.Equal(t, "pr", jsonField(unit, "abbreviation"))
 }

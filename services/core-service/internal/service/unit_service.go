@@ -596,3 +596,12 @@ func checkUnitReadPermission(identity *types.Identity) *apierror.APIError {
 	}
 	return identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead)
 }
+
+// CurrencyUnitID returns the system unit amounts in currency are stored in: the currency dimension's base unit, the dollar for usd, the only currency accepted.
+func (s *unitSvcImpl) CurrencyUnitID(ctx context.Context, _ constants.Currency) (string, *apierror.APIError) {
+	ctx, span := unitSvcTracer.Start(ctx, "service.unit.currency_unit_id")
+	defer span.End()
+
+	id, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+	return id, tracing.Trace(span, apiErr)
+}

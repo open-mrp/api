@@ -5,7 +5,6 @@ package api_test
 import (
 	"net/url"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,10 +45,9 @@ const (
 )
 
 // fetchSyncLineQuantity reads one line's quantity off a resource detail response
-// (`GET {path}?include=lines`): its decimal value and its display value (which embeds
-// the unit abbreviation, e.g. "25 pr"). Works for invoice, pick, and shipment lines —
-// all three expose `lines.data[].quantity`.
-func fetchSyncLineQuantity(t *testing.T, path, lineID string) (value float64, display string) {
+// (`GET {path}?include=lines`): its decimal value and its unit id. Works for invoice,
+// pick, and shipment lines — all three expose `lines.data[].quantity`.
+func fetchSyncLineQuantity(t *testing.T, path, lineID string) (value float64, unitID string) {
 	t.Helper()
 
 	status, body, err := apiClient.GetListRaw(path, url.Values{"include": {"lines"}})
@@ -68,7 +66,7 @@ func fetchSyncLineQuantity(t *testing.T, path, lineID string) (value float64, di
 		require.NotNil(t, qty, "line has a quantity")
 		v, err := strconv.ParseFloat(jsonField(qty, "value"), 64)
 		require.NoError(t, err)
-		return v, jsonField(qty, "display_value")
+		return v, jsonField(jsonObject(qty, "unit"), "id")
 	}
 	t.Fatalf("line %s not found on %s", lineID, path)
 	return 0, ""
@@ -77,25 +75,25 @@ func fetchSyncLineQuantity(t *testing.T, path, lineID string) (value float64, di
 // requireSyncState asserts the full downstream state for the sync order line: the
 // mirror invoice line and shipment line values, the partial invoice line (value fixed
 // at its seeded 10), the packed pick line (value fixed at its seeded 25), and — since
-// units always follow — the same unit abbreviation suffix on all four.
-func requireSyncState(t *testing.T, wantMirrorValue float64, wantUnitSuffix, step string) {
+// units always follow — the same unit on all four.
+func requireSyncState(t *testing.T, wantMirrorValue float64, wantUnitID, step string) {
 	t.Helper()
 
-	value, display := fetchSyncLineQuantity(t, invoicesPath+"/"+syncInvoiceID, syncInvoiceLineID)
+	value, unitID := fetchSyncLineQuantity(t, invoicesPath+"/"+syncInvoiceID, syncInvoiceLineID)
 	assert.InDelta(t, wantMirrorValue, value, 0.0001, "%s: mirror invoice line value follows the order line", step)
-	assert.True(t, strings.HasSuffix(display, wantUnitSuffix), "%s: mirror invoice line unit (display %q, want suffix %q)", step, display, wantUnitSuffix)
+	assert.Equal(t, wantUnitID, unitID, "%s: mirror invoice line unit", step)
 
-	value, display = fetchSyncLineQuantity(t, invoicesPath+"/"+syncPartialInvoiceID, syncPartialInvoiceLineID)
+	value, unitID = fetchSyncLineQuantity(t, invoicesPath+"/"+syncPartialInvoiceID, syncPartialInvoiceLineID)
 	assert.InDelta(t, 10, value, 0.0001, "%s: partial invoice line keeps its billed amount", step)
-	assert.True(t, strings.HasSuffix(display, wantUnitSuffix), "%s: partial invoice line unit still follows (display %q, want suffix %q)", step, display, wantUnitSuffix)
+	assert.Equal(t, wantUnitID, unitID, "%s: partial invoice line unit still follows", step)
 
-	value, display = fetchSyncLineQuantity(t, shipmentsPath+"/"+syncShipmentID, syncShipmentLineID)
+	value, unitID = fetchSyncLineQuantity(t, shipmentsPath+"/"+syncShipmentID, syncShipmentLineID)
 	assert.InDelta(t, wantMirrorValue, value, 0.0001, "%s: mirror shipment line value follows the order line", step)
-	assert.True(t, strings.HasSuffix(display, wantUnitSuffix), "%s: shipment line unit (display %q, want suffix %q)", step, display, wantUnitSuffix)
+	assert.Equal(t, wantUnitID, unitID, "%s: shipment line unit", step)
 
-	value, display = fetchSyncLineQuantity(t, picksPath+"/"+syncPickID, syncPickLineID)
+	value, unitID = fetchSyncLineQuantity(t, picksPath+"/"+syncPickID, syncPickLineID)
 	assert.InDelta(t, 25, value, 0.0001, "%s: pick line keeps its picked amount (progress, not a mirror)", step)
-	assert.True(t, strings.HasSuffix(display, wantUnitSuffix), "%s: pick line unit relabeled (display %q, want suffix %q)", step, display, wantUnitSuffix)
+	assert.Equal(t, wantUnitID, unitID, "%s: pick line unit relabeled", step)
 }
 
 // patchSyncOrderLineQuantity sets ORD-SYNC-001's line quantity and requires a 200.
@@ -117,17 +115,17 @@ func TestSalesOrderLineUpdate_SyncsFulfillmentLineQuantities(t *testing.T) {
 	// Baseline sanity: everything mirrors the seeded order line (25 pair). The test leaves it at
 	// 12, so it is put back first; the mirrors follow the order line, which is what restores them.
 	patchSyncOrderLineQuantity(t, "25", pairUnitID)
-	requireSyncState(t, 25, " pr", "baseline")
+	requireSyncState(t, 25, pairUnitID, "baseline")
 
 	// 1. Change value and unit together: 25 pair → 30 dozen.
 	patchSyncOrderLineQuantity(t, "30", dozenUnitID)
-	requireSyncState(t, 30, " dz", "value+unit change")
+	requireSyncState(t, 30, dozenUnitID, "value+unit change")
 
 	// 2. Unit-only change (the originally-reported bug): 30 dozen → 30 pair.
 	patchSyncOrderLineQuantity(t, "30", pairUnitID)
-	requireSyncState(t, 30, " pr", "unit-only change")
+	requireSyncState(t, 30, pairUnitID, "unit-only change")
 
 	// 3. Value-only change: 30 pair → 12 pair.
 	patchSyncOrderLineQuantity(t, "12", pairUnitID)
-	requireSyncState(t, 12, " pr", "value-only change")
+	requireSyncState(t, 12, pairUnitID, "value-only change")
 }

@@ -3,6 +3,7 @@ package productionstepep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"time"
@@ -10,6 +11,7 @@ import (
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -151,21 +153,9 @@ func (m *productionStepSvcImpl) CreateProductionStep(ctx context.Context, req *C
 		Allowances:        req.Allowances,
 		ScanningStationId: req.ScanningStationID.Ptr(),
 		DepartmentId:      req.DepartmentID.Ptr(),
-		LaborRate: &pb.CreateRateInput{
-			Value:             req.LaborRate.Value,
-			NumeratorUnitId:   req.LaborRate.NumeratorUnitID,
-			DenominatorUnitId: req.LaborRate.DenominatorUnitID,
-		},
-		LaborTime: &pb.CreateRateInput{
-			Value:             req.LaborTime.Value,
-			NumeratorUnitId:   req.LaborTime.NumeratorUnitID,
-			DenominatorUnitId: req.LaborTime.DenominatorUnitID,
-		},
-		OverheadRate: &pb.CreateRateInput{
-			Value:             req.OverheadRate.Value,
-			NumeratorUnitId:   req.OverheadRate.NumeratorUnitID,
-			DenominatorUnitId: req.OverheadRate.DenominatorUnitID,
-		},
+		LaborRate:         req.LaborRate.ToProto(),
+		LaborTime:         req.LaborTime.ToProto(),
+		OverheadRate:      req.OverheadRate.ToProto(),
 		Production: &pb.CreateProductionInput{
 			ItemId:         req.Production.ItemID,
 			QuantityValue:  req.Production.QuantityValue,
@@ -412,8 +402,6 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 	}, nil
 }
 
-var embeddedRateTimestamp = time.Unix(1, 0).UTC()
-
 func productionStepFromProto(s *pb.ProductionStepInfo) apiresource.ProductionStep {
 	if s == nil {
 		return apiresource.ProductionStep{}
@@ -426,9 +414,9 @@ func productionStepFromProto(s *pb.ProductionStepInfo) apiresource.ProductionSte
 		Notes:          s.Notes,
 		LevelingFactor: s.LevelingFactor,
 		Allowances:     s.Allowances,
-		LaborRate:      rateFromStepProto(s.LaborRate),
+		LaborRate:      resourceloaders.UnitPriceFromProto(s.LaborRate),
 		LaborTime:      rateFromStepProto(s.LaborTime),
-		OverheadRate:   rateFromStepProto(s.OverheadRate),
+		OverheadRate:   resourceloaders.UnitPriceFromProto(s.OverheadRate),
 		CreatedAt:      grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:      grpcutil.TimestampToTime(s.UpdatedAt),
 	}
@@ -438,29 +426,11 @@ func rateFromStepProto(r *pb.ProductionStepRateInfo) *apiresource.Rate {
 	if r == nil {
 		return nil
 	}
-	return &apiresource.Rate{
-		ID:     r.Id,
-		Object: constants.ObjectTypeRate,
-		Value:  r.Value,
-		// numerator_unit / denominator_unit left nil: expandable, loaded with real
-		// data via ?include=; never fabricated. display_value carries the rate.
-		DisplayValue: apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
-		CreatedAt:    embeddedRateTimestamp,
-		UpdatedAt:    embeddedRateTimestamp,
-	}
+	return apiresource.NewRate(r.Value, r.NumeratorUnitId, r.DenominatorUnitId)
 }
 
 func quantityFromStepProto(q *pb.QuantityInfo) *apiresource.Quantity {
-	if q == nil {
-		return nil
-	}
-	norm := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-	}
+	return resourceloaders.QuantityFromProto(q)
 }
 
 func productionOutputFromProto(p *pb.ProductionInfo) *apiresource.ProductionOutput {
@@ -481,7 +451,6 @@ func stashProductionOutputMeta(meta *include.LoadMeta, p *pb.ProductionInfo) {
 	if p == nil {
 		return
 	}
-	stashStepQuantityUnit(meta, p.Quantity)
 	if p.ItemId == "" {
 		return
 	}
@@ -494,12 +463,6 @@ func stashProductionOutputMeta(meta *include.LoadMeta, p *pb.ProductionInfo) {
 func stashProductionStepMeta(meta *include.LoadMeta, s *pb.ProductionStepInfo) {
 	if s == nil {
 		return
-	}
-
-	// The rates arrive with only their units' ids, which are stashed so `labor_rate.numerator_unit`
-	// and the like resolve through the unit loader.
-	for _, r := range []*pb.ProductionStepRateInfo{s.LaborRate, s.LaborTime, s.OverheadRate} {
-		stashStepRateUnits(meta, r)
 	}
 
 	stepTS := grpcutil.TimestampToTime(s.CreatedAt)
@@ -580,8 +543,6 @@ func stepConsumptionFromProto(meta *include.LoadMeta, c *pb.ConsumptionInfo) api
 	if c.ItemId != "" {
 		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
-	stashStepQuantityUnit(meta, c.Quantity)
-	stashStepQuantityUnit(meta, c.WasteQuantity)
 
 	return apiresource.Consumption{
 		ID:            c.Id,
@@ -624,21 +585,4 @@ func lightProductionStepToResource(st *pb.LightProductionStepInfo, fallback time
 		CreatedAt:      ca,
 		UpdatedAt:      ua,
 	}
-}
-
-// stashStepRateUnits records the ids of a rate's units so they resolve on `?include=`.
-func stashStepRateUnits(meta *include.LoadMeta, r *pb.ProductionStepRateInfo) {
-	if r == nil || r.Id == "" {
-		return
-	}
-	meta.Set(constants.ObjectTypeRate, r.Id, "numerator_unit_id", r.NumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, r.Id, "denominator_unit_id", r.DenominatorUnitId)
-}
-
-// stashStepQuantityUnit records the id of a quantity's unit so it resolves on `?include=`.
-func stashStepQuantityUnit(meta *include.LoadMeta, q *pb.QuantityInfo) {
-	if q == nil || q.Id == "" {
-		return
-	}
-	meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
 }

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+// Value shapes shared across CoreService RPCs: money, prices, rates and discounts.
+package core;
+
+option go_package = "shared/proto/core;core";
+
+// An amount in a currency. amount is a decimal string; currency is a lowercase ISO 4217 code.
+message Money {
+  string amount = 1;
+  string currency = 2;
+}
+
+// An amount of money per one unit.
+message UnitPrice {
+  string amount = 1;
+  string currency = 2;
+  string per_unit_id = 3;
+}
+
+// A rate supplied on a write: value in unit_id per one per_unit_id.
+message RateInput {
+  string value = 1;
+  string unit_id = 2;
+  string per_unit_id = 3;
+}
+
+// Something taken off: type is percent_off (percent_off set) or amount_off (amount_off set).
+message Discount {
+  string type = 1;
+  optional string percent_off = 2;
+  optional Money amount_off = 3;
+}
+
+// Parent message field absent: no change. clear=true: remove the amount. Otherwise set value.
+message MoneyPatch {
+  bool clear = 1;
+  Money value = 2;
+}

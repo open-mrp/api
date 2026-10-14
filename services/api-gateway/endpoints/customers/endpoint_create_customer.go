@@ -91,7 +91,7 @@ type CreateCustomerRequest struct {
 	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
 	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
 	// Maximum credit extended to this customer.
-	CreditLimit field.Optional[apirequest.QuantityInput] `json:"credit_limit,omitzero"`
+	CreditLimit field.Optional[apirequest.MoneyInput] `json:"credit_limit,omitzero"`
 	// Default billing address, created along with the customer.
 	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
 	// Default shipping address, created along with the customer.
@@ -130,9 +130,9 @@ var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
 	CarrierBillingType:    field.Some(constants.CarrierBillingTypeSender),
 	CarrierBillingAccount: field.Some(sampleCreateCustomerCarrierBillingAccount),
-	CreditLimit: field.Some(apirequest.QuantityInput{
-		Value:  "10000.00",
-		UnitID: apiresource.SampleUnitID,
+	CreditLimit: field.Some(apirequest.MoneyInput{
+		Amount:   "10000.00",
+		Currency: "usd",
 	}),
 	BillToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
@@ -182,26 +182,7 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomer,
 			Fields: []string{
-				"bill_to_address",
-				"ship_to_address",
-				"type",
-				"parent_account",
-				"freight_preferences.carrier",
-				"freight_preferences.carrier.service_levels",
-				"freight_preferences.service_level",
-				"defaults.payment_term",
-				"defaults.shipping_term",
-				"defaults.sales_rep",
-				"defaults.sales_rep.user",
-				"defaults.priority",
-				"contact_info",
-				"freight_preferences",
-				"defaults",
-				"notification_preferences",
-				"price_groups",
-				"child_accounts",
-				"credit_limit",
-				"credit_limit.unit",
+				"bill_to_address", "ship_to_address", "type", "parent_account", "freight_preferences.carrier", "freight_preferences.carrier.service_levels", "freight_preferences.service_level", "defaults.payment_term", "defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.priority", "contact_info", "freight_preferences", "defaults", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
 			},
 		}),
 	})

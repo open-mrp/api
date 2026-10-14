@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -38,8 +40,8 @@ type UpdateDepartmentRequest struct {
 	MachineIDs []string `json:"machine_ids,omitzero"`
 	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
-	// Creates the department's rate when it has none, otherwise rewrites the existing rate in place. The numerator unit must be a currency and the denominator must not be.
-	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero" sensitive:"cost"`
+	// Creates the department's rate when it has none, otherwise rewrites the existing rate in place. `per_unit_id` must not be a currency unit.
+	LaborRate field.Optional[apirequest.UnitPriceInput] `json:"labor_rate,omitzero" sensitive:"cost"`
 }
 
 var sampleUpdateDepartmentName = "Production"

@@ -22,9 +22,15 @@ func init() {
 				ExtractRefs: extractCategoryRefFromItem,
 				Populate:    populateCategoryOnItem,
 			},
-			{Key: "unit_value", Populate: populateUnitValueOnItem},
-			{Key: "unit_cost", Populate: populateUnitCostOnItem},
-			{Key: "burn_rate", Populate: populateBurnRateOnItem},
+			valueShapeSub(constants.ObjectTypeItem, "unit_value", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
+				p.(*apiresource.Item).UnitValue = v.(*apiresource.UnitPrice)
+			}),
+			valueShapeSub(constants.ObjectTypeItem, "unit_cost", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
+				p.(*apiresource.Item).UnitCost = v.(*apiresource.UnitPrice)
+			}),
+			valueShapeSub(constants.ObjectTypeItem, "burn_rate", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
+				p.(*apiresource.Item).BurnRate = v.(*apiresource.Rate)
+			}),
 			{Key: "attributes", Populate: populateAttributesOnItem},
 		},
 	})
@@ -43,36 +49,6 @@ func populateCategoryOnItem(ctx context.Context, parent any, _ map[string]any) {
 	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItem, item.ID, "category"); ok && v != nil {
 		item.Category = v.(*apiresource.ItemCategory)
 	}
-}
-
-func populateUnitValueOnItem(ctx context.Context, parent any, _ map[string]any) {
-	item := parent.(*apiresource.Item)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeItem, item.ID, "unit_value")
-	if !ok || v == nil {
-		return
-	}
-	item.UnitValue = v.(*apiresource.Rate)
-}
-
-func populateUnitCostOnItem(ctx context.Context, parent any, _ map[string]any) {
-	item := parent.(*apiresource.Item)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeItem, item.ID, "unit_cost")
-	if !ok || v == nil {
-		return
-	}
-	item.UnitCost = v.(*apiresource.Rate)
-}
-
-func populateBurnRateOnItem(ctx context.Context, parent any, _ map[string]any) {
-	item := parent.(*apiresource.Item)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeItem, item.ID, "burn_rate")
-	if !ok || v == nil {
-		return
-	}
-	item.BurnRate = v.(*apiresource.Rate)
 }
 
 func populateAttributesOnItem(ctx context.Context, parent any, _ map[string]any) {

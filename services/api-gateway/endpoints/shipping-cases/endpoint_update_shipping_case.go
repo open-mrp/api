@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -20,12 +22,8 @@ type UpdateShippingCaseRequest struct {
 	ShippingCaseID string `path:"id" validate:"required"`
 	// Carrier tracking number to set on the case, replacing any number already recorded; send `null` to clear it.
 	TrackingNumber field.Clearable[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
-	// New value for the case's freight cost, as a decimal string.
-	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero" validate:"omitempty,decimal,gte=0" format:"decimal"`
-	// ID of the currency unit the case's freight cost is expressed in.
-	//
-	// Changing the unit relabels the stored freight cost; the number itself is never converted, so send `freight_amount_value` alongside it when the amount should change too.
-	FreightAmountUnitID field.Optional[string] `json:"freight_amount_unit_id,omitzero" validate:"omitempty"`
+	// New freight cost for the case.
+	FreightAmount field.Optional[apirequest.MoneyInput] `json:"freight_amount,omitzero"`
 	// New value for the case's freight weight, as a decimal string.
 	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero" validate:"omitempty,decimal,gte=0" format:"decimal"`
 	// ID of the unit the case's freight weight is expressed in.
@@ -67,7 +65,7 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingCase,
-			Fields:     []string{"carrier", "shipment", "freight_amount", "freight_amount.unit", "freight_weight", "freight_weight.unit"},
+			Fields:     []string{"carrier", "shipment", "freight_amount", "freight_weight"},
 		}),
 	})
 }

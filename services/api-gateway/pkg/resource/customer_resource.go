@@ -56,7 +56,7 @@ type Customer struct {
 	// Maximum credit extended to this customer.
 	//
 	// Used to flag orders once the customer's outstanding balance approaches or passes the limit; orders that exceed it are not rejected.
-	CreditLimit *Quantity `json:"credit_limit" expandable:"true"`
+	CreditLimit *Money `json:"credit_limit" expandable:"true"`
 	// General contact details for the customer's business.
 	ContactInfo *CustomerContactInfo `json:"contact_info" expandable:"true"`
 	// Freight and carrier preferences applied to this customer's shipments.
@@ -219,7 +219,7 @@ var SampleCustomer = &Customer{
 	RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	Note:             &sampleCustomerNote,
-	CreditLimit:      SampleQuantity,
+	CreditLimit:      SampleMoney,
 	ContactInfo: &CustomerContactInfo{
 		Object: constants.ObjectTypeCustomerContactInfo,
 		Email:  &sampleCustomerEmail,

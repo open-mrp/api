@@ -49,9 +49,9 @@ func createSeededAccountPrice(t *testing.T, rateValue string) string {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               rateValue,
-			"numerator_unit_id":   seedCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       rateValue,
+			"unit_id":     seedCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -166,13 +166,24 @@ func TestAnalyticsCustomerPricing_FlagsPriceFarBelowPeers(t *testing.T) {
 
 	unitPrice := jsonObject(finding, "unit_price")
 	require.NotNil(t, unitPrice, "unit price is always present")
-	assert.Equal(t, "computed_rate", jsonField(unitPrice, "object"), "a computed rate carries no id because nothing was stored")
-	assert.NotEmpty(t, jsonField(unitPrice, "display_value"))
-	assert.Empty(t, jsonField(unitPrice, "id"), "computed rates must not invent an id")
+	assertAnalyticsUnitPrice(t, unitPrice, "unit_price")
 
 	peerMedian := jsonObject(finding, "peer_median_price")
 	require.NotNil(t, peerMedian, "an outlier is only an outlier against a median")
-	assert.Equal(t, "computed_rate", jsonField(peerMedian, "object"))
+	assertAnalyticsUnitPrice(t, peerMedian, "peer_median_price")
+}
+
+// assertAnalyticsUnitPrice checks a computed price is a plain unit price: an amount in dollars per a unit.
+func assertAnalyticsUnitPrice(t *testing.T, price map[string]any, field string) {
+	t.Helper()
+	assert.NotEmpty(t, jsonField(price, "amount"), "%s.amount", field)
+	assert.Equal(t, "usd", jsonField(price, "currency"), "%s.currency", field)
+	perUnit := jsonObject(price, "per_unit")
+	require.NotNil(t, perUnit, "%s.per_unit is always present", field)
+	assert.Equal(t, "unit", jsonField(perUnit, "object"), "%s.per_unit", field)
+	assert.NotEmpty(t, jsonField(perUnit, "id"), "%s.per_unit.id", field)
+	assert.NotContains(t, price, "id", "%s is a value, not a stored row", field)
+	assert.NotContains(t, price, "object", "%s is a value, not a stored row", field)
 }
 
 // The response models flags as one enum rather than a pair of booleans, so the wire format must never carry the old boolean fields.
@@ -338,10 +349,13 @@ func TestAnalyticsRealizedMargins_ResponseShape(t *testing.T) {
 		finding, ok := raw.(map[string]any)
 		require.True(t, ok)
 		revenue := jsonObject(finding, "revenue")
-		require.NotNil(t, revenue, "revenue must be a computed quantity")
-		assert.Equal(t, "computed_quantity", jsonField(revenue, "object"))
-		assert.Empty(t, jsonField(revenue, "id"), "computed quantities must not invent an id")
-		assert.Equal(t, "computed_rate", jsonField(jsonObject(finding, "average_unit_price"), "object"))
+		require.NotNil(t, revenue, "revenue must be money")
+		assert.NotEmpty(t, jsonField(revenue, "amount"))
+		assert.Equal(t, "usd", jsonField(revenue, "currency"))
+		assert.NotContains(t, revenue, "id", "computed money must not invent an id")
+		averagePrice := jsonObject(finding, "average_unit_price")
+		require.NotNil(t, averagePrice)
+		assertAnalyticsUnitPrice(t, averagePrice, "average_unit_price")
 		assert.Contains(t,
 			[]string{"below_peer_median", "below_target_margin", "below_peer_median_and_target_margin"},
 			jsonField(finding, "reason"))

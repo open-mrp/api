@@ -51,12 +51,12 @@ type CreateProductRequest struct {
 	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero" default:"hidden"`
 	// Initial selling price per unit.
 	//
-	// When set, the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the price is initialized to a zero rate in the category's base unit.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// When set, `per_unit_id` must not be a currency unit. When omitted, the price is initialized to a zero price per the category's base unit.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Initial cost per unit.
 	//
-	// The same unit rule as `unit_price` applies: the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	// The same `per_unit_id` rule as `unit_price` applies. When omitted, the cost is initialized to a zero price per the category's base unit.
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Attribute IDs to link to the product's item at creation time.
 	//
 	// Every ID must already exist in your account, and each attribute's property must be one the item's category carries; an ID that fails either check fails the whole request rather than being skipped.
@@ -73,8 +73,8 @@ var sampleCreateProductRequest = &CreateProductRequest{
 	ProductLineID:    field.Some(apiresource.SampleProductLineID),
 	CategoryID:       apiresource.SampleItemCategoryID,
 	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
-	UnitPrice:        field.Some(apirequest.RateInput{Value: "199.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
-	UnitCost:         field.Some(apirequest.RateInput{Value: "112.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitPrice:        field.Some(apirequest.UnitPriceInput{Amount: "199.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
+	UnitCost:         field.Some(apirequest.UnitPriceInput{Amount: "112.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	AttributeIDs:     []string{apiresource.SampleAttributeID},
 }
 

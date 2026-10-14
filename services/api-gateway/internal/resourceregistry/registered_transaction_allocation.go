@@ -15,14 +15,6 @@ func init() {
 		Load:       resourceloaders.LoadTransactionAllocations,
 		Subs: []include.SubField{
 			{
-				// The amount is already on the allocation — this exists so a caller can reach through
-				// it to the currency it is counted in.
-				Key:         "amount",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractAmountRefFromTransactionAllocation,
-			},
-			{
 				Key:         "transaction",
 				Target:      constants.ObjectTypeTransaction,
 				Cardinality: include.CardinalityOnePtr,
@@ -53,12 +45,4 @@ func populateTransactionOnTransactionAllocation(ctx context.Context, parent any,
 	if v, ok := loaded[id]; ok {
 		a.Transaction = v.(*apiresource.TransactionDetail)
 	}
-}
-
-func extractAmountRefFromTransactionAllocation(_ context.Context, parent any) []any {
-	a := parent.(*apiresource.TransactionAllocation)
-	if a.Amount == nil {
-		return nil
-	}
-	return []any{a.Amount}
 }

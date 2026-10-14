@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "core/core_async.proto";
 import "core/core_identity_context.proto";
 import "core/core_patch.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message GetStripeStatusResponse {
@@ -546,8 +547,10 @@ message ItemInfo {
   optional string notes = 4;
   string item_type_code = 5;
   ItemCategoryInfo category = 6;
-  RateInfo unit_value = 7;
-  RateInfo unit_cost = 8;
+  reserved 7;
+  UnitPrice unit_value = 15;
+  reserved 8;
+  UnitPrice unit_cost = 16;
   RateInfo burn_rate = 9;
   string account_id = 10;
   bool is_dirty = 11;

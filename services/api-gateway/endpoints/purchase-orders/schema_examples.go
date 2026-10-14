@@ -17,7 +17,7 @@ func (*CreatePurchaseOrderLineRequest) SchemaExample() any {
 			ProductSKU:         apiresource.SampleItemSKU,
 			ProductDescription: field.Some(desc),
 			Quantity:           apirequest.QuantityInput{Value: "10", UnitID: apiresource.SampleUnitID},
-			UnitPrice:          apirequest.RateInput{Value: apiresource.SampleRateValue, NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID},
+			UnitPrice:          apirequest.UnitPriceInput{Amount: "25.50", Currency: "usd", PerUnitID: apiresource.SampleUnitID},
 		},
 	})
 }

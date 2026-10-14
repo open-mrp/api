@@ -398,8 +398,8 @@ func TestUpdateItemInventory_AdjustingBelowZeroIsRecorded(t *testing.T) {
 // The response
 // ──────────────────────────────────────────────
 
-// The four figures are netted out of the ledger at read time, so they are computed quantities: no
-// id, because there is no row behind them to have one.
+// The four figures are netted out of the ledger at read time. Each is a plain quantity carrying its
+// whole unit, with no id, because there is no row behind it to have one.
 func TestItemInventory_FiguresAreComputedNotStoredRows(t *testing.T) {
 	t.Parallel()
 	itemID := freshInventoryItem(t)
@@ -413,11 +413,7 @@ func TestItemInventory_FiguresAreComputedNotStoredRows(t *testing.T) {
 
 	got := parseJSON(body)
 	for _, field := range []string{"on_hand", "reserved", "available_to_promise", "short"} {
-		figure := jsonObject(got, field)
-		require.NotNil(t, figure, "%s should be present", field)
-		assert.Equal(t, "computed_quantity", jsonField(figure, "object"), "%s should be a computed quantity", field)
-		assert.NotContains(t, figure, "id", "%s has no row behind it to carry an id", field)
-		assert.NotEmpty(t, jsonField(figure, "display_value"), "%s should convey its unit", field)
+		assertQuantityIn(t, jsonObject(got, field), "", "", field)
 	}
 }
 

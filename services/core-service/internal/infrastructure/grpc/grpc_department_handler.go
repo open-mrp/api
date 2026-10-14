@@ -31,16 +31,7 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 		info.LocationTypeCode = d.LocationTypeCode
 	}
 	if d.LaborRate != nil {
-		info.LaborRate = &pb.DepartmentRateInfo{
-			Id:                          d.LaborRate.ID,
-			Value:                       d.LaborRate.Value,
-			NumeratorUnitId:             d.LaborRate.NumeratorUnit.ID,
-			NumeratorUnitAbbreviation:   d.LaborRate.NumeratorUnit.Abbreviation,
-			NumeratorUnitType:           d.LaborRate.NumeratorUnit.Type,
-			DenominatorUnitId:           d.LaborRate.DenominatorUnit.ID,
-			DenominatorUnitAbbreviation: d.LaborRate.DenominatorUnit.Abbreviation,
-			DenominatorUnitType:         d.LaborRate.DenominatorUnit.Type,
-		}
+		info.LaborRate = unitPriceToProto(d.LaborRate.Value, d.LaborRate.DenominatorUnit.ID)
 	}
 
 	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
@@ -82,17 +73,6 @@ func (h *gRPCHandler) ExportDepartments(ctx context.Context, req *pb.ExportDepar
 	}
 
 	return &pb.ExportDepartmentsResponse{Job: jobToProto(job)}, nil
-}
-
-func departmentRateParamsFromProto(in *pb.DepartmentRateInput) *domain.CreateRateParams {
-	if in == nil {
-		return nil
-	}
-	return &domain.CreateRateParams{
-		Value:             in.Value,
-		NumeratorUnitID:   in.NumeratorUnitId,
-		DenominatorUnitID: in.DenominatorUnitId,
-	}
 }
 
 func (h *gRPCHandler) ListDepartments(ctx context.Context, req *pb.ListDepartmentsRequest) (*pb.ListDepartmentsResponse, error) {
@@ -150,11 +130,17 @@ func (h *gRPCHandler) CreateDepartment(ctx context.Context, req *pb.CreateDepart
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+	laborRate := money.rate("labor_rate", req.LaborRate)
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := domain.CreateDepartmentParams{
 		Name:               req.Name,
 		Notes:              req.Notes,
 		LocationID:         req.LocationId,
-		LaborRate:          departmentRateParamsFromProto(req.LaborRate),
+		LaborRate:          laborRate,
 		ScanningStationIDs: req.ScanningStationIds,
 		MachineIDs:         req.MachineIds,
 	}
@@ -202,12 +188,18 @@ func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepart
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+	laborRate := money.rate("labor_rate", req.LaborRate)
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := domain.UpdateDepartmentParams{
 		DepartmentID:       req.Id,
 		Name:               req.Name,
 		Notes:              fieldpb.StringClearableFromProto(req.Notes),
 		LocationID:         req.LocationId,
-		LaborRate:          departmentRateParamsFromProto(req.LaborRate),
+		LaborRate:          laborRate,
 		ScanningStationIDs: req.ScanningStationIds,
 		MachineIDs:         req.MachineIds,
 	}

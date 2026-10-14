@@ -124,7 +124,7 @@ type CreateSalesOrderLineInput struct {
 	// Unit price override.
 	//
 	// Honored only for internal users; for customer accounts it is ignored and the price is calculated server-side.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Key-value pairs to store on the line for your own references, such as its ID in another system.
 	//
 	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.
@@ -204,7 +204,7 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.totals"},
+			Fields:     []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
 		}),
 	})
 }

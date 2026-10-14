@@ -114,7 +114,7 @@ func costProduct(t *testing.T, costValue string) (productID, itemID string) {
 		"sku":         sku,
 		"type":        "sale",
 		"category_id": SeedItemCategoryID,
-		"unit_cost":   map[string]any{"value": costValue, "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+		"unit_cost":   map[string]any{"amount": costValue, "currency": "usd", "per_unit_id": SeedUnitID},
 	})
 	productID = jsonField(created, "id")
 	itemID = jsonField(jsonObject(parseJSON(mustGetAs(t, apiClient, productsPath+"/"+productID, url.Values{"include": {"item"}})), "item"), "id")
@@ -122,10 +122,14 @@ func costProduct(t *testing.T, costValue string) (productID, itemID string) {
 	return productID, itemID
 }
 
+// rateValue reads the figure of a price (its amount) or a rate (its value).
 func rateValue(t *testing.T, m map[string]any, key string) string {
 	t.Helper()
 	rate := jsonObject(m, key)
 	require.NotNil(t, rate, "%s is expected to carry a value: %v", key, m)
+	if amount := jsonField(rate, "amount"); amount != "" {
+		return amount
+	}
 	return jsonField(rate, "value")
 }
 
@@ -212,7 +216,7 @@ func costDepartment(t *testing.T) string {
 	t.Helper()
 	return jsonField(createAndCleanup(t, departmentsPath, map[string]any{
 		"name":       uniqueName("e2e-costs-dept"),
-		"labor_rate": map[string]any{"value": "31.50", "numerator_unit_id": dollarUnitID, "denominator_unit_id": "hour"},
+		"labor_rate": map[string]any{"amount": "31.50", "currency": "usd", "per_unit_id": "hour"},
 	}), "id")
 }
 
@@ -437,7 +441,7 @@ func TestCosts_RequestLogsKeepCostOut(t *testing.T) {
 		"sku":         uniqueName("e2e-costs-rqlog"),
 		"type":        "sale",
 		"category_id": SeedItemCategoryID,
-		"unit_cost":   map[string]any{"value": "6.75", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+		"unit_cost":   map[string]any{"amount": "6.75", "currency": "usd", "per_unit_id": SeedUnitID},
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusCreated, status, body)

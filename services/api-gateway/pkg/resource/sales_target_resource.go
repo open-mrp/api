@@ -25,7 +25,7 @@ type SalesTarget struct {
 	// A reference rather than the full record: it was tagged expandable but no include ever resolved it, so callers received an account user whose every field except the id was empty.
 	SalesRep *Entity `json:"sales_rep" validate:"required"`
 	// The revenue goal for the period, as a monetary quantity.
-	Amount *Quantity `json:"amount" validate:"required"`
+	Amount *Money `json:"amount" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -38,7 +38,7 @@ var SampleSalesTarget = &SalesTarget{
 	StartAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	EndAt:     timeutil.TimestampToTime(sampleExpiresAtTimestamp),
 	SalesRep:  NewEntity(SampleAccountUserID, constants.ObjectTypeAccountUser, nil, nil),
-	Amount:    SampleQuantity,
+	Amount:    SampleMoney,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

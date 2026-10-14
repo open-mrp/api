@@ -134,8 +134,7 @@ func TestProducts_IncludeItemUnitValue(t *testing.T) {
 	_, ok := item["unit_value"]
 	assert.True(t, ok, "unit_value key should be present on item with ?include=item.unit_value")
 	if uv := jsonObject(item, "unit_value"); uv != nil {
-		assert.Equal(t, "rate", jsonField(uv, "object"))
-		assert.NotEmpty(t, jsonField(uv, "id"))
+		assertItemUnitPriceShape(t, uv)
 	}
 }
 
@@ -154,8 +153,7 @@ func TestProducts_IncludeItemUnitCost(t *testing.T) {
 	_, ok := item["unit_cost"]
 	assert.True(t, ok, "unit_cost key should be present on item with ?include=item.unit_cost")
 	if uc := jsonObject(item, "unit_cost"); uc != nil {
-		assert.Equal(t, "rate", jsonField(uc, "object"))
-		assert.NotEmpty(t, jsonField(uc, "id"))
+		assertItemUnitPriceShape(t, uc)
 	}
 }
 
@@ -174,8 +172,7 @@ func TestProducts_IncludeItemBurnRate(t *testing.T) {
 	_, ok := item["burn_rate"]
 	assert.True(t, ok, "burn_rate key should be present on item with ?include=item.burn_rate")
 	if br := jsonObject(item, "burn_rate"); br != nil {
-		assert.Equal(t, "rate", jsonField(br, "object"))
-		assert.NotEmpty(t, jsonField(br, "id"))
+		assertItemRateShape(t, br)
 	}
 }
 
@@ -507,9 +504,9 @@ func TestProducts_CreateAndUpdateAllFields(t *testing.T) {
 		"description":       desc,
 		"notes":             notes,
 		"unit_price": map[string]any{
-			"value":               "12.34",
-			"numerator_unit_id":   currencyUnitID,
-			"denominator_unit_id": nonCurrencyUnitID,
+			"amount":      "12.34",
+			"currency":    "usd",
+			"per_unit_id": nonCurrencyUnitID,
 		},
 	}
 
@@ -551,8 +548,9 @@ func TestProducts_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, notes, jsonField(item, "notes"))
 	uv := jsonObject(item, "unit_value")
 	require.NotNil(t, uv)
-	assert.Equal(t, "rate", jsonField(uv, "object"))
-	assert.NotEmpty(t, jsonField(uv, "id"))
+	assertItemUnitPriceShape(t, uv)
+	assertDecimalEqual(t, "12.34", jsonField(uv, "amount"), "unit_value.amount")
+	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uv, "per_unit"), "id"))
 
 	newSKU := uniqueName("e2e-prod-allf-u")
 	newDesc := "All-fields updated description"
@@ -564,9 +562,9 @@ func TestProducts_CreateAndUpdateAllFields(t *testing.T) {
 		"notes":             newNotes,
 		"portal_visibility": "hidden",
 		"unit_price": map[string]any{
-			"value":               "99.01",
-			"numerator_unit_id":   currencyUnitID,
-			"denominator_unit_id": nonCurrencyUnitID,
+			"amount":      "99.01",
+			"currency":    "usd",
+			"per_unit_id": nonCurrencyUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -597,7 +595,9 @@ func TestProducts_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, newNotes, jsonField(item, "notes"))
 	uv = jsonObject(item, "unit_value")
 	require.NotNil(t, uv)
-	assert.Equal(t, "rate", jsonField(uv, "object"))
+	assertItemUnitPriceShape(t, uv)
+	assertDecimalEqual(t, "99.01", jsonField(uv, "amount"), "unit_value.amount")
+	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uv, "per_unit"), "id"))
 }
 
 func TestProducts_OmittedFields(t *testing.T) {

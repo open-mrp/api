@@ -3,6 +3,8 @@ package transactionallocationep
 import (
 	"context"
 	"fmt"
+
+	"github.com/open-mrp/api/shared/decimalfmt"
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -169,7 +171,7 @@ func allocationEntryFromProto(d *pb.AllocationEntryInfo) apiresource.AllocationE
 		ID:            d.Id,
 		Object:        constants.ObjectTypeAllocationEntry,
 		Amount:        d.AmountValue,
-		DisplayAmount: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbr, string(constants.UnitTypeCurrency)),
+		DisplayAmount: d.AmountUnitAbbr + decimalfmt.Display(d.AmountValue, true),
 		Customer: &apiresource.AllocationCustomer{
 			ID:     &d.CustomerId,
 			Object: constants.ObjectTypeAllocationCustomer,
@@ -211,20 +213,13 @@ func transactionAllocationFromProto(meta *include.LoadMeta, a *pb.TransactionAll
 		return apiresource.TransactionAllocation{}
 	}
 
-	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
 	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
 		ID:     a.Id,
 		Object: constants.ObjectTypeTransactionAllocation,
-		Amount: &apiresource.Quantity{
-			ID:           a.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        a.AmountValue,
-			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			// Unit left nil: its id is stashed so `allocations.amount.unit` resolves the real unit; never fabricated.
-		},
-		Note: a.Note,
+		Amount: apiresource.NewQuantity(a.AmountValue, a.AmountUnitId),
+		Note:   a.Note,
 		// Transaction left nil: its id is stashed so `transaction` resolves the real record through
 		// the transaction loader, rather than the allocation shipping an id with a blank number and
 		// amount that no include could ever fill in.

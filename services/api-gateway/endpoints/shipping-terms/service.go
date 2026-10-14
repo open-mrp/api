@@ -95,30 +95,8 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		Name:                        req.Name,
 		Type:                        string(req.Type),
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
-	}
-	if q, ok := req.FlatRate.Value(); ok {
-		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("flat_rate.value", "Field 'flat_rate.value' is required.")
-		}
-		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("flat_rate.unit_id", "Field 'flat_rate.unit_id' is required.")
-		}
-		pbReq.FlatRate = &pb.QuantityInput{
-			Value:  q.Value,
-			UnitId: q.UnitID,
-		}
-	}
-	if q, ok := req.MinimumOrderValue.Value(); ok {
-		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("minimum_order_value.value", "Field 'minimum_order_value.value' is required.")
-		}
-		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("minimum_order_value.unit_id", "Field 'minimum_order_value.unit_id' is required.")
-		}
-		pbReq.MinimumOrderValue = &pb.QuantityInput{
-			Value:  q.Value,
-			UnitId: q.UnitID,
-		}
+		FlatRate:                    apirequest.OptionalMoneyToProto(req.FlatRate),
+		MinimumOrderValue:           apirequest.OptionalMoneyToProto(req.MinimumOrderValue),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.create", domain.ServiceName,
@@ -142,24 +120,8 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 		ts := string(t)
 		pbReq.Type = &ts
 	}
-	if q, ok := req.FlatRate.Value(); ok {
-		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("flat_rate.value", "Field 'flat_rate.value' is required.")
-		}
-		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("flat_rate.unit_id", "Field 'flat_rate.unit_id' is required.")
-		}
-	}
-	if q, ok := req.MinimumOrderValue.Value(); ok {
-		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("minimum_order_value.value", "Field 'minimum_order_value.value' is required.")
-		}
-		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("minimum_order_value.unit_id", "Field 'minimum_order_value.unit_id' is required.")
-		}
-	}
-	pbReq.FlatRate = apirequest.QuantityFieldToProto(req.FlatRate)
-	pbReq.MinimumOrderValue = apirequest.QuantityFieldToProto(req.MinimumOrderValue)
+	pbReq.FlatRate = apirequest.MoneyFieldToProto(req.FlatRate)
+	pbReq.MinimumOrderValue = apirequest.MoneyFieldToProto(req.MinimumOrderValue)
 	pbReq.FreeShippingServiceLevelIds = fieldpb.StringListSliceClearableToProto(req.FreeShippingServiceLevelIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.update", domain.ServiceName,

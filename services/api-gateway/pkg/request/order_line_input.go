@@ -23,5 +23,5 @@ type OrderLineInput struct {
 	// Agreed purchase price per unit for this line.
 	//
 	// This is also the cost carried into inventory: stock received against the line is costed at this rate, and the delivery line records it as its unit cost when the goods are stocked.
-	UnitPrice RateInput `json:"unit_price" validate:"required"`
+	UnitPrice UnitPriceInput `json:"unit_price" validate:"required"`
 }

@@ -32,7 +32,7 @@ type CreateSalesOrderLineRequest struct {
 	// Unit price override.
 	//
 	// When omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users. The unit cost is always resolved from the product and never taken from the request.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Key-value pairs to store on the line for your own references, such as its ID in another system.
 	//
 	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.

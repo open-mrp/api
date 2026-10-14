@@ -35,7 +35,7 @@ func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).GetShippingTerm

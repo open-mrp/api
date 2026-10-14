@@ -51,11 +51,6 @@ func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndp
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}}},
 		ObjectType:        constants.ObjectTypeQuantity,
-		// The response is a measure on its own, so the unit it is counted in is the whole of what there is to expand.
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeQuantity,
-			Fields:     []string{"unit"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetRemainingQuantityToSplitRequest) (*apiresource.Quantity, *apierror.APIError) {
 			return svc.(BatchSvc).GetRemainingQuantityToSplit
 		},

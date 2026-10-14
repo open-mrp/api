@@ -1067,6 +1067,8 @@ type PurchaseOrderLineInfo struct {
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Delivery lines booked against the line, oldest first (populated when "lines.delivery_lines" is included).
 	DeliveryLines []*PurchaseOrderLineDeliveryLineInfo `protobuf:"bytes,31,rep,name=delivery_lines,json=deliveryLines,proto3" json:"delivery_lines,omitempty"`
+	UnitPrice     *UnitPrice                           `protobuf:"bytes,32,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost      *UnitPrice                           `protobuf:"bytes,33,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1314,6 +1316,20 @@ func (x *PurchaseOrderLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *PurchaseOrderLineInfo) GetDeliveryLines() []*PurchaseOrderLineDeliveryLineInfo {
 	if x != nil {
 		return x.DeliveryLines
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineInfo) GetUnitPrice() *UnitPrice {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineInfo) GetUnitCost() *UnitPrice {
+	if x != nil {
+		return x.UnitCost
 	}
 	return nil
 }
@@ -2222,21 +2238,17 @@ func (x *CreatePurchaseOrderRequest) GetShipToAddress() *InlineAddressInput {
 }
 
 type CreatePurchaseOrderLineInput struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	ProductId                  *string                `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
-	ItemId                     *string                `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
-	ProductSku                 string                 `protobuf:"bytes,3,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
-	ProductDescription         *string                `protobuf:"bytes,4,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
-	QuantityValue              string                 `protobuf:"bytes,5,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
-	QuantityUnitId             string                 `protobuf:"bytes,6,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
-	UnitPriceValue             string                 `protobuf:"bytes,7,opt,name=unit_price_value,json=unitPriceValue,proto3" json:"unit_price_value,omitempty"`
-	UnitPriceNumeratorUnitId   string                 `protobuf:"bytes,8,opt,name=unit_price_numerator_unit_id,json=unitPriceNumeratorUnitId,proto3" json:"unit_price_numerator_unit_id,omitempty"`
-	UnitPriceDenominatorUnitId string                 `protobuf:"bytes,9,opt,name=unit_price_denominator_unit_id,json=unitPriceDenominatorUnitId,proto3" json:"unit_price_denominator_unit_id,omitempty"`
-	UnitCostValue              *string                `protobuf:"bytes,10,opt,name=unit_cost_value,json=unitCostValue,proto3,oneof" json:"unit_cost_value,omitempty"`
-	UnitCostNumeratorUnitId    *string                `protobuf:"bytes,11,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3,oneof" json:"unit_cost_numerator_unit_id,omitempty"`
-	UnitCostDenominatorUnitId  *string                `protobuf:"bytes,12,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3,oneof" json:"unit_cost_denominator_unit_id,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ProductId          *string                `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
+	ItemId             *string                `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
+	ProductSku         string                 `protobuf:"bytes,3,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
+	ProductDescription *string                `protobuf:"bytes,4,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
+	QuantityValue      string                 `protobuf:"bytes,5,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
+	QuantityUnitId     string                 `protobuf:"bytes,6,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
+	UnitPrice          *UnitPrice             `protobuf:"bytes,13,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost           *UnitPrice             `protobuf:"bytes,14,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreatePurchaseOrderLineInput) Reset() {
@@ -2311,46 +2323,18 @@ func (x *CreatePurchaseOrderLineInput) GetQuantityUnitId() string {
 	return ""
 }
 
-func (x *CreatePurchaseOrderLineInput) GetUnitPriceValue() string {
+func (x *CreatePurchaseOrderLineInput) GetUnitPrice() *UnitPrice {
 	if x != nil {
-		return x.UnitPriceValue
+		return x.UnitPrice
 	}
-	return ""
+	return nil
 }
 
-func (x *CreatePurchaseOrderLineInput) GetUnitPriceNumeratorUnitId() string {
+func (x *CreatePurchaseOrderLineInput) GetUnitCost() *UnitPrice {
 	if x != nil {
-		return x.UnitPriceNumeratorUnitId
+		return x.UnitCost
 	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineInput) GetUnitPriceDenominatorUnitId() string {
-	if x != nil {
-		return x.UnitPriceDenominatorUnitId
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineInput) GetUnitCostValue() string {
-	if x != nil && x.UnitCostValue != nil {
-		return *x.UnitCostValue
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineInput) GetUnitCostNumeratorUnitId() string {
-	if x != nil && x.UnitCostNumeratorUnitId != nil {
-		return *x.UnitCostNumeratorUnitId
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineInput) GetUnitCostDenominatorUnitId() string {
-	if x != nil && x.UnitCostDenominatorUnitId != nil {
-		return *x.UnitCostDenominatorUnitId
-	}
-	return ""
+	return nil
 }
 
 type CreatePurchaseOrderResponse struct {
@@ -2786,22 +2770,18 @@ func (x *ChangePurchaseOrderStatusResponse) GetPurchaseOrder() *PurchaseOrderInf
 }
 
 type CreatePurchaseOrderLineRequest struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	PurchaseOrderId            string                 `protobuf:"bytes,1,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	ProductId                  *string                `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
-	ItemId                     *string                `protobuf:"bytes,3,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
-	ProductSku                 string                 `protobuf:"bytes,4,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
-	ProductDescription         *string                `protobuf:"bytes,5,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
-	QuantityValue              string                 `protobuf:"bytes,6,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
-	QuantityUnitId             string                 `protobuf:"bytes,7,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
-	UnitPriceValue             string                 `protobuf:"bytes,8,opt,name=unit_price_value,json=unitPriceValue,proto3" json:"unit_price_value,omitempty"`
-	UnitPriceNumeratorUnitId   string                 `protobuf:"bytes,9,opt,name=unit_price_numerator_unit_id,json=unitPriceNumeratorUnitId,proto3" json:"unit_price_numerator_unit_id,omitempty"`
-	UnitPriceDenominatorUnitId string                 `protobuf:"bytes,10,opt,name=unit_price_denominator_unit_id,json=unitPriceDenominatorUnitId,proto3" json:"unit_price_denominator_unit_id,omitempty"`
-	UnitCostValue              *string                `protobuf:"bytes,11,opt,name=unit_cost_value,json=unitCostValue,proto3,oneof" json:"unit_cost_value,omitempty"`
-	UnitCostNumeratorUnitId    *string                `protobuf:"bytes,12,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3,oneof" json:"unit_cost_numerator_unit_id,omitempty"`
-	UnitCostDenominatorUnitId  *string                `protobuf:"bytes,13,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3,oneof" json:"unit_cost_denominator_unit_id,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseOrderId    string                 `protobuf:"bytes,1,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
+	ProductId          *string                `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
+	ItemId             *string                `protobuf:"bytes,3,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
+	ProductSku         string                 `protobuf:"bytes,4,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
+	ProductDescription *string                `protobuf:"bytes,5,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
+	QuantityValue      string                 `protobuf:"bytes,6,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
+	QuantityUnitId     string                 `protobuf:"bytes,7,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
+	UnitPrice          *UnitPrice             `protobuf:"bytes,14,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost           *UnitPrice             `protobuf:"bytes,15,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreatePurchaseOrderLineRequest) Reset() {
@@ -2883,46 +2863,18 @@ func (x *CreatePurchaseOrderLineRequest) GetQuantityUnitId() string {
 	return ""
 }
 
-func (x *CreatePurchaseOrderLineRequest) GetUnitPriceValue() string {
+func (x *CreatePurchaseOrderLineRequest) GetUnitPrice() *UnitPrice {
 	if x != nil {
-		return x.UnitPriceValue
+		return x.UnitPrice
 	}
-	return ""
+	return nil
 }
 
-func (x *CreatePurchaseOrderLineRequest) GetUnitPriceNumeratorUnitId() string {
+func (x *CreatePurchaseOrderLineRequest) GetUnitCost() *UnitPrice {
 	if x != nil {
-		return x.UnitPriceNumeratorUnitId
+		return x.UnitCost
 	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineRequest) GetUnitPriceDenominatorUnitId() string {
-	if x != nil {
-		return x.UnitPriceDenominatorUnitId
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineRequest) GetUnitCostValue() string {
-	if x != nil && x.UnitCostValue != nil {
-		return *x.UnitCostValue
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineRequest) GetUnitCostNumeratorUnitId() string {
-	if x != nil && x.UnitCostNumeratorUnitId != nil {
-		return *x.UnitCostNumeratorUnitId
-	}
-	return ""
-}
-
-func (x *CreatePurchaseOrderLineRequest) GetUnitCostDenominatorUnitId() string {
-	if x != nil && x.UnitCostDenominatorUnitId != nil {
-		return *x.UnitCostDenominatorUnitId
-	}
-	return ""
+	return nil
 }
 
 type CreatePurchaseOrderLineResponse struct {
@@ -2970,23 +2922,19 @@ func (x *CreatePurchaseOrderLineResponse) GetPurchaseOrderLine() *PurchaseOrderL
 }
 
 type UpdatePurchaseOrderLineRequest struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	PurchaseOrderId            string                 `protobuf:"bytes,1,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	Id                         string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	ProductId                  *string                `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
-	ItemId                     *string                `protobuf:"bytes,4,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
-	ProductSku                 *string                `protobuf:"bytes,5,opt,name=product_sku,json=productSku,proto3,oneof" json:"product_sku,omitempty"`
-	ProductDescription         *string                `protobuf:"bytes,6,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
-	QuantityValue              *string                `protobuf:"bytes,7,opt,name=quantity_value,json=quantityValue,proto3,oneof" json:"quantity_value,omitempty"`
-	QuantityUnitId             *string                `protobuf:"bytes,8,opt,name=quantity_unit_id,json=quantityUnitId,proto3,oneof" json:"quantity_unit_id,omitempty"`
-	UnitPriceValue             *string                `protobuf:"bytes,9,opt,name=unit_price_value,json=unitPriceValue,proto3,oneof" json:"unit_price_value,omitempty"`
-	UnitPriceNumeratorUnitId   *string                `protobuf:"bytes,10,opt,name=unit_price_numerator_unit_id,json=unitPriceNumeratorUnitId,proto3,oneof" json:"unit_price_numerator_unit_id,omitempty"`
-	UnitPriceDenominatorUnitId *string                `protobuf:"bytes,11,opt,name=unit_price_denominator_unit_id,json=unitPriceDenominatorUnitId,proto3,oneof" json:"unit_price_denominator_unit_id,omitempty"`
-	UnitCostValue              *string                `protobuf:"bytes,12,opt,name=unit_cost_value,json=unitCostValue,proto3,oneof" json:"unit_cost_value,omitempty"`
-	UnitCostNumeratorUnitId    *string                `protobuf:"bytes,13,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3,oneof" json:"unit_cost_numerator_unit_id,omitempty"`
-	UnitCostDenominatorUnitId  *string                `protobuf:"bytes,14,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3,oneof" json:"unit_cost_denominator_unit_id,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseOrderId    string                 `protobuf:"bytes,1,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
+	Id                 string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ProductId          *string                `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
+	ItemId             *string                `protobuf:"bytes,4,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
+	ProductSku         *string                `protobuf:"bytes,5,opt,name=product_sku,json=productSku,proto3,oneof" json:"product_sku,omitempty"`
+	ProductDescription *string                `protobuf:"bytes,6,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
+	QuantityValue      *string                `protobuf:"bytes,7,opt,name=quantity_value,json=quantityValue,proto3,oneof" json:"quantity_value,omitempty"`
+	QuantityUnitId     *string                `protobuf:"bytes,8,opt,name=quantity_unit_id,json=quantityUnitId,proto3,oneof" json:"quantity_unit_id,omitempty"`
+	UnitPrice          *UnitPrice             `protobuf:"bytes,15,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitCost           *UnitPrice             `protobuf:"bytes,16,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdatePurchaseOrderLineRequest) Reset() {
@@ -3075,46 +3023,18 @@ func (x *UpdatePurchaseOrderLineRequest) GetQuantityUnitId() string {
 	return ""
 }
 
-func (x *UpdatePurchaseOrderLineRequest) GetUnitPriceValue() string {
-	if x != nil && x.UnitPriceValue != nil {
-		return *x.UnitPriceValue
+func (x *UpdatePurchaseOrderLineRequest) GetUnitPrice() *UnitPrice {
+	if x != nil {
+		return x.UnitPrice
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdatePurchaseOrderLineRequest) GetUnitPriceNumeratorUnitId() string {
-	if x != nil && x.UnitPriceNumeratorUnitId != nil {
-		return *x.UnitPriceNumeratorUnitId
+func (x *UpdatePurchaseOrderLineRequest) GetUnitCost() *UnitPrice {
+	if x != nil {
+		return x.UnitCost
 	}
-	return ""
-}
-
-func (x *UpdatePurchaseOrderLineRequest) GetUnitPriceDenominatorUnitId() string {
-	if x != nil && x.UnitPriceDenominatorUnitId != nil {
-		return *x.UnitPriceDenominatorUnitId
-	}
-	return ""
-}
-
-func (x *UpdatePurchaseOrderLineRequest) GetUnitCostValue() string {
-	if x != nil && x.UnitCostValue != nil {
-		return *x.UnitCostValue
-	}
-	return ""
-}
-
-func (x *UpdatePurchaseOrderLineRequest) GetUnitCostNumeratorUnitId() string {
-	if x != nil && x.UnitCostNumeratorUnitId != nil {
-		return *x.UnitCostNumeratorUnitId
-	}
-	return ""
-}
-
-func (x *UpdatePurchaseOrderLineRequest) GetUnitCostDenominatorUnitId() string {
-	if x != nil && x.UnitCostDenominatorUnitId != nil {
-		return *x.UnitCostDenominatorUnitId
-	}
-	return ""
+	return nil
 }
 
 type UpdatePurchaseOrderLineResponse struct {
@@ -3217,7 +3137,7 @@ var File_core_core_purchase_proto protoreflect.FileDescriptor
 
 const file_core_core_purchase_proto_rawDesc = "" +
 	"\n" +
-	"\x18core/core_purchase.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x19core/core_receiving.proto\"\xbd\x11\n" +
+	"\x18core/core_purchase.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x19core/core_receiving.proto\x1a\x17core/value_shapes.proto\"\xbd\x11\n" +
 	"\x18PurchaseOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x1f\n" +
@@ -3435,7 +3355,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x1b_ship_to_address_updated_atB\x12\n" +
 	"\x10_receiving_orderB\x19\n" +
 	"\x17_receiving_order_numberB\x19\n" +
-	"\x17_receiving_order_status\"\xde\x0f\n" +
+	"\x17_receiving_order_status\"\xbc\x10\n" +
 	"\x15PurchaseOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +
@@ -3475,7 +3395,10 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12N\n" +
-	"\x0edelivery_lines\x18\x1f \x03(\v2'.core.PurchaseOrderLineDeliveryLineInfoR\rdeliveryLinesB\x16\n" +
+	"\x0edelivery_lines\x18\x1f \x03(\v2'.core.PurchaseOrderLineDeliveryLineInfoR\rdeliveryLines\x12.\n" +
+	"\n" +
+	"unit_price\x18  \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18! \x01(\v2\x0f.core.UnitPriceR\bunitCostB\x16\n" +
 	"\x14_product_descriptionB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
@@ -3605,7 +3528,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\f_promised_atB\t\n" +
 	"\a_numberB\x15\n" +
 	"\x13_bill_to_address_idB\x15\n" +
-	"\x13_ship_to_address_id\"\xf6\x05\n" +
+	"\x13_ship_to_address_id\"\xbd\x03\n" +
 	"\x1cCreatePurchaseOrderLineInput\x12\"\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tH\x00R\tproductId\x88\x01\x01\x12\x1c\n" +
@@ -3614,21 +3537,16 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"productSku\x124\n" +
 	"\x13product_description\x18\x04 \x01(\tH\x02R\x12productDescription\x88\x01\x01\x12%\n" +
 	"\x0equantity_value\x18\x05 \x01(\tR\rquantityValue\x12(\n" +
-	"\x10quantity_unit_id\x18\x06 \x01(\tR\x0equantityUnitId\x12(\n" +
-	"\x10unit_price_value\x18\a \x01(\tR\x0eunitPriceValue\x12>\n" +
-	"\x1cunit_price_numerator_unit_id\x18\b \x01(\tR\x18unitPriceNumeratorUnitId\x12B\n" +
-	"\x1eunit_price_denominator_unit_id\x18\t \x01(\tR\x1aunitPriceDenominatorUnitId\x12+\n" +
-	"\x0funit_cost_value\x18\n" +
-	" \x01(\tH\x03R\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\v \x01(\tH\x04R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\f \x01(\tH\x05R\x19unitCostDenominatorUnitId\x88\x01\x01B\r\n" +
+	"\x10quantity_unit_id\x18\x06 \x01(\tR\x0equantityUnitId\x12.\n" +
+	"\n" +
+	"unit_price\x18\r \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\x0e \x01(\v2\x0f.core.UnitPriceR\bunitCostB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x16\n" +
-	"\x14_product_descriptionB\x12\n" +
-	"\x10_unit_cost_valueB\x1e\n" +
-	"\x1c_unit_cost_numerator_unit_idB \n" +
-	"\x1e_unit_cost_denominator_unit_id\"]\n" +
+	"\x14_product_descriptionJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"]\n" +
 	"\x1bCreatePurchaseOrderResponse\x12>\n" +
 	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xb3\x05\n" +
 	"\x1aUpdatePurchaseOrderRequest\x12\x0e\n" +
@@ -3666,7 +3584,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"send_email\x18\x03 \x01(\bR\tsendEmail\x12\x1a\n" +
 	"\bincludes\x18\x04 \x03(\tR\bincludes\"c\n" +
 	"!ChangePurchaseOrderStatusResponse\x12>\n" +
-	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xa4\x06\n" +
+	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xeb\x03\n" +
 	"\x1eCreatePurchaseOrderLineRequest\x12*\n" +
 	"\x11purchase_order_id\x18\x01 \x01(\tR\x0fpurchaseOrderId\x12\"\n" +
 	"\n" +
@@ -3676,23 +3594,18 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"productSku\x124\n" +
 	"\x13product_description\x18\x05 \x01(\tH\x02R\x12productDescription\x88\x01\x01\x12%\n" +
 	"\x0equantity_value\x18\x06 \x01(\tR\rquantityValue\x12(\n" +
-	"\x10quantity_unit_id\x18\a \x01(\tR\x0equantityUnitId\x12(\n" +
-	"\x10unit_price_value\x18\b \x01(\tR\x0eunitPriceValue\x12>\n" +
-	"\x1cunit_price_numerator_unit_id\x18\t \x01(\tR\x18unitPriceNumeratorUnitId\x12B\n" +
-	"\x1eunit_price_denominator_unit_id\x18\n" +
-	" \x01(\tR\x1aunitPriceDenominatorUnitId\x12+\n" +
-	"\x0funit_cost_value\x18\v \x01(\tH\x03R\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\f \x01(\tH\x04R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\r \x01(\tH\x05R\x19unitCostDenominatorUnitId\x88\x01\x01B\r\n" +
+	"\x10quantity_unit_id\x18\a \x01(\tR\x0equantityUnitId\x12.\n" +
+	"\n" +
+	"unit_price\x18\x0e \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\x0f \x01(\v2\x0f.core.UnitPriceR\bunitCostB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x16\n" +
-	"\x14_product_descriptionB\x12\n" +
-	"\x10_unit_cost_valueB\x1e\n" +
-	"\x1c_unit_cost_numerator_unit_idB \n" +
-	"\x1e_unit_cost_denominator_unit_id\"n\n" +
+	"\x14_product_descriptionJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\rJ\x04\b\r\x10\x0e\"n\n" +
 	"\x1fCreatePurchaseOrderLineResponse\x12K\n" +
-	"\x13purchase_order_line\x18\x01 \x01(\v2\x1b.core.PurchaseOrderLineInfoR\x11purchaseOrderLine\"\xe3\a\n" +
+	"\x13purchase_order_line\x18\x01 \x01(\v2\x1b.core.PurchaseOrderLineInfoR\x11purchaseOrderLine\"\xc2\x04\n" +
 	"\x1eUpdatePurchaseOrderLineRequest\x12*\n" +
 	"\x11purchase_order_id\x18\x01 \x01(\tR\x0fpurchaseOrderId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\"\n" +
@@ -3703,28 +3616,19 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"productSku\x88\x01\x01\x124\n" +
 	"\x13product_description\x18\x06 \x01(\tH\x03R\x12productDescription\x88\x01\x01\x12*\n" +
 	"\x0equantity_value\x18\a \x01(\tH\x04R\rquantityValue\x88\x01\x01\x12-\n" +
-	"\x10quantity_unit_id\x18\b \x01(\tH\x05R\x0equantityUnitId\x88\x01\x01\x12-\n" +
-	"\x10unit_price_value\x18\t \x01(\tH\x06R\x0eunitPriceValue\x88\x01\x01\x12C\n" +
-	"\x1cunit_price_numerator_unit_id\x18\n" +
-	" \x01(\tH\aR\x18unitPriceNumeratorUnitId\x88\x01\x01\x12G\n" +
-	"\x1eunit_price_denominator_unit_id\x18\v \x01(\tH\bR\x1aunitPriceDenominatorUnitId\x88\x01\x01\x12+\n" +
-	"\x0funit_cost_value\x18\f \x01(\tH\tR\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\r \x01(\tH\n" +
-	"R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\x0e \x01(\tH\vR\x19unitCostDenominatorUnitId\x88\x01\x01B\r\n" +
+	"\x10quantity_unit_id\x18\b \x01(\tH\x05R\x0equantityUnitId\x88\x01\x01\x12.\n" +
+	"\n" +
+	"unit_price\x18\x0f \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12,\n" +
+	"\tunit_cost\x18\x10 \x01(\v2\x0f.core.UnitPriceR\bunitCostB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x0e\n" +
 	"\f_product_skuB\x16\n" +
 	"\x14_product_descriptionB\x11\n" +
 	"\x0f_quantity_valueB\x13\n" +
-	"\x11_quantity_unit_idB\x13\n" +
-	"\x11_unit_price_valueB\x1f\n" +
-	"\x1d_unit_price_numerator_unit_idB!\n" +
-	"\x1f_unit_price_denominator_unit_idB\x12\n" +
-	"\x10_unit_cost_valueB\x1e\n" +
-	"\x1c_unit_cost_numerator_unit_idB \n" +
-	"\x1e_unit_cost_denominator_unit_id\"n\n" +
+	"\x11_quantity_unit_idJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\rJ\x04\b\r\x10\x0eJ\x04\b\x0e\x10\x0f\"n\n" +
 	"\x1fUpdatePurchaseOrderLineResponse\x12K\n" +
 	"\x13purchase_order_line\x18\x01 \x01(\v2\x1b.core.PurchaseOrderLineInfoR\x11purchaseOrderLine\"\\\n" +
 	"\x1eDeletePurchaseOrderLineRequest\x12*\n" +
@@ -3788,9 +3692,10 @@ var file_core_core_purchase_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),                   // 27: google.protobuf.Timestamp
 	(*ReceivingOrderInfo)(nil),                      // 28: core.ReceivingOrderInfo
 	(*DocumentRefInfo)(nil),                         // 29: core.DocumentRefInfo
-	(*PageInfo)(nil),                                // 30: core.PageInfo
-	(*InlineAddressInput)(nil),                      // 31: core.InlineAddressInput
-	(*emptypb.Empty)(nil),                           // 32: google.protobuf.Empty
+	(*UnitPrice)(nil),                               // 30: core.UnitPrice
+	(*PageInfo)(nil),                                // 31: core.PageInfo
+	(*InlineAddressInput)(nil),                      // 32: core.InlineAddressInput
+	(*emptypb.Empty)(nil),                           // 33: google.protobuf.Empty
 }
 var file_core_core_purchase_proto_depIdxs = []int32{
 	27, // 0: core.PurchaseOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
@@ -3828,54 +3733,62 @@ var file_core_core_purchase_proto_depIdxs = []int32{
 	27, // 32: core.PurchaseOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
 	27, // 33: core.PurchaseOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 34: core.PurchaseOrderLineInfo.delivery_lines:type_name -> core.PurchaseOrderLineDeliveryLineInfo
-	27, // 35: core.PurchaseOrderLineDeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	27, // 36: core.PurchaseOrderLineDeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	27, // 37: core.PurchaseOrderLineDeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	27, // 38: core.PurchaseOrderLineDeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 39: core.ListPurchaseOrdersResponse.purchase_orders:type_name -> core.PurchaseOrderSummaryInfo
-	30, // 40: core.ListPurchaseOrdersResponse.page_info:type_name -> core.PageInfo
-	1,  // 41: core.GetPurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 42: core.BatchGetPurchaseOrdersByIDsResponse.purchase_orders:type_name -> core.PurchaseOrderInfo
-	2,  // 43: core.BatchGetPurchaseOrderLinesByIDsResponse.lines:type_name -> core.PurchaseOrderLineInfo
-	14, // 44: core.CreatePurchaseOrderRequest.lines:type_name -> core.CreatePurchaseOrderLineInput
-	31, // 45: core.CreatePurchaseOrderRequest.bill_to_address:type_name -> core.InlineAddressInput
-	31, // 46: core.CreatePurchaseOrderRequest.ship_to_address:type_name -> core.InlineAddressInput
-	1,  // 47: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	31, // 48: core.UpdatePurchaseOrderRequest.billing_address:type_name -> core.InlineAddressInput
-	31, // 49: core.UpdatePurchaseOrderRequest.shipping_address:type_name -> core.InlineAddressInput
-	1,  // 50: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 51: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	2,  // 52: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	2,  // 53: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	5,  // 54: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
-	7,  // 55: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
-	9,  // 56: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
-	11, // 57: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
-	13, // 58: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
-	16, // 59: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
-	18, // 60: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
-	19, // 61: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
-	20, // 62: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
-	22, // 63: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
-	24, // 64: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
-	26, // 65: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
-	6,  // 66: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
-	8,  // 67: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
-	10, // 68: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
-	12, // 69: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
-	15, // 70: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
-	17, // 71: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
-	32, // 72: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
-	32, // 73: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
-	21, // 74: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
-	23, // 75: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
-	25, // 76: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
-	32, // 77: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
-	66, // [66:78] is the sub-list for method output_type
-	54, // [54:66] is the sub-list for method input_type
-	54, // [54:54] is the sub-list for extension type_name
-	54, // [54:54] is the sub-list for extension extendee
-	0,  // [0:54] is the sub-list for field type_name
+	30, // 35: core.PurchaseOrderLineInfo.unit_price:type_name -> core.UnitPrice
+	30, // 36: core.PurchaseOrderLineInfo.unit_cost:type_name -> core.UnitPrice
+	27, // 37: core.PurchaseOrderLineDeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	27, // 38: core.PurchaseOrderLineDeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	27, // 39: core.PurchaseOrderLineDeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 40: core.PurchaseOrderLineDeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 41: core.ListPurchaseOrdersResponse.purchase_orders:type_name -> core.PurchaseOrderSummaryInfo
+	31, // 42: core.ListPurchaseOrdersResponse.page_info:type_name -> core.PageInfo
+	1,  // 43: core.GetPurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 44: core.BatchGetPurchaseOrdersByIDsResponse.purchase_orders:type_name -> core.PurchaseOrderInfo
+	2,  // 45: core.BatchGetPurchaseOrderLinesByIDsResponse.lines:type_name -> core.PurchaseOrderLineInfo
+	14, // 46: core.CreatePurchaseOrderRequest.lines:type_name -> core.CreatePurchaseOrderLineInput
+	32, // 47: core.CreatePurchaseOrderRequest.bill_to_address:type_name -> core.InlineAddressInput
+	32, // 48: core.CreatePurchaseOrderRequest.ship_to_address:type_name -> core.InlineAddressInput
+	30, // 49: core.CreatePurchaseOrderLineInput.unit_price:type_name -> core.UnitPrice
+	30, // 50: core.CreatePurchaseOrderLineInput.unit_cost:type_name -> core.UnitPrice
+	1,  // 51: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	32, // 52: core.UpdatePurchaseOrderRequest.billing_address:type_name -> core.InlineAddressInput
+	32, // 53: core.UpdatePurchaseOrderRequest.shipping_address:type_name -> core.InlineAddressInput
+	1,  // 54: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 55: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	30, // 56: core.CreatePurchaseOrderLineRequest.unit_price:type_name -> core.UnitPrice
+	30, // 57: core.CreatePurchaseOrderLineRequest.unit_cost:type_name -> core.UnitPrice
+	2,  // 58: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	30, // 59: core.UpdatePurchaseOrderLineRequest.unit_price:type_name -> core.UnitPrice
+	30, // 60: core.UpdatePurchaseOrderLineRequest.unit_cost:type_name -> core.UnitPrice
+	2,  // 61: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	5,  // 62: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
+	7,  // 63: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
+	9,  // 64: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
+	11, // 65: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
+	13, // 66: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
+	16, // 67: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
+	18, // 68: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
+	19, // 69: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
+	20, // 70: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
+	22, // 71: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
+	24, // 72: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
+	26, // 73: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
+	6,  // 74: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
+	8,  // 75: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
+	10, // 76: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
+	12, // 77: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
+	15, // 78: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
+	17, // 79: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
+	33, // 80: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
+	33, // 81: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
+	21, // 82: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
+	23, // 83: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
+	25, // 84: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
+	33, // 85: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
+	74, // [74:86] is the sub-list for method output_type
+	62, // [62:74] is the sub-list for method input_type
+	62, // [62:62] is the sub-list for extension type_name
+	62, // [62:62] is the sub-list for extension extendee
+	0,  // [0:62] is the sub-list for field type_name
 }
 
 func init() { file_core_core_purchase_proto_init() }
@@ -3885,6 +3798,7 @@ func file_core_core_purchase_proto_init() {
 	}
 	file_core_core_proto_init()
 	file_core_core_receiving_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_purchase_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[2].OneofWrappers = []any{}

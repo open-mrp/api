@@ -2,6 +2,7 @@ package transactionep
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -37,14 +38,7 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 		UpdatedAt:        updatedAt,
 	}
 
-	tx.Amount = &apiresource.Quantity{
-		ID:           d.AmountId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        d.AmountValue,
-		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		// Unit left nil: its id is stashed so `amount.unit` resolves the real unit; never fabricated.
-	}
-	meta.Set(constants.ObjectTypeQuantity, d.AmountId, "unit_id", d.AmountUnitId)
+	tx.Amount = apiresource.NewQuantity(d.AmountValue, d.AmountUnitId)
 
 	tx.TransactionType = &apiresource.TransactionType{
 		ID:     d.TransactionTypeId,
@@ -122,14 +116,7 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		UpdatedAt:        updatedAt,
 	}
 
-	ts.Amount = &apiresource.Quantity{
-		ID:           d.AmountId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        d.AmountValue,
-		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		// Unit left nil: the expandable unit loads real data via ?include= and is
-		// never fabricated; display_value already carries the formatted amount.
-	}
+	ts.Amount = apiresource.NewQuantity(d.AmountValue, d.AmountUnitId)
 
 	// customer is an expandable reference loaded with real data via
 	// ?include=customer; left nil here rather than fabricated.
@@ -178,21 +165,12 @@ func TransactionAllocationPresenter(meta *include.LoadMeta, a *pb.TransactionAll
 		return apiresource.TransactionAllocation{}
 	}
 
-	// The currency the amount is counted in is a record of its own — stashed as an id so
-	// `allocations.amount.unit` resolves it in full.
-	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
 	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
-		ID:     a.Id,
-		Object: constants.ObjectTypeTransactionAllocation,
-		Amount: &apiresource.Quantity{
-			ID:           a.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        a.AmountValue,
-			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			// Unit left nil: its id is stashed so `allocations.amount.unit` resolves the real unit; never fabricated.
-		},
+		ID:        a.Id,
+		Object:    constants.ObjectTypeTransactionAllocation,
+		Amount:    apiresource.NewQuantity(a.AmountValue, a.AmountUnitId),
 		Note:      a.Note,
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),

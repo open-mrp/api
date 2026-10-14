@@ -78,20 +78,20 @@ type Customer struct {
 }
 ```
 
-### 4. Shared input fragments (`pkg/request/*`: `AddressInput`, `QuantityInput`, `RateInput`, …)
+### 4. Shared input fragments (`pkg/request/*`: `AddressInput`, `QuantityInput`, `RateInput`, `MoneyInput`, `UnitPriceInput`, `DiscountInput`, …)
 
 These are create-style building blocks embedded in other requests. They follow the **create** rules (`field.Optional` for optional, value + `required` for mandatory).
 
-**Compose them; do not inline their parts.** A value that already has a shared input fragment MUST be taken as that fragment, not flattened into sibling scalar fields. A rate is `rate: RateInput`, never `rate_value` + `rate_numerator_unit_id` + `rate_denominator_unit_id`; an amount with a unit is `credit_limit: QuantityInput`, never `credit_limit_value` + `credit_limit_unit_id`.
+**Compose them; do not inline their parts.** A value that already has a shared input fragment MUST be taken as that fragment, not flattened into sibling scalar fields. A rate is `rate: RateInput`, never `rate_value` + `rate_unit_id` + `rate_per_unit_id`; an amount of money is `credit_limit: MoneyInput`, never `credit_limit_amount` + `credit_limit_currency`.
 
 ```go
 // Good — one field, one concept.
 Rate apirequest.RateInput `json:"rate" validate:"required"`
 
 // Bad — the same concept smeared across three fields.
-RateValue             string `json:"rate_value" validate:"required"`
-RateNumeratorUnitID   string `json:"rate_numerator_unit_id" validate:"required"`
-RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required"`
+RateValue     string `json:"rate_value" validate:"required"`
+RateUnitID    string `json:"rate_unit_id" validate:"required"`
+RatePerUnitID string `json:"rate_per_unit_id" validate:"required"`
 ```
 
 Inlining costs real things: the OpenAPI schema loses the shared `$ref` (so SDKs emit three loose strings instead of one reusable type), the prefix has to be repeated in every doc comment, and nothing stops a caller sending a value without its units. A fragment is also the natural unit of partial update — on PATCH use `field.Optional[apirequest.RateInput]`, which makes "replace the whole rate" the only representable operation and removes the question of what a value without units means.

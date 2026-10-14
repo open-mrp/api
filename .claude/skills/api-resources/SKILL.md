@@ -31,6 +31,10 @@ Mechanically: presenter leaves expandables `nil`, stashes the FK id in load meta
 - Declare the allowed set on the endpoint via `IncludesFor`. Unlisted keys → `ParameterInvalidError`.
 - Fetch expensive data only when `appctx.IsIncludeRequested(ctx, key)` (nil include context returns true — backward compat).
 
+## Value shapes
+
+`Money`, `UnitPrice`, `Quantity`, `Rate` (`pkg/resource/value_shapes.go`) have no `id`/`object`/`display_value`. Build them with `apiresource.NewQuantity`/`NewRate`/`NewUnitPrice`/`NewMoney` or `resourceloaders.*FromProto`: units are stubs (`UnitStub(id)`) that the gateway fills in one batch after the handler, after each include loader and after each include `Populate` (`resourceloaders.FillUnits`). Never add a `*.unit` include key. Money arrives from core-service as `pb.Money`/`pb.UnitPrice`; the gateway never converts currency units. Requests take `MoneyInput`, `UnitPriceInput`, `QuantityInput`, `RateInput`.
+
 ## Request field types
 
 The type encodes presence. A bare `*T` cannot tell absent from `null`. **Never use a bare `*T` for an optional request field.**

@@ -1429,6 +1429,7 @@ The cross-cutting framework changes in this review are implemented once in the k
   - Business error codes, which register as kit extensions: `limit_exceeded` with `quota`, `payment_required`, `agent_spending_cap_reached` and `registration_closed`.
 - [ ] **Deferred until an API needs them:** gRPC contracts and `rpc`, `messaging` (outbox and RabbitMQ), `audit`, and the PlanetScale tools `vtparse` and `schemasplit`. They stay here, and moving them later is additive.
 - [ ] **Identity and permissions are app-defined.** The context holds the app's own identity type (`Identity[T]`). An endpoint carries an `Auth` policy value checked by an `Authorizer` the app registers. Our permission fields (`RequiredPermissions`, `CounterpartyPermissions`, `SelfPathParam`, `RequiredRoleType`) become OpenMRP's policy type.
+- [ ] **Deprecate preview.9 at release:** set `preview9DeprecatedAt` in `shared/apiversion/apiversion.go` to the forge.1 release date, so preview.9 responses carry `Deprecation`. No `Sunset` until its clients have moved.
 - [ ] **Migration at forge.1:** follow `docs/apikit-migration.md` (steps, rename map, what OpenMRP registers, client-visible changes, verification). In short: switch every import to apikit and delete the local copies. Register OpenMRP's error codes, ID prefixes, versions, sensitive-tag policies, `Authorizer` and identity type. Diff the generated OpenAPI spec and Stainless config against the pre-migration output, so the only changes are the forge.1 ones.
 
 ## Dashboard breaking changes
@@ -1545,7 +1546,7 @@ Pre-release changes (X/Y)
 - Errors carry an `errors[]` list for 422s (show every field error); bulk/job row errors are objects.
 - Validation failures are 422 `validation_failed` (was 400); a single failing field's `missing_field` / `invalid_format` now appears only on its `errors[]` entry. A body that does not parse is 400 `parameter_invalid`. Reusing an idempotency key with a different body is 422 `idempotency_key_reused`. `rate_limit_exceeded` → `rate_limited`. The error object has `errors` and `doc_url` and no `request_log_url`; `quota` appears only on `limit_exceeded`.
 - Async jobs: `/v1/core/jobs/{id}` → `/v1/core/async-jobs/{id}`, `POST …/cancel` → `POST /v1/core/async-jobs/{id}/actions/cancel`; `object: "job"` → `"async_job"` (rows `async_job_result`, export `async_job_export`); statuses `created` / `started` / `cancelled` → `queued` / `running` / `canceled`, `cancelled_at` → `canceled_at`. Async-job agent tools are `retrieve_async_job` / `cancel_async_job`.
-- Clients pinned to `1.0.forge-preview.9` keep the old shapes for these through transformers, and get a `Deprecation` header.
+- Clients pinned to `1.0.forge-preview.9` keep the old shapes for these through transformers, and get a `Deprecation` header once forge.1 is released.
 - Applications use `source` / `target`.
 - Lines gain an optional `discount` and snapshot `stocking_quantity`; order units can carry a per-item `quantity`; the `sales` section is allowed on materials and parts.
 

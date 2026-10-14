@@ -4,7 +4,7 @@ Changes to the public API, by the `OpenMRP-Version` that introduces them. A clie
 
 ## 1.0.forge
 
-The first stable version. Of the previews, only 1.0.forge-preview.9 is still served; it is deprecated, so its responses carry a `Deprecation` header. Earlier previews are no longer accepted.
+The first stable version. Of the previews, only 1.0.forge-preview.9 is still served, deprecated from the day 1.0.forge is released (its responses then carry a `Deprecation` header). Earlier previews are no longer accepted.
 
 ### Breaking changes
 

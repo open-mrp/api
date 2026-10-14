@@ -74,7 +74,7 @@ func TestCovCatalogParts_CreateSKUTooLong(t *testing.T) {
 		"category_id": SeedItemCategoryID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
@@ -94,7 +94,7 @@ func TestCovCatalogParts_UpdateSKUEmptyStringRejected(t *testing.T) {
 	// documented/correct behavior so a future regression to a silent 200 is caught.
 	status, body, err := apiClient.Patch(partsPath+"/"+id, map[string]any{"sku": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
@@ -129,7 +129,7 @@ func TestCovCatalogParts_CreateNonexistentUnitPriceUnit(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
@@ -147,7 +147,7 @@ func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")

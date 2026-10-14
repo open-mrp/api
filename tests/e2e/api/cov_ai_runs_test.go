@@ -171,7 +171,7 @@ func TestCovAiRuns_TriggerMissingAgentDefinitionID(t *testing.T) {
 		"input": "x",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "agent_definition_id")
@@ -184,7 +184,7 @@ func TestCovAiRuns_TriggerEmptyAgentDefinitionID(t *testing.T) {
 		"agent_definition_id": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "agent_definition_id")
@@ -212,7 +212,7 @@ func TestCovAiRuns_TriggerInactiveAgent(t *testing.T) {
 		"agent_definition_id": SeedInactiveAgentDefinitionID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "inactive")
@@ -229,7 +229,7 @@ func TestCovAiRuns_TriggerNullInput(t *testing.T) {
 		"input":               nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "input")
@@ -248,7 +248,7 @@ func TestCovAiRuns_TriggerBlankInput(t *testing.T) {
 		"input":               "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "input")
@@ -267,7 +267,7 @@ func TestCovAiRuns_CancelWrongState(t *testing.T) {
 
 	status, body, err := apiClient.Post(agentRunsPath+"/"+SeedAgentRunID+"/actions/cancel", nil, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "cannot be cancelled")
@@ -361,13 +361,13 @@ func TestCovAiRuns_ContinueMissingMessage(t *testing.T) {
 
 	status, body, err := apiClient.Post(agentRunsPath+"/"+SeedAgentRunID+"/actions/continue", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "message")
 
 	status, body, err = apiClient.Post(agentRunsPath+"/"+SeedAgentRunID+"/actions/continue", map[string]any{"message": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj = requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "message")
 }
@@ -380,7 +380,7 @@ func TestCovAiRuns_ContinueWrongState(t *testing.T) {
 
 	status, body, err := apiClient.Post(agentRunsPath+"/"+SeedAgentRunID+"/actions/continue", map[string]any{"message": "hi"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "not awaiting input or approval")
@@ -434,7 +434,7 @@ func TestCovAiRuns_RetryWrongState(t *testing.T) {
 
 	status, body, err := apiClient.Post(agentRunsPath+"/"+SeedAgentRunID+"/actions/retry", nil, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "Only failed runs can be retried")
@@ -860,7 +860,7 @@ func TestCovAiRuns_TenantIsolation_TriggerOtherTenantsAgentDefinition(t *testing
 
 	status, body, err := tenantB.Post(agentRunsPath, map[string]any{"agent_definition_id": SeedAgentDefinitionID}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "inactive")
 }

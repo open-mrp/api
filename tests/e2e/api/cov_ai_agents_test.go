@@ -589,7 +589,7 @@ func TestCovAiAgents_CreateValidation_DescriptionNull(t *testing.T) {
 	body["description"] = nil
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "null description should 400, got %d: %s", status, string(respBody))
+	assert.Equal(t, 422, status, "null description should 400, got %d: %s", status, string(respBody))
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "description")
 }
@@ -600,7 +600,7 @@ func TestCovAiAgents_CreateValidation_DescriptionEmpty(t *testing.T) {
 	body["description"] = ""
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "empty description should 400, got %d: %s", status, string(respBody))
+	assert.Equal(t, 422, status, "empty description should 400, got %d: %s", status, string(respBody))
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "description")
 }
@@ -624,7 +624,7 @@ func TestCovAiAgents_CreateValidation_ScheduledRequiresCronSchedule(t *testing.T
 		body["trigger_type"] = "scheduled"
 		status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, status, "scheduled without trigger_config should 400, got %d: %s", status, string(respBody))
+		assert.Equal(t, 422, status, "scheduled without trigger_config should 400, got %d: %s", status, string(respBody))
 		requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	})
 
@@ -634,7 +634,7 @@ func TestCovAiAgents_CreateValidation_ScheduledRequiresCronSchedule(t *testing.T
 		body["config"] = map[string]any{"trigger_config": map[string]any{"timezone": "UTC"}}
 		status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, status, "scheduled without cron_schedule should 400, got %d: %s", status, string(respBody))
+		assert.Equal(t, 422, status, "scheduled without cron_schedule should 400, got %d: %s", status, string(respBody))
 		requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	})
 }
@@ -645,7 +645,7 @@ func TestCovAiAgents_CreateValidation_EventRequiresEventFilters(t *testing.T) {
 	body["trigger_type"] = "event"
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "event without event_filters should 400, got %d: %s", status, string(respBody))
+	assert.Equal(t, 422, status, "event without event_filters should 400, got %d: %s", status, string(respBody))
 	requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 }
 
@@ -704,7 +704,7 @@ func TestCovAiAgents_CreateValidation_UnknownBuiltinToolSlug(t *testing.T) {
 	body["tools"] = []map[string]any{{"tool": "not_a_real_tool"}}
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "unknown tool slug should 400, got %d: %s", status, string(respBody))
+	assert.Equal(t, 422, status, "unknown tool slug should 400, got %d: %s", status, string(respBody))
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "tools")
 	assert.Contains(t, errObj["message"], "not_a_real_tool")
@@ -716,7 +716,7 @@ func TestCovAiAgents_CreateValidation_UnknownEndpointToolSlug(t *testing.T) {
 	body["config"] = map[string]any{"endpoint_tool_slugs": []string{"not_a_real_endpoint_tool"}}
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "unknown endpoint tool slug should 400, got %d: %s", status, string(respBody))
+	assert.Equal(t, 422, status, "unknown endpoint tool slug should 400, got %d: %s", status, string(respBody))
 	// Documented minor param-name mismatch: the error names "tools", not "config".
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "tools")
@@ -730,7 +730,7 @@ func TestCovAiAgents_CreateRoleIDNonexistentRejected(t *testing.T) {
 	body["role_id"] = "rl_doesnotexist_e2e"
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "role_id")
 }

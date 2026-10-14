@@ -39,7 +39,7 @@ func bulkUpsertProductsJob(t *testing.T, products ...map[string]any) map[string]
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -143,7 +143,7 @@ func TestProducts_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
 		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
 		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "products[1].sku")
 	assert.Contains(t, errObj["message"], "duplicate SKU")
@@ -188,7 +188,7 @@ func TestProducts_BulkUpsert_RejectsUnknownCategory(t *testing.T) {
 		map[string]any{"sku": uniqueName("e2e-bup-prod-ok"), "category": map[string]any{"id": SeedItemCategoryID}},
 		map[string]any{"sku": uniqueName("e2e-bup-prod-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "products[1].category")
 }
@@ -201,7 +201,7 @@ func TestProducts_BulkUpsert_RejectsWrongCategoryType(t *testing.T) {
 	status, body := bulkUpsertProducts(t,
 		map[string]any{"sku": uniqueName("e2e-bup-prod-wrongcat"), "category": map[string]any{"id": SeedMaterialCategoryID}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "products[0].category")
 }
@@ -247,7 +247,7 @@ func TestProducts_BulkUpsert_RejectsUnknownProductLine(t *testing.T) {
 			"product_line": map[string]any{"id": "pdln_does_not_exist_00000"},
 		},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "products[1].product_line")
 }

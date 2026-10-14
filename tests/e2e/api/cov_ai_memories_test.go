@@ -57,7 +57,7 @@ func TestCovAiMemories_CRUD(t *testing.T) {
 	delStatus, delBody, err := apiClient.Delete(agentMemoriesPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
-	assert.JSONEq(t, `{}`, string(delBody))
+	assertDeletedStub(t, delBody, id, "agent_memory")
 
 	// Verify deletion
 	getStatus2, getBody2, err := apiClient.GetListRaw(agentMemoriesPath+"/"+id, nil)
@@ -203,7 +203,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"content": "Missing category.",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "category")
 	})
@@ -213,7 +213,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"category": "fact",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "content")
 	})
@@ -224,7 +224,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"content":  "",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "content")
 	})
@@ -581,7 +581,7 @@ func TestCovAiMemories_CreateValidation_ExpiresAtMalformed(t *testing.T) {
 		"expires_at": "not-a-date",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "expires_at")
 }
@@ -731,7 +731,7 @@ func TestCovAiMemories_UpdateValidation_ExpiresAtMalformed(t *testing.T) {
 		"expires_at": "not-a-date",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "expires_at")
 }
@@ -755,7 +755,7 @@ func TestCovAiMemories_DeleteValidation_NotFoundIsIdempotentNoOp(t *testing.T) {
 	status, body, err := apiClient.Delete(agentMemoriesPath + "/agmm_doesnotexist000")
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body) // delete of a nonexistent memory is a no-op, not a 404
-	assert.JSONEq(t, `{}`, string(body))
+	assertDeletedStub(t, body, "agmm_doesnotexist000", "agent_memory")
 }
 
 // TestCovAiMemories_UpdateEntityClearingClearsBothFields documents

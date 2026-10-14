@@ -52,7 +52,7 @@ func TestAccountPrices_UpdateIsIdempotent(t *testing.T) {
 	status3, body3, err := apiClient.Patch(accountPricesPath+"/"+priceID,
 		map[string]any{"rate": rate("99.00")}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status3, body3)
+	requireStatus(t, 422, status3, body3)
 	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, accountPricesPath+"/"+priceID))
@@ -85,7 +85,7 @@ func TestVolumeDiscounts_UpdateIsIdempotent(t *testing.T) {
 	status3, body3, err := apiClient.Patch(volumeDiscountsPath+"/"+discountID,
 		map[string]any{"name": secondName}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status3, body3)
+	requireStatus(t, 422, status3, body3)
 	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, volumeDiscountsPath+"/"+discountID))
@@ -118,7 +118,7 @@ func TestOrderDiscounts_UpdateIsIdempotent(t *testing.T) {
 	status3, body3, err := apiClient.Patch(orderDiscountsPath+"/"+discountID,
 		map[string]any{"name": secondName}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status3, body3)
+	requireStatus(t, 422, status3, body3)
 	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, orderDiscountsPath+"/"+discountID))

@@ -273,7 +273,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 		requireStatus(t, 202, status, body)
 
 		accepted := parseJSON(body)
-		assert.Equal(t, "job", jsonField(accepted, "object"), "202 returns the canonical job resource")
+		assert.Equal(t, "async_job", jsonField(accepted, "object"), "202 returns the async job")
 		jobID := jsonField(accepted, "id")
 		require.NotEmpty(t, jobID, "202 must name the job to poll")
 

@@ -248,7 +248,7 @@ func TestCovAuthApiKeys_CreateValidation_NameTooLong(t *testing.T) {
 		"role_id": SeedAdminRoleID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 

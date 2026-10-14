@@ -38,7 +38,7 @@ func completedExportJobAs(t *testing.T, client *Client, path string, filters map
 	requireStatus(t, http.StatusAccepted, status, body)
 
 	accepted := parseJSON(body)
-	assert.Equal(t, "job", jsonField(accepted, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(accepted, "object"), "202 returns the async job")
 	assert.Equal(t, "export", jsonField(accepted, "type"))
 	jobID := jsonField(accepted, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
@@ -66,7 +66,7 @@ func awaitExportJob(t *testing.T, client *Client, jobID string) map[string]any {
 		switch status := jsonField(job, "status"); status {
 		case "completed":
 			return nil
-		case "failed", "cancelled":
+		case "failed", "canceled":
 			t.Fatalf("export job %s %s: %s", jobID, status, string(resp.Body))
 			return nil
 		default:
@@ -161,7 +161,7 @@ func TestExports_ReadingAJobNeverRedirects(t *testing.T) {
 	code, _, raw, err := apiClient.GetWithoutFollowingRedirects(jobsPath + "/" + jobID)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, code, "a completed export must still read as a job: %s", string(raw))
-	assert.Equal(t, "job", jsonField(parseJSON(raw), "object"))
+	assert.Equal(t, "async_job", jsonField(parseJSON(raw), "object"))
 }
 
 // Only an export carries a file, so a bulk job's export stays null.

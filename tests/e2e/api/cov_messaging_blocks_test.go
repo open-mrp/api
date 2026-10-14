@@ -192,7 +192,7 @@ func TestCovMessagingBlocks_MissingRequiredField(t *testing.T) {
 
 	status, body, err := user.Post(blocksPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
@@ -206,7 +206,7 @@ func TestCovMessagingBlocks_EmptyStringField(t *testing.T) {
 
 	status, body, err := user.Post(blocksPath, map[string]any{"blocked_account_user_id": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
@@ -219,7 +219,7 @@ func TestCovMessagingBlocks_WrongTypeField(t *testing.T) {
 
 	status, body, err := user.Post(blocksPath, map[string]any{"blocked_account_user_id": 12345}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
@@ -366,6 +366,6 @@ func TestCovMessagingBlocks_IdempotencyConflictDifferentBody(t *testing.T) {
 
 	second, err := user.PostFull(blocksPath, map[string]any{"blocked_account_user_id": SeedChildAccountUserID}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, second.StatusCode, second.Body)
+	requireStatus(t, 422, second.StatusCode, second.Body)
 	requireErrorResponse(t, second.Body, "validation_failed", "idempotency_error")
 }

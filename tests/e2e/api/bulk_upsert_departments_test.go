@@ -41,7 +41,7 @@ func bulkUpsertDepartmentsJob(t *testing.T, departments ...map[string]any) map[s
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -149,7 +149,7 @@ func TestDepartments_BulkUpsert_RejectsUnknownLocation(t *testing.T) {
 		map[string]any{"name": uniqueName("e2e-bup-dept-ok")},
 		map[string]any{"name": uniqueName("e2e-bup-dept-badloc"), "location": map[string]any{"name": uniqueName("no-such-location")}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "departments[1].location")
 }

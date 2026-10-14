@@ -68,7 +68,7 @@ func TestListAccountStatuses_LimitParam(t *testing.T) {
 	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "limit=1 should return exactly 1 item")
-	assert.True(t, list.PageInfo.HasNextPage, "Should have a next page with limit=1 and 4+ account statuses")
+	assert.True(t, list.PageInfo.HasNextPage(), "Should have a next page with limit=1 and 4+ account statuses")
 }
 
 func TestListAccountStatuses_PaginationCursor(t *testing.T) {
@@ -106,7 +106,7 @@ func TestListAccountStatuses_PrevPageURL(t *testing.T) {
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
-	assert.True(t, page2.PageInfo.HasPrevPage, "Page 2 should have has_prev_page=true")
+	assert.True(t, page2.PageInfo.HasPrevPage(), "Page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
 	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)

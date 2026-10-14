@@ -15,7 +15,7 @@ import (
 )
 
 const productionStepsBulkUpsertPath = productionStepsPath + "/actions/bulk-upsert"
-const jobsPath = "/v1/core/jobs"
+const jobsPath = "/v1/core/async-jobs"
 
 func bulkUpsertProductionSteps(t *testing.T, steps ...map[string]any) (int, []byte) {
 	t.Helper()
@@ -42,7 +42,7 @@ func pollJobUntilTerminal(t *testing.T, jobID string) map[string]any {
 		}
 		job = parseJSON(body)
 		switch jsonField(job, "status") {
-		case "completed", "failed", "cancelled":
+		case "completed", "failed", "canceled":
 			return nil
 		}
 		return fmt.Errorf("job %s not terminal yet (status %q)", jobID, jsonField(job, "status"))
@@ -58,7 +58,7 @@ func acceptBulkUpsertSteps(t *testing.T, steps ...map[string]any) (createdIDs, u
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -240,7 +240,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownSKU(t *testing.T) {
 		bulkStepRow(uniqueName("e2e-bup-step-ok")),
 		badRow,
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[1].production.item")
 }
@@ -256,7 +256,7 @@ func TestProductionSteps_BulkUpsert_RejectsDuplicateConsumptionSKU(t *testing.T)
 		map[string]any{"item": refSKU("lkn"), "quantity_value": "2", "quantity_unit": refAbbr("ea")}, // duplicate differing only by casing
 	}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].consumptions[1].item")
 }
@@ -272,7 +272,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownConsumptionSKU(t *testing.T) {
 		map[string]any{"item": refSKU(uniqueName("no-such-sku")), "quantity_value": "1", "quantity_unit": refAbbr("ea")},
 	}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].consumptions[0].item")
 }
@@ -283,7 +283,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownDepartment(t *testing.T) {
 	row := bulkStepRow(uniqueName("e2e-bup-step-baddept"))
 	row["department"] = refName(uniqueName("no-such-department"))
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].department")
 }
@@ -304,7 +304,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownWasteUnit(t *testing.T) {
 		},
 	}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].consumptions[0].waste_quantity_unit")
 }
@@ -315,7 +315,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownUnit(t *testing.T) {
 	row := bulkStepRow(uniqueName("e2e-bup-step-badunit"))
 	row["labor_time"] = map[string]any{"value": "1.5", "numerator_unit": refAbbr("lightyear"), "denominator_unit": refAbbr("ea")}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].labor_time.numerator_unit")
 }
@@ -326,7 +326,7 @@ func TestProductionSteps_BulkUpsert_RejectsUnknownStation(t *testing.T) {
 	row := bulkStepRow(uniqueName("e2e-bup-step-badstation"))
 	row["scanning_station"] = refName(uniqueName("no-such-station"))
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].scanning_station")
 }
@@ -339,7 +339,7 @@ func TestProductionSteps_BulkUpsert_RejectsNonCurrencyRate(t *testing.T) {
 	row := bulkStepRow(uniqueName("e2e-bup-step-badrate"))
 	row["labor_rate"] = map[string]any{"value": "25.00", "numerator_unit": refAbbr("ea"), "denominator_unit": refAbbr("hr")}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].labor_rate.numerator_unit")
 }
@@ -352,7 +352,7 @@ func TestProductionSteps_BulkUpsert_RejectsCurrencyRateDenominator(t *testing.T)
 	row := bulkStepRow(uniqueName("e2e-bup-step-badden"))
 	row["overhead_rate"] = map[string]any{"value": "15.00", "numerator_unit": refAbbr("$"), "denominator_unit": refAbbr("$")}
 	status, body := bulkUpsertProductionSteps(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_steps[0].overhead_rate.denominator_unit")
 }

@@ -39,7 +39,7 @@ func TestCovMessagingConversations_Create_MissingType(t *testing.T) {
 		"participant_account_user_ids": []string{SeedAccountUser2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
@@ -556,7 +556,7 @@ func TestCovMessagingConversations_SetWorkflowStatus_MissingField(t *testing.T) 
 
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/actions/set-status", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "workflow_status")
 }
@@ -688,7 +688,7 @@ func TestCovMessagingConversations_AddParticipant_Validation(t *testing.T) {
 	t.Run("missing account_user_id", func(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/participants", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "account_user_id")
 	})
@@ -697,7 +697,7 @@ func TestCovMessagingConversations_AddParticipant_Validation(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/participants",
 			map[string]any{"account_user_id": "acus_doesnotexist000"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		assert.Contains(t, string(body), "does not exist")
 	})
 }
@@ -711,7 +711,7 @@ func TestCovMessagingConversations_AddAgent_Validation(t *testing.T) {
 	t.Run("missing agent_config_id", func(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/agents", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "agent_config_id")
 	})
@@ -720,7 +720,7 @@ func TestCovMessagingConversations_AddAgent_Validation(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/agents",
 			map[string]any{"agent_config_id": SeedAgentConfigID, "trigger_policy": "bogus"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 		assertErrorParam(t, errObj, "trigger_policy")
 	})
@@ -832,11 +832,11 @@ func TestCovMessagingConversations_List_Pagination(t *testing.T) {
 	for attempt := 1; ; attempt++ {
 		page1, _, err := user.GetList(conversationsPath, url.Values{"limit": {"1"}})
 		require.NoError(t, err)
-		if (len(page1.Data) != 1 || !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil) && attempt < attempts {
+		if (len(page1.Data) != 1 || !page1.PageInfo.HasNextPage() || page1.PageInfo.NextPageURL == nil) && attempt < attempts {
 			continue
 		}
 		require.Len(t, page1.Data, 1, "first page should hold exactly one conversation (after %d attempts)", attempt)
-		require.True(t, page1.PageInfo.HasNextPage, "the caller has more than one conversation")
+		require.True(t, page1.PageInfo.HasNextPage(), "the caller has more than one conversation")
 		require.NotNil(t, page1.PageInfo.NextPageURL)
 
 		page2, _, err := user.GetListFromPageURL(page1.PageInfo.NextPageURL)

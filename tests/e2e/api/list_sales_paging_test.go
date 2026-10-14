@@ -30,7 +30,7 @@ func pageBothWays(t *testing.T, path string, params url.Values) (first, second s
 	params.Set("limit", "1")
 	rows, info := listPayments(t, path, params)
 	require.Len(t, rows, 1)
-	require.Equal(t, true, info["has_next_page"], "page_info: %v", info)
+	require.Equal(t, true, hasPage(info, "next"), "page_info: %v", info)
 	first = rowIDs(rows)[0]
 
 	next := jsonField(info, "next_page_url")
@@ -44,7 +44,7 @@ func pageBothWays(t *testing.T, path string, params url.Values) (first, second s
 	require.NotEqual(t, first, second)
 
 	info = jsonObject(page, "page_info")
-	require.Equal(t, true, info["has_prev_page"], "page_info: %v", info)
+	require.Equal(t, true, hasPage(info, "prev"), "page_info: %v", info)
 	prev := jsonField(info, "previous_page_url")
 	status, body, err = apiClient.GetListRawFromPageURL(&prev)
 	require.NoError(t, err)

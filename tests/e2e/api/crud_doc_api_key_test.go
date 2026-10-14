@@ -151,6 +151,6 @@ func TestDocAPIKey_RejectsProductionAccount(t *testing.T) {
 
 	status, body, err := user.Post(docAPIKeyPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }

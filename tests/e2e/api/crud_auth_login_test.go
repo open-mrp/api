@@ -139,7 +139,7 @@ func TestLogin_MissingIdentifier(t *testing.T) {
 		"password": seedUserPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "identifier")
@@ -151,7 +151,7 @@ func TestLogin_MissingPassword(t *testing.T) {
 		"identifier": seedUserEmail,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")
@@ -174,7 +174,7 @@ func TestLogin_InvalidIdentifier_TooShort(t *testing.T) {
 		"password":   seedUserPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "identifier")
@@ -187,7 +187,7 @@ func TestLogin_InvalidIdentifier_BadEmail(t *testing.T) {
 		"password":   seedUserPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "identifier")

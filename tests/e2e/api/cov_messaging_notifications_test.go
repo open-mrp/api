@@ -274,7 +274,7 @@ func TestCovMessagingNotifications_SendEmptyTitleRejected(t *testing.T) {
 		"title":    "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 }
 
@@ -319,7 +319,7 @@ func TestCovMessagingNotifications_SendEmptyTargetIDRejected(t *testing.T) {
 		"title":    uniqueName("e2e-cov-notif-emptytarget"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 }
 

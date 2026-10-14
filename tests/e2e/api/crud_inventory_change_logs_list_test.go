@@ -164,7 +164,7 @@ func TestInventoryChangeLogs_ListPagesForwardAndBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.Len(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "the account has more than one change log")
+	require.True(t, page1.PageInfo.HasNextPage(), "the account has more than one change log")
 
 	page2, status, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
@@ -230,7 +230,7 @@ func TestInventoryChangeLogs_SeveralValuesPageInListOrder(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, page1.Data, 1)
 	assert.Equal(t, SeedInventoryChangeLogID, DataItemField(page1.Data[0], "id"), "the newer fixture heads the list")
-	require.True(t, page1.PageInfo.HasNextPage)
+	require.True(t, page1.PageInfo.HasNextPage())
 
 	page2, status, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)

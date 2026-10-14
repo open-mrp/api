@@ -54,7 +54,7 @@ func bulkUpsertMachinesJob(t *testing.T, machines ...map[string]any) map[string]
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -124,7 +124,7 @@ func TestMachines_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 		bulkMachineRow(name),
 		bulkMachineRow(strings.ToUpper(name)), // duplicate differing only by casing
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "machines[1].name")
 	assert.Contains(t, errObj["message"], "duplicate name")
@@ -151,7 +151,7 @@ func TestMachines_BulkUpsert_RejectsUnknownDepartment(t *testing.T) {
 			"department":    map[string]any{"name": uniqueName("no-such-department")},
 		},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "machines[1].department")
 }
@@ -166,7 +166,7 @@ func TestMachines_BulkUpsert_RejectsDuplicateSerialInRequest(t *testing.T) {
 	rowB["serial_number"] = strings.ToUpper(serial) // duplicate differing only by casing
 
 	status, body := bulkUpsertMachines(t, rowA, rowB)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "machines[1].serial_number")
 	assert.Contains(t, errObj["message"], "duplicate serial number")

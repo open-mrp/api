@@ -174,13 +174,13 @@ func TestItemUpdates_CategoryMoveRefusals(t *testing.T) {
 		{"a part moved to a material category", apiClient, partsPath + "/" + partID,
 			map[string]any{"category_id": SeedMaterialCategoryID, "notes": notes},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "category_id")
 			}},
 		{"a material moved to a category that does not carry its attribute", apiClient, materialsPath + "/" + materialID,
 			map[string]any{"category_id": ownMaterialCategory, "notes": notes},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "category_id")
 			}},
 		{"a material moved to another tenant's category", apiClient, materialsPath + "/" + materialID,
@@ -192,13 +192,13 @@ func TestItemUpdates_CategoryMoveRefusals(t *testing.T) {
 		{"a blank category", apiClient, partsPath + "/" + partID,
 			map[string]any{"category_id": "", "notes": notes},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "category_id")
 			}},
 		{"a null category", apiClient, materialsPath + "/" + materialID,
 			map[string]any{"category_id": nil, "notes": notes},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "category_id")
 			}},
 	}

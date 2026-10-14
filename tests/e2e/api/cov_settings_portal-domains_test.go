@@ -331,7 +331,7 @@ func TestCovPortalDomains_CreateValidation_NoDot(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{"domain": "nodotdomain"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }
@@ -341,7 +341,7 @@ func TestCovPortalDomains_CreateValidation_ContainsAt(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{"domain": "user@shop.example.com"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }
@@ -352,7 +352,7 @@ func TestCovPortalDomains_CreateValidation_OpenMRPDomain(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{"domain": "shop.openmrp.ai"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }

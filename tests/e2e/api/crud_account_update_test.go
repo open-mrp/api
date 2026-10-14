@@ -633,7 +633,7 @@ func TestAccountUpdate_RefusesADefaultAddressTheAccountDoesNotHave(t *testing.T)
 				require.NoError(t, err)
 				require.Less(t, status, 500, "must not 5xx: %s", body)
 				assert.Contains(t, []int{400, 404}, status, "%s address must be refused: %s", name, body)
-				if status == 400 {
+				if status == 422 {
 					assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), param)
 				}
 			})
@@ -662,7 +662,7 @@ func TestAccountUpdate_ReplayingAnIdempotencyKeyReturnsTheFirstResult(t *testing
 
 	status, body, err := acct.owner.Patch(acct.path(), map[string]any{"name": uniqueName("E2E Second")}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 	assert.Equal(t, first, jsonField(readAccount(t, acct.owner, acct.id), "name"))
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// --- Job cancellation (POST /v1/core/jobs/{id}/cancel) ---
+// --- Job cancellation (POST /v1/core/async-jobs/{id}/actions/cancel) ---
 //
 // Cancelling an async bulk job must guarantee that the job's writes do not land: a job
 // that ends up cancelled created/updated none of its rows. The mechanism is the atomic,
@@ -32,7 +32,7 @@ func TestJobs_Cancel_RejectedAfterCompletion(t *testing.T) {
 		defer cleanupUnitIDs(created)
 	}
 
-	status, body, err := apiClient.Post(jobsPath+"/"+jobID+"/cancel", nil, "")
+	status, body, err := apiClient.Post(jobsPath+"/"+jobID+"/actions/cancel", nil, "")
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 409 || status == 422,
 		"cancelling a completed job must be rejected, got %d: %s", status, string(body))
@@ -57,7 +57,7 @@ func TestJobs_Cancel_CancelledJobWritesNothing(t *testing.T) {
 	jobID := acceptBulkUpsertUnits(t, rows...)
 
 	// Cancel immediately — before or (with a batch this size) during the write.
-	_, _, err := apiClient.Post(jobsPath+"/"+jobID+"/cancel", nil, "")
+	_, _, err := apiClient.Post(jobsPath+"/"+jobID+"/actions/cancel", nil, "")
 	require.NoError(t, err)
 
 	job := pollJobUntilTerminal(t, jobID)
@@ -71,7 +71,7 @@ func TestJobs_Cancel_CancelledJobWritesNothing(t *testing.T) {
 	}
 
 	switch status {
-	case "cancelled":
+	case "canceled":
 		// The guarded completion rolled the whole write back: no ids recorded...
 		assert.Empty(t, created, "a cancelled job must not have recorded created objects")
 		// ...and a representative unit must genuinely not exist.

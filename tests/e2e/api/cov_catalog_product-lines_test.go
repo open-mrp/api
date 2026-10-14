@@ -96,7 +96,7 @@ func TestCovCatalogProductLines_CreateNameTooLong(t *testing.T) {
 		"freight_policy":    "billed_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "name > 255 chars should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "name > 255 chars should return 400: %s", string(body))
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }

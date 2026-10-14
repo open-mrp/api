@@ -1300,7 +1300,7 @@ func TestDashCustomers_ProductLineAccessListsStayWithinTheAccount(t *testing.T) 
 				assert.NotEqual(t, list.id, jsonField(jsonObject(parseJSON(raw), list.key), "id"), "another tenant's %s list leaks a record", list.key)
 			}
 			cursor := got.PageInfo.NextCursor()
-			if !got.PageInfo.HasNextPage || cursor == nil {
+			if !got.PageInfo.HasNextPage() || cursor == nil {
 				break
 			}
 			params.Set("cursor", *cursor)
@@ -1380,7 +1380,7 @@ func dashCustomersFindTarget(t *testing.T, client *Client, repID, targetID strin
 				return parseJSON(raw)
 			}
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			return nil
 		}
 		list, _, err = client.GetListFromPageURL(list.PageInfo.NextPageURL)

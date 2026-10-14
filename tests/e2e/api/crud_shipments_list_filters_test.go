@@ -38,7 +38,7 @@ func shipmentIDsFiltered(t *testing.T, params url.Values) []string {
 		for _, raw := range list.Data {
 			ids = append(ids, DataItemField(raw, "id"))
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			return ids
 		}
 		require.Less(t, page, maxListScanPages, "%s %v has more rows than the scan allows", shipmentsPath, params)

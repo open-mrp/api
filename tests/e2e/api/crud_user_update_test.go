@@ -253,7 +253,7 @@ func TestUserUpdate_ReplayingAnIdempotencyKeyReturnsTheFirstResult(t *testing.T)
 
 	status, body, err := apiClient.Patch(u.path(), map[string]any{"name": uniqueName("E2E Second Name")}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 	assert.Equal(t, first, jsonField(readUser(t, apiClient, u.id), "name"))
 }

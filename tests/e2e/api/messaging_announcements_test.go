@@ -189,7 +189,7 @@ func TestAnnouncements_CursorPaginationAdvances(t *testing.T) {
 	page1, _, err := user.GetList(announcementsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1, "limit=1 should return one row")
-	require.True(t, page1.PageInfo.HasNextPage, "first page should have a next page")
+	require.True(t, page1.PageInfo.HasNextPage(), "first page should have a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := user.GetListFromPageURL(page1.PageInfo.NextPageURL)

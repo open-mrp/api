@@ -157,7 +157,7 @@ func TestCovSalesAccountGroups_CreateValidation_NameTooLong(t *testing.T) {
 		"type": "type_group",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -242,7 +242,7 @@ func TestCovSalesAccountGroups_UpdateValidation_NameTooLong(t *testing.T) {
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -348,7 +348,7 @@ func TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist(t *testing.T) {
 
 	status, body, err := apiClient.Delete(accountGroupsPath + "/" + SeedCustomerGroupID)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 
 	// Confirm the group still exists (was not deleted despite the error).

@@ -67,7 +67,7 @@ func TestListPriorities_LimitParam(t *testing.T) {
 	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "limit=1 should return exactly 1 item")
-	assert.True(t, list.PageInfo.HasNextPage, "Should have a next page with limit=1 and 3+ priorities")
+	assert.True(t, list.PageInfo.HasNextPage(), "Should have a next page with limit=1 and 3+ priorities")
 }
 
 func TestListPriorities_PaginationCursor(t *testing.T) {
@@ -107,7 +107,7 @@ func TestListPriorities_PrevPageURL(t *testing.T) {
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
-	assert.True(t, page2.PageInfo.HasPrevPage, "Page 2 should have has_prev_page=true")
+	assert.True(t, page2.PageInfo.HasPrevPage(), "Page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
 	// Navigate back to page 1

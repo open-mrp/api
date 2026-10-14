@@ -502,7 +502,7 @@ func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
@@ -519,7 +519,7 @@ func TestCustomers_UpdateValidation_EmptyName(t *testing.T) {
 
 	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
@@ -1761,7 +1761,7 @@ func TestCustomers_UpdateRejectsNullForNonNullableFields(t *testing.T) {
 				tc.field: nil,
 			}, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, tc.param)
 		})
@@ -1786,7 +1786,7 @@ func TestCustomers_CreateRejectsNullForNonNullableFields(t *testing.T) {
 			payload[tc.field] = nil
 			status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, tc.param)
 		})

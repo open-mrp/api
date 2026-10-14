@@ -178,7 +178,7 @@ func TestInventories_PaginationAdvances(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	require.Len(t, page1.Data, 1, "the seeded account has more than one item")
-	require.True(t, page1.PageInfo.HasNextPage, "one row per page leaves a next page")
+	require.True(t, page1.PageInfo.HasNextPage(), "one row per page leaves a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)

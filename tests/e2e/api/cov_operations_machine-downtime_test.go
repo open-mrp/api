@@ -707,14 +707,14 @@ func TestMachineDowntimeEvents_ListAndFilters(t *testing.T) {
 		require.Equal(t, 200, status)
 		require.Len(t, page1.Data, 1)
 		assert.Equal(t, openID, DataItemField(page1.Data[0], "id"), "the newer stoppage heads the list")
-		require.True(t, page1.PageInfo.HasNextPage)
+		require.True(t, page1.PageInfo.HasNextPage())
 
 		page2, status, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 		require.NoError(t, err)
 		require.Equal(t, 200, status)
 		require.Len(t, page2.Data, 1)
 		assert.Equal(t, closedID, DataItemField(page2.Data[0], "id"), "the older stoppage follows")
-		assert.False(t, page2.PageInfo.HasNextPage, "the machine has no other stoppage")
+		assert.False(t, page2.PageInfo.HasNextPage(), "the machine has no other stoppage")
 
 		back, status, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 		require.NoError(t, err)

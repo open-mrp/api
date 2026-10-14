@@ -238,7 +238,7 @@ func collectPagedItemSKUs(t *testing.T, baseParams url.Values) map[string]struct
 		for _, item := range list.Data {
 			skus[DataItemField(item, "sku")] = struct{}{}
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			break
 		}
 		nextPageURL = list.PageInfo.NextPageURL

@@ -176,7 +176,7 @@ func TestCovAuthUsers_Register_AccountSlugNull(t *testing.T) {
 		"account_slug": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "account_slug")
@@ -195,7 +195,7 @@ func TestCovAuthUsers_Register_AccountSlugBlank(t *testing.T) {
 		"account_slug": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "account_slug")
@@ -212,7 +212,7 @@ func TestCovAuthUsers_Register_MissingEmail(t *testing.T) {
 		"name":     "E2E Register MissingEmail",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "email")
@@ -225,7 +225,7 @@ func TestCovAuthUsers_Register_MissingPassword(t *testing.T) {
 		"name":  "E2E Register MissingPassword",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")
@@ -238,7 +238,7 @@ func TestCovAuthUsers_Register_MissingName(t *testing.T) {
 		"password": covAuthUsersPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
@@ -252,7 +252,7 @@ func TestCovAuthUsers_Register_EmptyName(t *testing.T) {
 		"name":     "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// required tag rejects blank strings with missing_field, per
 	// nullable-field-patterns.md's "T + required" row.
@@ -272,7 +272,7 @@ func TestCovAuthUsers_Register_InvalidEmail_TrailingAt(t *testing.T) {
 		"name":     "E2E Register BadEmail",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "email")
@@ -286,7 +286,7 @@ func TestCovAuthUsers_Register_InvalidEmail_ConsecutiveDots(t *testing.T) {
 		"name":     "E2E Register BadEmail",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "email")
@@ -300,7 +300,7 @@ func TestCovAuthUsers_Register_InvalidEmail_NumericTLD(t *testing.T) {
 		"name":     "E2E Register BadEmail",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "email")
@@ -318,7 +318,7 @@ func TestCovAuthUsers_Register_PasswordTooShort(t *testing.T) {
 		"name":     "E2E Register ShortPW",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")
@@ -332,7 +332,7 @@ func TestCovAuthUsers_Register_PasswordTooLong(t *testing.T) {
 		"name":     "E2E Register LongPW",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")
@@ -346,7 +346,7 @@ func TestCovAuthUsers_Register_PasswordNoDigitOrCase(t *testing.T) {
 		"name":     "E2E Register WeakPW",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")
@@ -368,7 +368,7 @@ func TestCovAuthUsers_Register_DuplicateEmail(t *testing.T) {
 		"name":     "E2E Register Duplicate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	param, hasParam := errObj["param"]
@@ -389,7 +389,7 @@ func TestCovAuthUsers_Register_DuplicateEmail_CaseInsensitive(t *testing.T) {
 		"name":     "E2E Register DuplicateCased",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	param, hasParam := errObj["param"]

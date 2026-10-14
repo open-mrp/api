@@ -104,7 +104,7 @@ func searchTerritoryIDs(t *testing.T, client *Client, path, q string) []string {
 	var found []string
 	for page := 0; ; page++ {
 		found = append(found, territoryIDsOf(list)...)
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil || page >= maxListScanPages {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil || page >= maxListScanPages {
 			return found
 		}
 		list, _, err = client.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -678,7 +678,7 @@ func TestTerritories_UpdateRejectsInvalidFields(t *testing.T) {
 	t.Run("empty body", func(t *testing.T) {
 		status, body, err := apiClient.Patch(territoryPath(territoryID), map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	})
 
@@ -764,8 +764,8 @@ func TestTerritories_SearchWithNoMatchReturnsAnEmptyList(t *testing.T) {
 	list, _, err := apiClient.GetList(territoriesPath(), url.Values{"q": {uniqueName("e2e-terr-none")}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data)
-	assert.False(t, list.PageInfo.HasNextPage)
-	assert.False(t, list.PageInfo.HasPrevPage)
+	assert.False(t, list.PageInfo.HasNextPage())
+	assert.False(t, list.PageInfo.HasPrevPage())
 }
 
 // Typing a ZIP code lists the territories covering it, as the dashboard's Express endpoint did (its search OR-ed
@@ -819,10 +819,10 @@ func TestTerritories_ListWalksPagesForwardAndBackNewestFirst(t *testing.T) {
 
 	page, _, err := apiClient.GetList(territoriesPath(), url.Values{"q": {plName}, "limit": {"2"}})
 	require.NoError(t, err)
-	assert.False(t, page.PageInfo.HasPrevPage)
+	assert.False(t, page.PageInfo.HasPrevPage())
 	assert.Nil(t, page.PageInfo.PreviousPageURL)
 	pages := [][]string{territoryIDsOf(page)}
-	for page.PageInfo.HasNextPage && len(pages) <= len(created) {
+	for page.PageInfo.HasNextPage() && len(pages) <= len(created) {
 		require.NotNil(t, page.PageInfo.NextPageURL)
 		page, _, err = apiClient.GetListFromPageURL(page.PageInfo.NextPageURL)
 		require.NoError(t, err)
@@ -830,21 +830,21 @@ func TestTerritories_ListWalksPagesForwardAndBackNewestFirst(t *testing.T) {
 	}
 	require.Equal(t, [][]string{order[0:2], order[2:4], order[4:5]}, pages, "forward walk")
 	assert.Nil(t, page.PageInfo.NextPageURL)
-	assert.True(t, page.PageInfo.HasPrevPage)
+	assert.True(t, page.PageInfo.HasPrevPage())
 
 	require.NotNil(t, page.PageInfo.PreviousPageURL)
 	page, _, err = apiClient.GetListFromPageURL(page.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	assert.Equal(t, order[2:4], territoryIDsOf(page), "back from the last page")
-	assert.True(t, page.PageInfo.HasNextPage)
-	assert.True(t, page.PageInfo.HasPrevPage)
+	assert.True(t, page.PageInfo.HasNextPage())
+	assert.True(t, page.PageInfo.HasPrevPage())
 
 	require.NotNil(t, page.PageInfo.PreviousPageURL)
 	page, _, err = apiClient.GetListFromPageURL(page.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	assert.Equal(t, order[0:2], territoryIDsOf(page), "back to the first page")
-	assert.True(t, page.PageInfo.HasNextPage)
-	assert.False(t, page.PageInfo.HasPrevPage, "nothing comes before the first page")
+	assert.True(t, page.PageInfo.HasNextPage())
+	assert.False(t, page.PageInfo.HasPrevPage(), "nothing comes before the first page")
 }
 
 func TestTerritories_ListRejectsAMalformedCursor(t *testing.T) {

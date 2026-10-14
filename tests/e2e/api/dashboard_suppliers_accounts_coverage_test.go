@@ -234,7 +234,7 @@ func TestDashSuppliers_CreateReplayMakesOneSupplierAndItsAddressesOnce(t *testin
 	body["name"] = "Changed " + tok
 	status, resp, err := apiClient.Post(path, body, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
 }
 
@@ -261,7 +261,7 @@ func TestDashSuppliers_UpdateReplayDoesNotWriteAgain(t *testing.T) {
 
 	status, resp, err := apiClient.Patch(path, map[string]any{"note": "third", "update_note": true}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
 	assert.Equal(t, "second", jsonField(getSupplier(t, id), "note"))
 }
@@ -421,7 +421,7 @@ func TestDashSuppliers_MaterialLinkReplayLinksOnce(t *testing.T) {
 	body["supplier_part_number"] = uniqueName("PN")
 	status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), body, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
 }
 
@@ -682,7 +682,7 @@ func TestDashAccounts_CreateReplaySendsOneWelcomeEmail(t *testing.T) {
 	body["name"] = uniqueName("e2e-dash-invite-changed")
 	status, resp, err := apiClient.Post(accountUsersPath, body, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
 }
 

@@ -61,7 +61,7 @@ func TestPurchaseOrders_CreateRejectsAMaterialLineInAUnitTheItemIsNotMeasuredIn(
 	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "quantity_unit_id")
 }
@@ -104,7 +104,7 @@ func TestPurchaseOrders_CreateRejectsAnAddressTheSupplierDoesNotHave(t *testing.
 	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "ship_to_address_id")
 }

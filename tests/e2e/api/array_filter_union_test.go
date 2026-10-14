@@ -231,7 +231,7 @@ func discoverFieldValues(t *testing.T, path, include, valuePath string, n int) [
 		require.NoError(t, err, "listing %s", path)
 		require.Equal(t, 200, status, "listing %s", path)
 		out = appendFieldValues(out, seen, list.Data, valuePath, n)
-		if len(out) >= n || !list.PageInfo.HasNextPage || page >= maxListScanPages {
+		if len(out) >= n || !list.PageInfo.HasNextPage() || page >= maxListScanPages {
 			return out
 		}
 		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -259,7 +259,7 @@ func linkedFilterValues(t *testing.T, c arrayFilterCase, n int) (values []string
 				}
 			}
 		}
-		if !list.PageInfo.HasNextPage || page >= maxListScanPages {
+		if !list.PageInfo.HasNextPage() || page >= maxListScanPages {
 			return values, sets
 		}
 		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -306,7 +306,7 @@ func filteredIDSet(t *testing.T, path, param string, values ...string) map[strin
 				out[id] = struct{}{}
 			}
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			return out
 		}
 		require.Less(t, page, maxListScanPages, "%s filter %s=%v has more rows than the scan allows", path, param, values)

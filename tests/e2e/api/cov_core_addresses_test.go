@@ -109,7 +109,7 @@ func TestCovCoreAddresses_ValidateAddress_BlankAddressLine1(t *testing.T) {
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "address_line_1")
 }
@@ -126,7 +126,7 @@ func TestCovCoreAddresses_ValidateAddress_BlankCity(t *testing.T) {
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "city")
 }
@@ -143,7 +143,7 @@ func TestCovCoreAddresses_ValidateAddress_BlankState(t *testing.T) {
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "state")
 }
@@ -160,7 +160,7 @@ func TestCovCoreAddresses_ValidateAddress_BlankPostalCode(t *testing.T) {
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "postal_code")
 }
@@ -177,7 +177,7 @@ func TestCovCoreAddresses_ValidateAddress_BlankCountry(t *testing.T) {
 		"country":        "",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "country")
 }
@@ -274,8 +274,8 @@ func TestCovCoreAddresses_Suggestions_PageInfoShape(t *testing.T) {
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
-	assert.False(t, list.PageInfo.HasNextPage, "suggestions list should never report has_next_page")
-	assert.False(t, list.PageInfo.HasPrevPage, "suggestions list should never report has_prev_page")
+	assert.False(t, list.PageInfo.HasNextPage(), "suggestions list should never report has_next_page")
+	assert.False(t, list.PageInfo.HasPrevPage(), "suggestions list should never report has_prev_page")
 	assert.Nil(t, list.PageInfo.NextPageURL, "suggestions list should never populate next_page_url")
 	assert.Nil(t, list.PageInfo.PreviousPageURL, "suggestions list should never populate previous_page_url")
 }

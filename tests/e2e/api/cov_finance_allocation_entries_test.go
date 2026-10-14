@@ -108,7 +108,7 @@ func TestPayments_AllocationEntriesPageBothWays(t *testing.T) {
 	params := url.Values{"q": {invoiceNumber}, "limit": {"1"}}
 	first, info := listPayments(t, financeAllocationsPath, params)
 	require.Len(t, first, 1)
-	require.Equal(t, true, info["has_next_page"])
+	require.Equal(t, true, hasPage(info, "next"))
 
 	next := jsonField(info, "next_page_url")
 	status, body, err := apiClient.GetListRawFromPageURL(&next)
@@ -119,9 +119,9 @@ func TestPayments_AllocationEntriesPageBothWays(t *testing.T) {
 	require.Len(t, second, 1)
 	assert.NotEqual(t, jsonField(first[0], "id"), jsonField(second[0].(map[string]any), "id"))
 	info = jsonObject(page, "page_info")
-	assert.Equal(t, false, info["has_next_page"])
+	assert.Equal(t, false, hasPage(info, "next"))
 
-	require.Equal(t, true, info["has_prev_page"])
+	require.Equal(t, true, hasPage(info, "prev"))
 	prev := jsonField(info, "previous_page_url")
 	status, body, err = apiClient.GetListRawFromPageURL(&prev)
 	require.NoError(t, err)

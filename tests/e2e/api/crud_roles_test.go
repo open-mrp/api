@@ -634,7 +634,7 @@ func TestRoles_UpdateValidation_EmptyName(t *testing.T) {
 
 	status, body, err := apiClient.Patch(rolesPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
@@ -649,7 +649,7 @@ func TestRoles_UpdateValidation_WhitespaceOnlyName(t *testing.T) {
 
 	status, body, err := apiClient.Patch(rolesPath+"/"+id, map[string]any{"name": "   "}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 

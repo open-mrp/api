@@ -161,7 +161,7 @@ func TestAddressValidation_UnsupportedRegion(t *testing.T) {
 		"country":        "BT",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "country")

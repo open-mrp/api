@@ -102,7 +102,7 @@ func dashPicksAllIDs(t *testing.T, client *Client, path string, params url.Value
 		for _, raw := range list.Data {
 			ids = append(ids, jsonField(parseJSON(raw), "id"))
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			return ids
 		}
 		list, status, err = client.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -240,7 +240,7 @@ func TestDashPicks_UpdateLineReplayDoesNotReapply(t *testing.T) {
 
 	status, body, err := apiClient.Patch(path, map[string]any{"quantity_value": "3"}, key)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 	assert.InDelta(t, 2.0, dashPicksLineQuantity(t, pickID, lineID), 0.001)
 }
@@ -310,7 +310,7 @@ func TestDashPicks_PackReplayShipsOnce(t *testing.T) {
 
 	status, body, err := apiClient.Post(path, map[string]any{"shipment_case_count": 2}, key)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 
 	assert.Len(t, pickShipmentNumbers(t, pickID), 1, "the pick was packed into exactly one shipment")
@@ -352,14 +352,14 @@ func TestDashPicks_PackRefusesAnUnpickedPick(t *testing.T) {
 
 	status, body, err := apiClient.Post(path, map[string]any{"shipment_case_count": 1}, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 
 	for name, count := range map[string]any{"negative": -1, "string": "one", "fraction": 1.5} {
 		status, body, err := apiClient.Post(path, map[string]any{"shipment_case_count": count}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "%s: %s", name, string(body))
-		assert.Equal(t, 400, status, "a %s case count is refused: %s", name, string(body))
+		assert.Equal(t, 422, status, "a %s case count is refused: %s", name, string(body))
 	}
 
 	assert.Empty(t, pickShipmentNumbers(t, pickID), "nothing was packed")
@@ -633,7 +633,7 @@ func TestDashReceiving_StockReplayPutsStockAwayOnce(t *testing.T) {
 
 	status, body, err := apiClient.Post(path, dashPicksStockBody(lineID, "3"), key)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 
 	assertDecimalEqual(t, "4", readInventory(t, itemID).onHand.String(), "four pairs on hand, not eight")
@@ -664,7 +664,7 @@ func TestDashReceiving_UpdateLineReplayDoesNotReapply(t *testing.T) {
 
 	status, body, err := apiClient.Patch(path, map[string]any{"quantity": pairs("3")}, key)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 	assertDecimalEqual(t, "2", lineQuantityValue(t, dashPicksReceivingLine(t, receivingOrderID)))
 }
@@ -765,7 +765,7 @@ func TestDashReceiving_ACompletedOrderCannotBeReceivedOrStockedAgain(t *testing.
 		{name: "stock the stocked line", method: http.MethodPost, path: receivingOrdersPath + "/" + receivingOrderID + "/actions/stock", body: dashPicksStockBody(lineID, "1")},
 	} {
 		status, body := call.send(t, apiClient)
-		require.Equal(t, 400, status, "%s on a completed order: %s", call.name, string(body))
+		require.Equal(t, 422, status, "%s on a completed order: %s", call.name, string(body))
 		requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	}
 
@@ -855,7 +855,7 @@ func TestDashReceiving_StockRefusesALineWithNothingReceived(t *testing.T) {
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, dashPicksStockItems(lineID, "1"))
-	require.Equal(t, 400, status, "%s", string(body))
+	require.Equal(t, 422, status, "%s", string(body))
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "line_items.receiving_order_line_id", errObj["param"])
 
@@ -1000,7 +1000,7 @@ func TestDashReceiving_ListFiltersByCreationWindow(t *testing.T) {
 	for _, param := range []string{"starts_at", "ends_at"} {
 		status, body, err := apiClient.GetListRaw(receivingOrdersPath, url.Values{param: {"06/10/2026"}})
 		require.NoError(t, err)
-		require.Equal(t, 400, status, "%s: %s", param, string(body))
+		require.Equal(t, 422, status, "%s: %s", param, string(body))
 		errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 		assert.Equal(t, param, errObj["param"])
 	}

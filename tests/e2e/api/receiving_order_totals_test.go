@@ -289,19 +289,19 @@ func TestReceivingOrders_TotalsSurviveBackwardPagination(t *testing.T) {
 		if forwardOrder = findReceivingOrder(jsonArray(parseJSON(forwardBody), "data"), receivingOrderID); forwardOrder != nil {
 			break
 		}
-		require.True(t, forwardInfo.HasNextPage, "the order just issued is on some page: %s", string(forwardBody))
+		require.True(t, forwardInfo.HasNextPage(), "the order just issued is on some page: %s", string(forwardBody))
 		status, forwardBody, err = apiClient.GetListRawFromPageURL(forwardInfo.NextPageURL)
 	}
 	require.NotNil(t, forwardOrder, "the order just issued is within the first 200 orders")
 	require.NotNil(t, forwardOrder["totals"],
 		"an order with a line has totals when they are asked for: %s", string(forwardBody))
-	require.True(t, forwardInfo.HasNextPage, "the seeded orders are older, so a page follows this one: %s", string(forwardBody))
+	require.True(t, forwardInfo.HasNextPage(), "the seeded orders are older, so a page follows this one: %s", string(forwardBody))
 
 	status, secondBody, err := apiClient.GetListRawFromPageURL(forwardInfo.NextPageURL)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, secondBody)
 	secondInfo := receivingOrdersPageInfo(t, secondBody)
-	require.True(t, secondInfo.HasPrevPage, "the next page can be walked back from: %s", string(secondBody))
+	require.True(t, secondInfo.HasPrevPage(), "the next page can be walked back from: %s", string(secondBody))
 
 	status, backwardBody, err := apiClient.GetListRawFromPageURL(secondInfo.PreviousPageURL)
 	require.NoError(t, err)

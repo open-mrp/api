@@ -157,19 +157,19 @@ func TestCovMessagingMessages_UpdateDraftValidation(t *testing.T) {
 	t.Run("missing body", func(t *testing.T) {
 		status, body, err := dane.Patch("/v1/messaging/messages/"+draftID, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("empty body", func(t *testing.T) {
 		status, body, err := dane.Patch("/v1/messaging/messages/"+draftID, map[string]any{"body": ""}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("subject explicit null rejected", func(t *testing.T) {
 		status, body, err := dane.Patch("/v1/messaging/messages/"+draftID, map[string]any{"body": uniqueName("x"), "subject": nil}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "subject")
 	})
@@ -244,7 +244,7 @@ func TestCovMessagingMessages_UpdateDraftIdempotencyKeyConflict(t *testing.T) {
 
 	status2, body2, err := dane.Patch(path, map[string]any{"body": uniqueName("idem body B")}, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 400, status2, body2)
+	requireStatus(t, 422, status2, body2)
 	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
 }
 
@@ -481,7 +481,7 @@ func TestCovMessagingMessages_CancelScheduledNonScheduledConflict(t *testing.T) 
 
 	status, body, err := dane.Post("/v1/messaging/messages/"+sentID+"/actions/cancel", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -498,7 +498,7 @@ func TestCovMessagingMessages_CancelScheduledCrossUserConflict(t *testing.T) {
 
 	status, body, err := dane.Post("/v1/messaging/messages/"+id+"/actions/cancel", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "status: scheduled", "the conflict message misleadingly reports the message as still cancelable")
 }

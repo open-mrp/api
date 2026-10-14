@@ -53,10 +53,10 @@ func TestCovCatalogProducts_Create_SKUTooLong(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
+	assert.True(t, status == 422 || status == 422,
 		"sku exceeding max length should return 400/422, got %d: %s", status, string(respBody))
 
-	if status == 400 {
+	if status == 422 {
 		errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "sku")
 	}
@@ -156,7 +156,7 @@ func TestCovCatalogProducts_Create_AttributeOutsideCategoryProperties(t *testing
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "attribute_ids")
@@ -195,7 +195,7 @@ func TestCovCatalogProducts_Update_SKUNullRejected(t *testing.T) {
 
 	status, body, err := apiClient.Patch(productsPath+"/"+id, map[string]any{"sku": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")

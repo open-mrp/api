@@ -22,7 +22,7 @@ func customerDefaultRouting(t *testing.T, customerID string) (carrierID, service
 
 func assertDefaultServiceLevelOffCarrier(t *testing.T, status int, body []byte, msg string) {
 	t.Helper()
-	if assert.Equal(t, 400, status, "%s: %s", msg, string(body)) {
+	if assert.Equal(t, 422, status, "%s: %s", msg, string(body)) {
 		assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "default_service_level_id")
 	}
 }

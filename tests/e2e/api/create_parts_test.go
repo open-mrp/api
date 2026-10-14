@@ -28,7 +28,7 @@ func TestParts_Create_RejectsWrongCategoryType(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")
@@ -120,7 +120,7 @@ func TestParts_Create_RejectsNonCurrencyNumeratorOnUnitCost(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
@@ -138,7 +138,7 @@ func TestParts_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
@@ -196,7 +196,7 @@ func TestParts_Create_MissingSKU(t *testing.T) {
 		"category_id": SeedItemCategoryID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
@@ -210,7 +210,7 @@ func TestParts_Create_EmptySKU(t *testing.T) {
 		"category_id": SeedItemCategoryID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
@@ -223,7 +223,7 @@ func TestParts_Create_MissingCategoryID(t *testing.T) {
 		"sku": uniqueName("e2e-part-no-cat"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")

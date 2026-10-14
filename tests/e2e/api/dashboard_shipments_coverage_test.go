@@ -493,7 +493,7 @@ func TestDashShipments_UpdateReplayDoesNotReapply(t *testing.T) {
 
 	status, body, err = apiClient.Patch(path, map[string]any{"note": "different body"}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 }
 
@@ -512,7 +512,7 @@ func TestDashShipments_ShipReplayShipsOnce(t *testing.T) {
 	shipBody := map[string]any{"email_customer": false}
 	first := dashShipmentsAction(t, shipmentID, "ship", shipBody, key)
 	requireStatus(t, 202, first.StatusCode, first.Body)
-	require.Equal(t, "job", jsonField(parseJSON(first.Body), "object"))
+	require.Equal(t, "async_job", jsonField(parseJSON(first.Body), "object"))
 	job := pollJobUntilTerminal(t, jsonField(parseJSON(first.Body), "id"))
 	require.Equal(t, "completed", jsonField(job, "status"), "the ship job should complete: %v", job)
 	assert.Equal(t, stubPurchaseTracking(1, shipmentID), jsonField(readShipment(t, shipmentID), "master_tracking_number"))
@@ -524,7 +524,7 @@ func TestDashShipments_ShipReplayShipsOnce(t *testing.T) {
 	assert.Equal(t, 1, countInvoicesNumbered(t, number), "the replay raises no second invoice")
 
 	different := dashShipmentsAction(t, shipmentID, "ship", map[string]any{"email_customer": true}, key)
-	requireStatus(t, 400, different.StatusCode, different.Body)
+	requireStatus(t, 422, different.StatusCode, different.Body)
 	requireErrorResponse(t, different.Body, "validation_failed", "idempotency_error")
 
 	voided := dashShipmentsAction(t, shipmentID, "void", nil, newIdempotencyKey())
@@ -550,7 +550,7 @@ func TestDashShipments_ShipRejectsANonBooleanEmailFlag(t *testing.T) {
 
 	_, _, shipmentID := dashShipmentsPacked(t)
 	resp := dashShipmentsAction(t, shipmentID, "ship", map[string]any{"email_customer": "yes"}, newIdempotencyKey())
-	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	requireStatus(t, 422, resp.StatusCode, resp.Body)
 	assert.Equal(t, "email_customer", requireErrorResponse(t, resp.Body, "invalid_format", "invalid_request_error")["param"])
 	assert.Equal(t, "packed", jsonField(readShipment(t, shipmentID), "status"))
 }

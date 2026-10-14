@@ -27,7 +27,7 @@ func TestIdempotency_CreateConflict(t *testing.T) {
 	name2 := uniqueName("e2e-idem-b")
 	status2, body2, err := apiClient.Post(idempotencyTestCustomerPath, validCustomerBody(name2), idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 400, status2, body2)
+	requireStatus(t, 422, status2, body2)
 
 	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
 
@@ -61,7 +61,7 @@ func TestIdempotency_UpdateConflict(t *testing.T) {
 		"note": "different note",
 	}, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 400, status2, body2)
+	requireStatus(t, 422, status2, body2)
 
 	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
 

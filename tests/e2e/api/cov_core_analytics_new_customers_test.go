@@ -148,7 +148,7 @@ func TestNewCustomers_PagesByCursorBothWays(t *testing.T) {
 		var ids []string
 		ids, info = page(params)
 		forward = append(forward, ids...)
-		if jsonField(info, "has_next_page") != "true" {
+		if pageFlag(info, "next") != "true" {
 			break
 		}
 		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
@@ -158,7 +158,7 @@ func TestNewCustomers_PagesByCursorBothWays(t *testing.T) {
 	require.Equal(t, all, forward, "one at a time, the same customers in the same order")
 
 	var backward []string
-	for i := 0; i < 200 && jsonField(info, "has_prev_page") == "true"; i++ {
+	for i := 0; i < 200 && pageFlag(info, "prev") == "true"; i++ {
 		var ids []string
 		ids, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
 		backward = append(ids, backward...)

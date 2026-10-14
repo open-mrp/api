@@ -856,7 +856,7 @@ func TestReceivingOrders_ListSearchFindsAnOrderBySupplierName(t *testing.T) {
 			found = found || id == receivingOrderID
 		}
 		info := receivingOrdersPageInfo(t, listBody)
-		if found || !info.HasNextPage {
+		if found || !info.HasNextPage() {
 			break
 		}
 		listStatus, listBody, err = apiClient.GetListRawFromPageURL(info.NextPageURL)

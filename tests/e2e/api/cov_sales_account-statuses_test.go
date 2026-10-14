@@ -166,7 +166,7 @@ func TestCovSalesAccountStatuses_InvalidCursorRejected(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"cursor": {"not-a-cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

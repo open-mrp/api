@@ -167,7 +167,7 @@ func dashItemsWalk(t *testing.T, client *Client, path string, params url.Values)
 		for _, raw := range list.Data {
 			rows = append(rows, parseJSON(raw))
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			return rows
 		}
 		require.NotNil(t, list.PageInfo.NextPageURL, "a page with a next page links to it")
@@ -705,7 +705,7 @@ func TestDashItems_InventoryReplayAdjustsOnce(t *testing.T) {
 
 	status, raw, err := apiClient.Patch(path, map[string]any{"quantity": dashItemsPound("4"), "operation": "adjust"}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	requireErrorResponse(t, raw, "validation_failed", "idempotency_error")
 	dashItemsAssertUnchanged(t, itemID, "3", 1)
 }
@@ -871,7 +871,7 @@ func TestDashItems_BulkReconcileReplayAppliesOnce(t *testing.T) {
 	other := map[string]any{"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "7"}}, "reconcile_type": "addition"}
 	status, raw, err := apiClient.Post(bulkReconcilePath, other, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	requireErrorResponse(t, raw, "validation_failed", "idempotency_error")
 	dashItemsAssertUnchanged(t, itemID, "25", 1)
 }
@@ -897,7 +897,7 @@ func TestDashItems_BulkReconcileRejectsANumericQuantity(t *testing.T) {
 		"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": 5}}, "reconcile_type": "force",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }

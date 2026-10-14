@@ -689,7 +689,7 @@ func bulkUpsertProductLinesJob(t *testing.T, rows ...map[string]any) map[string]
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -841,7 +841,7 @@ func TestProductLines_BulkUpsert_RejectsUnknownUnitGroup(t *testing.T) {
 		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugok"), SeedUnitGroupID, "commission_applied", "billed_freight"),
 		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugbad"), "ungp_does_not_exist_00000", "commission_exempt", "free_freight"),
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "product_lines[1].unit_group")
 }

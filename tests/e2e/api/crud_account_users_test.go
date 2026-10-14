@@ -846,7 +846,7 @@ func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
 		"is_commission_eligible": false,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, patchStatus, patchBody)
+	requireStatus(t, 422, patchStatus, patchBody)
 	errObj := requireErrorResponse(t, patchBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "is_commission_eligible")
 }

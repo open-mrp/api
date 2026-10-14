@@ -87,8 +87,8 @@ func TestPaginationEdge_EmptyResultsWithLimit(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &list))
 	assert.Equal(t, "list", list.Object)
 	assert.Empty(t, list.Data, "Search for nonsense should return empty data")
-	assert.False(t, list.PageInfo.HasNextPage, "Empty results should have has_next_page=false")
-	assert.False(t, list.PageInfo.HasPrevPage, "Empty results should have has_prev_page=false")
+	assert.False(t, list.PageInfo.HasNextPage(), "Empty results should have has_next_page=false")
+	assert.False(t, list.PageInfo.HasPrevPage(), "Empty results should have has_prev_page=false")
 }
 
 // ──────────────────────────────────────────────
@@ -117,7 +117,7 @@ func TestPaginationEdge_FullTraversal(t *testing.T) {
 			allIDs = append(allIDs, id)
 		}
 
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			break
 		}
 		require.NotNil(t, list.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true (page %d)", page)
@@ -180,7 +180,7 @@ func TestPaginationEdge_PrevCursorNavigation(t *testing.T) {
 	// Get page 1.
 	page1, _, err := apiClient.GetList(customersPath, params)
 	require.NoError(t, err)
-	require.True(t, page1.PageInfo.HasNextPage, "Need at least 2 items for prev cursor test")
+	require.True(t, page1.PageInfo.HasNextPage(), "Need at least 2 items for prev cursor test")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	// Get page 2 via next_page_url (HATEOAS).

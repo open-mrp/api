@@ -177,7 +177,7 @@ func TestCovCatalogMaterials_UpdateExplicitNullSKURejected(t *testing.T) {
 
 	status, body, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{"sku": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
 }
@@ -191,7 +191,7 @@ func TestCovCatalogMaterials_UpdateExplicitNullDescriptionRejected(t *testing.T)
 
 	status, respBody, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{"description": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "description")
 }
@@ -205,7 +205,7 @@ func TestCovCatalogMaterials_UpdateExplicitNullNotesRejected(t *testing.T) {
 
 	status, respBody, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{"notes": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "notes")
 }
@@ -228,7 +228,7 @@ func TestCovCatalogMaterials_UpdateUnitCostRejectsNonCurrencyNumerator(t *testin
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
@@ -246,7 +246,7 @@ func TestCovCatalogMaterials_CreateNonexistentCategoryID(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")
 }
@@ -330,7 +330,7 @@ func TestCovCatalogMaterials_CreateSKUExceedsMaxLengthRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "sku")
 }

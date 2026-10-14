@@ -220,7 +220,7 @@ func TestCovIdentityAccountUsers_UpdatePreferencesSameAccountRejected(t *testing
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "external", "error should explain preferences are cross-account-only")
@@ -243,7 +243,7 @@ func TestCovIdentityAccountUsers_InvalidNotificationTypeCode(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "notification type", "error should name the invalid notification type code")
@@ -260,7 +260,7 @@ func TestCovIdentityAccountUsers_CreateInvalidEmailFormatFails(t *testing.T) {
 		"email": "not-a-valid-email",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "email")
@@ -274,7 +274,7 @@ func TestCovIdentityAccountUsers_CreateInvalidUsernameFormatFails(t *testing.T) 
 		"password": "ScannerPass123!",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "username")
@@ -289,7 +289,7 @@ func TestCovIdentityAccountUsers_CreateWeakPasswordFails(t *testing.T) {
 		"password": "weak",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "password")

@@ -188,9 +188,9 @@ func TestCovMessagingContacts_LimitAcceptedButIgnored(t *testing.T) {
 	assert.Greater(t, len(list.Data), 1, "limit=1 should NOT truncate the result today (prod bug suspect: limit is validated but ignored server-side)")
 
 	assert.Equal(t, "list", list.Object)
-	assert.False(t, list.PageInfo.HasNextPage, "page_info.has_next_page is always false for this endpoint, even when limit is smaller than the result set")
+	assert.False(t, list.PageInfo.HasNextPage(), "page_info.has_next_page is always false for this endpoint, even when limit is smaller than the result set")
 	assert.Nil(t, list.PageInfo.NextPageURL)
-	assert.False(t, list.PageInfo.HasPrevPage)
+	assert.False(t, list.PageInfo.HasPrevPage())
 	assert.Nil(t, list.PageInfo.PreviousPageURL)
 }
 

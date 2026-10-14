@@ -179,7 +179,7 @@ func TestCovIdentityRoles_CreateValidation_MalformedPermissionNoColon(t *testing
 		"permissions": []string{"customers"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "permissions")
 }
@@ -191,7 +191,7 @@ func TestCovIdentityRoles_CreateValidation_InvalidPermissionAction(t *testing.T)
 		"permissions": []string{"customers:foo"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "permissions")
 }
@@ -210,7 +210,7 @@ func TestCovIdentityRoles_UpdateValidation_MalformedPermissionNoColon(t *testing
 		"permissions": []string{"customers"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "permissions")
 
@@ -235,7 +235,7 @@ func TestCovIdentityRoles_UpdateValidation_InvalidPermissionAction(t *testing.T)
 		"permissions": []string{"customers:badaction"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "permissions")
 }
@@ -249,7 +249,7 @@ func TestCovIdentityRoles_CreateValidation_UnrecognizedPermissionDomainRejected(
 		"permissions": []string{"bogus_domain:read"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "permissions")
 }
@@ -276,7 +276,7 @@ func TestCovIdentityRoles_UpdateGlobalRoleFails_ExactStatus(t *testing.T) {
 		"name": uniqueName("e2e-covroles-global-upd"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -284,7 +284,7 @@ func TestCovIdentityRoles_DeleteGlobalRoleFails_ExactStatus(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Delete(rolesPath + "/" + SeedAdminRoleID)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -319,7 +319,7 @@ func TestCovIdentityRoles_CreateValidation_NameTooLong(t *testing.T) {
 		"name": string(longName),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }

@@ -230,7 +230,7 @@ func TestCovOperationsPicks_PackedLineIsPickedOutAndCannotBeVoided(t *testing.T)
 	status, body, err := apiClient.Put(picksPath+"/"+pickID+"/lines/"+line+"/actions/void", nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "the packed-line guard must not 5xx: %s", string(body))
-	require.Equal(t, 400, status, "voiding a packed line is rejected: %s", string(body))
+	require.Equal(t, 422, status, "voiding a packed line is rejected: %s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 
 	// Picking it is not an error, just a no-op — nothing is outstanding on the order line.
@@ -261,7 +261,7 @@ func TestCovOperationsPicks_PackRequiresACaseCount(t *testing.T) {
 	status, body, err := apiClient.Post(picksPath+"/"+pbPickID+"/actions/pack",
 		map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "shipment_case_count is required: %s", string(body))
+	require.Equal(t, 422, status, "shipment_case_count is required: %s", string(body))
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assert.Equal(t, "shipment_case_count", errObj["param"])
 }

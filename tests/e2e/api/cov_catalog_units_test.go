@@ -332,7 +332,7 @@ func TestCovCatalogUnits_CreateBlankStringFields(t *testing.T) {
 
 			status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, respBody)
+			requireStatus(t, 422, status, respBody)
 			errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 			assertErrorParam(t, errObj, field)
 		})
@@ -358,7 +358,7 @@ func TestCovCatalogUnits_CreateZeroRatioDenominator(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "ratio_denominator")
 }
@@ -370,7 +370,7 @@ func TestCovCatalogUnits_CreateZeroOffsetDenominator(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "offset_denominator")
 }
@@ -402,7 +402,7 @@ func TestCovCatalogUnits_UpdateNullFieldsRejected(t *testing.T) {
 
 			status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{field: nil}, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, field)
 		})
@@ -421,7 +421,7 @@ func TestCovCatalogUnits_UpdateBlankStringFieldsRejected(t *testing.T) {
 
 			status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{field: ""}, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, field)
 		})
@@ -435,7 +435,7 @@ func TestCovCatalogUnits_UpdateZeroRatioDenominator(t *testing.T) {
 
 	status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{"ratio_denominator": "0"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "ratio_denominator")
 }
@@ -447,7 +447,7 @@ func TestCovCatalogUnits_UpdateZeroOffsetDenominator(t *testing.T) {
 
 	status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{"offset_denominator": "0"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "offset_denominator")
 }
@@ -549,7 +549,7 @@ func TestCovCatalogUnits_UpdateSystemUnitFails(t *testing.T) {
 		"name": uniqueName("e2e-cov-sys-upd"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -557,7 +557,7 @@ func TestCovCatalogUnits_DeleteSystemUnitFails(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Delete(unitsPath + "/" + SeedSystemUnitID)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 
 	// The system unit must remain retrievable and unmodified after the

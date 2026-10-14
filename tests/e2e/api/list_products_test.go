@@ -73,7 +73,7 @@ func TestListProducts_Pagination(t *testing.T) {
 	require.NoError(t, err)
 	assert.LessOrEqual(t, len(page1.Data), 2, "Limit=2 should return at most 2 items")
 
-	if !page1.PageInfo.HasNextPage {
+	if !page1.PageInfo.HasNextPage() {
 		t.Fatal("Not enough products for pagination test")
 		return
 	}
@@ -83,5 +83,5 @@ func TestListProducts_Pagination(t *testing.T) {
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	assert.NotEmpty(t, page2.Data, "Page 2 should have data")
-	assert.True(t, page2.PageInfo.HasPrevPage, "Page 2 should have prev_page=true")
+	assert.True(t, page2.PageInfo.HasPrevPage(), "Page 2 should have prev_page=true")
 }

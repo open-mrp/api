@@ -731,7 +731,7 @@ func acceptBulkUpsertLocations(t *testing.T, locations ...map[string]any) string
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 	return jobID
@@ -834,7 +834,7 @@ func TestLocations_BulkUpsert_ResponseShape(t *testing.T) {
 
 	m := parseJSON(body)
 	require.NotNil(t, m, "response body should parse as JSON")
-	assertObjectField(t, m, "job")
+	assertObjectField(t, m, "async_job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID)
 
@@ -983,7 +983,7 @@ func TestLocations_BulkUpsert_RejectsUnknownParent(t *testing.T) {
 	require.NoError(t, err)
 	// Unresolvable references fail in the synchronous accept phase, all-or-nothing: a
 	// row-indexed 400 before any job is raised, so the valid row is never written.
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "locations[1].parent")
 }
@@ -1217,7 +1217,7 @@ func TestLocations_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
+	assert.True(t, status == 422 || status == 422,
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "validation_failed", "")
 	assertErrorParam(t, errObj, "locations[1].name")

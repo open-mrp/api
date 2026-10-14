@@ -114,7 +114,7 @@ func TestCovAuthLogin_InvalidIdentifier_TooLong(t *testing.T) {
 		"password":   seedUserPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "identifier")
@@ -127,7 +127,7 @@ func TestCovAuthLogin_InvalidIdentifier_InvalidCharacters(t *testing.T) {
 		"password":   seedUserPassword,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "identifier")
@@ -161,6 +161,6 @@ func TestCovAuthLogin_IdempotencyConflictDifferentBody(t *testing.T) {
 		"password":   seedUserPassword,
 	}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status2, body2)
+	requireStatus(t, 422, status2, body2)
 	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
 }

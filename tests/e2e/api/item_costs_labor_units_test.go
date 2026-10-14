@@ -193,7 +193,7 @@ func TestProductionSteps_CreateRejectsAConsumptionWithoutWaste(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing field must not reach the database: %s", string(body))
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "consumptions[0].waste_quantity_value")
 }

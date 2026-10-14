@@ -54,7 +54,7 @@ func TestCovCatalogProperties_PropertyOmittedFields(t *testing.T) {
 	t.Run("CreateMissingNameField", func(t *testing.T) {
 		status, body, err := apiClient.Post(propertiesPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
+		assert.True(t, status == 422 || status == 422,
 			"Missing name field should return 400 or 422, got %d: %s", status, string(body))
 	})
 
@@ -70,7 +70,7 @@ func TestCovCatalogProperties_PropertyOmittedFields(t *testing.T) {
 
 		patchStatus, patchBody, err := apiClient.Patch(propertiesPath+"/"+id, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, patchStatus, "empty PATCH body should be rejected with 400, got %d: %s", patchStatus, string(patchBody))
+		assert.Equal(t, 422, patchStatus, "empty PATCH body should be rejected with 400, got %d: %s", patchStatus, string(patchBody))
 		requireErrorResponse(t, patchBody, "validation_failed", "invalid_request_error")
 	})
 }

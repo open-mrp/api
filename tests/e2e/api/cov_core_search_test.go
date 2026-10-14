@@ -254,10 +254,8 @@ func TestCovCoreSearch_ResponseShape_ListEnvelope(t *testing.T) {
 
 	pageInfo := jsonObject(parsed, "page_info")
 	require.NotNil(t, pageInfo, "page_info should be an object")
-	_, hasNext := pageInfo["has_next_page"]
-	_, hasPrev := pageInfo["has_prev_page"]
-	assert.True(t, hasNext, "page_info.has_next_page should be present")
-	assert.True(t, hasPrev, "page_info.has_prev_page should be present")
+	assert.NotContains(t, pageInfo, "has_next_page", "forge's page_info has no booleans")
+	assert.NotContains(t, pageInfo, "has_prev_page", "forge's page_info has no booleans")
 	assertNilField(t, pageInfo, "next_page_url")
 	assertNilField(t, pageInfo, "previous_page_url")
 
@@ -731,9 +729,9 @@ func TestCovCoreSearch_Pagination_NotSupported(t *testing.T) {
 	// The result set was demonstrably truncated, yet this fan-out picker exposes
 	// no pagination cursor: page_info is the zero value, matching every other
 	// aggregate list in the gateway (endpoints/messages/service.go PageInfo{}).
-	assert.False(t, page1.PageInfo.HasNextPage,
+	assert.False(t, page1.PageInfo.HasNextPage(),
 		"fan-out search does not paginate; has_next_page stays false even when limit truncates results")
-	assert.False(t, page1.PageInfo.HasPrevPage,
+	assert.False(t, page1.PageInfo.HasPrevPage(),
 		"fan-out search does not paginate; has_prev_page stays false")
 	assert.Nil(t, page1.PageInfo.NextPageURL,
 		"fan-out search exposes no next-page cursor; next_page_url stays nil")

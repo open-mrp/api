@@ -734,7 +734,7 @@ func bulkUpsertItemCategoriesJob(t *testing.T, rows ...map[string]any) map[strin
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -811,7 +811,7 @@ func TestItemCategories_BulkUpsert_ResponseShape(t *testing.T) {
 	created, _ := jobResultIDs(job)
 	defer cleanupItemCategoryIDs(created)
 
-	assertObjectField(t, job, "job")
+	assertObjectField(t, job, "async_job")
 	assert.Equal(t, "bulk_upsert", jsonField(job, "type"))
 	assert.Equal(t, "item_category", jsonField(job, "resource_type"), "the job must say what it operated on")
 	_, hasResults := job["results"]
@@ -965,7 +965,7 @@ func TestItemCategories_BulkUpsert_RejectsUnknownUnitGroup(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "item_categories[1].unit_group")
 }
@@ -1025,7 +1025,7 @@ func TestItemCategories_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
+	assert.True(t, status == 422 || status == 422,
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "validation_failed", "")
 	assertErrorParam(t, errObj, "item_categories[1].name")

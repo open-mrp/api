@@ -52,7 +52,7 @@ func bulkUpsertScanningStationsJob(t *testing.T, stations ...map[string]any) map
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -163,7 +163,7 @@ func TestScanningStations_BulkUpsert_RejectsUnknownDepartment(t *testing.T) {
 		bulkStationRow(uniqueName("e2e-bup-stn-ok")),
 		badRow,
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "scanning_stations[1].department")
 }

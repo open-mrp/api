@@ -51,7 +51,7 @@ func acceptBulkUpsertUnits(t *testing.T, units ...map[string]any) string {
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 	return jobID
@@ -330,7 +330,7 @@ func TestUnits_BulkUpsert_ResponseShape(t *testing.T) {
 
 	m := parseJSON(body)
 	require.NotNil(t, m, "response body should parse as JSON")
-	assertObjectField(t, m, "job")
+	assertObjectField(t, m, "async_job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID)
 

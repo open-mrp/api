@@ -313,7 +313,7 @@ func TestItemParity_BulkReconcileRefusesMoreThanTheRowCap(t *testing.T) {
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{"data": rows, "reconcile_type": "force"}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s", string(body))
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "data")
 }
 

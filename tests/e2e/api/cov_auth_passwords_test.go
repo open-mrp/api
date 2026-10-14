@@ -266,7 +266,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 			"new_password": "NewTesting123!",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "old_password")
 	})
@@ -276,7 +276,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 			"old_password": password,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "new_password")
 	})
@@ -287,7 +287,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 			"new_password": "NewTesting123!",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "old_password")
 	})
@@ -298,7 +298,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 			"new_password": "NewTesting123!",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "old_password")
 	})
@@ -316,7 +316,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 				"new_password": weak,
 			}, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, "new_password")
 		})
@@ -330,7 +330,7 @@ func TestCovAuthPasswords_UpdatePassword_Validation(t *testing.T) {
 			"new_password": strings.Repeat("A1a!", 64), // 256 chars
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	})
 
@@ -464,7 +464,7 @@ func TestCovAuthPasswords_RequestReset_AccountSlug(t *testing.T) {
 			"account_slug": nil,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "account_slug")
 	})
@@ -480,7 +480,7 @@ func TestCovAuthPasswords_RequestReset_Validation(t *testing.T) {
 	t.Run("MissingIdentifier", func(t *testing.T) {
 		status, body, err := apiClient.Post(covAuthPasswordsRequestResetPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "identifier")
 	})
@@ -490,7 +490,7 @@ func TestCovAuthPasswords_RequestReset_Validation(t *testing.T) {
 			"identifier": "",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "identifier")
 	})
@@ -500,7 +500,7 @@ func TestCovAuthPasswords_RequestReset_Validation(t *testing.T) {
 			"identifier": "ab",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "identifier")
 	})
@@ -510,7 +510,7 @@ func TestCovAuthPasswords_RequestReset_Validation(t *testing.T) {
 			"identifier": "not-an-email@",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "identifier")
 	})
@@ -737,7 +737,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"password": "ValidPass123!",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "token")
 	})
@@ -747,7 +747,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"token": "sometoken",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "password")
 	})
@@ -758,7 +758,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"password": "ValidPass123!",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "token")
 	})
@@ -769,7 +769,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"password": "",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "password")
 	})
@@ -781,7 +781,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"password": "weak",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "password")
 	})
@@ -797,7 +797,7 @@ func TestCovAuthPasswords_ResetPassword_Validation(t *testing.T) {
 			"password": strings.Repeat("A1a!", 100), // 400 chars
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "password")
 	})

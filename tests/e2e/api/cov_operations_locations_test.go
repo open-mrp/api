@@ -75,7 +75,7 @@ func TestCovOperationsLocations_CreateNonexistentParentIDRejected(t *testing.T) 
 		"parent_id": "lc_doesnotexist0000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parent_id")
@@ -89,7 +89,7 @@ func TestCovOperationsLocations_CreateNonexistentChildIDRejected(t *testing.T) {
 		"child_ids": []string{"lc_doesnotexist0000"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "child_ids")
@@ -107,7 +107,7 @@ func TestCovOperationsLocations_UpdateNonexistentParentIDRejected(t *testing.T) 
 		"parent_id": "lc_doesnotexist0000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parent_id")
@@ -125,7 +125,7 @@ func TestCovOperationsLocations_UpdateNonexistentChildIDRejected(t *testing.T) {
 		"child_ids": []string{"lc_doesnotexist0000"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "child_ids")
@@ -147,7 +147,7 @@ func TestCovOperationsLocations_UpdateSelfParentRejected(t *testing.T) {
 		"parent_id": id,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parent_id")
@@ -215,7 +215,7 @@ func TestCovOperationsLocations_CreateNameTooLongRejected(t *testing.T) {
 		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
@@ -238,7 +238,7 @@ func TestCovOperationsLocations_UpdateEmptyStringNameRejected(t *testing.T) {
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")

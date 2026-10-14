@@ -98,7 +98,7 @@ func TestAgentStaleSlugs_PatchAddingNewUnknownEndpointToolRejected(t *testing.T)
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "tools")
 	assert.Contains(t, errObj["message"], "not_a_real_endpoint_tool")
@@ -137,7 +137,7 @@ func TestAgentStaleSlugs_PatchResendingStoredStaleBuiltinToolDropsIt(t *testing.
 		"tools": []map[string]any{{"tool": "not_a_real_tool"}},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "tools")
 }

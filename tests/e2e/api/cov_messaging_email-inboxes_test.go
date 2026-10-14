@@ -213,7 +213,7 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
 		status, body, err := apiClient.Post(covMessagingEmailInboxesPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
+		assert.True(t, status == 422 || status == 422,
 			"missing email_domain_id and address should return 400 or 422, got %d: %s", status, string(body))
 		errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 		assert.Contains(t, errObj["message"], "email_domain_id")
@@ -225,7 +225,7 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 			"email_domain_id": SeedEmailDomainID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
+		assert.True(t, status == 422 || status == 422,
 			"missing address should return 400 or 422, got %d: %s", status, string(body))
 	})
 
@@ -542,7 +542,7 @@ func TestCovMessagingEmailInboxes_CreateValidation_FromNameExplicitNull(t *testi
 	body["from_name"] = nil
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "from_name")
 }
@@ -553,7 +553,7 @@ func TestCovMessagingEmailInboxes_CreateValidation_FromNameBlank(t *testing.T) {
 	body["from_name"] = ""
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "from_name")
 }
@@ -612,7 +612,7 @@ func TestCovMessagingEmailInboxes_UpdateValidation_MissingStatus(t *testing.T) {
 		"from_name": "X",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422, "missing status should return 400 or 422, got %d: %s", status, string(respBody))
+	assert.True(t, status == 422 || status == 422, "missing status should return 400 or 422, got %d: %s", status, string(respBody))
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "status")
 }
@@ -646,7 +646,7 @@ func TestCovMessagingEmailInboxes_UpdateValidation_CannotClearFromName(t *testin
 		"from_name": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "from_name")
 }

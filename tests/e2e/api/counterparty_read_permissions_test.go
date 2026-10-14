@@ -53,7 +53,7 @@ var counterpartyReads = []counterpartyRead{
 	counterpartySellerRecord("retrieve product line", "product_lines:read", productLinesPath+"/"+SeedProductLineID),
 	counterpartyList("list products", "items:read", productsPath),
 	counterpartySellerRecord("retrieve product", "items:read", productsPath+"/"+SeedProductID),
-	counterpartySellerRecord("retrieve job", "jobs:read", "/v1/core/jobs/"+SeedJobID),
+	counterpartySellerRecord("retrieve job", "jobs:read", "/v1/core/async-jobs/"+SeedJobID),
 	counterpartyList("list account users", "team:read", accountUsersPath),
 	{name: "retrieve account user", own: "team:read", path: accountUsersPath + "/" + SeedAccountUserID,
 		inCustomer: counterpartyTarget{accountUsersPath + "/" + SeedCustomerAccountUserID, http.StatusOK},

@@ -101,7 +101,7 @@ func listedAccess(t *testing.T, path, keyField string, limit int) map[string]map
 			seen[id] = record
 		}
 		cursor := list.PageInfo.NextCursor()
-		if !list.PageInfo.HasNextPage || cursor == nil {
+		if !list.PageInfo.HasNextPage() || cursor == nil {
 			return seen
 		}
 		params.Set("cursor", *cursor)

@@ -235,8 +235,8 @@ func TestCovSalesContacts_ListEnvelopePageInfoAlwaysZero(t *testing.T) {
 	require.NotNil(t, pageInfo, "page_info should be an object")
 	assert.Nil(t, pageInfo["next_page_url"])
 	assert.Nil(t, pageInfo["previous_page_url"])
-	assert.Equal(t, "false", jsonField(pageInfo, "has_next_page"))
-	assert.Equal(t, "false", jsonField(pageInfo, "has_prev_page"))
+	assert.Equal(t, "false", pageFlag(pageInfo, "next"))
+	assert.Equal(t, "false", pageFlag(pageInfo, "prev"))
 }
 
 // TestCovSalesContacts_ValidationEmptyEmail covers an empty-string email,

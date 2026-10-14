@@ -314,7 +314,7 @@ func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
 		for _, row := range list.Data {
 			backward = append(backward, DataItemField(row, "id"))
 		}
-		if !list.PageInfo.HasPrevPage || list.PageInfo.PreviousPageURL == nil {
+		if !list.PageInfo.HasPrevPage() || list.PageInfo.PreviousPageURL == nil {
 			break
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.PreviousPageURL)

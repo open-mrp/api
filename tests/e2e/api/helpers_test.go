@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -230,7 +231,7 @@ func listFindByField(t *testing.T, path string, params url.Values, field, value 
 				return item
 			}
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			return nil
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -268,12 +269,12 @@ func assertCursorPaginationAdvances(t *testing.T, path string, params url.Values
 	for attempt := 1; ; attempt++ {
 		page1, _, err := apiClient.GetList(path, merged)
 		require.NoError(t, err, "listing %s", path)
-		if (len(page1.Data) != 1 || !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil) && attempt < attempts {
+		if (len(page1.Data) != 1 || !page1.PageInfo.HasNextPage() || page1.PageInfo.NextPageURL == nil) && attempt < attempts {
 			t.Logf("page 1 of %s incomplete on attempt %d (likely parallel deletes); retrying", path, attempt)
 			continue
 		}
 		require.Len(t, page1.Data, 1, "first page of %s should hold one row (after %d attempts)", path, attempt)
-		require.True(t, page1.PageInfo.HasNextPage, "%s should have a next page", path)
+		require.True(t, page1.PageInfo.HasNextPage(), "%s should have a next page", path)
 		require.NotNil(t, page1.PageInfo.NextPageURL)
 
 		page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
@@ -315,7 +316,7 @@ func assertScopedCursorPagination(t *testing.T, path string, params url.Values, 
 		for _, item := range list.Data {
 			seen = append(seen, DataItemField(item, "id"))
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			break
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -401,7 +402,19 @@ func requireErrorResponse(t *testing.T, body []byte, expectedCode, expectedType 
 	errMap, ok := errObj.(map[string]any)
 	require.True(t, ok, "'error' should be an object: %s", string(body))
 
-	if expectedCode != "" {
+	fields, hasErrors := errMap["errors"].([]any)
+	assert.True(t, hasErrors, "error should have an errors list (body: %s)", string(body))
+	assert.NotContains(t, errMap, "request_log_url", "forge's error object has no request_log_url (body: %s)", string(body))
+	switch expectedCode {
+	case "":
+	case "missing_field", "invalid_format":
+		// A failing field's own code is on its entry in errors; the error itself is validation_failed.
+		assert.Equal(t, "validation_failed", errMap["code"], "error.code mismatch (body: %s)", string(body))
+		assert.True(t, slices.ContainsFunc(fields, func(f any) bool {
+			m, _ := f.(map[string]any)
+			return m["code"] == expectedCode
+		}), "no %s entry in error.errors (body: %s)", expectedCode, string(body))
+	default:
 		assert.Equal(t, expectedCode, errMap["code"], "error.code mismatch (body: %s)", string(body))
 	}
 	if expectedType != "" {
@@ -738,4 +751,26 @@ func jsonListData(m map[string]any, key string) []any {
 		return nil
 	}
 	return jsonArray(obj, "data")
+}
+
+// hasPage reports whether a raw page_info names the next or previous page; forge has no has_*_page booleans, only the URLs.
+func hasPage(info map[string]any, which string) bool {
+	if which == "prev" {
+		return info["previous_page_url"] != nil
+	}
+	return info["next_page_url"] != nil
+}
+
+// pageFlag is hasPage as the "true" or "false" a string comparison expects.
+func pageFlag(info map[string]any, which string) string {
+	if hasPage(info, which) {
+		return "true"
+	}
+	return "false"
+}
+
+// assertDeletedStub asserts a DELETE answered with the deleted stub {id, object, deleted: true} and nothing else.
+func assertDeletedStub(t *testing.T, body []byte, id, object string) {
+	t.Helper()
+	assert.JSONEq(t, `{"id":"`+id+`","object":"`+object+`","deleted":true}`, string(body))
 }

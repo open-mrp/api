@@ -214,7 +214,7 @@ func TestPayments_TransactionsPageByCreatedAtNotID(t *testing.T) {
 	var got []string
 	rows, pageInfo := listPayments(t, financeTransactionsPath, url.Values{"customer_ids": {inv.customerID}, "limit": {"1"}})
 	got = append(got, rowIDs(rows)...)
-	for pageInfo["has_next_page"] == true {
+	for hasPage(pageInfo, "next") == true {
 		next := jsonField(pageInfo, "next_page_url")
 		status, body, err := apiClient.GetListRawFromPageURL(&next)
 		require.NoError(t, err)
@@ -585,7 +585,7 @@ func TestPayments_OpenCreditsPageBothWays(t *testing.T) {
 	var got []string
 	rows, info := listPayments(t, financeOpenCreditsPath, params)
 	got = append(got, rowIDs(rows)...)
-	for i := 0; i < 5 && info["has_next_page"] == true; i++ {
+	for i := 0; i < 5 && hasPage(info, "next") == true; i++ {
 		next := jsonField(info, "next_page_url")
 		status, body, err := apiClient.GetListRawFromPageURL(&next)
 		require.NoError(t, err)
@@ -598,7 +598,7 @@ func TestPayments_OpenCreditsPageBothWays(t *testing.T) {
 	}
 	require.Equal(t, want, got, "most recently received first")
 
-	require.Equal(t, true, info["has_prev_page"], "the last page links back")
+	require.Equal(t, true, hasPage(info, "prev"), "the last page links back")
 	prev := jsonField(info, "previous_page_url")
 	status, body, err := apiClient.GetListRawFromPageURL(&prev)
 	require.NoError(t, err)

@@ -168,7 +168,7 @@ func TestCovSalesCustomers_MergeSelfMergeRejected(t *testing.T) {
 		"source_customer_ids": []string{targetID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -185,7 +185,7 @@ func TestCovSalesCustomers_MergeDuplicateSourceIDsRejected(t *testing.T) {
 		"source_customer_ids": []string{sourceID, sourceID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

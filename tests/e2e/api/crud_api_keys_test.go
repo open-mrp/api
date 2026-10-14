@@ -362,7 +362,7 @@ func TestAPIKeys_CreateValidation_ErrorShape(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(apiKeysPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }

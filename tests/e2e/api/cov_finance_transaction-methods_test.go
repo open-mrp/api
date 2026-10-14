@@ -133,7 +133,7 @@ func TestCovFinanceTransactionMethods_ListLimit(t *testing.T) {
 	// PageInfo is always the zero value on this endpoint — there is no real
 	// pagination, so a client cannot distinguish "more rows exist" from
 	// "that's everything" purely from limit truncation.
-	assert.False(t, list.PageInfo.HasNextPage)
+	assert.False(t, list.PageInfo.HasNextPage())
 	assert.Nil(t, list.PageInfo.NextPageURL)
 }
 
@@ -167,7 +167,7 @@ func TestCovFinanceTransactionMethods_InvalidCursor(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(covFinanceTransactionMethodsPath, url.Values{"cursor": {"anything"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }

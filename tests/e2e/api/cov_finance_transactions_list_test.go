@@ -113,7 +113,7 @@ func TestTransactionsList_PagesBackFromAFilteredPage(t *testing.T) {
 
 	first, pageInfo := listPayments(t, financeTransactionsPath, url.Values{"customer_ids": {f.inGroup}, "limit": {"1"}})
 	require.Equal(t, []string{f.inGroupNew}, rowIDs(first))
-	require.Equal(t, true, pageInfo["has_next_page"], "page_info: %v", pageInfo)
+	require.Equal(t, true, hasPage(pageInfo, "next"), "page_info: %v", pageInfo)
 
 	next := jsonField(pageInfo, "next_page_url")
 	status, body, err := apiClient.GetListRawFromPageURL(&next)
@@ -127,7 +127,7 @@ func TestTransactionsList_PagesBackFromAFilteredPage(t *testing.T) {
 	require.Equal(t, []string{f.inGroupOld}, secondIDs)
 
 	secondInfo := jsonObject(second, "page_info")
-	require.Equal(t, true, secondInfo["has_prev_page"], "page_info: %v", secondInfo)
+	require.Equal(t, true, hasPage(secondInfo, "prev"), "page_info: %v", secondInfo)
 	prev := jsonField(secondInfo, "previous_page_url")
 	status, body, err = apiClient.GetListRawFromPageURL(&prev)
 	require.NoError(t, err)

@@ -40,7 +40,7 @@ func TestCovCatalogItems_ChangeCategory_TypeMismatch(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")
@@ -74,7 +74,7 @@ func TestCovCatalogItems_ChangeCategory_StrandsAttribute(t *testing.T) {
 	// Moved to a category carrying no properties, so the Color attribute already on the item would be stranded. Moving to another Color-carrying category is a legal move and would not exercise the gate.
 	status, respBody, err := apiClient.Put(itemsPath+"/"+itemID+"/category/"+SeedPropertylessItemCategoryID, nil)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")
@@ -182,7 +182,7 @@ func TestCovCatalogItems_AddAttribute_PropertyNotOnCategory(t *testing.T) {
 
 	status, respBody, err := apiClient.Put(itemsPath+"/"+itemID+"/attributes/"+SeedAttributeID, nil)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "attribute_id")

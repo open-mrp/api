@@ -422,7 +422,7 @@ func TestCovOperationsCarriers_ServiceLevel_CreateValidation_EmptyName(t *testin
 		"code": uniqueName("e2e-cov-sl-badname-code"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 }
 
@@ -434,7 +434,7 @@ func TestCovOperationsCarriers_ServiceLevel_CreateValidation_EmptyCode(t *testin
 		"code": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 }
 
@@ -490,7 +490,7 @@ func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_EmptyName(t *testin
 
 	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, patchStatus, patchBody)
+	requireStatus(t, 422, patchStatus, patchBody)
 	requireErrorResponse(t, patchBody, "invalid_format", "invalid_request_error")
 }
 
@@ -508,7 +508,7 @@ func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_EmptyCode(t *testin
 
 	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{"code": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, patchStatus, patchBody)
+	requireStatus(t, 422, patchStatus, patchBody)
 	requireErrorResponse(t, patchBody, "invalid_format", "invalid_request_error")
 }
 
@@ -671,7 +671,7 @@ func TestCovOperationsCarriers_ServiceLevel_DefaultCannotBeDeleted(t *testing.T)
 
 	delStatus, delBody, err := apiClient.Delete(basePath + "/" + id)
 	require.NoError(t, err)
-	assert.Equal(t, 400, delStatus, "deleting a default service level should return 400, got %d: %s", delStatus, string(delBody))
+	assert.Equal(t, 422, delStatus, "deleting a default service level should return 400, got %d: %s", delStatus, string(delBody))
 	requireErrorResponse(t, delBody, "validation_failed", "invalid_request_error")
 	// No further cleanup needed: the throwaway carrier's deferred delete
 	// cascades to this (still-default) service level.
@@ -862,6 +862,6 @@ func TestCovOperationsCarriers_ServiceLevel_ListInvalidCursor(t *testing.T) {
 	basePath := serviceLevelsPath(SeedCarrierID)
 	status, body, err := apiClient.GetListRaw(basePath, url.Values{"cursor": {"not-a-valid-cursor"}})
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "malformed cursor should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "malformed cursor should return 400, got %d: %s", status, string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }

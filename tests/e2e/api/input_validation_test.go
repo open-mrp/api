@@ -23,7 +23,7 @@ func TestInputValidation_RequiredField_Customer(t *testing.T) {
 	// Customer requires "name".
 	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -137,7 +137,7 @@ func TestInputValidation_ExtremelyLongString_Rejected(t *testing.T) {
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

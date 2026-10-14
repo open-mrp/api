@@ -21,7 +21,7 @@ func pageBack(t *testing.T, path string, params url.Values) (first, second, back
 	params.Set("limit", "1")
 	rows, info := listPayments(t, path, params)
 	first = rowIDs(rows)
-	require.Equal(t, true, info["has_next_page"], "page_info: %v", info)
+	require.Equal(t, true, hasPage(info, "next"), "page_info: %v", info)
 
 	next := jsonField(info, "next_page_url")
 	status, body, err := apiClient.GetListRawFromPageURL(&next)
@@ -33,7 +33,7 @@ func pageBack(t *testing.T, path string, params url.Values) (first, second, back
 	}
 
 	pageInfo := jsonObject(page, "page_info")
-	require.Equal(t, true, pageInfo["has_prev_page"], "page_info: %v", pageInfo)
+	require.Equal(t, true, hasPage(pageInfo, "prev"), "page_info: %v", pageInfo)
 	prev := jsonField(pageInfo, "previous_page_url")
 	status, body, err = apiClient.GetListRawFromPageURL(&prev)
 	require.NoError(t, err)

@@ -47,7 +47,7 @@ func listedChangeLogCells(t *testing.T, params url.Values) [][]string {
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, nil)
 	if whole {
-		require.False(t, list.PageInfo.HasNextPage, "the comparison needs the whole list on one page")
+		require.False(t, list.PageInfo.HasNextPage(), "the comparison needs the whole list on one page")
 	}
 
 	cells := make([][]string, 0, len(list.Data))
@@ -120,13 +120,13 @@ func TestInventoryChangeLogExport_WithoutAWindowExportsAnItemsWholeHistory(t *te
 	requireStatus(t, http.StatusAccepted, resp.StatusCode, resp.Body)
 	accepted := parseJSON(resp.Body)
 	jobID := jsonField(accepted, "id")
-	assert.Equal(t, "job", jsonField(accepted, "object"))
+	assert.Equal(t, "async_job", jsonField(accepted, "object"))
 	assert.Equal(t, "export", jsonField(accepted, "type"))
 	assert.Equal(t, "inventory_change_log", jsonField(accepted, "resource_type"), "the job says what the export lists")
 	assert.Equal(t, jobsPath+"/"+jobID, resp.Header.Get("Location"), "202 points at the job to poll")
 
 	job := awaitExportJob(t, apiClient, jobID)
-	assert.Equal(t, "job_export", jsonField(jsonObject(job, "export"), "object"))
+	assert.Equal(t, "async_job_export", jsonField(jsonObject(job, "export"), "object"))
 	filename, rows := exportedChangeLogRows(t, job)
 	assert.Equal(t, "inventory-change-logs-all-all.xlsx", filename, "an open window reads as `all` at both ends")
 

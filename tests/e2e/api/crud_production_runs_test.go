@@ -1118,7 +1118,7 @@ func walkRunBatchIDs(t *testing.T, runID, scope string, limit int) []string {
 			seen[id] = true
 			ids = append(ids, id)
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			return ids
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)

@@ -109,7 +109,7 @@ func TestRequestLogs_ListPagination(t *testing.T) {
 		t.Fatal("Request logs endpoint not accessible")
 		return
 	}
-	if len(list.Data) == 0 || !list.PageInfo.HasNextPage {
+	if len(list.Data) == 0 || !list.PageInfo.HasNextPage() {
 		t.Fatal("Not enough request logs for pagination test")
 		return
 	}
@@ -1343,7 +1343,7 @@ func paginateAllRequestLogIDs(t *testing.T, params url.Values) []string {
 		seen[id] = true
 		ordered = append(ordered, id)
 
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			break
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -1415,7 +1415,7 @@ func TestRequestLogs_DualScopePagination_BackwardReturnsPriorPage(t *testing.T) 
 	})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "3-row cohort at limit=1 must have a next page")
+	require.True(t, page1.PageInfo.HasNextPage(), "3-row cohort at limit=1 must have a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 	page1ID := DataItemField(page1.Data[0], "id")
 

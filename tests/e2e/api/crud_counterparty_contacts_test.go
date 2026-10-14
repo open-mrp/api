@@ -148,7 +148,7 @@ func listContacts(t *testing.T, c *Client, params url.Values) []map[string]any {
 		for _, item := range list.Data {
 			contacts = append(contacts, parseJSON(item))
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			return contacts
 		}
 		require.NotNil(t, list.PageInfo.NextPageURL)
@@ -409,7 +409,7 @@ func TestCounterpartyContacts_List(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 200, status)
 			require.Len(t, first.Data, 1)
-			require.True(t, first.PageInfo.HasNextPage)
+			require.True(t, first.PageInfo.HasNextPage())
 			second, _, err := c.GetListFromPageURL(first.PageInfo.NextPageURL)
 			require.NoError(t, err)
 			require.Len(t, second.Data, 1)

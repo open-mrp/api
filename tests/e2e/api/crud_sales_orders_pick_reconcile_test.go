@@ -150,7 +150,7 @@ func acceptPackPick(t *testing.T, pickID string, caseCount int) map[string]any {
 	requireStatus(t, 202, status, body)
 
 	accepted := parseJSON(body)
-	require.Equal(t, "job", jsonField(accepted, "object"), "202 returns the canonical job resource")
+	require.Equal(t, "async_job", jsonField(accepted, "object"), "202 returns the canonical job resource")
 	jobID := jsonField(accepted, "id")
 	require.NotEmpty(t, jobID, "the 202 must name the job to poll")
 

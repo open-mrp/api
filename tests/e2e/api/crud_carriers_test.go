@@ -256,7 +256,7 @@ func TestCarriers_UpdateValidation_EmptyName(t *testing.T) {
 
 	status, body, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 

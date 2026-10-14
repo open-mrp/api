@@ -109,7 +109,7 @@ func TestPurchaseOrders_CreateRejectsAMissingSupplier(t *testing.T) {
 	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "supplier_account_id")
 }
@@ -178,7 +178,7 @@ func TestPurchaseOrders_CreateRequiresABillToAndAShipTo(t *testing.T) {
 			if status == 201 {
 				t.Cleanup(func() { _, _, _ = apiClient.Delete(purchaseOrdersPath + "/" + jsonField(parseJSON(respBody), "id")) })
 			}
-			requireStatus(t, 400, status, respBody)
+			requireStatus(t, 422, status, respBody)
 			assertErrorParam(t, requireErrorResponse(t, respBody, "missing_field", "invalid_request_error"), tc.param)
 		})
 	}
@@ -270,7 +270,7 @@ func TestPurchaseOrderLines_RejectAQuantityUnitOutsideTheProductsGroup(t *testin
 		status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-		requireStatus(t, 400, status, respBody)
+		requireStatus(t, 422, status, respBody)
 		errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 		assertErrorParam(t, errObj, "quantity_unit_id")
 	})
@@ -283,7 +283,7 @@ func TestPurchaseOrderLines_RejectAQuantityUnitOutsideTheProductsGroup(t *testin
 			badUnitLine("E2E-PO-BADUNIT-2"), newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-		requireStatus(t, 400, status, respBody)
+		requireStatus(t, 422, status, respBody)
 		errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 		assertErrorParam(t, errObj, "quantity_unit_id")
 	})
@@ -492,7 +492,7 @@ func TestPurchaseOrderLines_CreateRejectsALineWithNeitherProductNorItem(t *testi
 	status, body, err := apiClient.Post(purchaseOrdersPath+"/"+orderID+"/lines", line, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(body))
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "product_id")
 }

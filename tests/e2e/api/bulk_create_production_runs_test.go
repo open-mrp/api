@@ -103,7 +103,7 @@ func TestProductionRuns_BulkCreate_AllCreates(t *testing.T) {
 	defer cleanupBulkCreatedRuns(t, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 2)
 
@@ -231,7 +231,7 @@ func TestProductionRuns_BulkCreate_RejectsUnknownSKU(t *testing.T) {
 		map[string]any{"item": itemSKU(uniqueName("no-such-sku")), "quantity_value": "1", "quantity_unit": unitID(seedEachUnitID)},
 	}
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].batches[0].item")
 }
@@ -244,7 +244,7 @@ func TestProductionRuns_BulkCreate_RejectsUnknownUnit(t *testing.T) {
 		map[string]any{"item": itemSKU(SeedItemSKU), "quantity_value": "1", "quantity_unit": unitID(mustGenID(t, id.UnitIDPrefix))},
 	}
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].batches[0].quantity_unit")
 }
@@ -285,7 +285,7 @@ func TestProductionRuns_BulkCreate_RejectsUnknownStep(t *testing.T) {
 		},
 	}
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].batches[0].production_step_id")
 }
@@ -301,7 +301,7 @@ func TestProductionRuns_BulkCreate_RejectsUnknownStation(t *testing.T) {
 		},
 	}
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].batches[0].scanning_station")
 }
@@ -333,7 +333,7 @@ func TestProductionRuns_BulkCreate_RejectsUnknownResponsibleUser(t *testing.T) {
 	row := bulkRunRow()
 	row["responsible_user_id"] = mustGenID(t, id.UserIDPrefix)
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].responsible_user_id")
 }
@@ -348,7 +348,7 @@ func TestProductionRuns_BulkCreate_RejectsNonNumericQuantity(t *testing.T) {
 		map[string]any{"item": itemSKU(SeedItemSKU), "quantity_value": "lots", "quantity_unit": unitID(seedEachUnitID)},
 	}
 	status, body := bulkCreateProductionRuns(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "production_runs[0].batches[0].quantity_value")
 }

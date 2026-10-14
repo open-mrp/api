@@ -42,7 +42,7 @@ func TestAccounts_SetDefaultBillingAddress(t *testing.T) {
 	status, body, err = apiClient.Patch(accountsPath+"/"+SeedAccountID,
 		map[string]any{"default_billing_address_id": "addr_notoneofours0000"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "default_billing_address_id")
 	assert.Equal(t, addressID, accountDefaultBillingAddressID(t), "a refused address leaves the default alone")
 }

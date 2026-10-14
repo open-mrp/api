@@ -101,7 +101,7 @@ func TestCovFinanceAdjustmentTypes_LimitParam(t *testing.T) {
 	list, _, err := apiClient.GetList(covFinanceAdjustmentTypesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "limit=1 should return exactly 1 item")
-	assert.True(t, list.PageInfo.HasNextPage, "should have a next page with limit=1 and 6 seeded adjustment types")
+	assert.True(t, list.PageInfo.HasNextPage(), "should have a next page with limit=1 and 6 seeded adjustment types")
 }
 
 func TestCovFinanceAdjustmentTypes_LimitMax(t *testing.T) {
@@ -149,7 +149,7 @@ func TestCovFinanceAdjustmentTypes_PrevPageURL(t *testing.T) {
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
-	assert.True(t, page2.PageInfo.HasPrevPage, "page 2 should have has_prev_page=true")
+	assert.True(t, page2.PageInfo.HasPrevPage(), "page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "page 2 should have previous_page_url")
 
 	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
@@ -299,7 +299,7 @@ func TestCovFinanceAdjustmentTypes_InvalidCursorRejected(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"cursor": {"not-a-cursor"}})
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "garbage cursor should be rejected with 400, not 500; got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "garbage cursor should be rejected with 400, not 500; got %d: %s", status, string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

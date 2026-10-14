@@ -283,9 +283,9 @@ func TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 5)
 
-	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated a 195-row catalog")
+	assert.False(t, list.PageInfo.HasNextPage(), "has_next_page stays false even though limit truncated a 195-row catalog")
 	assert.Nil(t, list.PageInfo.NextPageURL)
-	assert.False(t, list.PageInfo.HasPrevPage)
+	assert.False(t, list.PageInfo.HasPrevPage())
 	assert.Nil(t, list.PageInfo.PreviousPageURL)
 }
 
@@ -327,7 +327,7 @@ func TestCovAiTools_ToolsCursorAdvancesDataButPageInfoStaysEmpty(t *testing.T) {
 	}
 	assert.Equal(t, expectedNext, gotSlugs, "cursor=<slug> should resume the catalog scan immediately after the matching item")
 
-	assert.False(t, page.PageInfo.HasNextPage)
+	assert.False(t, page.PageInfo.HasNextPage())
 	assert.Nil(t, page.PageInfo.NextPageURL)
 }
 
@@ -340,7 +340,7 @@ func TestCovAiTools_ToolsCursorInvalidRejected(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
@@ -358,7 +358,7 @@ func TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"cursor": {groupID}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
@@ -602,7 +602,7 @@ func TestCovAiTools_ToolGroupsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 5)
 
-	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated a 51-row catalog")
+	assert.False(t, list.PageInfo.HasNextPage(), "has_next_page stays false even though limit truncated a 51-row catalog")
 	assert.Nil(t, list.PageInfo.NextPageURL)
 }
 
@@ -637,7 +637,7 @@ func TestCovAiTools_ToolGroupsCursorAdvancesDataButPageInfoStaysEmpty(t *testing
 	}
 	assert.Equal(t, expectedNext, gotIDs, "cursor=<id> should resume the catalog scan immediately after the matching group")
 
-	assert.False(t, page.PageInfo.HasNextPage)
+	assert.False(t, page.PageInfo.HasNextPage())
 	assert.Nil(t, page.PageInfo.NextPageURL)
 }
 
@@ -646,7 +646,7 @@ func TestCovAiTools_ToolGroupsCursorInvalidRejected(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }

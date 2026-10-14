@@ -40,7 +40,7 @@ func TestCovFinancePaymentTerms_CreateValidation_NameTooLong(t *testing.T) {
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "256-char name should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "256-char name should return 400: %s", string(body))
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
@@ -52,7 +52,7 @@ func TestCovFinancePaymentTerms_CreateValidation_NameWrongType(t *testing.T) {
 		"name": 123,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "numeric name should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "numeric name should return 400: %s", string(body))
 
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
@@ -128,7 +128,7 @@ func TestCovFinancePaymentTerms_UpdateValidation_EmptyName(t *testing.T) {
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "empty-string name on update should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "empty-string name on update should return 400: %s", string(body))
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -150,7 +150,7 @@ func TestCovFinancePaymentTerms_UpdateValidation_NameTooLong(t *testing.T) {
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "256-char name on update should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "256-char name on update should return 400: %s", string(body))
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -173,7 +173,7 @@ func TestCovFinancePaymentTerms_UpdateValidation_NullNameRejected(t *testing.T) 
 		"name": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "explicit null name on update should be rejected (non-clearable field): %s", string(body))
+	assert.Equal(t, 422, status, "explicit null name on update should be rejected (non-clearable field): %s", string(body))
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 
@@ -203,7 +203,7 @@ func TestCovFinancePaymentTerms_UpdateDefaultTermPinnedStatus(t *testing.T) {
 		"name": uniqueName("e2e-default-upd-pinned"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "updating a default payment term should return exactly 400: %s", string(body))
+	assert.Equal(t, 422, status, "updating a default payment term should return exactly 400: %s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
@@ -211,7 +211,7 @@ func TestCovFinancePaymentTerms_DeleteDefaultTermPinnedStatus(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Delete(paymentTermsPath + "/" + SeedDefaultPaymentTermID)
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "deleting a default payment term should return exactly 400: %s", string(body))
+	assert.Equal(t, 422, status, "deleting a default payment term should return exactly 400: %s", string(body))
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

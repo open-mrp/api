@@ -37,7 +37,7 @@ func listSysProperties(t *testing.T, client *Client, params url.Values) []map[st
 		for _, raw := range list.Data {
 			out = append(out, parseJSON(raw))
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			return out
 		}
 		list, _, err = client.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -261,7 +261,7 @@ func TestSysProperties_SearchWithNoMatchIsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	assertEmptyListData(t, list.Data)
-	assert.False(t, list.PageInfo.HasNextPage)
+	assert.False(t, list.PageInfo.HasNextPage())
 
 	// LIKE wildcards match literally; otherwise "%" would list every counter.
 	for _, q := range []string{"%", "_"} {
@@ -282,8 +282,8 @@ func TestSysProperties_CursorPaginationVisitsEveryCounterOnce(t *testing.T) {
 	page1, _, err := apiClient.GetList(sysPropertiesPath, url.Values{"limit": {"2"}})
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 2)
-	assert.False(t, page1.PageInfo.HasPrevPage, "the first page has nothing before it")
-	require.True(t, page1.PageInfo.HasNextPage)
+	assert.False(t, page1.PageInfo.HasPrevPage(), "the first page has nothing before it")
+	require.True(t, page1.PageInfo.HasNextPage())
 
 	var walked []string
 	list := page1
@@ -293,7 +293,7 @@ func TestSysProperties_CursorPaginationVisitsEveryCounterOnce(t *testing.T) {
 		for _, raw := range list.Data {
 			walked = append(walked, DataItemField(raw, "id"))
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+		if !list.PageInfo.HasNextPage() || list.PageInfo.NextPageURL == nil {
 			break
 		}
 		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -303,7 +303,7 @@ func TestSysProperties_CursorPaginationVisitsEveryCounterOnce(t *testing.T) {
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.True(t, page2.PageInfo.HasPrevPage)
+	require.True(t, page2.PageInfo.HasPrevPage())
 	back, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	require.Len(t, back.Data, 2)
@@ -422,7 +422,7 @@ func TestSysProperties_UpdateIsIdempotent(t *testing.T) {
 
 	status, body, err := apiClient.Patch(path, map[string]any{"value": value + 1}, key)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
 
 	assert.Equal(t, value, sysPropertyValue(t, apiClient, id), "the reused key changed nothing")
@@ -434,7 +434,7 @@ func TestSysProperties_UpdateRejectsANullValue(t *testing.T) {
 
 	status, body, err := apiClient.Patch(sysPropertiesPath+"/"+id, map[string]any{"value": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "value")
 }
 
@@ -457,7 +457,7 @@ func TestSysProperties_UpdateRejectsANonIntegerValueNamingTheField(t *testing.T)
 		t.Run(name, func(t *testing.T) {
 			status, body, err := apiClient.Patch(sysPropertiesPath+"/"+id, map[string]any{"value": value}, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 			assertErrorParam(t, errObj, "value")
 			assert.Contains(t, errObj["message"], "'value'", "the message names the field")

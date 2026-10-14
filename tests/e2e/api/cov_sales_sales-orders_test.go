@@ -326,7 +326,7 @@ func TestCovSalesSalesOrders_EmptyLinesRejected(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "lines")
 }
@@ -428,7 +428,7 @@ func TestCovSalesSalesOrders_LineValidation(t *testing.T) {
 
 		status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, respBody)
+		requireStatus(t, 422, status, respBody)
 		requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	})
 

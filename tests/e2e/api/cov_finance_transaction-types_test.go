@@ -148,9 +148,9 @@ func TestCovFinanceTransactionTypes_LimitTruncates(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 2)
 
-	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated the static 4-row list")
+	assert.False(t, list.PageInfo.HasNextPage(), "has_next_page stays false even though limit truncated the static 4-row list")
 	assert.Nil(t, list.PageInfo.NextPageURL)
-	assert.False(t, list.PageInfo.HasPrevPage)
+	assert.False(t, list.PageInfo.HasPrevPage())
 	assert.Nil(t, list.PageInfo.PreviousPageURL)
 }
 
@@ -164,7 +164,7 @@ func TestCovFinanceTransactionTypes_CursorRejected(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(covFinanceTransactionTypesPath, url.Values{"cursor": {"anything"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }

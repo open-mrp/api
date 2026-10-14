@@ -27,14 +27,14 @@ func pagesBackToTheFirstPage(t *testing.T, path string, params url.Values) {
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.Len(t, first.Data, 1, "%s %v should hold at least two rows", path, params)
-	require.True(t, first.PageInfo.HasNextPage, "%s %v should have a second page", path, params)
+	require.True(t, first.PageInfo.HasNextPage(), "%s %v should have a second page", path, params)
 
 	second, status, err := apiClient.GetListFromPageURL(first.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.Len(t, second.Data, 1)
 	assert.NotEqual(t, DataItemField(first.Data[0], "id"), DataItemField(second.Data[0], "id"), "the next page repeats the first")
-	require.True(t, second.PageInfo.HasPrevPage)
+	require.True(t, second.PageInfo.HasPrevPage())
 
 	back, status, err := apiClient.GetListFromPageURL(second.PageInfo.PreviousPageURL)
 	require.NoError(t, err)

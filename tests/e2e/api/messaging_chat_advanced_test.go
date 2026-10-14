@@ -32,7 +32,7 @@ func listContainsConversation(t *testing.T, c *Client, conversationID string, pa
 				return true
 			}
 		}
-		if !list.PageInfo.HasNextPage || page >= maxListScanPages {
+		if !list.PageInfo.HasNextPage() || page >= maxListScanPages {
 			return false
 		}
 		list, status, err = c.GetListFromPageURL(list.PageInfo.NextPageURL)
@@ -59,7 +59,7 @@ func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
 		for _, raw := range list.Data {
 			delete(want, jsonField(parseJSON(raw), "id"))
 		}
-		if !list.PageInfo.HasNextPage {
+		if !list.PageInfo.HasNextPage() {
 			break
 		}
 		require.NotNil(t, list.PageInfo.NextPageURL, "a page with more after it must say where the next one is")
@@ -140,7 +140,7 @@ func TestChat_MessagePaginationAndCatchup(t *testing.T) {
 	page1, _, err := user.GetList(conversationsPath+"/"+convID+"/messages", url.Values{"limit": {"2"}})
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 2)
-	require.True(t, page1.PageInfo.HasNextPage)
+	require.True(t, page1.PageInfo.HasNextPage())
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := user.GetListFromPageURL(page1.PageInfo.NextPageURL)

@@ -39,7 +39,7 @@ func bulkUpsertPartsJob(t *testing.T, parts ...map[string]any) map[string]any {
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -131,7 +131,7 @@ func TestParts_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
 		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
 		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parts[1].sku")
 	assert.Contains(t, errObj["message"], "duplicate SKU")
@@ -177,7 +177,7 @@ func TestParts_BulkUpsert_RejectsUnknownCategory(t *testing.T) {
 		map[string]any{"sku": uniqueName("e2e-bup-part-ok"), "category": map[string]any{"id": SeedItemCategoryID}},
 		map[string]any{"sku": uniqueName("e2e-bup-part-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parts[1].category")
 }
@@ -213,7 +213,7 @@ func TestParts_BulkUpsert_RejectsWrongCategoryType(t *testing.T) {
 	status, body := bulkUpsertParts(t,
 		map[string]any{"sku": uniqueName("e2e-bup-part-wrongcat"), "category": map[string]any{"id": SeedMaterialCategoryID}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parts[0].category")
 }

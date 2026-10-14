@@ -346,7 +346,7 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 		var rows []row
 		rows, info = page(params)
 		forward = append(forward, rows...)
-		if jsonField(info, "has_next_page") != "true" {
+		if pageFlag(info, "next") != "true" {
 			break
 		}
 		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
@@ -363,7 +363,7 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 
 	// Walk back from the last page to the first: the same groups, in reverse.
 	var backward []row
-	for i := 0; i < 50 && jsonField(info, "has_prev_page") == "true"; i++ {
+	for i := 0; i < 50 && pageFlag(info, "prev") == "true"; i++ {
 		var rows []row
 		rows, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
 		backward = append(rows, backward...)
@@ -429,7 +429,7 @@ func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) 
 		var rows []row
 		rows, info = page(params)
 		forward = append(forward, rows...)
-		if jsonField(info, "has_next_page") != "true" {
+		if pageFlag(info, "next") != "true" {
 			break
 		}
 		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
@@ -445,7 +445,7 @@ func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) 
 	}
 
 	var backward []row
-	for i := 0; i < 10 && jsonField(info, "has_prev_page") == "true"; i++ {
+	for i := 0; i < 10 && pageFlag(info, "prev") == "true"; i++ {
 		var rows []row
 		rows, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
 		backward = append(rows, backward...)
@@ -530,16 +530,16 @@ func TestSalesAnalytics_LinesPageForwardAndBack(t *testing.T) {
 	status, first, raw := putSales(t, salesLinesPath, url.Values{"limit": {"1"}}, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	firstInfo := jsonObject(first, "page_info")
-	assert.Equal(t, "true", jsonField(firstInfo, "has_next_page"))
-	assert.Equal(t, "false", jsonField(firstInfo, "has_prev_page"))
+	assert.Equal(t, "true", pageFlag(firstInfo, "next"))
+	assert.Equal(t, "false", pageFlag(firstInfo, "prev"))
 	firstID := jsonField(jsonArray(first, "data")[0].(map[string]any), "id")
 
 	next := cursorFromURL(t, jsonField(firstInfo, "next_page_url"))
 	status, second, raw := putSales(t, salesLinesPath, url.Values{"limit": {"1"}, "cursor": {next}}, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	secondInfo := jsonObject(second, "page_info")
-	assert.Equal(t, "false", jsonField(secondInfo, "has_next_page"))
-	assert.Equal(t, "true", jsonField(secondInfo, "has_prev_page"))
+	assert.Equal(t, "false", pageFlag(secondInfo, "next"))
+	assert.Equal(t, "true", pageFlag(secondInfo, "prev"))
 	secondID := jsonField(jsonArray(second, "data")[0].(map[string]any), "id")
 	assert.NotEqual(t, firstID, secondID)
 

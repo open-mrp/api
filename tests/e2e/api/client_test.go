@@ -20,7 +20,7 @@ type Response struct {
 	Header     http.Header
 }
 
-const defaultAPIVersion = "1.0.forge-preview.9"
+const defaultAPIVersion = "1.0.forge"
 
 // Client is an HTTP client for the OpenMRP API configured with authentication.
 type Client struct {
@@ -160,13 +160,17 @@ type ListResponse struct {
 	Data     []json.RawMessage `json:"data"`
 }
 
-// PageInfo contains URL-based pagination metadata.
+// PageInfo contains URL-based pagination metadata. Another page exists exactly when its URL is present.
 type PageInfo struct {
 	NextPageURL     *string `json:"next_page_url"`
 	PreviousPageURL *string `json:"previous_page_url"`
-	HasNextPage     bool    `json:"has_next_page"`
-	HasPrevPage     bool    `json:"has_prev_page"`
 }
+
+// HasNextPage reports whether a next page exists.
+func (p PageInfo) HasNextPage() bool { return p.NextPageURL != nil }
+
+// HasPrevPage reports whether a previous page exists.
+func (p PageInfo) HasPrevPage() bool { return p.PreviousPageURL != nil }
 
 // NextCursor extracts the cursor query parameter from NextPageURL.
 func (p PageInfo) NextCursor() *string {

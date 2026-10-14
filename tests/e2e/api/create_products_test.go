@@ -30,7 +30,7 @@ func TestProducts_Create_RejectsWrongCategoryType(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "category_id")
@@ -88,7 +88,7 @@ func TestProducts_Create_RejectsNonCurrencyNumeratorOnUnitCost(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
@@ -106,7 +106,7 @@ func TestProducts_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")

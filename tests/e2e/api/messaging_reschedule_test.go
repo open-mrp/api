@@ -100,7 +100,7 @@ func TestScheduledMessages_RescheduleUnderMessagingUpdateAlone(t *testing.T) {
 	// Once sent it can no longer be edited.
 	status, body, err = editor.Post(reschedulePath(messageID), map[string]any{"scheduled_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339)}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, http.StatusBadRequest, status, body)
+	requireStatus(t, http.StatusUnprocessableEntity, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 

@@ -5,28 +5,17 @@ import (
 	apiexample "github.com/open-mrp/apikit/example"
 )
 
-// Record is a lightweight reference to a business record — a sales order, purchase order, pick, shipment, production run, invoice, etc.
+// A lightweight reference to another record, such as a sales order's shipments or the record a note is on.
 //
-// Like the `actor` and `entity` references, it carries just enough to identify and label the referenced record without embedding its full resource. The `status` and `metadata` fields hold type-specific detail that varies by the kind of record referenced.
+// It carries enough to identify and label the record without embedding it. Fetch the full record by `type` and `id` when you need more.
 type Record struct {
 	// Unique identifier for the record.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=record"`
-	// The kind of business record referenced.
+	// The kind of record referenced: the `object` of the full resource, such as `sales_order`, `invoice` or `job`.
 	//
-	// Determines how to resolve the record and which `status` and `metadata` keys may appear.
-	//
-	// - `sales_order`: a customer order.
-	// - `purchase_order`: an order placed with a supplier.
-	// - `receiving_order`: an inbound order being received into inventory.
-	// - `pick`: a warehouse pick task.
-	// - `shipment`: an outbound shipment.
-	// - `delivery`: a delivery of one or more shipments to a destination.
-	// - `production_run`: a manufacturing production run.
-	// - `invoice`: a customer invoice.
-	// - `transaction`: a payment or financial transaction.
-	// - `settlement`: a settlement reconciling transactions against invoices.
+	// More types may be added; treat an unknown one as a record you can't open.
 	Type constants.RecordType `json:"type" validate:"required"`
 	// Human-readable record number, when the record has one.
 	Number *string `json:"number"`
@@ -63,4 +52,18 @@ var SampleRecord = &Record{
 
 func (*Record) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleRecord)
+}
+
+// Names one record by type and ID, for a request field that can point at records of several types.
+type RecordInput struct {
+	// The kind of record: the `object` of the full resource, such as `sales_order`.
+	Type constants.RecordType `json:"type" validate:"required"`
+	// ID of the record.
+	ID string `json:"id" validate:"required"`
+}
+
+var SampleRecordInput = &RecordInput{Type: constants.RecordTypeSalesOrder, ID: SampleSalesOrderID}
+
+func (*RecordInput) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRecordInput)
 }

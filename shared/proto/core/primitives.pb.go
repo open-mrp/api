@@ -9,11 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -328,11 +330,64 @@ func (x *AddressSnapshot) GetEmail() string {
 	return ""
 }
 
+// A list's created-date filter: created_after is inclusive, created_before exclusive, and either may be unset.
+type CreatedRange struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CreatedAfter  *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=created_after,json=createdAfter,proto3,oneof" json:"created_after,omitempty"`
+	CreatedBefore *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_before,json=createdBefore,proto3,oneof" json:"created_before,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatedRange) Reset() {
+	*x = CreatedRange{}
+	mi := &file_core_primitives_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatedRange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatedRange) ProtoMessage() {}
+
+func (x *CreatedRange) ProtoReflect() protoreflect.Message {
+	mi := &file_core_primitives_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatedRange.ProtoReflect.Descriptor instead.
+func (*CreatedRange) Descriptor() ([]byte, []int) {
+	return file_core_primitives_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreatedRange) GetCreatedAfter() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAfter
+	}
+	return nil
+}
+
+func (x *CreatedRange) GetCreatedBefore() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedBefore
+	}
+	return nil
+}
+
 var File_core_primitives_proto protoreflect.FileDescriptor
 
 const file_core_primitives_proto_rawDesc = "" +
 	"\n" +
-	"\x15core/primitives.proto\x12\x04core\"\x81\x01\n" +
+	"\x15core/primitives.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
 	"\x05Actor\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x13\n" +
 	"\x02id\x18\x02 \x01(\tH\x00R\x02id\x88\x01\x01\x12\x17\n" +
@@ -371,7 +426,12 @@ const file_core_primitives_proto_rawDesc = "" +
 	"\x06_stateB\x0e\n" +
 	"\f_postal_codeB\b\n" +
 	"\x06_phoneB\b\n" +
-	"\x06_emailB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x06_email\"\xc1\x01\n" +
+	"\fCreatedRange\x12D\n" +
+	"\rcreated_after\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\fcreatedAfter\x88\x01\x01\x12F\n" +
+	"\x0ecreated_before\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\rcreatedBefore\x88\x01\x01B\x10\n" +
+	"\x0e_created_afterB\x11\n" +
+	"\x0f_created_beforeB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_primitives_proto_rawDescOnce sync.Once
@@ -385,20 +445,24 @@ func file_core_primitives_proto_rawDescGZIP() []byte {
 	return file_core_primitives_proto_rawDescData
 }
 
-var file_core_primitives_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_core_primitives_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_core_primitives_proto_goTypes = []any{
-	(*Actor)(nil),           // 0: core.Actor
-	(*Date)(nil),            // 1: core.Date
-	(*DatePatch)(nil),       // 2: core.DatePatch
-	(*AddressSnapshot)(nil), // 3: core.AddressSnapshot
+	(*Actor)(nil),                 // 0: core.Actor
+	(*Date)(nil),                  // 1: core.Date
+	(*DatePatch)(nil),             // 2: core.DatePatch
+	(*AddressSnapshot)(nil),       // 3: core.AddressSnapshot
+	(*CreatedRange)(nil),          // 4: core.CreatedRange
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
 var file_core_primitives_proto_depIdxs = []int32{
 	1, // 0: core.DatePatch.value:type_name -> core.Date
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 1: core.CreatedRange.created_after:type_name -> google.protobuf.Timestamp
+	5, // 2: core.CreatedRange.created_before:type_name -> google.protobuf.Timestamp
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_core_primitives_proto_init() }
@@ -409,13 +473,14 @@ func file_core_primitives_proto_init() {
 	file_core_primitives_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_primitives_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_primitives_proto_msgTypes[3].OneofWrappers = []any{}
+	file_core_primitives_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_primitives_proto_rawDesc), len(file_core_primitives_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

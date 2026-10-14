@@ -3,11 +3,13 @@ package main
 import (
 	"bufio"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/open-mrp/apikit/conformance"
+	"github.com/open-mrp/apikit/openapi"
 )
 
 const conformanceBaselinePath = "testdata/conformance_baseline.txt"
@@ -20,7 +22,7 @@ const conformanceBaselinePath = "testdata/conformance_baseline.txt"
 func TestConformance(t *testing.T) {
 	t.Parallel()
 	got := map[string][]string{}
-	for _, v := range conformance.Check(openAPIEndpointGroups()) {
+	for _, v := range conformance.Check(openAPIEndpointGroups(), append(slices.Clone(conformance.Rules), searchDocumented)...) {
 		key := v.Rule + " " + v.Method + " " + v.Route
 		got[key] = append(got[key], v.Message)
 	}
@@ -50,6 +52,35 @@ func TestConformance(t *testing.T) {
 			t.Errorf("%s now conforms; delete its line from %s", key, conformanceBaselinePath)
 		}
 	}
+}
+
+var searchDocs = openapi.NewDocReader()
+
+// searchDocumented holds every `q` to documenting exactly which columns it matches and how, such as "Case-insensitive substring match on `name`." Never "varies by endpoint".
+var searchDocumented = conformance.Rule{
+	Name: "search_documented",
+	Check: func(e conformance.Endpoint) []string {
+		if e.RequestType == nil || e.RequestType.Kind() != reflect.Struct {
+			return nil
+		}
+		for _, f := range reflect.VisibleFields(e.RequestType) {
+			if f.Tag.Get("query") != "q" {
+				continue
+			}
+			declaring := e.RequestType
+			for _, i := range f.Index[:len(f.Index)-1] {
+				declaring = declaring.Field(i).Type
+				if declaring.Kind() == reflect.Pointer {
+					declaring = declaring.Elem()
+				}
+			}
+			doc := searchDocs.GetTypeDoc(declaring).Fields[f.Name]
+			if strings.Contains(doc, "varies by endpoint") || !strings.Contains(strings.ToLower(doc), "match") {
+				return []string{"q must say which columns it matches and how, such as \"Case-insensitive substring match on `name`.\""}
+			}
+		}
+		return nil
+	},
 }
 
 func readConformanceBaseline(t *testing.T) map[string]bool {

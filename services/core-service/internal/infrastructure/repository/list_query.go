@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
@@ -41,6 +42,16 @@ func (f *listFilter) only(keep func(clause string) bool) *listFilter {
 func (f *listFilter) in(column string, values []string) {
 	if len(values) > 0 {
 		f.add(column+" IN ("+placeholders(len(values))+")", stringArgs(values)...)
+	}
+}
+
+// createdBetween filters column, the table's created_at, to a list's created-date range.
+func (f *listFilter) createdBetween(column string, r domain.CreatedRange) {
+	if r.After != nil {
+		f.add(column+" >= ?", *r.After)
+	}
+	if r.Before != nil {
+		f.add(column+" < ?", *r.Before)
 	}
 }
 

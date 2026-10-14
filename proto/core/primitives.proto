@@ -5,6 +5,8 @@ package core;
 
 option go_package = "shared/proto/core;core";
 
+import "google/protobuf/timestamp.proto";
+
 // Who caused a record. type is a constants.ActorType: user, api_key, agent, device or system.
 message Actor {
   string type = 1;
@@ -43,4 +45,10 @@ message AddressSnapshot {
   string country = 8;
   optional string phone = 9;
   optional string email = 10;
+}
+
+// A list's created-date filter: created_after is inclusive, created_before exclusive, and either may be unset.
+message CreatedRange {
+  optional google.protobuf.Timestamp created_after = 1;
+  optional google.protobuf.Timestamp created_before = 2;
 }

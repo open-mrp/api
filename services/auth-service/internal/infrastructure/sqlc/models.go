@@ -515,6 +515,7 @@ type Batch struct {
 	ScannedAt             sql.NullTime
 	LocationID            sql.NullString
 	OperatorAccountUserID sql.NullString
+	ReleaseLotID          sql.NullString
 }
 
 type BatchCountAdjustment struct {
@@ -550,6 +551,8 @@ type BatchSignature struct {
 	ActorID             string
 	ActorType           string
 	SignedAt            time.Time
+	LotID               sql.NullString
+	LotNumber           sql.NullString
 }
 
 type BatchesMachine struct {
@@ -769,14 +772,19 @@ type DemandOverrideType struct {
 }
 
 type Department struct {
-	ID          string
-	Name        string
-	Notes       sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	LocationID  sql.NullString
-	AccountID   string
-	LaborRateID sql.NullString
+	ID                         string
+	Name                       string
+	Notes                      sql.NullString
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	LocationID                 sql.NullString
+	AccountID                  string
+	LaborRateID                sql.NullString
+	ReleaseRequirementCode     string
+	ReleaseEnforcementCode     string
+	ReleaseRationale           sql.NullString
+	ReleaseChecklist           json.RawMessage
+	ReleaseOperatorSigningCode string
 }
 
 type DocApiKey struct {
@@ -2011,23 +2019,19 @@ type ProductionShift struct {
 }
 
 type ProductionStep struct {
-	ID                     string
-	Name                   string
-	Notes                  sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	AccountID              string
-	ScanningStationID      sql.NullString
-	Allowances             string
-	LaborRateID            string
-	LaborTimeID            string
-	LevelingFactor         string
-	OverheadRateID         string
-	DepartmentID           sql.NullString
-	ReleaseRequirementCode string
-	ReleaseEnforcementCode string
-	ReleaseRationale       sql.NullString
-	ReleaseChecklist       json.RawMessage
+	ID                string
+	Name              string
+	Notes             sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         string
+	ScanningStationID sql.NullString
+	Allowances        string
+	LaborRateID       string
+	LaborTimeID       string
+	LevelingFactor    string
+	OverheadRateID    string
+	DepartmentID      sql.NullString
 }
 
 type Property struct {

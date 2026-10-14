@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	gatewaymw "github.com/open-mrp/api/services/api-gateway/internal/middleware"
+
 	"github.com/open-mrp/api/services/api-gateway/internal/versiontransforms"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -35,7 +37,7 @@ func newRouter(cfg *BaseConfig) *router {
 		TrustedProxyHops: cfg.TrustedProxyHops,
 		SkipPaths:        []string{"/healthz"},
 		MaxBodyBytes:     omrpctx.MaxLoggedBodyBytes,
-	})(versiontransforms.RoutePreview9Jobs(r.Router))
+	})(gatewaymw.RequestedVersion(versiontransforms.RoutePreview9Jobs(r.Router)))
 	return r
 }
 

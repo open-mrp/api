@@ -556,8 +556,9 @@ func TestItemCategories_OmittedFields(t *testing.T) {
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-itcg-pres")
 		createStatus, createBody, err := apiClient.Post(itemCategoriesPath+"?include=unit_group", map[string]any{
-			"name": name,
-			"type": "material",
+			"name":          name,
+			"type":          "material",
+			"unit_group_id": SeedUnitGroupID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -748,8 +749,9 @@ func TestItemCategories_ChangeUnitGroup(t *testing.T) {
 	sameTypeUnitGroupID := "ungp_1gf7a8200f8x8jjpq5a9kdrhd"
 
 	createStatus, createBody, err := apiClient.Post(itemCategoriesPath, map[string]any{
-		"name": name,
-		"type": "material",
+		"name":          name,
+		"type":          "material",
+		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -780,8 +782,9 @@ func TestItemCategories_ChangeUnitGroupRejectsDifferentType(t *testing.T) {
 	differentTypeUnitGroupID := "ungp_01k0a51qxceydax5036pegvzzy"
 
 	createStatus, createBody, err := apiClient.Post(itemCategoriesPath, map[string]any{
-		"name": name,
-		"type": "material",
+		"name":          name,
+		"type":          "material",
+		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)

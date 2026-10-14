@@ -233,47 +233,27 @@ func TestMaterials_BulkUpsert_RejectsWrongCategoryType(t *testing.T) {
 	assertErrorParam(t, errObj, "materials[0].category")
 }
 
-// TestMaterials_BulkUpsert_RejectsDuplicateAttributeValueAcrossProperties: attribute
-// values are unique per account (mirroring the single attribute-create endpoint), so a
-// value used under two different properties — within one request or against an
-// existing attribute — fails as a validation error and creates nothing.
-func TestMaterials_BulkUpsert_RejectsDuplicateAttributeValueAcrossProperties(t *testing.T) {
+// TestMaterials_BulkUpsert_SameAttributeValueUnderTwoProperties: attribute values are unique within their property,
+// so one value under two properties resolves to two attributes, one per property.
+func TestMaterials_BulkUpsert_SameAttributeValueUnderTwoProperties(t *testing.T) {
 	t.Parallel()
 
-	// Same value under two properties within one request. Attribute resolution runs before
-	// the row loop, so the conflict sinks the whole job rather than one row.
-	dupValue := uniqueName("e2e-bup-mat-dupval")
-	status, body := bulkUpsertMaterials(t, map[string]any{
-		"sku":      uniqueName("e2e-bup-mat-dupattr"),
-		"category": map[string]any{"id": SeedMaterialCategoryID},
-		"properties": []any{
-			bulkProperty(uniqueName("e2e-bup-mat-dv-a"), dupValue),
-			bulkProperty(uniqueName("e2e-bup-mat-dv-b"), dupValue),
-		},
-	})
-	requireStatus(t, 202, status, body)
-	job := pollJobUntilTerminal(t, jsonField(parseJSON(body), "id"))
-	assert.Equal(t, "failed", jsonField(job, "status"))
-	assert.Empty(t, jobWrittenResults(job))
-
-	// Value already existing under a different property from a prior import.
-	existingValue := uniqueName("e2e-bup-mat-exval")
-	seeded, _ := bulkUpsertMaterialIDs(t, map[string]any{
-		"sku":        uniqueName("e2e-bup-mat-dupattr-seed"),
+	value := uniqueName("e2e-bup-mat-dupval")
+	propA := uniqueName("e2e-bup-mat-dv-a")
+	propB := uniqueName("e2e-bup-mat-dv-b")
+	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
+		"sku":        uniqueName("e2e-bup-mat-dupattr"),
 		"category":   map[string]any{"id": SeedMaterialCategoryID},
-		"properties": []any{bulkProperty(uniqueName("e2e-bup-mat-dv-c"), existingValue)},
+		"properties": []any{bulkProperty(propA, value), bulkProperty(propB, value)},
 	})
-	defer cleanupMaterialIDs(seeded)
+	defer cleanupMaterialIDs(created)
+	require.Len(t, created, 1)
 
-	conflictStatus, conflictBody := bulkUpsertMaterials(t, map[string]any{
-		"sku":        uniqueName("e2e-bup-mat-dupattr2"),
-		"category":   map[string]any{"id": SeedMaterialCategoryID},
-		"properties": []any{bulkProperty(uniqueName("e2e-bup-mat-dv-d"), existingValue)},
-	})
-	requireStatus(t, 202, conflictStatus, conflictBody)
-	conflictJob := pollJobUntilTerminal(t, jsonField(parseJSON(conflictBody), "id"))
-	assert.Equal(t, "failed", jsonField(conflictJob, "status"))
-	assert.Empty(t, jobResults(conflictJob))
+	for _, prop := range []string{propA, propB} {
+		attrs := propertyAttributes(t, prop)
+		require.Len(t, attrs, 1, "property %s has its own attribute", prop)
+		assert.Equal(t, value, jsonField(attrs[0], "value"))
+	}
 }
 
 // --- update paths: every updatable portion ---
@@ -414,13 +394,11 @@ func TestMaterials_BulkUpsert_ReusesPropertyAndAttributeAcrossCasingAndWhitespac
 	}
 	assert.Equal(t, 1, matches)
 
-	// Exactly one attribute under it, with a valid named color and 1-based order.
+	// Exactly one attribute under it, with the default color and 1-based order.
 	attrs := propertyAttributes(t, propName)
 	require.Len(t, attrs, 1)
 	assert.Equal(t, propValue, jsonField(attrs[0], "value"))
-	color := jsonField(attrs[0], "color")
-	assert.NotEmpty(t, color)
-	assert.NotEqual(t, "default", color)
+	assert.Equal(t, "default", jsonField(attrs[0], "color"))
 	order, ok := attrs[0]["sort_order"].(float64)
 	require.True(t, ok, "sort_order should be numeric")
 	assert.GreaterOrEqual(t, order, float64(1))

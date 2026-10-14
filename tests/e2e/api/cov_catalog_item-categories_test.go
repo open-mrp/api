@@ -137,7 +137,7 @@ func TestCovCatalogItemCategories_UpdateNotFound(t *testing.T) {
 
 func TestCovCatalogItemCategories_ListFilterByType_InvalidValue(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(itemCategoriesPath, url.Values{"type": {"bogus_type"}})
+	status, body, err := apiClient.GetListRaw(itemCategoriesPath, url.Values{"types[]": {"bogus_type"}})
 	require.NoError(t, err)
 	require.False(t, status >= 500, "invalid type filter should never 5xx, got %d: %s", status, string(body))
 	assert.Equal(t, 400, status,
@@ -164,7 +164,7 @@ func TestCovCatalogItemCategories_AddPropertyNotFound(t *testing.T) {
 	status, body, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/properties/pp_000000000000", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "Adding a nonexistent property should return 404, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requirePreview9Error(t, body, "resource_not_found")
 }
 
 func TestCovCatalogItemCategories_AddPropertyDuplicateConflict(t *testing.T) {
@@ -183,7 +183,7 @@ func TestCovCatalogItemCategories_AddPropertyDuplicateConflict(t *testing.T) {
 	require.False(t, dupStatus >= 500, "duplicate property add should never 5xx, got %d: %s", dupStatus, string(dupBody))
 	assert.Equal(t, 409, dupStatus,
 		"Adding a duplicate property name should return 409, got %d: %s", dupStatus, string(dupBody))
-	errObj := requireErrorResponse(t, dupBody, "resource_conflict", "invalid_request_error")
+	errObj := requirePreview9Error(t, dupBody, "resource_conflict")
 	assertErrorParam(t, errObj, "property_id")
 }
 
@@ -195,7 +195,7 @@ func TestCovCatalogItemCategories_RemovePropertyNonexistentID(t *testing.T) {
 	status, body, err := apiClient.WithAPIVersion(preview9Version).Delete(itemCategoriesPath + "/" + id + "/properties/pp_000000000000")
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "Removing a property_id that doesn't exist at all should return 404, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requirePreview9Error(t, body, "resource_not_found")
 }
 
 func TestCovCatalogItemCategories_RemovePropertyNeverAddedIsNoOp(t *testing.T) {

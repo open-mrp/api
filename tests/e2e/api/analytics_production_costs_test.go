@@ -62,7 +62,7 @@ func createProductionCostPlant(t *testing.T) productionCostPlant {
 
 	p.catXName, p.catYName = uniqueName("e2e-pcost-x"), uniqueName("e2e-pcost-y")
 	category := func(name string) string {
-		return jsonField(createAndCleanup(t, itemCategoriesPath, map[string]any{"name": name, "type": "product_category", "unit_group_id": SeedUnitGroupID}), "id")
+		return jsonField(createAndCleanup(t, itemCategoriesPath, map[string]any{"name": name, "type": "product", "unit_group_id": SeedUnitGroupID}), "id")
 	}
 	p.catX, p.catY = category(p.catXName), category(p.catYName)
 

@@ -108,7 +108,7 @@ func dashItemsMaterialCategory(t *testing.T, client *Client) string {
 		"name": uniqueName("e2e-dashitems-ug"), "type": "quantity", "base_unit_id": "each",
 	})
 	return dashItemsCreateAs(t, client, itemCategoriesPath, map[string]any{
-		"name": uniqueName("e2e-dashitems-cat"), "type": "material_category", "unit_group_id": unitGroupID,
+		"name": uniqueName("e2e-dashitems-cat"), "type": "material", "unit_group_id": unitGroupID,
 	})
 }
 

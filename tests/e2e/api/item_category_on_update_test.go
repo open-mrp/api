@@ -22,7 +22,7 @@ func productCategoryInEaches(t *testing.T) string {
 		"name": uniqueName("e2e-moveitem-ug"), "type": "quantity", "base_unit_id": "each",
 	})
 	return dashItemsCreateAs(t, apiClient, itemCategoriesPath, map[string]any{
-		"name": uniqueName("e2e-moveitem-cat"), "type": "product_category", "unit_group_id": unitGroupID,
+		"name": uniqueName("e2e-moveitem-cat"), "type": "product", "unit_group_id": unitGroupID,
 	})
 }
 

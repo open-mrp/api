@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Creating a property from a category is one request under item_categories:update: the new property is created in the account and attached to the category together.
+// Creating a property from a category is one request under item_categories:update: the new property is created in the account and attached to the category together. The route is kept for preview.9 callers only.
 
 func categoryPropertiesPath(categoryID string) string {
 	return itemCategoriesPath + "/" + categoryID + "/properties"
@@ -22,7 +22,7 @@ func categoryPropertiesPath(categoryID string) string {
 func trackCategoryProperty(t *testing.T, categoryID, propertyID string) {
 	t.Helper()
 	t.Cleanup(func() {
-		_, _, _ = apiClient.Delete(categoryPropertiesPath(categoryID) + "/" + propertyID)
+		_, _, _ = apiClient.WithAPIVersion(preview9Version).Delete(categoryPropertiesPath(categoryID) + "/" + propertyID)
 		_, _, _ = apiClient.Delete(propertiesPath + "/" + propertyID)
 	})
 }
@@ -42,7 +42,7 @@ func categoryPropertyIDs(t *testing.T, categoryID string) []string {
 func TestItemCategoryProperties_CreateUnderItemCategoriesUpdateAlone(t *testing.T) {
 	t.Parallel()
 	categoryID := productCategoryInEaches(t)
-	editor := customRoleClient(t, "item_categories:update")
+	editor := customRoleClient(t, "item_categories:update").WithAPIVersion(preview9Version)
 	name := uniqueName("e2e-catprop")
 	key := newIdempotencyKey()
 
@@ -128,7 +128,7 @@ func TestItemCategoryProperties_CreateRefusals(t *testing.T) {
 			}},
 	}
 	for _, tc := range cases {
-		status, body, err := tc.client.Post(categoryPropertiesPath(tc.categoryID), tc.body, newIdempotencyKey())
+		status, body, err := tc.client.WithAPIVersion(preview9Version).Post(categoryPropertiesPath(tc.categoryID), tc.body, newIdempotencyKey())
 		require.NoError(t, err)
 		if status == http.StatusCreated {
 			trackCategoryProperty(t, tc.categoryID, jsonField(parseJSON(body), "id"))
@@ -137,4 +137,8 @@ func TestItemCategoryProperties_CreateRefusals(t *testing.T) {
 	}
 
 	assert.Empty(t, categoryPropertyIDs(t, categoryID), "no refused request attached a property")
+
+	status, body, err = apiClient.Post(categoryPropertiesPath(categoryID), map[string]any{"name": uniqueName("e2e-catprop-forge")}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, status, "forge has no create-and-attach route: %s", body)
 }

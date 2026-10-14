@@ -47,12 +47,12 @@ func shipSaleToNewCustomer(t *testing.T) shippedSale {
 		{
 			"product_id": SeedProductID,
 			"quantity":   map[string]any{"value": "5", "unit_id": SeedUnitID},
-			"unit_price": map[string]any{"value": "4.25", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+			"unit_price": map[string]any{"amount": "4.25", "currency": "usd", "per_unit_id": SeedUnitID},
 		},
 		{
 			"product_id": SeedProductID,
 			"quantity":   map[string]any{"value": "2", "unit_id": seedDozenUnitID},
-			"unit_price": map[string]any{"value": "3.00", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+			"unit_price": map[string]any{"amount": "3.00", "currency": "usd", "per_unit_id": SeedUnitID},
 		},
 	})
 }
@@ -159,12 +159,14 @@ func awaitSalesReports(t *testing.T) {
 	})
 }
 
-func computedValue(t *testing.T, obj map[string]any, field string) string {
+// salesAmount returns a report's money figure, asserting it is a bare Money in dollars.
+func salesAmount(t *testing.T, obj map[string]any, field string) string {
 	t.Helper()
-	q := jsonObject(obj, field)
-	require.NotNil(t, q, "%s must be present: %v", field, obj)
-	assert.Equal(t, "computed_quantity", jsonField(q, "object"))
-	return jsonField(q, "value")
+	m := jsonObject(obj, field)
+	require.NotNil(t, m, "%s must be present: %v", field, obj)
+	assertValueShapeBare(t, m, field)
+	assert.Equal(t, "usd", jsonField(m, "currency"), "%s.currency", field)
+	return jsonField(m, "amount")
 }
 
 // --- Summary ---
@@ -179,17 +181,16 @@ func TestSalesAnalytics_ShippedSaleIsReportedExactly(t *testing.T) {
 	overall := jsonObject(summary, "overall")
 	assert.Equal(t, "sales_totals", jsonField(overall, "object"))
 	assertNilField(t, overall, "period_start")
-	assert.Equal(t, shippedSaleRevenue, computedValue(t, overall, "revenue"), "5 pr x $4.25 + 2 dz (12 pr) x $3.00")
-	assert.Equal(t, shippedSaleQuantity, computedValue(t, overall, "quantity_invoiced"), "quantities are summed in the base unit, pairs")
-	assert.NotEmpty(t, computedValue(t, overall, "cost"), "an admin sees cost")
+	assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, overall, "revenue"), "5 pr x $4.25 + 2 dz (12 pr) x $3.00")
+	assertDecimalEqual(t, shippedSaleQuantity, jsonField(overall, "quantity_invoiced"), "quantities are summed in the base unit, pairs")
+	assert.NotEmpty(t, salesAmount(t, overall, "cost"), "an admin sees cost")
 	assert.Equal(t, "1", jsonField(overall, "invoice_count"))
 	assert.Equal(t, "2", jsonField(overall, "line_count"))
-	assert.Equal(t, "57.25", jsonField(jsonObject(overall, "revenue"), "display_value"))
 
 	days := jsonListData(summary, "periods")
 	require.Len(t, days, 1, "one day had sales")
 	day := days[0].(map[string]any)
-	assert.Equal(t, shippedSaleRevenue, computedValue(t, day, "revenue"))
+	assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, day, "revenue"))
 	assertValidTimestamp(t, jsonField(day, "period_start"), "period_start")
 
 	assertNilField(t, summary, "comparison")
@@ -209,10 +210,10 @@ func TestSalesAnalytics_ComparisonPeriodIsReportedSeparately(t *testing.T) {
 
 	comparison := jsonObject(summary, "comparison")
 	require.NotNil(t, comparison, "a comparison period was asked for")
-	assert.Equal(t, "0", computedValue(t, comparison, "revenue"), "the customer bought nothing a year ago")
+	assertDecimalEqual(t, "0", salesAmount(t, comparison, "revenue"), "the customer bought nothing a year ago")
 	assert.Equal(t, "0", jsonField(comparison, "invoice_count"))
 	assert.Empty(t, jsonListData(summary, "comparison_periods"))
-	assert.Equal(t, shippedSaleRevenue, computedValue(t, jsonObject(summary, "overall"), "revenue"))
+	assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, jsonObject(summary, "overall"), "revenue"))
 }
 
 func TestSalesAnalytics_LocalDayBucketsFollowTheCallersOffset(t *testing.T) {
@@ -259,9 +260,8 @@ func TestSalesAnalytics_BreakdownByProductCarriesItemDetail(t *testing.T) {
 	assert.NotEmpty(t, jsonField(g, "description"))
 	assert.Equal(t, "pr", jsonField(g, "unit_abbreviation"))
 	totals := jsonObject(g, "totals")
-	assert.Equal(t, shippedSaleRevenue, computedValue(t, totals, "revenue"))
-	assert.Equal(t, shippedSaleQuantity, computedValue(t, totals, "quantity_invoiced"))
-	assert.Equal(t, "17 pr", jsonField(jsonObject(totals, "quantity_invoiced"), "display_value"))
+	assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, totals, "revenue"))
+	assertDecimalEqual(t, shippedSaleQuantity, jsonField(totals, "quantity_invoiced"))
 	assertNilField(t, g, "comparison_totals")
 }
 
@@ -280,8 +280,8 @@ func TestSalesAnalytics_BreakdownByEveryDimensionResponds(t *testing.T) {
 			groups := jsonArray(awaitSalesBreakdown(t, nil, body, 1), "data")
 			g := groups[0].(map[string]any)
 			assert.Equal(t, want, jsonField(g, "key"), groupBy)
-			assert.Equal(t, shippedSaleRevenue, computedValue(t, jsonObject(g, "totals"), "revenue"), groupBy)
-			assert.Equal(t, "0", computedValue(t, jsonObject(g, "comparison_totals"), "revenue"), groupBy)
+			assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, jsonObject(g, "totals"), "revenue"), groupBy)
+			assertDecimalEqual(t, "0", salesAmount(t, jsonObject(g, "comparison_totals"), "revenue"), groupBy)
 			continue
 		}
 		status, _, raw := putSales(t, salesBreakdownPath, nil, body)
@@ -332,7 +332,7 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 		var out []row
 		for _, g := range jsonArray(list, "data") {
 			m := g.(map[string]any)
-			rev, err := strconv.ParseFloat(computedValue(t, jsonObject(m, "totals"), "revenue"), 64)
+			rev, err := strconv.ParseFloat(salesAmount(t, jsonObject(m, "totals"), "revenue"), 64)
 			require.NoError(t, err)
 			out = append(out, row{jsonField(m, "key"), rev})
 		}
@@ -390,7 +390,7 @@ func TestSalesAnalytics_InvoicesListTheShippedInvoice(t *testing.T) {
 	assert.NotEmpty(t, jsonField(inv, "customer_name"))
 	assertValidTimestamp(t, jsonField(inv, "invoiced_at"), "invoiced_at")
 	assert.Equal(t, "1", jsonField(inv, "item_count"))
-	assert.Equal(t, shippedSaleRevenue, computedValue(t, inv, "revenue"))
+	assertDecimalEqual(t, shippedSaleRevenue, salesAmount(t, inv, "revenue"))
 }
 
 // A filtered invoice page is chosen from the filter's lines, a page per customer merged newest first;
@@ -561,7 +561,7 @@ func TestSalesAnalytics_VoidingTheShipmentRemovesTheSale(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	summary := awaitSalesSummary(t, sale.customerID, 0)
-	assert.Equal(t, "0", computedValue(t, jsonObject(summary, "overall"), "revenue"), "a voided shipment's invoice is no longer a sale")
+	assertDecimalEqual(t, "0", salesAmount(t, jsonObject(summary, "overall"), "revenue"), "a voided shipment's invoice is no longer a sale")
 }
 
 // --- Validation ---
@@ -607,7 +607,7 @@ func TestSalesAnalytics_UnknownCustomerYieldsNoSales(t *testing.T) {
 	status, summary, raw := putSales(t, salesSummaryPath, nil, saleFilter("ac_doesnotexist0"))
 	requireStatus(t, 200, status, raw)
 	assert.Equal(t, "0", jsonField(jsonObject(summary, "overall"), "invoice_count"))
-	assert.Equal(t, "0", computedValue(t, jsonObject(summary, "overall"), "revenue"))
+	assertDecimalEqual(t, "0", salesAmount(t, jsonObject(summary, "overall"), "revenue"))
 }
 
 // --- Export ---

@@ -47,7 +47,7 @@ type QuotedSalesOrderLine struct {
 	// The product priced.
 	Product *apiresource.Product `json:"product"`
 	// Calculated unit price.
-	UnitPrice *apiresource.ComputedRate `json:"unit_price"`
+	UnitPrice *apiresource.UnitPrice `json:"unit_price"`
 }
 
 var sampleQuoteSalesOrderPricesRequest = &QuoteSalesOrderPricesRequest{
@@ -73,7 +73,7 @@ var sampleQuoteSalesOrderPricesResponse = &QuoteSalesOrderPricesResponse{
 		{
 			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
 			Product:   apiresource.SampleProduct,
-			UnitPrice: apiresource.NewComputedRate("25.00", apiresource.SampleUnit, apiresource.SampleUnit),
+			UnitPrice: &apiresource.UnitPrice{Amount: "25.00", Currency: constants.CurrencyUSD, PerUnit: apiresource.SampleUnit},
 		},
 	}, apiresource.PageInfo{}),
 }

@@ -63,18 +63,6 @@ func init() {
 			},
 			// The quantity and the two rates already ride on the line; these exist so a caller can
 			// reach through them to the units they are counted in.
-			{
-				Key:         "quantity_ordered",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityOrderedRefFromPOLine,
-			},
-			{
-				Key:         "unit_price",
-				Target:      constants.ObjectTypeRate,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractUnitPriceRefFromPOLine,
-			},
 			// Carried inline: the order read fetched them with the lines when they were included.
 			{
 				Key:         "delivery_lines",
@@ -117,22 +105,6 @@ func populateItemOnPOLine(ctx context.Context, parent any, loaded map[string]any
 	if v, ok := loaded[id]; ok {
 		l.Item = v.(*apiresource.Item)
 	}
-}
-
-func extractQuantityOrderedRefFromPOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.PurchaseOrderLine)
-	if l.QuantityOrdered == nil {
-		return nil
-	}
-	return []any{l.QuantityOrdered}
-}
-
-func extractUnitPriceRefFromPOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.PurchaseOrderLine)
-	if l.UnitPrice == nil {
-		return nil
-	}
-	return []any{l.UnitPrice}
 }
 
 func extractSupplierIDFromPO(ctx context.Context, parent any) []string {

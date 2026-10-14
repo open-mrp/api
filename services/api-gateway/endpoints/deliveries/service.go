@@ -3,10 +3,12 @@ package deliveryep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -186,15 +188,9 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 	}
 
 	return apiresource.DeliveryLine{
-		ID:     l.Id,
-		Object: constants.ObjectTypeDeliveryLine,
-		Quantity: &apiresource.Quantity{
-			ID:           l.QuantityId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        l.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
-		},
+		ID:       l.Id,
+		Object:   constants.ObjectTypeDeliveryLine,
+		Quantity: apiresource.NewQuantity(l.QuantityValue, l.QuantityUnitId),
 		// Item, unit cost, location and lot are expandable: left nil here and stashed for the
 		// include resolver, so a line carries only what it is — a quantity and when it landed.
 		AcceptedAt: grpcutil.TimestampToTimePtr(l.AcceptedAt),
@@ -206,7 +202,7 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 
 // stashDeliveryLineMeta carries each expandable sub-object of a line from what the query returned, so the include resolver can reveal the ones a caller asked for.
 func stashDeliveryLineMeta(meta *include.LoadMeta, l *pb.DeliveryLineInfo, line *apiresource.DeliveryLine) {
-	if l == nil || line.Quantity == nil {
+	if l == nil {
 		return
 	}
 	if l.ItemId != nil && *l.ItemId != "" {
@@ -222,28 +218,10 @@ func stashDeliveryLineMeta(meta *include.LoadMeta, l *pb.DeliveryLineInfo, line 
 			LotNumber: l.GetLotNumber(),
 		})
 	}
-	// The unit the line's quantity is counted in, for `lines.quantity.unit`.
-	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", l.QuantityUnitId)
 	// The purchase order line the goods were ordered on, resolved through the PO line loader.
 	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "order_line_id", l.OrderLineId)
 
-	// The delivery query returns the rate in full, so `lines.unit_cost` is a complete rate rather
-	// than an id and a bare number. Its two units stay behind their own includes, the same as on
-	// any other rate.
-	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "unit_cost", &apiresource.Rate{
-		ID:     l.UnitCostId,
-		Object: constants.ObjectTypeRate,
-		Value:  apiresource.NormalizeRateValue(l.UnitCostValue),
-		DisplayValue: apiresource.FormatRateDisplay(
-			l.UnitCostValue,
-			l.UnitCostNumeratorUnitAbbreviation,
-			l.UnitCostDenominatorUnitAbbreviation,
-		),
-		CreatedAt: grpcutil.TimestampToTime(l.UnitCostCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(l.UnitCostUpdatedAt),
-	})
-	meta.Set(constants.ObjectTypeRate, l.UnitCostId, "numerator_unit_id", l.UnitCostNumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, l.UnitCostId, "denominator_unit_id", l.UnitCostDenominatorUnitId)
+	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "unit_cost", resourceloaders.UnitPriceFromProto(l.UnitCost))
 }
 
 func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.Delivery] {

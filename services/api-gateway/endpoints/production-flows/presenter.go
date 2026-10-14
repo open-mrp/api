@@ -2,46 +2,20 @@ package productionflowep
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"time"
 
-	quantityep "github.com/open-mrp/api/services/api-gateway/endpoints/quantities"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/include"
+
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func flowQuantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
-	if q == nil {
-		return nil
-	}
-	norm := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-		Unit:         quantityep.UnitFromQuantityInfo(q),
-	}
-}
-
-func flowRatePresenter(r *pb.RateInfo) *apiresource.Rate {
-	if r == nil {
-		return nil
-	}
-	return &apiresource.Rate{
-		ID:              r.Id,
-		Object:          constants.ObjectTypeRate,
-		Value:           r.Value,
-		NumeratorUnit:   unitFromRateInfo(r.NumeratorUnitId, r.NumeratorUnitName, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.NumeratorUnitRatioNumerator, r.NumeratorUnitRatioDenominator, r.NumeratorUnitOffsetNumerator, r.NumeratorUnitOffsetDenominator, r.NumeratorUnitCreatedAt, r.NumeratorUnitUpdatedAt),
-		DenominatorUnit: unitFromRateInfo(r.DenominatorUnitId, r.DenominatorUnitName, r.DenominatorUnitAbbreviation, r.DenominatorUnitType, r.DenominatorUnitRatioNumerator, r.DenominatorUnitRatioDenominator, r.DenominatorUnitOffsetNumerator, r.DenominatorUnitOffsetDenominator, r.DenominatorUnitCreatedAt, r.DenominatorUnitUpdatedAt),
-		DisplayValue:    apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
-		CreatedAt:       grpcutil.TimestampToTime(r.CreatedAt),
-		UpdatedAt:       grpcutil.TimestampToTime(r.UpdatedAt),
-	}
+	return resourceloaders.QuantityFromProto(q)
 }
 
 func flowProductionPresenter(ctx context.Context, p *pb.ProductionFlowProductionInfo, ts time.Time) *apiresource.ProductionFlowProduction {
@@ -113,9 +87,9 @@ func linkedStepFromProto(s *pb.ProductionFlowStepInfo) apiresource.ProductionSte
 		Notes:          notes,
 		LevelingFactor: s.LevelingFactor,
 		Allowances:     s.Allowances,
-		LaborRate:      flowRatePresenter(s.LaborRate),
-		LaborTime:      flowRatePresenter(s.LaborTime),
-		OverheadRate:   flowRatePresenter(s.OverheadRate),
+		LaborRate:      resourceloaders.UnitPriceFromProto(s.LaborRate),
+		LaborTime:      resourceloaders.RateFromProto(s.LaborTime),
+		OverheadRate:   resourceloaders.UnitPriceFromProto(s.OverheadRate),
 		CreatedAt:      grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:      grpcutil.TimestampToTime(s.UpdatedAt),
 	}
@@ -175,15 +149,15 @@ func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepIn
 		Notes:          notes,
 		LevelingFactor: s.LevelingFactor,
 		Allowances:     s.Allowances,
-		LaborRate:      flowRatePresenter(s.LaborRate),
-		LaborTime:      flowRatePresenter(s.LaborTime),
-		OverheadRate:   flowRatePresenter(s.OverheadRate),
+		LaborRate:      resourceloaders.UnitPriceFromProto(s.LaborRate),
+		LaborTime:      resourceloaders.RateFromProto(s.LaborTime),
+		OverheadRate:   resourceloaders.UnitPriceFromProto(s.OverheadRate),
 		CreatedAt:      grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:      grpcutil.TimestampToTime(s.UpdatedAt),
 	}
 }
 
-func ProductionFlowPresenter(ctx context.Context, steps []*pb.ProductionFlowStepInfo) *apiresource.ProductionFlow {
+func ProductionFlowPresenter(ctx context.Context, steps []*pb.ProductionFlowStepInfo) (*apiresource.ProductionFlow, *apierror.APIError) {
 	byID := make(map[string]*pb.ProductionFlowStepInfo, len(steps))
 	for _, s := range steps {
 		byID[s.Id] = s
@@ -193,151 +167,28 @@ func ProductionFlowPresenter(ctx context.Context, steps []*pb.ProductionFlowStep
 		flowSteps = append(flowSteps, productionFlowStepFromProto(ctx, s, byID))
 	}
 
-	enrichFlowUnits(ctx, flowSteps)
-
 	meta := include.GetLoadMeta(ctx)
+	if apiErr := fillFlowUnits(ctx, meta, flowSteps); apiErr != nil {
+		return nil, apiErr
+	}
 	meta.Set(constants.ObjectTypeProductionFlow, "singleton", "steps",
 		apiresource.NewList(flowSteps, apiresource.PageInfo{}))
 
 	return &apiresource.ProductionFlow{
 		Object: constants.ObjectTypeProductionFlow,
-	}
+	}, nil
 }
 
-func enrichFlowUnits(ctx context.Context, steps []apiresource.ProductionFlowStep) {
-	unitIDs := map[string]struct{}{}
-
-	collectRateUnits := func(r *apiresource.Rate) {
-		if r == nil {
-			return
-		}
-		if r.NumeratorUnit != nil {
-			unitIDs[r.NumeratorUnit.ID] = struct{}{}
-		}
-		if r.DenominatorUnit != nil {
-			unitIDs[r.DenominatorUnit.ID] = struct{}{}
-		}
-	}
-	collectQuantityUnit := func(q *apiresource.Quantity) {
-		if q != nil && q.Unit != nil {
-			unitIDs[q.Unit.ID] = struct{}{}
-		}
-	}
-
-	meta := include.GetLoadMeta(ctx)
+// fillFlowUnits loads the units of the values each step stashes for its includes: they are attached after the
+// response leaves the service, so they are filled here rather than with the response.
+func fillFlowUnits(ctx context.Context, meta *include.LoadMeta, steps []apiresource.ProductionFlowStep) *apierror.APIError {
+	values := []any{steps}
 	for _, s := range steps {
-		collectRateUnits(s.LaborRate)
-		collectRateUnits(s.LaborTime)
-		collectRateUnits(s.OverheadRate)
-
-		if prod, ok := meta.Get(constants.ObjectTypeProductionStep, s.ID, "production"); ok {
-			if p, ok := prod.(*apiresource.ProductionFlowProduction); ok && p != nil {
-				collectQuantityUnit(p.Quantity)
-			}
-		}
-		if consList, ok := meta.Get(constants.ObjectTypeProductionStep, s.ID, "consumptions"); ok {
-			if list, ok := consList.(*apiresource.List[apiresource.ProductionFlowConsumption]); ok {
-				for i := range list.Data {
-					collectQuantityUnit(list.Data[i].Quantity)
-					collectQuantityUnit(list.Data[i].WasteQuantity)
-				}
+		for _, key := range []string{"production", "consumptions", "in_steps", "out_steps"} {
+			if v, ok := meta.Get(constants.ObjectTypeProductionStep, s.ID, key); ok {
+				values = append(values, v)
 			}
 		}
 	}
-
-	if len(unitIDs) == 0 {
-		return
-	}
-
-	ids := make([]string, 0, len(unitIDs))
-	for id := range unitIDs {
-		ids = append(ids, id)
-	}
-
-	loaded, apiErr := resourceloaders.LoadUnits(ctx, ids)
-	if apiErr != nil || len(loaded) == 0 {
-		return
-	}
-
-	replaceUnit := func(u *apiresource.Unit) {
-		if u == nil {
-			return
-		}
-		if v, ok := loaded[u.ID]; ok {
-			if full, ok := v.(*apiresource.Unit); ok {
-				*u = *full
-			}
-		}
-	}
-	replaceRateUnits := func(r *apiresource.Rate) {
-		if r == nil {
-			return
-		}
-		replaceUnit(r.NumeratorUnit)
-		replaceUnit(r.DenominatorUnit)
-		r.DisplayValue = apiresource.FormatRateDisplayValue(
-			r.Value,
-			r.NumeratorUnit.Abbreviation,
-			string(r.NumeratorUnit.Type),
-			r.DenominatorUnit.Abbreviation,
-		)
-	}
-	replaceQuantityUnit := func(q *apiresource.Quantity) {
-		if q == nil || q.Unit == nil {
-			return
-		}
-		replaceUnit(q.Unit)
-		q.DisplayValue = apiresource.FormatDisplayValue(q.Value, q.Unit.Abbreviation, string(q.Unit.Type))
-	}
-
-	for i := range steps {
-		replaceRateUnits(steps[i].LaborRate)
-		replaceRateUnits(steps[i].LaborTime)
-		replaceRateUnits(steps[i].OverheadRate)
-
-		if prod, ok := meta.Get(constants.ObjectTypeProductionStep, steps[i].ID, "production"); ok {
-			if p, ok := prod.(*apiresource.ProductionFlowProduction); ok && p != nil {
-				replaceQuantityUnit(p.Quantity)
-			}
-		}
-		if consList, ok := meta.Get(constants.ObjectTypeProductionStep, steps[i].ID, "consumptions"); ok {
-			if list, ok := consList.(*apiresource.List[apiresource.ProductionFlowConsumption]); ok {
-				for j := range list.Data {
-					replaceQuantityUnit(list.Data[j].Quantity)
-					replaceQuantityUnit(list.Data[j].WasteQuantity)
-				}
-			}
-		}
-	}
-}
-
-// unitFromRateInfo builds a Unit from the real unit fields the production-flow
-// proto carries inline. It never fabricates identifiers; ratio/offset default to
-// the mathematical identity only when the proto omits them so the Unit stays valid.
-func unitFromRateInfo(id, name, abbreviation, unitType, ratioNum, ratioDen, offsetNum, offsetDen string, createdAt, updatedAt *timestamppb.Timestamp) *apiresource.Unit {
-	if ratioNum == "" {
-		ratioNum = "1"
-	}
-	if ratioDen == "" {
-		ratioDen = "1"
-	}
-	if offsetNum == "" {
-		offsetNum = "0"
-	}
-	if offsetDen == "" {
-		offsetDen = "1"
-	}
-	return &apiresource.Unit{
-		ID:                id,
-		Object:            constants.ObjectTypeUnit,
-		Name:              name,
-		Abbreviation:      abbreviation,
-		Type:              constants.UnitType(unitType),
-		RatioNumerator:    ratioNum,
-		RatioDenominator:  ratioDen,
-		OffsetNumerator:   offsetNum,
-		OffsetDenominator: offsetDen,
-		CreatedAt:         grpcutil.TimestampToTime(createdAt),
-		UpdatedAt:         grpcutil.TimestampToTime(updatedAt),
-	}
+	return resourceloaders.FillUnits(ctx, values...)
 }

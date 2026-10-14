@@ -214,31 +214,31 @@ func TestCovCatalogMaterials_UpdateExplicitNullNotesRejected(t *testing.T) {
 // --- Update-side rate currency-rule validation ---
 // ──────────────────────────────────────────────
 
-// TestCovCatalogMaterials_UpdateUnitCostRejectsNonCurrencyNumerator mirrors TestMaterials_Create_RejectsNonCurrencyNumeratorOnUnitCost but exercises the PATCH path, which was previously untested.
-func TestCovCatalogMaterials_UpdateUnitCostRejectsNonCurrencyNumerator(t *testing.T) {
+// TestCovCatalogMaterials_UpdateUnitCostRejectsUnsupportedCurrency exercises the PATCH path of the currency rule: only dollars are accepted.
+func TestCovCatalogMaterials_UpdateUnitCostRejectsUnsupportedCurrency(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, materialsPath, validMaterialBody(uniqueName("e2e-mat-updratebad")))
 	id := jsonField(created, "id")
 
 	status, body, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{
 		"unit_cost": map[string]any{
-			"value":               "0.50",
-			"numerator_unit_id":   nonCurrencyUnitID, // wrong: must be currency
-			"denominator_unit_id": nonCurrencyUnitID,
+			"amount":      "0.50",
+			"currency":    "eur", // wrong: only usd is supported
+			"per_unit_id": nonCurrencyUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
+	errObj := requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error")
+	assertErrorParam(t, errObj, "unit_cost.currency")
 }
 
 // ──────────────────────────────────────────────
 // --- Nonexistent FK validation (category_id / unit_id / attribute_ids) ---
 // ──────────────────────────────────────────────
 
-// A nonexistent category_id is reported against the field, the way the sibling foreign keys on this request (unit_price/unit_cost unit ids) are, rather than as a bare not-found for the material itself.
+// A nonexistent category_id is reported against the field, the way the sibling foreign keys on this request (unit_price/unit_cost per_unit_id) are, rather than as a bare not-found for the material itself.
 func TestCovCatalogMaterials_CreateNonexistentCategoryID(t *testing.T) {
 	t.Parallel()
 	body := validMaterialBody(uniqueName("e2e-mat-badcat"))

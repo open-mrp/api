@@ -121,7 +121,7 @@ type DeliveryLine struct {
 	// Copied from the originating purchase order line's unit price at the moment of stocking, so later price changes on the purchase order leave it untouched.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
+	UnitCost *UnitPrice `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Storage location the goods on this line were put away at.
 	//
 	// Not set on refused lines, or when the quantity was stocked without naming a location.
@@ -149,7 +149,7 @@ var SampleDeliveryLine = &DeliveryLine{
 	Object:     constants.ObjectTypeDeliveryLine,
 	Item:       SampleItem,
 	Quantity:   SampleQuantity,
-	UnitCost:   SampleRate,
+	UnitCost:   SampleUnitPrice,
 	Location:   SampleLocation,
 	Lot:        SampleLot,
 	AcceptedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),

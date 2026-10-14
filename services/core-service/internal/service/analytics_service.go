@@ -651,6 +651,7 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 	var items []domain.WeeksOfSalesItem
 	for _, plInfo := range plInfoRows {
 		orderRow := ordersByProductLine[plInfo.ID]
+		unitID := orderRow.UnitID
 		unitAbbrev := orderRow.UnitAbbreviation
 		unitType := orderRow.UnitType
 
@@ -673,9 +674,11 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 			ProductLineID:                        plInfo.ID,
 			ProductLineName:                      plInfo.Name,
 			QuantityOnHand:                       onHand,
+			QuantityOnHandUnitID:                 unitID,
 			QuantityOnHandUnitAbbreviation:       unitAbbrev,
 			QuantityOnHandUnitType:               unitType,
 			AverageSalesQuantity:                 avgSales,
+			AverageSalesQuantityUnitID:           unitID,
 			AverageSalesQuantityUnitAbbreviation: unitAbbrev,
 			AverageSalesQuantityUnitType:         unitType,
 			WeeksOfSales:                         wos,

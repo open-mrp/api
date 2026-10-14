@@ -9,6 +9,7 @@ import "core/core_identity_context.proto";
 import "core/core_items.proto";
 import "core/core_fuzzy_identifiers.proto";
 import "core/core_async.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message CreateConsumptionRequest {
@@ -130,6 +131,7 @@ message DeliveryLineInfo {
   // The purchase order line the goods were ordered on, reached through the receiving line this
   // delivery line was stocked against.
   string order_line_id = 25;
+  UnitPrice unit_cost = 26;
 }
 message LightScanningStationInfo {
   string id = 1;

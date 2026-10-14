@@ -238,8 +238,8 @@ func (*AnalyzeInventoryReceiptsResponse) SchemaExample() any {
 				OwnerAccount:            owner,
 				HolderAccount:           holder,
 				RemainingQuantity:       SampleQuantity,
-				WeightedAverageUnitCost: new(sampleAnalyticsRate()),
-				InventoryValue:          SampleQuantity,
+				WeightedAverageUnitCost: SampleUnitPrice,
+				InventoryValue:          SampleMoney,
 				OldestReceiptAt:         ptrTime(analyticsExampleTime()),
 				NewestReceiptAt:         ptrTime(analyticsExampleTime()),
 			},
@@ -249,13 +249,6 @@ func (*AnalyzeInventoryReceiptsResponse) SchemaExample() any {
 
 func ptrTime(t time.Time) *time.Time {
 	return &t
-}
-
-func sampleAnalyticsRate() AnalyticsRate {
-	return AnalyticsRate{
-		Numerator:   SampleQuantity,
-		Denominator: SampleQuantity,
-	}
 }
 
 func (*AnalyzeNewCustomersResponse) SchemaExample() any {
@@ -457,21 +450,13 @@ var (
 )
 
 var SampleCustomerPricingFinding = &CustomerPricingFinding{
-	ID:             SampleAccountPriceID + ":" + SampleCustomerID,
-	Object:         constants.ObjectTypeCustomerPricingFinding,
-	AccountPriceID: SampleAccountPriceID,
-	Reason:         constants.PricingFindingReasonBelowPeerMedianAndTargetMargin,
-	Origin:         constants.AccountPriceOriginDirect,
-	UnitPrice: &ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        "8.5000",
-		DisplayValue: "$8.50 / " + SampleUnitAbbreviation,
-	},
-	PeerMedianPrice: &ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        "12.5000",
-		DisplayValue: "$12.50 / " + SampleUnitAbbreviation,
-	},
+	ID:                      SampleAccountPriceID + ":" + SampleCustomerID,
+	Object:                  constants.ObjectTypeCustomerPricingFinding,
+	AccountPriceID:          SampleAccountPriceID,
+	Reason:                  constants.PricingFindingReasonBelowPeerMedianAndTargetMargin,
+	Origin:                  constants.AccountPriceOriginDirect,
+	UnitPrice:               &UnitPrice{Amount: "8.5000", Currency: constants.CurrencyUSD, PerUnit: SampleUnit},
+	PeerMedianPrice:         &UnitPrice{Amount: "12.5000", Currency: constants.CurrencyUSD, PerUnit: SampleUnit},
 	BelowPeerMedianFraction: &samplePricingBelowPeer,
 	GrossMargin:             &samplePricingGrossMargin,
 }
@@ -494,34 +479,14 @@ func (*AnalyzeCustomerPricingResponse) SchemaExample() any {
 }
 
 var SampleRealizedMarginFinding = &RealizedMarginFinding{
-	ID:     SampleCustomerID + ":" + SampleItemID,
-	Object: constants.ObjectTypeRealizedMarginFinding,
-	Reason: constants.PricingFindingReasonBelowTargetMargin,
-	QuantityInvoiced: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "1200",
-		DisplayValue: "1,200 " + SampleUnitAbbreviation,
-	},
-	Revenue: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "16200.00",
-		DisplayValue: "16,200.00",
-	},
-	Cost: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "12800.00",
-		DisplayValue: "12,800.00",
-	},
-	AverageUnitPrice: &ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        "13.5000",
-		DisplayValue: "$13.50 / " + SampleUnitAbbreviation,
-	},
-	PeerMedianPrice: &ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        "18.0000",
-		DisplayValue: "$18.00 / " + SampleUnitAbbreviation,
-	},
+	ID:                      SampleCustomerID + ":" + SampleItemID,
+	Object:                  constants.ObjectTypeRealizedMarginFinding,
+	Reason:                  constants.PricingFindingReasonBelowTargetMargin,
+	QuantityInvoiced:        &Quantity{Value: "1200", Unit: SampleUnit},
+	Revenue:                 &Money{Amount: "16200.00", Currency: constants.CurrencyUSD},
+	Cost:                    &Money{Amount: "12800.00", Currency: constants.CurrencyUSD},
+	AverageUnitPrice:        &UnitPrice{Amount: "13.5000", Currency: constants.CurrencyUSD, PerUnit: SampleUnit},
+	PeerMedianPrice:         &UnitPrice{Amount: "18.0000", Currency: constants.CurrencyUSD, PerUnit: SampleUnit},
 	LineCount:               14,
 	BelowPeerMedianFraction: &sampleRealizedBelowPeer,
 	GrossMargin:             &sampleRealizedGrossMargin,

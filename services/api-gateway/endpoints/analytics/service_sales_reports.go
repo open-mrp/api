@@ -3,7 +3,6 @@ package analyticsep
 import (
 	"context"
 
-	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -137,7 +136,7 @@ func (m *analyticsSvcImpl) AnalyzeSalesInvoices(ctx context.Context, req *Analyz
 			CustomerName: inv.GetCustomerName(),
 			InvoicedAt:   grpcutil.TimestampToTime(inv.GetInvoicedAt()),
 			ItemCount:    inv.GetItemCount(),
-			Revenue:      salesAmount(inv.GetInvoiced(), nil),
+			Revenue:      apiresource.NewMoney(inv.GetInvoiced()),
 		}
 	}
 	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
@@ -169,7 +168,7 @@ func (m *analyticsSvcImpl) ListNewCustomers(ctx context.Context, req *ListNewCus
 			CustomerGroupName: c.CustomerGroupName,
 			Location:          c.Location,
 			SalesRepName:      c.SalesRepName,
-			LifetimeRevenue:   salesAmount(c.GetTotalInvoiced(), nil),
+			LifetimeRevenue:   apiresource.NewMoney(c.GetTotalInvoiced()),
 			FirstOrderedAt:    grpcutil.TimestampToTime(c.GetFirstOrderedAt()),
 			AddedAt:           grpcutil.TimestampToTime(c.GetCustomerCreatedAt()),
 		}
@@ -237,13 +236,13 @@ func salesTotalsFromProto(t *pb.SalesTotalsProto, unitAbbr *string) *apiresource
 	}
 	out := &apiresource.SalesTotals{
 		Object:           constants.ObjectTypeSalesTotals,
-		Revenue:          salesAmount(t.GetInvoiced(), nil),
-		QuantityInvoiced: salesQuantity(t.GetQuantity(), unitAbbr),
+		Revenue:          apiresource.NewMoney(t.GetInvoiced()),
+		QuantityInvoiced: t.GetQuantity(),
 		InvoiceCount:     t.GetInvoiceCount(),
 		LineCount:        t.GetLineCount(),
 	}
 	if t.Cost != nil {
-		out.Cost = salesAmount(*t.Cost, nil)
+		out.Cost = apiresource.NewMoney(*t.Cost)
 	}
 	if t.PeriodStart != nil {
 		ps := grpcutil.TimestampToTime(t.PeriodStart)
@@ -258,53 +257,4 @@ func salesTotalsListFromProto(ts []*pb.SalesTotalsProto) *apiresource.List[apire
 		out[i] = *salesTotalsFromProto(t, nil)
 	}
 	return apiresource.NewList(out, apiresource.PageInfo{})
-}
-
-// salesAmount renders an exact money decimal as a computed quantity. value keeps every digit core-service summed, so a caller adding or comparing figures sees no rounding; display_value is rounded to cents with thousands separators.
-func salesAmount(value string, unitAbbr *string) *apiresource.ComputedQuantity {
-	return computedDecimal(value, unitAbbr, func(d decimal.Decimal) string { return d.StringFixed(2) })
-}
-
-// salesQuantity renders a quantity the same way, but displays only its significant digits: 17 pairs reads "17 pr", not "17.00 pr".
-func salesQuantity(value string, unitAbbr *string) *apiresource.ComputedQuantity {
-	return computedDecimal(value, unitAbbr, func(d decimal.Decimal) string { return d.Round(4).String() })
-}
-
-func computedDecimal(value string, unitAbbr *string, format func(decimal.Decimal) string) *apiresource.ComputedQuantity {
-	amount, err := decimal.NewFromString(value)
-	if err != nil {
-		amount, value = decimal.Zero, "0"
-	}
-	display := groupThousands(format(amount))
-	if unitAbbr != nil && *unitAbbr != "" {
-		display += " " + *unitAbbr
-	}
-	return &apiresource.ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        value,
-		DisplayValue: display,
-	}
-}
-
-// groupThousands inserts thousands separators into a plain fixed-point number.
-func groupThousands(fixed string) string {
-	sign := ""
-	if len(fixed) > 0 && fixed[0] == '-' {
-		sign, fixed = "-", fixed[1:]
-	}
-	intPart, frac := fixed, ""
-	for i := range len(fixed) {
-		if fixed[i] == '.' {
-			intPart, frac = fixed[:i], fixed[i:]
-			break
-		}
-	}
-	var b []byte
-	for i := range len(intPart) {
-		if i > 0 && (len(intPart)-i)%3 == 0 {
-			b = append(b, ',')
-		}
-		b = append(b, intPart[i])
-	}
-	return sign + string(b) + frac
 }

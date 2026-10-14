@@ -28,11 +28,11 @@ type CreateShippingTermRequest struct {
 	// Fixed shipping charge applied to orders.
 	//
 	// Used only when `type` is `flat_rate_freight`. A `flat_rate_freight` term created without a flat rate falls through to the carrier's quoted rate.
-	FlatRate field.Optional[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
+	FlatRate field.Optional[apirequest.MoneyInput] `json:"flat_rate,omitzero"`
 	// Order total a buyer must exceed for this term's free-shipping rules to apply.
 	//
 	// Above this total, freight is free for the service levels in `free_shipping_service_level_ids`.
-	MinimumOrderValue field.Optional[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
+	MinimumOrderValue field.Optional[apirequest.MoneyInput] `json:"minimum_order_value,omitzero"`
 	// IDs of the service levels that ship for free once an order exceeds `minimum_order_value`.
 	//
 	// Leave this empty to let every service level ship free above the threshold. The request is rejected if any ID is not a service level available to your account.
@@ -42,8 +42,8 @@ type CreateShippingTermRequest struct {
 var sampleCreateShippingTermRequest = &CreateShippingTermRequest{
 	Name:                        "Prepaid",
 	Type:                        constants.ShippingTermTypeFlatRateFreight,
-	FlatRate:                    field.Some(apirequest.QuantityInput{Value: "15.00", UnitID: apiresource.SampleUnitID}),
-	MinimumOrderValue:           field.Some(apirequest.QuantityInput{Value: "500.00", UnitID: apiresource.SampleUnitID}),
+	FlatRate:                    field.Some(apirequest.MoneyInput{Amount: "15.00", Currency: "usd"}),
+	MinimumOrderValue:           field.Some(apirequest.MoneyInput{Amount: "500.00", Currency: "usd"}),
 	FreeShippingServiceLevelIDs: []string{apiresource.SampleServiceLevelID},
 }
 
@@ -70,7 +70,7 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).CreateShippingTerm

@@ -2093,6 +2093,7 @@ type SalesTargetProto struct {
 	AmountUnitOffsetDenominator string `protobuf:"bytes,17,opt,name=amount_unit_offset_denominator,json=amountUnitOffsetDenominator,proto3" json:"amount_unit_offset_denominator,omitempty"`
 	AmountUnitCreatedAt         string `protobuf:"bytes,18,opt,name=amount_unit_created_at,json=amountUnitCreatedAt,proto3" json:"amount_unit_created_at,omitempty"`
 	AmountUnitUpdatedAt         string `protobuf:"bytes,19,opt,name=amount_unit_updated_at,json=amountUnitUpdatedAt,proto3" json:"amount_unit_updated_at,omitempty"`
+	Amount                      *Money `protobuf:"bytes,20,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -2260,6 +2261,13 @@ func (x *SalesTargetProto) GetAmountUnitUpdatedAt() string {
 	return ""
 }
 
+func (x *SalesTargetProto) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
 type ListSalesTargetsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SalesRepId    string                 `protobuf:"bytes,1,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
@@ -2385,8 +2393,7 @@ type CreateSalesTargetRequest struct {
 	SalesRepId    string                 `protobuf:"bytes,1,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
 	StartDate     string                 `protobuf:"bytes,2,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
 	EndDate       string                 `protobuf:"bytes,3,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
-	AmountValue   string                 `protobuf:"bytes,4,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
-	AmountUnitId  string                 `protobuf:"bytes,5,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
+	Amount        *Money                 `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2442,18 +2449,11 @@ func (x *CreateSalesTargetRequest) GetEndDate() string {
 	return ""
 }
 
-func (x *CreateSalesTargetRequest) GetAmountValue() string {
+func (x *CreateSalesTargetRequest) GetAmount() *Money {
 	if x != nil {
-		return x.AmountValue
+		return x.Amount
 	}
-	return ""
-}
-
-func (x *CreateSalesTargetRequest) GetAmountUnitId() string {
-	if x != nil {
-		return x.AmountUnitId
-	}
-	return ""
+	return nil
 }
 
 type CreateSalesTargetResponse struct {
@@ -2506,8 +2506,7 @@ type UpsertSalesTargetRequest struct {
 	SalesRepId    string                 `protobuf:"bytes,2,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
 	StartDate     string                 `protobuf:"bytes,3,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
 	EndDate       string                 `protobuf:"bytes,4,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
-	AmountValue   string                 `protobuf:"bytes,5,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
-	AmountUnitId  string                 `protobuf:"bytes,6,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
+	Amount        *Money                 `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2570,18 +2569,11 @@ func (x *UpsertSalesTargetRequest) GetEndDate() string {
 	return ""
 }
 
-func (x *UpsertSalesTargetRequest) GetAmountValue() string {
+func (x *UpsertSalesTargetRequest) GetAmount() *Money {
 	if x != nil {
-		return x.AmountValue
+		return x.Amount
 	}
-	return ""
-}
-
-func (x *UpsertSalesTargetRequest) GetAmountUnitId() string {
-	if x != nil {
-		return x.AmountUnitId
-	}
-	return ""
+	return nil
 }
 
 type UpsertSalesTargetResponse struct {
@@ -5894,7 +5886,7 @@ var File_core_core_account_groups_proto protoreflect.FileDescriptor
 
 const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\"\xf0\x03\n" +
+	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\x1a\x17core/value_shapes.proto\"\xf0\x03\n" +
 	"\x10AccountGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
@@ -6100,7 +6092,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	" UpdateAccountUserPasswordRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12-\n" +
 	"\x12requester_password\x18\x02 \x01(\tR\x11requesterPassword\x12!\n" +
-	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"\xc1\x06\n" +
+	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"\xe6\x06\n" +
 	"\x10SalesTargetProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -6126,7 +6118,8 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x1camount_unit_offset_numerator\x18\x10 \x01(\tR\x19amountUnitOffsetNumerator\x12C\n" +
 	"\x1eamount_unit_offset_denominator\x18\x11 \x01(\tR\x1bamountUnitOffsetDenominator\x123\n" +
 	"\x16amount_unit_created_at\x18\x12 \x01(\tR\x13amountUnitCreatedAt\x123\n" +
-	"\x16amount_unit_updated_at\x18\x13 \x01(\tR\x13amountUnitUpdatedAt\"\x8e\x01\n" +
+	"\x16amount_unit_updated_at\x18\x13 \x01(\tR\x13amountUnitUpdatedAt\x12#\n" +
+	"\x06amount\x18\x14 \x01(\v2\v.core.MoneyR\x06amount\"\x8e\x01\n" +
 	"\x17ListSalesTargetsRequest\x12 \n" +
 	"\fsales_rep_id\x18\x01 \x01(\tR\n" +
 	"salesRepId\x12\x19\n" +
@@ -6136,26 +6129,24 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x06_query\"m\n" +
 	"\x18ListSalesTargetsResponse\x12;\n" +
 	"\rsales_targets\x18\x01 \x03(\v2\x16.core.SalesTargetProtoR\fsalesTargets\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05total\"\xbf\x01\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xa7\x01\n" +
 	"\x18CreateSalesTargetRequest\x12 \n" +
 	"\fsales_rep_id\x18\x01 \x01(\tR\n" +
 	"salesRepId\x12\x1d\n" +
 	"\n" +
 	"start_date\x18\x02 \x01(\tR\tstartDate\x12\x19\n" +
-	"\bend_date\x18\x03 \x01(\tR\aendDate\x12!\n" +
-	"\famount_value\x18\x04 \x01(\tR\vamountValue\x12$\n" +
-	"\x0eamount_unit_id\x18\x05 \x01(\tR\famountUnitId\"V\n" +
+	"\bend_date\x18\x03 \x01(\tR\aendDate\x12#\n" +
+	"\x06amount\x18\x06 \x01(\v2\v.core.MoneyR\x06amountJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"V\n" +
 	"\x19CreateSalesTargetResponse\x129\n" +
-	"\fsales_target\x18\x01 \x01(\v2\x16.core.SalesTargetProtoR\vsalesTarget\"\xdc\x01\n" +
+	"\fsales_target\x18\x01 \x01(\v2\x16.core.SalesTargetProtoR\vsalesTarget\"\xc4\x01\n" +
 	"\x18UpsertSalesTargetRequest\x12\x1b\n" +
 	"\ttarget_id\x18\x01 \x01(\tR\btargetId\x12 \n" +
 	"\fsales_rep_id\x18\x02 \x01(\tR\n" +
 	"salesRepId\x12\x1d\n" +
 	"\n" +
 	"start_date\x18\x03 \x01(\tR\tstartDate\x12\x19\n" +
-	"\bend_date\x18\x04 \x01(\tR\aendDate\x12!\n" +
-	"\famount_value\x18\x05 \x01(\tR\vamountValue\x12$\n" +
-	"\x0eamount_unit_id\x18\x06 \x01(\tR\famountUnitId\"V\n" +
+	"\bend_date\x18\x04 \x01(\tR\aendDate\x12#\n" +
+	"\x06amount\x18\a \x01(\v2\v.core.MoneyR\x06amountJ\x04\b\x05\x10\x06J\x04\b\x06\x10\a\"V\n" +
 	"\x19UpsertSalesTargetResponse\x129\n" +
 	"\fsales_target\x18\x01 \x01(\v2\x16.core.SalesTargetProtoR\vsalesTarget\"\xdd\x03\n" +
 	"\x10AccountPriceInfo\x12\x0e\n" +
@@ -6531,7 +6522,8 @@ var file_core_core_account_groups_proto_goTypes = []any{
 	(*PageInfo)(nil),                                           // 99: core.PageInfo
 	(*StringPatch)(nil),                                        // 100: core.StringPatch
 	(*Int32Patch)(nil),                                         // 101: core.Int32Patch
-	(*JobInfo)(nil),                                            // 102: core.JobInfo
+	(*Money)(nil),                                              // 102: core.Money
+	(*JobInfo)(nil),                                            // 103: core.JobInfo
 }
 var file_core_core_account_groups_proto_depIdxs = []int32{
 	98,  // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -6564,69 +6556,72 @@ var file_core_core_account_groups_proto_depIdxs = []int32{
 	24,  // 27: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
 	12,  // 28: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
 	12,  // 29: core.BatchGetAccountUsersByIDsResponse.account_users:type_name -> core.AccountUserDetail
-	33,  // 30: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
-	33,  // 31: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	33,  // 32: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	41,  // 33: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
-	42,  // 34: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
-	43,  // 35: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
-	45,  // 36: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
-	46,  // 37: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
-	98,  // 38: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 39: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 40: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 41: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 42: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 43: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	44,  // 44: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
-	44,  // 45: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
-	98,  // 46: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 47: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 48: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 49: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 50: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 51: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 52: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 53: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	102, // 54: core.ExportPriceListResponse.job:type_name -> core.JobInfo
-	40,  // 55: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
-	99,  // 56: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
-	40,  // 57: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	40,  // 58: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	56,  // 59: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
-	56,  // 60: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
-	40,  // 61: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	60,  // 62: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	98,  // 63: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 64: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	59,  // 65: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	99,  // 66: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	59,  // 67: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	59,  // 68: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	59,  // 69: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	59,  // 70: core.BatchGetAccountGroupProductLineAccessByIDsResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	60,  // 71: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	98,  // 72: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 73: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	72,  // 74: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	99,  // 75: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	72,  // 76: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	72,  // 77: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	72,  // 78: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	72,  // 79: core.BatchGetCustomerProductLineAccessByIDsResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	98,  // 80: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 81: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84,  // 82: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	99,  // 83: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
-	84,  // 84: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	84,  // 85: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	84,  // 86: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	84,  // 87: core.BatchGetAccountIntegrationsByIDsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	88,  // [88:88] is the sub-list for method output_type
-	88,  // [88:88] is the sub-list for method input_type
-	88,  // [88:88] is the sub-list for extension type_name
-	88,  // [88:88] is the sub-list for extension extendee
-	0,   // [0:88] is the sub-list for field type_name
+	102, // 30: core.SalesTargetProto.amount:type_name -> core.Money
+	33,  // 31: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
+	102, // 32: core.CreateSalesTargetRequest.amount:type_name -> core.Money
+	33,  // 33: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	102, // 34: core.UpsertSalesTargetRequest.amount:type_name -> core.Money
+	33,  // 35: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	41,  // 36: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
+	42,  // 37: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
+	43,  // 38: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
+	45,  // 39: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
+	46,  // 40: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
+	98,  // 41: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 42: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 43: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 44: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 45: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 46: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	44,  // 47: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
+	44,  // 48: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
+	98,  // 49: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 50: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 51: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 52: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 53: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 54: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 55: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 56: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	103, // 57: core.ExportPriceListResponse.job:type_name -> core.JobInfo
+	40,  // 58: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
+	99,  // 59: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
+	40,  // 60: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	40,  // 61: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	56,  // 62: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
+	56,  // 63: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
+	40,  // 64: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	60,  // 65: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	98,  // 66: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 67: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	59,  // 68: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
+	99,  // 69: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	59,  // 70: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	59,  // 71: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	59,  // 72: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	59,  // 73: core.BatchGetAccountGroupProductLineAccessByIDsResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
+	60,  // 74: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	98,  // 75: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 76: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	72,  // 77: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
+	99,  // 78: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	72,  // 79: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	72,  // 80: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	72,  // 81: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	72,  // 82: core.BatchGetCustomerProductLineAccessByIDsResponse.items:type_name -> core.CustomerProductLineAccessInfo
+	98,  // 83: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 84: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84,  // 85: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	99,  // 86: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
+	84,  // 87: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	84,  // 88: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	84,  // 89: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	84,  // 90: core.BatchGetAccountIntegrationsByIDsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	91,  // [91:91] is the sub-list for method output_type
+	91,  // [91:91] is the sub-list for method input_type
+	91,  // [91:91] is the sub-list for extension type_name
+	91,  // [91:91] is the sub-list for extension extendee
+	0,   // [0:91] is the sub-list for field type_name
 }
 
 func init() { file_core_core_account_groups_proto_init() }
@@ -6637,6 +6632,7 @@ func file_core_core_account_groups_proto_init() {
 	file_core_core_patch_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_async_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_account_groups_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[5].OneofWrappers = []any{}

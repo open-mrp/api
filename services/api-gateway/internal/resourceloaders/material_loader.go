@@ -64,11 +64,5 @@ func materialQuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
 	if normalized == "0" {
 		return nil
 	}
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        normalized,
-		DisplayValue: apiresource.FormatDisplayValue(normalized, q.UnitAbbreviation, q.UnitType),
-		// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-	}
+	return apiresource.NewQuantity(normalized, q.UnitId)
 }

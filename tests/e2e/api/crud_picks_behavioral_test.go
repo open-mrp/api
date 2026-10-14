@@ -316,7 +316,7 @@ func TestPicks_Pack_CreatesCasesWithResolvedUnits(t *testing.T) {
 	caseID := jsonField(row, "id")
 
 	status, body, err = apiClient.GetListRaw(shippingCasesPath+"/"+caseID,
-		url.Values{"include": {"freight_weight.unit", "freight_amount.unit"}})
+		url.Values{"include": {"freight_weight", "freight_amount"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
@@ -326,9 +326,10 @@ func TestPicks_Pack_CreatesCasesWithResolvedUnits(t *testing.T) {
 	assert.Equal(t, "lb", jsonField(weightUnit, "abbreviation"),
 		"freight is weighed in pounds — the mass base unit is grams, so this must not be resolved as a base unit")
 
-	amountUnit := jsonObject(jsonObject(got, "freight_amount"), "unit")
-	require.NotNil(t, amountUnit, "the freight amount's unit must resolve")
-	assert.Equal(t, "$", jsonField(amountUnit, "abbreviation"))
+	amount := jsonObject(got, "freight_amount")
+	require.NotNil(t, amount, "the freight amount must resolve")
+	assert.NotEmpty(t, jsonField(amount, "amount"))
+	assert.Equal(t, "usd", jsonField(amount, "currency"))
 }
 
 // A short pick is normal and an over-pick is a real floor event, so the quantity is stored as

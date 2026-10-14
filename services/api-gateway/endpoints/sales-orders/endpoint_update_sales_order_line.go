@@ -30,11 +30,11 @@ type UpdateSalesOrderLineRequest struct {
 	// Price charged per unit.
 	//
 	// Rounded to the nearest cent.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero" validate:"omitempty"`
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero" validate:"omitempty"`
 	// Internal cost per unit, used to derive line profitability.
 	//
 	// Rounded to the nearest cent.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty" sensitive:"cost"`
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" validate:"omitempty" sensitive:"cost"`
 	// Key-value pairs to store on the line, merged into the ones it already has.
 	//
 	// Keys left out are kept, so `{}` changes nothing. Setting a key to `null` removes it; an empty string is stored as a value. Sending `metadata: null` removes every key. An object holds at most 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are up to 500 characters.
@@ -46,10 +46,10 @@ var sampleUpdateSalesOrderLineRequest = &UpdateSalesOrderLineRequest{
 		Value:  "20",
 		UnitID: apiresource.SampleUnitID,
 	}),
-	UnitPrice: field.Some(apirequest.RateInput{
-		Value:             "30.00",
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
+	UnitPrice: field.Some(apirequest.UnitPriceInput{
+		Amount:    "30.00",
+		Currency:  "usd",
+		PerUnitID: apiresource.SampleUnitID,
 	}),
 }
 

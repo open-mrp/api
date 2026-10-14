@@ -43,10 +43,7 @@ func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apier
 
 		// The lot is a Quantity built inline and stashed for the default_lot SubField, the same way a customer's credit_limit is. This loader backs both retrieve and list, so a lot mapped only in the presenter would read as null everywhere.
 		if pl.DefaultLot != nil {
-			meta.Set(constants.ObjectTypeProductLine, pl.Id, "default_lot", buildProductLineDefaultLot(pl.DefaultLot))
-			if pl.DefaultLot.UnitId != "" {
-				meta.Set(constants.ObjectTypeQuantity, pl.DefaultLot.Id, "unit_id", pl.DefaultLot.UnitId)
-			}
+			meta.Set(constants.ObjectTypeProductLine, pl.Id, "default_lot", apiresource.NewQuantity(apiresource.NormalizeQuantityValue(pl.DefaultLot.Value, ""), pl.DefaultLot.UnitId))
 		}
 
 		// Pre-build the UnitGroup from the proto and stash it for the unit_group SubField's Populate. This preserves backward compat: requesting ?include[]=unit_group returns the full UnitGroup with BaseUnit and AssociatedUnits inline.
@@ -57,16 +54,6 @@ func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apier
 		}
 	}
 	return out, nil
-}
-
-// buildProductLineDefaultLot renders the lot as a Quantity. Unit is left nil: the unit id is stashed so LoadUnits fetches the real Unit on ?include=default_lot.unit rather than this fabricating one.
-func buildProductLineDefaultLot(lot *pb.ProductLineDefaultLotInfo) *apiresource.Quantity {
-	return &apiresource.Quantity{
-		ID:           lot.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        apiresource.NormalizeQuantityValue(lot.Value, ""),
-		DisplayValue: apiresource.FormatDisplayValue(lot.Value, "", ""),
-	}
 }
 
 func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {

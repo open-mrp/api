@@ -47,12 +47,12 @@ type CreateMaterialRequest struct {
 	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
 	// Initial selling price per unit.
 	//
-	// `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit. It becomes the `unit_value` rate on the material's item; the material update endpoint cannot change it afterwards.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// `per_unit_id` must not be a currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero price per the category's base unit. It becomes the `unit_value` price on the material's item; the material update endpoint cannot change it afterwards.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Initial cost per unit.
 	//
-	// Follows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	// Follows the same `per_unit_id` rule as `unit_price`. When omitted, the cost is initialized to a zero price per the category's base unit.
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// IDs of existing attributes to link to the material at creation time.
 	//
 	// Each attribute's property must be one the material's category carries; an attribute from any other property fails the whole request.
@@ -68,8 +68,8 @@ var sampleCreateMaterialRequest = &CreateMaterialRequest{
 	CategoryID:   apiresource.SampleItemCategoryID,
 	OrderPoint:   field.Some(QuantityInputRequest{Value: "100.00", UnitID: apiresource.SampleUnitID}),
 	LeadTime:     field.Some(QuantityInputRequest{Value: "7.00", UnitID: apiresource.SampleUnitID}),
-	UnitPrice:    field.Some(apirequest.RateInput{Value: "12.50", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
-	UnitCost:     field.Some(apirequest.RateInput{Value: "8.25", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitPrice:    field.Some(apirequest.UnitPriceInput{Amount: "12.50", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
+	UnitCost:     field.Some(apirequest.UnitPriceInput{Amount: "8.25", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	AttributeIDs: []string{apiresource.SampleAttributeID},
 }
 

@@ -42,8 +42,13 @@ func readMovedItem(t *testing.T, itemID string) map[string]any {
 	return parseJSON(body)
 }
 
-func rateDenominator(item map[string]any, rate string) string {
-	return jsonField(jsonObject(jsonObject(item, rate), "denominator_unit"), "id")
+// pricePerUnit is the unit an item price is per; the price itself is always in dollars.
+func pricePerUnit(item map[string]any, price string) string {
+	return jsonField(jsonObject(jsonObject(item, price), "per_unit"), "id")
+}
+
+func priceAmount(item map[string]any, price string) string {
+	return jsonField(jsonObject(item, price), "amount")
 }
 
 // requireItemCategoryMoveAudited waits for the item's own update event and checks it records the move to categoryID.
@@ -60,7 +65,7 @@ func TestPartUpdate_MovesTheCategoryUnderPartsUpdateAlone(t *testing.T) {
 	categoryID := productCategoryInEaches(t)
 	partID, itemID := partInSocks(t)
 	before := readMovedItem(t, itemID)
-	require.NotEqual(t, "each", rateDenominator(before, "unit_value"), "the socks category does not count in eaches")
+	require.NotEqual(t, "each", pricePerUnit(before, "unit_value"), "the socks category does not count in eaches")
 
 	writer := customRoleClient(t, "parts:update")
 	notes := uniqueName("moved with its notes")
@@ -78,8 +83,9 @@ func TestPartUpdate_MovesTheCategoryUnderPartsUpdateAlone(t *testing.T) {
 	after := readMovedItem(t, itemID)
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
 	for _, rate := range []string{"unit_value", "unit_cost"} {
-		assert.Equal(t, "each", rateDenominator(after, rate), "%s moves onto the new base unit", rate)
-		assertDecimalEqual(t, jsonField(jsonObject(before, rate), "value"), jsonField(jsonObject(after, rate), "value"), "%s keeps its figure", rate)
+		assert.Equal(t, "each", pricePerUnit(after, rate), "%s moves onto the new base unit", rate)
+		assertDecimalEqual(t, priceAmount(before, rate), priceAmount(after, rate), "%s keeps its figure", rate)
+		assert.Equal(t, "usd", jsonField(jsonObject(after, rate), "currency"), rate)
 	}
 
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
@@ -99,16 +105,16 @@ func TestMaterialUpdate_MovesTheCategoryUnderMaterialsUpdateAlone(t *testing.T) 
 	writer := customRoleClient(t, "materials:update")
 	status, body, err := writer.Patch(materialsPath+"/"+materialID, map[string]any{
 		"category_id": categoryID,
-		"unit_cost":   map[string]any{"value": "0.40", "numerator_unit_id": "dollar", "denominator_unit_id": "each"},
+		"unit_cost":   map[string]any{"amount": "0.40", "currency": "usd", "per_unit_id": "each"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 
 	after := readMovedItem(t, itemID)
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	assertDecimalEqual(t, "0.40", jsonField(jsonObject(after, "unit_cost"), "value"), "the cost sent with the move")
-	assert.Equal(t, "each", rateDenominator(after, "unit_cost"))
-	assert.Equal(t, "each", rateDenominator(after, "unit_value"), "the price the request left alone moves onto the new base unit")
+	assertDecimalEqual(t, "0.40", priceAmount(after, "unit_cost"), "the cost sent with the move")
+	assert.Equal(t, "each", pricePerUnit(after, "unit_cost"))
+	assert.Equal(t, "each", pricePerUnit(after, "unit_value"), "the price the request left alone moves onto the new base unit")
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {categoryID}}))
 
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
@@ -123,16 +129,16 @@ func TestProductUpdate_MovesTheCategoryUnderItemsUpdate(t *testing.T) {
 	writer := customRoleClient(t, "items:update")
 	status, body, err := writer.Patch(productsPath+"/"+productID, map[string]any{
 		"category_id": categoryID,
-		"unit_price":  map[string]any{"value": "3.25", "numerator_unit_id": "dollar", "denominator_unit_id": "each"},
+		"unit_price":  map[string]any{"amount": "3.25", "currency": "usd", "per_unit_id": "each"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 
 	after := readMovedItem(t, itemID)
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	assertDecimalEqual(t, "3.25", jsonField(jsonObject(after, "unit_value"), "value"), "the price sent with the move")
-	assert.Equal(t, "each", rateDenominator(after, "unit_value"))
-	assert.Equal(t, "each", rateDenominator(after, "unit_cost"))
+	assertDecimalEqual(t, "3.25", priceAmount(after, "unit_value"), "the price sent with the move")
+	assert.Equal(t, "each", pricePerUnit(after, "unit_value"))
+	assert.Equal(t, "each", pricePerUnit(after, "unit_cost"))
 
 	// A product's price is its item's value, so the move and the price are both audited on the item; a product update event is published only when a product field changes.
 	requireItemCategoryMoveAudited(t, itemID, categoryID)

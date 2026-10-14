@@ -98,9 +98,9 @@ func TestInventories_RejectsTheQuantityUnitInclude(t *testing.T) {
 	assert.Equal(t, 400, status, "quantity.unit is not offered on this endpoint: %s", string(body))
 }
 
-// The unit still reaches the caller, formatted into display_value, which is the only place it is
-// available here.
-func TestInventories_QuantityCarriesItsUnitInTheDisplayValue(t *testing.T) {
+// The on-hand figure is a plain value shape: a value and its unit, with no id, object or
+// preformatted display string of its own.
+func TestInventories_QuantityIsAValueWithItsUnit(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"q": {SeedItemSKU}})
@@ -110,9 +110,14 @@ func TestInventories_QuantityCarriesItsUnitInTheDisplayValue(t *testing.T) {
 
 	quantity := jsonObject(parseJSON(list.Data[0]), "quantity")
 	require.NotNil(t, quantity)
-	assertObjectField(t, quantity, "computed_quantity")
-	assert.NotEmpty(t, jsonField(quantity, "display_value"),
-		"display_value carries the abbreviation the raw value lacks: %v", quantity)
+	assert.NotEmpty(t, jsonField(quantity, "value"))
+	unit := jsonObject(quantity, "unit")
+	require.NotNil(t, unit, "the unit travels with the figure: %v", quantity)
+	assert.NotEmpty(t, jsonField(unit, "id"))
+	assert.NotEmpty(t, jsonField(unit, "abbreviation"))
+	for _, gone := range []string{"id", "object", "display_value"} {
+		assert.NotContains(t, quantity, gone, "a quantity value shape has no %s", gone)
+	}
 }
 
 // --- Ledger-less items ---

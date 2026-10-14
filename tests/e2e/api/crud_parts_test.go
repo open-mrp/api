@@ -480,7 +480,7 @@ func TestParts_IncludeUnitValue(t *testing.T) {
 	_, ok := item["unit_value"]
 	assert.True(t, ok, "item.unit_value key should be present with ?include=item.unit_value")
 	if uv := jsonObject(item, "unit_value"); uv != nil {
-		assert.Equal(t, "rate", jsonField(uv, "object"))
+		assertPartUnitPriceShape(t, uv, "item.unit_value")
 	}
 }
 
@@ -498,7 +498,7 @@ func TestParts_IncludeUnitCost(t *testing.T) {
 	_, ok := item["unit_cost"]
 	assert.True(t, ok, "item.unit_cost key should be present with ?include=item.unit_cost")
 	if uc := jsonObject(item, "unit_cost"); uc != nil {
-		assert.Equal(t, "rate", jsonField(uc, "object"))
+		assertPartUnitPriceShape(t, uc, "item.unit_cost")
 	}
 }
 
@@ -516,8 +516,21 @@ func TestParts_IncludeBurnRate(t *testing.T) {
 	_, ok := item["burn_rate"]
 	assert.True(t, ok, "item.burn_rate key should be present with ?include=item.burn_rate")
 	if br := jsonObject(item, "burn_rate"); br != nil {
-		assert.Equal(t, "rate", jsonField(br, "object"))
+		assert.NotEmpty(t, jsonField(br, "value"), "item.burn_rate.value")
+		assert.Equal(t, "unit", jsonField(jsonObject(br, "unit"), "object"), "item.burn_rate.unit")
+		assert.Equal(t, "unit", jsonField(jsonObject(br, "per_unit"), "object"), "item.burn_rate.per_unit")
+		assert.NotContains(t, br, "object", "a rate is a value, not a stored row")
 	}
+}
+
+// assertPartUnitPriceShape checks a unit price carries an amount in dollars per a unit, and no row identity.
+func assertPartUnitPriceShape(t *testing.T, price map[string]any, field string) {
+	t.Helper()
+	assert.NotEmpty(t, jsonField(price, "amount"), "%s.amount", field)
+	assert.Equal(t, "usd", jsonField(price, "currency"), "%s.currency", field)
+	assert.Equal(t, "unit", jsonField(jsonObject(price, "per_unit"), "object"), "%s.per_unit", field)
+	assert.NotContains(t, price, "id", "%s is a value, not a stored row", field)
+	assert.NotContains(t, price, "object", "%s is a value, not a stored row", field)
 }
 
 func TestParts_IncludeAttributes(t *testing.T) {

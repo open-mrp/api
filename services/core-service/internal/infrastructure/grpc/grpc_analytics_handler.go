@@ -407,6 +407,7 @@ func (h *gRPCHandler) AnalyzeMaterials(ctx context.Context, req *pb.AnalyzeMater
 			QuantityInInventory: &pb.BaseQuantity{
 				Measure: e.QuantityInInventory.Measure,
 				Unit: &pb.BaseQuantityUnitProto{
+					Id:           e.QuantityInInventory.UnitID,
 					Name:         e.QuantityInInventory.UnitName,
 					Abbreviation: e.QuantityInInventory.UnitAbbreviation,
 					Type:         e.QuantityInInventory.UnitType,
@@ -415,6 +416,7 @@ func (h *gRPCHandler) AnalyzeMaterials(ctx context.Context, req *pb.AnalyzeMater
 			QuantityInDemand: &pb.BaseQuantity{
 				Measure: e.QuantityInDemand.Measure,
 				Unit: &pb.BaseQuantityUnitProto{
+					Id:           e.QuantityInDemand.UnitID,
 					Name:         e.QuantityInDemand.UnitName,
 					Abbreviation: e.QuantityInDemand.UnitAbbreviation,
 					Type:         e.QuantityInDemand.UnitType,
@@ -432,6 +434,7 @@ func (h *gRPCHandler) AnalyzeMaterials(ctx context.Context, req *pb.AnalyzeMater
 			entry.OrderPoint = &pb.BaseQuantity{
 				Measure: e.OrderPoint.Measure,
 				Unit: &pb.BaseQuantityUnitProto{
+					Id:           e.OrderPoint.UnitID,
 					Name:         e.OrderPoint.UnitName,
 					Abbreviation: e.OrderPoint.UnitAbbreviation,
 					Type:         e.OrderPoint.UnitType,
@@ -443,6 +446,7 @@ func (h *gRPCHandler) AnalyzeMaterials(ctx context.Context, req *pb.AnalyzeMater
 			entry.LeadTime = &pb.BaseQuantity{
 				Measure: e.LeadTime.Measure,
 				Unit: &pb.BaseQuantityUnitProto{
+					Id:           e.LeadTime.UnitID,
 					Name:         e.LeadTime.UnitName,
 					Abbreviation: e.LeadTime.UnitAbbreviation,
 					Type:         e.LeadTime.UnitType,
@@ -509,6 +513,7 @@ func (h *gRPCHandler) AnalyzeInventoryReceipts(ctx context.Context, req *pb.Anal
 			RemainingQuantity: &pb.BaseQuantity{
 				Measure: e.RemainingQuantity,
 				Unit: &pb.BaseQuantityUnitProto{
+					Id:           e.UnitID,
 					Name:         e.UnitName,
 					Abbreviation: e.Unit,
 					Type:         e.UnitType,
@@ -526,6 +531,7 @@ func (h *gRPCHandler) AnalyzeInventoryReceipts(ctx context.Context, req *pb.Anal
 				Denominator: &pb.BaseQuantity{
 					Measure: 1,
 					Unit: &pb.BaseQuantityUnitProto{
+						Id:           e.UnitID,
 						Name:         e.CostDenominatorUnitName,
 						Abbreviation: e.CostDenominatorUnitAbbreviation,
 						Type:         e.CostDenominatorUnitType,
@@ -790,9 +796,11 @@ func (h *gRPCHandler) AnalyzeWeeksOfSales(ctx context.Context, req *pb.AnalyzeWe
 			ProductLineName:                      item.ProductLineName,
 			QuantityOnHand:                       item.QuantityOnHand,
 			QuantityOnHandUnitAbbreviation:       item.QuantityOnHandUnitAbbreviation,
+			QuantityOnHandUnitId:                 item.QuantityOnHandUnitID,
 			QuantityOnHandUnitType:               item.QuantityOnHandUnitType,
 			AverageSalesQuantity:                 item.AverageSalesQuantity,
 			AverageSalesQuantityUnitAbbreviation: item.AverageSalesQuantityUnitAbbreviation,
+			AverageSalesQuantityUnitId:           item.AverageSalesQuantityUnitID,
 			AverageSalesQuantityUnitType:         item.AverageSalesQuantityUnitType,
 			WeeksOfSales:                         item.WeeksOfSales,
 		}
@@ -1013,6 +1021,7 @@ func (h *gRPCHandler) AnalyzeRealizedMargins(ctx context.Context, req *pb.Analyz
 			ItemId:                  f.ItemID,
 			ProductLineId:           f.ProductLineID,
 			UnitAbbreviation:        f.UnitAbbreviation,
+			UnitId:                  f.UnitID,
 			QuantityInvoiced:        f.QuantityInvoiced,
 			Revenue:                 f.Revenue,
 			Cost:                    f.Cost,

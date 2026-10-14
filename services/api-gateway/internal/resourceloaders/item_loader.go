@@ -62,13 +62,13 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 		}
 
 		if item.UnitValue != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "unit_value", rateFromProto(item.UnitValue))
+			meta.Set(constants.ObjectTypeItem, item.Id, "unit_value", UnitPriceFromProto(item.UnitValue))
 		}
 		if item.UnitCost != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "unit_cost", rateFromProto(item.UnitCost))
+			meta.Set(constants.ObjectTypeItem, item.Id, "unit_cost", UnitPriceFromProto(item.UnitCost))
 		}
 		if item.BurnRate != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "burn_rate", rateFromProto(item.BurnRate))
+			meta.Set(constants.ObjectTypeItem, item.Id, "burn_rate", RateFromProto(item.BurnRate))
 		}
 
 		attrs := make([]apiresource.Attribute, 0, len(item.Attributes))
@@ -126,45 +126,3 @@ func itemFromProto(i *pb.ItemInfo) *apiresource.Item {
 	}
 }
 
-func rateFromProto(r *pb.RateInfo) *apiresource.Rate {
-	normalizedValue := apiresource.NormalizeRateValue(r.Value)
-	return &apiresource.Rate{
-		ID:     r.Id,
-		Object: constants.ObjectTypeRate,
-		Value:  normalizedValue,
-		NumeratorUnit: &apiresource.Unit{
-			ID:                r.NumeratorUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              r.NumeratorUnitName,
-			Abbreviation:      r.NumeratorUnitAbbreviation,
-			Type:              constants.UnitType(r.NumeratorUnitType),
-			RatioNumerator:    r.NumeratorUnitRatioNumerator,
-			RatioDenominator:  r.NumeratorUnitRatioDenominator,
-			OffsetNumerator:   r.NumeratorUnitOffsetNumerator,
-			OffsetDenominator: r.NumeratorUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitUpdatedAt),
-		},
-		DenominatorUnit: &apiresource.Unit{
-			ID:                r.DenominatorUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              r.DenominatorUnitName,
-			Abbreviation:      r.DenominatorUnitAbbreviation,
-			Type:              constants.UnitType(r.DenominatorUnitType),
-			RatioNumerator:    r.DenominatorUnitRatioNumerator,
-			RatioDenominator:  r.DenominatorUnitRatioDenominator,
-			OffsetNumerator:   r.DenominatorUnitOffsetNumerator,
-			OffsetDenominator: r.DenominatorUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitUpdatedAt),
-		},
-		DisplayValue: apiresource.FormatRateDisplayValue(
-			normalizedValue,
-			r.NumeratorUnitAbbreviation,
-			r.NumeratorUnitType,
-			r.DenominatorUnitAbbreviation,
-		),
-		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
-	}
-}

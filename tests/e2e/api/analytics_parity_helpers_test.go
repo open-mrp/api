@@ -41,7 +41,7 @@ func parityLine(productID, qty, unitID, pricePerPair string) map[string]any {
 	return map[string]any{
 		"product_id": productID,
 		"quantity":   map[string]any{"value": qty, "unit_id": unitID},
-		"unit_price": map[string]any{"value": pricePerPair, "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+		"unit_price": map[string]any{"amount": pricePerPair, "currency": "usd", "per_unit_id": SeedUnitID},
 	}
 }
 

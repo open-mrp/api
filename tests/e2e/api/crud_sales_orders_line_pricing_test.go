@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// saleLineUnitPrices returns the unit_price value of every line on the order whose product
+// saleLineUnitPrices returns the unit_price amount of every line on the order whose product
 // is SeedProductID.
 func saleLineUnitPrices(t *testing.T, orderID string) []float64 {
 	t.Helper()
@@ -28,8 +28,8 @@ func saleLineUnitPrices(t *testing.T, orderID string) []float64 {
 			continue
 		}
 		up := jsonObject(line, "unit_price")
-		require.NotNil(t, up, "a sale line carries a unit price")
-		v, err := strconv.ParseFloat(jsonField(up, "value"), 64)
+		assertUnitPriceHydrated(t, up, "lines.unit_price")
+		v, err := strconv.ParseFloat(jsonField(up, "amount"), 64)
 		require.NoError(t, err)
 		prices = append(prices, v)
 	}
@@ -78,9 +78,9 @@ func TestSalesOrder_AddLine_WithExplicitPrice_HonoredAsOverride(t *testing.T) {
 		"product_sku": "E2E-OVERRIDE-PRICE",
 		"quantity":    map[string]any{"value": "1", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
-			"value":               "3.33",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "3.33",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}
 	status, body, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", lineBody, newIdempotencyKey())

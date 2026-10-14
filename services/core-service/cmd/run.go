@@ -673,12 +673,6 @@ func Run(
 		TxManager:       txManager,
 	})
 
-	measureSvc := service.NewMeasureSvc(&service.MeasureSvcConfig{
-		Repos:           repoFactory,
-		MediatorFactory: mediatorFactory,
-		TxManager:       txManager,
-	})
-
 	roleSvc := service.NewRoleSvc(&service.RoleSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1032,7 +1026,6 @@ func Run(
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
-	grpc.RegisterMeasureService(srv, measureSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)
 	grpc.RegisterUserService(srv, userSvc)
 	grpc.RegisterLocationService(srv, locationSvc)

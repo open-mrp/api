@@ -3,12 +3,13 @@ package materialep
 import (
 	"testing"
 
-	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestMaterialPresenter_PopulatesQuantityUnits(t *testing.T) {
+// The presenter names each quantity's unit; the gateway loads the unit in full before the response is written.
+func TestMaterialPresenter_QuantitiesNameTheirUnits(t *testing.T) {
 	t.Parallel()
 
 	now := timestamppb.Now()
@@ -39,6 +40,21 @@ func TestMaterialPresenter_PopulatesQuantityUnits(t *testing.T) {
 	}
 
 	result := MaterialPresenter(info)
-	resourcetest.ValidateResourceStruct(t, "Material", result)
-	resourcetest.ValidatePopulatedExpandableFields(t, "Material", result)
+	for name, tc := range map[string]struct {
+		got        *apiresource.Quantity
+		value, uid string
+	}{
+		"order_point": {result.OrderPoint, "10", "un_01kg"},
+		"lead_time":   {result.LeadTime, "5", "un_01day"},
+	} {
+		if tc.got == nil {
+			t.Fatalf("%s is nil", name)
+		}
+		if tc.got.Value != tc.value {
+			t.Errorf("%s value = %q, want %q", name, tc.got.Value, tc.value)
+		}
+		if !apiresource.IsUnitStub(tc.got.Unit) || tc.got.Unit.ID != tc.uid {
+			t.Errorf("%s unit = %+v, want a stub for %s", name, tc.got.Unit, tc.uid)
+		}
+	}
 }

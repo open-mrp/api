@@ -24,6 +24,7 @@ type realizedLine struct {
 	ProductLineID   string
 	ProductLine     string
 	UnitAbbr        string
+	UnitID          string
 
 	Quantity decimal.Decimal
 	Revenue  decimal.Decimal
@@ -41,6 +42,7 @@ type realizedAggregate struct {
 	ProductLineID   string
 	ProductLine     string
 	UnitAbbr        string
+	UnitID          string
 
 	Quantity decimal.Decimal
 	Revenue  decimal.Decimal
@@ -85,6 +87,7 @@ func aggregateRealizedLines(lines []realizedLine) []realizedAggregate {
 				ProductLineID:   line.ProductLineID,
 				ProductLine:     line.ProductLine,
 				UnitAbbr:        line.UnitAbbr,
+				UnitID:          line.UnitID,
 			}
 			byKey[key] = aggregate
 			order = append(order, key)

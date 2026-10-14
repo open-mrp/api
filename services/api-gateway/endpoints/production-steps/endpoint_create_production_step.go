@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -34,30 +36,20 @@ type CreateProductionStepRequest struct {
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
 	// Department responsible for this step.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero" validate:"omitempty"`
-	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
+	// Cost of labor for this step, as money per unit of time (e.g. `25.00` per `hr`).
 	//
-	// The numerator unit must be a currency and the denominator must not be.
-	LaborRate CreateRateInput `json:"labor_rate" validate:"required" sensitive:"cost"`
-	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
-	LaborTime CreateRateInput `json:"labor_time" validate:"required"`
-	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
+	// `per_unit_id` must not be a currency unit.
+	LaborRate apirequest.UnitPriceInput `json:"labor_rate" validate:"required" sensitive:"cost"`
+	// Labor duration for this step, as time per unit of output (e.g. `1.5` `hr` per `ea`).
+	LaborTime apirequest.RateInput `json:"labor_time" validate:"required"`
+	// Overhead cost for this step, as money per unit of time (e.g. `15.00` per `hr`).
 	//
-	// The numerator unit must be a currency and the denominator must not be.
-	OverheadRate CreateRateInput `json:"overhead_rate" validate:"required" sensitive:"cost"`
+	// `per_unit_id` must not be a currency unit.
+	OverheadRate apirequest.UnitPriceInput `json:"overhead_rate" validate:"required" sensitive:"cost"`
 	// The item and quantity this step produces.
 	Production CreateProductionInput `json:"production" validate:"required"`
 	// Materials consumed by the step.
 	Consumptions []CreateConsumptionInput `json:"consumptions,omitzero" validate:"dive"`
-}
-
-// A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).
-type CreateRateInput struct {
-	// Value as a decimal string.
-	Value string `json:"value" validate:"required"`
-	// Unit of the rate's numerator.
-	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
-	// Unit of the rate's denominator.
-	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
 }
 
 // The item and quantity a production step produces.
@@ -92,21 +84,9 @@ var sampleCreateProductionStepRequest = &CreateProductionStepRequest{
 	LevelingFactor:    "1.10",
 	Allowances:        "0.05",
 	ScanningStationID: field.Some(sampleCreateProductionStepScanningStationID),
-	LaborRate: CreateRateInput{
-		Value:             "25.00",
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
-	},
-	LaborTime: CreateRateInput{
-		Value:             "1.5",
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
-	},
-	OverheadRate: CreateRateInput{
-		Value:             "15.00",
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
-	},
+	LaborRate:         apirequest.UnitPriceInput{Amount: "25.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID},
+	LaborTime:         apirequest.RateInput{Value: "1.5", UnitID: apiresource.SampleUnitID, PerUnitID: apiresource.SampleUnitID},
+	OverheadRate:      apirequest.UnitPriceInput{Amount: "15.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID},
 	Production: CreateProductionInput{
 		ItemID:         apiresource.SampleItemID,
 		QuantityValue:  "100",

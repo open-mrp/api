@@ -72,6 +72,7 @@ type ShippingCaseInfo struct {
 	FreightWeightUnitOffsetDenominator string                 `protobuf:"bytes,35,opt,name=freight_weight_unit_offset_denominator,json=freightWeightUnitOffsetDenominator,proto3" json:"freight_weight_unit_offset_denominator,omitempty"`
 	FreightWeightUnitCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,36,opt,name=freight_weight_unit_created_at,json=freightWeightUnitCreatedAt,proto3" json:"freight_weight_unit_created_at,omitempty"`
 	FreightWeightUnitUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,37,opt,name=freight_weight_unit_updated_at,json=freightWeightUnitUpdatedAt,proto3" json:"freight_weight_unit_updated_at,omitempty"`
+	FreightAmount                      *Money                 `protobuf:"bytes,43,opt,name=freight_amount,json=freightAmount,proto3" json:"freight_amount,omitempty"`
 	unknownFields                      protoimpl.UnknownFields
 	sizeCache                          protoimpl.SizeCache
 }
@@ -400,6 +401,13 @@ func (x *ShippingCaseInfo) GetFreightWeightUnitUpdatedAt() *timestamppb.Timestam
 	return nil
 }
 
+func (x *ShippingCaseInfo) GetFreightAmount() *Money {
+	if x != nil {
+		return x.FreightAmount
+	}
+	return nil
+}
+
 // Get shipping case
 type GetShippingCaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -494,10 +502,9 @@ type UpdateShippingCaseRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	TrackingNumber      *string                `protobuf:"bytes,2,opt,name=tracking_number,json=trackingNumber,proto3,oneof" json:"tracking_number,omitempty"`
-	FreightAmountValue  *string                `protobuf:"bytes,3,opt,name=freight_amount_value,json=freightAmountValue,proto3,oneof" json:"freight_amount_value,omitempty"`
-	FreightAmountUnitId *string                `protobuf:"bytes,4,opt,name=freight_amount_unit_id,json=freightAmountUnitId,proto3,oneof" json:"freight_amount_unit_id,omitempty"`
 	FreightWeightValue  *string                `protobuf:"bytes,5,opt,name=freight_weight_value,json=freightWeightValue,proto3,oneof" json:"freight_weight_value,omitempty"`
 	FreightWeightUnitId *string                `protobuf:"bytes,6,opt,name=freight_weight_unit_id,json=freightWeightUnitId,proto3,oneof" json:"freight_weight_unit_id,omitempty"`
+	FreightAmount       *Money                 `protobuf:"bytes,7,opt,name=freight_amount,json=freightAmount,proto3" json:"freight_amount,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -546,20 +553,6 @@ func (x *UpdateShippingCaseRequest) GetTrackingNumber() string {
 	return ""
 }
 
-func (x *UpdateShippingCaseRequest) GetFreightAmountValue() string {
-	if x != nil && x.FreightAmountValue != nil {
-		return *x.FreightAmountValue
-	}
-	return ""
-}
-
-func (x *UpdateShippingCaseRequest) GetFreightAmountUnitId() string {
-	if x != nil && x.FreightAmountUnitId != nil {
-		return *x.FreightAmountUnitId
-	}
-	return ""
-}
-
 func (x *UpdateShippingCaseRequest) GetFreightWeightValue() string {
 	if x != nil && x.FreightWeightValue != nil {
 		return *x.FreightWeightValue
@@ -572,6 +565,13 @@ func (x *UpdateShippingCaseRequest) GetFreightWeightUnitId() string {
 		return *x.FreightWeightUnitId
 	}
 	return ""
+}
+
+func (x *UpdateShippingCaseRequest) GetFreightAmount() *Money {
+	if x != nil {
+		return x.FreightAmount
+	}
+	return nil
 }
 
 type UpdateShippingCaseResponse struct {
@@ -889,7 +889,7 @@ var File_core_core_shipping_case_proto protoreflect.FileDescriptor
 
 const file_core_core_shipping_case_proto_rawDesc = "" +
 	"\n" +
-	"\x1dcore/core_shipping_case.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x16\n" +
+	"\x1dcore/core_shipping_case.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17core/value_shapes.proto\"\xfc\x16\n" +
 	"\x10ShippingCaseInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -939,7 +939,8 @@ const file_core_core_shipping_case_proto_rawDesc = "" +
 	"$freight_weight_unit_offset_numerator\x18\" \x01(\tR freightWeightUnitOffsetNumerator\x12R\n" +
 	"&freight_weight_unit_offset_denominator\x18# \x01(\tR\"freightWeightUnitOffsetDenominator\x12^\n" +
 	"\x1efreight_weight_unit_created_at\x18$ \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightWeightUnitCreatedAt\x12^\n" +
-	"\x1efreight_weight_unit_updated_at\x18% \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightWeightUnitUpdatedAtB\a\n" +
+	"\x1efreight_weight_unit_updated_at\x18% \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightWeightUnitUpdatedAt\x122\n" +
+	"\x0efreight_amount\x18+ \x01(\v2\v.core.MoneyR\rfreightAmountB\a\n" +
 	"\x05_ssccB\x12\n" +
 	"\x10_tracking_numberB\r\n" +
 	"\v_shipped_atB\x12\n" +
@@ -954,19 +955,16 @@ const file_core_core_shipping_case_proto_rawDesc = "" +
 	"\x16GetShippingCaseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
 	"\x17GetShippingCaseResponse\x12;\n" +
-	"\rshipping_case\x18\x01 \x01(\v2\x16.core.ShippingCaseInfoR\fshippingCase\"\xb7\x03\n" +
+	"\rshipping_case\x18\x01 \x01(\v2\x16.core.ShippingCaseInfoR\fshippingCase\"\xd2\x02\n" +
 	"\x19UpdateShippingCaseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x0ftracking_number\x18\x02 \x01(\tH\x00R\x0etrackingNumber\x88\x01\x01\x125\n" +
-	"\x14freight_amount_value\x18\x03 \x01(\tH\x01R\x12freightAmountValue\x88\x01\x01\x128\n" +
-	"\x16freight_amount_unit_id\x18\x04 \x01(\tH\x02R\x13freightAmountUnitId\x88\x01\x01\x125\n" +
-	"\x14freight_weight_value\x18\x05 \x01(\tH\x03R\x12freightWeightValue\x88\x01\x01\x128\n" +
-	"\x16freight_weight_unit_id\x18\x06 \x01(\tH\x04R\x13freightWeightUnitId\x88\x01\x01B\x12\n" +
+	"\x14freight_weight_value\x18\x05 \x01(\tH\x01R\x12freightWeightValue\x88\x01\x01\x128\n" +
+	"\x16freight_weight_unit_id\x18\x06 \x01(\tH\x02R\x13freightWeightUnitId\x88\x01\x01\x122\n" +
+	"\x0efreight_amount\x18\a \x01(\v2\v.core.MoneyR\rfreightAmountB\x12\n" +
 	"\x10_tracking_numberB\x17\n" +
-	"\x15_freight_amount_valueB\x19\n" +
-	"\x17_freight_amount_unit_idB\x17\n" +
 	"\x15_freight_weight_valueB\x19\n" +
-	"\x17_freight_weight_unit_id\"Y\n" +
+	"\x17_freight_weight_unit_idJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05\"Y\n" +
 	"\x1aUpdateShippingCaseResponse\x12;\n" +
 	"\rshipping_case\x18\x01 \x01(\v2\x16.core.ShippingCaseInfoR\fshippingCase\"z\n" +
 	"&AdminUpdateShippingCaseTrackingRequest\x12\x0e\n" +
@@ -1016,6 +1014,7 @@ var file_core_core_shipping_case_proto_goTypes = []any{
 	(*GetShippingCaseLabelRequest)(nil),             // 9: core.GetShippingCaseLabelRequest
 	(*GetShippingCaseLabelResponse)(nil),            // 10: core.GetShippingCaseLabelResponse
 	(*timestamppb.Timestamp)(nil),                   // 11: google.protobuf.Timestamp
+	(*Money)(nil),                                   // 12: core.Money
 }
 var file_core_core_shipping_case_proto_depIdxs = []int32{
 	11, // 0: core.ShippingCaseInfo.shipped_at:type_name -> google.protobuf.Timestamp
@@ -1029,24 +1028,26 @@ var file_core_core_shipping_case_proto_depIdxs = []int32{
 	11, // 8: core.ShippingCaseInfo.freight_amount_unit_updated_at:type_name -> google.protobuf.Timestamp
 	11, // 9: core.ShippingCaseInfo.freight_weight_unit_created_at:type_name -> google.protobuf.Timestamp
 	11, // 10: core.ShippingCaseInfo.freight_weight_unit_updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: core.GetShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
-	0,  // 12: core.UpdateShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
-	0,  // 13: core.AdminUpdateShippingCaseTrackingResponse.shipping_case:type_name -> core.ShippingCaseInfo
-	1,  // 14: core.CoreShippingCaseService.GetShippingCase:input_type -> core.GetShippingCaseRequest
-	3,  // 15: core.CoreShippingCaseService.UpdateShippingCase:input_type -> core.UpdateShippingCaseRequest
-	5,  // 16: core.CoreShippingCaseService.AdminUpdateShippingCaseTracking:input_type -> core.AdminUpdateShippingCaseTrackingRequest
-	7,  // 17: core.CoreShippingCaseService.DeleteShippingCase:input_type -> core.DeleteShippingCaseRequest
-	9,  // 18: core.CoreShippingCaseService.GetShippingCaseLabel:input_type -> core.GetShippingCaseLabelRequest
-	2,  // 19: core.CoreShippingCaseService.GetShippingCase:output_type -> core.GetShippingCaseResponse
-	4,  // 20: core.CoreShippingCaseService.UpdateShippingCase:output_type -> core.UpdateShippingCaseResponse
-	6,  // 21: core.CoreShippingCaseService.AdminUpdateShippingCaseTracking:output_type -> core.AdminUpdateShippingCaseTrackingResponse
-	8,  // 22: core.CoreShippingCaseService.DeleteShippingCase:output_type -> core.DeleteShippingCaseResponse
-	10, // 23: core.CoreShippingCaseService.GetShippingCaseLabel:output_type -> core.GetShippingCaseLabelResponse
-	19, // [19:24] is the sub-list for method output_type
-	14, // [14:19] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	12, // 11: core.ShippingCaseInfo.freight_amount:type_name -> core.Money
+	0,  // 12: core.GetShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
+	12, // 13: core.UpdateShippingCaseRequest.freight_amount:type_name -> core.Money
+	0,  // 14: core.UpdateShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
+	0,  // 15: core.AdminUpdateShippingCaseTrackingResponse.shipping_case:type_name -> core.ShippingCaseInfo
+	1,  // 16: core.CoreShippingCaseService.GetShippingCase:input_type -> core.GetShippingCaseRequest
+	3,  // 17: core.CoreShippingCaseService.UpdateShippingCase:input_type -> core.UpdateShippingCaseRequest
+	5,  // 18: core.CoreShippingCaseService.AdminUpdateShippingCaseTracking:input_type -> core.AdminUpdateShippingCaseTrackingRequest
+	7,  // 19: core.CoreShippingCaseService.DeleteShippingCase:input_type -> core.DeleteShippingCaseRequest
+	9,  // 20: core.CoreShippingCaseService.GetShippingCaseLabel:input_type -> core.GetShippingCaseLabelRequest
+	2,  // 21: core.CoreShippingCaseService.GetShippingCase:output_type -> core.GetShippingCaseResponse
+	4,  // 22: core.CoreShippingCaseService.UpdateShippingCase:output_type -> core.UpdateShippingCaseResponse
+	6,  // 23: core.CoreShippingCaseService.AdminUpdateShippingCaseTracking:output_type -> core.AdminUpdateShippingCaseTrackingResponse
+	8,  // 24: core.CoreShippingCaseService.DeleteShippingCase:output_type -> core.DeleteShippingCaseResponse
+	10, // 25: core.CoreShippingCaseService.GetShippingCaseLabel:output_type -> core.GetShippingCaseLabelResponse
+	21, // [21:26] is the sub-list for method output_type
+	16, // [16:21] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_core_core_shipping_case_proto_init() }
@@ -1054,6 +1055,7 @@ func file_core_core_shipping_case_proto_init() {
 	if File_core_core_shipping_case_proto != nil {
 		return
 	}
+	file_core_value_shapes_proto_init()
 	file_core_core_shipping_case_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_shipping_case_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_shipping_case_proto_msgTypes[5].OneofWrappers = []any{}

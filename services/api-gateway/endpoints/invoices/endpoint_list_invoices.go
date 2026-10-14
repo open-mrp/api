@@ -82,22 +82,7 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoice,
 			Fields: []string{
-				"customer",
-				"order",
-				"shipment",
-				"related.sales_order",
-				"related.shipment",
-				"billing_address",
-				"payment_term",
-				"lines",
-				"lines.order_line",
-				"lines.order_line.product",
-				"lines.item",
-				"lines.quantity",
-				"lines.quantity.unit",
-				"lines.unit_price",
-				"lines.unit_price.numerator_unit",
-				"lines.unit_price.denominator_unit",
+				"customer", "order", "shipment", "related.sales_order", "related.shipment", "billing_address", "payment_term", "lines", "lines.order_line", "lines.order_line.product", "lines.item",
 			},
 		}),
 	})

@@ -54,6 +54,15 @@ func awaitNewCustomer(t *testing.T, customerID string) map[string]any {
 	return row
 }
 
+// analyticsMoneyAmount returns the amount of a money field, which analytics report in dollars.
+func analyticsMoneyAmount(t *testing.T, obj map[string]any, field string) string {
+	t.Helper()
+	money := jsonObject(obj, field)
+	require.NotNil(t, money, "%s must be present: %v", field, obj)
+	assert.Equal(t, "usd", jsonField(money, "currency"), "%s.currency", field)
+	return jsonField(money, "amount")
+}
+
 func TestNewCustomers_ListsACustomerOnceItHasOrdered(t *testing.T) {
 	t.Parallel()
 	addedBefore := time.Now().UTC().Add(-time.Second)
@@ -65,7 +74,7 @@ func TestNewCustomers_ListsACustomerOnceItHasOrdered(t *testing.T) {
 	assert.NotEmpty(t, jsonField(row, "name"))
 	assert.NotEmpty(t, jsonField(row, "customer_group_name"), "the customer's group")
 	assertNilField(t, row, "sales_rep_name")
-	assert.True(t, decimal.RequireFromString(shippedSaleRevenue).Equal(decimal.RequireFromString(computedValue(t, row, "lifetime_revenue"))),
+	assert.True(t, decimal.RequireFromString(shippedSaleRevenue).Equal(decimal.RequireFromString(analyticsMoneyAmount(t, row, "lifetime_revenue"))),
 		"lifetime revenue is the whole sale: %v", row["lifetime_revenue"])
 	first := mustTime(t, jsonField(row, "first_ordered_at"))
 	added := mustTime(t, jsonField(row, "added_at"))
@@ -206,12 +215,12 @@ func TestSalesAnalytics_AnInvoiceSpanningTwoProductLinesCountsOnce(t *testing.T)
 		{
 			"product_id": SeedProductID,
 			"quantity":   map[string]any{"value": "5", "unit_id": SeedUnitID},
-			"unit_price": map[string]any{"value": "4.25", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+			"unit_price": map[string]any{"amount": "4.25", "currency": "usd", "per_unit_id": SeedUnitID},
 		},
 		{
 			"product_id": otherProductID,
 			"quantity":   map[string]any{"value": "3", "unit_id": "each"},
-			"unit_price": map[string]any{"value": "2.00", "numerator_unit_id": dollarUnitID, "denominator_unit_id": "each"},
+			"unit_price": map[string]any{"amount": "2.00", "currency": "usd", "per_unit_id": "each"},
 		},
 	})
 
@@ -240,11 +249,11 @@ func TestSalesAnalytics_AnInvoiceSpanningTwoProductLinesCountsOnce(t *testing.T)
 		return nil
 	})
 
-	assert.True(t, decimal.RequireFromString("27.25").Equal(decimal.RequireFromString(computedValue(t, both, "revenue"))), "revenue: %v", both["revenue"])
+	assert.True(t, decimal.RequireFromString("27.25").Equal(decimal.RequireFromString(analyticsMoneyAmount(t, both, "revenue"))), "revenue: %v", both["revenue"])
 	assert.Equal(t, "1", jsonField(both, "invoice_count"), "one invoice, though it spans both lines")
 	socks, other := breakdown(SeedProductLineID), breakdown(otherLineID)
 	assert.Equal(t, "1", jsonField(socks, "invoice_count"))
 	assert.Equal(t, "1", jsonField(other, "invoice_count"))
-	assert.True(t, decimal.RequireFromString("21.25").Equal(decimal.RequireFromString(computedValue(t, socks, "revenue"))))
-	assert.True(t, decimal.RequireFromString("6").Equal(decimal.RequireFromString(computedValue(t, other, "revenue"))))
+	assert.True(t, decimal.RequireFromString("21.25").Equal(decimal.RequireFromString(analyticsMoneyAmount(t, socks, "revenue"))))
+	assert.True(t, decimal.RequireFromString("6").Equal(decimal.RequireFromString(analyticsMoneyAmount(t, other, "revenue"))))
 }

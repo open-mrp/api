@@ -32,11 +32,11 @@ type UpdateShippingTermRequest struct {
 	// Fixed shipping charge applied to orders.
 	//
 	// Used only when `type` is `flat_rate_freight`. Clearing it leaves a `flat_rate_freight` term falling through to the carrier's quoted rate.
-	FlatRate field.Clearable[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
+	FlatRate field.Clearable[apirequest.MoneyInput] `json:"flat_rate,omitzero"`
 	// Order total a buyer must exceed for this term's free-shipping rules to apply.
 	//
 	// Clearing it removes the free-shipping threshold, so orders are charged according to `type` regardless of their total.
-	MinimumOrderValue field.Clearable[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
+	MinimumOrderValue field.Clearable[apirequest.MoneyInput] `json:"minimum_order_value,omitzero"`
 	// IDs of the service levels that ship for free once an order exceeds `minimum_order_value`.
 	//
 	// Replaces the whole list rather than adding to it, and clearing it lets every service level ship free above the threshold. The request is rejected if any ID is not a service level available to your account.
@@ -46,8 +46,8 @@ type UpdateShippingTermRequest struct {
 var sampleUpdateShippingTermRequest = &UpdateShippingTermRequest{
 	Name:                        field.Some("Collect"),
 	Type:                        field.Some(constants.ShippingTermTypeFlatRateFreight),
-	FlatRate:                    field.Set(apirequest.QuantityInput{Value: "15.00", UnitID: apiresource.SampleUnitID}),
-	MinimumOrderValue:           field.Set(apirequest.QuantityInput{Value: "500.00", UnitID: apiresource.SampleUnitID}),
+	FlatRate:                    field.Set(apirequest.MoneyInput{Amount: "15.00", Currency: "usd"}),
+	MinimumOrderValue:           field.Set(apirequest.MoneyInput{Amount: "500.00", Currency: "usd"}),
 	FreeShippingServiceLevelIDs: field.Set([]string{apiresource.SampleServiceLevelID}),
 }
 
@@ -74,7 +74,7 @@ func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).UpdateShippingTerm

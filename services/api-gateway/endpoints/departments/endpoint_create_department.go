@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -34,18 +36,8 @@ type CreateDepartmentRequest struct {
 	MachineIDs []string `json:"machine_ids,omitzero"`
 	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
-	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting. The numerator unit must be a currency and the denominator must not be.
-	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero" sensitive:"cost"`
-}
-
-// A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).
-type DepartmentRateInput struct {
-	// Decimal value of the rate.
-	Value string `json:"value" validate:"required"`
-	// ID of the unit in the rate's numerator (a currency, e.g. dollars).
-	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
-	// ID of the unit in the rate's denominator (e.g. hours).
-	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
+	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting. `per_unit_id` must not be a currency unit.
+	LaborRate field.Optional[apirequest.UnitPriceInput] `json:"labor_rate,omitzero" sensitive:"cost"`
 }
 
 var sampleCreateDepartmentRequest = &CreateDepartmentRequest{

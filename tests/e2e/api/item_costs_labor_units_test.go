@@ -37,7 +37,7 @@ func createLaborCostFixture(t *testing.T) laborCostFixture {
 	status, body, err := apiClient.Post(materialsPath+"?include=item", map[string]any{
 		"sku":         uniqueName("e2e-labor-units-box"),
 		"category_id": packagingID,
-		"unit_cost":   map[string]any{"value": "0.10", "numerator_unit_id": unitDollar, "denominator_unit_id": unitEach},
+		"unit_cost":   map[string]any{"amount": "0.10", "currency": "usd", "per_unit_id": unitEach},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -86,9 +86,9 @@ func createLaborStep(t *testing.T, f laborCostFixture, spec laborStepSpec) {
 		"name":            uniqueName("e2e-labor-units-step"),
 		"leveling_factor": leveling,
 		"allowances":      allowance,
-		"labor_time":      map[string]any{"value": spec.labor.value, "numerator_unit_id": spec.labor.timeUnit, "denominator_unit_id": spec.labor.perUnit},
-		"labor_rate":      map[string]any{"value": "25", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
-		"overhead_rate":   map[string]any{"value": "20", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
+		"labor_time":      map[string]any{"value": spec.labor.value, "unit_id": spec.labor.timeUnit, "per_unit_id": spec.labor.perUnit},
+		"labor_rate":      map[string]any{"amount": "25", "currency": "usd", "per_unit_id": unitHour},
+		"overhead_rate":   map[string]any{"amount": "20", "currency": "usd", "per_unit_id": unitHour},
 		"production":      map[string]any{"item_id": f.partItemID, "quantity_value": spec.produceQty, "quantity_unit_id": spec.produceUnit},
 		"consumptions": []map[string]any{
 			{"item_id": f.materialItemID, "quantity_value": spec.eachesProduced, "quantity_unit_id": unitEach,
@@ -183,9 +183,9 @@ func TestProductionSteps_CreateRejectsAConsumptionWithoutWaste(t *testing.T) {
 		"name":            uniqueName("e2e-step-no-waste"),
 		"leveling_factor": "0",
 		"allowances":      "0",
-		"labor_time":      map[string]any{"value": "30", "numerator_unit_id": unitSecond, "denominator_unit_id": unitEach},
-		"labor_rate":      map[string]any{"value": "25", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
-		"overhead_rate":   map[string]any{"value": "20", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
+		"labor_time":      map[string]any{"value": "30", "unit_id": unitSecond, "per_unit_id": unitEach},
+		"labor_rate":      map[string]any{"amount": "25", "currency": "usd", "per_unit_id": unitHour},
+		"overhead_rate":   map[string]any{"amount": "20", "currency": "usd", "per_unit_id": unitHour},
 		"production":      map[string]any{"item_id": f.partItemID, "quantity_value": "1", "quantity_unit_id": unitEach},
 		"consumptions": []map[string]any{
 			{"item_id": f.materialItemID, "quantity_value": "1", "quantity_unit_id": unitEach},

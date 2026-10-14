@@ -43,18 +43,7 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductionFlow,
 			Fields: []string{
-				"steps",
-				"steps.production",
-				"steps.production.produced_item",
-				"steps.consumptions",
-				"steps.consumptions.consumed_item",
-				"steps.consumptions.quantity",
-				"steps.consumptions.waste_quantity",
-				"steps.machines",
-				"steps.scanning_station",
-				"steps.department",
-				"steps.in_steps",
-				"steps.out_steps",
+				"steps", "steps.production", "steps.production.produced_item", "steps.consumptions", "steps.consumptions.consumed_item", "steps.machines", "steps.scanning_station", "steps.department", "steps.in_steps", "steps.out_steps",
 			},
 		}),
 	})

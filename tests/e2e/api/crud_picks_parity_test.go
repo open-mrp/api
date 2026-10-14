@@ -20,8 +20,6 @@ var pickDetailPageIncludes = []string{
 	"related.sales_order",
 	"lines",
 	"lines.sales_order_line",
-	"lines.quantity",
-	"lines.quantity.unit",
 }
 
 func pickPageParams(includes []string, extra url.Values) url.Values {
@@ -61,10 +59,9 @@ func TestPicksParity_DetailResolvesEveryIncludeThePageRequests(t *testing.T) {
 			"each line is joined to its order line by id")
 
 		quantity := jsonObject(line, "quantity")
-		require.NotNil(t, quantity, "the quantity input is bound to lines.quantity")
+		require.NotNil(t, quantity, "the quantity input is bound to lines.quantity, always present")
 		assert.NotEmpty(t, jsonField(quantity, "value"))
-		require.NotNil(t, quantity["unit"],
-			"lines.quantity.unit is two levels down; without it the input has no unit to render")
+		require.NotNil(t, quantity["unit"], "the quantity carries its unit; without it the input has nothing to render")
 		assert.NotEmpty(t, jsonField(jsonObject(quantity, "unit"), "abbreviation"))
 
 		ordered := jsonObject(line, "ordered_quantity")

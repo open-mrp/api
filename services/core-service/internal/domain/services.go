@@ -81,6 +81,9 @@ type UnitSvc interface {
 
 	// BatchGetUnitsByIDs returns units by ID for the api-gateway include resolver.
 	BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*Unit, *apierror.APIError)
+
+	// CurrencyUnitID returns the unit an amount in currency is stored in while money still lives in quantity and rate rows.
+	CurrencyUnitID(ctx context.Context, currency constants.Currency) (string, *apierror.APIError)
 }
 
 type UnitGroupSvc interface {
@@ -1622,11 +1625,6 @@ type ProductionSvc interface {
 
 	// UpdateProduction partially updates a production output.
 	UpdateProduction(ctx context.Context, params UpdateProductionParams) (*Production, *apierror.APIError)
-}
-
-type MeasureSvc interface {
-	UpdateQuantity(ctx context.Context, params UpdateQuantityParams) (*Quantity, *apierror.APIError)
-	UpdateRate(ctx context.Context, params UpdateRateParams) (*Rate, *apierror.APIError)
 }
 
 type UtilsSvc interface {

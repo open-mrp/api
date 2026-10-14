@@ -52,11 +52,7 @@ func TestInventoryChangeLogs_RetrieveReportsEveryField(t *testing.T) {
 	// The amount is what the entry is, so it rides inline rather than behind an include.
 	quantity := jsonObject(got, "quantity")
 	require.NotNil(t, quantity, "quantity is always present: %s", string(body))
-	assertObjectField(t, quantity, "quantity")
-	assert.NotEmpty(t, jsonField(quantity, "value"), "the quantity reports a value")
-	unit := jsonObject(quantity, "unit")
-	require.NotNil(t, unit, "the quantity carries its unit: %s", string(body))
-	assertObjectField(t, unit, "unit")
+	assertQuantityIn(t, quantity, "", "", "quantity")
 
 	item := jsonObject(got, "item")
 	require.NotNil(t, item, "item should be present with ?include=item")

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -32,21 +34,16 @@ type UpsertSalesTargetRequest struct {
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
 	EndDate time.Time `json:"ends_at" validate:"required"`
-	// The revenue goal for the period, as a decimal string (e.g. `75000.00`).
+	// The revenue goal for the period.
 	//
 	// This is the only value an existing target accepts; everything else on it stays as it was.
-	AmountValue string `json:"amount_value" validate:"required,decimal" format:"decimal"`
-	// The unit the goal is denominated in, typically a currency unit. It must be one of your account's units or a unit every account shares.
-	//
-	// Only applied when creating a new target; the unit on an existing target is not changed.
-	AmountUnitID string `json:"amount_unit_id" validate:"required,max=191"`
+	Amount apirequest.MoneyInput `json:"amount" validate:"required"`
 }
 
 var sampleUpsertSalesTargetRequest = &UpsertSalesTargetRequest{
-	StartDate:    time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
-	EndDate:      time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
-	AmountValue:  "75000.00",
-	AmountUnitID: apiresource.SampleUnitID,
+	StartDate: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+	EndDate:   time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
+	Amount:    apirequest.MoneyInput{Amount: "75000.00", Currency: "usd"},
 }
 
 func (*UpsertSalesTargetRequest) SchemaExample() any {

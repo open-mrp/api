@@ -3,6 +3,7 @@ package accountpriceep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -114,8 +115,8 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 		RecipientAccountId:    req.RecipientAccountID,
 		ProductLineId:         req.ProductLineID,
 		RateValue:             req.Rate.Value,
-		RateNumeratorUnitId:   req.Rate.NumeratorUnitID,
-		RateDenominatorUnitId: req.Rate.DenominatorUnitID,
+		RateNumeratorUnitId:   req.Rate.UnitID,
+		RateDenominatorUnitId: req.Rate.PerUnitID,
 		CategoryIds:           req.CategoryIDs,
 		AttributeIds:          req.AttributeIDs,
 	}
@@ -145,8 +146,8 @@ func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *Updat
 	// The rate is replaced whole, so its three columns move together or not at all.
 	if rate, ok := req.Rate.Value(); ok {
 		pbReq.RateValue = &rate.Value
-		pbReq.RateNumeratorUnitId = &rate.NumeratorUnitID
-		pbReq.RateDenominatorUnitId = &rate.DenominatorUnitID
+		pbReq.RateNumeratorUnitId = &rate.UnitID
+		pbReq.RateDenominatorUnitId = &rate.PerUnitID
 	}
 
 	if v, ok := req.CategoryIDs.Value(); ok {
@@ -195,50 +196,7 @@ func accountPriceFromProto(ap *pb.AccountPriceInfo) apiresource.AccountPrice {
 
 	var rate *apiresource.Rate
 	if ap.Rate != nil {
-		rate = &apiresource.Rate{
-			ID:        ap.Rate.Id,
-			Object:    constants.ObjectTypeRate,
-			Value:     ap.Rate.Value,
-			CreatedAt: grpcutil.TimestampToTime(ap.Rate.CreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(ap.Rate.UpdatedAt),
-		}
-		var numeratorAbbreviation, numeratorUnitType, denominatorAbbreviation string
-		if ap.Rate.NumeratorUnit != nil {
-			nu := ap.Rate.NumeratorUnit
-			rate.NumeratorUnit = &apiresource.Unit{
-				ID:                nu.Id,
-				Object:            constants.ObjectTypeUnit,
-				Name:              nu.Name,
-				Abbreviation:      nu.Abbreviation,
-				Type:              constants.UnitType(nu.Type),
-				RatioNumerator:    nu.RatioNumerator,
-				RatioDenominator:  nu.RatioDenominator,
-				OffsetNumerator:   nu.OffsetNumerator,
-				OffsetDenominator: nu.OffsetDenominator,
-				CreatedAt:         grpcutil.TimestampToTime(nu.CreatedAt),
-				UpdatedAt:         grpcutil.TimestampToTime(nu.UpdatedAt),
-			}
-			numeratorAbbreviation = nu.Abbreviation
-			numeratorUnitType = nu.Type
-		}
-		if ap.Rate.DenominatorUnit != nil {
-			du := ap.Rate.DenominatorUnit
-			rate.DenominatorUnit = &apiresource.Unit{
-				ID:                du.Id,
-				Object:            constants.ObjectTypeUnit,
-				Name:              du.Name,
-				Abbreviation:      du.Abbreviation,
-				Type:              constants.UnitType(du.Type),
-				RatioNumerator:    du.RatioNumerator,
-				RatioDenominator:  du.RatioDenominator,
-				OffsetNumerator:   du.OffsetNumerator,
-				OffsetDenominator: du.OffsetDenominator,
-				CreatedAt:         grpcutil.TimestampToTime(du.CreatedAt),
-				UpdatedAt:         grpcutil.TimestampToTime(du.UpdatedAt),
-			}
-			denominatorAbbreviation = du.Abbreviation
-		}
-		rate.DisplayValue = apiresource.FormatRateDisplayValue(ap.Rate.Value, numeratorAbbreviation, numeratorUnitType, denominatorAbbreviation)
+		rate = apiresource.NewRate(ap.Rate.Value, ap.Rate.GetNumeratorUnit().GetId(), ap.Rate.GetDenominatorUnit().GetId())
 	}
 
 	return apiresource.AccountPrice{

@@ -334,9 +334,9 @@ func TestSalesOrder_AddLineToPickedOrder_CreatesPickLine(t *testing.T) {
 		"product_sku": "E2E-RECON-ADD",
 		"quantity":    map[string]any{"value": "5", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
-			"value":               "9.00",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "9.00",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}
 	aStatus, aBody, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", lineBody, newIdempotencyKey())
@@ -519,9 +519,9 @@ func TestSalesOrder_DeleteLine_FinishesPickWhenRemainingLinesPacked(t *testing.T
 		"product_sku": "E2E-RECON-B",
 		"quantity":    map[string]any{"value": "5", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
-			"value":               "7.00",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "7.00",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}
 	aStatus, aBody, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", lineBody, newIdempotencyKey())

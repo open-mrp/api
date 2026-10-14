@@ -45,6 +45,7 @@ type SalesEntry struct {
 	CategoryName        string
 	ProductLine         *string
 	Unit                string
+	UnitID              string
 	QuantityInvoiced    float64
 	TotalInvoiced       float64
 	TotalCost           float64
@@ -262,6 +263,7 @@ type AnalyzeMaterialsParams struct {
 
 type MaterialBaseQuantity struct {
 	Measure          float64
+	UnitID           string
 	UnitName         string
 	UnitAbbreviation string
 	UnitType         string
@@ -316,7 +318,8 @@ type InventoryReceiptEntry struct {
 	OwnerAccountName   string
 	HolderAccountID    string
 	HolderAccountName  string
-	// RemainingQuantity is in the item's base unit, which Unit names.
+	// RemainingQuantity is in the item's base unit, which UnitID and Unit name.
+	UnitID string
 	RemainingQuantity       float64
 	WeightedAverageUnitCost float64
 	// InventoryValue is nil when nothing remains.
@@ -467,6 +470,7 @@ type GetOrderQuantitiesByProductLinesParams struct {
 type OrderQuantityByProductLineRow struct {
 	ProductLineID    string
 	TotalQuantity    float64
+	UnitID           string
 	UnitAbbreviation string
 	UnitType         string
 	// BaseRatio is the base unit's size in its dimension's base unit.
@@ -483,9 +487,11 @@ type WeeksOfSalesItem struct {
 	ProductLineID                        string
 	ProductLineName                      string
 	QuantityOnHand                       float64
+	QuantityOnHandUnitID                 string
 	QuantityOnHandUnitAbbreviation       string
 	QuantityOnHandUnitType               string
 	AverageSalesQuantity                 float64
+	AverageSalesQuantityUnitID           string
 	AverageSalesQuantityUnitAbbreviation string
 	AverageSalesQuantityUnitType         string
 	WeeksOfSales                         float64
@@ -658,6 +664,7 @@ type RealizedMarginFinding struct {
 	CustomerGroupID         string
 	ItemID                  string
 	ProductLineID           string
+	UnitID                  string
 	UnitAbbreviation        string
 	QuantityInvoiced        string
 	Revenue                 string

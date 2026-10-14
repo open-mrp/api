@@ -3,6 +3,7 @@ package purchaseorderep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -56,11 +57,7 @@ var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_add
 
 // purchaseOrderLineIncludeFields is everything a line offers, as reached from the line itself.
 var purchaseOrderLineIncludeFields = []string{
-	"item", "item.category", "item.category.unit_group", "item.category.unit_group.base_unit",
-	"item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit",
-	"quantity_ordered", "quantity_ordered.unit",
-	"unit_price", "unit_price.numerator_unit", "unit_price.denominator_unit",
-	"delivery_lines", "delivery_lines.quantity", "delivery_lines.quantity.unit",
+	"item", "item.category", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "delivery_lines",
 }
 
 // purchaseOrderListIncludeFields is what a list row offers: the list reads the supplier, ship-to,
@@ -186,15 +183,13 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 	lines := make([]*pb.CreatePurchaseOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		lines[i] = &pb.CreatePurchaseOrderLineInput{
-			ProductId:                  l.ProductID.Ptr(),
-			ItemId:                     l.ItemID.Ptr(),
-			ProductSku:                 l.ProductSKU,
-			ProductDescription:         l.ProductDescription.Ptr(),
-			QuantityValue:              l.Quantity.Value,
-			QuantityUnitId:             l.Quantity.UnitID,
-			UnitPriceValue:             l.UnitPrice.Value,
-			UnitPriceNumeratorUnitId:   l.UnitPrice.NumeratorUnitID,
-			UnitPriceDenominatorUnitId: l.UnitPrice.DenominatorUnitID,
+			ProductId:          l.ProductID.Ptr(),
+			ItemId:             l.ItemID.Ptr(),
+			ProductSku:         l.ProductSKU,
+			ProductDescription: l.ProductDescription.Ptr(),
+			QuantityValue:      l.Quantity.Value,
+			QuantityUnitId:     l.Quantity.UnitID,
+			UnitPrice:          l.UnitPrice.ToProto(),
 		}
 	}
 
@@ -340,16 +335,14 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 
 func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreatePurchaseOrderLineRequest{
-		PurchaseOrderId:            req.PurchaseOrderID,
-		ProductId:                  req.ProductID.Ptr(),
-		ItemId:                     req.ItemID.Ptr(),
-		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription.Ptr(),
-		QuantityValue:              req.Quantity.Value,
-		QuantityUnitId:             req.Quantity.UnitID,
-		UnitPriceValue:             req.UnitPrice.Value,
-		UnitPriceNumeratorUnitId:   req.UnitPrice.NumeratorUnitID,
-		UnitPriceDenominatorUnitId: req.UnitPrice.DenominatorUnitID,
+		PurchaseOrderId:    req.PurchaseOrderID,
+		ProductId:          req.ProductID.Ptr(),
+		ItemId:             req.ItemID.Ptr(),
+		ProductSku:         req.ProductSKU,
+		ProductDescription: req.ProductDescription.Ptr(),
+		QuantityValue:      req.Quantity.Value,
+		QuantityUnitId:     req.Quantity.UnitID,
+		UnitPrice:          req.UnitPrice.ToProto(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create_line", domain.ServiceName,
@@ -371,17 +364,15 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 
 func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdatePurchaseOrderLineRequest{
-		PurchaseOrderId:            req.PurchaseOrderID,
-		Id:                         req.PurchaseOrderLineID,
-		ProductId:                  req.ProductID.Ptr(),
-		ItemId:                     req.ItemID.Ptr(),
-		ProductSku:                 req.ProductSKU.Ptr(),
-		ProductDescription:         req.ProductDescription.Ptr(),
-		QuantityValue:              req.QuantityValue.Ptr(),
-		QuantityUnitId:             req.QuantityUnitID.Ptr(),
-		UnitPriceValue:             req.UnitPriceValue.Ptr(),
-		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID.Ptr(),
-		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID.Ptr(),
+		PurchaseOrderId:    req.PurchaseOrderID,
+		Id:                 req.PurchaseOrderLineID,
+		ProductId:          req.ProductID.Ptr(),
+		ItemId:             req.ItemID.Ptr(),
+		ProductSku:         req.ProductSKU.Ptr(),
+		ProductDescription: req.ProductDescription.Ptr(),
+		QuantityValue:      req.QuantityValue.Ptr(),
+		QuantityUnitId:     req.QuantityUnitID.Ptr(),
+		UnitPrice:          apirequest.OptionalUnitPriceToProto(req.UnitPrice),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update_line", domain.ServiceName,
@@ -767,63 +758,31 @@ func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrde
 		meta.Set(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id", *info.ItemId)
 	}
 
-	// The quantities and rates ride on the line, but the units they are counted in are records of
-	// their own — stashed as ids so `quantity_ordered.unit` and its peers resolve them in full,
-	// rather than the line shipping a unit carrying nothing but an abbreviation.
-	l.QuantityOrdered = &apiresource.Quantity{
-		ID:           info.QuantityId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        info.QuantityValue,
-		DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
-	}
-	meta.Set(constants.ObjectTypeQuantity, info.QuantityId, "unit_id", info.QuantityUnitId)
+	l.QuantityOrdered = apiresource.NewQuantity(info.QuantityValue, info.QuantityUnitId)
 
-	// What has been received is rolled up from the receiving order's lines rather than stored, so
-	// it is a computed quantity: no id, and the unit travels with it.
+	// What has been received is rolled up from the receiving order's lines rather than stored.
 	if info.QuantityReceivedValue != nil {
-		l.QuantityReceived = &apiresource.ComputedQuantity{
-			Object:       constants.ObjectTypeComputedQuantity,
-			Value:        *info.QuantityReceivedValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityReceivedValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
-			Unit:         units[info.QuantityUnitId],
+		l.QuantityReceived = &apiresource.Quantity{
+			Value: *info.QuantityReceivedValue,
+			Unit:  units[info.QuantityUnitId],
 		}
 	}
 
-	l.UnitPrice = &apiresource.Rate{
-		ID:     info.UnitPriceId,
-		Object: constants.ObjectTypeRate,
-		Value:  info.UnitPriceValue,
-		DisplayValue: apiresource.FormatRateDisplayValue(
-			info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
-		CreatedAt: grpcutil.TimestampToTime(info.UnitPriceCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UnitPriceUpdatedAt),
-	}
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
+	l.UnitPrice = resourceloaders.UnitPriceFromProto(info.UnitPrice)
 
 	// Delivery lines are read only when the caller included them, so an empty list here means none
 	// were booked rather than none were asked for: the resolver only reveals it when included.
 	deliveryLines := make([]apiresource.DeliveryLine, len(info.DeliveryLines))
 	for i, dl := range info.DeliveryLines {
-		var abbreviation, unitType string
-		if u := units[dl.QuantityUnitId]; u != nil {
-			abbreviation, unitType = u.Abbreviation, string(u.Type)
-		}
 		deliveryLines[i] = apiresource.DeliveryLine{
-			ID:     dl.Id,
-			Object: constants.ObjectTypeDeliveryLine,
-			Quantity: &apiresource.Quantity{
-				ID:           dl.QuantityId,
-				Object:       constants.ObjectTypeQuantity,
-				Value:        dl.QuantityValue,
-				DisplayValue: apiresource.FormatDisplayValue(dl.QuantityValue, abbreviation, unitType),
-			},
+			ID:         dl.Id,
+			Object:     constants.ObjectTypeDeliveryLine,
+			Quantity:   apiresource.NewQuantity(dl.QuantityValue, dl.QuantityUnitId),
 			AcceptedAt: grpcutil.TimestampToTimePtr(dl.AcceptedAt),
 			RejectedAt: grpcutil.TimestampToTimePtr(dl.RejectedAt),
 			CreatedAt:  grpcutil.TimestampToTime(dl.CreatedAt),
 			UpdatedAt:  grpcutil.TimestampToTime(dl.UpdatedAt),
 		}
-		meta.Set(constants.ObjectTypeQuantity, dl.QuantityId, "unit_id", dl.QuantityUnitId)
 	}
 	meta.Set(constants.ObjectTypePurchaseOrderLine, l.ID, "delivery_lines", apiresource.NewList(deliveryLines, apiresource.PageInfo{}))
 

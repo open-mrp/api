@@ -38,7 +38,7 @@ type Department struct {
 	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	LaborRate *Rate `json:"labor_rate" sensitive:"cost"`
+	LaborRate *UnitPrice `json:"labor_rate" sensitive:"cost"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.

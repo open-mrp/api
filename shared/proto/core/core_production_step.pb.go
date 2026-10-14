@@ -33,9 +33,9 @@ type ProductionStepInfo struct {
 	Notes           *string                    `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	LevelingFactor  string                     `protobuf:"bytes,4,opt,name=leveling_factor,json=levelingFactor,proto3" json:"leveling_factor,omitempty"`
 	Allowances      string                     `protobuf:"bytes,5,opt,name=allowances,proto3" json:"allowances,omitempty"`
-	LaborRate       *ProductionStepRateInfo    `protobuf:"bytes,6,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
+	LaborRate       *UnitPrice                 `protobuf:"bytes,18,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
 	LaborTime       *ProductionStepRateInfo    `protobuf:"bytes,7,opt,name=labor_time,json=laborTime,proto3" json:"labor_time,omitempty"`
-	OverheadRate    *ProductionStepRateInfo    `protobuf:"bytes,8,opt,name=overhead_rate,json=overheadRate,proto3" json:"overhead_rate,omitempty"`
+	OverheadRate    *UnitPrice                 `protobuf:"bytes,19,opt,name=overhead_rate,json=overheadRate,proto3" json:"overhead_rate,omitempty"`
 	Production      *ProductionInfo            `protobuf:"bytes,9,opt,name=production,proto3" json:"production,omitempty"`
 	Consumptions    []*ConsumptionInfo         `protobuf:"bytes,10,rep,name=consumptions,proto3" json:"consumptions,omitempty"`
 	Machines        []*LightMachineInfo        `protobuf:"bytes,11,rep,name=machines,proto3" json:"machines,omitempty"`
@@ -114,7 +114,7 @@ func (x *ProductionStepInfo) GetAllowances() string {
 	return ""
 }
 
-func (x *ProductionStepInfo) GetLaborRate() *ProductionStepRateInfo {
+func (x *ProductionStepInfo) GetLaborRate() *UnitPrice {
 	if x != nil {
 		return x.LaborRate
 	}
@@ -128,7 +128,7 @@ func (x *ProductionStepInfo) GetLaborTime() *ProductionStepRateInfo {
 	return nil
 }
 
-func (x *ProductionStepInfo) GetOverheadRate() *ProductionStepRateInfo {
+func (x *ProductionStepInfo) GetOverheadRate() *UnitPrice {
 	if x != nil {
 		return x.OverheadRate
 	}
@@ -760,9 +760,9 @@ type CreateProductionStepRequest struct {
 	Allowances        string                        `protobuf:"bytes,4,opt,name=allowances,proto3" json:"allowances,omitempty"`
 	ScanningStationId *string                       `protobuf:"bytes,5,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
 	DepartmentId      *string                       `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	LaborRate         *CreateRateInput              `protobuf:"bytes,7,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
-	LaborTime         *CreateRateInput              `protobuf:"bytes,8,opt,name=labor_time,json=laborTime,proto3" json:"labor_time,omitempty"`
-	OverheadRate      *CreateRateInput              `protobuf:"bytes,9,opt,name=overhead_rate,json=overheadRate,proto3" json:"overhead_rate,omitempty"`
+	LaborRate         *UnitPrice                    `protobuf:"bytes,12,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
+	LaborTime         *RateInput                    `protobuf:"bytes,13,opt,name=labor_time,json=laborTime,proto3" json:"labor_time,omitempty"`
+	OverheadRate      *UnitPrice                    `protobuf:"bytes,14,opt,name=overhead_rate,json=overheadRate,proto3" json:"overhead_rate,omitempty"`
 	Production        *CreateProductionInput        `protobuf:"bytes,10,opt,name=production,proto3" json:"production,omitempty"`
 	Consumptions      []*CreateStepConsumptionInput `protobuf:"bytes,11,rep,name=consumptions,proto3" json:"consumptions,omitempty"`
 	unknownFields     protoimpl.UnknownFields
@@ -841,21 +841,21 @@ func (x *CreateProductionStepRequest) GetDepartmentId() string {
 	return ""
 }
 
-func (x *CreateProductionStepRequest) GetLaborRate() *CreateRateInput {
+func (x *CreateProductionStepRequest) GetLaborRate() *UnitPrice {
 	if x != nil {
 		return x.LaborRate
 	}
 	return nil
 }
 
-func (x *CreateProductionStepRequest) GetLaborTime() *CreateRateInput {
+func (x *CreateProductionStepRequest) GetLaborTime() *RateInput {
 	if x != nil {
 		return x.LaborTime
 	}
 	return nil
 }
 
-func (x *CreateProductionStepRequest) GetOverheadRate() *CreateRateInput {
+func (x *CreateProductionStepRequest) GetOverheadRate() *UnitPrice {
 	if x != nil {
 		return x.OverheadRate
 	}
@@ -2316,7 +2316,7 @@ var File_core_core_production_step_proto protoreflect.FileDescriptor
 
 const file_core_core_production_step_proto_rawDesc = "" +
 	"\n" +
-	"\x1fcore/core_production_step.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a\x15core/core_patch.proto\"\xfb\x06\n" +
+	"\x1fcore/core_production_step.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a\x15core/core_patch.proto\x1a\x17core/value_shapes.proto\"\xed\x06\n" +
 	"\x12ProductionStepInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -2324,12 +2324,12 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\x0fleveling_factor\x18\x04 \x01(\tR\x0elevelingFactor\x12\x1e\n" +
 	"\n" +
 	"allowances\x18\x05 \x01(\tR\n" +
-	"allowances\x12;\n" +
+	"allowances\x12.\n" +
 	"\n" +
-	"labor_rate\x18\x06 \x01(\v2\x1c.core.ProductionStepRateInfoR\tlaborRate\x12;\n" +
+	"labor_rate\x18\x12 \x01(\v2\x0f.core.UnitPriceR\tlaborRate\x12;\n" +
 	"\n" +
-	"labor_time\x18\a \x01(\v2\x1c.core.ProductionStepRateInfoR\tlaborTime\x12A\n" +
-	"\roverhead_rate\x18\b \x01(\v2\x1c.core.ProductionStepRateInfoR\foverheadRate\x124\n" +
+	"labor_time\x18\a \x01(\v2\x1c.core.ProductionStepRateInfoR\tlaborTime\x124\n" +
+	"\roverhead_rate\x18\x13 \x01(\v2\x0f.core.UnitPriceR\foverheadRate\x124\n" +
 	"\n" +
 	"production\x18\t \x01(\v2\x14.core.ProductionInfoR\n" +
 	"production\x129\n" +
@@ -2345,7 +2345,7 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
 	"\x06_notesB\x10\n" +
-	"\x0e_department_id\"\x82\x03\n" +
+	"\x0e_department_idJ\x04\b\x06\x10\aJ\x04\b\b\x10\t\"\x82\x03\n" +
 	"\x16ProductionStepRateInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12*\n" +
@@ -2406,12 +2406,12 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"allowances\x18\x04 \x01(\tR\n" +
 	"allowances\x123\n" +
 	"\x13scanning_station_id\x18\x05 \x01(\tH\x01R\x11scanningStationId\x88\x01\x01\x12(\n" +
-	"\rdepartment_id\x18\x06 \x01(\tH\x02R\fdepartmentId\x88\x01\x01\x124\n" +
+	"\rdepartment_id\x18\x06 \x01(\tH\x02R\fdepartmentId\x88\x01\x01\x12.\n" +
 	"\n" +
-	"labor_rate\x18\a \x01(\v2\x15.core.CreateRateInputR\tlaborRate\x124\n" +
+	"labor_rate\x18\f \x01(\v2\x0f.core.UnitPriceR\tlaborRate\x12.\n" +
 	"\n" +
-	"labor_time\x18\b \x01(\v2\x15.core.CreateRateInputR\tlaborTime\x12:\n" +
-	"\roverhead_rate\x18\t \x01(\v2\x15.core.CreateRateInputR\foverheadRate\x12;\n" +
+	"labor_time\x18\r \x01(\v2\x0f.core.RateInputR\tlaborTime\x124\n" +
+	"\roverhead_rate\x18\x0e \x01(\v2\x0f.core.UnitPriceR\foverheadRate\x12;\n" +
 	"\n" +
 	"production\x18\n" +
 	" \x01(\v2\x1b.core.CreateProductionInputR\n" +
@@ -2419,7 +2419,8 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\fconsumptions\x18\v \x03(\v2 .core.CreateStepConsumptionInputR\fconsumptionsB\b\n" +
 	"\x06_notesB\x16\n" +
 	"\x14_scanning_station_idB\x10\n" +
-	"\x0e_department_id\"\x81\x01\n" +
+	"\x0e_department_idJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"\"\x81\x01\n" +
 	"\x15CreateProductionInput\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12%\n" +
 	"\x0equantity_value\x18\x02 \x01(\tR\rquantityValue\x12(\n" +
@@ -2622,50 +2623,51 @@ var file_core_core_production_step_proto_goTypes = []any{
 	(*UpsertProductionStepInput)(nil),         // 30: core.UpsertProductionStepInput
 	(*BulkUpsertProductionStepsRequest)(nil),  // 31: core.BulkUpsertProductionStepsRequest
 	(*BulkUpsertProductionStepsResponse)(nil), // 32: core.BulkUpsertProductionStepsResponse
-	(*ConsumptionInfo)(nil),                   // 33: core.ConsumptionInfo
-	(*LightMachineInfo)(nil),                  // 34: core.LightMachineInfo
-	(*LightScanningStationInfo)(nil),          // 35: core.LightScanningStationInfo
-	(*LightProductionStepInfo)(nil),           // 36: core.LightProductionStepInfo
-	(*timestamppb.Timestamp)(nil),             // 37: google.protobuf.Timestamp
-	(*QuantityInfo)(nil),                      // 38: core.QuantityInfo
-	(*PageInfo)(nil),                          // 39: core.PageInfo
-	(*JobInfo)(nil),                           // 40: core.JobInfo
-	(*CreateRateInput)(nil),                   // 41: core.CreateRateInput
-	(*StringPatch)(nil),                       // 42: core.StringPatch
-	(*StringListPatch)(nil),                   // 43: core.StringListPatch
-	(*UnitIdentifier)(nil),                    // 44: core.UnitIdentifier
-	(*ItemIdentifier)(nil),                    // 45: core.ItemIdentifier
-	(*ObjectIdentifier)(nil),                  // 46: core.ObjectIdentifier
+	(*UnitPrice)(nil),                         // 33: core.UnitPrice
+	(*ConsumptionInfo)(nil),                   // 34: core.ConsumptionInfo
+	(*LightMachineInfo)(nil),                  // 35: core.LightMachineInfo
+	(*LightScanningStationInfo)(nil),          // 36: core.LightScanningStationInfo
+	(*LightProductionStepInfo)(nil),           // 37: core.LightProductionStepInfo
+	(*timestamppb.Timestamp)(nil),             // 38: google.protobuf.Timestamp
+	(*QuantityInfo)(nil),                      // 39: core.QuantityInfo
+	(*PageInfo)(nil),                          // 40: core.PageInfo
+	(*JobInfo)(nil),                           // 41: core.JobInfo
+	(*RateInput)(nil),                         // 42: core.RateInput
+	(*StringPatch)(nil),                       // 43: core.StringPatch
+	(*StringListPatch)(nil),                   // 44: core.StringListPatch
+	(*UnitIdentifier)(nil),                    // 45: core.UnitIdentifier
+	(*ItemIdentifier)(nil),                    // 46: core.ItemIdentifier
+	(*ObjectIdentifier)(nil),                  // 47: core.ObjectIdentifier
 }
 var file_core_core_production_step_proto_depIdxs = []int32{
-	1,  // 0: core.ProductionStepInfo.labor_rate:type_name -> core.ProductionStepRateInfo
+	33, // 0: core.ProductionStepInfo.labor_rate:type_name -> core.UnitPrice
 	1,  // 1: core.ProductionStepInfo.labor_time:type_name -> core.ProductionStepRateInfo
-	1,  // 2: core.ProductionStepInfo.overhead_rate:type_name -> core.ProductionStepRateInfo
+	33, // 2: core.ProductionStepInfo.overhead_rate:type_name -> core.UnitPrice
 	2,  // 3: core.ProductionStepInfo.production:type_name -> core.ProductionInfo
-	33, // 4: core.ProductionStepInfo.consumptions:type_name -> core.ConsumptionInfo
-	34, // 5: core.ProductionStepInfo.machines:type_name -> core.LightMachineInfo
-	35, // 6: core.ProductionStepInfo.scanning_station:type_name -> core.LightScanningStationInfo
-	36, // 7: core.ProductionStepInfo.in_steps:type_name -> core.LightProductionStepInfo
-	36, // 8: core.ProductionStepInfo.out_steps:type_name -> core.LightProductionStepInfo
-	37, // 9: core.ProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	37, // 10: core.ProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	38, // 11: core.ProductionInfo.quantity:type_name -> core.QuantityInfo
-	37, // 12: core.ProductionInfo.created_at:type_name -> google.protobuf.Timestamp
-	37, // 13: core.ProductionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	37, // 14: core.ListProductionStepsRequest.start_date:type_name -> google.protobuf.Timestamp
-	37, // 15: core.ListProductionStepsRequest.end_date:type_name -> google.protobuf.Timestamp
+	34, // 4: core.ProductionStepInfo.consumptions:type_name -> core.ConsumptionInfo
+	35, // 5: core.ProductionStepInfo.machines:type_name -> core.LightMachineInfo
+	36, // 6: core.ProductionStepInfo.scanning_station:type_name -> core.LightScanningStationInfo
+	37, // 7: core.ProductionStepInfo.in_steps:type_name -> core.LightProductionStepInfo
+	37, // 8: core.ProductionStepInfo.out_steps:type_name -> core.LightProductionStepInfo
+	38, // 9: core.ProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	38, // 10: core.ProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 11: core.ProductionInfo.quantity:type_name -> core.QuantityInfo
+	38, // 12: core.ProductionInfo.created_at:type_name -> google.protobuf.Timestamp
+	38, // 13: core.ProductionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	38, // 14: core.ListProductionStepsRequest.start_date:type_name -> google.protobuf.Timestamp
+	38, // 15: core.ListProductionStepsRequest.end_date:type_name -> google.protobuf.Timestamp
 	0,  // 16: core.ListProductionStepsResponse.production_steps:type_name -> core.ProductionStepInfo
-	39, // 17: core.ListProductionStepsResponse.page_info:type_name -> core.PageInfo
-	40, // 18: core.ExportProductionStepsResponse.job:type_name -> core.JobInfo
+	40, // 17: core.ListProductionStepsResponse.page_info:type_name -> core.PageInfo
+	41, // 18: core.ExportProductionStepsResponse.job:type_name -> core.JobInfo
 	0,  // 19: core.GetProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
-	41, // 20: core.CreateProductionStepRequest.labor_rate:type_name -> core.CreateRateInput
-	41, // 21: core.CreateProductionStepRequest.labor_time:type_name -> core.CreateRateInput
-	41, // 22: core.CreateProductionStepRequest.overhead_rate:type_name -> core.CreateRateInput
+	33, // 20: core.CreateProductionStepRequest.labor_rate:type_name -> core.UnitPrice
+	42, // 21: core.CreateProductionStepRequest.labor_time:type_name -> core.RateInput
+	33, // 22: core.CreateProductionStepRequest.overhead_rate:type_name -> core.UnitPrice
 	10, // 23: core.CreateProductionStepRequest.production:type_name -> core.CreateProductionInput
 	11, // 24: core.CreateProductionStepRequest.consumptions:type_name -> core.CreateStepConsumptionInput
 	0,  // 25: core.CreateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
-	42, // 26: core.UpdateProductionStepRequest.notes:type_name -> core.StringPatch
-	43, // 27: core.UpdateProductionStepRequest.machine_ids:type_name -> core.StringListPatch
+	43, // 26: core.UpdateProductionStepRequest.notes:type_name -> core.StringPatch
+	44, // 27: core.UpdateProductionStepRequest.machine_ids:type_name -> core.StringListPatch
 	0,  // 28: core.UpdateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
 	2,  // 29: core.GetProductionResponse.production:type_name -> core.ProductionInfo
 	2,  // 30: core.UpdateProductionResponse.production:type_name -> core.ProductionInfo
@@ -2673,22 +2675,22 @@ var file_core_core_production_step_proto_depIdxs = []int32{
 	22, // 32: core.BulkCreateProductionStepInput.productions:type_name -> core.BulkCreateProductionInput
 	23, // 33: core.BulkCreateProductionStepsRequest.steps:type_name -> core.BulkCreateProductionStepInput
 	25, // 34: core.BulkCreateProductionStepsResponse.results:type_name -> core.BulkCreateProductionStepResult
-	44, // 35: core.UpsertRateInput.numerator_unit:type_name -> core.UnitIdentifier
-	44, // 36: core.UpsertRateInput.denominator_unit:type_name -> core.UnitIdentifier
-	45, // 37: core.UpsertProductionInput.item:type_name -> core.ItemIdentifier
-	44, // 38: core.UpsertProductionInput.quantity_unit:type_name -> core.UnitIdentifier
-	45, // 39: core.UpsertStepConsumptionInput.item:type_name -> core.ItemIdentifier
-	44, // 40: core.UpsertStepConsumptionInput.quantity_unit:type_name -> core.UnitIdentifier
-	44, // 41: core.UpsertStepConsumptionInput.waste_quantity_unit:type_name -> core.UnitIdentifier
-	46, // 42: core.UpsertProductionStepInput.scanning_station:type_name -> core.ObjectIdentifier
-	46, // 43: core.UpsertProductionStepInput.department:type_name -> core.ObjectIdentifier
+	45, // 35: core.UpsertRateInput.numerator_unit:type_name -> core.UnitIdentifier
+	45, // 36: core.UpsertRateInput.denominator_unit:type_name -> core.UnitIdentifier
+	46, // 37: core.UpsertProductionInput.item:type_name -> core.ItemIdentifier
+	45, // 38: core.UpsertProductionInput.quantity_unit:type_name -> core.UnitIdentifier
+	46, // 39: core.UpsertStepConsumptionInput.item:type_name -> core.ItemIdentifier
+	45, // 40: core.UpsertStepConsumptionInput.quantity_unit:type_name -> core.UnitIdentifier
+	45, // 41: core.UpsertStepConsumptionInput.waste_quantity_unit:type_name -> core.UnitIdentifier
+	47, // 42: core.UpsertProductionStepInput.scanning_station:type_name -> core.ObjectIdentifier
+	47, // 43: core.UpsertProductionStepInput.department:type_name -> core.ObjectIdentifier
 	27, // 44: core.UpsertProductionStepInput.labor_rate:type_name -> core.UpsertRateInput
 	27, // 45: core.UpsertProductionStepInput.labor_time:type_name -> core.UpsertRateInput
 	27, // 46: core.UpsertProductionStepInput.overhead_rate:type_name -> core.UpsertRateInput
 	28, // 47: core.UpsertProductionStepInput.production:type_name -> core.UpsertProductionInput
 	29, // 48: core.UpsertProductionStepInput.consumptions:type_name -> core.UpsertStepConsumptionInput
 	30, // 49: core.BulkUpsertProductionStepsRequest.production_steps:type_name -> core.UpsertProductionStepInput
-	40, // 50: core.BulkUpsertProductionStepsResponse.job:type_name -> core.JobInfo
+	41, // 50: core.BulkUpsertProductionStepsResponse.job:type_name -> core.JobInfo
 	3,  // 51: core.CoreProductionStepService.ListProductionSteps:input_type -> core.ListProductionStepsRequest
 	5,  // 52: core.CoreProductionStepService.ExportProductionSteps:input_type -> core.ExportProductionStepsRequest
 	7,  // 53: core.CoreProductionStepService.GetProductionStep:input_type -> core.GetProductionStepRequest
@@ -2725,6 +2727,7 @@ func file_core_core_production_step_proto_init() {
 	file_core_core_fuzzy_identifiers_proto_init()
 	file_core_core_async_proto_init()
 	file_core_core_patch_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_production_step_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[3].OneofWrappers = []any{}

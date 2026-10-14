@@ -738,14 +738,6 @@ service CoreService {
   // Returns product types by ID for the api-gateway include resolver.
   rpc BatchGetProductTypesByIDs(BatchGetProductTypesByIDsRequest) returns (BatchGetProductTypesByIDsResponse);
 
-  // Quantities
-
-  rpc UpdateQuantity(UpdateQuantityRequest) returns (UpdateQuantityResponse);
-
-  // Rates
-
-  rpc UpdateRate(UpdateRateRequest) returns (UpdateRateResponse);
-
   // Receivables
 
   // Returns unpaid invoices (receivables) for the caller's account.

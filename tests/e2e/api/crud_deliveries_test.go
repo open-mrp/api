@@ -159,7 +159,9 @@ func TestDeliveries_LineItemAndUnitCostExpandWithInclude(t *testing.T) {
 
 	unitCost := jsonObject(line, "unit_cost")
 	require.NotNil(t, unitCost, "lines.unit_cost must expand when asked for: %s", string(body))
-	assert.NotEmpty(t, jsonField(unitCost, "value"))
+	assert.NotEmpty(t, jsonField(unitCost, "amount"))
+	assert.Equal(t, "usd", jsonField(unitCost, "currency"))
+	assert.NotEmpty(t, jsonField(jsonObject(unitCost, "per_unit"), "id"), "the unit cost carries its per unit")
 }
 
 func TestDeliveries_RelatedPurchaseOrderExpandsWithInclude(t *testing.T) {

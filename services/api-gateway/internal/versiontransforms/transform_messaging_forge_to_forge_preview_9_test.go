@@ -127,5 +127,5 @@ func TestPreview9_ConversationQueries(t *testing.T) {
 	links := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeConversationLink, "/v1/messaging/conversations/{id}/links",
 		url.Values{"include": {"resource,conversation.topic"}})
 	assert.Equal(t, "record,conversation.related.record", links.Get("include"))
-	assert.Equal(t, "100", links.Get("limit"))
+	assert.Empty(t, links.Get("limit"), "a create on the same route must not gain list parameters")
 }

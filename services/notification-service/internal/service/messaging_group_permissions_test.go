@@ -109,12 +109,10 @@ func TestMessagingGroups_RequireTheirMessagingPermission(t *testing.T) {
 func TestMessagingGroups_PermittedCallerProceeds(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
-	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
-	notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), "us_caller", "ac_team").Return("acus_caller", nil)
+	// A read needs no account membership, so the caller's account user is never resolved.
 	groupRepo := repositorymock.NewMockMessagingGroupRepo(ctrl)
 	groupRepo.EXPECT().ListPage(gomock.Any(), "ac_team", domain.KeysetPage{Limit: 26}).Return(nil, nil)
 	factory := factorymock.NewMockRepoFactory(ctrl)
-	factory.EXPECT().NewNotificationRepo().Return(notifRepo)
 	factory.EXPECT().NewMessagingGroupRepo().Return(groupRepo)
 	svc := &conversationSvcImpl{repoFactory: factory}
 

@@ -381,6 +381,13 @@ func (s *conversationSvcImpl) messagingGroupCaller(ctx context.Context, action t
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainMessaging, action); apiErr != nil {
 		return "", "", apiErr
 	}
+	// Reading a roster needs no membership of the caller's own, so API keys and includes can read one too.
+	if action == types.ActionRead {
+		if !identity.IsTargetAccountSet() {
+			return "", "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
+		}
+		return "", identity.Target.AccountID, nil
+	}
 	_, callerAcus, accountID, apiErr := s.caller(ctx)
 	return callerAcus, accountID, apiErr
 }

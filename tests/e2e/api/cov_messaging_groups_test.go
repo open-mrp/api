@@ -158,7 +158,11 @@ func TestCovMessagingGroups_CreateAndUpdateAllFields(t *testing.T) {
 	removeResp, err := owner.DeleteFull(messagingGroupsPath + "/" + id + "/members/" + jsonField(userMember, "id"))
 	require.NoError(t, err)
 	requireStatus(t, 200, removeResp.StatusCode, removeResp.Body)
-	afterRemove := parseJSON(removeResp.Body)
+	assert.Equal(t, map[string]any{"id": jsonField(userMember, "id"), "object": "messaging_group_member", "deleted": true}, parseJSON(removeResp.Body))
+	getAfter, err := owner.GetFull(messagingGroupsPath+"/"+id, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getAfter.StatusCode, getAfter.Body)
+	afterRemove := parseJSON(getAfter.Body)
 	afterData, ok := listData(afterRemove, "members")
 	require.True(t, ok)
 	assert.Len(t, afterData, 1, "removing one member should leave the other")
@@ -362,7 +366,7 @@ func TestCovMessagingGroups_List(t *testing.T) {
 	assert.True(t, found, "the created roster should appear in the list")
 
 	t.Run("UnsupportedQueryParamsRejected", func(t *testing.T) {
-		for _, param := range []string{"limit", "cursor", "q", "sort"} {
+		for _, param := range []string{"q", "sort"} {
 			status, body, err := owner.GetListRaw(messagingGroupsPath, url.Values{param: {"1"}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)

@@ -69,17 +69,6 @@ func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
 	assert.Empty(t, want, "every conversation is reachable by paging")
 }
 
-func TestChat_DMDedupIsOrderIndependent(t *testing.T) {
-	t.Parallel()
-	user := chatUserClient(t)   // dane (SeedAccountUserID)
-	other := chatUser2Client(t) // user2 (SeedAccountUser2ID)
-
-	fromUser := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
-	fromOther := jsonField(createDM(t, other, SeedAccountUserID), "id")
-
-	assert.Equal(t, fromUser, fromOther,
-		"a DM is the same conversation regardless of which participant creates it (sorted dm_key)")
-}
 
 func TestChat_ListConversationsForBothParticipantsAndTypeFilter(t *testing.T) {
 	t.Parallel()

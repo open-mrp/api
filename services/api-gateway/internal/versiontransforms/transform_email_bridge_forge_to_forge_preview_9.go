@@ -2,7 +2,6 @@ package versiontransforms
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/open-mrp/api/shared/apiversion"
@@ -16,7 +15,6 @@ import (
 //   - email_inbox: group_id became the expandable group.
 //   - email_sender: email_domain_id, domain and domain_status became the expandable email_domain; PUT became PATCH,
 //     and DELETE answers with the deleted stub.
-//   - the domain and inbox lists page (25 by default) where preview.9 returned every row.
 //
 // preview.9 callers get the old fields back from the forced includes and the records, and their PUT is served by
 // the PATCH with every omitted optional field cleared, as a replacement did.
@@ -112,27 +110,6 @@ func (emailBridgeForgeToPreview9) TransformRequestBody(objectType object.Type, m
 
 func (emailBridgeForgeToPreview9) TransformRequest(_ object.Type, data map[string]any) map[string]any {
 	return data
-}
-
-// TransformQuery keeps preview.9's whole-list reads of domains and inboxes whole for any account with up to 100 of them.
-func (emailBridgeForgeToPreview9) TransformQuery(_ object.Type, route string, query url.Values) url.Values {
-	return preview9UnpagedLimit(route, query)
-}
-
-// preview9UnpagedRoutes are the lists that returned every row on preview.9.
-var preview9UnpagedRoutes = map[string]bool{
-	"/v1/messaging/email-domains":            true,
-	"/v1/messaging/email-inboxes":            true,
-	"/v1/messaging/groups":                   true,
-	"/v1/messaging/blocks":                   true,
-	"/v1/messaging/conversations/{id}/links": true,
-}
-
-func preview9UnpagedLimit(route string, query url.Values) url.Values {
-	if preview9UnpagedRoutes[route] && query.Get("limit") == "" {
-		query.Set("limit", "100")
-	}
-	return query
 }
 
 // idOf is the id of an expanded reference, or nil.

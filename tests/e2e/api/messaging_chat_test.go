@@ -98,11 +98,21 @@ func TestChat_CreateDMAlwaysStartsANewConversation(t *testing.T) {
 	again := createDM(t, user, SeedAccountUser2ID)
 	assert.NotEqual(t, id, jsonField(again, "id"), "a repeat create must start a new conversation")
 
-	// participant_ids[] with limit=1 finds the latest conversation with them.
-	list, _, err := user.GetList(conversationsPath, url.Values{"participant_ids[]": {SeedAccountUser2ID}, "limit": {"1"}})
+	// participant_ids[] lists only conversations that also seat them, most recently active first.
+	sendMessage(t, user, jsonField(again, "id"), uniqueName("latest"), newIdempotencyKey())
+	list, _, err := user.GetList(conversationsPath, url.Values{"participant_ids[]": {SeedAccountUser2ID}, "limit": {"50"}, "include": {"participants"}})
 	require.NoError(t, err)
-	require.Len(t, list.Data, 1)
-	assert.Equal(t, jsonField(again, "id"), jsonField(parseJSON(list.Data[0]), "id"), "the newest conversation with them comes first")
+	var found bool
+	for _, raw := range list.Data {
+		conv := parseJSON(raw)
+		found = found || jsonField(conv, "id") == jsonField(again, "id")
+		pid, _, _ := participantInfo(t, conv, SeedAccountUser2ID)
+		assert.NotEmpty(t, pid, "every listed conversation seats the participant")
+	}
+	assert.True(t, found, "the newest conversation with them is listed")
+	other, _, err := user.GetList(conversationsPath, url.Values{"participant_ids[]": {"acus_nobodyatall0000"}})
+	require.NoError(t, err)
+	assert.Empty(t, other.Data, "no conversation seats an unknown account user")
 
 	// Both users appear as participants.
 	participants, ok := listData(dm, "participants")

@@ -3,7 +3,6 @@ package versiontransforms
 import (
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,13 +87,4 @@ func TestPreview9_EmailSenderPutRoutesToPatch(t *testing.T) {
 	forge.Header.Set(apiversion.Header, apiversion.V1_0_Forge.String())
 	h.ServeHTTP(httptest.NewRecorder(), forge)
 	assert.Equal(t, http.MethodPut, method, "forge callers are not rerouted")
-}
-
-func TestPreview9_UnpagedListsReadUpTo100(t *testing.T) {
-	t.Parallel()
-
-	q := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeEmailDomain, "/v1/messaging/email-domains", url.Values{})
-	assert.Equal(t, "100", q.Get("limit"))
-	q = version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeEmailDomain, "/v1/messaging/email-domains", url.Values{"limit": {"10"}})
-	assert.Equal(t, "10", q.Get("limit"))
 }

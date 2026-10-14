@@ -189,24 +189,15 @@ func TestCovMessagingAnnouncements_ListBasicSmoke(t *testing.T) {
 	assert.NotEmpty(t, list.Data, "the announcements list should hold at least one row")
 }
 
-func TestCovMessagingAnnouncements_ListQueryIsNoOp(t *testing.T) {
+// The announcement list has no search, so q is an unknown parameter.
+func TestCovMessagingAnnouncements_ListHasNoSearch(t *testing.T) {
 	t.Parallel()
 	user := notifUserClient(t)
-	title := uniqueName("e2e-cov-announce-qnoop")
-	broadcastAnnouncement(t, user, title)
-	findAnnouncement(t, user, title)
-
-	// KNOWN GAP (do not fix): ListAnnouncementsRequest.Query is validated (max=500) and documented, but AnnouncementSvc.ListAnnouncements never forwards it into pb.ListAnnouncementsRequest, which has no query field at all. A syntactically valid but non-matching q must NOT filter the announcement out of the results — asserting otherwise would assert behavior the backend does not implement.
-	list, _, err := user.GetList(announcementsPath, url.Values{"limit": {"100"}, "q": {uniqueName("nonmatching-token")}})
+	status, body, err := user.GetListRaw(announcementsPath, url.Values{"q": {"anything"}})
 	require.NoError(t, err)
-	var sawTitle bool
-	for _, raw := range list.Data {
-		if jsonField(parseJSON(raw), "title") == title {
-			sawTitle = true
-			break
-		}
-	}
-	assert.True(t, sawTitle, "q is a documented-but-inert filter on this endpoint; a non-matching q must not remove the row")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
+	assertErrorParam(t, errObj, "q")
 }
 
 // ── List query-param validation ─────────────────────────────────────
@@ -237,26 +228,6 @@ func TestCovMessagingAnnouncements_ListLimitValidation(t *testing.T) {
 	requireStatus(t, 200, status, nil)
 }
 
-func TestCovMessagingAnnouncements_ListQueryLengthValidation(t *testing.T) {
-	t.Parallel()
-	user := notifUserClient(t)
-
-	tooLong := ""
-	for i := 0; i < 501; i++ {
-		tooLong += "a"
-	}
-	status, body, err := user.GetListRaw(announcementsPath, url.Values{"q": {tooLong}})
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "q")
-
-	// Exactly at the boundary (500 chars) remains valid, even though (per the no-op gap above) it does not actually filter anything.
-	atLimit := tooLong[:500]
-	status, _, err = user.GetListRaw(announcementsPath, url.Values{"q": {atLimit}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-}
 
 func TestCovMessagingAnnouncements_UnknownIncludeRejected(t *testing.T) {
 	t.Parallel()

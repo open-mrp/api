@@ -176,9 +176,15 @@ func TestChatGroup_DMCannotBeManaged(t *testing.T) {
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
-	patch, err := user.PatchFull(conversationsPath+"/"+convID, map[string]any{"title": "nope"}, newIdempotencyKey())
+	// A direct message can be named, but not archived or given more members.
+	patch, err := user.PatchFull(conversationsPath+"/"+convID, map[string]any{"title": "named"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, patch.StatusCode, patch.Body)
+	requireStatus(t, 200, patch.StatusCode, patch.Body)
+	assert.Equal(t, "named", jsonField(parseJSON(patch.Body), "title"))
+
+	archive, err := user.PostFull(conversationsPath+"/"+convID+"/actions/archive", map[string]any{}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, archive.StatusCode, archive.Body)
 
 	add, err := user.PostFull(conversationsPath+"/"+convID+"/participants",
 		map[string]any{"account_user_id": SeedAccountUserID}, newIdempotencyKey())

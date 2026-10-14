@@ -67,12 +67,12 @@ func TestVersionCompatMessaging_ConversationsOnPreview9(t *testing.T) {
 	assert.NotContains(t, msg, "related")
 
 	status, raw, err = preview.Post(conversationsPath+"/"+convID+"/links", map[string]any{
-		"resource_type": "invoice", "resource_id": "inv_" + uniqueName("compat"),
+		"resource_type": "sales_order", "resource_id": SeedSalesOrderID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, raw)
 	link := parseJSON(raw)
-	assert.Equal(t, "invoice", jsonField(jsonObject(link, "resource"), "type"))
+	assert.Equal(t, "sales_order", jsonField(jsonObject(link, "resource"), "type"))
 	assert.NotContains(t, link, "record")
 }
 

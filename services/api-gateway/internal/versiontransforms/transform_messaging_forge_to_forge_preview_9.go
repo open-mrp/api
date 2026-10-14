@@ -191,7 +191,6 @@ func moveRecord(data map[string]any, typeKey, idKey, key string) {
 
 // TransformQuery upgrades preview.9's list filters and the include keys that named entities.
 func (messagingForgeToPreview9) TransformQuery(_ object.Type, route string, query url.Values) url.Values {
-	query = preview9UnpagedLimit(route, query)
 	switch route {
 	case conversationsRoute:
 		if status := query.Get("status"); status != "" {

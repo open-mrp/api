@@ -21,9 +21,7 @@ type Record struct {
 	Number *string `json:"number"`
 	// Type-specific status code, when applicable.
 	Status *string `json:"status"`
-	// Type-specific metadata.
-	//
-	// The set of keys varies by record type.
+	// The record's own `metadata`: the key-value pairs set on it. Empty for record types without metadata.
 	Metadata map[string]string `json:"metadata"`
 }
 
@@ -45,8 +43,7 @@ var SampleRecord = &Record{
 	Number: &sampleRecordNumber,
 	Status: new("fulfilled"),
 	Metadata: map[string]string{
-		"carrier":         "UPS",
-		"tracking_number": "1Z999AA10123456784",
+		"erp_reference": "SH-7781",
 	},
 }
 

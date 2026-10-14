@@ -16,7 +16,7 @@ func init() {
 			rec := apiresource.NewRecord(s.ID, constants.RecordTypeShipment)
 			rec.Number = new(s.Number)
 			rec.Status = new(string(s.Status))
-			// The shipment loader stashes tracking, carrier and ship date for its stubs.
+			// Until FUL2 moves shipments to their own metadata, the stub carries tracking, carrier and ship date there.
 			if m, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "record_metadata"); ok {
 				if meta, ok := m.(map[string]string); ok && len(meta) > 0 {
 					rec.Metadata = meta

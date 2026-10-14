@@ -68,6 +68,7 @@ func TestAnalyticsParityWeeksOfSales_StockAndSalesInTheLinesBaseUnit(t *testing.
 		require.NotNil(t, q, field)
 		unit := jsonObject(q, "unit")
 		require.NotNil(t, unit, field)
+		assert.Equal(t, SeedUnitID, jsonField(unit, "id"), field)
 		assert.Equal(t, "pr", jsonField(unit, "abbreviation"), field)
 		assert.Equal(t, "quantity", jsonField(unit, "type"), field)
 		v, err := strconv.ParseFloat(jsonField(q, "value"), 64)
@@ -218,7 +219,7 @@ func TestAnalyticsParityDemandForecast_ForecastsAnItemFirstOrderedThisMonth(t *t
 		body["lines"] = []map[string]any{{
 			"product_id": product, "product_sku": "E2E-PO-SKU",
 			"quantity":   map[string]any{"value": "4", "unit_id": SeedUnitID},
-			"unit_price": map[string]any{"value": "9.50", "numerator_unit_id": e2eCurrencyUnitID, "denominator_unit_id": SeedUnitID},
+			"unit_price": map[string]any{"amount": "9.50", "currency": "usd", "per_unit_id": SeedUnitID},
 		}}
 	})
 	status, raw := changePurchaseOrderStatus(t, jsonField(po, "id"), "issue")

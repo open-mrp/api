@@ -19,9 +19,9 @@ func materialLineBody(sku string) map[string]any {
 		"product_sku": sku,
 		"quantity":    map[string]any{"value": "40", "unit_id": SeedMaterialUnitID},
 		"unit_price": map[string]any{
-			"value":               "6",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedMaterialUnitID,
+			"amount":      "6",
+			"currency":    "usd",
+			"per_unit_id": SeedMaterialUnitID,
 		},
 	}
 }
@@ -41,7 +41,7 @@ func TestPurchaseOrders_CreateAcceptsAMaterialLineWithoutAProduct(t *testing.T) 
 		b["lines"] = []map[string]any{materialLineBody("E2E-PO-MAT")}
 	})
 
-	po := retrievePurchaseOrder(t, jsonField(created, "id"), "lines", "lines.item", "lines.quantity_ordered.unit")
+	po := retrievePurchaseOrder(t, jsonField(created, "id"), "lines", "lines.item")
 	lines := jsonListData(po, "lines")
 	require.Len(t, lines, 1)
 	line := lines[0].(map[string]any)

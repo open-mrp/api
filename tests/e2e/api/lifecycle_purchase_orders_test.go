@@ -29,9 +29,9 @@ func purchaseOrderLineBody(sku string) map[string]any {
 		"product_sku": sku,
 		"quantity":    map[string]any{"value": "4", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
-			"value":               "9.50",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "9.50",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}
 }

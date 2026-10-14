@@ -53,7 +53,7 @@ func freightLinePrices(t *testing.T, orderID string, orderedSKU string) []float6
 		if jsonField(line, "product_sku") == orderedSKU {
 			continue
 		}
-		price, err := strconv.ParseFloat(jsonField(jsonObject(line, "unit_price"), "value"), 64)
+		price, err := strconv.ParseFloat(jsonField(jsonObject(line, "unit_price"), "amount"), 64)
 		require.NoError(t, err)
 		prices = append(prices, price)
 	}

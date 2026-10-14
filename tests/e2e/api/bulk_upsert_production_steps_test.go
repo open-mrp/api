@@ -121,6 +121,16 @@ func assertDecimalEqual(t *testing.T, expected, actual string, msgAndArgs ...any
 	assert.InDelta(t, want, got, 1e-9, msgAndArgs...)
 }
 
+// assertStepPrice checks a step's labor or overhead rate: dollars per perUnitID.
+func assertStepPrice(t *testing.T, step map[string]any, field, amount, perUnitID string) {
+	t.Helper()
+	price := jsonObject(step, field)
+	require.NotNil(t, price, "%s is always present", field)
+	assertDecimalEqual(t, amount, jsonField(price, "amount"), field)
+	assert.Equal(t, "usd", jsonField(price, "currency"), field)
+	assert.Equal(t, perUnitID, jsonField(jsonObject(price, "per_unit"), "id"), "%s.per_unit", field)
+}
+
 func getStep(t *testing.T, id string, includes ...string) map[string]any {
 	t.Helper()
 	var q url.Values
@@ -182,9 +192,12 @@ func TestProductionSteps_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	assert.Equal(t, "full step notes", jsonField(got, "notes"))
 	assertDecimalEqual(t, "1.1", jsonField(got, "leveling_factor"))
 	assertDecimalEqual(t, "0.05", jsonField(got, "allowances"))
-	assertDecimalEqual(t, "25.00", jsonField(jsonObject(got, "labor_rate"), "value"))
-	assertDecimalEqual(t, "1.5", jsonField(jsonObject(got, "labor_time"), "value"))
-	assertDecimalEqual(t, "15.00", jsonField(jsonObject(got, "overhead_rate"), "value"))
+	assertStepPrice(t, got, "labor_rate", "25.00", unitHour)
+	laborTime := jsonObject(got, "labor_time")
+	assertDecimalEqual(t, "1.5", jsonField(laborTime, "value"))
+	assert.Equal(t, unitHour, jsonField(jsonObject(laborTime, "unit"), "id"), "labor_time.unit")
+	assert.Equal(t, unitEach, jsonField(jsonObject(laborTime, "per_unit"), "id"), "labor_time.per_unit")
+	assertStepPrice(t, got, "overhead_rate", "15.00", unitHour)
 
 	station := jsonObject(got, "scanning_station")
 	require.NotNil(t, station, "scanning_station should be populated with include")
@@ -436,7 +449,7 @@ func TestProductionSteps_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	assert.Equal(t, upper, jsonField(got, "name"), "name adopts the request's casing")
 	assert.Equal(t, "updated notes", jsonField(got, "notes"))
 	assertDecimalEqual(t, "2", jsonField(got, "leveling_factor"))
-	assertDecimalEqual(t, "30.00", jsonField(jsonObject(got, "labor_rate"), "value"), "rate is freshly written on update")
+	assertStepPrice(t, got, "labor_rate", "30.00", unitHour)
 	production := jsonObject(got, "production")
 	require.NotNil(t, production)
 	assert.Equal(t, "SCK-002", jsonField(jsonObject(production, "produced_item"), "sku"), "production is replaced on update")

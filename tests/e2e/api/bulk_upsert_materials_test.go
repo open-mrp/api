@@ -116,8 +116,8 @@ func TestMaterials_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	item := catalogItem(t, materialsPath, id)
 	assert.Equal(t, "full material description", jsonField(item, "description"))
 	assert.Equal(t, "full material notes", jsonField(item, "notes"))
-	assert.Equal(t, "1.50", catalogRateValue(t, materialsPath, id, "item.unit_value"))
-	assert.Equal(t, "0.75", catalogRateValue(t, materialsPath, id, "item.unit_cost"))
+	assert.Equal(t, "1.50", bulkCatalogPriceAmount(t, materialsPath, id, "item.unit_value"))
+	assert.Equal(t, "0.75", bulkCatalogPriceAmount(t, materialsPath, id, "item.unit_cost"))
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 
@@ -130,9 +130,9 @@ func TestMaterials_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
 		"sku":      uniqueName("e2e-bup-mat-badrate"),
 		"category": map[string]any{"id": SeedMaterialCategoryID},
 		"unit_price": map[string]any{
-			"value":               "1.00",
-			"numerator_unit_id":   currencyUnitID,
-			"denominator_unit_id": currencyUnitID, // must not be currency
+			"amount":      "1.00",
+			"currency":    "usd",
+			"per_unit_id": e2eCurrencyUnitID, // must not be currency
 		},
 	})
 	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
@@ -329,8 +329,8 @@ func TestMaterials_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	item := catalogItem(t, materialsPath, materialID)
 	assert.Equal(t, "updated description", jsonField(item, "description"))
 	assert.Equal(t, "updated notes", jsonField(item, "notes"))
-	assert.Equal(t, "2.22", catalogRateValue(t, materialsPath, materialID, "item.unit_value"))
-	assert.Equal(t, "1.11", catalogRateValue(t, materialsPath, materialID, "item.unit_cost"))
+	assert.Equal(t, "2.22", bulkCatalogPriceAmount(t, materialsPath, materialID, "item.unit_value"))
+	assert.Equal(t, "1.11", bulkCatalogPriceAmount(t, materialsPath, materialID, "item.unit_cost"))
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 

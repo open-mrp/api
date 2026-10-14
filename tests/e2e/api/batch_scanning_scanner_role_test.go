@@ -33,9 +33,6 @@ var scannerRolePermissions = map[string]string{
 	"self":                  "r",
 }
 
-// stationBatchIncludes are the expansions the scanning station asks for on every batch it shows.
-const stationBatchIncludes = "quantity.unit,seconds.unit,waste.unit"
-
 // scannerOperator is a person signed in to the seed account under a role holding exactly the scanner
 // role's permissions. Role assignment has no API: an operator grants it in SQL, as this does.
 func scannerOperator(t *testing.T) *Client {
@@ -124,7 +121,7 @@ func flowByBatch(t *testing.T, flow map[string]any) map[string]any {
 func scanAs(t *testing.T, client *Client, action string, body map[string]any) map[string]any {
 	t.Helper()
 	markOutbox(t)
-	got := postAs(t, client, batchesPath+"/actions/"+action+"?include="+stationBatchIncludes, body, http.StatusCreated)
+	got := postAs(t, client, batchesPath+"/actions/"+action, body, http.StatusCreated)
 	settleScanAtCleanup(t, action, jsonField(got, "id"))
 	return got
 }
@@ -133,7 +130,7 @@ func scanAs(t *testing.T, client *Client, action string, body map[string]any) ma
 // station shows of it, as an admin reads the same batch in the station's list.
 func requireStationShowsScan(t *testing.T, stationID string, scanned map[string]any) {
 	t.Helper()
-	rows := jsonArray(readAs(t, apiClient, scanningStationsPath+"/"+stationID+"/batches", url.Values{"limit": {"100"}, "include": {stationBatchIncludes}}), "data")
+	rows := jsonArray(readAs(t, apiClient, scanningStationsPath+"/"+stationID+"/batches", url.Values{"limit": {"100"}}), "data")
 	var adminRow map[string]any
 	for _, row := range rows {
 		if jsonField(row.(map[string]any), "id") == jsonField(scanned, "id") {
@@ -174,7 +171,7 @@ func TestBatchScanningScanner_RunsEveryStation(t *testing.T) {
 	initialized := scanAs(t, operator, "initialize", map[string]any{"batch_id": first, "scanning_station_id": c.initStation})
 	requireStationShowsScan(t, c.initStation, initialized)
 	scanAs(t, operator, "initialize", map[string]any{"batch_id": second, "scanning_station_id": c.initStation})
-	requireSameForBoth(t, operator, scanningStationsPath+"/"+c.initStation+"/batches", url.Values{"limit": {"25"}, "include": {stationBatchIncludes}})
+	requireSameForBoth(t, operator, scanningStationsPath+"/"+c.initStation+"/batches", url.Values{"limit": {"25"}})
 	// The preview reads stock, which the scans' inventory moves once their messages are handled.
 	settleScans(t, first, second)
 	waitForOnHand(t, c.a.id, "14")
@@ -188,10 +185,8 @@ func TestBatchScanningScanner_RunsEveryStation(t *testing.T) {
 
 	// Split, after reading what is left.
 	remainingBody := map[string]any{"batch_ids": []string{first}, "production_step_id": c.splitStep}
-	adminLeft := postAs(t, apiClient, batchesPath+"/remaining-quantities?include=unit", remainingBody, http.StatusOK)
-	operatorLeft := postAs(t, operator, batchesPath+"/remaining-quantities?include=unit", remainingBody, http.StatusOK)
-	delete(adminLeft, "id") // a fresh id each read
-	delete(operatorLeft, "id")
+	adminLeft := postAs(t, apiClient, batchesPath+"/remaining-quantities", remainingBody, http.StatusOK)
+	operatorLeft := postAs(t, operator, batchesPath+"/remaining-quantities", remainingBody, http.StatusOK)
 	assert.Equal(t, adminLeft, operatorLeft, "the operator reads what is left as an admin does")
 	split := scanAs(t, operator, "split", splitBody(c.splitStation, c.splitStep, []string{first}, "6", "1", "1", false))
 	requireStationShowsScan(t, c.splitStation, split)
@@ -205,9 +200,8 @@ func TestBatchScanningScanner_RunsEveryStation(t *testing.T) {
 
 	// The batch's history, as the flow page and a printed traveler read it. Its nodes come in no fixed
 	// order; the page lays them out by their links.
-	flowParams := url.Values{"include": {"batch.quantity.unit,batch.seconds.unit,batch.waste.unit"}}
-	assert.Equal(t, flowByBatch(t, readAs(t, apiClient, batchesPath+"/"+first+"/flow", flowParams)),
-		flowByBatch(t, readAs(t, operator, batchesPath+"/"+first+"/flow", flowParams)), "the operator reads the flow as an admin does")
+	assert.Equal(t, flowByBatch(t, readAs(t, apiClient, batchesPath+"/"+first+"/flow", nil)),
+		flowByBatch(t, readAs(t, operator, batchesPath+"/"+first+"/flow", nil)), "the operator reads the flow as an admin does")
 
 	// Undo, the way the station does: the latest scan first.
 	postAs(t, operator, batchesPath+"/actions/bulk-delete", map[string]any{"batch_ids": []string{jsonField(mergedBatch, "id")}}, http.StatusOK)

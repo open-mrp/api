@@ -277,13 +277,15 @@ func TestDashItems_DashboardIncludeSetHydratesEveryKey(t *testing.T) {
 			assertUnitHydrated(t, jsonObject(member, "unit"), where+": associated_units[].unit")
 		}
 
-		for _, rate := range []string{"unit_value", "unit_cost", "burn_rate"} {
-			got := jsonObject(item, rate)
-			require.NotNil(t, got, "%s: %s", where, rate)
-			assertObjectField(t, got, "rate")
-			assertUnitHydrated(t, jsonObject(got, "numerator_unit"), where+": "+rate+".numerator_unit")
-			assertUnitHydrated(t, jsonObject(got, "denominator_unit"), where+": "+rate+".denominator_unit")
+		for _, price := range []string{"unit_value", "unit_cost"} {
+			assertUnitPriceHydrated(t, jsonObject(item, price), where+": "+price)
 		}
+		burnRate := jsonObject(item, "burn_rate")
+		require.NotNil(t, burnRate, "%s: burn_rate", where)
+		assertValueShapeBare(t, burnRate, where+": burn_rate")
+		assert.NotEmpty(t, jsonField(burnRate, "value"), "%s: burn_rate.value", where)
+		assertUnitHydrated(t, jsonObject(burnRate, "unit"), where+": burn_rate.unit")
+		assertUnitHydrated(t, jsonObject(burnRate, "per_unit"), where+": burn_rate.per_unit")
 		attributes := jsonObject(item, "attributes")
 		require.NotNil(t, attributes, "%s: attributes", where)
 		assert.Empty(t, jsonArray(attributes, "data"), "%s: a new item carries no attributes", where)
@@ -801,7 +803,8 @@ func TestDashItems_InventoryCorrectionIsAttributedToTheSignedInUser(t *testing.T
 		assertObjectField(t, got, "inventory_change_log")
 		assert.Equal(t, "user_correction", jsonField(got, "action_type"), where)
 		quantity := jsonObject(got, "quantity")
-		assertObjectField(t, quantity, "quantity")
+		require.NotNil(t, quantity, "%s: quantity", where)
+		assertValueShapeBare(t, quantity, where+": quantity")
 		assertDecimalEqual(t, "2.5", jsonField(quantity, "value"), where)
 		assert.Equal(t, poundUnitID, jsonField(jsonObject(quantity, "unit"), "id"), where)
 		assert.Equal(t, itemID, jsonField(jsonObject(got, "item"), "id"), where)
@@ -990,8 +993,8 @@ func TestDashItems_ChangeCategoryMovesTheRatesOntoTheNewBaseUnit(t *testing.T) {
 	categoryID := dashItemsMaterialCategory(t, apiClient)
 	sku := uniqueName("e2e-dashitems-move")
 	material := validMaterialBody(sku)
-	material["unit_price"] = map[string]any{"value": "1.50", "numerator_unit_id": "dollar", "denominator_unit_id": poundUnitID}
-	material["unit_cost"] = map[string]any{"value": "0.75", "numerator_unit_id": "dollar", "denominator_unit_id": poundUnitID}
+	material["unit_price"] = map[string]any{"amount": "1.50", "currency": "usd", "per_unit_id": poundUnitID}
+	material["unit_cost"] = map[string]any{"amount": "0.75", "currency": "usd", "per_unit_id": poundUnitID}
 	itemID := dashItemsMaterialFrom(t, material)
 	include := url.Values{"include": {"category,unit_value,unit_cost,burn_rate"}}
 
@@ -1006,14 +1009,14 @@ func TestDashItems_ChangeCategoryMovesTheRatesOntoTheNewBaseUnit(t *testing.T) {
 	after := parseJSON(body)
 
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	for rate, value := range map[string]string{"unit_value": "1.5", "unit_cost": "0.75"} {
-		assertDecimalEqual(t, value, jsonField(jsonObject(before, rate), "value"), "%s before the move", rate)
-		assertDecimalEqual(t, value, jsonField(jsonObject(after, rate), "value"), "%s keeps its figure", rate)
-		assert.Equal(t, poundUnitID, jsonField(jsonObject(jsonObject(before, rate), "denominator_unit"), "id"), "%s was per pound", rate)
-		assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, rate), "denominator_unit"), "id"), "%s is now per each", rate)
-		assert.Equal(t, "dollar", jsonField(jsonObject(jsonObject(after, rate), "numerator_unit"), "id"), "%s stays in dollars", rate)
+	for price, amount := range map[string]string{"unit_value": "1.5", "unit_cost": "0.75"} {
+		assertDecimalEqual(t, amount, jsonField(jsonObject(before, price), "amount"), "%s before the move", price)
+		assertDecimalEqual(t, amount, jsonField(jsonObject(after, price), "amount"), "%s keeps its figure", price)
+		assert.Equal(t, poundUnitID, jsonField(jsonObject(jsonObject(before, price), "per_unit"), "id"), "%s was per pound", price)
+		assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, price), "per_unit"), "id"), "%s is now per each", price)
+		assert.Equal(t, "usd", jsonField(jsonObject(after, price), "currency"), "%s stays in dollars", price)
 	}
-	assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, "burn_rate"), "numerator_unit"), "id"), "burn rate counts eaches")
+	assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, "burn_rate"), "unit"), "id"), "burn rate counts eaches")
 
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {categoryID}}))
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {SeedMaterialCategoryID}}))
@@ -1024,7 +1027,7 @@ func TestDashItems_ChangeCategoryMovesTheRatesOntoTheNewBaseUnit(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	again := parseJSON(body)
 	assert.Equal(t, categoryID, jsonField(jsonObject(again, "category"), "id"))
-	assert.Equal(t, jsonField(jsonObject(after, "unit_cost"), "value"), jsonField(jsonObject(again, "unit_cost"), "value"))
+	assert.Equal(t, jsonField(jsonObject(after, "unit_cost"), "amount"), jsonField(jsonObject(again, "unit_cost"), "amount"))
 }
 
 func TestDashItems_AttributeAndCategoryWritesStayInTheirTenant(t *testing.T) {

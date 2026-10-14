@@ -22,8 +22,8 @@ import (
 // Two rules follow from that, and every test here checks one of them:
 //
 //   - A field behind an include is null until asked for, and fully populated once it is.
-//   - A computed figure — one summed or netted at read time, with no row of its own — carries the
-//     unit it is counted in, because there is no id a caller could follow to fetch it.
+//   - A value — a quantity, a price, an amount — always carries the whole unit it is counted in;
+//     the unit is never behind an include of its own.
 
 // --- Shared assertions ---
 
@@ -43,44 +43,49 @@ func assertUnitHydrated(t *testing.T, unit map[string]any, where string) {
 	assertValidTimestamp(t, jsonField(unit, "updated_at"), where+".updated_at")
 }
 
-// assertRateHydrated asserts a rate arrived complete. Its two units stay behind their own includes,
-// so they are not checked here.
-func assertRateHydrated(t *testing.T, rate map[string]any, where string) {
+// assertValueShapeBare asserts a value shape carries none of the record fields it used to: a value
+// is not a row, so it has no id, no object and no timestamps.
+func assertValueShapeBare(t *testing.T, value map[string]any, where string) {
 	t.Helper()
 
-	require.NotNil(t, rate, "%s must be present", where)
-	assertObjectField(t, rate, "rate")
-	assert.NotEmpty(t, jsonField(rate, "id"), "%s.id", where)
-	assert.NotEmpty(t, jsonField(rate, "value"), "%s.value", where)
-	assert.NotEmpty(t, jsonField(rate, "display_value"), "%s.display_value — required, and the only readable form of the rate", where)
-	assertValidTimestamp(t, jsonField(rate, "created_at"), where+".created_at")
-	assertValidTimestamp(t, jsonField(rate, "updated_at"), where+".updated_at")
+	for _, key := range []string{"id", "object", "display_value", "created_at", "updated_at"} {
+		assert.NotContains(t, value, key, "%s is a value, not a record", where)
+	}
 }
 
-// assertQuantityHydrated asserts a stored quantity arrived complete. Its unit is expandable, so it
-// is checked separately by the tests that ask for it.
+// assertUnitPriceHydrated asserts a price arrived complete: an amount, its currency, and the whole
+// unit it is priced per — a price with no basis is not a price.
+func assertUnitPriceHydrated(t *testing.T, price map[string]any, where string) {
+	t.Helper()
+
+	require.NotNil(t, price, "%s must be present", where)
+	assertValueShapeBare(t, price, where)
+	assert.NotEmpty(t, jsonField(price, "amount"), "%s.amount", where)
+	assert.Equal(t, "usd", jsonField(price, "currency"), "%s.currency", where)
+	assertUnitHydrated(t, jsonObject(price, "per_unit"), where+".per_unit")
+}
+
+// assertQuantityHydrated asserts a quantity arrived complete, with the whole unit it is counted in.
+// Stored or computed, the shape is the same.
 func assertQuantityHydrated(t *testing.T, quantity map[string]any, where string) {
 	t.Helper()
 
 	require.NotNil(t, quantity, "%s must be present", where)
-	assertObjectField(t, quantity, "quantity")
-	assert.NotEmpty(t, jsonField(quantity, "id"), "%s.id — a stored quantity is a row, so it has one", where)
+	assertValueShapeBare(t, quantity, where)
 	assert.NotEmpty(t, jsonField(quantity, "value"), "%s.value", where)
-	assert.NotEmpty(t, jsonField(quantity, "display_value"), "%s.display_value", where)
+	assertUnitHydrated(t, jsonObject(quantity, "unit"), where+".unit")
 }
 
-// assertComputedQuantityHydrated asserts a figure derived at read time arrived with its unit. It has
-// no id — that is the difference between it and a stored quantity — and the unit is not expandable,
-// so it must already be here.
-func assertComputedQuantityHydrated(t *testing.T, quantity map[string]any, where string) {
+// assertIncludeRejected asserts an include key that no longer exists is a client error, not a
+// silently ignored key.
+func assertIncludeRejected(t *testing.T, path string, includes ...string) {
 	t.Helper()
 
-	require.NotNil(t, quantity, "%s must be present", where)
-	assertObjectField(t, quantity, "computed_quantity")
-	assert.NotContains(t, quantity, "id", "%s carries no id — it is computed, not stored", where)
-	assert.NotEmpty(t, jsonField(quantity, "value"), "%s.value", where)
-	assert.NotEmpty(t, jsonField(quantity, "display_value"), "%s.display_value", where)
-	assertUnitHydrated(t, jsonObject(quantity, "unit"), where+".unit")
+	status, body, err := apiClient.GetListRaw(path, url.Values{"include": includes})
+	require.NoError(t, err)
+	require.Less(t, status, 500, "%s must not 5xx: %s", path, string(body))
+	assert.Equal(t, 400, status, "%v is not an include: %s", includes, string(body))
+	assert.Equal(t, "parameter_invalid", jsonField(jsonObject(parseJSON(body), "error"), "code"), string(body))
 }
 
 // firstLineWith asks for a resource with the given includes and returns its first line.
@@ -126,8 +131,7 @@ func TestItemCosts_UnitsAreResolvedWithoutAnInclude(t *testing.T) {
 
 // --- Item inventory ---
 
-// The four stock figures are netted out of the ledger, so each is a computed quantity that arrives
-// with its unit already on it.
+// The four stock figures are netted out of the ledger; each arrives with its unit already on it.
 func TestItemInventory_ExpandedFiguresCarryTheirUnit(t *testing.T) {
 	t.Parallel()
 
@@ -141,7 +145,7 @@ func TestItemInventory_ExpandedFiguresCarryTheirUnit(t *testing.T) {
 	assertObjectField(t, inventory, "item_inventory")
 
 	for _, field := range includes {
-		assertComputedQuantityHydrated(t, jsonObject(inventory, field), field)
+		assertQuantityHydrated(t, jsonObject(inventory, field), field)
 	}
 }
 
@@ -189,7 +193,7 @@ func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 		assertObjectField(t, item, "item")
 		assert.NotEmpty(t, jsonField(item, "sku"))
 
-		assertComputedQuantityHydrated(t, jsonObject(row, "quantity"), "quantity")
+		assertQuantityHydrated(t, jsonObject(row, "quantity"), "quantity")
 	}
 }
 
@@ -204,98 +208,76 @@ func everyInventoryRowHasAUnit(rows []json.RawMessage) bool {
 
 // --- Deliveries ---
 
-// The cost a delivery line was stocked at is a rate: a value, a readable form, and two units. All
-// of it comes from the delivery query, so asking for the include returns the whole record — not an
-// id with a blank display value.
+// The cost a delivery line was stocked at is a price: an amount, a currency, and the unit it is
+// per. All of it comes from the delivery query, so asking for the include returns the whole price.
 func TestDeliveries_LineUnitCostExpandsFullyHydrated(t *testing.T) {
 	t.Parallel()
 
-	line, body := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.unit_cost")
-	assertRateHydrated(t, jsonObject(line, "unit_cost"), "lines.unit_cost")
-
-	// The two units stay behind their own includes.
-	unitCost := jsonObject(line, "unit_cost")
-	assertNilField(t, unitCost, "numerator_unit")
-	assertNilField(t, unitCost, "denominator_unit")
-	_ = body
+	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.unit_cost")
+	assertUnitPriceHydrated(t, jsonObject(line, "unit_cost"), "lines.unit_cost")
 }
 
-func TestDeliveries_LineUnitCostUnitsExpandWithInclude(t *testing.T) {
+// The price's unit comes with the price, so there is no include left to reach it by.
+func TestDeliveries_LineUnitCostUnitIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID,
-		"lines", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit")
-
-	unitCost := jsonObject(line, "unit_cost")
-	require.NotNil(t, unitCost)
-	assertUnitHydrated(t, jsonObject(unitCost, "numerator_unit"), "lines.unit_cost.numerator_unit")
-	assertUnitHydrated(t, jsonObject(unitCost, "denominator_unit"), "lines.unit_cost.denominator_unit")
-	assert.Equal(t, "currency", jsonField(jsonObject(unitCost, "numerator_unit"), "type"),
-		"a unit cost is priced in a currency")
+	assertIncludeRejected(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.unit_cost", "lines.unit_cost.per_unit")
 }
 
-// The quantity is always on the line; its unit is a record of its own and is asked for by name.
-func TestDeliveries_LineQuantityUnitExpandsWithInclude(t *testing.T) {
+// The quantity is always on the line, unit and all; it is not an include.
+func TestDeliveries_LineQuantityIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.quantity", "lines.quantity.unit")
-
-	quantity := jsonObject(line, "quantity")
-	assertQuantityHydrated(t, quantity, "lines.quantity")
-	assertUnitHydrated(t, jsonObject(quantity, "unit"), "lines.quantity.unit")
+	assertIncludeRejected(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.quantity")
 }
 
-func TestDeliveries_LineQuantityUnitIsNullWithoutInclude(t *testing.T) {
+func TestDeliveries_LineQuantityCarriesItsUnitWithoutInclude(t *testing.T) {
 	t.Parallel()
 
 	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines")
-
-	quantity := jsonObject(line, "quantity")
-	assertQuantityHydrated(t, quantity, "lines.quantity")
-	assertNilField(t, quantity, "unit")
+	assertQuantityHydrated(t, jsonObject(line, "quantity"), "lines.quantity")
 }
 
 // --- Receiving orders ---
 
-// What the purchase order asked for is the order line's own quantity, reported under that
-// quantity's id. A synthesized id would look real and resolve to nothing.
+// What the purchase order asked for is the order line's own quantity, in the order line's unit.
 func TestReceivingOrders_LineQuantityOrderedIsThePurchaseOrderQuantity(t *testing.T) {
 	t.Parallel()
 
 	line, body := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID,
-		"lines", "lines.quantity_ordered", "lines.quantity_ordered.unit", "related", "related.purchase_order")
+		"lines", "lines.quantity_ordered", "related", "related.purchase_order")
 
 	ordered := jsonObject(line, "quantity_ordered")
 	assertQuantityHydrated(t, ordered, "lines.quantity_ordered")
-	assertUnitHydrated(t, jsonObject(ordered, "unit"), "lines.quantity_ordered.unit")
-
-	orderedID := jsonField(ordered, "id")
-	assert.NotContains(t, orderedID, "_ordered", "the ordered quantity is the order line's own row, not a made-up id")
 
 	// The same quantity, reached the other way: through the purchase order the receiving order was
-	// created from. Both routes must name the same row.
+	// created from. Both routes must report the same figure in the same unit.
 	related := jsonObject(parseJSON(body), "related")
 	require.NotNil(t, related, "the seeded receiving order was created from a purchase order: %s", string(body))
 	purchaseOrder := jsonObject(related, "purchase_order")
 	require.NotNil(t, purchaseOrder, "the seeded receiving order was created from a purchase order: %s", string(body))
 
-	poLine, _ := firstLineWith(t, purchaseOrdersPath+"/"+jsonField(purchaseOrder, "id"), "lines", "lines.quantity_ordered")
-	assert.Equal(t, jsonField(jsonObject(poLine, "quantity_ordered"), "id"), orderedID,
-		"the receiving line reports the purchase order line's quantity, not a copy of its value")
+	poLine, _ := firstLineWith(t, purchaseOrdersPath+"/"+jsonField(purchaseOrder, "id"), "lines")
+	poOrdered := jsonObject(poLine, "quantity_ordered")
+	assertQuantityHydrated(t, poOrdered, "purchase order lines.quantity_ordered")
+	assert.Equal(t, jsonField(poOrdered, "value"), jsonField(ordered, "value"),
+		"the receiving line reports the purchase order line's quantity")
+	assert.Equal(t, jsonField(jsonObject(poOrdered, "unit"), "id"), jsonField(jsonObject(ordered, "unit"), "id"),
+		"in the purchase order line's unit")
 }
 
-func TestReceivingOrders_LineQuantityUnitExpandsWithInclude(t *testing.T) {
+// The received quantity is always on the line, unit and all; it is not an include.
+func TestReceivingOrders_LineQuantityCarriesItsUnitWithoutInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines", "lines.quantity", "lines.quantity.unit")
+	line, _ := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines")
+	assertQuantityHydrated(t, jsonObject(line, "quantity"), "lines.quantity")
 
-	quantity := jsonObject(line, "quantity")
-	assertQuantityHydrated(t, quantity, "lines.quantity")
-	assertUnitHydrated(t, jsonObject(quantity, "unit"), "lines.quantity.unit")
+	assertIncludeRejected(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines", "lines.quantity")
 }
 
-// The rejected figure is summed across the line's deliveries, so when it is present it is a
-// computed quantity carrying its unit rather than a quantity with an invented id.
+// The rejected figure is summed across the line's deliveries, so when it is present it carries its
+// unit like any other quantity.
 func TestReceivingOrders_LineRejectedQuantityIsComputed(t *testing.T) {
 	t.Parallel()
 
@@ -314,56 +296,44 @@ func TestReceivingOrders_LineRejectedQuantityIsComputed(t *testing.T) {
 		if rejected == nil {
 			continue
 		}
-		assertComputedQuantityHydrated(t, rejected, "lines.rejected_quantity")
+		assertQuantityHydrated(t, rejected, "lines.rejected_quantity")
 	}
 }
 
 // --- Purchase orders ---
 
-func TestPurchaseOrders_LineQuantityAndRatesAreHydrated(t *testing.T) {
+// The ordered quantity and the agreed price are always on the line, units and all.
+func TestPurchaseOrders_LineQuantityAndPriceAreHydrated(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines", "lines.quantity_ordered", "lines.unit_price")
+	line, _ := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines")
 
 	assertQuantityHydrated(t, jsonObject(line, "quantity_ordered"), "lines.quantity_ordered")
-	assertRateHydrated(t, jsonObject(line, "unit_price"), "lines.unit_price")
+	assertUnitPriceHydrated(t, jsonObject(line, "unit_price"), "lines.unit_price")
 }
 
-func TestPurchaseOrders_LineUnitPriceUnitsExpandWithInclude(t *testing.T) {
+func TestPurchaseOrders_LineValuesAreNotIncludes(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID,
-		"lines", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit")
-
-	unitPrice := jsonObject(line, "unit_price")
-	require.NotNil(t, unitPrice)
-	assertUnitHydrated(t, jsonObject(unitPrice, "numerator_unit"), "lines.unit_price.numerator_unit")
-	assertUnitHydrated(t, jsonObject(unitPrice, "denominator_unit"), "lines.unit_price.denominator_unit")
+	path := purchaseOrdersPath + "/" + SeedPurchaseOrderID
+	assertIncludeRejected(t, path, "lines", "lines.unit_price")
+	assertIncludeRejected(t, path, "lines", "lines.quantity_ordered")
 }
 
-func TestPurchaseOrders_LineQuantityOrderedUnitExpandsWithInclude(t *testing.T) {
-	t.Parallel()
-
-	line, _ := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID,
-		"lines", "lines.quantity_ordered", "lines.quantity_ordered.unit")
-
-	assertUnitHydrated(t, jsonObject(jsonObject(line, "quantity_ordered"), "unit"), "lines.quantity_ordered.unit")
-}
-
-// Nothing on a line is half-resolved when its include was not asked for.
-func TestPurchaseOrders_LineSubUnitsAreNullWithoutInclude(t *testing.T) {
+// Nothing on a line is half-resolved when its include was not asked for, and the units of its
+// values are not includes, so they are always there.
+func TestPurchaseOrders_LineItemIsNullAndUnitsArePresentWithoutInclude(t *testing.T) {
 	t.Parallel()
 
 	line, _ := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines")
 
 	assertNilField(t, line, "item")
-	assertNilField(t, jsonObject(line, "quantity_ordered"), "unit")
-	assertNilField(t, jsonObject(line, "unit_price"), "numerator_unit")
-	assertNilField(t, jsonObject(line, "unit_price"), "denominator_unit")
+	assertUnitHydrated(t, jsonObject(jsonObject(line, "quantity_ordered"), "unit"), "lines.quantity_ordered.unit")
+	assertUnitHydrated(t, jsonObject(jsonObject(line, "unit_price"), "per_unit"), "lines.unit_price.per_unit")
 }
 
 // What has been received against a line is rolled up from the receiving order, so when it is
-// present it is computed and carries its own unit.
+// present it carries its own unit.
 func TestPurchaseOrders_LineQuantityReceivedIsComputed(t *testing.T) {
 	t.Parallel()
 
@@ -381,7 +351,7 @@ func TestPurchaseOrders_LineQuantityReceivedIsComputed(t *testing.T) {
 		if received == nil {
 			continue
 		}
-		assertComputedQuantityHydrated(t, received, "lines.quantity_received")
+		assertQuantityHydrated(t, received, "lines.quantity_received")
 	}
 }
 
@@ -504,83 +474,53 @@ func TestInvoices_LineItemIsNullWithoutInclude(t *testing.T) {
 	assertNilField(t, line, "item")
 }
 
-// The quantity billed is a stored row, so it carries an id; the unit it is counted in is a record
-// of its own and is reachable through it.
-func TestInvoices_LineQuantityUnitExpandsWithInclude(t *testing.T) {
+// The quantity billed carries the unit it is counted in; neither is an include.
+func TestInvoices_LineQuantityIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, invoicesPath+"/"+SeedInvoiceID, "lines", "lines.quantity", "lines.quantity.unit")
-
-	quantity := jsonObject(line, "quantity")
-	assertQuantityHydrated(t, quantity, "lines.quantity")
-	assertUnitHydrated(t, jsonObject(quantity, "unit"), "lines.quantity.unit")
+	assertIncludeRejected(t, invoicesPath+"/"+SeedInvoiceID, "lines", "lines.quantity")
 }
 
-func TestInvoices_LineQuantityUnitIsNullWithoutInclude(t *testing.T) {
+func TestInvoices_LineQuantityCarriesItsUnitWithoutInclude(t *testing.T) {
 	t.Parallel()
 
 	line, _ := firstLineWith(t, invoicesPath+"/"+SeedInvoiceID, "lines")
-	assertNilField(t, jsonObject(line, "quantity"), "unit")
+	assertQuantityHydrated(t, jsonObject(line, "quantity"), "lines.quantity")
 }
 
-// A price is currency over an item unit. Both sides are reachable, so the line can print "$/kg"
-// without a second request.
-func TestInvoices_LineUnitPriceUnitsExpandWithInclude(t *testing.T) {
+// A price names the unit it is per, so the line can print "$/kg" without a second request.
+func TestInvoices_LineUnitPriceIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, invoicesPath+"/"+SeedInvoiceID,
-		"lines", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit")
-
-	unitPrice := jsonObject(line, "unit_price")
-	assertRateHydrated(t, unitPrice, "lines.unit_price")
-	assertUnitHydrated(t, jsonObject(unitPrice, "numerator_unit"), "lines.unit_price.numerator_unit")
-	assertUnitHydrated(t, jsonObject(unitPrice, "denominator_unit"), "lines.unit_price.denominator_unit")
+	assertIncludeRejected(t, invoicesPath+"/"+SeedInvoiceID, "lines", "lines.unit_price")
 }
 
-func TestInvoices_LineUnitPriceUnitsAreNullWithoutInclude(t *testing.T) {
+func TestInvoices_LineUnitPriceCarriesItsUnitWithoutInclude(t *testing.T) {
 	t.Parallel()
 
 	line, _ := firstLineWith(t, invoicesPath+"/"+SeedInvoiceID, "lines")
-	unitPrice := jsonObject(line, "unit_price")
-	require.NotNil(t, unitPrice, "unit_price is always on the line")
-	assertNilField(t, unitPrice, "numerator_unit")
-	assertNilField(t, unitPrice, "denominator_unit")
+	assertUnitPriceHydrated(t, jsonObject(line, "unit_price"), "lines.unit_price")
 }
 
-// An allocation is an amount of money. The currency is a record, and the allocation only knew its
-// id — so the amount arrived with a null unit and no include that would fill it.
-func TestInvoices_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
+// An allocation is an amount of money counted in the currency unit. The allocation only knew the
+// currency's id, so the amount once arrived with a null unit; it now always carries it.
+func TestInvoices_AllocationAmountCarriesItsUnit(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(invoicesPath+"/"+SeedInvoiceID,
-		url.Values{"include": {"allocations", "allocations.amount", "allocations.amount.unit"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "invoice retrieve must not 5xx: %s", string(body))
-	requireStatus(t, 200, status, body)
-
-	allocations := jsonListData(parseJSON(body), "allocations")
-	require.NotEmpty(t, allocations, "the seeded invoice is paid by a seeded allocation: %s", string(body))
-	for _, raw := range allocations {
-		allocation, ok := raw.(map[string]any)
-		require.True(t, ok)
-		assertObjectField(t, allocation, "invoice_allocation")
-
-		amount := jsonObject(allocation, "amount")
-		assertQuantityHydrated(t, amount, "allocations.amount")
-		assertUnitHydrated(t, jsonObject(amount, "unit"), "allocations.amount.unit")
-	}
+	assertAllocationAmountsCarryTheirUnit(t, invoicesPath+"/"+SeedInvoiceID, "invoice_allocation")
+	assertIncludeRejected(t, invoicesPath+"/"+SeedInvoiceID, "allocations", "allocations.amount")
 }
 
 // --- Settlements and transactions ---
 
 // The same allocation amount, reached from the two other documents that carry it.
-func TestSettlements_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
+func TestSettlements_AllocationAmountCarriesItsUnit(t *testing.T) {
 	t.Parallel()
 
 	assertAllocationAmountsCarryTheirUnit(t, settlementsPath+"/"+SeedSettlementID, "transaction_allocation")
 }
 
-func TestTransactions_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
+func TestTransactions_AllocationAmountCarriesItsUnit(t *testing.T) {
 	t.Parallel()
 
 	assertAllocationAmountsCarryTheirUnit(t, transactionsPath+"/"+SeedTransactionID, "transaction_allocation")
@@ -589,8 +529,7 @@ func TestTransactions_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
 func assertAllocationAmountsCarryTheirUnit(t *testing.T, path, objectType string) {
 	t.Helper()
 
-	status, body, err := apiClient.GetListRaw(path,
-		url.Values{"include": {"allocations", "allocations.amount", "allocations.amount.unit"}})
+	status, body, err := apiClient.GetListRaw(path, url.Values{"include": {"allocations"}})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s must not 5xx: %s", path, string(body))
 	requireStatus(t, 200, status, body)
@@ -604,7 +543,8 @@ func assertAllocationAmountsCarryTheirUnit(t *testing.T, path, objectType string
 
 		amount := jsonObject(allocation, "amount")
 		assertQuantityHydrated(t, amount, "allocations.amount")
-		assertUnitHydrated(t, jsonObject(amount, "unit"), "allocations.amount.unit")
+		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "type"),
+			"an allocation is counted in a currency")
 	}
 }
 
@@ -682,11 +622,7 @@ func TestProductionSteps_ConsumedItemIsNullWithoutInclude(t *testing.T) {
 func TestPurchaseOrders_ListOffersTheSameLineIncludesAsRetrieve(t *testing.T) {
 	t.Parallel()
 
-	includes := []string{
-		"lines", "lines.item",
-		"lines.quantity_ordered", "lines.quantity_ordered.unit",
-		"lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit",
-	}
+	includes := []string{"lines", "lines.item"}
 
 	status, body, err := apiClient.GetListRaw(purchaseOrdersPath, url.Values{"include": includes, "limit": {"5"}})
 	require.NoError(t, err)
@@ -708,14 +644,8 @@ func TestPurchaseOrders_ListOffersTheSameLineIncludesAsRetrieve(t *testing.T) {
 				assertItemHydrated(t, item, "lines.item")
 			}
 
-			quantity := jsonObject(line, "quantity_ordered")
-			assertQuantityHydrated(t, quantity, "lines.quantity_ordered")
-			assertUnitHydrated(t, jsonObject(quantity, "unit"), "lines.quantity_ordered.unit")
-
-			unitPrice := jsonObject(line, "unit_price")
-			assertRateHydrated(t, unitPrice, "lines.unit_price")
-			assertUnitHydrated(t, jsonObject(unitPrice, "numerator_unit"), "lines.unit_price.numerator_unit")
-			assertUnitHydrated(t, jsonObject(unitPrice, "denominator_unit"), "lines.unit_price.denominator_unit")
+			assertQuantityHydrated(t, jsonObject(line, "quantity_ordered"), "lines.quantity_ordered")
+			assertUnitPriceHydrated(t, jsonObject(line, "unit_price"), "lines.unit_price")
 		}
 	}
 	require.True(t, sawLine, "the seeded account has purchase orders with lines: %s", string(body))
@@ -822,12 +752,12 @@ func TestInvoices_AllocationTransactionIsNullWithoutInclude(t *testing.T) {
 }
 
 // Reaching through the transaction to the currency its amount is counted in — the transaction is
-// loaded here rather than presented, so this proves the loader stashes what its own sub-objects need.
-func TestSettlements_AllocationTransactionAmountUnitExpands(t *testing.T) {
+// loaded here rather than presented, so this proves the loader stashes what its own values need.
+func TestSettlements_AllocationTransactionAmountCarriesItsUnit(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.GetListRaw(settlementsPath+"/"+SeedSettlementID,
-		url.Values{"include": {"allocations", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit"}})
+		url.Values{"include": {"allocations", "allocations.transaction"}})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "settlement retrieve must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -839,7 +769,8 @@ func TestSettlements_AllocationTransactionAmountUnitExpands(t *testing.T) {
 		require.True(t, ok)
 		amount := jsonObject(jsonObject(allocation, "transaction"), "amount")
 		assertQuantityHydrated(t, amount, "allocations.transaction.amount")
-		assertUnitHydrated(t, jsonObject(amount, "unit"), "allocations.transaction.amount.unit")
+		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "type"),
+			"a transaction is counted in a currency")
 	}
 }
 
@@ -951,28 +882,20 @@ func TestBatches_ReferencesAreNamedNotHalfBuilt(t *testing.T) {
 	require.True(t, sawBatch, "the seeded scanning station has batches: %s", string(body))
 }
 
-// The three measures are stored rows, so the unit each is counted in is reachable through them.
-func TestBatches_MeasureUnitsExpandWithInclude(t *testing.T) {
+// A batch keeps nothing behind an include: its measures carry their units, so the endpoint takes no
+// include parameter at all.
+func TestBatches_TakeNoInclude(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.GetListRaw(scanningStationsPath+"/"+SeedScanningStationID+"/batches",
-		url.Values{"limit": {"5"}, "include": {"quantity.unit"}})
+		url.Values{"limit": {"5"}, "include": {"quantity"}})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "batches must not 5xx: %s", string(body))
-	requireStatus(t, 200, status, body)
-
-	for _, raw := range jsonArray(parseJSON(body), "data") {
-		batch, ok := raw.(map[string]any)
-		require.True(t, ok)
-		quantity := jsonObject(batch, "quantity")
-		if quantity == nil {
-			continue
-		}
-		assertUnitHydrated(t, jsonObject(quantity, "unit"), "quantity.unit")
-	}
+	assert.Equal(t, 400, status, "batches take no include: %s", string(body))
+	assert.Equal(t, "parameter_unknown", jsonField(jsonObject(parseJSON(body), "error"), "code"), string(body))
 }
 
-func TestBatches_MeasureUnitIsNullWithoutInclude(t *testing.T) {
+func TestBatches_MeasuresCarryTheirUnit(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.GetListRaw(scanningStationsPath+"/"+SeedScanningStationID+"/batches",
@@ -984,7 +907,7 @@ func TestBatches_MeasureUnitIsNullWithoutInclude(t *testing.T) {
 		batch, ok := raw.(map[string]any)
 		require.True(t, ok)
 		if quantity := jsonObject(batch, "quantity"); quantity != nil {
-			assertNilField(t, quantity, "unit")
+			assertQuantityHydrated(t, quantity, "quantity")
 		}
 	}
 }
@@ -1005,7 +928,7 @@ func assertPurchaseOrderLineHydrated(t *testing.T, line map[string]any, where st
 	assertValidTimestamp(t, jsonField(line, "updated_at"), where+".updated_at")
 
 	assertQuantityHydrated(t, jsonObject(line, "quantity_ordered"), where+".quantity_ordered")
-	assertRateHydrated(t, jsonObject(line, "unit_price"), where+".unit_price")
+	assertUnitPriceHydrated(t, jsonObject(line, "unit_price"), where+".unit_price")
 
 	// A purchase line records one agreed price, and that price is the cost — there is no separate
 	// unit_cost on it.
@@ -1034,17 +957,11 @@ func TestReceivingOrders_LineOrderLineIsNullWithoutInclude(t *testing.T) {
 	assertNilField(t, line, "order_line")
 }
 
-// Reaching through the order line to the price's currency proves the loader stashes what its own
-// sub-objects need, the same way the order endpoint does.
-func TestReceivingOrders_LineOrderLineUnitPriceUnitsExpand(t *testing.T) {
+// The order line's price is always on it, so there is no include reaching past the order line.
+func TestReceivingOrders_LineOrderLineUnitPriceIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 
-	line, _ := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID,
-		"lines", "lines.order_line", "lines.order_line.unit_price", "lines.order_line.unit_price.numerator_unit")
-
-	unitPrice := jsonObject(jsonObject(line, "order_line"), "unit_price")
-	assertRateHydrated(t, unitPrice, "lines.order_line.unit_price")
-	assertUnitHydrated(t, jsonObject(unitPrice, "numerator_unit"), "lines.order_line.unit_price.numerator_unit")
+	assertIncludeRejected(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines", "lines.order_line", "lines.order_line.unit_price")
 }
 
 // A delivery line reaches the same order line, one step further along: it is stocked against a

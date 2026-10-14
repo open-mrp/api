@@ -286,9 +286,9 @@ func TestSalesOrder_Lines_CreateUpdateDelete(t *testing.T) {
 		"product_description": "Original line description",
 		"quantity":            map[string]any{"value": "3", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
-			"value":               "12.50",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"amount":      "12.50",
+			"currency":    "usd",
+			"per_unit_id": SeedUnitID,
 		},
 	}
 	status, body, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", lineBody, newIdempotencyKey())

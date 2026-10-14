@@ -183,7 +183,7 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 		"product_line_id":   SeedProductLineID,
 		"portal_visibility": "visible",
 		"notes":             "Margin is thin on this one",
-		"unit_price":        map[string]any{"value": "4.50", "numerator_unit_id": currencyUnitID, "denominator_unit_id": nonCurrencyUnitID},
+		"unit_price":        map[string]any{"amount": "4.50", "currency": "usd", "per_unit_id": nonCurrencyUnitID},
 	})
 	linePath := productLinesPath + "/" + jsonField(line, "id")
 	productPath := productsPath + "/" + jsonField(product, "id")

@@ -9,10 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Behavioral coverage for POST /v1/sales/sales-orders/{id}/actions/quote-freight, pinning
-// that the quote's unit_price presents its numerator/denominator units in full — the same
-// Unit shape (name, abbreviation, type, conversion fields) every other endpoint returns —
-// rather than a bare {id, object} reference, which is what the endpoint used to emit.
+// Behavioral coverage for POST /v1/sales/sales-orders/{id}/actions/quote-freight. The quote is money:
+// an amount and its currency, with no units, id or display string.
 
 // assertFullyPresentedUnit fails unless the given object is a fully presented Unit resource,
 // not a bare {id, object} reference.
@@ -30,7 +28,7 @@ func assertFullyPresentedUnit(t *testing.T, unit map[string]any, label string) {
 	assert.Contains(t, unit, "ratio_denominator", "%s carries conversion fields", label)
 }
 
-func TestQuoteSalesOrderFreight_FullyPresentsUnits(t *testing.T) {
+func TestQuoteSalesOrderFreight_QuotesMoney(t *testing.T) {
 	t.Parallel()
 	orderID := createLifecycleOrder(t)
 
@@ -43,10 +41,6 @@ func TestQuoteSalesOrderFreight_FullyPresentsUnits(t *testing.T) {
 
 	unitPrice := jsonObject(resp, "unit_price")
 	require.NotNil(t, unitPrice, "the freight quote carries a unit_price")
-	assert.Equal(t, "computed_rate", jsonField(unitPrice, "object"))
-	assert.NotEmpty(t, jsonField(unitPrice, "value"), "the rate carries a value")
-
-	// Both units of the rate must be fully presented, not bare {id, object} refs.
-	assertFullyPresentedUnit(t, jsonObject(unitPrice, "numerator_unit"), "numerator_unit")
-	assertFullyPresentedUnit(t, jsonObject(unitPrice, "denominator_unit"), "denominator_unit")
+	assertMoneyUSD(t, unitPrice, "", "unit_price")
+	assert.Len(t, unitPrice, 2, "money is its amount and currency, nothing more: %v", unitPrice)
 }

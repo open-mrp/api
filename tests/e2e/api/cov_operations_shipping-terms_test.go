@@ -15,12 +15,12 @@ import (
 // the coverage already present in crud_shipping_terms_test.go and
 // crud_partial_includes_test.go — see TASK-operations_shipping-terms.md.
 
-// --- allFields: minimum_order_value, free_shipping_service_levels contents, nested unit/owner.account ---
+// --- allFields: minimum_order_value, free_shipping_service_levels contents, owner.account ---
 
 func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing.T) {
 	t.Parallel()
 
-	includeParams := "?include=flat_rate.unit,minimum_order_value.unit,free_shipping_service_levels,owner,owner.account"
+	includeParams := "?include=free_shipping_service_levels,owner,owner.account"
 
 	// ── CREATE with flat_rate, minimum_order_value, and free_shipping_service_level_ids all set ──
 	name := covOperationsShippingTermsUniqueName("allf-pop")
@@ -28,12 +28,12 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 		"name": name,
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
-			"value":   "9.99",
-			"unit_id": SeedUnitID,
+			"amount":   "9.99",
+			"currency": "usd",
 		},
 		"minimum_order_value": map[string]any{
-			"value":   "100.00",
-			"unit_id": SeedUnitID,
+			"amount":   "100.00",
+			"currency": "usd",
 		},
 		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
 	}, newIdempotencyKey())
@@ -62,27 +62,8 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 	assert.Equal(t, SeedAccountID, jsonField(ownerAccount, "id"))
 	assertObjectField(t, ownerAccount, "account")
 
-	// flat_rate + nested unit
-	flatRate := jsonObject(got, "flat_rate")
-	require.NotNil(t, flatRate, "flat_rate must be set after create")
-	assertObjectField(t, flatRate, "quantity")
-	assert.Equal(t, "9.99", jsonField(flatRate, "value"))
-	assert.NotEmpty(t, jsonField(flatRate, "display_value"))
-	flatRateUnit := jsonObject(flatRate, "unit")
-	require.NotNil(t, flatRateUnit, "flat_rate.unit should be present with ?include=flat_rate.unit")
-	assert.Equal(t, SeedUnitID, jsonField(flatRateUnit, "id"))
-	assertObjectField(t, flatRateUnit, "unit")
-
-	// minimum_order_value + nested unit
-	minOrderValue := jsonObject(got, "minimum_order_value")
-	require.NotNil(t, minOrderValue, "minimum_order_value must be set after create")
-	assertObjectField(t, minOrderValue, "quantity")
-	assert.Equal(t, "100.00", jsonField(minOrderValue, "value"))
-	assert.NotEmpty(t, jsonField(minOrderValue, "display_value"))
-	minOrderValueUnit := jsonObject(minOrderValue, "unit")
-	require.NotNil(t, minOrderValueUnit, "minimum_order_value.unit should be present with ?include=minimum_order_value.unit")
-	assert.Equal(t, SeedUnitID, jsonField(minOrderValueUnit, "id"))
-	assertObjectField(t, minOrderValueUnit, "unit")
+	assertShippingMoney(t, jsonObject(got, "flat_rate"), "9.99", "flat_rate after create")
+	assertShippingMoney(t, jsonObject(got, "minimum_order_value"), "100.00", "minimum_order_value after create")
 
 	// free_shipping_service_levels contents
 	freeLevels := jsonListData(got, "free_shipping_service_levels")
@@ -97,12 +78,12 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 	patchResp, err := apiClient.PatchFull(shippingTermsPath+"/"+id+includeParams, map[string]any{
 		"name": updatedName,
 		"flat_rate": map[string]any{
-			"value":   "19.99",
-			"unit_id": SeedUnitID,
+			"amount":   "19.99",
+			"currency": "usd",
 		},
 		"minimum_order_value": map[string]any{
-			"value":   "200.00",
-			"unit_id": SeedUnitID,
+			"amount":   "200.00",
+			"currency": "usd",
 		},
 		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
 	}, newIdempotencyKey())
@@ -114,15 +95,8 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, "flat_rate_freight", jsonField(updated, "type"), "type should be preserved")
 
-	updFlatRate := jsonObject(updated, "flat_rate")
-	require.NotNil(t, updFlatRate, "flat_rate should be present after update")
-	assert.Equal(t, "19.99", jsonField(updFlatRate, "value"))
-	require.NotNil(t, jsonObject(updFlatRate, "unit"), "flat_rate.unit should be present after update")
-
-	updMinOrderValue := jsonObject(updated, "minimum_order_value")
-	require.NotNil(t, updMinOrderValue, "minimum_order_value should be present after update")
-	assert.Equal(t, "200.00", jsonField(updMinOrderValue, "value"))
-	require.NotNil(t, jsonObject(updMinOrderValue, "unit"), "minimum_order_value.unit should be present after update")
+	assertShippingMoney(t, jsonObject(updated, "flat_rate"), "19.99", "flat_rate after update")
+	assertShippingMoney(t, jsonObject(updated, "minimum_order_value"), "200.00", "minimum_order_value after update")
 
 	updFreeLevels := jsonListData(updated, "free_shipping_service_levels")
 	require.Len(t, updFreeLevels, 1, "free_shipping_service_levels should still contain the assigned service level after update")
@@ -150,29 +124,28 @@ func TestCovOperationsShippingTerms_IncludeOwnerAccount(t *testing.T) {
 	assertObjectField(t, account, "account")
 }
 
-// --- expandable: nested flat_rate.unit / minimum_order_value.unit against seeded populated quantities ---
+// --- money: the seeded term's flat_rate and minimum_order_value are always present as Money ---
 
-func TestCovOperationsShippingTerms_IncludeFlatRateAndMinimumOrderValueUnit(t *testing.T) {
+func TestCovOperationsShippingTerms_FlatRateAndMinimumOrderValueAreMoney(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedCustomShippingTermID, url.Values{"include": {"flat_rate.unit", "minimum_order_value.unit"}})
+	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedCustomShippingTermID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
+	for _, field := range []string{"flat_rate", "minimum_order_value"} {
+		money := jsonObject(got, field)
+		require.NotNil(t, money, "seeded custom shipping term should have %s set", field)
+		assertValueShapeBare(t, money, field)
+		assert.NotEmpty(t, jsonField(money, "amount"), "%s.amount", field)
+		assert.Equal(t, "usd", jsonField(money, "currency"), "%s.currency", field)
+	}
 
-	flatRate := jsonObject(got, "flat_rate")
-	require.NotNil(t, flatRate, "seeded custom shipping term should have flat_rate set")
-	flatRateUnit := jsonObject(flatRate, "unit")
-	require.NotNil(t, flatRateUnit, "flat_rate.unit should be present with ?include=flat_rate.unit")
-	assert.NotEmpty(t, jsonField(flatRateUnit, "id"))
-	assertObjectField(t, flatRateUnit, "unit")
-
-	minOrderValue := jsonObject(got, "minimum_order_value")
-	require.NotNil(t, minOrderValue, "seeded custom shipping term should have minimum_order_value set")
-	minOrderValueUnit := jsonObject(minOrderValue, "unit")
-	require.NotNil(t, minOrderValueUnit, "minimum_order_value.unit should be present with ?include=minimum_order_value.unit")
-	assert.NotEmpty(t, jsonField(minOrderValueUnit, "id"))
-	assertObjectField(t, minOrderValueUnit, "unit")
+	// Money has no unit to include.
+	status, body, err = apiClient.GetListRaw(shippingTermsPath+"/"+SeedCustomShippingTermID, url.Values{"include": {"flat_rate.unit"}})
+	require.NoError(t, err)
+	require.Less(t, status, 500, string(body))
+	assert.Equal(t, 400, status, string(body))
 }
 
 // --- expandable: free_shipping_service_levels contents against seeded populated list ---
@@ -200,7 +173,7 @@ func TestCovOperationsShippingTerms_IncludeFreeShippingServiceLevelsContents(t *
 	assert.True(t, found, "expected free_shipping_service_levels to contain SeedServiceLevelID=%s", SeedServiceLevelID)
 }
 
-// --- validation: invalid type enum, oversized name, malformed QuantityInput ---
+// --- validation: invalid type enum, oversized name, malformed MoneyInput ---
 
 func TestCovOperationsShippingTerms_CreateValidation_InvalidTypeEnum(t *testing.T) {
 	t.Parallel()
@@ -225,14 +198,14 @@ func TestCovOperationsShippingTerms_CreateValidation_NameTooLong(t *testing.T) {
 		"name > 255 chars should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// QuantityInput.Value is validate:"required", so a flat_rate carrying only a unit_id is a validation error rather than a persisted half-quantity.
-func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingValue(t *testing.T) {
+// A flat_rate carrying only a currency is a validation error rather than a persisted half-amount.
+func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingAmount(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-noval"),
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
-			"unit_id": SeedUnitID,
+			"currency": "usd",
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -242,18 +215,18 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingValue(t *tes
 			defer apiClient.Delete(shippingTermsPath + "/" + id)
 		}
 	}
-	assert.True(t, status == 400 || status == 422,
-		"flat_rate missing value should return 400 or 422, got %d: %s", status, string(body))
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "flat_rate.amount")
 }
 
-// QuantityInput.UnitID is validate:"required", so a flat_rate carrying only a value is a validation error rather than a quantity with a null unit.
-func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingUnitID(t *testing.T) {
+// A flat_rate carrying only an amount is a validation error rather than money in no currency.
+func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingCurrency(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-nounit"),
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
-			"value": "9.99",
+			"amount": "9.99",
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -263,19 +236,19 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingUnitID(t *te
 			defer apiClient.Delete(shippingTermsPath + "/" + id)
 		}
 	}
-	assert.True(t, status == 400 || status == 422,
-		"flat_rate missing unit_id should return 400 or 422, got %d: %s", status, string(body))
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "flat_rate.currency")
 }
 
-// A flat_rate.unit_id naming a unit that does not exist is rejected, rather than persisting a quantity with no unit association.
-func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnknownUnitID(t *testing.T) {
+// A flat_rate in a currency other than dollars is rejected rather than stored as dollars.
+func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnsupportedCurrency(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-fkunit"),
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
-			"value":   "9.99",
-			"unit_id": "un_000000000000000000",
+			"amount":   "9.99",
+			"currency": "eur",
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -285,8 +258,8 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnknownUnitID(t *te
 			defer apiClient.Delete(shippingTermsPath + "/" + id)
 		}
 	}
-	assert.True(t, status == 400 || status == 404 || status == 422,
-		"flat_rate.unit_id referencing a non-existent unit should return 400, 404, or 422, got %d: %s", status, string(body))
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "flat_rate.currency")
 }
 
 // A free_shipping_service_level_ids entry naming a service level that does not exist is rejected, rather than silently dropped from the created term.
@@ -357,8 +330,8 @@ func TestCovOperationsShippingTerms_UpdateClearMinimumOrderValueAndServiceLevels
 		"name": name,
 		"type": "free_freight",
 		"minimum_order_value": map[string]any{
-			"value":   "50.00",
-			"unit_id": SeedUnitID,
+			"amount":   "50.00",
+			"currency": "usd",
 		},
 		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
 	}, newIdempotencyKey())

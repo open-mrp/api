@@ -110,9 +110,9 @@ func newScanStep(t *testing.T, stationID string, produce scanQty, consumes ...sc
 		"leveling_factor":     "0",
 		"allowances":          "0",
 		"scanning_station_id": stationID,
-		"labor_time":          map[string]any{"value": "1", "numerator_unit_id": unitSecond, "denominator_unit_id": unitEach},
-		"labor_rate":          map[string]any{"value": "1", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
-		"overhead_rate":       map[string]any{"value": "1", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
+		"labor_time":          map[string]any{"value": "1", "unit_id": unitSecond, "per_unit_id": unitEach},
+		"labor_rate":          map[string]any{"amount": "1", "currency": "usd", "per_unit_id": unitHour},
+		"overhead_rate":       map[string]any{"amount": "1", "currency": "usd", "per_unit_id": unitHour},
 		"production":          map[string]any{"item_id": produce.itemID, "quantity_value": produce.value, "quantity_unit_id": produce.unitID},
 		"consumptions":        consumptions,
 	}, newIdempotencyKey())
@@ -252,7 +252,7 @@ func requireScanError(t *testing.T, action string, body map[string]any, wantStat
 
 func remainingToSplit(t *testing.T, stepID string, batchIDs ...string) (int, map[string]any, []byte) {
 	t.Helper()
-	status, raw, err := apiClient.Post(batchesPath+"/remaining-quantities?include=unit", map[string]any{
+	status, raw, err := apiClient.Post(batchesPath+"/remaining-quantities", map[string]any{
 		"batch_ids": batchIDs, "production_step_id": stepID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -266,7 +266,7 @@ func requireRemaining(t *testing.T, stepID, want, wantUnitID string, batchIDs ..
 	requireStatus(t, 200, status, raw)
 	assertDecimalEqual(t, want, jsonField(got, "value"), "remaining to split")
 	assert.Equal(t, wantUnitID, jsonField(jsonObject(got, "unit"), "id"), "remaining unit: %s", raw)
-	assert.NotEmpty(t, jsonField(got, "id"), "the remaining quantity is addressable")
+	assert.NotContains(t, got, "id", "a value shape carries no id")
 }
 
 type scanConsumptionRow struct {

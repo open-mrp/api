@@ -308,7 +308,6 @@ func TestDashCustomers_UpdateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 		{"unknown shipping term", map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "default_shipping_term_id"},
 		{"unknown service level", map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "default_service_level_id"},
 		{"unknown receive calendar", map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "receive_calendar_id"},
-		{"unknown credit limit unit", map[string]any{"credit_limit": map[string]any{"value": "10", "unit_id": mustGenID(t, id.UnitIDPrefix)}}, "credit_limit"},
 		{"another tenant's type group", map[string]any{"customer_type_group_id": foreignType}, "customer_type_group_id"},
 		{"another tenant's pricing group", map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "customer_price_group_ids"},
 		{"another tenant's sales rep", map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "default_sales_rep_id"},
@@ -367,7 +366,6 @@ func TestDashCustomers_CreateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 		{"unknown shipping term", apiClient, SeedAccountID, map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "default_shipping_term_id"},
 		{"unknown service level", apiClient, SeedAccountID, map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "default_service_level_id"},
 		{"unknown receive calendar", apiClient, SeedAccountID, map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "receive_calendar_id"},
-		{"unknown credit limit unit", apiClient, SeedAccountID, map[string]any{"credit_limit": map[string]any{"value": "10", "unit_id": mustGenID(t, id.UnitIDPrefix)}}, "credit_limit"},
 		{"another tenant's type group", apiClient, SeedAccountID, map[string]any{"customer_type_group_id": foreignType}, "customer_type_group_id"},
 		{"another tenant's pricing group", apiClient, SeedAccountID, map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "customer_price_group_ids"},
 		{"another tenant's sales rep", apiClient, SeedAccountID, map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "default_sales_rep_id"},
@@ -1365,7 +1363,7 @@ func dashCustomersTargetPath(repID, targetID string) string {
 }
 
 func dashCustomersTargetBody(starts, ends, amount string) map[string]any {
-	return map[string]any{"starts_at": starts, "ends_at": ends, "amount_value": amount, "amount_unit_id": SeedUnitID}
+	return map[string]any{"starts_at": starts, "ends_at": ends, "amount": map[string]any{"amount": amount, "currency": "usd"}}
 }
 
 // dashCustomersFindTarget walks a rep's targets for targetID, returning it or nil.
@@ -1404,26 +1402,25 @@ func TestDashCustomers_SalesTargetUpsertCreatesThenUpdatesTheAmount(t *testing.T
 	assert.Equal(t, targetID, jsonField(created, "id"))
 	assert.Equal(t, "sales_target", jsonField(created, "object"))
 	assert.Equal(t, SeedAccountUserID, jsonField(jsonObject(created, "sales_rep"), "id"))
-	assert.Equal(t, "100", jsonField(jsonObject(created, "amount"), "value"))
-	assert.Equal(t, SeedUnitID, jsonField(jsonObject(jsonObject(created, "amount"), "unit"), "id"))
+	assert.Equal(t, map[string]any{"amount": "100.00", "currency": "usd"}, created["amount"])
 
 	status, resp, err = apiClient.Put(path, body)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
 	assert.Equal(t, targetID, jsonField(parseJSON(resp), "id"))
-	assert.Equal(t, jsonField(jsonObject(created, "amount"), "id"), jsonField(jsonObject(parseJSON(resp), "amount"), "id"), "a repeat updates the same amount")
+	assert.Equal(t, created["amount"], parseJSON(resp)["amount"], "a repeat leaves the amount as it was")
 
 	status, resp, err = apiClient.Put(path, dashCustomersTargetBody("2033-01-01T00:00:00Z", "2033-03-31T00:00:00Z", "250"))
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
 	updated := parseJSON(resp)
-	assert.Equal(t, "250", jsonField(jsonObject(updated, "amount"), "value"))
+	assert.Equal(t, map[string]any{"amount": "250.00", "currency": "usd"}, updated["amount"])
 	assert.Equal(t, jsonField(created, "start_at"), jsonField(updated, "start_at"), "an update keeps the period")
 	assert.Equal(t, jsonField(created, "end_at"), jsonField(updated, "end_at"))
 
 	listed := dashCustomersFindTarget(t, apiClient, SeedAccountUserID, targetID)
 	require.NotNil(t, listed, "the target is listed under its rep")
-	assert.Equal(t, "250", jsonField(jsonObject(listed, "amount"), "value"))
+	assert.Equal(t, map[string]any{"amount": "250.00", "currency": "usd"}, listed["amount"])
 }
 
 // A target with no period or amount, an amount that is not a number, or a period that ends before it
@@ -1435,10 +1432,11 @@ func TestDashCustomers_SalesTargetUpsertValidatesTheBody(t *testing.T) {
 		body map[string]any
 	}{
 		{"an empty body", map[string]any{}},
-		{"no amount", map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount_unit_id": SeedUnitID}},
+		{"no amount", map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z"}},
+		{"an amount without its figure", map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount": map[string]any{"currency": "usd"}}},
 		{"an amount that is not a number", dashCustomersTargetBody("2034-01-01T00:00:00Z", "2034-03-31T00:00:00Z", "abc")},
-		{"no unit", map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount_value": "10"}},
-		{"no period", map[string]any{"amount_value": "10", "amount_unit_id": SeedUnitID}},
+		{"no currency", map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount": map[string]any{"amount": "10"}}},
+		{"no period", map[string]any{"amount": map[string]any{"amount": "10", "currency": "usd"}}},
 		{"a period that ends before it starts", dashCustomersTargetBody("2034-03-31T00:00:00Z", "2034-01-01T00:00:00Z", "10")},
 	}
 	client := dashCustomersNoRetry(apiClient)
@@ -1454,9 +1452,10 @@ func TestDashCustomers_SalesTargetUpsertValidatesTheBody(t *testing.T) {
 	}
 
 	status, body, err := apiClient.Put(dashCustomersTargetPath(SeedAccountUserID, mustGenID(t, id.TargetIDPrefix)),
-		map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount_value": "10", "amount_unit_id": mustGenID(t, id.UnitIDPrefix)})
+		map[string]any{"starts_at": "2034-01-01T00:00:00Z", "ends_at": "2034-03-31T00:00:00Z", "amount": map[string]any{"amount": "10", "currency": "eur"}})
 	require.NoError(t, err)
-	assert.Contains(t, []int{400, 404}, status, "an unknown unit is refused: %s", body)
+	assert.Equal(t, 422, status, "only dollars are supported: %s", body)
+	assert.Equal(t, "amount.currency", errorParam(body), "%s", body)
 }
 
 // A target is filed under one rep: a save through another rep's path finds nothing rather than
@@ -1474,12 +1473,12 @@ func TestDashCustomers_SalesTargetBelongsToTheRepItIsFiledUnder(t *testing.T) {
 
 	got := dashCustomersFindTarget(t, apiClient, SeedAccountUserID, targetID)
 	require.NotNil(t, got)
-	assert.Equal(t, "100", jsonField(jsonObject(got, "amount"), "value"), "the first rep's target is unchanged")
+	assert.Equal(t, "100.00", jsonField(jsonObject(got, "amount"), "amount"), "the first rep's target is unchanged")
 	assert.Nil(t, dashCustomersFindTarget(t, apiClient, SeedAccountUser2ID, targetID))
 }
 
-// Another tenant can neither read nor change this account's targets, nor measure its own targets in
-// this account's unit; an unknown rep is not found and the portal has no targets.
+// Another tenant can neither read nor change this account's targets; an unknown rep is not found and
+// the portal has no targets.
 func TestDashCustomers_SalesTargetsStayWithinTheAccount(t *testing.T) {
 	t.Parallel()
 	other := getTenantBClient()
@@ -1496,17 +1495,12 @@ func TestDashCustomers_SalesTargetsStayWithinTheAccount(t *testing.T) {
 	assert.Equal(t, 404, status, "another tenant cannot save over this account's target: %s", body)
 	got := dashCustomersFindTarget(t, apiClient, SeedAccountUserID, targetID)
 	require.NotNil(t, got)
-	assert.Equal(t, "100", jsonField(jsonObject(got, "amount"), "value"))
+	assert.Equal(t, "100.00", jsonField(jsonObject(got, "amount"), "amount"))
 
 	status, body, err = apiClient.Put(dashCustomersTargetPath(mustGenID(t, id.AccountUserIDPrefix), mustGenID(t, id.TargetIDPrefix)),
 		dashCustomersTargetBody("2036-01-01T00:00:00Z", "2036-03-31T00:00:00Z", "1"))
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "an unknown rep: %s", body)
-
-	status, body, err = other.Put(dashCustomersTargetPath(SeedTenantBAccountUserID, mustGenID(t, id.TargetIDPrefix)),
-		dashCustomersTargetBody("2036-01-01T00:00:00Z", "2036-03-31T00:00:00Z", "1"))
-	require.NoError(t, err)
-	assert.Contains(t, []int{400, 404}, status, "another tenant cannot use this account's unit: %s", body)
 
 	status, body, err = getCustomerPortalClient().GetListRaw(salesTargetsPathFor(SeedAccountUserID), nil)
 	require.NoError(t, err)

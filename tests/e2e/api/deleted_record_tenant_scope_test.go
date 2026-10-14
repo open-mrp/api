@@ -197,7 +197,7 @@ func TestDeletedRecordScope_Sales(t *testing.T) {
 				lockPricingWrite(t)
 				return deletedScopeTarget{path: accountPricesPath + "/" + jsonField(createAccountPrice(t, SeedCustomerAccountID, "32.00"), "id")}
 			},
-			patch: map[string]any{"rate": map[string]any{"value": "33.00", "numerator_unit_id": e2eCurrencyUnitID, "denominator_unit_id": SeedUnitID}},
+			patch: map[string]any{"rate": map[string]any{"value": "33.00", "unit_id": e2eCurrencyUnitID, "per_unit_id": SeedUnitID}},
 		},
 		{
 			name: "volume discount",

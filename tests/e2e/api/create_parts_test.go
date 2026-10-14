@@ -77,14 +77,14 @@ func TestParts_Create_WithValidRates(t *testing.T) {
 
 	body := validPartBody(uniqueName("e2e-part-rates"))
 	body["unit_price"] = map[string]any{
-		"value":               "5.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "5.00",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 	body["unit_cost"] = map[string]any{
-		"value":               "2.50",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "2.50",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 
 	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
@@ -96,44 +96,46 @@ func TestParts_Create_WithValidRates(t *testing.T) {
 	require.NotEmpty(t, id)
 	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
 
-	// Verify unit_cost was persisted with the supplied currency numerator by
-	// expanding the nested rate via ?include=item.unit_cost.
+	// Verify unit_cost was persisted as sent by expanding it via ?include=item.unit_cost.
 	rateStatus, rateBody, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.unit_cost"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, rateStatus, rateBody)
 
 	uc := jsonObject(jsonObject(parseJSON(rateBody), "item"), "unit_cost")
 	require.NotNil(t, uc, "item.unit_cost should be populated with ?include=item.unit_cost")
-	assert.Equal(t, "rate", jsonField(uc, "object"))
-	assert.Equal(t, "2.50", jsonField(uc, "value"))
+	assert.Equal(t, "2.50", jsonField(uc, "amount"))
+	assert.Equal(t, "usd", jsonField(uc, "currency"))
+	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uc, "per_unit"), "id"))
+	assert.NotContains(t, uc, "object", "a unit price is a value shape, not an object")
 }
 
-func TestParts_Create_RejectsNonCurrencyNumeratorOnUnitCost(t *testing.T) {
+// Only dollars are accepted; the currency takes the place of the old currency numerator unit.
+func TestParts_Create_RejectsUnsupportedCurrencyOnUnitCost(t *testing.T) {
 	t.Parallel()
 
 	body := validPartBody(uniqueName("e2e-part-bad-num"))
 	body["unit_cost"] = map[string]any{
-		"value":               "1.00",
-		"numerator_unit_id":   nonCurrencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "1.00",
+		"currency":    "eur",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, respBody)
 
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
+	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
+	assertErrorParam(t, errObj, "unit_cost.currency")
 }
 
-func TestParts_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
+func TestParts_Create_RejectsCurrencyPerUnitOnUnitPrice(t *testing.T) {
 	t.Parallel()
 
 	body := validPartBody(uniqueName("e2e-part-bad-den"))
 	body["unit_price"] = map[string]any{
-		"value":               "1.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": currencyUnitID,
+		"amount":      "1.00",
+		"currency":    "usd",
+		"per_unit_id": currencyUnitID,
 	}
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
@@ -141,7 +143,7 @@ func TestParts_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
 	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
+	assertErrorParam(t, errObj, "unit_price.per_unit_id")
 }
 
 func TestParts_Create_LinksAttributes(t *testing.T) {

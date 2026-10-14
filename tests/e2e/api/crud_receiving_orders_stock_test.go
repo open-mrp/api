@@ -59,7 +59,7 @@ func lineQuantityUnitID(t *testing.T, line map[string]any) string {
 	t.Helper()
 
 	unit := jsonObject(jsonObject(line, "quantity"), "unit")
-	require.NotNil(t, unit, "the line's quantity unit must expand: %v", line)
+	require.NotNil(t, unit, "the line's quantity always carries its unit: %v", line)
 	return jsonField(unit, "id")
 }
 
@@ -210,7 +210,7 @@ func TestReceivingOrderLines_UpdateRecordsTheUnitItWasCountedIn(t *testing.T) {
 	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": dozens("1")})
 	requireStatus(t, 200, status, body)
 
-	got, getBody, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines", "lines.quantity", "lines.quantity.unit"}})
+	got, getBody, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, got, getBody)
 	line, ok := jsonListData(parseJSON(getBody), "lines")[0].(map[string]any)
@@ -803,7 +803,7 @@ func TestReceivingOrders_ActionsReturnTheRequestedIncludes(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
-	include := url.Values{"include": {"lines", "lines.order_line", "lines.quantity", "lines.quantity.unit", "supplier", "totals"}}
+	include := url.Values{"include": {"lines", "lines.order_line", "supplier", "totals"}}
 
 	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/actions/receive?"+include.Encode(), nil)
 	require.NoError(t, err)
@@ -821,7 +821,7 @@ func TestReceivingOrders_ActionsReturnTheRequestedIncludes(t *testing.T) {
 
 	lineID := jsonField(line, "id")
 	lineStatus, lineBody, err := apiClient.Put(
-		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/void?"+url.Values{"include": {"order_line", "quantity.unit"}}.Encode(), nil)
+		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/void?"+url.Values{"include": {"order_line"}}.Encode(), nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, lineStatus, lineBody)
 	require.NotNil(t, jsonObject(parseJSON(lineBody), "order_line"), "a line action fills its includes too: %s", string(lineBody))

@@ -20,28 +20,100 @@ func materialFullCreateBody(sku string) map[string]any {
 	body["notes"] = "All-fields material notes"
 	body["order_point"] = map[string]any{"value": "10", "unit_id": SeedUnitID}
 	body["lead_time"] = map[string]any{"value": "5", "unit_id": SeedUnitID}
-	body["unit_price"] = map[string]any{
-		"value":               "4.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
-	body["unit_cost"] = map[string]any{
-		"value":               "2.50",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
+	body["unit_price"] = priceInputPer("4.00", nonCurrencyUnitID)
+	body["unit_cost"] = priceInputPer("2.50", nonCurrencyUnitID)
 	return body
 }
 
-func assertMaterialQuantityInfo(t *testing.T, doc map[string]any, field string, _ string) {
+func assertMaterialQuantityInfo(t *testing.T, doc map[string]any, field string, unitID string) {
 	t.Helper()
-	q := jsonObject(doc, field)
-	require.NotNil(t, q, "%s should be set", field)
-	assert.NotEmpty(t, jsonField(q, "value"), "%s.value should be non-empty", field)
-	assert.NotEmpty(t, jsonField(q, "display_value"), "%s.display_value should convey the unit", field)
-	// unit is an expandable sub-resource of a quantity: null unless explicitly
-	// requested. The unit abbreviation is still conveyed via display_value.
-	assert.Nil(t, q["unit"], "%s.unit should be null without an explicit unit include", field)
+	assertQuantityIn(t, jsonObject(doc, field), "", unitID, field)
+}
+
+// priceInputPer is a UnitPriceInput in dollars per perUnitID.
+func priceInputPer(amount, perUnitID string) map[string]any {
+	return map[string]any{"amount": amount, "currency": "usd", "per_unit_id": perUnitID}
+}
+
+// moneyInputUSD is a MoneyInput in dollars.
+func moneyInputUSD(amount string) map[string]any {
+	return map[string]any{"amount": amount, "currency": "usd"}
+}
+
+// assertUnitShape checks a value shape's unit, which is always the full unit.
+func assertUnitShape(t *testing.T, unit map[string]any, unitID, label string) {
+	t.Helper()
+	require.NotNil(t, unit, "%s: a value shape always carries its full unit", label)
+	assert.Equal(t, "unit", jsonField(unit, "object"), label)
+	if unitID != "" {
+		assert.Equal(t, unitID, jsonField(unit, "id"), label)
+	} else {
+		assert.NotEmpty(t, jsonField(unit, "id"), label)
+	}
+	assert.NotEmpty(t, jsonField(unit, "abbreviation"), label)
+}
+
+// assertNoValueIdentity checks a value shape carries none of the record fields values used to have.
+func assertNoValueIdentity(t *testing.T, v map[string]any, label string) {
+	t.Helper()
+	for _, field := range []string{"id", "object", "display_value", "created_at", "updated_at"} {
+		_, has := v[field]
+		assert.False(t, has, "%s: a value shape has no %s", label, field)
+	}
+}
+
+// assertPricePer checks a UnitPrice; an empty amount only requires one.
+func assertPricePer(t *testing.T, price map[string]any, amount, perUnitID, label string) {
+	t.Helper()
+	require.NotNil(t, price, "%s should be set", label)
+	if amount != "" {
+		assert.Equal(t, amount, jsonField(price, "amount"), label)
+	} else {
+		assert.NotEmpty(t, jsonField(price, "amount"), label)
+	}
+	assert.Equal(t, "usd", jsonField(price, "currency"), label)
+	assertUnitShape(t, jsonObject(price, "per_unit"), perUnitID, label+".per_unit")
+	assertNoValueIdentity(t, price, label)
+}
+
+// assertMoneyUSD checks a Money; an empty amount only requires one.
+func assertMoneyUSD(t *testing.T, money map[string]any, amount, label string) {
+	t.Helper()
+	require.NotNil(t, money, "%s should be set", label)
+	if amount != "" {
+		assert.Equal(t, amount, jsonField(money, "amount"), label)
+	} else {
+		assert.NotEmpty(t, jsonField(money, "amount"), label)
+	}
+	assert.Equal(t, "usd", jsonField(money, "currency"), label)
+	assertNoValueIdentity(t, money, label)
+}
+
+// assertQuantityIn checks a Quantity; an empty value only requires one, an empty unitID any unit.
+func assertQuantityIn(t *testing.T, q map[string]any, value, unitID, label string) {
+	t.Helper()
+	require.NotNil(t, q, "%s should be set", label)
+	if value != "" {
+		assertDecimalEqual(t, value, jsonField(q, "value"), label)
+	} else {
+		assert.NotEmpty(t, jsonField(q, "value"), label)
+	}
+	assertUnitShape(t, jsonObject(q, "unit"), unitID, label+".unit")
+	assertNoValueIdentity(t, q, label)
+}
+
+// assertRateShape checks a Rate; empty ids accept any unit.
+func assertRateShape(t *testing.T, r map[string]any, value, unitID, perUnitID, label string) {
+	t.Helper()
+	require.NotNil(t, r, "%s should be set", label)
+	if value != "" {
+		assertDecimalEqual(t, value, jsonField(r, "value"), label)
+	} else {
+		assert.NotEmpty(t, jsonField(r, "value"), label)
+	}
+	assertUnitShape(t, jsonObject(r, "unit"), unitID, label+".unit")
+	assertUnitShape(t, jsonObject(r, "per_unit"), perUnitID, label+".per_unit")
+	assertNoValueIdentity(t, r, label)
 }
 
 // ──────────────────────────────────────────────
@@ -134,11 +206,7 @@ func TestMaterials_CreateAndUpdateAllFields(t *testing.T) {
 		"notes":       "Updated all-fields notes",
 		"order_point": map[string]any{"value": "20", "unit_id": SeedUnitID},
 		"lead_time":   map[string]any{"value": "8", "unit_id": SeedUnitID},
-		"unit_cost": map[string]any{
-			"value":               "3.00",
-			"numerator_unit_id":   currencyUnitID,
-			"denominator_unit_id": nonCurrencyUnitID,
-		},
+		"unit_cost":   priceInputPer("3.00", nonCurrencyUnitID),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -640,16 +708,8 @@ func TestMaterials_IncludeItem(t *testing.T) {
 func materialWithRatesID(t *testing.T) string {
 	t.Helper()
 	body := validMaterialBody(uniqueName("e2e-mat-inc"))
-	body["unit_price"] = map[string]any{
-		"value":               "2.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
-	body["unit_cost"] = map[string]any{
-		"value":               "1.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
+	body["unit_price"] = priceInputPer("2.00", nonCurrencyUnitID)
+	body["unit_cost"] = priceInputPer("1.00", nonCurrencyUnitID)
 	created := createAndCleanup(t, materialsPath, body)
 	return jsonField(created, "id")
 }
@@ -698,10 +758,7 @@ func TestMaterials_IncludeItemUnitValue(t *testing.T) {
 
 	unitValue := jsonObject(item, "unit_value")
 	require.NotNil(t, unitValue, "item.unit_value should be present with include=item.unit_value")
-	assert.Equal(t, "rate", jsonField(unitValue, "object"))
-	assert.NotEmpty(t, jsonField(unitValue, "id"))
-	assert.NotEmpty(t, jsonField(unitValue, "value"))
-	assert.NotEmpty(t, jsonField(unitValue, "display_value"))
+	assertPricePer(t, unitValue, "2.00", nonCurrencyUnitID, "item.unit_value")
 
 	assertNilField(t, item, "category")
 	assertNilField(t, item, "unit_cost")
@@ -723,10 +780,7 @@ func TestMaterials_IncludeItemUnitCost(t *testing.T) {
 
 	unitCost := jsonObject(item, "unit_cost")
 	require.NotNil(t, unitCost, "item.unit_cost should be present with include=item.unit_cost")
-	assert.Equal(t, "rate", jsonField(unitCost, "object"))
-	assert.NotEmpty(t, jsonField(unitCost, "id"))
-	assert.NotEmpty(t, jsonField(unitCost, "value"))
-	assert.NotEmpty(t, jsonField(unitCost, "display_value"))
+	assertPricePer(t, unitCost, "1.00", nonCurrencyUnitID, "item.unit_cost")
 
 	assertNilField(t, item, "category")
 	assertNilField(t, item, "unit_value")
@@ -748,10 +802,7 @@ func TestMaterials_IncludeItemBurnRate(t *testing.T) {
 
 	burnRate := jsonObject(item, "burn_rate")
 	require.NotNil(t, burnRate, "item.burn_rate should be present with include=item.burn_rate")
-	assert.Equal(t, "rate", jsonField(burnRate, "object"))
-	assert.NotEmpty(t, jsonField(burnRate, "id"))
-	assert.NotEmpty(t, jsonField(burnRate, "value"))
-	assert.NotEmpty(t, jsonField(burnRate, "display_value"))
+	assertRateShape(t, burnRate, "", "", "", "item.burn_rate")
 
 	assertNilField(t, item, "category")
 	assertNilField(t, item, "unit_value")
@@ -780,19 +831,11 @@ func TestMaterials_IncludeAllFields(t *testing.T) {
 	assert.NotEmpty(t, jsonField(category, "id"))
 
 	unitValue := jsonObject(item, "unit_value")
-	require.NotNil(t, unitValue, "item.unit_value should be present")
-	assert.Equal(t, "rate", jsonField(unitValue, "object"))
-	assert.NotEmpty(t, jsonField(unitValue, "id"))
+	assertPricePer(t, unitValue, "2.00", nonCurrencyUnitID, "item.unit_value")
 
-	unitCost := jsonObject(item, "unit_cost")
-	require.NotNil(t, unitCost, "item.unit_cost should be present")
-	assert.Equal(t, "rate", jsonField(unitCost, "object"))
-	assert.NotEmpty(t, jsonField(unitCost, "id"))
+	assertPricePer(t, jsonObject(item, "unit_cost"), "1.00", nonCurrencyUnitID, "item.unit_cost")
 
-	burnRate := jsonObject(item, "burn_rate")
-	require.NotNil(t, burnRate, "item.burn_rate should be present")
-	assert.Equal(t, "rate", jsonField(burnRate, "object"))
-	assert.NotEmpty(t, jsonField(burnRate, "id"))
+	assertRateShape(t, jsonObject(item, "burn_rate"), "", "", "", "item.burn_rate")
 }
 
 // ──────────────────────────────────────────────
@@ -855,11 +898,7 @@ func TestMaterials_List_IncludeItemUnitValue(t *testing.T) {
 	t.Parallel()
 	sku := uniqueName("e2e-mat-luv")
 	body := validMaterialBody(sku)
-	body["unit_price"] = map[string]any{
-		"value":               "3.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
+	body["unit_price"] = priceInputPer("3.00", nonCurrencyUnitID)
 	created := createAndCleanup(t, materialsPath, body)
 	createdID := jsonField(created, "id")
 
@@ -885,19 +924,14 @@ func TestMaterials_List_IncludeItemUnitValue(t *testing.T) {
 	require.NotNil(t, item, "item should be present with include=item.unit_value")
 	unitValue := jsonObject(item, "unit_value")
 	require.NotNil(t, unitValue, "item.unit_value should be present with include=item.unit_value")
-	assert.Equal(t, "rate", jsonField(unitValue, "object"))
-	assert.NotEmpty(t, jsonField(unitValue, "id"))
+	assertPricePer(t, unitValue, "3.00", nonCurrencyUnitID, "item.unit_value")
 }
 
 func TestMaterials_List_IncludeItemUnitCost(t *testing.T) {
 	t.Parallel()
 	sku := uniqueName("e2e-mat-luc")
 	body := validMaterialBody(sku)
-	body["unit_cost"] = map[string]any{
-		"value":               "1.50",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
+	body["unit_cost"] = priceInputPer("1.50", nonCurrencyUnitID)
 	created := createAndCleanup(t, materialsPath, body)
 	createdID := jsonField(created, "id")
 
@@ -923,8 +957,7 @@ func TestMaterials_List_IncludeItemUnitCost(t *testing.T) {
 	require.NotNil(t, item, "item should be present with include=item.unit_cost")
 	unitCost := jsonObject(item, "unit_cost")
 	require.NotNil(t, unitCost, "item.unit_cost should be present with include=item.unit_cost")
-	assert.Equal(t, "rate", jsonField(unitCost, "object"))
-	assert.NotEmpty(t, jsonField(unitCost, "id"))
+	assertPricePer(t, unitCost, "1.50", nonCurrencyUnitID, "item.unit_cost")
 }
 
 func TestMaterials_List_IncludeItemBurnRate(t *testing.T) {
@@ -955,7 +988,5 @@ func TestMaterials_List_IncludeItemBurnRate(t *testing.T) {
 	item := jsonObject(found, "item")
 	require.NotNil(t, item, "item should be present with include=item.burn_rate")
 	burnRate := jsonObject(item, "burn_rate")
-	require.NotNil(t, burnRate, "item.burn_rate should be present with include=item.burn_rate")
-	assert.Equal(t, "rate", jsonField(burnRate, "object"))
-	assert.NotEmpty(t, jsonField(burnRate, "id"))
+	assertRateShape(t, burnRate, "", "", "", "item.burn_rate")
 }

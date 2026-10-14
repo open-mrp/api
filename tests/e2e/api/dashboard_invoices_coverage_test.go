@@ -23,11 +23,9 @@ import (
 var (
 	dashInvoicesListIncludes   = []string{"customer", "billing_address", "payment_term", "related.sales_order", "related.shipment"}
 	dashInvoicesDetailIncludes = append(append([]string{}, dashInvoicesListIncludes...),
-		"lines", "lines.order_line", "lines.quantity", "lines.quantity.unit",
-		"lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit",
-		"allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction")
+		"lines", "lines.order_line", "allocations", "allocations.transaction")
 	dashInvoicesSettleIncludes = []string{"customer", "parent_account", "billing_address",
-		"allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction"}
+		"allocations", "allocations.transaction"}
 )
 
 func dashInvoicesTransactionsPathFor(customerID string) string {
@@ -240,8 +238,9 @@ func TestDashInvoices_ListAndDetailExpandWhatTheDashboardRequests(t *testing.T) 
 		assert.NotNil(t, jsonObject(line, "order_line"), "lines[%d].order_line", i)
 		assert.NotEmpty(t, jsonField(jsonObject(jsonObject(line, "quantity"), "unit"), "id"), "lines[%d].quantity.unit", i)
 		price := jsonObject(line, "unit_price")
-		assert.NotEmpty(t, jsonField(jsonObject(price, "numerator_unit"), "id"), "lines[%d].unit_price.numerator_unit", i)
-		assert.NotEmpty(t, jsonField(jsonObject(price, "denominator_unit"), "id"), "lines[%d].unit_price.denominator_unit", i)
+		assert.NotEmpty(t, jsonField(price, "amount"), "lines[%d].unit_price.amount", i)
+		assert.Equal(t, "usd", jsonField(price, "currency"), "lines[%d].unit_price.currency", i)
+		assert.NotEmpty(t, jsonField(jsonObject(price, "per_unit"), "id"), "lines[%d].unit_price.per_unit", i)
 	}
 	allocations := jsonObject(detail, "allocations")
 	require.NotNil(t, allocations, "an unpaid invoice expands to an empty allocation list, not null")
@@ -492,7 +491,7 @@ func TestDashInvoices_CustomerInvoicesCarryWhatTheSettleFlowReads(t *testing.T) 
 	require.Len(t, allocations, 1)
 	applied := allocations[0].(map[string]any)
 	assert.True(t, decimal.NewFromInt(5).Equal(amountOf(t, applied)))
-	assert.NotNil(t, jsonObject(jsonObject(applied, "amount"), "unit"), "allocations.amount.unit")
+	assert.Equal(t, e2eCurrencyUnitID, jsonField(jsonObject(jsonObject(applied, "amount"), "unit"), "id"), "allocations.amount.unit")
 	assert.Equal(t, jsonField(payment, "id"), jsonField(jsonObject(applied, "transaction"), "id"))
 
 	bare := invoiceRow(t, apiClient, path, nil, inv.invoiceID)

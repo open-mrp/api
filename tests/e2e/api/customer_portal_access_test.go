@@ -294,10 +294,9 @@ func TestCustomerPortalAccess_CannotCreateUnitGroup(t *testing.T) {
 }
 
 // TestCustomerPortalAccess_SalesOrderLineUnitsHydrated verifies that a sales order's line
-// quantity/rate UNIT sub-objects hydrate for a customer relation actor when requested via
-// nested includes. Regression: the gateway built the line quantity/rate stubs without stashing
-// their unit FKs, so ?include=lines.quantity_ordered.unit (and unit_price.numerator_unit)
-// returned null — which broke unit display and the client-side order total on the portal.
+// quantity and price carry their full units for a customer relation actor. Regression: the
+// line units once came back null for this actor, which broke unit display and the client-side
+// order total on the portal.
 func TestCustomerPortalAccess_SalesOrderLineUnitsHydrated(t *testing.T) {
 	t.Parallel()
 	client := getCustomerPortalClient()
@@ -305,7 +304,7 @@ func TestCustomerPortalAccess_SalesOrderLineUnitsHydrated(t *testing.T) {
 	// Seed estimate EST-001 (or_01k0a8bs2yfhev5begay245wez): owned by the vendor, bought by the
 	// seed customer, whose lines carry quantity units (pair / each) and unit prices.
 	status, body, err := client.GetListRaw("/v1/sales/sales-orders/or_01k0a8bs2yfhev5begay245wez", url.Values{
-		"include": {"lines,lines.quantity_ordered,lines.quantity_ordered.unit,lines.unit_price,lines.unit_price.numerator_unit,lines.unit_price.denominator_unit"},
+		"include": {"lines,lines.quantity_ordered,lines.unit_price"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -329,12 +328,13 @@ func TestCustomerPortalAccess_SalesOrderLineUnitsHydrated(t *testing.T) {
 		assert.NotEmpty(t, jsonField(unit, "abbreviation"), "line %d: quantity_ordered.unit.abbreviation", i)
 
 		if up := jsonObject(line, "unit_price"); up != nil {
-			num := jsonObject(up, "numerator_unit")
-			require.NotNil(t, num, "line %d: unit_price.numerator_unit must be hydrated (regression: was null)", i)
-			assert.NotEmpty(t, jsonField(num, "id"), "line %d: unit_price.numerator_unit.id", i)
-			den := jsonObject(up, "denominator_unit")
-			require.NotNil(t, den, "line %d: unit_price.denominator_unit must be hydrated", i)
-			assert.NotEmpty(t, jsonField(den, "id"), "line %d: unit_price.denominator_unit.id", i)
+			assert.NotEmpty(t, jsonField(up, "amount"), "line %d: unit_price.amount", i)
+			assert.Equal(t, "usd", jsonField(up, "currency"), "line %d: unit_price.currency", i)
+			perUnit := jsonObject(up, "per_unit")
+			require.NotNil(t, perUnit, "line %d: unit_price.per_unit must be hydrated (regression: was null)", i)
+			assert.Equal(t, "unit", jsonField(perUnit, "object"), "line %d: unit_price.per_unit object", i)
+			assert.NotEmpty(t, jsonField(perUnit, "id"), "line %d: unit_price.per_unit.id", i)
+			assert.NotEmpty(t, jsonField(perUnit, "abbreviation"), "line %d: unit_price.per_unit.abbreviation", i)
 		}
 	}
 }

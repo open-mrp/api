@@ -76,21 +76,21 @@ func (r RowResult) Failed() bool {
 func (j *Job) Status() constants.JobStatus {
 	switch {
 	case j.CancelledAt != nil:
-		return constants.JobStatusCancelled
+		return constants.JobStatusCanceled
 	case j.CompletedAt != nil:
 		return constants.JobStatusCompleted
 	case j.FailedAt != nil:
 		return constants.JobStatusFailed
 	case j.StartedAt != nil:
-		return constants.JobStatusStarted
+		return constants.JobStatusRunning
 	default:
-		return constants.JobStatusCreated
+		return constants.JobStatusQueued
 	}
 }
 
 func (j *Job) IsTerminal() bool {
 	switch j.Status() {
-	case constants.JobStatusCompleted, constants.JobStatusCancelled:
+	case constants.JobStatusCompleted, constants.JobStatusCanceled:
 		return true
 	default:
 		return false

@@ -56,8 +56,8 @@ func (*BulkUpsertMachinesRequest) SchemaExample() any {
 // (case-insensitive), then writes asynchronously — 202 with a job to poll.
 type BulkUpsertMachinesEndpoint struct{}
 
-func (e *BulkUpsertMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertMachinesRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkUpsertMachinesRequest, *apiresource.Job]{
+func (e *BulkUpsertMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertMachinesRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkUpsertMachinesRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Upsert Machines",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -67,16 +67,16 @@ func (e *BulkUpsertMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMachines, Action: types.ActionCreate}, {Domain: types.PermissionDomainMachines, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(MachineSvc).BulkUpsertMachines
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

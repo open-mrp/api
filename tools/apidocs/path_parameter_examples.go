@@ -15,7 +15,7 @@ var routeSegmentToSampleID = map[string]string{
 	"production-schedules":         apiresource.SampleProductionScheduleID,
 	"announcements":                apiresource.SampleAnnouncementID,
 	"notifications":                apiresource.SampleNotificationID,
-	"jobs":                         apiresource.SampleJobID,
+	"jobs":                         apiresource.SampleAsyncJobID,
 	"units":                        apiresource.SampleUnitID,
 	"unit-groups":                  apiresource.SampleUnitGroupID,
 	"properties":                   apiresource.SamplePropertyID,

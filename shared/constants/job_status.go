@@ -4,21 +4,21 @@ package constants
 type JobStatus string
 
 const (
-	// JobStatusCreated indicates the job is queued but not yet started.
-	JobStatusCreated JobStatus = "created"
-	// JobStatusStarted indicates the job is currently executing.
-	JobStatusStarted JobStatus = "started"
+	// JobStatusQueued indicates the job is queued but not yet started.
+	JobStatusQueued JobStatus = "queued"
+	// JobStatusRunning indicates the job is currently executing.
+	JobStatusRunning JobStatus = "running"
 	// JobStatusCompleted indicates the job completed successfully.
 	JobStatusCompleted JobStatus = "completed"
 	// JobStatusFailed indicates the job failed.
 	JobStatusFailed JobStatus = "failed"
-	// JobStatusCancelled indicates the job has been cancelled.
-	JobStatusCancelled JobStatus = "cancelled"
+	// JobStatusCanceled indicates the job has been canceled.
+	JobStatusCanceled JobStatus = "canceled"
 )
 
 func (m JobStatus) IsValid() bool {
 	switch m {
-	case JobStatusCreated, JobStatusStarted, JobStatusCompleted, JobStatusFailed, JobStatusCancelled:
+	case JobStatusQueued, JobStatusRunning, JobStatusCompleted, JobStatusFailed, JobStatusCanceled:
 		return true
 	default:
 		return false
@@ -27,10 +27,10 @@ func (m JobStatus) IsValid() bool {
 
 func (m JobStatus) EnumValues() []string {
 	return []string{
-		string(JobStatusCreated),
-		string(JobStatusStarted),
+		string(JobStatusQueued),
+		string(JobStatusRunning),
 		string(JobStatusCompleted),
 		string(JobStatusFailed),
-		string(JobStatusCancelled),
+		string(JobStatusCanceled),
 	}
 }

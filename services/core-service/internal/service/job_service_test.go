@@ -279,7 +279,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_StampOnlyTheirOwnTime
 				return apiErr
 			},
 			stamped: func(p domain.UpdateJobRepositoryParams) *time.Time { return p.StartedAt },
-			status:  constants.JobStatusStarted,
+			status:  constants.JobStatusRunning,
 		},
 		{
 			name: "complete",
@@ -397,7 +397,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_SettlesTheJobAndReturns
 	suite.NotNil(captured.CancelledAt)
 
 	cancelled := &domain.Job{CancelledAt: captured.CancelledAt}
-	suite.Equal(constants.JobStatusCancelled, cancelled.Status())
+	suite.Equal(constants.JobStatusCanceled, cancelled.Status())
 	suite.True(cancelled.IsTerminal())
 }
 

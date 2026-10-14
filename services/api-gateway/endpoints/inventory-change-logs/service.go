@@ -23,7 +23,7 @@ type InventoryChangeLogSvc interface {
 	ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError)
 	GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError)
 	ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError)
-	StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.Job, *apierror.APIError)
+	StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type InventoryChangeLogSvcConfig struct {
@@ -155,7 +155,7 @@ func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Contex
 	}, nil
 }
 
-func (m *inventoryChangeLogSvcImpl) StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *inventoryChangeLogSvcImpl) StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.StartInventoryChangeLogsExportRequest{
 		ItemIds:          req.ItemIDs,
 		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),

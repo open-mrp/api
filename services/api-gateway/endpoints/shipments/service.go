@@ -30,7 +30,7 @@ type ShipmentSvc interface {
 	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	AdminUpdateShipmentTracking(ctx context.Context, req *AdminUpdateShipmentTrackingRequest) (*apiresource.Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Job, *apierror.APIError)
+	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	EstimateRate(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError)
 	RateShop(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError)
@@ -200,7 +200,7 @@ func (m *shipmentSvcImpl) DeleteShipment(ctx context.Context, req *DeleteShipmen
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.ShipShipmentRequest{
 		Id:            req.ShipmentID,
 		EmailCustomer: req.EmailCustomer,

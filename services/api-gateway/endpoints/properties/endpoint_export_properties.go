@@ -28,8 +28,8 @@ func (*ExportPropertiesRequest) SchemaExample() any {
 // Starts an export of every matching property, one row per attribute, and returns the job that tracks it.
 type ExportPropertiesEndpoint struct{}
 
-func (e *ExportPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPropertiesRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportPropertiesRequest, *apiresource.Job]{
+func (e *ExportPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPropertiesRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportPropertiesRequest, *apiresource.AsyncJob]{
 		Title:             "Export Properties",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -39,16 +39,16 @@ func (e *ExportPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PropertySvc).ExportProperties
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

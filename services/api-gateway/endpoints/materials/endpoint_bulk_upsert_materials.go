@@ -80,8 +80,8 @@ func (*BulkUpsertMaterialsRequest) SchemaExample() any {
 // At most 1,000 materials and an 8 MB request body per call.
 type BulkUpsertMaterialsEndpoint struct{}
 
-func (e *BulkUpsertMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertMaterialsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkUpsertMaterialsRequest, *apiresource.Job]{
+func (e *BulkUpsertMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertMaterialsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkUpsertMaterialsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Upsert Materials",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/materials/actions/bulk-upsert",
@@ -91,17 +91,17 @@ func (e *BulkUpsertMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}, {Domain: types.PermissionDomainMaterials, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(MaterialSvc).BulkUpsertMaterials
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

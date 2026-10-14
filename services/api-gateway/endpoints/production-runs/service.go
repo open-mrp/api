@@ -21,14 +21,14 @@ import (
 
 type ProductionRunSvc interface {
 	ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRun], *apierror.APIError)
-	ExportProductionRuns(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportProductionRuns(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	DeleteProductionRun(ctx context.Context, req *DeleteProductionRunRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	AddBatchesToProductionRun(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
 	ListBatchesByProductionRun(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
-	BulkCreateProductionRuns(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkCreateProductionRuns(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type ProductionRunSvcConfig struct {
@@ -59,7 +59,7 @@ func NewProductionRunSvc(config *ProductionRunSvcConfig) ProductionRunSvc {
 	}
 }
 
-func (m *productionRunSvcImpl) ExportProductionRuns(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productionRunSvcImpl) ExportProductionRuns(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, productionRunEpSvcTracer, "service.production_runs.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductionRunsResponse, error) {
 			return m.coreClient.ExportProductionRuns(ctx, &pb.ExportProductionRunsRequest{Query: req.Query}, opts...)
@@ -187,7 +187,7 @@ func (m *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, re
 	return addBatchesFromProto(ctx, resp), nil
 }
 
-func (m *productionRunSvcImpl) BulkCreateProductionRuns(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productionRunSvcImpl) BulkCreateProductionRuns(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 
 	pbRuns := make([]*pb.BulkCreateProductionRunInput, len(req.ProductionRuns))
 	for i, r := range req.ProductionRuns {

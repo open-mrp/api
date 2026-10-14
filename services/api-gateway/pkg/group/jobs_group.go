@@ -37,7 +37,7 @@ func (*JobsEndpointGroup) Materialize(config *JobsEndpointGroupConfig) *JobsEndp
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Jobs",
 		Description:  "View the jobs that track asynchronous work. Endpoints that answer 202 Accepted raise one and point at it with a Location header.",
-		ResourceType: &apiresource.Job{},
+		ResourceType: &apiresource.AsyncJob{},
 	}
 
 	retrieveEndpoint := apiendpoint.From(&jobep.RetrieveJobEndpoint{}).WithService(inner, svc)

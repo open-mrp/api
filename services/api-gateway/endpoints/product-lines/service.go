@@ -20,12 +20,12 @@ import (
 
 type ProductLineSvc interface {
 	ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError)
-	ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.Job, *apierror.APIError)
+	ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	DeleteProductLine(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type ProductLineSvcConfig struct {
@@ -56,7 +56,7 @@ func NewProductLineSvc(config *ProductLineSvcConfig) ProductLineSvc {
 	}
 }
 
-func (m *productLineSvcImpl) ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productLineSvcImpl) ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product_lines.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductLinesResponse, error) {
 			return m.coreClient.ExportProductLines(ctx, &pb.ExportProductLinesRequest{Query: req.Query}, opts...)
@@ -178,7 +178,7 @@ func (m *productLineSvcImpl) DeleteProductLine(ctx context.Context, req *DeleteP
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	inputs := make([]*pb.BulkUpsertProductLineInput, len(req.ProductLines))
 	for i, pl := range req.ProductLines {
 		inputs[i] = &pb.BulkUpsertProductLineInput{

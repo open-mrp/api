@@ -48,8 +48,8 @@ func (*StartInventoryChangeLogsExportRequest) SchemaExample() any {
 // Poll the job; once it completes, `export.url` links to the Excel file. The file has one row per change log, newest first, with the same columns as the synchronous export, and is named for the window you asked for — `inventory-change-logs-<starts_at>-<ends_at>.xlsx`, each bound as its UTC date and `all` in place of a bound you left open. A file with more change logs than one worksheet holds continues on further worksheets.
 type StartInventoryChangeLogsExportEndpoint struct{}
 
-func (e *StartInventoryChangeLogsExportEndpoint) Materialize() *apiendpoint.APIEndpoint[*StartInventoryChangeLogsExportRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*StartInventoryChangeLogsExportRequest, *apiresource.Job]{
+func (e *StartInventoryChangeLogsExportEndpoint) Materialize() *apiendpoint.APIEndpoint[*StartInventoryChangeLogsExportRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*StartInventoryChangeLogsExportRequest, *apiresource.AsyncJob]{
 		Title:             "Start Inventory Change Logs Export",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -59,19 +59,19 @@ func (e *StartInventoryChangeLogsExportEndpoint) Materialize() *apiendpoint.APIE
 		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},
 		}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(InventoryChangeLogSvc).StartInventoryChangeLogsExport
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

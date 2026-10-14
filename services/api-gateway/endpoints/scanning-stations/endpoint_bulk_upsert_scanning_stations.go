@@ -82,8 +82,8 @@ func (*BulkUpsertScanningStationsRequest) SchemaExample() any {
 // Validates and resolves synchronously, then writes asynchronously — 202 with a job to poll.
 type BulkUpsertScanningStationsEndpoint struct{}
 
-func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.Job]{
+func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Upsert Scanning Stations",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -93,16 +93,16 @@ func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpo
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionCreate}, {Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ScanningStationSvc).BulkUpsertScanningStations
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

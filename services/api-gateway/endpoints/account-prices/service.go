@@ -23,7 +23,7 @@ type AccountPriceSvc interface {
 	CreateAccountPrice(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	DeleteAccountPrice(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ExportPriceList(ctx context.Context, req *ExportPriceListRequest) (*apiresource.Job, *apierror.APIError)
+	ExportPriceList(ctx context.Context, req *ExportPriceListRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type AccountPriceSvcConfig struct {
@@ -303,7 +303,7 @@ func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 }
 
 // ExportPriceList accepts the export and returns the job that tracks it. The document is built by the export worker, which prices the whole catalog against one pricing bundle rather than a request's worth of round trips.
-func (m *accountPriceSvcImpl) ExportPriceList(ctx context.Context, req *ExportPriceListRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *accountPriceSvcImpl) ExportPriceList(ctx context.Context, req *ExportPriceListRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, accountPriceSvcTracer, "service.account_prices.export_price_list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportPriceListResponse, error) {
 			return m.coreClient.ExportPriceList(ctx, &pb.ExportPriceListRequest{CustomerAccountId: req.CustomerID}, opts...)

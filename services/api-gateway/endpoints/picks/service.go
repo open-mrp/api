@@ -27,7 +27,7 @@ type PickSvc interface {
 	GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError)
 	PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.Pick, *apierror.APIError)
 	VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.Pick, *apierror.APIError)
-	PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.Job, *apierror.APIError)
+	PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError)
 	PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
 	VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
@@ -160,7 +160,7 @@ func (m *pickSvcImpl) VoidPick(ctx context.Context, req *VoidPickRequest) (*apir
 	return &result, nil
 }
 
-func (m *pickSvcImpl) PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *pickSvcImpl) PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.PackPickRequest{Id: req.PickID, ShipmentCaseCount: req.ShipmentCaseCount}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.pack", domain.ServiceName,

@@ -72,8 +72,8 @@ func (*BulkUpsertPartsRequest) SchemaExample() any {
 // At most 1,000 parts and an 8 MB request body per call.
 type BulkUpsertPartsEndpoint struct{}
 
-func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertPartsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkUpsertPartsRequest, *apiresource.Job]{
+func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertPartsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkUpsertPartsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Upsert Parts",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/parts/actions/bulk-upsert",
@@ -83,17 +83,17 @@ func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUp
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}, {Domain: types.PermissionDomainParts, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PartSvc).BulkUpsertParts
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

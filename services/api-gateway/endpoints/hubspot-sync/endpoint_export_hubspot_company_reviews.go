@@ -32,8 +32,8 @@ func (*ExportHubspotCompanyReviewsRequest) SchemaExample() any {
 // The file carries each customer's name, email, and website alongside its candidate HubSpot companies, plus blank `Decision` and `HubSpot Company ID` columns. Filling those in and posting the rows back to the bulk-resolve endpoint applies them, so the queue can be worked outside the dashboard.
 type ExportHubspotCompanyReviewsEndpoint struct{}
 
-func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.Job]{
+func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.AsyncJob]{
 		Title:             "Export HubSpot Company Reviews",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -42,17 +42,17 @@ func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndp
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
 		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).ExportCompanyReviews
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

@@ -572,7 +572,7 @@ func init() {
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeJob,
+		ObjectType: constants.ObjectTypeAsyncJob,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "created_by", ObjectType: constants.ObjectTypeActor},
 		},

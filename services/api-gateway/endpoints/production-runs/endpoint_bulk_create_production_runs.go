@@ -88,8 +88,8 @@ func (*BulkCreateProductionRunsRequest) SchemaExample() any {
 // then writes asynchronously — 202 with a job whose `results` already carry the new ids.
 type BulkCreateProductionRunsEndpoint struct{}
 
-func (e *BulkCreateProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.Job]{
+func (e *BulkCreateProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Create Production Runs",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -99,17 +99,17 @@ func (e *BulkCreateProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoin
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}}},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionRunSvc).BulkCreateProductionRuns
 		},
 		// The work is accepted, not done, so point at the job rather than at any run.
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

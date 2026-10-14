@@ -32,10 +32,10 @@ type MaterialSvc interface {
 	ListMaterials(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError)
 	GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError)
-	BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError)
-	ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type MaterialSvcConfig struct {
@@ -134,7 +134,7 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 	return loadMaterialByID(ctx, resp.Material.Id)
 }
 
-func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbMaterials := make([]*pb.UpsertMaterialInput, len(req.Materials))
 	for i, m := range req.Materials {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(m.Properties))
@@ -219,7 +219,7 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 	return result, nil
 }
 
-func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.ExportMaterialsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,

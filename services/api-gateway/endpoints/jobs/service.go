@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/open-mrp/apikit/include"
 	"log/slog"
+
+	"github.com/open-mrp/apikit/include"
+	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -22,8 +24,8 @@ import (
 var jobEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.jobs.service")
 
 type JobSvc interface {
-	GetJob(ctx context.Context, req *RetrieveJobRequest) (*apiresource.Job, *apierror.APIError)
-	CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.Job, *apierror.APIError)
+	GetJob(ctx context.Context, req *RetrieveJobRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type jobSvcImpl struct {
@@ -53,19 +55,17 @@ func NewJobSvc(config *JobSvcConfig) JobSvc {
 // maps the job's row outcomes onto the resource. An unset list stays nil so "no results
 // recorded" reads as null, while a present but empty one reads as an empty list.
 //
-// A trimmed record is reported as has_next_page: the job carries fewer rows than it
-// produced, and saying so is the only honest thing a bounded list can do — there is no
-// cursor to follow, because the rows it dropped were never stored.
-func jobResultsFromProto(list *pb.JobResultList) *apiresource.List[apiresource.JobResult] {
+// A trimmed record has no next page to point at: the rows it dropped were never stored.
+func jobResultsFromProto(list *pb.JobResultList) *apiresource.List[apiresource.AsyncJobResult] {
 	if list == nil {
 		return nil
 	}
-	out := make([]apiresource.JobResult, 0, len(list.GetItems()))
+	out := make([]apiresource.AsyncJobResult, 0, len(list.GetItems()))
 	for _, item := range list.GetItems() {
-		result := apiresource.JobResult{
-			Object: constants.ObjectTypeJobResult,
+		result := apiresource.AsyncJobResult{
+			Object: object.TypeAsyncJobResult,
 			Index:  int(item.GetIndex()),
-			Status: constants.JobResultStatus(item.GetStatus()),
+			Status: object.AsyncJobResultStatus(item.GetStatus()),
 		}
 		if id := item.GetId(); id != "" {
 			result.Resource = apiresource.NewEntity(id, constants.ObjectType(item.GetResourceType()), item.Name, nil)
@@ -103,22 +103,22 @@ func responseErrorFromJSON(raw string) *apierror.ErrorObject {
 	return &e
 }
 
-// maps a JobInfo to the canonical Job resource. Exported because every async operation's
-// 202 returns a Job, so every such endpoint reuses this one mapping.
+// maps a JobInfo to the async_job resource. Exported because every async operation's
+// 202 returns one, so every such endpoint reuses this one mapping.
 //
 // created_by is left nil: it is expandable, and the creator's id is stashed for the
 // include resolver by StashJobMeta rather than inlined here.
-func JobFromProto(info *pb.JobInfo) *apiresource.Job {
-	job := &apiresource.Job{
+func JobFromProto(info *pb.JobInfo) *apiresource.AsyncJob {
+	job := &apiresource.AsyncJob{AsyncJob: object.AsyncJob[apiresource.Entity]{
 		ID:        info.GetId(),
-		Object:    constants.ObjectTypeJob,
-		Type:      constants.JobType(info.GetType()),
-		Status:    constants.JobStatus(info.GetStatus()),
+		Object:    object.TypeAsyncJob,
+		Type:      info.GetType(),
+		Status:    object.AsyncJobStatus(info.GetStatus()),
 		Results:   jobResultsFromProto(info.Results),
 		Error:     responseErrorFromJSON(info.GetError()),
 		CreatedAt: info.GetCreatedAt().AsTime(),
 		UpdatedAt: info.GetUpdatedAt().AsTime(),
-	}
+	}}
 
 	if resourceType := info.GetResourceType(); resourceType != "" {
 		t := constants.ObjectType(resourceType)
@@ -138,7 +138,7 @@ func JobFromProto(info *pb.JobInfo) *apiresource.Job {
 	}
 	if info.CancelledAt != nil {
 		t := info.GetCancelledAt().AsTime()
-		job.CancelledAt = &t
+		job.CanceledAt = &t
 	}
 
 	return job
@@ -152,7 +152,7 @@ func StashJobMeta(ctx context.Context, info *pb.JobInfo, jobID string) *apiresou
 	if actor == nil {
 		return nil
 	}
-	include.GetLoadMeta(ctx).Set(constants.ObjectTypeJob, jobID, "created_by_id", actor.ID)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeAsyncJob, jobID, "created_by_id", actor.ID)
 	include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	return actor
 }
@@ -168,7 +168,7 @@ func hydrateCreator(ctx context.Context, creator *apiresource.Actor) {
 }
 
 // reads a job. A completed export carries the link to its file alongside the rest of it.
-func (m *jobSvcImpl) GetJob(ctx context.Context, req *RetrieveJobRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *jobSvcImpl) GetJob(ctx context.Context, req *RetrieveJobRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, jobEpSvcTracer, "service.jobs.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetJobResponse, error) {
 			return m.coreClient.GetJob(ctx, &pb.GetJobRequest{Id: req.JobID}, opts...)
@@ -179,13 +179,13 @@ func (m *jobSvcImpl) GetJob(ctx context.Context, req *RetrieveJobRequest) (*apir
 
 	job := JobFromProto(resp.GetJob())
 	if url := resp.GetJob().GetExport().GetUrl(); url != "" {
-		job.Export = apiresource.NewJobExport(url)
+		job.Export = apiresource.NewAsyncJobExport(url)
 	}
 	hydrateCreator(ctx, StashJobMeta(ctx, resp.GetJob(), job.ID))
 	return job, nil
 }
 
-func (m *jobSvcImpl) CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *jobSvcImpl) CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, jobEpSvcTracer, "service.jobs.cancel", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CancelJobResponse, error) {
 			return m.coreClient.CancelJob(ctx, &pb.CancelJobRequest{Id: req.JobID}, opts...)

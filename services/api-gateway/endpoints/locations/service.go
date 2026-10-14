@@ -20,12 +20,12 @@ import (
 
 type LocationSvc interface {
 	ListLocations(ctx context.Context, req *ListLocationsRequest) (*apiresource.List[apiresource.Location], *apierror.APIError)
-	ExportLocations(ctx context.Context, req *ExportLocationsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportLocations(ctx context.Context, req *ExportLocationsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetLocation(ctx context.Context, req *RetrieveLocationRequest) (*apiresource.Location, *apierror.APIError)
 	CreateLocation(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError)
 	UpdateLocation(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError)
 	DeleteLocation(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	BulkUpsertLocations(ctx context.Context, req *BulkUpsertLocationsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertLocations(ctx context.Context, req *BulkUpsertLocationsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	ListLocationTypes(ctx context.Context, req *ListLocationTypesRequest) (*apiresource.List[apiresource.LocationType], *apierror.APIError)
 	GetLocationType(ctx context.Context, req *RetrieveLocationTypeRequest) (*apiresource.LocationType, *apierror.APIError)
 }
@@ -58,7 +58,7 @@ func NewLocationSvc(config *LocationSvcConfig) LocationSvc {
 	}
 }
 
-func (m *locationSvcImpl) ExportLocations(ctx context.Context, req *ExportLocationsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *locationSvcImpl) ExportLocations(ctx context.Context, req *ExportLocationsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportLocationsResponse, error) {
 			return m.coreClient.ExportLocations(ctx, &pb.ExportLocationsRequest{Query: req.Query}, opts...)
@@ -213,7 +213,7 @@ func (m *locationSvcImpl) GetLocationType(ctx context.Context, req *RetrieveLoca
 	return &result, nil
 }
 
-func (m *locationSvcImpl) BulkUpsertLocations(ctx context.Context, req *BulkUpsertLocationsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *locationSvcImpl) BulkUpsertLocations(ctx context.Context, req *BulkUpsertLocationsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	locations := make([]*pb.BulkUpsertLocationInput, 0, len(req.Locations))
 	for _, loc := range req.Locations {
 		children := make([]*pb.ObjectIdentifier, 0, len(loc.Children))

@@ -70,7 +70,7 @@ type CustomerSvc interface {
 	UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError)
 	UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
-	ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.Job, *apierror.APIError)
+	ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type CustomerSvcConfig struct {
@@ -157,7 +157,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.ExportCustomersRequest{
 		Query:                 req.Query.Ptr(),
 		CustomerGroupIds:      req.CustomerGroupIDs,

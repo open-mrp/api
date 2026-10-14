@@ -29,8 +29,8 @@ func (*ExportProductionRunsRequest) SchemaExample() any {
 // lists a run's batches one per row.
 type ExportProductionRunsEndpoint struct{}
 
-func (e *ExportProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportProductionRunsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportProductionRunsRequest, *apiresource.Job]{
+func (e *ExportProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportProductionRunsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportProductionRunsRequest, *apiresource.AsyncJob]{
 		Title:             "Export Production Runs",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -40,16 +40,16 @@ func (e *ExportProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*E
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionRead}}},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionRunSvc).ExportProductionRuns
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

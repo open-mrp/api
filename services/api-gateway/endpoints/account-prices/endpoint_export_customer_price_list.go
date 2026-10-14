@@ -34,8 +34,8 @@ func (*ExportPriceListRequest) SchemaExample() any {
 // Pricing a whole catalog takes too long to hold a request open for, so the PDF is rendered in the background. Poll the returned job and download the file it names once it completes.
 type ExportPriceListEndpoint struct{}
 
-func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPriceListRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportPriceListRequest, *apiresource.Job]{
+func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPriceListRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportPriceListRequest, *apiresource.AsyncJob]{
 		Title:             "Export Price List",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -44,19 +44,19 @@ func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPriceListRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPriceListRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(AccountPriceSvc).ExportPriceList
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

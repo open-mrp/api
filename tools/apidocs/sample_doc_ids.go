@@ -105,7 +105,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleItemCategoryID:                      {},
 		apiresource.SampleItemID:                              {},
 		apiresource.SampleInventoryChangeLogID:                {},
-		apiresource.SampleJobID:                               {},
+		apiresource.SampleAsyncJobID:                               {},
 		apiresource.SampleLocationChildID:                     {},
 		apiresource.SampleLocationTypeID:                      {},
 		apiresource.SampleLotID:                               {},

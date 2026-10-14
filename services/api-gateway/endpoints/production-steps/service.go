@@ -23,7 +23,7 @@ import (
 
 type ProductionStepSvc interface {
 	ListProductionSteps(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError)
-	ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetProductionStep(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	CreateProductionStep(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	UpdateProductionStep(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
@@ -31,7 +31,7 @@ type ProductionStepSvc interface {
 	GetProduction(ctx context.Context, req *RetrieveProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	UpdateProduction(ctx context.Context, req *UpdateProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	BulkCreateProductionSteps(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError)
-	BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type ProductionStepSvcConfig struct {
@@ -61,7 +61,7 @@ func NewProductionStepSvc(config *ProductionStepSvcConfig) ProductionStepSvc {
 	}
 }
 
-func (m *productionStepSvcImpl) ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productionStepSvcImpl) ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductionStepsResponse, error) {
 			return m.coreClient.ExportProductionSteps(ctx, &pb.ExportProductionStepsRequest{Query: req.Query}, opts...)
@@ -279,7 +279,7 @@ func (m *productionStepSvcImpl) UpdateProduction(ctx context.Context, req *Updat
 	return result, nil
 }
 
-func (m *productionStepSvcImpl) BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productionStepSvcImpl) BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	rateToProto := func(r UpsertRateInput) *pb.UpsertRateInput {
 		return &pb.UpsertRateInput{
 			Value:           r.Value,

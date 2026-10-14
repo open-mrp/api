@@ -18,11 +18,11 @@ import (
 
 type UnitSvc interface {
 	ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError)
-	ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError)
-	BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ValidateUnits(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError)
 }
@@ -55,7 +55,7 @@ func NewUnitSvc(config *UnitSvcConfig) UnitSvc {
 	}
 }
 
-func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportUnitsResponse, error) {
 			return m.coreClient.ExportUnits(ctx, &pb.ExportUnitsRequest{Query: req.Query}, opts...)
@@ -159,7 +159,7 @@ func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*
 	return loadUnitByID(ctx, resp.Unit.Id)
 }
 
-func (m *unitSvcImpl) BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *unitSvcImpl) BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	units := make([]*pb.BulkUpsertUnitInput, 0, len(req.Units))
 	for _, u := range req.Units {
 		units = append(units, &pb.BulkUpsertUnitInput{

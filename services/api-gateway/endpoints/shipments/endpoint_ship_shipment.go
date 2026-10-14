@@ -38,8 +38,8 @@ func (*ShipShipmentRequest) SchemaExample() any {
 // Shipping raises the shipment's invoice, numbered after the shipment, and queues it for EDI transmission when the customer trades over EDI. When the carrier is linked to the account's Shippo integration, a label is bought for every case first; each case must have a freight weight, and the carrier's charge is recorded as the cost of the order's freight line (zero when no label is bought). Labels already bought for the cases by an earlier attempt are reused, never bought twice. A shipment is shipped, voided or deleted by one request at a time: a concurrent ship of the same shipment fails its job with a conflict error and can be retried once the first finishes.
 type ShipShipmentEndpoint struct{}
 
-func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Job]{
+func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.AsyncJob]{
 		Title:             "Ship Shipment",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{id}/actions/ship",
@@ -49,16 +49,16 @@ func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipm
 		AgentTool:         true,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}}},
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ShipmentSvc).ShipShipment
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

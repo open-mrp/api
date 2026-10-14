@@ -198,7 +198,7 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 	if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,
 		Action:       constants.AuditActionCreate,
-		ResourceType: constants.ObjectTypeJob,
+		ResourceType: constants.ObjectTypeAsyncJob,
 		ResourceID:   created.ID,
 		Changes:      audit.ComputeChanges(nil, created),
 	}); apiErr != nil {
@@ -282,7 +282,7 @@ func (s *jobSvcImpl) UpdateJob(ctx context.Context, params domain.UpdateJobServi
 	if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,
 		Action:       constants.AuditActionUpdate,
-		ResourceType: constants.ObjectTypeJob,
+		ResourceType: constants.ObjectTypeAsyncJob,
 		ResourceID:   updated.ID,
 		Changes:      audit.ComputeChanges(old, updated),
 	}); apiErr != nil {
@@ -328,15 +328,15 @@ func capRowResults(results []domain.RowResult) ([]domain.RowResult, bool) {
 // Job.Status derives back out of them cannot disagree.
 func stampTransition(params *domain.UpdateJobRepositoryParams, status constants.JobStatus, at time.Time) *apierror.APIError {
 	switch status {
-	case constants.JobStatusStarted:
+	case constants.JobStatusRunning:
 		params.StartedAt = &at
 	case constants.JobStatusCompleted:
 		params.CompletedAt = &at
 	case constants.JobStatusFailed:
 		params.FailedAt = &at
-	case constants.JobStatusCancelled:
+	case constants.JobStatusCanceled:
 		params.CancelledAt = &at
-	case constants.JobStatusCreated:
+	case constants.JobStatusQueued:
 		// The created state is the absence of every other timestamp; there is nothing to stamp.
 	default:
 		return apierror.NewFieldError("status", apierror.CodeInvalidFormat, "Unknown job status.")
@@ -353,7 +353,7 @@ func stampTransition(params *domain.UpdateJobRepositoryParams, status constants.
 func (s *jobSvcImpl) StartJob(ctx context.Context, params domain.StartJobParams) (time.Time, *apierror.APIError) {
 	updated, apiErr := s.UpdateJob(ctx, domain.UpdateJobServiceParams{
 		JobID:  params.JobID,
-		Status: constants.JobStatusStarted,
+		Status: constants.JobStatusRunning,
 	})
 	if apiErr != nil {
 		return time.Time{}, apiErr
@@ -412,7 +412,7 @@ func (s *jobSvcImpl) CancelJob(ctx context.Context, params domain.CancelJobParam
 
 	cancel := domain.UpdateJobServiceParams{
 		JobID:  params.JobID,
-		Status: constants.JobStatusCancelled,
+		Status: constants.JobStatusCanceled,
 	}
 	if s.txManager == nil {
 		return s.UpdateJob(ctx, cancel)

@@ -23,7 +23,7 @@ import (
 
 type UnitGroupSvc interface {
 	ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError)
-	ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	CreateUnitGroup(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
@@ -33,7 +33,7 @@ type UnitGroupSvc interface {
 	DeleteUnitGroupUnit(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError)
 	GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError)
-	BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type UnitGroupSvcConfig struct {
@@ -64,7 +64,7 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) UnitGroupSvc {
 	}
 }
 
-func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportUnitGroupsResponse, error) {
 			return m.coreClient.ExportUnitGroups(ctx, &pb.ExportUnitGroupsRequest{Query: req.Query}, opts...)
@@ -367,7 +367,7 @@ func loadUnitGroupUnitByID(ctx context.Context, id string) (*apiresource.UnitGro
 	return v.(*apiresource.UnitGroupUnit), nil
 }
 
-func (m *unitGroupSvcImpl) BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *unitGroupSvcImpl) BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	unitGroups := make([]*pb.BulkUpsertUnitGroupInput, 0, len(req.UnitGroups))
 	for _, ug := range req.UnitGroups {
 		conversions := make([]*pb.BulkUpsertUnitGroupConversionInput, 0, len(ug.UnitConversions))

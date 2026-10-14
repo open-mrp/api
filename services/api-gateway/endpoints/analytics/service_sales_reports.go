@@ -206,7 +206,7 @@ func (m *analyticsSvcImpl) ListSalesLines(ctx context.Context, req *ListSalesLin
 	return apiresource.NewList(lines, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
 }
 
-func (m *analyticsSvcImpl) ExportSalesLines(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *analyticsSvcImpl) ExportSalesLines(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	start, hasStart := req.StartDate.Value()
 	end, hasEnd := req.EndDate.Value()
 	if hasStart != hasEnd {

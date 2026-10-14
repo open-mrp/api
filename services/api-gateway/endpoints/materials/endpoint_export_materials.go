@@ -37,8 +37,8 @@ func (*ExportMaterialsRequest) SchemaExample() any {
 // Starts an export of every matching material and returns the job that tracks it.
 type ExportMaterialsEndpoint struct{}
 
-func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportMaterialsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportMaterialsRequest, *apiresource.Job]{
+func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportMaterialsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportMaterialsRequest, *apiresource.AsyncJob]{
 		Title:             "Export Materials",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -48,16 +48,16 @@ func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(MaterialSvc).ExportMaterials
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

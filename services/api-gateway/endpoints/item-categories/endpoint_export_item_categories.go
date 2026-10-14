@@ -28,8 +28,8 @@ func (*ExportItemCategoriesRequest) SchemaExample() any {
 // Starts an export of every matching item category and returns the job that tracks it.
 type ExportItemCategoriesEndpoint struct{}
 
-func (e *ExportItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemCategoriesRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportItemCategoriesRequest, *apiresource.Job]{
+func (e *ExportItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemCategoriesRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportItemCategoriesRequest, *apiresource.AsyncJob]{
 		Title:             "Export Item Categories",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -39,16 +39,16 @@ func (e *ExportItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*E
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionRead}}},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ItemCategorySvc).ExportItemCategories
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

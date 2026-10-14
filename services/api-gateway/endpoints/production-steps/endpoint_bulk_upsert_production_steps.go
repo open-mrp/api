@@ -121,8 +121,8 @@ func (*BulkUpsertProductionStepsRequest) SchemaExample() any {
 // Validates and resolves synchronously, then writes asynchronously — 202 with a job to poll.
 type BulkUpsertProductionStepsEndpoint struct{}
 
-func (e *BulkUpsertProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductionStepsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkUpsertProductionStepsRequest, *apiresource.Job]{
+func (e *BulkUpsertProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductionStepsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkUpsertProductionStepsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Upsert Production Steps",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -132,16 +132,16 @@ func (e *BulkUpsertProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}, {Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkUpsertProductionSteps
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

@@ -52,8 +52,8 @@ func (*BulkResolveHubspotCompanyReviewsRequest) SchemaExample() any {
 // The decisions are validated against the sync synchronously — an unknown review, or one belonging to another sync, fails the whole request — and then applied by a background job. Poll the returned job to follow it: each decision that could not be applied lands in the job's `errors`, keyed by its index in `reviews`, while the rest still take effect.
 type BulkResolveHubspotCompanyReviewsEndpoint struct{}
 
-func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.Job]{
+func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.AsyncJob]{
 		Title:             "Bulk Resolve HubSpot Company Reviews",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -62,17 +62,17 @@ func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.AP
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
 		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).BulkResolveCompanyReviews
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

@@ -20,11 +20,11 @@ import (
 
 type DepartmentSvc interface {
 	ListDepartments(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError)
-	ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetDepartment(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	CreateDepartment(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	UpdateDepartment(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
-	BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	DeleteDepartment(ctx context.Context, req *DeleteDepartmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -56,7 +56,7 @@ func NewDepartmentSvc(config *DepartmentSvcConfig) DepartmentSvc {
 	}
 }
 
-func (m *departmentSvcImpl) ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *departmentSvcImpl) ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, departmentSvcTracer, "service.departments.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportDepartmentsResponse, error) {
 			return m.coreClient.ExportDepartments(ctx, &pb.ExportDepartmentsRequest{Query: req.Query}, opts...)
@@ -125,7 +125,7 @@ func (m *departmentSvcImpl) CreateDepartment(ctx context.Context, req *CreateDep
 	return loadDepartmentByID(ctx, resp.Department.Id)
 }
 
-func (m *departmentSvcImpl) BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *departmentSvcImpl) BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbDepartments := make([]*pb.UpsertDepartmentInput, len(req.Departments))
 	for i, d := range req.Departments {
 		pbDepartments[i] = &pb.UpsertDepartmentInput{

@@ -118,7 +118,7 @@ func (m *analyticsSvcImpl) ListOpenOrderLines(ctx context.Context, req *ListOpen
 	return apiresource.NewList(lines, apiresource.PageInfo{}), nil
 }
 
-func (m *analyticsSvcImpl) ExportOpenOrderLines(ctx context.Context, req *ExportOpenOrderLinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *analyticsSvcImpl) ExportOpenOrderLines(ctx context.Context, req *ExportOpenOrderLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.export_open_order_lines", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportOpenOrderLinesResponse, error) {
 			return m.coreClient.ExportOpenOrderLines(ctx, &pb.ExportOpenOrderLinesRequest{Filter: req.OpenOrderFilters.toProto()}, opts...)

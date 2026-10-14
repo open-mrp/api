@@ -11,7 +11,7 @@ import (
 
 func init() {
 	include.Register(&include.Definition{
-		ObjectType: constants.ObjectTypeJob,
+		ObjectType: constants.ObjectTypeAsyncJob,
 		Load:       resourceloaders.LoadJobs,
 		Subs: []include.SubField{
 			{
@@ -28,11 +28,11 @@ func init() {
 // the creator is stored as a bare identity-actor id, so the job endpoint's service stashes
 // it and preheats the Actor built from it (see jobep.StashJobMeta)
 func jobCreatedByID(ctx context.Context, parent any) string {
-	job, ok := parent.(*apiresource.Job)
+	job, ok := parent.(*apiresource.AsyncJob)
 	if !ok {
 		return ""
 	}
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeJob, job.ID, "created_by_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeAsyncJob, job.ID, "created_by_id")
 	return id
 }
 
@@ -45,7 +45,7 @@ func extractCreatedByIDFromJob(ctx context.Context, parent any) []string {
 }
 
 func populateCreatedByOnJob(ctx context.Context, parent any, loaded map[string]any) {
-	job, ok := parent.(*apiresource.Job)
+	job, ok := parent.(*apiresource.AsyncJob)
 	if !ok {
 		return
 	}

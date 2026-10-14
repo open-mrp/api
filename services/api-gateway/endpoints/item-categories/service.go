@@ -19,7 +19,7 @@ import (
 
 type ItemCategorySvc interface {
 	ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError)
-	ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.Job, *apierror.APIError)
+	ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
@@ -28,7 +28,7 @@ type ItemCategorySvc interface {
 	CreateItemCategoryProperty(ctx context.Context, req *CreateItemCategoryPropertyRequest) (*apiresource.Property, *apierror.APIError)
 	RemoveItemCategoryProperty(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ChangeItemCategoryUnitGroup(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type ItemCategorySvcConfig struct {
@@ -59,7 +59,7 @@ func NewItemCategorySvc(config *ItemCategorySvcConfig) ItemCategorySvc {
 	}
 }
 
-func (m *itemCategorySvcImpl) ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *itemCategorySvcImpl) ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item_categories.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportItemCategoriesResponse, error) {
 			return m.coreClient.ExportItemCategories(ctx, &pb.ExportItemCategoriesRequest{Query: req.Query}, opts...)
@@ -249,7 +249,7 @@ func loadItemCategoryByID(ctx context.Context, id string) (*apiresource.ItemCate
 	return v.(*apiresource.ItemCategory), nil
 }
 
-func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	inputs := make([]*pb.BulkUpsertItemCategoryInput, len(req.ItemCategories))
 	for i, ic := range req.ItemCategories {
 		inputs[i] = &pb.BulkUpsertItemCategoryInput{

@@ -22,11 +22,11 @@ import (
 
 type MachineSvc interface {
 	ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError)
-	ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.Job, *apierror.APIError)
+	ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	CreateMachine(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError)
-	BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	DeleteMachine(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListMachineItems(ctx context.Context, req *ListMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
 	ReplaceMachineItems(ctx context.Context, req *ReplaceMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
@@ -73,7 +73,7 @@ func loadMachineByID(ctx context.Context, id string) (*apiresource.Machine, *api
 	return v.(*apiresource.Machine), nil
 }
 
-func (m *machineSvcImpl) ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *machineSvcImpl) ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportMachinesResponse, error) {
 			return m.coreClient.ExportMachines(ctx, &pb.ExportMachinesRequest{Query: req.Query}, opts...)
@@ -145,7 +145,7 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 	return loadMachineByID(ctx, resp.Machine.Id)
 }
 
-func (m *machineSvcImpl) BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *machineSvcImpl) BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbMachines := make([]*pb.UpsertMachineInput, len(req.Machines))
 	for i, machine := range req.Machines {
 		pbMachines[i] = &pb.UpsertMachineInput{

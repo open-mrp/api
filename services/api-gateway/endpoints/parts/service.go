@@ -33,10 +33,10 @@ type PartSvc interface {
 	ListParts(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError)
 	GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError)
 	CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError)
-	BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError)
 	DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError)
-	ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type PartSvcConfig struct {
@@ -134,7 +134,7 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 	return loadPartByID(ctx, resp.Part.Id)
 }
 
-func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbParts := make([]*pb.UpsertPartInput, len(req.Parts))
 	for i, p := range req.Parts {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
@@ -208,7 +208,7 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 	return result, nil
 }
 
-func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.ExportPartsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,

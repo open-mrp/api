@@ -29,8 +29,8 @@ func (*ExportUnitGroupsRequest) SchemaExample() any {
 // a group's units one per row, the base unit excepted.
 type ExportUnitGroupsEndpoint struct{}
 
-func (e *ExportUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportUnitGroupsRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportUnitGroupsRequest, *apiresource.Job]{
+func (e *ExportUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportUnitGroupsRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportUnitGroupsRequest, *apiresource.AsyncJob]{
 		Title:             "Export Unit Groups",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -40,16 +40,16 @@ func (e *ExportUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionRead}}},
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(UnitGroupSvc).ExportUnitGroups
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

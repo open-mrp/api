@@ -20,10 +20,10 @@ import (
 
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError)
-	ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetScanningStation(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
-	BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	DeleteScanningStation(ctx context.Context, req *DeleteScanningStationRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ConnectProductionSteps(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -57,7 +57,7 @@ func NewScanningStationSvc(config *ScanningStationSvcConfig) ScanningStationSvc 
 	}
 }
 
-func (m *scanningStationSvcImpl) ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *scanningStationSvcImpl) ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportScanningStationsResponse, error) {
 			return m.coreClient.ExportScanningStations(ctx, &pb.ExportScanningStationsRequest{Query: req.Query}, opts...)
@@ -154,7 +154,7 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 	return loadScanningStationByID(ctx, resp.ScanningStation.Id)
 }
 
-func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbStations := make([]*pb.UpsertScanningStationInput, len(req.ScanningStations))
 	for i, ss := range req.ScanningStations {
 		pbStations[i] = &pb.UpsertScanningStationInput{

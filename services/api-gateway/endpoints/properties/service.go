@@ -25,8 +25,8 @@ type PropertySvc interface {
 	CreateProperty(ctx context.Context, req *CreatePropertyRequest) (*apiresource.Property, *apierror.APIError)
 	UpdateProperty(ctx context.Context, req *UpdatePropertyRequest) (*apiresource.Property, *apierror.APIError)
 	DeleteProperty(ctx context.Context, req *DeletePropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	BulkUpsertProperties(ctx context.Context, req *BulkUpsertPropertiesRequest) (*apiresource.Job, *apierror.APIError)
-	ExportProperties(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertProperties(ctx context.Context, req *BulkUpsertPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	ExportProperties(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	ListAttributes(ctx context.Context, req *ListAttributesRequest) (*apiresource.List[apiresource.Attribute], *apierror.APIError)
 	GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
 	CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
@@ -133,7 +133,7 @@ func (m *propertySvcImpl) UpdateProperty(ctx context.Context, req *UpdatePropert
 	return loadPropertyByID(ctx, resp.Property.Id)
 }
 
-func (m *propertySvcImpl) BulkUpsertProperties(ctx context.Context, req *BulkUpsertPropertiesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *propertySvcImpl) BulkUpsertProperties(ctx context.Context, req *BulkUpsertPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	inputs := make([]*pb.BulkUpsertPropertyInput, len(req.Properties))
 	for i, p := range req.Properties {
 		attributes := make([]*pb.BulkUpsertPropertyAttributeInput, len(p.Attributes))
@@ -165,7 +165,7 @@ func (m *propertySvcImpl) BulkUpsertProperties(ctx context.Context, req *BulkUps
 	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
-func (m *propertySvcImpl) ExportProperties(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *propertySvcImpl) ExportProperties(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportPropertiesResponse, error) {
 			return m.coreClient.ExportProperties(ctx, &pb.ExportPropertiesRequest{Query: req.Query}, opts...)

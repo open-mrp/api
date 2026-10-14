@@ -30,8 +30,8 @@ type HubspotSyncSvc interface {
 	LinkCompanyReview(ctx context.Context, req *LinkHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
 	CreateNewCompanyReview(ctx context.Context, req *CreateNewHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
 	SkipCompanyReview(ctx context.Context, req *SkipHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
-	BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError)
-	ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	ExecuteSync(ctx context.Context, req *ExecuteHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
 }
 
@@ -174,7 +174,7 @@ func (m *hubspotSyncSvcImpl) resolveCompanyReview(ctx context.Context, jobID, re
 	return hubspotCompanyReviewFromProto(resp.Review), nil
 }
 
-func (m *hubspotSyncSvcImpl) BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *hubspotSyncSvcImpl) BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	reviews := make([]*pb.HubspotCompanyReviewResolution, len(req.Reviews))
 	for i, review := range req.Reviews {
 		reviews[i] = &pb.HubspotCompanyReviewResolution{
@@ -194,7 +194,7 @@ func (m *hubspotSyncSvcImpl) BulkResolveCompanyReviews(ctx context.Context, req 
 	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
-func (m *hubspotSyncSvcImpl) ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *hubspotSyncSvcImpl) ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.export_reviews", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportHubspotCompanyReviewsResponse, error) {
 			return m.coreClient.ExportHubspotCompanyReviews(ctx, &pb.ExportHubspotCompanyReviewsRequest{JobId: req.JobID, Status: req.Status.StringPtr()}, opts...)

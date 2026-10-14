@@ -37,12 +37,12 @@ type ProductSvc interface {
 	ListProducts(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError)
 	GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError)
 	CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError)
-	BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.Job, *apierror.APIError)
+	BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError)
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError)
 	ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError)
 	ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError)
-	ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
 type ProductSvcConfig struct {
@@ -150,7 +150,7 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 	return loadProductByID(ctx, resp.Product.Id)
 }
 
-func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbProducts := make([]*pb.UpsertProductInput, len(req.Products))
 	for i, p := range req.Products {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
@@ -295,7 +295,7 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 	return result, nil
 }
 
-func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.Job, *apierror.APIError) {
+func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.ExportProductsRequest{
 		Query:          req.Query,
 		CustomerIds:    req.CustomerIDs,

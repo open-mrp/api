@@ -38,8 +38,8 @@ func (*PackPickRequest) SchemaExample() any {
 // Returns a validation error if the pick is already finished or no line on the pick has a picked quantity greater than zero. Packs of the same pick run one at a time, so a second pack accepted alongside the first finds nothing left to pack and its job fails rather than shipping the lines twice.
 type PackPickEndpoint struct{}
 
-func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.Job]{
+func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.AsyncJob]{
 		Title:             "Pack Pick",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/picks/{id}/actions/pack",
@@ -48,19 +48,19 @@ func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickReque
 		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionUpdate},
 		}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *PackPickRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *PackPickRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PickSvc).PackPick
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

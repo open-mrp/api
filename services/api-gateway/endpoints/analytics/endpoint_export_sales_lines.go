@@ -28,8 +28,8 @@ type ExportSalesLinesRequest struct {
 // The file has one row per invoice line with its pricing, customer and ship-to details. Sales reps export only their own sales, and without the unit cost column. An export matching more than 50,000 lines fails with a request to narrow the filters.
 type ExportSalesLinesEndpoint struct{}
 
-func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.Job] {
-	return (&apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.Job]{
+func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.AsyncJob]{
 		Title:             "Export Sales Lines",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -38,17 +38,17 @@ func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeJob,
+			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.Job, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(AnalyticsSvc).ExportSalesLines
 		},
-		LocationFunc: func(resp *apiresource.Job) string {
-			return "/v1/core/jobs/" + resp.ID
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
 		},
 	})
 }

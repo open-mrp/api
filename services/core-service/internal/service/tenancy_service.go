@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 var tenancySvcTracer = tracing.GetTracer("core-service.tenancy_service")

@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 
@@ -145,8 +145,8 @@ func (m *operatingCalendarSvcImpl) UpdateOperatingCalendar(ctx context.Context, 
 		Id:         req.OperatingCalendarID,
 		Name:       req.Name.Ptr(),
 		DaysOfWeek: req.DaysOfWeek.Ptr(),
-		CutoffAt:   field.StringClearableToProto(req.CutoffAt),
-		Timezone:   field.StringClearableToProto(req.Timezone),
+		CutoffAt:   fieldpb.StringClearableToProto(req.CutoffAt),
+		Timezone:   fieldpb.StringClearableToProto(req.Timezone),
 		IsDefault:  req.IsDefault.Ptr(),
 	}
 

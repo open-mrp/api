@@ -8,8 +8,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // deriveDepartmentWork explodes a version's constraint plan through the production-step graph and replaces that version's derived rows.

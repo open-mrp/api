@@ -6,7 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/apikit/ptrutil"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

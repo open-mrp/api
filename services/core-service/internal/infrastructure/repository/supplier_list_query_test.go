@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 	"github.com/stretchr/testify/assert"
 )
 

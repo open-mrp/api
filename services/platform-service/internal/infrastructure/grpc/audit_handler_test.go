@@ -12,8 +12,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

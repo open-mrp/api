@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 var idempotencyRepoTracer = tracing.GetTracer("agent-service.idempotency_key_repository")

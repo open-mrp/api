@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // memLeaseRepo is an in-memory task_leases table shared by every "pod" in a test.

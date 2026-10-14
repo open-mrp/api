@@ -1,7 +1,8 @@
-package field
+package fieldpb
 
 import (
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 )
 
 // QuantityInput holds amount and unit for quantity patch fields.
@@ -11,15 +12,15 @@ type QuantityInput struct {
 }
 
 // QuantityClearableFromProto converts protobuf to a quantity field.
-func QuantityClearableFromProto(p *pb.QuantityPatch) Clearable[QuantityInput] {
+func QuantityClearableFromProto(p *pb.QuantityPatch) field.Clearable[QuantityInput] {
 	if p == nil {
-		return Unset[QuantityInput]()
+		return field.Unset[QuantityInput]()
 	}
 	if p.Clear {
-		return Clear[QuantityInput]()
+		return field.Clear[QuantityInput]()
 	}
 	if p.Value == nil || p.UnitId == nil {
-		return Clear[QuantityInput]()
+		return field.Clear[QuantityInput]()
 	}
-	return Set(QuantityInput{Value: *p.Value, UnitID: *p.UnitId})
+	return field.Set(QuantityInput{Value: *p.Value, UnitID: *p.UnitId})
 }

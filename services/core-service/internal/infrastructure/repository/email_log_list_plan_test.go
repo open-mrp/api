@@ -15,7 +15,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The email log corpus is the production tenant's outbox: two years of mail, two in five of them sales

@@ -13,7 +13,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -206,8 +206,8 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 	pbReq := &pb.UpdateProductRequest{
 		Id:            req.ProductID,
 		Sku:           req.SKU.Ptr(),
-		Description:   field.StringClearableToProto(req.Description),
-		Notes:         field.StringClearableToProto(req.Notes),
+		Description:   fieldpb.StringClearableToProto(req.Description),
+		Notes:         fieldpb.StringClearableToProto(req.Notes),
 		IsPortalReady: isPortalReady,
 		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
 		CategoryId:    req.CategoryID.Ptr(),

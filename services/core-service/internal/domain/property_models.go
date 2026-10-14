@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Property represents a user-defined property that groups attributes.

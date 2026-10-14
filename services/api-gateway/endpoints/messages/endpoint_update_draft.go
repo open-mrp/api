@@ -10,7 +10,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // Request to edit a still-open customer-reply draft message.

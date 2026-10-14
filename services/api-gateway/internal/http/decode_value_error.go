@@ -8,7 +8,7 @@ import (
 	"time"
 
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // valueDecodeError turns an error decoding a value of body into an invalid_format error naming the

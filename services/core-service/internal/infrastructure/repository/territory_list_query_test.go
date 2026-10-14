@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 	"github.com/stretchr/testify/assert"
 )
 

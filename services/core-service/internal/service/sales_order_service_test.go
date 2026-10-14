@@ -17,10 +17,10 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/field"
 	"github.com/shopspring/decimal"
 
 	"github.com/stretchr/testify/suite"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // customerRefKind is a record a customer's account_relation row points at. The row has no foreign keys, so this check is all that stops it naming another account's record.

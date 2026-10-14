@@ -17,7 +17,7 @@ import (
 
 	domain "github.com/open-mrp/api/services/billing-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
-	pagination "github.com/open-mrp/api/shared/pagination"
+	pagination "github.com/open-mrp/apikit/pagination"
 	gomock "go.uber.org/mock/gomock"
 )
 

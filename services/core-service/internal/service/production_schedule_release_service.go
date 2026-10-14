@@ -17,8 +17,8 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // MaxBatchesPerRelease bounds one release, independently of the per-campaign cap.

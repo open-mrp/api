@@ -15,8 +15,8 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/lease"
 	"go.opentelemetry.io/otel/attribute"
 )
 

@@ -1,8 +1,8 @@
 package apirequest
 
 import (
-	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 )
 
 // QuantityFieldToProto converts a clearable quantity request field into its patch representation: an omitted field yields nil so the stored value is left alone, an explicit null yields a clear instruction, and a supplied object yields the new value and unit.

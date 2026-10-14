@@ -15,7 +15,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The delivery corpus is the fulfillment merchant's receiving side: two deliveries against each

@@ -6,10 +6,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -710,16 +710,16 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		ShippingAddress:      inlineAddressToDomain(req.ShippingAddress),
 		Includes:             req.Includes,
 		// Clearable fields (StringPatch / TimestampPatch → Clearable).
-		CustomerPONumber:      field.StringClearableFromProto(req.CustomerPoNumber),
-		Note:                  field.StringClearableFromProto(req.Note),
-		ServiceLevelID:        field.StringClearableFromProto(req.ServiceLevelId),
-		CarrierBillingType:    field.StringClearableFromProto(req.CarrierBillingType),
-		CarrierBillingAccount: field.StringClearableFromProto(req.CarrierBillingAccount),
-		SalesRepID:            field.StringClearableFromProto(req.SalesRepId),
-		OrderDiscountID:       field.StringClearableFromProto(req.OrderDiscountId),
-		PromisedAt:            field.TimestampClearableFromProto(req.PromisedAt),
-		LeadTimeOverrideDays:  field.Int32ClearableFromProto(req.LeadTimeOverrideDays),
-		ShipByOverrideDate:    field.TimestampClearableFromProto(req.ShipByOverrideDate),
+		CustomerPONumber:      fieldpb.StringClearableFromProto(req.CustomerPoNumber),
+		Note:                  fieldpb.StringClearableFromProto(req.Note),
+		ServiceLevelID:        fieldpb.StringClearableFromProto(req.ServiceLevelId),
+		CarrierBillingType:    fieldpb.StringClearableFromProto(req.CarrierBillingType),
+		CarrierBillingAccount: fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
+		SalesRepID:            fieldpb.StringClearableFromProto(req.SalesRepId),
+		OrderDiscountID:       fieldpb.StringClearableFromProto(req.OrderDiscountId),
+		PromisedAt:            fieldpb.TimestampClearableFromProto(req.PromisedAt),
+		LeadTimeOverrideDays:  fieldpb.Int32ClearableFromProto(req.LeadTimeOverrideDays),
+		ShipByOverrideDate:    fieldpb.TimestampClearableFromProto(req.ShipByOverrideDate),
 	}
 
 	if list := req.AcknowledgementEmailContacts; list != nil {
@@ -1001,7 +1001,7 @@ func (h *salesGRPCHandler) UpdateSalesOrderLine(ctx context.Context, req *pb.Upd
 		ProductID:                  req.ProductId,
 		ItemID:                     req.ItemId,
 		ProductSKU:                 req.ProductSku,
-		ProductDescription:         field.StringClearableFromProto(req.ProductDescription),
+		ProductDescription:         fieldpb.StringClearableFromProto(req.ProductDescription),
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitID:             req.QuantityUnitId,
 		UnitPriceValue:             req.UnitPriceValue,

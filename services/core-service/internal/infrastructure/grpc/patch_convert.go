@@ -2,8 +2,9 @@ package grpc
 
 import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 )
 
 func quantityPatchToDomain(p *pb.QuantityPatch) field.Clearable[domain.QuantityInput] {
@@ -20,7 +21,7 @@ func quantityPatchToDomain(p *pb.QuantityPatch) field.Clearable[domain.QuantityI
 }
 
 func stringListPatchToSliceField(p *pb.StringListPatch) field.Clearable[[]string] {
-	f := field.StringListClearableFromProto(p)
+	f := fieldpb.StringListClearableFromProto(p)
 	if f.IsUnset() {
 		return field.Unset[[]string]()
 	}
@@ -39,12 +40,12 @@ func inlineAddressToDomain(p *pb.InlineAddressInput) *domain.InlineAddressParams
 	return &domain.InlineAddressParams{
 		ID:                p.Id,
 		Name:              p.Name,
-		Phone:             field.StringClearableFromProto(p.Phone),
-		Email:             field.StringClearableFromProto(p.Email),
+		Phone:             fieldpb.StringClearableFromProto(p.Phone),
+		Email:             fieldpb.StringClearableFromProto(p.Email),
 		IsDropShip:        p.IsDropShip,
-		ReceiveCalendarID: field.StringClearableFromProto(p.ReceiveCalendarId),
+		ReceiveCalendarID: fieldpb.StringClearableFromProto(p.ReceiveCalendarId),
 		StreetLine1:       p.StreetLine_1,
-		StreetLine2:       field.StringClearableFromProto(p.StreetLine_2),
+		StreetLine2:       fieldpb.StringClearableFromProto(p.StreetLine_2),
 		Locality:          p.Locality,
 		State:             p.State,
 		PostalCode:        p.PostalCode,

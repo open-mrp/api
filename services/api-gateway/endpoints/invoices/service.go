@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
@@ -141,7 +141,7 @@ func stashAllocationTransactions(ctx context.Context, transactions []*pb.Transac
 func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.UpdateInvoiceRequest{
 		Id:           req.InvoiceID,
-		Note:         field.StringClearableToProto(req.Note),
+		Note:         fieldpb.StringClearableToProto(req.Note),
 		HasBeenSent:  req.HasBeenSent.Ptr(),
 		IsPaidInFull: req.IsPaidInFull.Ptr(),
 		Metadata:     metadata.PatchToProto(req.Metadata),

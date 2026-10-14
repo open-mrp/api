@@ -13,9 +13,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The order-book reports (order data, open orders) price and count each sale line exactly as the dashboard's analytics did: quantities in the item's base unit, money as the line's quantity in its dimension's base unit times the price per that unit, unrounded.

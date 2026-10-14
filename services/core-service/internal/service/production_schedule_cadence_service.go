@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // EnqueueScheduledGeneration reserves a version and queues the solve, in one transaction.

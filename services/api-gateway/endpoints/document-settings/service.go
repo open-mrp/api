@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -81,12 +81,12 @@ func (m *documentSettingSvcImpl) GetDocumentSetting(ctx context.Context, req *Re
 func (m *documentSettingSvcImpl) UpdateDocumentSetting(ctx context.Context, req *UpdateDocumentSettingRequest) (*apiresource.DocumentSetting, *apierror.APIError) {
 	pbReq := &pb.UpdateDocumentSettingRequest{
 		DocumentType: string(req.DocumentType),
-		FooterText:   field.StringClearableToProto(req.FooterText),
+		FooterText:   fieldpb.StringClearableToProto(req.FooterText),
 	}
 	if control, ok := req.DocumentControl.Value(); ok {
-		pbReq.ProcessOwner = field.StringClearableToProto(control.ProcessOwner)
-		pbReq.DocumentNumber = field.StringClearableToProto(control.DocumentNumber)
-		pbReq.Revision = field.StringClearableToProto(control.Revision)
+		pbReq.ProcessOwner = fieldpb.StringClearableToProto(control.ProcessOwner)
+		pbReq.DocumentNumber = fieldpb.StringClearableToProto(control.DocumentNumber)
+		pbReq.Revision = fieldpb.StringClearableToProto(control.Revision)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, documentSettingSvcTracer, "service.document_settings.update", domain.ServiceName,

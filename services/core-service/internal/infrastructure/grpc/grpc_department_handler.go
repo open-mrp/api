@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -205,7 +205,7 @@ func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepart
 	params := domain.UpdateDepartmentParams{
 		DepartmentID:       req.Id,
 		Name:               req.Name,
-		Notes:              field.StringClearableFromProto(req.Notes),
+		Notes:              fieldpb.StringClearableFromProto(req.Notes),
 		LocationID:         req.LocationId,
 		LaborRate:          departmentRateParamsFromProto(req.LaborRate),
 		ScanningStationIDs: req.ScanningStationIds,

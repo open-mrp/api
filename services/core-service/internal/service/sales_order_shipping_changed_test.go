@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 	"github.com/stretchr/testify/assert"
 )
 

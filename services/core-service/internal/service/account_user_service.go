@@ -13,13 +13,13 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 var accountUserSvcTracer = tracing.GetTracer("core-service.account_user_service")

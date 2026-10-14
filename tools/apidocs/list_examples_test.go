@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 func TestBuildListSchemaExample_WithoutRouteUsesNullPageURLs(t *testing.T) {

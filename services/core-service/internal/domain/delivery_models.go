@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // DeliverySummary represents a delivery with line count instead of full lines.

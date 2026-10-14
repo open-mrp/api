@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // UnitGroupFull represents a full unit group with its base unit and conversions.

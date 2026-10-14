@@ -10,7 +10,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The pick list's plan is invisible from its results: every index returns the same page, so a wrong

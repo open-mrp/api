@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 var accountGroupRepoTracer = tracing.GetTracer("core-service.account_group_repository")

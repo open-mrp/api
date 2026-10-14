@@ -11,7 +11,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

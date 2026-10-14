@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/apikit/ptrutil"
 
 	"go.uber.org/mock/gomock"
 )

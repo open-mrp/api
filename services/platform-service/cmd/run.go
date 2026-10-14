@@ -18,10 +18,10 @@ import (
 	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 func Run(

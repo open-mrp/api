@@ -15,10 +15,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/ptrutil"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -141,7 +142,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		Number:               req.Number.Ptr(),
 		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
-		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
+		ServiceLevelId:       fieldpb.StringClearableToProto(req.ServiceLevelID),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
@@ -164,7 +165,7 @@ func (m *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, req *
 		Id:                   req.ShipmentID,
 		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
-		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
+		ServiceLevelId:       fieldpb.StringClearableToProto(req.ServiceLevelID),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 

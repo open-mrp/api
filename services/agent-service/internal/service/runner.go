@@ -23,10 +23,10 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/retry"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // llmCallTimeout bounds a single LLM turn (streaming or not) as a backstop against a connection that stalls without a clean close — e.g. a streaming response silently severed by an egress NAT/firewall, where the read would otherwise block forever and pin the run in "running". The gateway streaming path has a tighter idle watchdog (streamIdleTimeout); this is the absolute ceiling for the whole attempt. One turn caps at 4096 output tokens, so minutes is generous.

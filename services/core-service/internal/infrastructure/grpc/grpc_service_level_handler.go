@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -121,7 +121,7 @@ func (h *gRPCHandler) UpdateServiceLevel(ctx context.Context, req *pb.UpdateServ
 		Code:               req.Code,
 		IsPortalEnabled:    req.IsPortalEnabled,
 		IsDefault:          req.IsDefault,
-		DefaultTransitDays: field.Int32ClearableFromProto(req.DefaultTransitDays),
+		DefaultTransitDays: fieldpb.Int32ClearableFromProto(req.DefaultTransitDays),
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.UpdateServiceLevel(ctx, params)

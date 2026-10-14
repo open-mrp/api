@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 func TestMachBuildSearchParams_MatchesANamePrefixLiterally(t *testing.T) {

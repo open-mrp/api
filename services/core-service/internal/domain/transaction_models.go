@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Transaction represents a full transaction with all related data.

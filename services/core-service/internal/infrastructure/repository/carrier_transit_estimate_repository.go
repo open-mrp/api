@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 var carrierTransitEstimateRepoTracer = tracing.GetTracer("core-service.carrier_transit_estimate_repository")

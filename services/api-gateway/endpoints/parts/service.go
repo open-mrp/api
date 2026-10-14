@@ -11,7 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -169,8 +169,8 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 	pbReq := &pb.UpdatePartRequest{
 		Id:          req.ItemID,
 		Sku:         req.SKU.Ptr(),
-		Description: field.StringClearableToProto(req.Description),
-		Notes:       field.StringClearableToProto(req.Notes),
+		Description: fieldpb.StringClearableToProto(req.Description),
+		Notes:       fieldpb.StringClearableToProto(req.Notes),
 		CategoryId:  req.CategoryID.Ptr(),
 	}
 

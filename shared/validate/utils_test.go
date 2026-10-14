@@ -6,7 +6,7 @@ import (
 	"time"
 
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 type passwordTestStruct struct {

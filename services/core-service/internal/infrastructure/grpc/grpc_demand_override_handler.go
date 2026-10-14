@@ -7,7 +7,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -190,10 +190,10 @@ func (h *demandOverrideGRPCHandler) UpdateDemandOverride(ctx context.Context, re
 		PeriodEndDate:    downtimeTimePtr(req.PeriodEndDate),
 		OverrideTypeCode: req.OverrideTypeCode,
 		Value:            req.Value,
-		UnitID:           field.StringClearableFromProto(req.UnitId),
-		ReasonCode:       field.StringClearableFromProto(req.ReasonCode),
-		Note:             field.StringClearableFromProto(req.Note),
-		ExpiresAt:        field.TimestampClearableFromProto(req.ExpiresAt),
+		UnitID:           fieldpb.StringClearableFromProto(req.UnitId),
+		ReasonCode:       fieldpb.StringClearableFromProto(req.ReasonCode),
+		Note:             fieldpb.StringClearableFromProto(req.Note),
+		ExpiresAt:        fieldpb.TimestampClearableFromProto(req.ExpiresAt),
 		IsActive:         req.IsActive,
 	}
 

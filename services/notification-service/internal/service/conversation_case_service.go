@@ -14,8 +14,8 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // supportAliasDisplayName is the branded party a customer sees behind every staff reply on an external

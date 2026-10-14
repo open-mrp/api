@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	dbpkg "github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // planFinRecentTransactions are the newest allocated transactions: together they appear in a few

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 type ListPricingPlansInput struct {

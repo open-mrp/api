@@ -9,7 +9,7 @@ import (
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/querytag"
+	"github.com/open-mrp/apikit/querytag"
 )
 
 type router struct {

@@ -1,6 +1,7 @@
-package field
+package fieldpb
 
 import (
+	"github.com/open-mrp/apikit/field"
 	"reflect"
 	"testing"
 	"time"
@@ -14,21 +15,21 @@ type testEnum string
 func TestEnumClearableToProto(t *testing.T) {
 	t.Parallel()
 
-	if got := EnumClearableToProto(Unset[testEnum]()); got != nil {
+	if got := EnumClearableToProto(field.Unset[testEnum]()); got != nil {
 		t.Errorf("unset should convert to nil, got %+v", got)
 	}
 
-	if got := EnumClearableToProto(Clear[testEnum]()); got == nil || !got.Clear {
+	if got := EnumClearableToProto(field.Clear[testEnum]()); got == nil || !got.Clear {
 		t.Errorf("clear should convert to a clearing patch, got %+v", got)
 	}
 
 	// An explicitly set empty value is never a valid enum value and is treated
 	// as a clear (spreadsheet-driven clients send "" for a blank cell).
-	if got := EnumClearableToProto(Set(testEnum(""))); got == nil || !got.Clear {
+	if got := EnumClearableToProto(field.Set(testEnum(""))); got == nil || !got.Clear {
 		t.Errorf("set empty value should convert to a clearing patch, got %+v", got)
 	}
 
-	got := EnumClearableToProto(Set(testEnum("tag")))
+	got := EnumClearableToProto(field.Set(testEnum("tag")))
 	if got == nil || got.Clear || got.Value == nil || *got.Value != "tag" {
 		t.Errorf("set value should convert to a value patch, got %+v", got)
 	}
@@ -42,17 +43,17 @@ func TestStringClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name  string
 		in    *pb.StringPatch
-		want  Clearable[string]
+		want  field.Clearable[string]
 		value string
 	}{
-		{name: "nil is unset", in: nil, want: Unset[string]()},
-		{name: "clear flag clears", in: &pb.StringPatch{Clear: true}, want: Clear[string]()},
+		{name: "nil is unset", in: nil, want: field.Unset[string]()},
+		{name: "clear flag clears", in: &pb.StringPatch{Clear: true}, want: field.Clear[string]()},
 		// A malformed patch (no clear flag, no value) is treated as a clear: the helper cannot
 		// report an error, so a raw gRPC client that omits value NULLs the column.
-		{name: "no clear flag and no value clears", in: &pb.StringPatch{Clear: false, Value: nil}, want: Clear[string]()},
-		{name: "clear flag wins over a value", in: &pb.StringPatch{Clear: true, Value: strPtr("x")}, want: Clear[string]()},
-		{name: "value sets", in: &pb.StringPatch{Clear: false, Value: strPtr("x")}, want: Set("x"), value: "x"},
-		{name: "empty value sets blank, unlike the enum helper", in: &pb.StringPatch{Clear: false, Value: strPtr("")}, want: Set(""), value: ""},
+		{name: "no clear flag and no value clears", in: &pb.StringPatch{Clear: false, Value: nil}, want: field.Clear[string]()},
+		{name: "clear flag wins over a value", in: &pb.StringPatch{Clear: true, Value: strPtr("x")}, want: field.Clear[string]()},
+		{name: "value sets", in: &pb.StringPatch{Clear: false, Value: strPtr("x")}, want: field.Set("x"), value: "x"},
+		{name: "empty value sets blank, unlike the enum helper", in: &pb.StringPatch{Clear: false, Value: strPtr("")}, want: field.Set(""), value: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -74,16 +75,16 @@ func TestInt32ClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name  string
 		in    *pb.Int32Patch
-		want  Clearable[int32]
+		want  field.Clearable[int32]
 		value int32
 	}{
-		{name: "nil is unset", in: nil, want: Unset[int32]()},
-		{name: "clear flag clears", in: &pb.Int32Patch{Clear: true}, want: Clear[int32]()},
+		{name: "nil is unset", in: nil, want: field.Unset[int32]()},
+		{name: "clear flag clears", in: &pb.Int32Patch{Clear: true}, want: field.Clear[int32]()},
 		// Same malformed-patch hazard as StringClearableFromProto: a missing value NULLs the
 		// column (customer credit limits, lead times) instead of erroring.
-		{name: "no clear flag and no value clears", in: &pb.Int32Patch{Clear: false, Value: nil}, want: Clear[int32]()},
-		{name: "value sets", in: &pb.Int32Patch{Clear: false, Value: &val}, want: Set(val), value: val},
-		{name: "zero value sets 0, not clear", in: &pb.Int32Patch{Clear: false, Value: &zero}, want: Set(zero), value: 0},
+		{name: "no clear flag and no value clears", in: &pb.Int32Patch{Clear: false, Value: nil}, want: field.Clear[int32]()},
+		{name: "value sets", in: &pb.Int32Patch{Clear: false, Value: &val}, want: field.Set(val), value: val},
+		{name: "zero value sets 0, not clear", in: &pb.Int32Patch{Clear: false, Value: &zero}, want: field.Set(zero), value: 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -103,12 +104,12 @@ func TestTimestampClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *pb.TimestampPatch
-		want Clearable[time.Time]
+		want field.Clearable[time.Time]
 	}{
-		{name: "nil is unset", in: nil, want: Unset[time.Time]()},
-		{name: "clear flag clears", in: &pb.TimestampPatch{Clear: true}, want: Clear[time.Time]()},
-		{name: "no clear flag and no value clears", in: &pb.TimestampPatch{Clear: false, Value: nil}, want: Clear[time.Time]()},
-		{name: "value sets", in: &pb.TimestampPatch{Clear: false, Value: timestamppb.New(refTime)}, want: Set(refTime)},
+		{name: "nil is unset", in: nil, want: field.Unset[time.Time]()},
+		{name: "clear flag clears", in: &pb.TimestampPatch{Clear: true}, want: field.Clear[time.Time]()},
+		{name: "no clear flag and no value clears", in: &pb.TimestampPatch{Clear: false, Value: nil}, want: field.Clear[time.Time]()},
+		{name: "value sets", in: &pb.TimestampPatch{Clear: false, Value: timestamppb.New(refTime)}, want: field.Set(refTime)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -149,15 +150,15 @@ func TestStringListClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name  string
 		in    *pb.StringListPatch
-		want  Clearable[StringList]
+		want  field.Clearable[StringList]
 		value StringList
 	}{
-		{name: "nil is unset", in: nil, want: Unset[StringList]()},
-		{name: "clear flag clears", in: &pb.StringListPatch{Clear: true}, want: Clear[StringList]()},
+		{name: "nil is unset", in: nil, want: field.Unset[StringList]()},
+		{name: "clear flag clears", in: &pb.StringListPatch{Clear: true}, want: field.Clear[StringList]()},
 		// The list helper diverges from the scalar ones: a nil value is a SET empty list, not a
 		// clear, so a malformed patch empties the list rather than NULLing the column.
-		{name: "no clear flag and no value sets empty", in: &pb.StringListPatch{Clear: false, Value: nil}, want: Set(StringList(nil)), value: nil},
-		{name: "value sets", in: &pb.StringListPatch{Clear: false, Value: []string{"a", "b"}}, want: Set(StringList{"a", "b"}), value: StringList{"a", "b"}},
+		{name: "no clear flag and no value sets empty", in: &pb.StringListPatch{Clear: false, Value: nil}, want: field.Set(StringList(nil)), value: nil},
+		{name: "value sets", in: &pb.StringListPatch{Clear: false, Value: []string{"a", "b"}}, want: field.Set(StringList{"a", "b"}), value: StringList{"a", "b"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -177,16 +178,16 @@ func TestQuantityClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name  string
 		in    *pb.QuantityPatch
-		want  Clearable[QuantityInput]
+		want  field.Clearable[QuantityInput]
 		value QuantityInput
 	}{
-		{name: "nil is unset", in: nil, want: Unset[QuantityInput]()},
-		{name: "clear flag clears", in: &pb.QuantityPatch{Clear: true}, want: Clear[QuantityInput]()},
+		{name: "nil is unset", in: nil, want: field.Unset[QuantityInput]()},
+		{name: "clear flag clears", in: &pb.QuantityPatch{Clear: true}, want: field.Clear[QuantityInput]()},
 		// A half-filled patch clears rather than erroring, so a client that sends an amount
 		// without a unit wipes the column it meant to write.
-		{name: "value without unit clears", in: &pb.QuantityPatch{Value: strPtr("10")}, want: Clear[QuantityInput]()},
-		{name: "unit without value clears", in: &pb.QuantityPatch{UnitId: strPtr("unit_1")}, want: Clear[QuantityInput]()},
-		{name: "both set", in: &pb.QuantityPatch{Value: strPtr("10"), UnitId: strPtr("unit_1")}, want: Set(QuantityInput{Value: "10", UnitID: "unit_1"}), value: QuantityInput{Value: "10", UnitID: "unit_1"}},
+		{name: "value without unit clears", in: &pb.QuantityPatch{Value: strPtr("10")}, want: field.Clear[QuantityInput]()},
+		{name: "unit without value clears", in: &pb.QuantityPatch{UnitId: strPtr("unit_1")}, want: field.Clear[QuantityInput]()},
+		{name: "both set", in: &pb.QuantityPatch{Value: strPtr("10"), UnitId: strPtr("unit_1")}, want: field.Set(QuantityInput{Value: "10", UnitID: "unit_1"}), value: QuantityInput{Value: "10", UnitID: "unit_1"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -206,14 +207,14 @@ func TestEnumClearableFromProto(t *testing.T) {
 	tests := []struct {
 		name  string
 		in    *pb.StringPatch
-		want  Clearable[testEnum]
+		want  field.Clearable[testEnum]
 		value testEnum
 	}{
-		{name: "nil is unset", in: nil, want: Unset[testEnum]()},
-		{name: "clear flag clears", in: &pb.StringPatch{Clear: true}, want: Clear[testEnum]()},
-		{name: "no value clears", in: &pb.StringPatch{Clear: false, Value: nil}, want: Clear[testEnum]()},
-		{name: "empty value clears", in: &pb.StringPatch{Clear: false, Value: strPtr("")}, want: Clear[testEnum]()},
-		{name: "value sets", in: &pb.StringPatch{Clear: false, Value: strPtr("tag")}, want: Set(testEnum("tag")), value: "tag"},
+		{name: "nil is unset", in: nil, want: field.Unset[testEnum]()},
+		{name: "clear flag clears", in: &pb.StringPatch{Clear: true}, want: field.Clear[testEnum]()},
+		{name: "no value clears", in: &pb.StringPatch{Clear: false, Value: nil}, want: field.Clear[testEnum]()},
+		{name: "empty value clears", in: &pb.StringPatch{Clear: false, Value: strPtr("")}, want: field.Clear[testEnum]()},
+		{name: "value sets", in: &pb.StringPatch{Clear: false, Value: strPtr("tag")}, want: field.Set(testEnum("tag")), value: "tag"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -235,11 +236,11 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 
 	t.Run("string", func(t *testing.T) {
 		t.Parallel()
-		for name, want := range map[string]Clearable[string]{
-			"unset": Unset[string](),
-			"clear": Clear[string](),
-			"set":   Set("value"),
-			"blank": Set(""),
+		for name, want := range map[string]field.Clearable[string]{
+			"unset": field.Unset[string](),
+			"clear": field.Clear[string](),
+			"set":   field.Set("value"),
+			"blank": field.Set(""),
 		} {
 			got := StringClearableFromProto(StringClearableToProto(want))
 			assertClearableState(t, got.IsUnset(), got.IsClear(), got.IsSet(), want)
@@ -253,11 +254,11 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 
 	t.Run("int32", func(t *testing.T) {
 		t.Parallel()
-		for name, want := range map[string]Clearable[int32]{
-			"unset": Unset[int32](),
-			"clear": Clear[int32](),
-			"set":   Set(int32(9)),
-			"zero":  Set(int32(0)),
+		for name, want := range map[string]field.Clearable[int32]{
+			"unset": field.Unset[int32](),
+			"clear": field.Clear[int32](),
+			"set":   field.Set(int32(9)),
+			"zero":  field.Set(int32(0)),
 		} {
 			got := Int32ClearableFromProto(Int32ClearableToProto(want))
 			assertClearableState(t, got.IsUnset(), got.IsClear(), got.IsSet(), want)
@@ -271,10 +272,10 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 
 	t.Run("timestamp", func(t *testing.T) {
 		t.Parallel()
-		for name, want := range map[string]Clearable[time.Time]{
-			"unset": Unset[time.Time](),
-			"clear": Clear[time.Time](),
-			"set":   Set(refTime),
+		for name, want := range map[string]field.Clearable[time.Time]{
+			"unset": field.Unset[time.Time](),
+			"clear": field.Clear[time.Time](),
+			"set":   field.Set(refTime),
 		} {
 			got := TimestampClearableFromProto(TimestampClearableToProto(want))
 			assertClearableState(t, got.IsUnset(), got.IsClear(), got.IsSet(), want)
@@ -287,10 +288,10 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 
 	t.Run("string list", func(t *testing.T) {
 		t.Parallel()
-		for name, want := range map[string]Clearable[StringList]{
-			"unset": Unset[StringList](),
-			"clear": Clear[StringList](),
-			"set":   Set(StringList{"a", "b"}),
+		for name, want := range map[string]field.Clearable[StringList]{
+			"unset": field.Unset[StringList](),
+			"clear": field.Clear[StringList](),
+			"set":   field.Set(StringList{"a", "b"}),
 		} {
 			got := StringListClearableFromProto(StringListClearableToProto(want))
 			assertClearableState(t, got.IsUnset(), got.IsClear(), got.IsSet(), want)
@@ -304,10 +305,10 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 
 	t.Run("enum", func(t *testing.T) {
 		t.Parallel()
-		for name, want := range map[string]Clearable[testEnum]{
-			"unset": Unset[testEnum](),
-			"clear": Clear[testEnum](),
-			"set":   Set(testEnum("tag")),
+		for name, want := range map[string]field.Clearable[testEnum]{
+			"unset": field.Unset[testEnum](),
+			"clear": field.Clear[testEnum](),
+			"set":   field.Set(testEnum("tag")),
 		} {
 			got := EnumClearableFromProto[testEnum](EnumClearableToProto(want))
 			assertClearableState(t, got.IsUnset(), got.IsClear(), got.IsSet(), want)
@@ -325,23 +326,25 @@ func TestClearable_protoRoundTrip(t *testing.T) {
 func TestSliceClearableToStringListClearable_preservesState(t *testing.T) {
 	t.Parallel()
 
-	if got := SliceClearableToStringListClearable(Unset[[]string]()); !got.IsUnset() {
+	if got := SliceClearableToStringListClearable(field.Unset[[]string]()); !got.IsUnset() {
 		t.Errorf("unset: got %+v", got)
 	}
-	if got := SliceClearableToStringListClearable(Clear[[]string]()); !got.IsClear() {
+	if got := SliceClearableToStringListClearable(field.Clear[[]string]()); !got.IsClear() {
 		t.Errorf("clear: got %+v", got)
 	}
-	got := SliceClearableToStringListClearable(Set([]string{"a"}))
+	got := SliceClearableToStringListClearable(field.Set([]string{"a"}))
 	v, ok := got.Value()
 	if !ok || !reflect.DeepEqual(v, StringList{"a"}) {
 		t.Errorf("set: got %#v ok=%v", v, ok)
 	}
 }
 
-func assertClearableState[T any](t *testing.T, unset, clear, set bool, want Clearable[T]) {
+func assertClearableState[T any](t *testing.T, unset, clear, set bool, want field.Clearable[T]) {
 	t.Helper()
 	if unset != want.IsUnset() || clear != want.IsClear() || set != want.IsSet() {
 		t.Fatalf("state: got unset=%v clear=%v set=%v, want unset=%v clear=%v set=%v",
 			unset, clear, set, want.IsUnset(), want.IsClear(), want.IsSet())
 	}
 }
+
+var refTime = time.Date(2026, 6, 4, 12, 30, 0, 0, time.UTC)

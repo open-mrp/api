@@ -5,8 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -448,7 +449,7 @@ func (h *shippingGRPCHandler) UpdateShipment(ctx context.Context, req *pb.Update
 	if req.CarrierId != nil {
 		params.CarrierID = req.CarrierId
 	}
-	params.ServiceLevelID = field.StringClearableFromProto(req.ServiceLevelId)
+	params.ServiceLevelID = fieldpb.StringClearableFromProto(req.ServiceLevelId)
 
 	shipment, apiErr := h.shipmentSvc.UpdateShipment(ctx, params)
 	if apiErr != nil {
@@ -473,7 +474,7 @@ func (h *shippingGRPCHandler) AdminUpdateShipmentTracking(ctx context.Context, r
 		ShipmentID:           req.Id,
 		MasterTrackingNumber: trackingNumberFromProto(req.MasterTrackingNumber),
 		CarrierID:            req.CarrierId,
-		ServiceLevelID:       field.StringClearableFromProto(req.ServiceLevelId),
+		ServiceLevelID:       fieldpb.StringClearableFromProto(req.ServiceLevelId),
 		Includes:             req.Includes,
 	}
 

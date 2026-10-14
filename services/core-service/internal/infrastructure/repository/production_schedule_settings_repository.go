@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // defaultShiftDaysOfWeek is Monday to Friday, matching both the column default and operating_calendar.days_of_week. It says which days the shift capacity falls on; without a start time and zone beside it, nothing reads it.

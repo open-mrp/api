@@ -12,8 +12,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // The purchase order a supplier receives: the submission email and the PDF attached to it, ported

@@ -11,7 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -147,7 +147,7 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		pbReq.FreightPolicy = &s
 	}
 	pbReq.DefaultLot = apirequest.QuantityFieldToProto(req.DefaultLot)
-	pbReq.FulfillmentPolicyCode = field.EnumClearableToProto(req.FulfillmentPolicy)
+	pbReq.FulfillmentPolicyCode = fieldpb.EnumClearableToProto(req.FulfillmentPolicy)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductLineResponse, error) {

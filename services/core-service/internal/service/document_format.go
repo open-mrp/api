@@ -3,7 +3,7 @@ package service
 import (
 	"strings"
 
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 	"github.com/shopspring/decimal"
 )
 

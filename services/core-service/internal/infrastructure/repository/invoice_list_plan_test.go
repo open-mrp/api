@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
 	dbpkg "github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 	"github.com/stretchr/testify/require"
 )
 

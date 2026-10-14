@@ -4,7 +4,7 @@ import (
 	gosql "database/sql"
 	"strings"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The shipment list is a deferred join: buildShipmentListQuery pages shipment ids from the shipment

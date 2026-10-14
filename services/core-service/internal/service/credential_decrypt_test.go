@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/open-mrp/api/shared/crypto"
+	"github.com/open-mrp/apikit/crypto"
 	"github.com/stretchr/testify/require"
 )
 

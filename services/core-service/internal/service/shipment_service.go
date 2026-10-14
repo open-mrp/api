@@ -29,17 +29,17 @@ import (
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/open-mrp/api/shared/timeutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // decryptShippoAPIKey decrypts and unwraps a stored Shippo integration credential blob, returning the plaintext API key to hand to the Shippo client factory. The credential is sealed with the account ID as additional authenticated data (see account_integration_service.go), so the same accountID must be supplied here.

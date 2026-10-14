@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 var customerProductLineAccessRepoTracer = tracing.GetTracer("core-service.customer_product_line_access_repository")

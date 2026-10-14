@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -162,11 +162,11 @@ func (m *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, req *U
 		Id:         req.MachineDowntimeEventID,
 		ReasonCode: downtimeEnumPtr(req.Reason.Ptr()),
 		// Clearable nullable fields → *Patch (clear / set / leave). A cleared ended_at reopens the event.
-		EndedAt:         field.TimestampClearableToProto(req.EndedAt),
-		ItemId:          field.StringClearableToProto(req.ItemID),
-		ProductionRunId: field.StringClearableToProto(req.ProductionRunID),
-		BatchId:         field.StringClearableToProto(req.BatchID),
-		Note:            field.StringClearableToProto(req.Note),
+		EndedAt:         fieldpb.TimestampClearableToProto(req.EndedAt),
+		ItemId:          fieldpb.StringClearableToProto(req.ItemID),
+		ProductionRunId: fieldpb.StringClearableToProto(req.ProductionRunID),
+		BatchId:         fieldpb.StringClearableToProto(req.BatchID),
+		Note:            fieldpb.StringClearableToProto(req.Note),
 		MachineId:       req.MachineID.Ptr(),
 		Duration:        apirequest.QuantityFieldToProto(req.Duration),
 	}

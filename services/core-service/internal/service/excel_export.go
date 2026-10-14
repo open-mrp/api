@@ -17,8 +17,8 @@ import (
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 var exportTracer = tracing.GetTracer("core-service.export_operation")

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // territoryListPageQuery selects one page of territory IDs in list order, emitting only the predicates the

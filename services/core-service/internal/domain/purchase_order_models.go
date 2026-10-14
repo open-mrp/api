@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/pricing"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // PurchaseOrder represents a full purchase order domain model.

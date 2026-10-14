@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 var unitRepoTracer = tracing.GetTracer("core-service.unit_repository")

@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // merchantLetterhead is the account's own branding, resolved for a template that has no order behind it to carry it (a purchase-order submission, a statement of account). Templates with an order build the same values through ackData instead.

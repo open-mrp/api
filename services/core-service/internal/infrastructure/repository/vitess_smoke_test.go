@@ -16,7 +16,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/db/backfill"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/querytag"
+	"github.com/open-mrp/apikit/querytag"
 )
 
 // Runs queries through a real vtgate (vitess/vttestserver) with the production pool settings, so each

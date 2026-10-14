@@ -14,10 +14,10 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/field"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.

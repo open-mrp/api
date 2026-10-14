@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 type ScanningStation struct {

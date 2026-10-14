@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/field"
 )
 
 var shippingCaseRepoTracer = tracing.GetTracer("core-service.shipping_case_repository")

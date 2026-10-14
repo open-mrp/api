@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/crypto"
 )
 
 const (

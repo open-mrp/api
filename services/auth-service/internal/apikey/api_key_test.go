@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/apikit/crypto"
 )
 
 func TestGenParsedAPIKey(t *testing.T) {

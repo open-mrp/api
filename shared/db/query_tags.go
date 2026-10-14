@@ -5,7 +5,7 @@ import (
 	"database/sql/driver"
 	"time"
 
-	"github.com/open-mrp/api/shared/querytag"
+	"github.com/open-mrp/apikit/querytag"
 )
 
 // taggingConnector appends each statement's SQLCommenter tags (querytag) as it reaches the driver, beneath otelsql, so every path is tagged: queries, execs, prepares and everything inside a transaction.

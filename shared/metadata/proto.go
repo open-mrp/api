@@ -1,8 +1,8 @@
 package metadata
 
 import (
-	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 )
 
 // FromCreateRequest is a create body's metadata as stored. A key sent as null has nothing to remove on a

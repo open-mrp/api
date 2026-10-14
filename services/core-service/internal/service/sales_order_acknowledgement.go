@@ -12,9 +12,9 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/pricing"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/shopspring/decimal"
 )
 

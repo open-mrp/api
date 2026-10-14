@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The sales order list's keys. Each leads with the owner and ends in list order, so a list on its

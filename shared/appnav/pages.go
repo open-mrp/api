@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/open-mrp/api/shared/fuzzy"
+	"github.com/open-mrp/apikit/fuzzy"
 )
 
 //go:embed app_pages.json

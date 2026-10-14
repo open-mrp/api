@@ -4,8 +4,8 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 func (*AnalyzeSalesRequest) SchemaExample() any {

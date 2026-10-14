@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // DepartmentScanningStation is a scanning station sub-resource attached to a department.

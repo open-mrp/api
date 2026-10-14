@@ -16,8 +16,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/lease"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // sales_line_fact and its reports are SQL end to end, so these run against the seeded dev database:

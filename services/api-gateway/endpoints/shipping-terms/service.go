@@ -10,7 +10,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -160,7 +160,7 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 	}
 	pbReq.FlatRate = apirequest.QuantityFieldToProto(req.FlatRate)
 	pbReq.MinimumOrderValue = apirequest.QuantityFieldToProto(req.MinimumOrderValue)
-	pbReq.FreeShippingServiceLevelIds = field.StringListSliceClearableToProto(req.FreeShippingServiceLevelIDs)
+	pbReq.FreeShippingServiceLevelIds = fieldpb.StringListSliceClearableToProto(req.FreeShippingServiceLevelIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShippingTermResponse, error) {

@@ -13,10 +13,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -480,28 +480,28 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Id:                       req.CustomerID,
 		Name:                     req.Name.Ptr(),
 		Number:                   req.Number.Ptr(),
-		Note:                     field.StringClearableToProto(req.Note),
-		Email:                    field.StringClearableToProto(req.Email),
-		Phone:                    field.StringClearableToProto(req.Phone),
-		Url:                      field.StringClearableToProto(req.URL),
+		Note:                     fieldpb.StringClearableToProto(req.Note),
+		Email:                    fieldpb.StringClearableToProto(req.Email),
+		Phone:                    fieldpb.StringClearableToProto(req.Phone),
+		Url:                      fieldpb.StringClearableToProto(req.URL),
 		StatusCode:               req.StatusCode.Ptr().StringPtr(),
 		CommissionPolicy:         req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:            req.FreightPolicy.Ptr().StringPtr(),
-		DefaultLeadTimeDays:      field.Int32ClearableToProto(req.LeadTimeDays),
-		ReceiveCalendarId:        field.StringClearableToProto(req.ReceiveCalendarID),
-		FulfillmentPolicyCode:    field.EnumClearableToProto(req.FulfillmentPolicy),
+		DefaultLeadTimeDays:      fieldpb.Int32ClearableToProto(req.LeadTimeDays),
+		ReceiveCalendarId:        fieldpb.StringClearableToProto(req.ReceiveCalendarID),
+		FulfillmentPolicyCode:    fieldpb.EnumClearableToProto(req.FulfillmentPolicy),
 		DefaultCarrierId:         req.DefaultCarrierID.Ptr(),
-		DefaultServiceLevelId:    field.StringClearableToProto(req.DefaultServiceLevelID),
+		DefaultServiceLevelId:    fieldpb.StringClearableToProto(req.DefaultServiceLevelID),
 		DefaultPaymentTermId:     req.DefaultPaymentTermID.Ptr(),
 		DefaultShippingTermId:    req.DefaultShippingTermID.Ptr(),
 		DefaultPriorityCode:      req.DefaultPriorityCode.Ptr().StringPtr(),
-		DefaultSalesRepId:        field.StringClearableToProto(req.DefaultSalesRepID),
-		BillToAddressId:          field.StringClearableToProto(req.BillToAddressID),
-		ShipToAddressId:          field.StringClearableToProto(req.ShipToAddressID),
+		DefaultSalesRepId:        fieldpb.StringClearableToProto(req.DefaultSalesRepID),
+		BillToAddressId:          fieldpb.StringClearableToProto(req.BillToAddressID),
+		ShipToAddressId:          fieldpb.StringClearableToProto(req.ShipToAddressID),
 		CustomerPriceGroupIds:    ptrutil.Deref(req.CustomerPriceGroupIDs.Ptr()),
 		CustomerTypeGroupId:      req.CustomerTypeGroupID.Ptr(),
 		CarrierBillingType:       req.CarrierBillingType.Ptr().StringPtr(),
-		CarrierBillingAccount:    field.StringClearableToProto(req.CarrierBillingAccount),
+		CarrierBillingAccount:    fieldpb.StringClearableToProto(req.CarrierBillingAccount),
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs.IsSet(),
 		Includes:                 resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}

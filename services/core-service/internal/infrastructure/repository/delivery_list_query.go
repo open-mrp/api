@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The delivery list is a deferred join: buildDeliveryListQuery pages delivery ids from the delivery

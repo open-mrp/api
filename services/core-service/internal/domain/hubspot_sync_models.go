@@ -6,7 +6,7 @@ import (
 	"time"
 
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // HubspotSyncSvc is the application service for the HubSpot backfill: starting a job (which dispatches the preview command), reading job status, managing the company-review queue, and triggering execute. The target account and authorization are derived from the request identity.

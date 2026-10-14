@@ -6,7 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -191,7 +191,7 @@ func (h *gRPCHandler) UpdateProductLine(ctx context.Context, req *pb.UpdateProdu
 
 		DefaultLot:            lotInputFromPatch(req.DefaultLot),
 		ClearDefaultLot:       req.DefaultLot != nil && req.DefaultLot.Clear,
-		FulfillmentPolicyCode: field.StringClearableFromProto(req.FulfillmentPolicyCode),
+		FulfillmentPolicyCode: fieldpb.StringClearableFromProto(req.FulfillmentPolicyCode),
 	}
 	if req.CommissionPolicy != nil {
 		cp := constants.CommissionPolicy(*req.CommissionPolicy)

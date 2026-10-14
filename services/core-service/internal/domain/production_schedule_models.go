@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // ProductionScheduleItemSetting is a merchant override for one item's planning.

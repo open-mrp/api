@@ -2,7 +2,7 @@ package apiresource
 
 import (
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // PaginationRequest is the standard request type for paginated list endpoints.

@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // checkCatalogReadPermission checks the appropriate read permission based on the target context. Internal actors need products:read for their own account, or customers:read / suppliers:read for external accounts.

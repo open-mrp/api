@@ -7,8 +7,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -199,11 +200,11 @@ func (h *machineDowntimeGRPCHandler) UpdateMachineDowntimeEvent(ctx context.Cont
 		EventID:         req.Id,
 		ReasonCode:      req.ReasonCode,
 		StartedAt:       downtimeTimePtr(req.StartedAt),
-		EndedAt:         field.TimestampClearableFromProto(req.EndedAt),
-		ItemID:          field.StringClearableFromProto(req.ItemId),
-		ProductionRunID: field.StringClearableFromProto(req.ProductionRunId),
-		BatchID:         field.StringClearableFromProto(req.BatchId),
-		Note:            field.StringClearableFromProto(req.Note),
+		EndedAt:         fieldpb.TimestampClearableFromProto(req.EndedAt),
+		ItemID:          fieldpb.StringClearableFromProto(req.ItemId),
+		ProductionRunID: fieldpb.StringClearableFromProto(req.ProductionRunId),
+		BatchID:         fieldpb.StringClearableFromProto(req.BatchId),
+		Note:            fieldpb.StringClearableFromProto(req.Note),
 		MachineID:       req.MachineId,
 		Duration:        downtimeDurationClearableFromProto(req.Duration),
 	}

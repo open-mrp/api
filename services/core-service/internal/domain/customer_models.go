@@ -4,8 +4,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/fieldpb"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Customer represents a full customer record from the database.
@@ -275,7 +276,7 @@ type UpdateCustomerParams struct {
 	CustomerTypeGroupID      *string
 	CarrierBillingType       *string
 	CarrierBillingAccount    field.Clearable[string]
-	CreditLimit              field.Clearable[field.QuantityInput]
+	CreditLimit              field.Clearable[fieldpb.QuantityInput]
 	CreditLimitID            *string
 	Includes                 []string
 }

@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // ProductFull represents a product entity, which extends an Item with product-specific fields.

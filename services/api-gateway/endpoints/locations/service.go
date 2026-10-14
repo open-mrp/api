@@ -11,7 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -132,9 +132,9 @@ func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocatio
 		Id:       req.LocationID,
 		Name:     req.Name.Ptr(),
 		TypeCode: req.TypeCode.Ptr().StringPtr(),
-		ParentId: field.StringClearableToProto(req.ParentID),
+		ParentId: fieldpb.StringClearableToProto(req.ParentID),
 	}
-	pbReq.ChildIds = field.StringListSliceClearableToProto(req.ChildIDs)
+	pbReq.ChildIds = fieldpb.StringListSliceClearableToProto(req.ChildIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateLocationResponse, error) {

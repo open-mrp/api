@@ -8,9 +8,10 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/ptrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -1703,10 +1704,10 @@ func (h *gRPCHandler) UpdateAccountGroup(ctx context.Context, req *pb.UpdateAcco
 	params := domain.UpdateAccountGroupParams{
 		AccountGroupID:       req.Id,
 		Name:                 req.Name,
-		Description:          field.StringClearableFromProto(req.Description),
+		Description:          fieldpb.StringClearableFromProto(req.Description),
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
-		DefaultLeadTimeDays:  field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
+		DefaultLeadTimeDays:  fieldpb.Int32ClearableFromProto(req.DefaultLeadTimeDays),
 	}
 
 	accountGroup, apiErr := h.accountGroupSvc.UpdateAccountGroup(ctx, params)
@@ -1907,12 +1908,12 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 	params := domain.UpdateAddressParams{
 		AddressID:         req.Id,
 		Name:              req.Name,
-		Phone:             field.StringClearableFromProto(req.Phone),
-		Email:             field.StringClearableFromProto(req.Email),
+		Phone:             fieldpb.StringClearableFromProto(req.Phone),
+		Email:             fieldpb.StringClearableFromProto(req.Email),
 		IsDropShip:        req.IsDropShip,
-		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId),
+		ReceiveCalendarID: fieldpb.StringClearableFromProto(req.ReceiveCalendarId),
 		StreetLine1:       req.StreetLine_1,
-		StreetLine2:       field.StringClearableFromProto(req.StreetLine_2),
+		StreetLine2:       fieldpb.StringClearableFromProto(req.StreetLine_2),
 		Locality:          req.Locality,
 		State:             req.State,
 		PostalCode:        req.PostalCode,

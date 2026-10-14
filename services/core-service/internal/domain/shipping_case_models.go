@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // ShippingCase represents a shipping case domain model with joined fields for reads.

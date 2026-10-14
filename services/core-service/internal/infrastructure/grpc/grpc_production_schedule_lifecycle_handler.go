@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -146,7 +146,7 @@ func (h *productionScheduleGRPCHandler) UpdateProductionScheduleLine(ctx context
 		RunHours:      req.RunHours,
 		SequenceIndex: req.SequenceIndex,
 		StatusCode:    req.StatusCode,
-		ReasonCode:    field.StringClearableFromProto(req.ReasonCode),
+		ReasonCode:    fieldpb.StringClearableFromProto(req.ReasonCode),
 		ReasonNote:    req.ReasonNote,
 	})
 	if apiErr != nil {

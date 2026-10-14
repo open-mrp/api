@@ -17,7 +17,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/open-mrp/api/shared/querytag"
+	"github.com/open-mrp/apikit/querytag"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -164,7 +164,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 		BaseUnitId: req.BaseUnitID.Ptr(),
 	}
 
-	pbReq.Notes = field.StringClearableToProto(req.Notes)
+	pbReq.Notes = fieldpb.StringClearableToProto(req.Notes)
 
 	if associatedUnitsReq, ok := req.AssociatedUnits.Value(); ok {
 		pbReq.UpdateUnitConversions = true

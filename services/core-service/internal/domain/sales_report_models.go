@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // SalesReportFilter selects the invoiced sales a report covers. Every list is empty-means-all and they combine with AND.

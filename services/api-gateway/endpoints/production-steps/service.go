@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -196,7 +196,7 @@ func (m *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, req *U
 		LevelingFactor:    req.LevelingFactor.Ptr(),
 		Allowances:        req.Allowances.Ptr(),
 		ScanningStationId: req.ScanningStationID.Ptr(),
-		Notes:             field.StringClearableToProto(req.Notes),
+		Notes:             fieldpb.StringClearableToProto(req.Notes),
 	}
 	if machineIDs, ok := req.MachineIDs.Value(); ok {
 		pbReq.MachineIds = &pb.StringListPatch{Value: machineIDs}

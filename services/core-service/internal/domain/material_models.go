@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Material represents a material entity, which extends an Item with order point and lead time quantities.

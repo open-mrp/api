@@ -1,6 +1,6 @@
 package apirequest
 
-import "github.com/open-mrp/api/shared/field"
+import "github.com/open-mrp/apikit/field"
 
 // Details of a single line item ordered from a supplier, used when creating a purchase order and when adding a line to an existing one.
 type OrderLineInput struct {

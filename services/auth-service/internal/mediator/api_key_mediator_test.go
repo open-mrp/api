@@ -14,8 +14,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/apikit/crypto"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

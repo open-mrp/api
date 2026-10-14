@@ -21,7 +21,7 @@ package pricing
 import (
 	"fmt"
 
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 	"github.com/shopspring/decimal"
 )
 

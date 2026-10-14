@@ -20,7 +20,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 const inventoryChangeLogExportSheet = "Inventory Change Logs"

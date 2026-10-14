@@ -6,8 +6,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -196,9 +197,9 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 	params := domain.UpdateScanningStationParams{
 		ScanningStationID: req.Id,
 		Name:              req.Name,
-		Notes:             field.StringClearableFromProto(req.Notes),
-		LabelSizeCode:     clearLabelWhenEmpty(field.StringClearableFromProto(req.LabelSizeCode)),
-		LabelTypeCode:     clearLabelWhenEmpty(field.StringClearableFromProto(req.LabelTypeCode)),
+		Notes:             fieldpb.StringClearableFromProto(req.Notes),
+		LabelSizeCode:     clearLabelWhenEmpty(fieldpb.StringClearableFromProto(req.LabelSizeCode)),
+		LabelTypeCode:     clearLabelWhenEmpty(fieldpb.StringClearableFromProto(req.LabelTypeCode)),
 		OperatorRequirement: func() *constants.OperatorRequirement {
 			if req.OperatorRequirement == nil {
 				return nil
@@ -236,8 +237,8 @@ func (h *gRPCHandler) BulkUpsertScanningStations(ctx context.Context, req *pb.Bu
 			Name:                ss.Name,
 			Notes:               ss.Notes,
 			Type:                constants.ScanningStationType(ss.Type),
-			LabelSizeCode:       clearLabelWhenEmpty(field.StringClearableFromProto(ss.LabelSizeCode)),
-			LabelTypeCode:       clearLabelWhenEmpty(field.StringClearableFromProto(ss.LabelTypeCode)),
+			LabelSizeCode:       clearLabelWhenEmpty(fieldpb.StringClearableFromProto(ss.LabelSizeCode)),
+			LabelTypeCode:       clearLabelWhenEmpty(fieldpb.StringClearableFromProto(ss.LabelTypeCode)),
 			OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
 			Department:          objectIdentifierFromProto(ss.Department),
 		}

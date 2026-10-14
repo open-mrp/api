@@ -23,18 +23,18 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
-	"github.com/open-mrp/api/shared/ptrutil"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 var salesOrderSvcTracer = tracing.GetTracer("core-service.sales_order_service")

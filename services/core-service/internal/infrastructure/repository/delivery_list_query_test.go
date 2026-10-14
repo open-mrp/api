@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Every filter together, under each drive: a placeholder/arg mismatch binds values to the wrong

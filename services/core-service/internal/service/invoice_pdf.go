@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
+	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/shopspring/decimal"
 )
 

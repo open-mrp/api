@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // supplierSearchWordLimit bounds how many predicates a search emits; a supplier search is a name or a number, not prose.

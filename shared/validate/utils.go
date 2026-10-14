@@ -31,7 +31,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 	"github.com/shopspring/decimal"
 )
 

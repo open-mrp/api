@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/redact"
+	"github.com/open-mrp/apikit/field"
 )
 
 // sentinel is planted in every sensitive field of a fixture; surviving anywhere in the redacted body is the leak these tests exist to catch.

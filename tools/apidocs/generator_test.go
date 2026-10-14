@@ -16,7 +16,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 
 	invoiceep "github.com/open-mrp/api/services/api-gateway/endpoints/invoices"
 )

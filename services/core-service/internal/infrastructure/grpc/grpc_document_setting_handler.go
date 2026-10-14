@@ -6,7 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -75,10 +75,10 @@ func (h *gRPCHandler) UpdateDocumentSetting(ctx context.Context, req *pb.UpdateD
 
 	setting, apiErr := h.documentSettingSvc.UpdateDocumentSetting(ctx, domain.UpdateDocumentSettingParams{
 		DocumentType:   constants.DocumentType(req.DocumentType),
-		ProcessOwner:   field.StringClearableFromProto(req.ProcessOwner),
-		DocumentNumber: field.StringClearableFromProto(req.DocumentNumber),
-		Revision:       field.StringClearableFromProto(req.Revision),
-		FooterText:     field.StringClearableFromProto(req.FooterText),
+		ProcessOwner:   fieldpb.StringClearableFromProto(req.ProcessOwner),
+		DocumentNumber: fieldpb.StringClearableFromProto(req.DocumentNumber),
+		Revision:       fieldpb.StringClearableFromProto(req.Revision),
+		FooterText:     fieldpb.StringClearableFromProto(req.FooterText),
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

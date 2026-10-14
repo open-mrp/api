@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/crypto"
 	"github.com/open-mrp/api/shared/env"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/apikit/crypto"
 )
 
 var (

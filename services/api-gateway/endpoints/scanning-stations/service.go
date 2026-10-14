@@ -11,7 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -163,8 +163,8 @@ func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context,
 			Type:                string(ss.Type),
 			OperatorRequirement: string(ss.OperatorRequirement),
 			Department:          apirequest.ObjectIdentifierToProto(ss.Department),
-			LabelSizeCode:       field.EnumClearableToProto(ss.LabelSizeCode),
-			LabelTypeCode:       field.EnumClearableToProto(ss.LabelTypeCode),
+			LabelSizeCode:       fieldpb.EnumClearableToProto(ss.LabelSizeCode),
+			LabelTypeCode:       fieldpb.EnumClearableToProto(ss.LabelTypeCode),
 		}
 	}
 
@@ -183,9 +183,9 @@ func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req 
 	pbReq := &pb.UpdateScanningStationRequest{
 		Id:            req.ScanningStationID,
 		Name:          req.Name.Ptr(),
-		Notes:         field.StringClearableToProto(req.Notes),
-		LabelSizeCode: field.EnumClearableToProto(req.LabelSizeCode),
-		LabelTypeCode: field.EnumClearableToProto(req.LabelTypeCode),
+		Notes:         fieldpb.StringClearableToProto(req.Notes),
+		LabelSizeCode: fieldpb.EnumClearableToProto(req.LabelSizeCode),
+		LabelTypeCode: fieldpb.EnumClearableToProto(req.LabelTypeCode),
 		OperatorRequirement: func() *string {
 			if v, ok := req.OperatorRequirement.Value(); ok {
 				s := string(v)

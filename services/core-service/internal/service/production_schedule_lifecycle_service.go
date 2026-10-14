@@ -15,8 +15,8 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // lineSnapshot is what a deviation records before and after a change. It is a flat copy rather than a reference so the log stays readable after the line is deleted — the whole point of an append-only record is that it outlives its subject.

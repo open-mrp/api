@@ -5,7 +5,7 @@ import (
 	gosql "database/sql"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // machineItemPageIndex holds a machine's items in list order, so a page walks it and stops at the limit.

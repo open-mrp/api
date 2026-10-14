@@ -7,9 +7,9 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -458,30 +458,30 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerAccountID:        req.Id,
 		Name:                     req.Name,
 		Number:                   req.Number,
-		Note:                     field.StringClearableFromProto(req.Note),
-		Email:                    field.StringClearableFromProto(req.Email),
-		Phone:                    field.StringClearableFromProto(req.Phone),
-		URL:                      field.StringClearableFromProto(req.Url),
+		Note:                     fieldpb.StringClearableFromProto(req.Note),
+		Email:                    fieldpb.StringClearableFromProto(req.Email),
+		Phone:                    fieldpb.StringClearableFromProto(req.Phone),
+		URL:                      fieldpb.StringClearableFromProto(req.Url),
 		StatusCode:               req.StatusCode,
 		CommissionPolicy:         optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
-		DefaultLeadTimeDays:      field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
-		ReceiveCalendarID:        field.StringClearableFromProto(req.ReceiveCalendarId),
-		FulfillmentPolicy:        field.EnumClearableFromProto[constants.FulfillmentPolicy](req.FulfillmentPolicyCode),
+		DefaultLeadTimeDays:      fieldpb.Int32ClearableFromProto(req.DefaultLeadTimeDays),
+		ReceiveCalendarID:        fieldpb.StringClearableFromProto(req.ReceiveCalendarId),
+		FulfillmentPolicy:        fieldpb.EnumClearableFromProto[constants.FulfillmentPolicy](req.FulfillmentPolicyCode),
 		DefaultCarrierID:         req.DefaultCarrierId,
-		DefaultServiceLevelID:    field.StringClearableFromProto(req.DefaultServiceLevelId),
+		DefaultServiceLevelID:    fieldpb.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
 		DefaultShippingTermID:    req.DefaultShippingTermId,
 		DefaultPriorityCode:      req.DefaultPriorityCode,
-		DefaultSalesRepID:        field.StringClearableFromProto(req.DefaultSalesRepId),
-		BillToAddressID:          field.StringClearableFromProto(req.BillToAddressId),
-		ShipToAddressID:          field.StringClearableFromProto(req.ShipToAddressId),
+		DefaultSalesRepID:        fieldpb.StringClearableFromProto(req.DefaultSalesRepId),
+		BillToAddressID:          fieldpb.StringClearableFromProto(req.BillToAddressId),
+		ShipToAddressID:          fieldpb.StringClearableFromProto(req.ShipToAddressId),
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
 		HasCustomerPriceGroupIDs: req.HasCustomerPriceGroupIds,
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
-		CarrierBillingAccount:    field.StringClearableFromProto(req.CarrierBillingAccount),
-		CreditLimit:              field.QuantityClearableFromProto(req.CreditLimit),
+		CarrierBillingAccount:    fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
+		CreditLimit:              fieldpb.QuantityClearableFromProto(req.CreditLimit),
 		Includes:                 req.Includes,
 	}
 

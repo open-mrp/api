@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -161,7 +161,7 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 		LocationID: req.Id,
 		Name:       req.Name,
 		TypeCode:   req.TypeCode,
-		ParentID:   field.StringClearableFromProto(req.ParentId),
+		ParentID:   fieldpb.StringClearableFromProto(req.ParentId),
 		ChildIDs:   stringListPatchToSliceField(req.ChildIds),
 		Includes:   req.Includes,
 	}

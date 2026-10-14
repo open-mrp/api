@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -125,8 +125,8 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 		Name:                    req.Name.Ptr(),
 		Email:                   req.Email.Ptr(),
 		Username:                req.Username.Ptr(),
-		RoleId:                  field.StringClearableToProto(req.RoleID),
-		DepartmentId:            field.StringClearableToProto(req.DepartmentID),
+		RoleId:                  fieldpb.StringClearableToProto(req.RoleID),
+		DepartmentId:            fieldpb.StringClearableToProto(req.DepartmentID),
 		IsCommissionEligible:    req.IsCommissionEligible.Ptr(),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}

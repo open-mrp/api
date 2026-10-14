@@ -1,6 +1,7 @@
-package field
+package fieldpb
 
 import (
+	"github.com/open-mrp/apikit/field"
 	"time"
 
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -11,7 +12,7 @@ import (
 type StringList []string
 
 // StringClearableToProto converts a string field to protobuf. Returns nil when unset.
-func StringClearableToProto(f Clearable[string]) *pb.StringPatch {
+func StringClearableToProto(f field.Clearable[string]) *pb.StringPatch {
 	if f.IsUnset() {
 		return nil
 	}
@@ -25,7 +26,7 @@ func StringClearableToProto(f Clearable[string]) *pb.StringPatch {
 // EnumClearableToProto converts a string-enum field to protobuf. Returns nil when
 // unset. An explicitly set empty value is treated as a clear — the empty string is
 // never a valid enum value, and spreadsheet-driven clients send "" for a blank cell.
-func EnumClearableToProto[T ~string](f Clearable[T]) *pb.StringPatch {
+func EnumClearableToProto[T ~string](f field.Clearable[T]) *pb.StringPatch {
 	if f.IsUnset() {
 		return nil
 	}
@@ -38,32 +39,32 @@ func EnumClearableToProto[T ~string](f Clearable[T]) *pb.StringPatch {
 }
 
 // EnumClearableFromProto converts a StringPatch to a string-enum field. Nil means unset; a set empty value is treated as a clear, the mirror of EnumClearableToProto.
-func EnumClearableFromProto[T ~string](p *pb.StringPatch) Clearable[T] {
+func EnumClearableFromProto[T ~string](p *pb.StringPatch) field.Clearable[T] {
 	if p == nil {
-		return Unset[T]()
+		return field.Unset[T]()
 	}
 	if p.Clear || p.Value == nil || *p.Value == "" {
-		return Clear[T]()
+		return field.Clear[T]()
 	}
-	return Set(T(*p.Value))
+	return field.Set(T(*p.Value))
 }
 
 // StringClearableFromProto converts protobuf to a string field. Nil means unset.
-func StringClearableFromProto(p *pb.StringPatch) Clearable[string] {
+func StringClearableFromProto(p *pb.StringPatch) field.Clearable[string] {
 	if p == nil {
-		return Unset[string]()
+		return field.Unset[string]()
 	}
 	if p.Clear {
-		return Clear[string]()
+		return field.Clear[string]()
 	}
 	if p.Value == nil {
-		return Clear[string]()
+		return field.Clear[string]()
 	}
-	return Set(*p.Value)
+	return field.Set(*p.Value)
 }
 
 // StringListClearableToProto converts a string-list field to protobuf. Returns nil when unset.
-func StringListClearableToProto(f Clearable[StringList]) *pb.StringListPatch {
+func StringListClearableToProto(f field.Clearable[StringList]) *pb.StringListPatch {
 	if f.IsUnset() {
 		return nil
 	}
@@ -75,35 +76,35 @@ func StringListClearableToProto(f Clearable[StringList]) *pb.StringListPatch {
 }
 
 // StringListClearableFromProto converts protobuf to a string-list field.
-func StringListClearableFromProto(p *pb.StringListPatch) Clearable[StringList] {
+func StringListClearableFromProto(p *pb.StringListPatch) field.Clearable[StringList] {
 	if p == nil {
-		return Unset[StringList]()
+		return field.Unset[StringList]()
 	}
 	if p.Clear {
-		return Clear[StringList]()
+		return field.Clear[StringList]()
 	}
-	return Set(StringList(p.Value))
+	return field.Set(StringList(p.Value))
 }
 
 // SliceClearableToStringListClearable converts []string patch fields for proto list patches.
-func SliceClearableToStringListClearable(f Clearable[[]string]) Clearable[StringList] {
+func SliceClearableToStringListClearable(f field.Clearable[[]string]) field.Clearable[StringList] {
 	if f.IsUnset() {
-		return Unset[StringList]()
+		return field.Unset[StringList]()
 	}
 	if f.IsClear() {
-		return Clear[StringList]()
+		return field.Clear[StringList]()
 	}
 	v, _ := f.Value()
-	return Set(StringList(v))
+	return field.Set(StringList(v))
 }
 
 // StringListSliceClearableToProto converts a []string field to protobuf.
-func StringListSliceClearableToProto(f Clearable[[]string]) *pb.StringListPatch {
+func StringListSliceClearableToProto(f field.Clearable[[]string]) *pb.StringListPatch {
 	return StringListClearableToProto(SliceClearableToStringListClearable(f))
 }
 
 // TimestampClearableToProto converts a time.Time field to protobuf. Returns nil when unset.
-func TimestampClearableToProto(f Clearable[time.Time]) *pb.TimestampPatch {
+func TimestampClearableToProto(f field.Clearable[time.Time]) *pb.TimestampPatch {
 	if f.IsUnset() {
 		return nil
 	}
@@ -115,18 +116,18 @@ func TimestampClearableToProto(f Clearable[time.Time]) *pb.TimestampPatch {
 }
 
 // TimestampClearableFromProto converts protobuf to a time.Time field. Nil means unset.
-func TimestampClearableFromProto(p *pb.TimestampPatch) Clearable[time.Time] {
+func TimestampClearableFromProto(p *pb.TimestampPatch) field.Clearable[time.Time] {
 	if p == nil {
-		return Unset[time.Time]()
+		return field.Unset[time.Time]()
 	}
 	if p.Clear || p.Value == nil {
-		return Clear[time.Time]()
+		return field.Clear[time.Time]()
 	}
-	return Set(p.Value.AsTime())
+	return field.Set(p.Value.AsTime())
 }
 
 // Int32ClearableToProto converts an int32 clearable field to protobuf. Returns nil when unset.
-func Int32ClearableToProto(f Clearable[int32]) *pb.Int32Patch {
+func Int32ClearableToProto(f field.Clearable[int32]) *pb.Int32Patch {
 	if f.IsUnset() {
 		return nil
 	}
@@ -138,12 +139,12 @@ func Int32ClearableToProto(f Clearable[int32]) *pb.Int32Patch {
 }
 
 // Int32ClearableFromProto converts an int32 patch back to a clearable field.
-func Int32ClearableFromProto(p *pb.Int32Patch) Clearable[int32] {
+func Int32ClearableFromProto(p *pb.Int32Patch) field.Clearable[int32] {
 	if p == nil {
-		return Unset[int32]()
+		return field.Unset[int32]()
 	}
 	if p.Clear || p.Value == nil {
-		return Clear[int32]()
+		return field.Clear[int32]()
 	}
-	return Set(*p.Value)
+	return field.Set(*p.Value)
 }

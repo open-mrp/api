@@ -3,7 +3,7 @@ package validate
 import (
 	"testing"
 
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

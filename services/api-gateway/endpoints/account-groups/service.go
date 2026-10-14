@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -116,10 +116,10 @@ func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *Updat
 	pbReq := &pb.UpdateAccountGroupRequest{
 		Id:                  req.AccountGroupID,
 		Name:                req.Name.Ptr(),
-		Description:         field.StringClearableToProto(req.Description),
+		Description:         fieldpb.StringClearableToProto(req.Description),
 		CommissionPolicy:    req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:       req.FreightPolicy.Ptr().StringPtr(),
-		DefaultLeadTimeDays: field.Int32ClearableToProto(req.DefaultLeadTimeDays),
+		DefaultLeadTimeDays: fieldpb.Int32ClearableToProto(req.DefaultLeadTimeDays),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupResponse, error) {

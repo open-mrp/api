@@ -9,7 +9,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // The pick list is a deferred join: buildPickListQuery pages pick ids using only the pick table, and

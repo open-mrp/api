@@ -19,8 +19,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/fuzzy"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/fuzzy"
 )
 
 var PathExtractor func(*http.Request) func(string) string = defaultPathExtractor

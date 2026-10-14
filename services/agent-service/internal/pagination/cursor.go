@@ -2,8 +2,8 @@ package pagination
 
 import (
 	apierror "github.com/open-mrp/api/shared/errors"
-	sharedpagination "github.com/open-mrp/api/shared/pagination"
 	pb "github.com/open-mrp/api/shared/proto/agent"
+	sharedpagination "github.com/open-mrp/apikit/pagination"
 )
 
 // ParseOptionalStringCursor decodes a platform list cursor for forward-only varchar-ID lists. Empty or omitted cursors are valid for the first page.

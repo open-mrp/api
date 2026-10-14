@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/grpc"
@@ -272,7 +272,7 @@ func (h *productionStepGRPCHandler) UpdateProductionStep(ctx context.Context, re
 		LevelingFactor:    req.LevelingFactor,
 		Allowances:        req.Allowances,
 		ScanningStationID: req.ScanningStationId,
-		Notes:             field.StringClearableFromProto(req.Notes),
+		Notes:             fieldpb.StringClearableFromProto(req.Notes),
 	}
 	if req.MachineIds != nil {
 		machineIDs := []string{}

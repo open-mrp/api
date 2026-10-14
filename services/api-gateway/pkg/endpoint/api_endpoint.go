@@ -21,11 +21,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/redact"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/api/shared/validate"
 	"github.com/open-mrp/api/shared/version"
+	"github.com/open-mrp/apikit/field"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

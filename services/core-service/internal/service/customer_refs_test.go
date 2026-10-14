@@ -12,7 +12,8 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
+	"github.com/open-mrp/apikit/field"
 )
 
 type customerRefsSetup struct {
@@ -112,7 +113,7 @@ func TestCheckCustomerRefs_RefusesAnUnknownCreditLimitUnit(t *testing.T) {
 	s.units.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"un_missing"}).Return(nil, nil)
 
 	refs := changedCustomerRefs(domain.UpdateCustomerParams{
-		CreditLimit: field.Set(field.QuantityInput{Value: "10", UnitID: "un_missing"}),
+		CreditLimit: field.Set(fieldpb.QuantityInput{Value: "10", UnitID: "un_missing"}),
 	}, &domain.Customer{})
 	apiErr := checkCustomerRefs(context.Background(), s.repos, "ac_seller", refs)
 
@@ -144,7 +145,7 @@ func TestChangedCustomerRefs_LeavesWhatTheCustomerHoldsAlone(t *testing.T) {
 		CustomerTypeGroupID:      refsPtr("acgp_type"),
 		HasCustomerPriceGroupIDs: true,
 		CustomerPriceGroupIDs:    []string{"acgp_held", "acgp_new"},
-		CreditLimit:              field.Set(field.QuantityInput{Value: "20", UnitID: "un_held"}),
+		CreditLimit:              field.Set(fieldpb.QuantityInput{Value: "20", UnitID: "un_held"}),
 	}, old)
 
 	assert.Equal(t, customerRefs{

@@ -32,10 +32,10 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	dbpkg "github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/db/backfill"
-	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // reportMaxOpenConnections caps the report pool. Reports are few, short and cached, so a small pool

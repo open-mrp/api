@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -174,10 +174,10 @@ func (m *demandOverridesSvcImpl) UpdateDemandOverride(ctx context.Context, req *
 		OverrideTypeCode: enumPtr(req.Adjustment.Ptr()),
 		Value:            req.Value.Ptr(),
 		// Clearable nullable fields → *Patch (clear / set / leave). Clearing expires_at makes the override permanent again.
-		UnitId:     field.StringClearableToProto(req.UnitID),
+		UnitId:     fieldpb.StringClearableToProto(req.UnitID),
 		ReasonCode: reasonPatch,
-		Note:       field.StringClearableToProto(req.Note),
-		ExpiresAt:  field.TimestampClearableToProto(req.ExpiresAt),
+		Note:       fieldpb.StringClearableToProto(req.Note),
+		ExpiresAt:  fieldpb.TimestampClearableToProto(req.ExpiresAt),
 		IsActive:   req.Active.Ptr(),
 	}
 	if periodStart := req.PeriodStartsAt.Ptr(); periodStart != nil {

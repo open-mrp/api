@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	s3 "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // AttachmentPurgeRef identifies an attachment row whose backing object must be removed before the row is deleted.

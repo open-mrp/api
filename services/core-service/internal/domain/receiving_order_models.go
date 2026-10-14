@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/pricing"
+	"github.com/open-mrp/apikit/pagination"
 	"github.com/shopspring/decimal"
 )
 

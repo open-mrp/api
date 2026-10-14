@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // These prove the event-driven refresher keeps sales_line_fact and sales_fact_rollup equal to their

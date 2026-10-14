@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // Batch is one step of a backfill: process up to limit rows after cursor and return the cursor to

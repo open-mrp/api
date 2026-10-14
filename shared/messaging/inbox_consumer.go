@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/querytag"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/querytag"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
 )

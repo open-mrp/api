@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // BatchQuantityPresenter converts a proto BatchQuantityInfo to an apiresource.Quantity.

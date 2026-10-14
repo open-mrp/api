@@ -3,9 +3,10 @@ package apirequest
 import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/validate"
+	"github.com/open-mrp/apikit/field"
 )
 
 func init() {
@@ -79,12 +80,12 @@ func InlineAddressToProto(f field.Optional[InlineAddressInput]) *pb.InlineAddres
 	return &pb.InlineAddressInput{
 		Id:                in.ID.Ptr(),
 		Name:              in.Name.Ptr(),
-		Phone:             field.StringClearableToProto(in.Phone),
-		Email:             field.StringClearableToProto(in.Email),
+		Phone:             fieldpb.StringClearableToProto(in.Phone),
+		Email:             fieldpb.StringClearableToProto(in.Email),
 		IsDropShip:        isDropShip,
-		ReceiveCalendarId: field.StringClearableToProto(in.ReceiveCalendarID),
+		ReceiveCalendarId: fieldpb.StringClearableToProto(in.ReceiveCalendarID),
 		StreetLine_1:      in.StreetLine1.Ptr(),
-		StreetLine_2:      field.StringClearableToProto(in.StreetLine2),
+		StreetLine_2:      fieldpb.StringClearableToProto(in.StreetLine2),
 		Locality:          in.Locality.Ptr(),
 		State:             in.State.Ptr(),
 		PostalCode:        in.PostalCode.Ptr(),

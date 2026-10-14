@@ -11,7 +11,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -126,12 +126,12 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 	pbReq := &pb.UpdateAddressRequest{
 		Id:                req.AddressID,
 		Name:              req.Name.Ptr(),
-		Phone:             field.StringClearableToProto(req.Phone),
-		Email:             field.StringClearableToProto(req.Email),
+		Phone:             fieldpb.StringClearableToProto(req.Phone),
+		Email:             fieldpb.StringClearableToProto(req.Email),
 		IsDropShip:        addressTypeToDropShipPtr(req.Type.Ptr()),
-		ReceiveCalendarId: field.StringClearableToProto(req.ReceiveCalendarID),
+		ReceiveCalendarId: fieldpb.StringClearableToProto(req.ReceiveCalendarID),
 		StreetLine_1:      req.StreetLine1.Ptr(),
-		StreetLine_2:      field.StringClearableToProto(req.StreetLine2),
+		StreetLine_2:      fieldpb.StringClearableToProto(req.StreetLine2),
 		Locality:          req.Locality.Ptr(),
 		State:             req.State.Ptr(),
 		PostalCode:        req.PostalCode.Ptr(),

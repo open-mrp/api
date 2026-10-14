@@ -13,7 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // DefaultOperatorEmail is where operator-facing alerts go when a service is not configured with its own

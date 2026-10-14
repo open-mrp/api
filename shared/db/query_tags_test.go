@@ -11,7 +11,7 @@ import (
 	"github.com/XSAM/otelsql"
 	"github.com/stretchr/testify/require"
 
-	"github.com/open-mrp/api/shared/querytag"
+	"github.com/open-mrp/apikit/querytag"
 )
 
 // recordingDriver records the SQL that reaches it. skipDirect makes it refuse direct execution, as the MySQL driver does when it cannot interpolate, so database/sql falls back to prepare.

@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // Helpers shared by the list queries built in Go (sales orders, invoices).

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // OEE buckets. A reason's bucket decides which OEE term its downtime charges. OeeBucketNotScheduled is the odd one out: it is removed from the Availability denominator entirely rather than counted as a loss against it, because a machine nobody planned to run has no OEE rather than 0% OEE.

@@ -12,8 +12,8 @@ import (
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/apikit/crypto"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

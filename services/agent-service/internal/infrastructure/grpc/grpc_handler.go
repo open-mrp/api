@@ -15,10 +15,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	pb "github.com/open-mrp/api/shared/proto/agent"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

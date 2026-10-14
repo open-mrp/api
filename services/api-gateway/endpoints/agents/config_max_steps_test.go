@@ -3,7 +3,7 @@ package agentep
 import (
 	"testing"
 
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // max_steps survives the trip from request to persisted config to response, and stays null when unset.

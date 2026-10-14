@@ -14,12 +14,12 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -261,16 +261,16 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		Metadata: metadata.PatchToProto(req.Metadata),
 		Id:       req.SalesOrderID,
 		// Clearable nullable fields → *Patch (clear / set / leave).
-		CustomerPoNumber:      field.StringClearableToProto(req.CustomerPurchaseOrderNumber),
-		Note:                  field.StringClearableToProto(req.Note),
-		ServiceLevelId:        field.StringClearableToProto(req.ServiceLevelID),
+		CustomerPoNumber:      fieldpb.StringClearableToProto(req.CustomerPurchaseOrderNumber),
+		Note:                  fieldpb.StringClearableToProto(req.Note),
+		ServiceLevelId:        fieldpb.StringClearableToProto(req.ServiceLevelID),
 		CarrierBillingType:    carrierBillingTypePatch,
-		CarrierBillingAccount: field.StringClearableToProto(req.CarrierBillingAccountNumber),
-		SalesRepId:            field.StringClearableToProto(req.SalesRepID),
-		OrderDiscountId:       field.StringClearableToProto(req.OrderDiscountID),
-		PromisedAt:            field.TimestampClearableToProto(req.PromisedAt),
-		LeadTimeOverrideDays:  field.Int32ClearableToProto(req.LeadTimeOverrideDays),
-		ShipByOverrideDate:    field.TimestampClearableToProto(req.ShipByOverrideDate),
+		CarrierBillingAccount: fieldpb.StringClearableToProto(req.CarrierBillingAccountNumber),
+		SalesRepId:            fieldpb.StringClearableToProto(req.SalesRepID),
+		OrderDiscountId:       fieldpb.StringClearableToProto(req.OrderDiscountID),
+		PromisedAt:            fieldpb.TimestampClearableToProto(req.PromisedAt),
+		LeadTimeOverrideDays:  fieldpb.Int32ClearableToProto(req.LeadTimeOverrideDays),
+		ShipByOverrideDate:    fieldpb.TimestampClearableToProto(req.ShipByOverrideDate),
 		// Non-nullable optional fields → *string (set or leave; not clearable).
 		CarrierId:                    req.CarrierID.Ptr(),
 		PriorityCode:                 req.PriorityCode.Ptr().StringPtr(),
@@ -667,7 +667,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *Updat
 		SalesOrderId:       req.SalesOrderID,
 		Id:                 req.SalesOrderLineID,
 		ProductSku:         req.ProductSKU.Ptr(),
-		ProductDescription: field.StringClearableToProto(req.ProductDescription),
+		ProductDescription: fieldpb.StringClearableToProto(req.ProductDescription),
 	}
 	if v, ok := req.Quantity.Value(); ok {
 		pbReq.QuantityValue = &v.Value

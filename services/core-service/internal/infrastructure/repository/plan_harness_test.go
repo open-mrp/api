@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // interpolateParams matches shared/db/db_pool.go, so statements reach MySQL the way production sends them.

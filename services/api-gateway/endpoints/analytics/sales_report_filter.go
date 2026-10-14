@@ -3,7 +3,7 @@ package analyticsep
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // SalesReportFilters are the entity filters every sales report accepts. Every list is empty-means-all and they combine with AND.

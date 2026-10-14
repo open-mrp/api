@@ -10,7 +10,7 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/apikit/lease"
 )
 
 // InboxPurgerConfig holds the configuration for the inbox purger worker.

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 // DocumentSetting is an account's customizations to one document type. An account that has never saved the

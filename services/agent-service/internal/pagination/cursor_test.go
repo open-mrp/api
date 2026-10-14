@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	sharedpagination "github.com/open-mrp/api/shared/pagination"
+	sharedpagination "github.com/open-mrp/apikit/pagination"
 )
 
 func TestParseOptionalStringCursor_empty(t *testing.T) {

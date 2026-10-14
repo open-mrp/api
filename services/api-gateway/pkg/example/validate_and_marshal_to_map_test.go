@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 type updateBodyExample struct {

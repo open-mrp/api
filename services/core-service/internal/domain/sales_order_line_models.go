@@ -3,9 +3,9 @@ package domain
 import (
 	"time"
 
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
+	"github.com/open-mrp/apikit/field"
 )
 
 // SalesOrderLine represents a sales order line domain model.

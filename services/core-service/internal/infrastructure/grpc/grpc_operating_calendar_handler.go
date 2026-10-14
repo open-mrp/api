@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -105,13 +105,13 @@ func (h *productionScheduleGRPCHandler) UpdateOperatingCalendar(ctx context.Cont
 	}
 
 	// A clearable arrives as three states, and the repo needs the clear flag separately because a nil value already means "leave alone".
-	cutoff := field.StringClearableFromProto(req.CutoffAt)
+	cutoff := fieldpb.StringClearableFromProto(req.CutoffAt)
 	if v, ok := cutoff.Value(); ok {
 		params.CutoffAt = &v
 	}
 	params.ClearCutoffAt = cutoff.IsClear()
 
-	timezone := field.StringClearableFromProto(req.Timezone)
+	timezone := fieldpb.StringClearableFromProto(req.Timezone)
 	if v, ok := timezone.Value(); ok {
 		params.Timezone = &v
 	}

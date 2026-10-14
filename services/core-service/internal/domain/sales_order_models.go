@@ -6,9 +6,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/metadata"
-	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 // SalesOrder represents a full sales order domain model.

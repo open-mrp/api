@@ -3,10 +3,10 @@ package password
 import (
 	"context"
 
-	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/api/shared/validate"
+	"github.com/open-mrp/apikit/crypto"
 )
 
 var passwordTracer = tracing.GetTracer("auth-service.password")

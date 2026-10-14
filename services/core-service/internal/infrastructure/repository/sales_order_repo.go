@@ -14,12 +14,12 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/metadata"
-	"github.com/open-mrp/api/shared/pagination"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 var salesOrderRepoTracer = tracing.GetTracer("core-service.sales_order_repository")

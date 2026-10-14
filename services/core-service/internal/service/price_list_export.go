@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/apikit/safeconv"
 )
 
 // maxPriceListTierColumns bounds how many volume breaks become price columns. Past this the table stops being readable, and the ones dropped are disclosed on the title page rather than silently omitted.

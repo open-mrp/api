@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

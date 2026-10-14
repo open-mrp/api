@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -186,8 +186,8 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 	params := domain.UpdatePartParams{
 		PartID:      req.Id,
 		SKU:         req.Sku,
-		Description: field.StringClearableFromProto(req.Description),
-		Notes:       field.StringClearableFromProto(req.Notes),
+		Description: fieldpb.StringClearableFromProto(req.Description),
+		Notes:       fieldpb.StringClearableFromProto(req.Notes),
 		CategoryID:  req.CategoryId,
 		Includes:    req.Includes,
 	}

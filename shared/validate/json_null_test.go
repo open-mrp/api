@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 type patchOptionalPointer struct {

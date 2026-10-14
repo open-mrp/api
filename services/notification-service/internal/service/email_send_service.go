@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // SendInboxReply sends an agent's outbound email through the conversation's bound inbox and records it in the thread + ledger. Recipient and threading are derived from the latest inbound mail, so the agent cannot redirect the reply to an arbitrary address.

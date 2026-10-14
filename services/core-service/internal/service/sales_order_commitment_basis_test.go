@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/apikit/field"
 )
 
 func TestValidateCommitmentBasisExclusive_AcceptsAtMostOne(t *testing.T) {

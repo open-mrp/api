@@ -182,7 +182,7 @@ func TestCheckDuplicates_CustomerPONumberRequiresACustomer(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body := checkDuplicate(t, apiClient, tc.body)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			assertErrorParam(t, requireErrorResponse(t, body, tc.code, "invalid_request_error"), "customer_id")
 		})
 	}
@@ -224,7 +224,7 @@ func TestCheckDuplicates_WhitespaceOnlyNumberIsRefused(t *testing.T) {
 	t.Parallel()
 
 	status, body := checkDuplicate(t, apiClient, map[string]any{"type": "order_number", "record_number": "   "})
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "record_number")
 }
 
@@ -287,7 +287,7 @@ func TestCheckDuplicates_RequestIsValidated(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body := checkDuplicate(t, apiClient, tc.body)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 			assertErrorParam(t, requireErrorResponse(t, body, tc.code, "invalid_request_error"), tc.param)
 		})
 	}

@@ -428,7 +428,7 @@ func TestItemInventory_FiguresAreComputedNotStoredRows(t *testing.T) {
 func TestUpdateItemInventory_RejectsAQuantityThatIsNotADecimal(t *testing.T) {
 	t.Parallel()
 	status, _ := updateInventory(t, SeedItemID, "not-a-number", SeedUnitID, "adjust")
-	assert.Equal(t, 400, status)
+	assert.Equal(t, 422, status)
 }
 
 func TestUpdateItemInventory_RejectsAMissingQuantity(t *testing.T) {
@@ -437,7 +437,7 @@ func TestUpdateItemInventory_RejectsAMissingQuantity(t *testing.T) {
 		"operation": "adjust",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status)
+	assert.Equal(t, 422, status)
 }
 
 func TestUpdateItemInventory_NotFound(t *testing.T) {

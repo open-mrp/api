@@ -71,7 +71,7 @@ func TestEstimateRate_RejectsMissingRequiredFields(t *testing.T) {
 
 			status, resp, err := apiClient.Post(estimateRatePath, body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, resp)
+			requireStatus(t, 422, status, resp)
 		})
 	}
 }
@@ -84,7 +84,7 @@ func TestEstimateRate_RejectsEmptyParcelList(t *testing.T) {
 
 	status, resp, err := apiClient.Post(estimateRatePath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 }
 
 func TestEstimateRate_CustomerActorCannotRateForAnotherCustomer(t *testing.T) {

@@ -544,7 +544,7 @@ func TestAccountUpdate_RejectsInvalidValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body, err := acct.owner.Patch(acct.path(), tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 			errObj := requireErrorResponse(t, body, tc.code, "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -565,7 +565,7 @@ func TestAccountUpdate_RejectsASlugThatIsNotURLSafe(t *testing.T) {
 			before := accountValues(readAccount(t, acct.owner, acct.id))["slug"]
 			status, body, err := acct.owner.Patch(acct.path(), map[string]any{"slug": slug}, newIdempotencyKey())
 			require.NoError(t, err)
-			assert.Equal(t, 400, status, "a slug that is not URL-safe must be refused: %s", body)
+			assert.Equal(t, 422, status, "a slug that is not URL-safe must be refused: %s", body)
 			if status == 400 {
 				assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "slug")
 			}
@@ -632,7 +632,7 @@ func TestAccountUpdate_RefusesADefaultAddressTheAccountDoesNotHave(t *testing.T)
 				status, body, err := acct.owner.Patch(acct.path(), map[string]any{param: addressID}, newIdempotencyKey())
 				require.NoError(t, err)
 				require.Less(t, status, 500, "must not 5xx: %s", body)
-				assert.Contains(t, []int{400, 404}, status, "%s address must be refused: %s", name, body)
+				assert.Contains(t, []int{422, 404}, status, "%s address must be refused: %s", name, body)
 				if status == 422 {
 					assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), param)
 				}
@@ -663,7 +663,7 @@ func TestAccountUpdate_ReplayingAnIdempotencyKeyReturnsTheFirstResult(t *testing
 	status, body, err := acct.owner.Patch(acct.path(), map[string]any{"name": uniqueName("E2E Second")}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assert.Equal(t, first, jsonField(readAccount(t, acct.owner, acct.id), "name"))
 }
 
@@ -878,7 +878,7 @@ func TestAccountLogo_RejectsAnUploadThatIsNotAnImage(t *testing.T) {
 				status, body, err := acct.owner.PutBytes(acct.path()+"/"+asset, up.contentType, up.body)
 				require.NoError(t, err)
 				require.Less(t, status, 500, "must not 5xx: %s", body)
-				assert.Contains(t, []int{400, 415}, status, "a %s upload is not an image: %s", up.name, body)
+				assert.Contains(t, []int{422, 415}, status, "a %s upload is not an image: %s", up.name, body)
 			})
 		}
 	}

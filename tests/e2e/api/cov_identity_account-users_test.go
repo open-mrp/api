@@ -149,7 +149,7 @@ func TestCovIdentityAccountUsers_StatusLockAdminNotSelfFails(t *testing.T) {
 	// locked" from "you cannot lock your own account".
 	status, body, err := apiClient.Put(accountUsersPath+"/"+SeedAdmin2AccountUserID+"/actions/disable", nil)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "Admin", "error should name the admin-lock rule, got: %v", errObj["message"])

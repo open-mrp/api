@@ -97,7 +97,7 @@ func TestAgentDefinitions_CreateRoundTripsEndpointToolSlugs(t *testing.T) {
 func TestAgentTools_CatalogOffersCostReportsAndGatesAgentSpend(t *testing.T) {
 	t.Parallel()
 
-	list, code, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	list, code, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, code)
 	require.NotEmpty(t, list.Data)

@@ -120,13 +120,13 @@ func TestBilling_PlanChangeNeedsABillingCadence(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(billingPath+"/plans/"+SeedProPlanID+"/proration", nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "proration without a cadence must be refused: %s", string(body))
+	assert.Equal(t, 422, status, "proration without a cadence must be refused: %s", string(body))
 	assert.Contains(t, string(body), "cadence", "the refusal must name what is missing: %s", string(body))
 
 	status, body, err = apiClient.Post(billingPath+"/plans/"+SeedProPlanID+"/switch", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "switching without a cadence must be refused: %s", string(body))
+	assert.Equal(t, 422, status, "switching without a cadence must be refused: %s", string(body))
 }
 
 func TestBilling_PlanChangeForUnknownPlanIsRefused(t *testing.T) {
@@ -204,7 +204,7 @@ func TestStripeWebhook_RejectsAnUnsignedPayload(t *testing.T) {
 			status, body, err := apiClient.PostSigned(stripeWebhookPath, sig, []byte(`{"id":"evt_1","type":"customer.deleted","data":{"object":{"id":"cus_1"}}}`))
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
-			assert.Equal(t, 400, status, "a %s signature must be rejected: %s", name, string(body))
+			assert.Equal(t, 422, status, "a %s signature must be rejected: %s", name, string(body))
 		})
 	}
 }
@@ -238,7 +238,7 @@ func TestStripeWebhook_RejectsAMalformedPayload(t *testing.T) {
 	status, body, err := apiClient.PostSigned(stripeWebhookPath, StubStripeSignature, []byte(`not json`))
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "an unparseable event must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "an unparseable event must be rejected: %s", string(body))
 }
 
 // The account-scoped webhook carries a seller's own Stripe events. An account that has not
@@ -311,7 +311,7 @@ func TestCarriers_SyncOptionsNeedsAShippoAccount(t *testing.T) {
 	status, body, err := apiClient.Post(carriersPath+"/"+SeedCarrierID+"/actions/sync-options", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a carrier with no Shippo account cannot sync: %s", string(body))
+	assert.Equal(t, 422, status, "a carrier with no Shippo account cannot sync: %s", string(body))
 	assert.Contains(t, string(body), "Shippo", "the refusal must say what is missing: %s", string(body))
 }
 
@@ -374,7 +374,7 @@ func TestHubspotSync_CancelRejectsAFinishedJob(t *testing.T) {
 	status, body, err := apiClient.Post(hubspotSyncPath+"/"+SeedHubspotCompletedJobID+"/actions/cancel", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a finished sync cannot be cancelled: %s", string(body))
+	assert.Equal(t, 422, status, "a finished sync cannot be cancelled: %s", string(body))
 }
 
 func TestHubspotSync_CancelUnknownJobIs404(t *testing.T) {

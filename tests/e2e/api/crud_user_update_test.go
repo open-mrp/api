@@ -193,7 +193,7 @@ func TestUserUpdate_RejectsInvalidValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body, err := apiClient.Patch(u.path(), tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 			errObj := requireErrorResponse(t, body, tc.code, "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -221,7 +221,7 @@ func TestUserUpdate_AMalformedValueNamesItsField(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			status, body, err := apiClient.Patch(u.path(), tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 			assert.Equal(t, tc.param, errObj["param"], "the error names the field it is about: %s", body)
 		})
@@ -254,7 +254,7 @@ func TestUserUpdate_ReplayingAnIdempotencyKeyReturnsTheFirstResult(t *testing.T)
 	status, body, err := apiClient.Patch(u.path(), map[string]any{"name": uniqueName("E2E Second Name")}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assert.Equal(t, first, jsonField(readUser(t, apiClient, u.id), "name"))
 }
 
@@ -375,7 +375,7 @@ func TestUserPhoto_RejectsAnUploadThatIsNotAnImage(t *testing.T) {
 			status, body, err := apiClient.PutBytes(u.path()+"/photo", up.contentType, up.body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", body)
-			assert.Contains(t, []int{400, 415}, status, "a %s upload is not an image: %s", up.name, body)
+			assert.Contains(t, []int{422, 415}, status, "a %s upload is not an image: %s", up.name, body)
 		})
 	}
 	status, body, err := apiClient.GetListRaw(u.path()+"/photo", nil)

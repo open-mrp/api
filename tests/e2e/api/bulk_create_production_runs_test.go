@@ -202,7 +202,7 @@ func TestProductionRuns_BulkCreate_TooManyRejected(t *testing.T) {
 		rows[i] = bulkRunRow()
 	}
 	status, body := bulkCreateProductionRuns(t, rows...)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestProductionRuns_BulkCreate_EmptyRejected(t *testing.T) {
@@ -210,7 +210,7 @@ func TestProductionRuns_BulkCreate_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(productionRunsBulkCreatePath, map[string]any{"production_runs": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestProductionRuns_BulkCreate_RejectsRunWithoutBatches(t *testing.T) {
@@ -220,7 +220,7 @@ func TestProductionRuns_BulkCreate_RejectsRunWithoutBatches(t *testing.T) {
 		"responsible_user_id": SeedUserID,
 		"batches":             []any{},
 	})
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestProductionRuns_BulkCreate_RejectsUnknownSKU(t *testing.T) {

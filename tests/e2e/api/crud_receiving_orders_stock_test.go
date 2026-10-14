@@ -163,7 +163,7 @@ func TestReceivingOrderLines_UpdateWithAnEmptyBodyIsRejected(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "an empty body is a client error: %s", string(body))
-	assert.Equal(t, 400, status, "a PATCH must name at least one field: %s", string(body))
+	assert.Equal(t, 422, status, "a PATCH must name at least one field: %s", string(body))
 
 	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, receivingOrderID)),
 		"and the line is untouched")
@@ -228,7 +228,7 @@ func TestReceivingOrderLines_UpdateRejectsAUnitOutsideTheItemsGroup(t *testing.T
 	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{
 		"quantity": map[string]any{"value": "2", "unit_id": SeedMaterialUnitID},
 	})
-	assert.Equal(t, 400, status, "pounds are not a unit socks are counted in: %s", string(body))
+	assert.Equal(t, 422, status, "pounds are not a unit socks are counted in: %s", string(body))
 	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, receivingOrderID)), "and the line is untouched")
 }
 
@@ -239,7 +239,7 @@ func TestReceivingOrderLines_UpdateRejectsANegativeQuantity(t *testing.T) {
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("-1")})
-	assert.Equal(t, 400, status, "a received quantity cannot be negative: %s", string(body))
+	assert.Equal(t, 422, status, "a received quantity cannot be negative: %s", string(body))
 }
 
 // A stocked line's quantity is what went into inventory. Editing or voiding it afterwards would
@@ -259,15 +259,15 @@ func TestReceivingOrderLines_AStockedLineCannotBeChanged(t *testing.T) {
 	requireStatus(t, 200, stockStatus, stockBody)
 
 	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("3")})
-	assert.Equal(t, 400, status, "a stocked line cannot be edited: %s", string(body))
+	assert.Equal(t, 422, status, "a stocked line cannot be edited: %s", string(body))
 
 	voidStatus, voidBody, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/void", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 400, voidStatus, "a stocked line cannot be voided: %s", string(voidBody))
+	assert.Equal(t, 422, voidStatus, "a stocked line cannot be voided: %s", string(voidBody))
 
 	receiveStatus, receiveBody, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/receive", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 400, receiveStatus, "a stocked line cannot be received again: %s", string(receiveBody))
+	assert.Equal(t, 422, receiveStatus, "a stocked line cannot be received again: %s", string(receiveBody))
 }
 
 func TestReceivingOrderLines_UpdateOnUnknownLineIs404(t *testing.T) {
@@ -688,7 +688,7 @@ func TestReceivingOrders_StockRefusesAnAllocationForAnotherOrdersLine(t *testing
 		"receiving_order_line_id": foreignLineID,
 		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
 	}})
-	assert.Equal(t, 400, status, "another order's line cannot be stocked through this one: %s", string(body))
+	assert.Equal(t, 422, status, "another order's line cannot be stocked through this one: %s", string(body))
 
 	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
 	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, otherOrderID)),
@@ -706,7 +706,7 @@ func TestReceivingOrders_StockRefusesAnUnknownLine(t *testing.T) {
 		"receiving_order_line_id": "rcln_doesnotexist00",
 		"allocations":             []map[string]any{{"quantity": pairs("1")}},
 	}})
-	assert.Equal(t, 400, status, "an unknown line is refused: %s", string(body))
+	assert.Equal(t, 422, status, "an unknown line is refused: %s", string(body))
 	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
 }
 
@@ -722,7 +722,7 @@ func TestReceivingOrders_StockRefusesAMalformedQuantity(t *testing.T) {
 				"receiving_order_line_id": lineID,
 				"allocations":             []map[string]any{{"quantity": pairs(quantity)}},
 			}})
-			assert.Equal(t, 400, status, "an unparseable quantity is refused rather than stocked as zero: %s", string(body))
+			assert.Equal(t, 422, status, "an unparseable quantity is refused rather than stocked as zero: %s", string(body))
 		})
 	}
 	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
@@ -739,7 +739,7 @@ func TestReceivingOrders_StockRefusesMoreThanWasReceived(t *testing.T) {
 		"rejected_quantity":       pairs("1"),
 		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
-	assert.Equal(t, 400, status, "4 put away and 1 refused is more than the 4 received: %s", string(body))
+	assert.Equal(t, 422, status, "4 put away and 1 refused is more than the 4 received: %s", string(body))
 }
 
 func TestReceivingOrders_StockRefusesALineTwice(t *testing.T) {
@@ -753,7 +753,7 @@ func TestReceivingOrders_StockRefusesALineTwice(t *testing.T) {
 		"allocations":             []map[string]any{{"quantity": pairs("2"), "location_id": SeedLocationID}},
 	}
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{item, item})
-	assert.Equal(t, 400, status, "a line is stocked once per request: %s", string(body))
+	assert.Equal(t, 422, status, "a line is stocked once per request: %s", string(body))
 }
 
 // The stocking dialog offers every unit of the item's group. Here the delivery was counted as a
@@ -776,7 +776,7 @@ func TestReceivingOrders_StockInAnotherUnitOfTheGroup(t *testing.T) {
 		"receiving_order_line_id": overLineID,
 		"allocations":             []map[string]any{{"quantity": pairs("7"), "location_id": SeedLocationID}},
 	}})
-	assert.Equal(t, 400, overStatus, "7 pairs is more than the dozen received: %s", string(overBody))
+	assert.Equal(t, 422, overStatus, "7 pairs is more than the dozen received: %s", string(overBody))
 
 	receivingOrderID, lineID := countedInDozens(t)
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{

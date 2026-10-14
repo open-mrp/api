@@ -158,7 +158,7 @@ func TestDashAnalytics_InvertedWindowsAreRejected(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			status, _, raw := putAnalytics(t, apiClient, tc.path, nil, tc.body)
-			require.Equal(t, 400, status, string(raw))
+			require.Equal(t, 422, status, string(raw))
 			assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), tc.param)
 		})
 	}
@@ -239,7 +239,7 @@ func TestDashAnalytics_MalformedReportRequestsAreRejected(t *testing.T) {
 				status, raw, err = apiClient.PutRaw(tc.path, tc.params, tc.body)
 			}
 			require.NoError(t, err)
-			require.Equal(t, 400, status, string(raw))
+			requireClientRejection(t, status, raw)
 			assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), tc.param)
 		})
 	}

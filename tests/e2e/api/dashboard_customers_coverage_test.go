@@ -279,7 +279,7 @@ func TestDashCustomers_UpdateRejectsInvalidValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body, err := apiClient.Patch(customersPath+"/"+customerID, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 			assert.Equal(t, tc.param, errorParam(body))
 		})
 	}
@@ -690,7 +690,7 @@ func TestDashCustomers_BulkDeleteIsAllOrNothing(t *testing.T) {
 
 	status, body, err := apiClient.Post(dashCustomersBulkDeletePath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "customer_ids", errorParam(body))
 }
 
@@ -851,7 +851,7 @@ func TestDashCustomers_RegisteringAsAnExistingCustomer(t *testing.T) {
 	}
 	status, resp, err = person.Post(dashCustomersRegistrationPath, map[string]any{"account_slug": SeedAccountSlug, "is_existing_customer": true}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an existing customer is found by its number: %s", resp)
+	assert.Equal(t, 422, status, "an existing customer is found by its number: %s", resp)
 }
 
 // A new customer needs a name, an address, terms and a group, and the group and terms must be the
@@ -893,7 +893,7 @@ func TestDashCustomers_RegisteringANewCustomerNeedsTheSellersDetails(t *testing.
 				_, _, _ = apiClient.Delete(customersPath + "/" + customerID)
 			}
 			require.Less(t, status, 500, "%s", resp)
-			assert.Contains(t, []int{400, 404}, status, "the registration is refused: %s", resp)
+			assert.Contains(t, []int{422, 404}, status, "the registration is refused: %s", resp)
 		})
 	}
 }
@@ -1448,7 +1448,7 @@ func TestDashCustomers_SalesTargetUpsertValidatesTheBody(t *testing.T) {
 			status, body, err := client.Put(dashCustomersTargetPath(SeedAccountUserID, targetID), tc.body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "%s", body)
-			assert.Equal(t, 400, status, "%s", body)
+			assert.Equal(t, 422, status, "%s", body)
 			assert.Nil(t, dashCustomersFindTarget(t, apiClient, SeedAccountUserID, targetID), "nothing was stored")
 		})
 	}

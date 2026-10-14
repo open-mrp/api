@@ -51,7 +51,7 @@ func TestScheduleAttainment_RejectsInvertedPeriod(t *testing.T) {
 		"ends_at":   "2026-07-01T00:00:00Z",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "ends_at")
 }
 

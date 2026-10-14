@@ -127,7 +127,7 @@ func TestMachines_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "machines[1].name")
-	assert.Contains(t, errObj["message"], "duplicate name")
+	assert.Contains(t, errorMessages(errObj), "duplicate name")
 }
 
 func TestMachines_BulkUpsert_EmptyRejected(t *testing.T) {
@@ -135,7 +135,7 @@ func TestMachines_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(machinesBulkUpsertPath, map[string]any{"machines": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestMachines_BulkUpsert_RejectsUnknownDepartment: references resolve at accept, so an
@@ -169,7 +169,7 @@ func TestMachines_BulkUpsert_RejectsDuplicateSerialInRequest(t *testing.T) {
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "machines[1].serial_number")
-	assert.Contains(t, errObj["message"], "duplicate serial number")
+	assert.Contains(t, errorMessages(errObj), "duplicate serial number")
 }
 
 // TestMachines_BulkUpsert_RenamesMachineKeepingSerial: a row whose serial number

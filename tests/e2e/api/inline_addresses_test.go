@@ -245,32 +245,32 @@ func TestInlineAddresses_PurchaseOrderRejections(t *testing.T) {
 			b["bill_to_address_id"] = supplierAddressID
 			b["bill_to_address"] = map[string]any{"id": supplierAddressID}
 			b["ship_to_address_id"] = supplierAddressID
-		}, 400, "validation_failed", "bill_to_address"},
+		}, 422, "validation_failed", "bill_to_address"},
 		{"flat fields and an inline address", func(b map[string]any) {
 			b["bill_to_address_id"] = supplierAddressID
 			b["ship_to_name"] = "Flat"
 			b["ship_to_address"] = inlineAddressBody("Inline", "5 Both St")
-		}, 400, "validation_failed", "ship_to_address"},
+		}, 422, "validation_failed", "ship_to_address"},
 		{"a new address without a country", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"name": "No country"}
 			b["ship_to_address_id"] = supplierAddressID
-		}, 400, "missing_field", "bill_to_address.country"},
+		}, 422, "missing_field", "bill_to_address.country"},
 		{"a new address without a name", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"country": "US"}
 			b["ship_to_address_id"] = supplierAddressID
-		}, 400, "missing_field", "bill_to_address.name"},
+		}, 422, "missing_field", "bill_to_address.name"},
 		{"a blank name", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"name": "   ", "country": "US"}
 			b["ship_to_address_id"] = supplierAddressID
-		}, 400, "validation_failed", "bill_to_address.name"},
+		}, 422, "validation_failed", "bill_to_address.name"},
 		{"a malformed email", func(b map[string]any) {
 			b["bill_to_address_id"] = supplierAddressID
 			b["ship_to_address"] = map[string]any{"name": "Bad email", "country": "US", "email": "not-an-email"}
-		}, 400, "invalid_format", "ship_to_address.email"},
+		}, 422, "invalid_format", "ship_to_address.email"},
 		{"one address edited two ways", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"id": supplierAddressID, "name": "One"}
 			b["ship_to_address"] = map[string]any{"id": supplierAddressID, "name": "Two"}
-		}, 400, "validation_failed", "ship_to_address.id"},
+		}, 422, "validation_failed", "ship_to_address.id"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -402,14 +402,14 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 			b["bill_to_address_id"] = customerAddressID
 			b["bill_to_address"] = map[string]any{"id": customerAddressID}
 			b["ship_to_address_id"] = customerAddressID
-		}, 400, "validation_failed", "bill_to_address"},
+		}, 422, "validation_failed", "bill_to_address"},
 		{"create: neither an id nor an inline address", false, func(b map[string]any) {
 			b["bill_to_address_id"] = customerAddressID
-		}, 400, "missing_field", "ship_to_address_id"},
+		}, 422, "missing_field", "ship_to_address_id"},
 		{"create: a new address without a country", false, func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"name": "No country"}
 			b["ship_to_address_id"] = customerAddressID
-		}, 400, "missing_field", "bill_to_address.country"},
+		}, 422, "missing_field", "bill_to_address.country"},
 		{"update: another customer's address", true, func(b map[string]any) {
 			b["billing_address"] = map[string]any{"id": otherCustomerAddressID, "name": "x"}
 		}, 404, "", "billing_address.id"},
@@ -419,10 +419,10 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 		{"update: an id and an inline address", true, func(b map[string]any) {
 			b["shipping_address_id"] = customerAddressID
 			b["shipping_address"] = map[string]any{"id": customerAddressID}
-		}, 400, "validation_failed", "shipping_address"},
+		}, 422, "validation_failed", "shipping_address"},
 		{"update: a too-long state", true, func(b map[string]any) {
 			b["billing_address"] = map[string]any{"name": "Long state", "country": "US", "state": strings.Repeat("x", 256)}
-		}, 400, "", "billing_address.state"},
+		}, 422, "", "billing_address.state"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -517,8 +517,8 @@ func TestInlineAddresses_AccountUpdateRejections(t *testing.T) {
 		{"an id and an inline address", map[string]any{
 			"default_billing_address_id": originalBilling,
 			"default_billing_address":    map[string]any{"id": originalBilling},
-		}, 400, "validation_failed", "default_billing_address"},
-		{"a new address without a name", map[string]any{"default_shipping_address": map[string]any{"country": "US"}}, 400, "missing_field", "default_shipping_address.name"},
+		}, 422, "validation_failed", "default_billing_address"},
+		{"a new address without a name", map[string]any{"default_shipping_address": map[string]any{"country": "US"}}, 422, "missing_field", "default_shipping_address.name"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -580,7 +580,7 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersOrOwnAddresses(
 	} {
 		status, body, err := apiClient.Patch(path, map[string]any{tc.field: tc.addressID}, newIdempotencyKey())
 		require.NoError(t, err)
-		require.Equal(t, 400, status, "%s: %s", tc.name, string(body))
+		require.Equal(t, 422, status, "%s: %s", tc.name, string(body))
 		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.field)
 	}
 

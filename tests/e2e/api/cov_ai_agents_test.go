@@ -672,7 +672,7 @@ func TestCovAiAgents_CreateValidation_TemperatureOutOfRange(t *testing.T) {
 		body["config"] = map[string]any{"temperature": 1.5}
 		status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, status, "temperature=1.5 should 400, got %d: %s", status, string(respBody))
+		assert.Equal(t, 422, status, "temperature=1.5 should 422, got %d: %s", status, string(respBody))
 	})
 
 	t.Run("TooLow", func(t *testing.T) {
@@ -680,7 +680,7 @@ func TestCovAiAgents_CreateValidation_TemperatureOutOfRange(t *testing.T) {
 		body["config"] = map[string]any{"temperature": -0.1}
 		status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, status, "temperature=-0.1 should 400, got %d: %s", status, string(respBody))
+		assert.Equal(t, 422, status, "temperature=-0.1 should 422, got %d: %s", status, string(respBody))
 	})
 }
 
@@ -693,7 +693,7 @@ func TestCovAiAgents_CreateValidation_MaxStepsOutOfRange(t *testing.T) {
 			body["config"] = map[string]any{"max_steps": maxSteps}
 			status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 			require.NoError(t, err)
-			assert.Equal(t, 400, status, "max_steps=%d should 400, got %d: %s", maxSteps, status, string(respBody))
+			assert.Equal(t, 422, status, "max_steps=%d should 422, got %d: %s", maxSteps, status, string(respBody))
 		})
 	}
 }

@@ -99,7 +99,7 @@ func createTerritoryProductLine(t *testing.T) (productLineID, name string) {
 // searchTerritoryIDs returns every territory a search for q finds, in list order.
 func searchTerritoryIDs(t *testing.T, client *Client, path, q string) []string {
 	t.Helper()
-	list, _, err := client.GetList(path, url.Values{"q": {q}, "limit": {"1000"}})
+	list, _, err := client.GetList(path, url.Values{"q": {q}, "limit": {"100"}})
 	require.NoError(t, err)
 	var found []string
 	for page := 0; ; page++ {
@@ -140,7 +140,7 @@ func assertExpandedTerritoryRefs(t *testing.T, territory map[string]any, repUser
 // assertTerritoryErrorParam asserts a 400 whose error names one of params.
 func assertTerritoryErrorParam(t *testing.T, status int, body []byte, params ...string) {
 	t.Helper()
-	requireStatus(t, 400, status, body)
+	requireClientRejection(t, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assert.Contains(t, params, errObj["param"], "error.param should name the offending field: %s", body)
 }

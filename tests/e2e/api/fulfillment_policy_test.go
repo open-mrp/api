@@ -110,7 +110,7 @@ func TestFulfillmentPolicy_RejectsUnknownValues(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Less(t, status, 500, "an unknown item must not 5xx: %s", string(body))
-		assert.Contains(t, []int{400, 404}, status,
+		assert.Contains(t, []int{422, 404}, status,
 			"a setting for an item that does not exist should be rejected, got %d: %s", status, string(body))
 	})
 }

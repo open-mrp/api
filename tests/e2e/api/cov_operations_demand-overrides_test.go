@@ -154,7 +154,7 @@ func TestDemandOverrides_CreateRejectsUnknownScopeRef(t *testing.T) {
 		"value":            100,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "scope_ref_id")
 }
 
@@ -208,7 +208,7 @@ func TestDemandOverrides_CreateRejectsInvalidInput(t *testing.T) {
 
 			status, respBody, err := apiClient.Post(demandOverridesPath, body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, respBody)
+			requireClientRejection(t, status, respBody)
 		})
 	}
 }
@@ -448,7 +448,7 @@ func TestDemandOverrides_UpdateValidatesTypeAgainstExistingValue(t *testing.T) {
 		"adjustment": "absolute",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "value")
 }
 
@@ -463,7 +463,7 @@ func TestDemandOverrides_UpdateRejectsInvertedPeriod(t *testing.T) {
 		"period_ends_at": rfc3339(time.Now().UTC().AddDate(-5, 0, 0)),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "period_ends_at")
 	_ = start
 }

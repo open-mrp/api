@@ -75,7 +75,7 @@ func TestCovCoreSandboxes_OmittedFields(t *testing.T) {
 			// "name" key entirely absent, not just empty.
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 422 || status == 422,
+		assert.True(t, status == 422,
 			"missing name key should return 400 or 422, got %d: %s", status, string(body))
 		requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	})
@@ -91,7 +91,7 @@ func TestCovCoreSandboxes_CreateValidation_NameTooLong(t *testing.T) {
 		"mode": "blank",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422 || status == 422,
+	assert.True(t, status == 422,
 		"256-char name should return 400 or 422, got %d: %s", status, string(body))
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
@@ -197,7 +197,7 @@ func TestCovCoreSandboxes_CreateIdempotent_DifferentBodySameKey(t *testing.T) {
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)
-	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body2, "idempotency_key_reused", "idempotency_error")
 }
 
 // TestCovCoreSandboxes_BlockedInSandboxMode_Create closes the 403 failure-mode

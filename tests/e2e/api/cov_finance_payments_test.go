@@ -365,7 +365,7 @@ func TestPayments_MoneyNotYetReceivedCannotBeSettled(t *testing.T) {
 		"allocations":         []any{allocation(jsonField(pending, "id"), inv.invoiceID, "10.00")},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "unpaid", invoicePaymentStatus(t, inv.invoiceID))
 }
 

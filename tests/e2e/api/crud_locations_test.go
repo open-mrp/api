@@ -427,7 +427,7 @@ func TestLocations_UpdateEmptyBodyRejected(t *testing.T) {
 
 	patchStatus, _, err := apiClient.Patch(locationsPath+"/"+id, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "Empty PATCH body should return 400")
+	assert.Equal(t, 422, patchStatus, "Empty PATCH body should return 422")
 
 	apiClient.Delete(locationsPath + "/" + id)
 }
@@ -1217,11 +1217,11 @@ func TestLocations_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422 || status == 422,
+	assert.True(t, status == 422,
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "validation_failed", "")
 	assertErrorParam(t, errObj, "locations[1].name")
-	assert.Contains(t, errObj["message"], "duplicate name")
+	assert.Contains(t, errorMessages(errObj), "duplicate name")
 }
 
 func TestLocations_BulkUpsert_CaseInsensitiveDuplicateName(t *testing.T) {

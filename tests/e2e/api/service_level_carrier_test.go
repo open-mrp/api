@@ -14,7 +14,7 @@ import (
 
 func assertServiceLevelOffCarrier(t *testing.T, status int, body []byte, msg string) {
 	t.Helper()
-	if assert.Equal(t, 400, status, "%s: %s", msg, string(body)) {
+	if assert.Equal(t, 422, status, "%s: %s", msg, string(body)) {
 		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "service_level_id")
 	}
 }

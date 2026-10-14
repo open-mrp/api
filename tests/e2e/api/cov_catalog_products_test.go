@@ -53,7 +53,7 @@ func TestCovCatalogProducts_Create_SKUTooLong(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422 || status == 422,
+	assert.True(t, status == 422,
 		"sku exceeding max length should return 400/422, got %d: %s", status, string(respBody))
 
 	if status == 422 {
@@ -393,7 +393,7 @@ func TestCovCatalogProducts_List_FilterByCategoryIDs(t *testing.T) {
 
 	list, _, err := apiClient.GetList(productsPath, url.Values{
 		"category_ids": {SeedItemCategoryID},
-		"limit":        {"1000"},
+		"limit":        {"100"},
 	})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(list, id), "category_ids filter should include the newly created product in the seeded category")
@@ -420,7 +420,7 @@ func TestCovCatalogProducts_List_FilterByAttributeIDs(t *testing.T) {
 
 	list, _, err := apiClient.GetList(productsPath, url.Values{
 		"attribute_ids": {SeedAttributeID},
-		"limit":         {"1000"},
+		"limit":         {"100"},
 	})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(list, id), "attribute_ids filter should include the newly created product linked to the seeded attribute")
@@ -450,7 +450,7 @@ func TestCovCatalogProducts_List_FilterByCustomerIDs(t *testing.T) {
 
 	list, _, err := apiClient.GetList(productsPath, url.Values{
 		"customer_ids": {SeedCustomerAccountID},
-		"limit":        {"1000"},
+		"limit":        {"100"},
 	})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(list, id), "customer_ids filter should include the newly created product on the customer-accessible product line")
@@ -481,12 +481,12 @@ func TestCovCatalogProducts_List_FilterByPortalVisibility(t *testing.T) {
 	hiddenID := jsonField(hidden, "id")
 	require.NotEmpty(t, hiddenID)
 
-	visList, _, err := apiClient.GetList(productsPath, url.Values{"portal_visibility": {"visible"}, "limit": {"1000"}})
+	visList, _, err := apiClient.GetList(productsPath, url.Values{"portal_visibility": {"visible"}, "limit": {"100"}})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(visList, visibleID), "portal_visibility=visible filter should include the visible product")
 	assert.False(t, covCatalogProductsListContainsID(visList, hiddenID), "portal_visibility=visible filter should exclude the hidden product")
 
-	hidList, _, err := apiClient.GetList(productsPath, url.Values{"portal_visibility": {"hidden"}, "limit": {"1000"}})
+	hidList, _, err := apiClient.GetList(productsPath, url.Values{"portal_visibility": {"hidden"}, "limit": {"100"}})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(hidList, hiddenID), "portal_visibility=hidden filter should include the hidden product")
 	assert.False(t, covCatalogProductsListContainsID(hidList, visibleID), "portal_visibility=hidden filter should exclude the visible product")
@@ -511,7 +511,7 @@ func TestCovCatalogProducts_List_FilterByDateRange(t *testing.T) {
 	inRange, _, err := apiClient.GetList(productsPath, url.Values{
 		"starts_at": {"2020-01-01T00:00:00Z"},
 		"ends_at":   {"2030-01-01T00:00:00Z"},
-		"limit":     {"1000"},
+		"limit":     {"100"},
 	})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(inRange, id), "date range bracketing created_at should include the newly created product")

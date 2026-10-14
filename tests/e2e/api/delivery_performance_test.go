@@ -184,7 +184,7 @@ func TestDeliveryPerformance_ValidatesItsWindow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a window that ends before it starts should be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "a window that ends before it starts should be rejected: %s", string(body))
 }
 
 // The buckets and the overall figure are computed from one set of outcomes, so
@@ -367,7 +367,7 @@ func TestDeliveryPerformance_RejectsMalformedRequests(t *testing.T) {
 			status, body, err := apiClient.Put(deliveryPerformancePath, tc.body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
-			assert.Equal(t, 400, status, "body: %s", string(body))
+			assertClientRejection(t, status, body, "body: %s", string(body))
 		})
 	}
 

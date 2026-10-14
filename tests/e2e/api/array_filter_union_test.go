@@ -292,7 +292,7 @@ func appendFieldValues(out []string, seen map[string]struct{}, items []json.RawM
 // filteredIDSet returns the set of row ids from path when filtered by param=values.
 func filteredIDSet(t *testing.T, path, param string, values ...string) map[string]struct{} {
 	t.Helper()
-	params := url.Values{"limit": {"1000"}}
+	params := url.Values{"limit": {"100"}}
 	params[param] = values
 	list, status, err := apiClient.GetList(path, params)
 	// Every page: rows accumulate across runs, and comparing capped pages would find rows "missing"

@@ -53,7 +53,7 @@ func TestAccountPrices_UpdateIsIdempotent(t *testing.T) {
 		map[string]any{"rate": rate("99.00")}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status3, body3)
-	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body3, "idempotency_key_reused", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, accountPricesPath+"/"+priceID))
 	assertDecimalEquals(t, 21.00, jsonField(jsonObject(persisted, "rate"), "value"),
@@ -86,7 +86,7 @@ func TestVolumeDiscounts_UpdateIsIdempotent(t *testing.T) {
 		map[string]any{"name": secondName}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status3, body3)
-	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body3, "idempotency_key_reused", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, volumeDiscountsPath+"/"+discountID))
 	assert.Equal(t, firstName, jsonField(persisted, "name"),
@@ -119,7 +119,7 @@ func TestOrderDiscounts_UpdateIsIdempotent(t *testing.T) {
 		map[string]any{"name": secondName}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status3, body3)
-	requireErrorResponse(t, body3, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body3, "idempotency_key_reused", "idempotency_error")
 
 	persisted := parseJSON(mustGet(t, orderDiscountsPath+"/"+discountID))
 	assert.Equal(t, firstName, jsonField(persisted, "name"),

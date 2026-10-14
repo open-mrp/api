@@ -570,8 +570,8 @@ func TestCovSalesSalesOrders_NonexistentUncheckedForeignKeysRejected(t *testing.
 				id := jsonField(parseJSON(respBody), "id")
 				deleteOrder(t, id)
 			}
-			assert.True(t, status == 400 || status == 404,
-				"nonexistent %s should be rejected with 400/404, got %d: %s",
+			assert.True(t, status == 422 || status == 404,
+				"nonexistent %s should be rejected with 422/404, got %d: %s",
 				tc.field, status, string(respBody))
 		})
 	}
@@ -591,8 +591,8 @@ func TestCovSalesSalesOrders_NonexistentEmailContactAccountUserRejected(t *testi
 		id := jsonField(parseJSON(respBody), "id")
 		deleteOrder(t, id)
 	}
-	assert.True(t, status == 400 || status == 404,
-		"a nonexistent acknowledgement_email_contacts[].account_user_id should be rejected with 400/404, got %d: %s",
+	assert.True(t, status == 422 || status == 404,
+		"a nonexistent acknowledgement_email_contacts[].account_user_id should be rejected with 422/404, got %d: %s",
 		status, string(respBody))
 }
 
@@ -641,7 +641,7 @@ func TestCovSalesSalesOrders_EmailContactFromSellerAccountRejected(t *testing.T)
 		id := jsonField(parseJSON(respBody), "id")
 		deleteOrder(t, id)
 	}
-	assert.Equalf(t, 400, status,
+	assert.Equalf(t, 422, status,
 		"a seller-account account_user_id must be rejected as an order email contact (recipients are buyer-side), got %d: %s",
 		status, string(respBody))
 }

@@ -216,7 +216,7 @@ func TestFulfillmentRecommendations_ApplyValidatesItsInput(t *testing.T) {
 			map[string]any{"item_ids": []string{}}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
-		assert.Equal(t, 400, status, "applying nothing should be rejected, got %d: %s", status, string(body))
+		assert.Equal(t, 422, status, "applying nothing should be rejected, got %d: %s", status, string(body))
 	})
 
 	t.Run("unknown item", func(t *testing.T) {
@@ -224,7 +224,7 @@ func TestFulfillmentRecommendations_ApplyValidatesItsInput(t *testing.T) {
 			map[string]any{"item_ids": []string{"it_doesnotexist0000"}}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
-		assert.Contains(t, []int{400, 404}, status,
+		assert.Contains(t, []int{422, 404}, status,
 			"an item with no recommendation cannot be applied, got %d: %s", status, string(body))
 	})
 }
@@ -324,7 +324,7 @@ func TestFulfillmentRecommendations_ApplyTenantIsolation(t *testing.T) {
 		map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "cross-tenant apply must not 5xx: %s", string(body))
-	assert.Contains(t, []int{400, 404}, status,
+	assert.Contains(t, []int{422, 404}, status,
 		"tenant B must not apply advice to tenant A's item, got %d: %s", status, string(body))
 
 	getStatus, _, err := apiClient.GetListRaw(itemSettingsPath+"/"+itemID, nil)

@@ -108,12 +108,12 @@ func TestItemCategoryProperties_CreateRefusals(t *testing.T) {
 			}},
 		{"no name", apiClient, categoryID, map[string]any{},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, parseJSON(body)["error"].(map[string]any), "name")
 			}},
 		{"a name longer than 255 characters", apiClient, categoryID, map[string]any{"name": strings.Repeat("n", 256)},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusBadRequest, status, body)
+				requireStatus(t, http.StatusUnprocessableEntity, status, body)
 				assertErrorParam(t, parseJSON(body)["error"].(map[string]any), "name")
 			}},
 		{"another tenant's category", apiClient, foreignCategoryID, map[string]any{"name": uniqueName("e2e-catprop-ref")},

@@ -578,7 +578,7 @@ func TestMachineDowntimeEvents_RejectsEndBeforeStart(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Less(t, status, 500, "an inverted window must be a client error, not a 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "ended_at before started_at should be 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "ended_at before started_at should be 422, got %d: %s", status, string(body))
 }
 
 func TestMachineDowntimeEvents_RejectsFutureStart(t *testing.T) {
@@ -592,7 +592,7 @@ func TestMachineDowntimeEvents_RejectsFutureStart(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Less(t, status, 500, "a future start must be a client error, not a 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a start far in the future should be 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "a start far in the future should be 422, got %d: %s", status, string(body))
 }
 
 func TestMachineDowntimeEvents_RejectsUnknownMachine(t *testing.T) {

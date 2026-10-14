@@ -135,7 +135,7 @@ func TestRegistrationFlows_UpdateRejectsANullOptionList(t *testing.T) {
 	id := createRegistrationFlow(t, apiClient)
 
 	status, _, body := patchRegistrationFlow(t, apiClient, id, map[string]any{"payment_term_ids": nil})
-	assert.Equal(t, 400, status, "send [] to clear options, not null: %s", string(body))
+	assert.Equal(t, 422, status, "send [] to clear options, not null: %s", string(body))
 }
 
 // The replace flags belong to 1.0.forge-preview.5; the current version names them as unknown.

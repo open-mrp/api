@@ -84,7 +84,7 @@ func TestAddresses_CRUD(t *testing.T) {
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, emptyNameStatus, emptyNameBody)
+	requireStatus(t, 422, emptyNameStatus, emptyNameBody)
 
 	// DELETE
 	delStatus, delBody, err := apiClient.Delete(addressesPath + "/" + id)

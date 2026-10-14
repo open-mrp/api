@@ -227,7 +227,7 @@ func TestSupplierParity_CreateValidation(t *testing.T) {
 	} {
 		status, resp, err := apiClient.Post(suppliersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 400, status, "%s: %s", name, string(resp))
+		assert.Equal(t, 422, status, "%s: %s", name, string(resp))
 	}
 }
 
@@ -473,7 +473,7 @@ func TestSupplierParity_UpdateRefusesAnAddressThatIsNotTheSuppliers(t *testing.T
 
 // --- Delete ---
 
-func TestSupplierParity_DeleteReturnsTheSupplierThenIsGone(t *testing.T) {
+func TestSupplierParity_DeleteReturnsAStubThenIsGone(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-sup-del")
 	status, body, err := apiClient.Post(suppliersPath, map[string]any{
@@ -484,14 +484,10 @@ func TestSupplierParity_DeleteReturnsTheSupplierThenIsGone(t *testing.T) {
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
 
-	status, body, err = apiClient.Delete(suppliersPath + "/" + id + "?include=bill_to_address")
+	status, body, err = apiClient.Delete(suppliersPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	deleted := parseJSON(body)
-	assert.Equal(t, id, jsonField(deleted, "id"))
-	assert.Equal(t, name, jsonField(deleted, "name"))
-	assert.NotEmpty(t, jsonField(jsonObject(deleted, "bill_to_address"), "id"), "the delete returns the addresses when included")
-	assertNilField(t, deleted, "ship_to_address")
+	assertDeletedStub(t, body, id, "supplier")
 
 	getStatus, getBody, err := apiClient.GetListRaw(suppliersPath+"/"+id, nil)
 	require.NoError(t, err)
@@ -701,10 +697,10 @@ func TestSupplierMaterialParity_LongDescriptions(t *testing.T) {
 	assert.Len(t, jsonField(got, "supplier_description"), 65535)
 
 	status, _, body = patchSupplier(t, path, map[string]any{"supplier_description": full + "a"})
-	requireErrorParam(t, 400, status, body, "supplier_description")
+	requireErrorParam(t, 422, status, body, "supplier_description")
 
 	status, _, body = patchSupplier(t, path, map[string]any{"supplier_description": strings.Repeat("🧶", 17000)})
-	requireErrorParam(t, 400, status, body, "supplier_description")
+	requireErrorParam(t, 422, status, body, "supplier_description")
 	assert.Len(t, jsonField(parseJSON(mustGet(t, path)), "supplier_description"), 65535, "a refused update changes nothing")
 }
 

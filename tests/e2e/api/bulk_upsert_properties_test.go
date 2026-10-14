@@ -194,7 +194,7 @@ func TestProperties_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 
 	name := uniqueName("e2e-bup-prop-dup")
 	status, body := bulkUpsertProperties(t, bulkPropertyRow(name), bulkPropertyRow(strings.ToUpper(name)))
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := jsonObject(parseJSON(body), "error")
 	assert.Equal(t, "invalid_request_error", jsonField(errObj, "type"))
@@ -211,7 +211,7 @@ func TestProperties_BulkUpsert_RejectsValueUnderTwoProperties(t *testing.T) {
 		map[string]any{"name": uniqueName("e2e-bup-prop-x"), "attributes": []any{map[string]any{"value": value}}},
 		map[string]any{"name": uniqueName("e2e-bup-prop-y"), "attributes": []any{map[string]any{"value": value}}},
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := jsonObject(parseJSON(body), "error")
 	assert.Equal(t, "invalid_request_error", jsonField(errObj, "type"))
@@ -223,7 +223,7 @@ func TestProperties_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(propertiesBulkUpsertPath, map[string]any{"properties": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // re-runs the same bulk upsert: the existing property is matched, not duplicated

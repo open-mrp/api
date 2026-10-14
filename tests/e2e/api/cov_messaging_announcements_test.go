@@ -233,7 +233,7 @@ func TestCovMessagingAnnouncements_ListLimitValidation(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 
-	status, _, err = user.GetListRaw(announcementsPath, url.Values{"limit": {"1000"}})
+	status, _, err = user.GetListRaw(announcementsPath, url.Values{"limit": {"100"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 }
@@ -425,7 +425,7 @@ func TestCovMessagingAnnouncements_BroadcastFieldValidation(t *testing.T) {
 		"target":   map[string]any{"type": "account", "id": SeedAccountID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// category omitted.
 	status, body, err = user.Post(notificationsPath, map[string]any{
@@ -433,7 +433,7 @@ func TestCovMessagingAnnouncements_BroadcastFieldValidation(t *testing.T) {
 		"title":  uniqueName("e2e-cov-announce-nocat"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// body explicitly blank (as opposed to omitted) — field.Optional[string] rejects a present-but-empty value.
 	status, body, err = user.Post(notificationsPath, map[string]any{
@@ -443,5 +443,5 @@ func TestCovMessagingAnnouncements_BroadcastFieldValidation(t *testing.T) {
 		"body":     "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }

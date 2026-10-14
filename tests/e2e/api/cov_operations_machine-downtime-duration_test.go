@@ -76,7 +76,7 @@ func TestMachineDowntimeEvents_DurationAndEndTogetherIsRejected(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "a rejected request must not 5xx: %s", string(resp.Body))
-	assert.Equal(t, 400, resp.StatusCode, "body: %s", string(resp.Body))
+	assert.Equal(t, 422, resp.StatusCode, "body: %s", string(resp.Body))
 }
 
 // A lot size sent as a duration would silently become a number of seconds, which is exactly the class of error carrying the unit is meant to make impossible.
@@ -94,7 +94,7 @@ func TestMachineDowntimeEvents_DurationRejectsANonTimeUnit(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "a rejected request must not 5xx: %s", string(resp.Body))
-	assert.Equal(t, 400, resp.StatusCode, "body: %s", string(resp.Body))
+	assert.Equal(t, 422, resp.StatusCode, "body: %s", string(resp.Body))
 }
 
 // Correcting a stoppage by its length is how somebody fixes "it was actually two hours, not one" without doing clock arithmetic.

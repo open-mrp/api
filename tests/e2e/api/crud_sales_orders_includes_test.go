@@ -416,7 +416,7 @@ func TestSalesOrders_UpdateSalesRep_RejectsUserIDAcceptsAccountUser(t *testing.T
 	badStatus, badBody, err := apiClient.Patch(salesOrdersPath+"/"+orderID,
 		map[string]any{"sales_rep_id": SeedUserID}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, badStatus, badBody)
+	requireStatus(t, 422, badStatus, badBody)
 
 	// The matching account_user id is accepted and hydrates on read.
 	okStatus, okBody, err := apiClient.Patch(salesOrdersPath+"/"+orderID,

@@ -71,7 +71,7 @@ func TestProductLineLot_RejectsAQuantityWithNoUnit(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
-	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, 422, resp.StatusCode)
 }
 
 // A lot counted in a unit the line cannot express is not a lot anybody can act on.
@@ -90,7 +90,7 @@ func TestProductLineLot_RejectsAUnitOutsideTheGroup(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
-	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, 422, resp.StatusCode)
 }
 
 func TestProductLineLot_CanBeCleared(t *testing.T) {

@@ -127,7 +127,7 @@ func TestCommitmentBasis_SettingTwoBasesIsRejected(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			status, body := createOrderWithBasis(t, SeedCustomerAccountID, basis)
-			assert.Equal(t, 400, status, "%s must be rejected: %s", name, string(body))
+			assert.Equal(t, 422, status, "%s must be rejected: %s", name, string(body))
 		})
 	}
 }
@@ -148,7 +148,7 @@ func TestCommitmentBasis_AddingASecondBasisByPatchIsRejected(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "patch must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "adding a second basis must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "adding a second basis must be rejected: %s", string(body))
 }
 
 // Clearing one basis while setting another in the same request is how a caller switches, and must succeed.
@@ -303,7 +303,7 @@ func TestQuoteCommitment_RejectsTwoBases(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "quote must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a quote naming two bases must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "a quote naming two bases must be rejected: %s", string(body))
 }
 
 // Unissuing hands the order back to the customer's standing lead time, so no stamped commitment survives.

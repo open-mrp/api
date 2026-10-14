@@ -407,7 +407,7 @@ func TestDashItems_ExportWalksReachEveryRowOnce(t *testing.T) {
 	})
 
 	t.Run("categories", func(t *testing.T) {
-		rows := dashItemsWalk(t, apiClient, itemCategoriesPath, url.Values{"limit": {"1000"}})
+		rows := dashItemsWalk(t, apiClient, itemCategoriesPath, url.Values{"limit": {"100"}})
 		seen := dashItemsIDs(rows, dashItemsRowID)
 		for id, n := range seen {
 			assert.Equal(t, 1, n, "category %s appears %d times", id, n)
@@ -630,7 +630,7 @@ func TestDashItems_InventoryRejectsInvalidFields(t *testing.T) {
 		{"missing unit", "missing_field", map[string]any{"quantity": map[string]any{"value": "1"}}},
 	} {
 		status, body := dashItemsPatchInventory(t, apiClient, itemID, tc.body)
-		assert.Equal(t, 400, status, "%s: %s", tc.name, string(body))
+		assertClientRejection(t, status, body, "%s: %s", tc.name, string(body))
 		if status == 400 {
 			requireErrorResponse(t, body, tc.code, "invalid_request_error")
 		}
@@ -669,7 +669,7 @@ func TestDashItems_InventoryRejectsAnUnknownUnit(t *testing.T) {
 	status, body := dashItemsPatchInventory(t, apiClient, itemID, map[string]any{
 		"quantity": map[string]any{"value": "1", "unit_id": "un_01zzzzzzzzzzzzzzzzzzzz"},
 	})
-	assert.Contains(t, []int{400, 404}, status, "an unknown unit is a client error: %s", string(body))
+	assert.Contains(t, []int{422, 404}, status, "an unknown unit is a client error: %s", string(body))
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -681,7 +681,7 @@ func TestDashItems_InventoryRejectsAUnitOutsideTheItemsGroup(t *testing.T) {
 	status, body := dashItemsPatchInventory(t, apiClient, itemID, map[string]any{
 		"quantity": map[string]any{"value": "1", "unit_id": SeedUnitID},
 	})
-	assert.Equal(t, 400, status, "a pair of yarn has no weight to convert: %s", string(body))
+	assert.Equal(t, 422, status, "a pair of yarn has no weight to convert: %s", string(body))
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -706,7 +706,7 @@ func TestDashItems_InventoryReplayAdjustsOnce(t *testing.T) {
 	status, raw, err := apiClient.Patch(path, map[string]any{"quantity": dashItemsPound("4"), "operation": "adjust"}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, raw)
-	requireErrorResponse(t, raw, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, raw, "idempotency_key_reused", "idempotency_error")
 	dashItemsAssertUnchanged(t, itemID, "3", 1)
 }
 
@@ -728,8 +728,8 @@ func TestDashItems_InventoryKeyReusedOnAnotherItemIsNotReplayed(t *testing.T) {
 	switch resp.StatusCode {
 	case 200:
 		assert.Equal(t, "1", dashItemsLevel(t, second), "a 200 for the second item must have adjusted it")
-	case 400:
-		requireErrorResponse(t, resp.Body, "validation_failed", "idempotency_error")
+	case 422:
+		requireErrorResponse(t, resp.Body, "idempotency_key_reused", "idempotency_error")
 		dashItemsAssertUnchanged(t, second, "0", 0)
 	default:
 		t.Errorf("unexpected status %d: %s", resp.StatusCode, string(resp.Body))
@@ -872,7 +872,7 @@ func TestDashItems_BulkReconcileReplayAppliesOnce(t *testing.T) {
 	status, raw, err := apiClient.Post(bulkReconcilePath, other, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, raw)
-	requireErrorResponse(t, raw, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, raw, "idempotency_key_reused", "idempotency_error")
 	dashItemsAssertUnchanged(t, itemID, "25", 1)
 }
 

@@ -36,7 +36,7 @@ func TestProductionSchedulePreview_RequiresAConstraintMachine(t *testing.T) {
 	require.NoError(t, err)
 	require.Less(t, status, 500, "the preview must not 5xx: %s", string(body))
 
-	assert.Equal(t, 400, status,
+	assert.Equal(t, 422, status,
 		"with no constraint machine configured the preview should be a 400, got %d: %s", status, string(body))
 	assert.Contains(t, string(body), "constraint",
 		"the error should say what to configure")
@@ -51,7 +51,7 @@ func TestProductionSchedulePreview_ValidatesOverrides(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Less(t, status, 500, "a bad horizon must be a client error, not a 5xx: %s", string(body))
-		assert.Equal(t, 400, status, "horizon_weeks above the maximum should be 400, got %d: %s", status, string(body))
+		assert.Equal(t, 422, status, "horizon_weeks above the maximum should be 422, got %d: %s", status, string(body))
 	})
 
 	t.Run("rejects an unknown demand basis", func(t *testing.T) {
@@ -456,7 +456,7 @@ func TestProductionSchedules_ReadValidation(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.Less(t, status, 500, "a bad horizon must be a client error, not a 5xx: %s", string(body))
-		assert.Equal(t, 400, status)
+		assert.Equal(t, 422, status)
 	})
 
 	t.Run("status filter narrows the list", func(t *testing.T) {

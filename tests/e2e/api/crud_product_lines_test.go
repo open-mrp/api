@@ -806,7 +806,7 @@ func TestProductLines_BulkUpsert_DuplicateNameRejected(t *testing.T) {
 		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight"),
 		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_exempt", "free_freight"),
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestProductLines_BulkUpsert_ResolvesUnitGroupByName: the unit group is a fuzzy

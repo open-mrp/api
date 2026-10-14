@@ -215,13 +215,13 @@ func TestDocumentSettings_Validation(t *testing.T) {
 	t.Run("empty body", func(t *testing.T) {
 		status, body, err := apiClient.Patch(documentSettingsPath+"/invoice", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("null document_control", func(t *testing.T) {
 		status, body, err := apiClient.Patch(documentSettingsPath+"/invoice", map[string]any{"document_control": nil}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("revision too long", func(t *testing.T) {
@@ -229,7 +229,7 @@ func TestDocumentSettings_Validation(t *testing.T) {
 			"document_control": map[string]any{"revision": strings.Repeat("r", 256)},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("footer too long", func(t *testing.T) {
@@ -237,6 +237,6 @@ func TestDocumentSettings_Validation(t *testing.T) {
 			"footer_text": strings.Repeat("f", 2001),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 }

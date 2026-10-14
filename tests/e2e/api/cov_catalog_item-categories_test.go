@@ -85,7 +85,7 @@ func TestCovCatalogItemCategories_UpdateValidation_NullName(t *testing.T) {
 		"name": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "Explicit null name should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "Explicit null name should return 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -99,7 +99,7 @@ func TestCovCatalogItemCategories_UpdateValidation_BlankName(t *testing.T) {
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "Blank name should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "Blank name should return 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -118,7 +118,7 @@ func TestCovCatalogItemCategories_UpdateValidation_NameTooLong(t *testing.T) {
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "256-char name should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "256-char name should return 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
@@ -132,7 +132,7 @@ func TestCovCatalogItemCategories_UpdateValidation_NullNotes(t *testing.T) {
 		"notes": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "Explicit null notes should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "Explicit null notes should return 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "notes")
 }
@@ -146,7 +146,7 @@ func TestCovCatalogItemCategories_UpdateValidation_BlankNotes(t *testing.T) {
 		"notes": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "Blank notes should return 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "Blank notes should return 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "notes")
 }

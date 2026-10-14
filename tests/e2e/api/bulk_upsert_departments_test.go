@@ -128,7 +128,7 @@ func TestDepartments_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 		map[string]any{"name": name},
 		map[string]any{"name": strings.ToUpper(name)}, // duplicate differing only by casing
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "invalid_request_error", jsonField(jsonObject(parseJSON(body), "error"), "type"))
 }
 
@@ -137,7 +137,7 @@ func TestDepartments_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(departmentsBulkUpsertPath, map[string]any{"departments": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestDepartments_BulkUpsert_RejectsUnknownLocation: references resolve at accept, so an

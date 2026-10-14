@@ -336,7 +336,7 @@ func TestSettlements_RejectAllocationsAgainstUnknownRecords(t *testing.T) {
 			}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "%s must not 5xx: %s", name, string(body))
-			assert.Contains(t, []int{400, 404}, status, "%s must be rejected: %s", name, string(body))
+			assert.Contains(t, []int{422, 404}, status, "%s must be rejected: %s", name, string(body))
 		})
 	}
 }
@@ -350,7 +350,7 @@ func TestSettlements_RejectAnUnknownResponsibleUser(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Contains(t, []int{400, 404}, status, "an unknown responsible user must be rejected: %s", string(body))
+	assert.Contains(t, []int{422, 404}, status, "an unknown responsible user must be rejected: %s", string(body))
 }
 
 // ──────────────────────────────────────────────
@@ -471,7 +471,7 @@ func TestTransactions_RequireAResponsibleUserWhenTheCallerIsNotAUser(t *testing.
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "an API key must be told to name a responsible user: %s", string(body))
+	assert.Equal(t, 422, status, "an API key must be told to name a responsible user: %s", string(body))
 	assert.Contains(t, string(body), "responsible_user_id", "the error must name the missing field: %s", string(body))
 }
 

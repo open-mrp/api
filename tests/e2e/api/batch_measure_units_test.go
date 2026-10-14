@@ -120,28 +120,13 @@ func TestBatches_FlowMeasureUnitsResolveThroughTheBatch(t *testing.T) {
 
 // --- Delete ---
 
-// Delete returns the batch as it looked before deletion, measures and all, so it has the same gap as
-// any other batch endpoint — just harder to notice, because the batch is gone by the time anyone
-// reads the response.
-//
-// Asserted against a batch that does not exist: the include is validated before the handler runs, so
-// a 404 says the endpoint understood the include while a 400 says it advertises none. That avoids
-// standing up a production run and a schedule just to have something to delete.
-func TestBatches_DeleteAcceptsTheMeasureUnitIncludes(t *testing.T) {
+// Delete returns a deleted stub, which carries no measures, so there is nothing for include to expand and
+// the parameter is refused rather than silently ignored.
+func TestBatches_DeleteRefusesInclude(t *testing.T) {
 	t.Parallel()
 
-	for _, include := range []string{"quantity.unit", "seconds.unit", "waste.unit"} {
-		t.Run(include, func(t *testing.T) {
-			t.Parallel()
-
-			status, body, err := apiClient.Delete(
-				batchesPath + "/bt_doesnotexist00000?include=" + url.QueryEscape(include))
-			require.NoError(t, err)
-			require.Less(t, status, 500, "deleting an unknown batch must not 5xx: %s", string(body))
-
-			assertIncludeAccepted(t, status, body, include, "deleting a batch")
-			assert.Equal(t, 404, status,
-				"the include is understood, so the request fails on the missing batch: %s", string(body))
-		})
-	}
+	status, body, err := apiClient.Delete(batchesPath + "/bt_doesnotexist00000?include=" + url.QueryEscape("quantity.unit"))
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error"), "include")
 }

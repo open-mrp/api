@@ -217,7 +217,7 @@ func TestProductionSteps_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) 
 		bulkStepRow(name),
 		bulkStepRow(strings.ToUpper(name)), // duplicate differing only by casing
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "invalid_request_error", jsonField(jsonObject(parseJSON(body), "error"), "type"))
 }
 
@@ -226,7 +226,7 @@ func TestProductionSteps_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(productionStepsBulkUpsertPath, map[string]any{"production_steps": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestProductionSteps_BulkUpsert_RejectsUnknownSKU: a row referencing an item SKU that

@@ -239,12 +239,12 @@ func TestScheduleRegenerate_RejectsPublished(t *testing.T) {
 	status, body, err = apiClient.Put(regeneratePath(scheduleID), map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "regenerating a published version must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "regenerating a published version must be rejected: %s", string(body))
 
 	status, body, err = apiClient.Put(previewRegeneratePath(scheduleID), map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "previewing a regenerate of a published version must be rejected too")
+	assert.Equal(t, 422, status, "previewing a regenerate of a published version must be rejected too")
 }
 
 func TestScheduleRegenerate_RejectsUnknownMergeMode(t *testing.T) {

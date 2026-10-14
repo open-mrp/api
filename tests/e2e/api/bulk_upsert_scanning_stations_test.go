@@ -128,7 +128,7 @@ func TestScanningStations_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T)
 		bulkStationRow(name),
 		bulkStationRow(strings.ToUpper(name)), // duplicate differing only by casing
 	)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "invalid_request_error", jsonField(jsonObject(parseJSON(body), "error"), "type"))
 }
 
@@ -137,7 +137,7 @@ func TestScanningStations_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(scanningStationsBulkUpsertPath, map[string]any{"scanning_stations": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestScanningStations_BulkUpsert_RejectsInvalidType: a bad enum is a structural error, so it
@@ -148,7 +148,7 @@ func TestScanningStations_BulkUpsert_RejectsInvalidType(t *testing.T) {
 	row := bulkStationRow(uniqueName("e2e-bup-stn-badtype"))
 	row["type"] = "teleport_batch"
 	status, body := bulkUpsertScanningStations(t, row)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Equal(t, "invalid_request_error", jsonField(jsonObject(parseJSON(body), "error"), "type"))
 }
 

@@ -141,8 +141,8 @@ func TestCovSalesPriorities_List_InvalidLimitTooLarge(t *testing.T) {
 
 func TestCovSalesPriorities_List_LimitMaxAllowed(t *testing.T) {
 	t.Parallel()
-	// limit=1000 is the documented max and must be accepted (not rejected).
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1000"}})
+	// limit=100 is the documented max and must be accepted (not rejected).
+	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"100"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 3, "should still return all seeded priorities under the max limit")
 }
@@ -153,7 +153,7 @@ func TestCovSalesPriorities_List_InvalidCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")

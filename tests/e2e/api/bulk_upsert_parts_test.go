@@ -134,7 +134,7 @@ func TestParts_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "parts[1].sku")
-	assert.Contains(t, errObj["message"], "duplicate SKU")
+	assert.Contains(t, errorMessages(errObj), "duplicate SKU")
 }
 
 // checks that a SKU already used by a product is rejected; the conflict is found by the
@@ -164,7 +164,7 @@ func TestParts_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(partsBulkUpsertPath, map[string]any{"parts": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestParts_BulkUpsert_RejectsUnknownCategory: a create row whose category does not

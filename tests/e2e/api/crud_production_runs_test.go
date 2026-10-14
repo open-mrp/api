@@ -138,7 +138,7 @@ func deleteBatch(t *testing.T, batchID string) {
 // assertValidationParam asserts a 400 validation error naming param.
 func assertValidationParam(t *testing.T, status int, body []byte, param string) {
 	t.Helper()
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	var envelope map[string]any
 	require.NoError(t, json.Unmarshal(body, &envelope), string(body))
 	errObj, _ := envelope["error"].(map[string]any)
@@ -300,7 +300,7 @@ func TestProductionRuns_OmittedFields(t *testing.T) {
 	t.Run("create without responsible_user_id is rejected", func(t *testing.T) {
 		status, body, err := apiClient.Post(productionRunsPath, map[string]any{"batches": []any{plannedBatch("1")}}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("patching the number preserves the responsible user", func(t *testing.T) {
@@ -315,7 +315,7 @@ func TestProductionRuns_OmittedFields(t *testing.T) {
 		run := createRunWithBatches(t, plannedBatch("1"))
 		status, body, err := apiClient.Patch(productionRunPath(jsonField(run, "id")), map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 }
 
@@ -511,19 +511,19 @@ func TestProductionRuns_UpdateNonHappyPaths(t *testing.T) {
 	t.Run("blank number is rejected", func(t *testing.T) {
 		status, body, err := apiClient.Patch(productionRunPath(runID), map[string]any{"number": ""}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("null number is rejected", func(t *testing.T) {
 		status, body, err := apiClient.Patch(productionRunPath(runID), map[string]any{"number": nil}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("number over 255 characters is rejected", func(t *testing.T) {
 		status, body, err := apiClient.Patch(productionRunPath(runID), map[string]any{"number": strings.Repeat("9", 256)}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("unknown responsible user is rejected", func(t *testing.T) {
@@ -613,7 +613,7 @@ func TestProductionRuns_AddBatchesNonHappyPaths(t *testing.T) {
 	t.Run("no batches is rejected", func(t *testing.T) {
 		status, body, err := apiClient.Post(productionRunBatchesPath(runID), map[string]any{"batches": []any{}}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("missing required batch field is rejected", func(t *testing.T) {
@@ -621,7 +621,7 @@ func TestProductionRuns_AddBatchesNonHappyPaths(t *testing.T) {
 			"batches": []any{map[string]any{"item_id": SeedGreigeItemID, "quantity_value": "1"}},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("unknown run is not found", func(t *testing.T) {
@@ -673,13 +673,13 @@ func TestProductionRuns_ScannedLifecycle(t *testing.T) {
 	t.Run("completed run cannot be updated", func(t *testing.T) {
 		status, body, err := apiClient.Patch(productionRunPath(runID), map[string]any{"number": uniqueName("e2e-pr-done")}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("completed run takes no more batches", func(t *testing.T) {
 		status, body, err := apiClient.Post(productionRunBatchesPath(runID), map[string]any{"batches": []any{plannedBatch("1")}}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("status filters place it with closed runs", func(t *testing.T) {
@@ -887,7 +887,7 @@ func TestProductionRuns_ListRejectsInvalidParams(t *testing.T) {
 			t.Parallel()
 			status, body, err := apiClient.GetListRaw(productionRunsPath, params)
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 		})
 	}
 
@@ -1172,12 +1172,12 @@ func TestProductionRuns_BatchCountCap(t *testing.T) {
 	if status == 201 {
 		apiClient.Delete(productionRunPath(jsonField(parseJSON(body), "id")))
 	}
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	runID := jsonField(createRunWithBatches(t, plannedBatch("1")), "id")
 	status, body, err = apiClient.Post(productionRunBatchesPath(runID), map[string]any{"batches": plannedBatches(501)}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // The flow scope follows a run's batches downstream into the batches made from them; the run

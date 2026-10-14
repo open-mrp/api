@@ -246,7 +246,7 @@ func TestCovSalesContacts_ValidationEmptyEmail(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(contactsFindByEmailPath, map[string]any{"email": ""}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestCovSalesContacts_ValidationInvalidInclude covers an unknown ?include=

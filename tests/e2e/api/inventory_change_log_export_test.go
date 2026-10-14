@@ -250,7 +250,7 @@ func TestInventoryChangeLogExport_RejectsInvalidFilters(t *testing.T) {
 			t.Parallel()
 			status, body, err := apiClient.Post(inventoryChangeLogsExportPath, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, http.StatusBadRequest, status, body)
+			requireClientRejection(t, status, body)
 			errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 			if tc.param != "" {
 				assert.Contains(t, errObj["param"], tc.param, "the error names the offending filter: %s", string(body))

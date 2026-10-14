@@ -170,7 +170,7 @@ func TestPortalRegistration_ForwardOnlySteps(t *testing.T) {
 	// Moving back to an earlier step is rejected.
 	status, body, err = buyer.Patch(sessionPath, map[string]any{"step": "customer_details"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestPortalRegistration_GetUnknownNotFound confirms an unknown id is a clean 404.
@@ -244,7 +244,7 @@ func TestPortalRegistration_CompleteAfterAbandonRejected(t *testing.T) {
 
 	status, body, err = buyer.Post(portalRegSessionsPath+"/"+sessionID+"/actions/complete", nil, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestPortalRegistration_CreateValidation covers request validation on start.
@@ -256,7 +256,7 @@ func TestPortalRegistration_CreateValidation(t *testing.T) {
 		t.Parallel()
 		status, body, err := buyer.Post(portalRegSessionsPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("unknown seller_slug", func(t *testing.T) {
@@ -315,7 +315,7 @@ func TestPortalRegistration_CompleteNewCustomerJourney(t *testing.T) {
 	// A completed session can no longer be updated.
 	status, body, err = buyer.Patch(sessionPath, map[string]any{"step": "contact"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestPortalRegistration_CompleteExistingCustomerJourney confirms the existing-customer

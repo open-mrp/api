@@ -303,7 +303,7 @@ func TestAnalyticsCustomerPricing_RejectsOutOfRangeFractions(t *testing.T) {
 			status, body, err := apiClient.Put(customerPricingPath, map[string]any{tc.field: tc.value})
 			require.NoError(t, err)
 			require.Less(t, status, 500, "bad input must not 5xx: %s", string(body))
-			require.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
+			require.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
 			errObj := requireErrorResponse(t, body, "", "")
 			assertErrorParam(t, errObj, tc.field)
 		})
@@ -355,7 +355,7 @@ func TestAnalyticsRealizedMargins_RequiresAWindow(t *testing.T) {
 	status, body, err := apiClient.Put(realizedMarginsPath, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing window is a client error: %s", string(body))
-	assert.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
 }
 
 // An inverted window is a client mistake, not an empty result.
@@ -369,7 +369,7 @@ func TestAnalyticsRealizedMargins_RejectsInvertedWindow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "an inverted window must not 5xx: %s", string(body))
-	require.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
+	require.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
 	errObj := requireErrorResponse(t, body, "", "")
 	assertErrorParam(t, errObj, "ends_at")
 }
@@ -413,7 +413,7 @@ func TestPriceListExport_RequiresACustomer(t *testing.T) {
 	status, body, err := apiClient.Post(priceListPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing customer is a client error: %s", string(body))
-	assert.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
 }
 
 // The accept only records which customer to price, so an unknown one surfaces when the worker runs rather than rejecting the request.

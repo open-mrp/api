@@ -385,7 +385,7 @@ func TestNotifications_SendValidation(t *testing.T) {
 		"target":   map[string]any{"type": "account_user", "id": SeedAccountUserID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// Missing target.
 	status, body, err = user.Post(notificationsPath, map[string]any{
@@ -393,7 +393,7 @@ func TestNotifications_SendValidation(t *testing.T) {
 		"title":    "no target",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // ── Marking a nonexistent / non-owned notification ─────────────────

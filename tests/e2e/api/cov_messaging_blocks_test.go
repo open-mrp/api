@@ -367,5 +367,5 @@ func TestCovMessagingBlocks_IdempotencyConflictDifferentBody(t *testing.T) {
 	second, err := user.PostFull(blocksPath, map[string]any{"blocked_account_user_id": SeedChildAccountUserID}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, second.StatusCode, second.Body)
-	requireErrorResponse(t, second.Body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, second.Body, "idempotency_key_reused", "idempotency_error")
 }

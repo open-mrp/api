@@ -243,7 +243,7 @@ func TestCovCatalogUnits_OmittedFields(t *testing.T) {
 
 				status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 				require.NoError(t, err)
-				requireStatus(t, 400, status, respBody)
+				requireStatus(t, 422, status, respBody)
 				errObj := requireErrorResponse(t, respBody, tc.expectedCode, "invalid_request_error")
 				assertErrorParam(t, errObj, tc.field)
 			})
@@ -383,7 +383,7 @@ func TestCovCatalogUnits_CreateNonNumericRatioNumerator(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status,
+	assert.Equal(t, 422, status,
 		"non-numeric ratio_numerator should be rejected with 400, got %d: %s",
 		status, string(respBody))
 }
@@ -460,7 +460,7 @@ func TestCovCatalogUnits_UpdateNonNumericRatioNumerator(t *testing.T) {
 
 	status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{"ratio_numerator": "abc"}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status,
+	assert.Equal(t, 422, status,
 		"non-numeric ratio_numerator on update should be rejected with 400, got %d: %s",
 		status, string(body))
 }

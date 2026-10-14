@@ -503,7 +503,7 @@ func TestInvoiceParity_UpdateEachField(t *testing.T) {
 
 	status, body, err = apiClient.Patch(path, map[string]any{"is_paid_in_full": nil}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "a flag cannot be null: %s", string(body))
+	assert.Equal(t, 422, status, "a flag cannot be null: %s", string(body))
 }
 
 // --- List ---

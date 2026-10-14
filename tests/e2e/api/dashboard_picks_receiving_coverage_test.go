@@ -241,7 +241,7 @@ func TestDashPicks_UpdateLineReplayDoesNotReapply(t *testing.T) {
 	status, body, err := apiClient.Patch(path, map[string]any{"quantity_value": "3"}, key)
 	require.NoError(t, err)
 	require.Equal(t, 422, status, "%s", string(body))
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assert.InDelta(t, 2.0, dashPicksLineQuantity(t, pickID, lineID), 0.001)
 }
 
@@ -311,7 +311,7 @@ func TestDashPicks_PackReplayShipsOnce(t *testing.T) {
 	status, body, err := apiClient.Post(path, map[string]any{"shipment_case_count": 2}, key)
 	require.NoError(t, err)
 	require.Equal(t, 422, status, "%s", string(body))
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 
 	assert.Len(t, pickShipmentNumbers(t, pickID), 1, "the pick was packed into exactly one shipment")
 	assert.NotNil(t, retrievePick(t, pickID)["finished_at"], "the one pack finished the pick")
@@ -333,12 +333,12 @@ func TestDashPicks_UpdateLineRejectsMalformedQuantities(t *testing.T) {
 		status, body, err := apiClient.Patch(path, map[string]any{"quantity_value": value}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "%s: %s", name, string(body))
-		assert.Equal(t, 400, status, "quantity_value %s is refused: %s", name, string(body))
+		assert.Equal(t, 422, status, "quantity_value %s is refused: %s", name, string(body))
 	}
 
 	status, body, err := apiClient.Patch(path, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an empty body names nothing to change: %s", string(body))
+	assert.Equal(t, 422, status, "an empty body names nothing to change: %s", string(body))
 
 	assert.InDelta(t, 1.0, dashPicksLineQuantity(t, pickID, lineID), 0.001, "the line kept its picked quantity")
 }
@@ -634,7 +634,7 @@ func TestDashReceiving_StockReplayPutsStockAwayOnce(t *testing.T) {
 	status, body, err := apiClient.Post(path, dashPicksStockBody(lineID, "3"), key)
 	require.NoError(t, err)
 	require.Equal(t, 422, status, "%s", string(body))
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 
 	assertDecimalEqual(t, "4", readInventory(t, itemID).onHand.String(), "four pairs on hand, not eight")
 	assert.Equal(t, 1, dashPicksDeliveryCount(t, receivingOrderID), "one delivery")
@@ -665,7 +665,7 @@ func TestDashReceiving_UpdateLineReplayDoesNotReapply(t *testing.T) {
 	status, body, err := apiClient.Patch(path, map[string]any{"quantity": pairs("3")}, key)
 	require.NoError(t, err)
 	require.Equal(t, 422, status, "%s", string(body))
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assertDecimalEqual(t, "2", lineQuantityValue(t, dashPicksReceivingLine(t, receivingOrderID)))
 }
 
@@ -736,7 +736,7 @@ func TestDashReceiving_UpdateLineRejectsNullAndIncompleteQuantities(t *testing.T
 		"unknown unit id": map[string]any{"value": "1", "unit_id": "un_01doesnotexist00000"},
 	} {
 		status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": quantity})
-		assert.Equal(t, 400, status, "a %s quantity is refused: %s", name, string(body))
+		assert.Equal(t, 422, status, "a %s quantity is refused: %s", name, string(body))
 	}
 
 	assertDecimalEqual(t, "4", lineQuantityValue(t, dashPicksReceivingLine(t, receivingOrderID)), "the line kept its count")
@@ -797,7 +797,7 @@ func TestDashReceiving_VoidingACompletedOrderReopensItWithoutUnstocking(t *testi
 	assert.NotEmpty(t, jsonField(line, "stocked_at"), "and stays stocked")
 
 	status, body = stockReceivingOrder(t, receivingOrderID, dashPicksStockItems(lineID, "4"))
-	require.Equal(t, 400, status, "the still-stocked line cannot be stocked again: %s", string(body))
+	require.Equal(t, 422, status, "the still-stocked line cannot be stocked again: %s", string(body))
 	status, body = stockReceivingOrder(t, receivingOrderID, nil)
 	requireStatus(t, 200, status, body)
 
@@ -886,7 +886,7 @@ func TestDashReceiving_StockRefusesMalformedLineItems(t *testing.T) {
 		},
 	} {
 		status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{item})
-		assert.Equal(t, 400, status, "%s is refused: %s", name, string(body))
+		assert.Equal(t, 422, status, "%s is refused: %s", name, string(body))
 	}
 
 	assert.Empty(t, jsonField(dashPicksReceivingLine(t, receivingOrderID), "stocked_at"), "nothing was stocked")
@@ -920,7 +920,7 @@ func TestDashReceiving_StockRefusesALocationTheAccountDoesNotHave(t *testing.T) 
 				"receiving_order_line_id": lineID,
 				"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": locationID}},
 			}})
-			assert.Contains(t, []int{400, 404}, status, "the location is refused: %s", string(body))
+			assert.Contains(t, []int{422, 404}, status, "the location is refused: %s", string(body))
 
 			assert.Empty(t, jsonField(dashPicksReceivingLine(t, receivingOrderID), "stocked_at"), "nothing was stocked")
 			assertDecimalEqual(t, "0", readInventory(t, itemID).onHand.String(), "nothing reached inventory")

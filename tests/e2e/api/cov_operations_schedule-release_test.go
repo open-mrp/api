@@ -178,7 +178,7 @@ func TestScheduleRelease_RefusesToReleaseTheSameWeekTwice(t *testing.T) {
 	requireStatus(t, 201, status, raw)
 
 	status, _, _ = releaseWeek(t, scheduleID, 5)
-	assert.Equal(t, 400, status, "a second release must fail rather than create a second run")
+	assert.Equal(t, 422, status, "a second release must fail rather than create a second run")
 
 	preview := weekReleasePreview(t, scheduleID, 5)
 	assert.Equal(t, "false", jsonField(preview, "is_releasable"))
@@ -217,7 +217,7 @@ func TestScheduleRelease_EmptyWeekIsNotReleasable(t *testing.T) {
 	assert.NotEmpty(t, jsonField(preview, "blocked_reason"))
 
 	status, body, _ = releaseWeek(t, scheduleID, emptyWeek)
-	assert.Equal(t, 400, status,
+	assert.Equal(t, 422, status,
 		"releasing an empty week must fail rather than create an empty run: %s", string(body))
 }
 
@@ -231,13 +231,13 @@ func TestScheduleRelease_RejectsWeekOutsideHorizon(t *testing.T) {
 	require.True(t, ok)
 
 	status, _, _ := releaseWeek(t, scheduleID, int(horizonWeeks)+5)
-	assert.Equal(t, 400, status)
+	assert.Equal(t, 422, status)
 
 	status, body, err := apiClient.GetListRaw(schedulePath(scheduleID)+"/week-release-preview",
 		url.Values{"week_index": {strconv.Itoa(int(horizonWeeks) + 5)}})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status)
+	assert.Equal(t, 422, status)
 }
 
 // The lot size is snapshotted onto the line at plan time rather than re-read at release, so the run always matches the lots shown on the plan grid.

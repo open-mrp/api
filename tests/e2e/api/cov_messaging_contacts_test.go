@@ -195,13 +195,13 @@ func TestCovMessagingContacts_LimitAcceptedButIgnored(t *testing.T) {
 }
 
 // TestCovMessagingContacts_LimitValidRange asserts in-range limit values
-// (including the documented bounds 1 and 1000) are accepted with 200 and
+// (including the documented bounds 1 and 100) are accepted with 200 and
 // never crash — the result count is intentionally not asserted to equal
 // the requested limit (see TestCovMessagingContacts_LimitAcceptedButIgnored).
 func TestCovMessagingContacts_LimitValidRange(t *testing.T) {
 	t.Parallel()
 
-	for _, limit := range []string{"1", "50", "1000"} {
+	for _, limit := range []string{"1", "50", "100"} {
 		limit := limit
 		t.Run(limit, func(t *testing.T) {
 			t.Parallel()

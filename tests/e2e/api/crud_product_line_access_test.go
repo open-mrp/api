@@ -208,7 +208,7 @@ func TestCustomerProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testing.T)
 		"product_line_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an empty grant is refused: %s", body)
+	assert.Equal(t, 422, status, "an empty grant is refused: %s", body)
 	assert.Equal(t, "product_line_ids", errorParam(body))
 	status, _ = readAccess(t, path)
 	assert.Equal(t, 404, status, "the refused grant created nothing")
@@ -218,12 +218,12 @@ func TestCustomerProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testing.T)
 
 	status, body, err = apiClient.Patch(path, map[string]any{"product_line_ids": []string{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an edit to no product lines is refused: %s", body)
+	assert.Equal(t, 422, status, "an edit to no product lines is refused: %s", body)
 	assert.Equal(t, "product_line_ids", errorParam(body))
 
 	status, body, err = apiClient.Patch(path, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an edit naming nothing is refused: %s", body)
+	assert.Equal(t, 422, status, "an edit naming nothing is refused: %s", body)
 
 	status, read := readAccess(t, path)
 	require.Equal(t, 200, status)
@@ -377,7 +377,7 @@ func TestAccountGroupProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testin
 		"product_line_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an empty grant is refused: %s", body)
+	assert.Equal(t, 422, status, "an empty grant is refused: %s", body)
 	assert.Equal(t, "product_line_ids", errorParam(body))
 
 	grantAccess(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA, f.lineB}})
@@ -385,7 +385,7 @@ func TestAccountGroupProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testin
 
 	status, body, err = apiClient.Patch(path, map[string]any{"product_line_ids": []string{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "an edit to no product lines is refused: %s", body)
+	assert.Equal(t, 422, status, "an edit to no product lines is refused: %s", body)
 	assert.Equal(t, "product_line_ids", errorParam(body))
 
 	status, read := readAccess(t, path)

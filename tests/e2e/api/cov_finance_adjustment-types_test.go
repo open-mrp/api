@@ -106,10 +106,10 @@ func TestCovFinanceAdjustmentTypes_LimitParam(t *testing.T) {
 
 func TestCovFinanceAdjustmentTypes_LimitMax(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"limit": {"1000"}})
+	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"limit": {"100"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	list, _, err := apiClient.GetList(covFinanceAdjustmentTypesPath, url.Values{"limit": {"1000"}})
+	list, _, err := apiClient.GetList(covFinanceAdjustmentTypesPath, url.Values{"limit": {"100"}})
 	require.NoError(t, err)
 	assert.LessOrEqual(t, len(list.Data), 1000)
 }

@@ -223,7 +223,7 @@ func TestItemSettings_RejectsUnworkableOverrides(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body := putItemSetting(t, itemID, tc.body)
-			assert.Equal(t, 400, status, "body: %s", string(body))
+			assertClientRejection(t, status, body, "body: %s", string(body))
 		})
 	}
 
@@ -241,7 +241,7 @@ func TestItemSettings_RejectsUnknownItem(t *testing.T) {
 	status, body := putItemSetting(t, "it_doesnotexist0000", map[string]any{
 		"participation_status": "included",
 	})
-	assert.Contains(t, []int{400, 404}, status,
+	assert.Contains(t, []int{422, 404}, status,
 		"an override for an unknown item must be rejected, got %d: %s", status, string(body))
 }
 
@@ -298,7 +298,7 @@ func TestItemSettings_TenantIsolation(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, writeStatus, 500, "cross-tenant write must not 5xx: %s", string(writeBody))
-	assert.Contains(t, []int{400, 404}, writeStatus,
+	assert.Contains(t, []int{422, 404}, writeStatus,
 		"tenant B must not write against tenant A's item, got %d: %s", writeStatus, string(writeBody))
 
 	deleteStatus, deleteBody, err := clientB.Delete(itemSettingsPath + "/" + itemID)

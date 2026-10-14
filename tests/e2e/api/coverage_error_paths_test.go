@@ -246,7 +246,7 @@ func TestListParameters_AreRejectedByTheirQueryParameterName(t *testing.T) {
 			status, body, err := apiClient.GetListRaw(purchaseOrdersPath, tc.params)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
-			assert.Equal(t, 400, status, "%s must be rejected: %s", name, string(body))
+			assertClientRejection(t, status, body, "%s must be rejected: %s", name, string(body))
 			// Either the message quotes the parameter or the error's `param` carries it — both
 			// let a client point at the offending input; naming neither does not.
 			assert.Contains(t, string(body), tc.param,

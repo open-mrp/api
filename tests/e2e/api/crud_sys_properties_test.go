@@ -358,7 +358,7 @@ func TestSysProperties_UpdateWithoutValueKeepsTheCounter(t *testing.T) {
 
 	status, body, err = apiClient.Patch(path, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	status, body, err = apiClient.GetListRaw(path, nil)
 	require.NoError(t, err)
@@ -423,7 +423,7 @@ func TestSysProperties_UpdateIsIdempotent(t *testing.T) {
 	status, body, err := apiClient.Patch(path, map[string]any{"value": value + 1}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 
 	assert.Equal(t, value, sysPropertyValue(t, apiClient, id), "the reused key changed nothing")
 }

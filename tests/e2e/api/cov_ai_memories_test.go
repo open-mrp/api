@@ -339,7 +339,7 @@ func TestCovAiMemories_ListCategoryFilter(t *testing.T) {
 		"content":  uniqueName("category-filter-target"),
 	})
 
-	list, _, err := apiClient.GetList(agentMemoriesPath, url.Values{"category": {"instruction"}, "limit": {"1000"}})
+	list, _, err := apiClient.GetList(agentMemoriesPath, url.Values{"category": {"instruction"}, "limit": {"100"}})
 	require.NoError(t, err)
 	found := false
 	for _, item := range list.Data {
@@ -366,7 +366,7 @@ func TestCovAiMemories_ListEntityTypeFilter(t *testing.T) {
 		"entity_id":   SeedProductID,
 	})
 
-	list, _, err := apiClient.GetList(agentMemoriesPath, url.Values{"entity_type": {"product"}, "limit": {"1000"}})
+	list, _, err := apiClient.GetList(agentMemoriesPath, url.Values{"entity_type": {"product"}, "limit": {"100"}})
 	require.NoError(t, err)
 	found := false
 	for _, item := range list.Data {
@@ -529,7 +529,7 @@ func TestCovAiMemories_CreateValidation_EntityTypeTooLong(t *testing.T) {
 		"entity_type": string(longType),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "entity_type")
 }
@@ -542,7 +542,7 @@ func TestCovAiMemories_CreateValidation_EntityTypeExplicitNullRejected(t *testin
 		"entity_type": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "entity_type")
 }
@@ -555,7 +555,7 @@ func TestCovAiMemories_CreateValidation_EntityIDExplicitNullRejected(t *testing.
 		"entity_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "entity_id")
 }
@@ -568,7 +568,7 @@ func TestCovAiMemories_CreateValidation_ImportanceExplicitNullRejected(t *testin
 		"importance": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "importance")
 }
@@ -683,7 +683,7 @@ func TestCovAiMemories_UpdateValidation_ContentExplicitNullRejected(t *testing.T
 		"content": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "content")
 }
@@ -717,7 +717,7 @@ func TestCovAiMemories_UpdateValidation_EntityTypeTooLong(t *testing.T) {
 		"entity_type": string(longType),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestCovAiMemories_UpdateValidation_ExpiresAtMalformed(t *testing.T) {

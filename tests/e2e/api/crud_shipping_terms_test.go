@@ -516,7 +516,7 @@ func TestShippingTerms_UpdateEmptyBodyRejected(t *testing.T) {
 	// Empty body should be rejected
 	patchStatus, _, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "Empty PATCH body should return 400")
+	assert.Equal(t, 422, patchStatus, "Empty PATCH body should return 422")
 
 	apiClient.Delete(shippingTermsPath + "/" + id)
 }

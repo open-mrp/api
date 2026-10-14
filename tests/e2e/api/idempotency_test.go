@@ -29,7 +29,7 @@ func TestIdempotency_CreateConflict(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)
 
-	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body2, "idempotency_key_reused", "idempotency_error")
 
 	apiClient.Delete(idempotencyTestCustomerPath + "/" + id)
 }
@@ -63,7 +63,7 @@ func TestIdempotency_UpdateConflict(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)
 
-	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body2, "idempotency_key_reused", "idempotency_error")
 
 	apiClient.Delete(path)
 }

@@ -60,7 +60,7 @@ func TestScheduledMessages_ScheduleListCancel(t *testing.T) {
 	// Canceling again is no longer allowed (not scheduled).
 	cancelResp2, err := dane.PostFull("/v1/messaging/messages/"+id+"/actions/cancel", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, cancelResp2.StatusCode, cancelResp2.Body)
+	requireStatus(t, 422, cancelResp2.StatusCode, cancelResp2.Body)
 }
 
 func TestScheduledMessages_PastTimeRejected(t *testing.T) {

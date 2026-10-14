@@ -548,7 +548,7 @@ func TestOrderCascadeAudit_JobLifecycleIsAudited(t *testing.T) {
 	}
 	require.Equal(t, "completed", jsonField(job, "status"))
 
-	completed := expectAuditFieldChange(t, jobID, "job", "update", "completed_at")
+	completed := expectAuditFieldChange(t, jobID, "async_job", "update", "completed_at")
 	assertNilField(t, completed, "old_value")
 }
 
@@ -566,9 +566,9 @@ func TestOrderCascadeAudit_JobCancelIsAudited(t *testing.T) {
 	}
 	switch jsonField(job, "status") {
 	case "cancelled":
-		expectAuditFieldChange(t, jobID, "job", "update", "cancelled_at")
+		expectAuditFieldChange(t, jobID, "async_job", "update", "cancelled_at")
 	case "completed":
-		expectAuditFieldChange(t, jobID, "job", "update", "completed_at")
+		expectAuditFieldChange(t, jobID, "async_job", "update", "completed_at")
 	default:
 		t.Fatalf("unexpected terminal status %q", jsonField(job, "status"))
 	}

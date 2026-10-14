@@ -264,7 +264,7 @@ func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testi
 	allSKUs := collectPagedItemSKUs(t, url.Values{
 		"types":              {"part"},
 		"subassembly_filter": {"all"},
-		"limit":              {"500"},
+		"limit":              {"100"},
 	})
 	require.Contains(t, allSKUs, SeedLknItemSKU, "seed baseline (all) must include LKN")
 	require.Contains(t, allSKUs, SeedSknItemSKU, "seed baseline (all) must include SKN")
@@ -273,7 +273,7 @@ func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testi
 	initialSKUs := collectPagedItemSKUs(t, url.Values{
 		"types":              {"part"},
 		"subassembly_filter": {"initial_only"},
-		"limit":              {"500"},
+		"limit":              {"100"},
 	})
 
 	assert.Contains(t, initialSKUs, SeedLknItemSKU, "LKN (Large Knitted Sock) must appear in initial_only results")

@@ -174,7 +174,7 @@ func TestCovMessagingEmailDomains_CreateValidation_MissingDomain(t *testing.T) {
 	// The framework-level required-field check may surface as missing_field
 	// or validation_failed depending on which layer catches it first; only
 	// assert the status per docs/patterns/e2e-test-patterns.md §8.
-	assert.Equal(t, 400, status, "missing domain should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "missing domain should return 422: %s", string(body))
 }
 
 // TestCovMessagingEmailDomains_CreateValidation_EmptyDomain covers `domain: ""`.
@@ -184,7 +184,7 @@ func TestCovMessagingEmailDomains_CreateValidation_EmptyDomain(t *testing.T) {
 		"domain": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "empty domain should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "empty domain should return 422: %s", string(body))
 }
 
 // TestCovMessagingEmailDomains_CreateValidation_NoDot covers a domain missing

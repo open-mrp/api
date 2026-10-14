@@ -347,7 +347,7 @@ func TestCovCoreSearch_List_LimitCapsResultCount(t *testing.T) {
 
 	uncapped, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
 		"types": {"sales_order"},
-		"limit": {"1000"},
+		"limit": {"100"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
@@ -585,7 +585,7 @@ func TestCovCoreSearch_Validation_TypesInvalid_MixedWithValid(t *testing.T) {
 }
 
 // TestCovCoreSearch_Validation_LimitOutOfRange covers limit=0, limit=-1, and
-// limit=1001 (validator is min=1,max=1000).
+// limit=1001 (the limit is 1 to 100).
 func TestCovCoreSearch_Validation_LimitOutOfRange(t *testing.T) {
 	t.Parallel()
 
@@ -615,11 +615,11 @@ func TestCovCoreSearch_Validation_LimitOutOfRange(t *testing.T) {
 }
 
 // TestCovCoreSearch_Validation_LimitBoundaries_Valid asserts the documented
-// boundary values (1, 1000) are accepted.
+// boundary values (1, 100) are accepted.
 func TestCovCoreSearch_Validation_LimitBoundaries_Valid(t *testing.T) {
 	t.Parallel()
 
-	for _, limit := range []string{"1", "1000"} {
+	for _, limit := range []string{"1", "100"} {
 		limit := limit
 		t.Run(limit, func(t *testing.T) {
 			t.Parallel()
@@ -712,7 +712,7 @@ func TestCovCoreSearch_Pagination_NotSupported(t *testing.T) {
 	t.Parallel()
 
 	uncapped, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"types": {"sales_order"}, "limit": {"1000"},
+		"types": {"sales_order"}, "limit": {"100"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)

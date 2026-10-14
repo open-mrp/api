@@ -569,7 +569,7 @@ func TestAccountUsers_CreateScannerMissingPasswordFails(t *testing.T) {
 		"username": username,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "scanner users (username-only) must provide a password")
+	assert.Equal(t, 422, status, "scanner users (username-only) must provide a password")
 }
 
 func TestAccountUsers_CreateNonScannerWithPasswordFails(t *testing.T) {
@@ -584,7 +584,7 @@ func TestAccountUsers_CreateNonScannerWithPasswordFails(t *testing.T) {
 		"password": "SomePassword123!",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "non-scanner users cannot set a password directly")
+	assert.Equal(t, 422, status, "non-scanner users cannot set a password directly")
 }
 
 // --- Status transitions ---
@@ -620,7 +620,7 @@ func TestAccountUsers_StatusLockAdminFails(t *testing.T) {
 	// The seeded admin account user cannot be disabled.
 	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/actions/disable", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "admin users cannot be locked")
+	assert.Equal(t, 422, status, "admin users cannot be locked")
 }
 
 func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
@@ -645,7 +645,7 @@ func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
 	// Attempting to lock a removed user must fail.
 	lockStatus, _, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 400, lockStatus, "removed users cannot be locked")
+	assert.Equal(t, 422, lockStatus, "removed users cannot be locked")
 }
 
 // --- Scanner password endpoint ---

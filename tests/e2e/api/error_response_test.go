@@ -225,8 +225,8 @@ func TestUpdateEndpoints_EmptyBodyErrorShape(t *testing.T) {
 			require.NoError(t, err, "PATCH %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
-			if statusCode != 400 {
-				t.Fatalf("PATCH %s with empty body returned %d (expected 400)", path, statusCode)
+			if statusCode != 422 {
+				t.Fatalf("PATCH %s with empty body returned %d (expected 422)", path, statusCode)
 				return
 			}
 

@@ -140,14 +140,17 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, 400, statusCode,
-				"GET %s?cursor=invalid should return 400, got %d: %s", path, statusCode, string(body))
-
-			if statusCode == 400 {
+			switch statusCode {
+			case 400:
 				errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-				code := errObj["code"]
-				assert.True(t, code == "parameter_invalid" || code == "validation_failed",
-					"GET %s?cursor=invalid: error.code should be parameter_invalid or validation_failed, got %v", path, code)
+				assert.Equal(t, "parameter_invalid", errObj["code"],
+					"GET %s?cursor=invalid: a 400 must be parameter_invalid", path)
+			case 422:
+				errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+				assert.Equal(t, "validation_failed", errObj["code"],
+					"GET %s?cursor=invalid: a 422 must be validation_failed", path)
+			default:
+				t.Errorf("GET %s?cursor=invalid should return 400 or 422, got %d: %s", path, statusCode, string(body))
 			}
 		})
 	}

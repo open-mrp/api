@@ -184,7 +184,7 @@ func TestParts_OmittedFields(t *testing.T) {
 			"category_id": SeedItemCategoryID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {

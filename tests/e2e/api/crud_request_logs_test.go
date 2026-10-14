@@ -499,7 +499,7 @@ func TestRequestLogs_ListFilterByMultipleActorsUnion(t *testing.T) {
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_ids": {actorA, actorB},
 		"include":   {"actor"},
-		"limit":     {"200"},
+		"limit":     {"100"},
 	})
 	require.NoError(t, err)
 
@@ -869,7 +869,7 @@ func TestRequestLogs_ListFilterByErrorCodeExcludesNonMatching(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"error_codes": {wantErrorCode},
-		"limit":       {"200"},
+		"limit":       {"100"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, filtered.Data, "Filtering by error_code=%s should return at least one log", wantErrorCode)

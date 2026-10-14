@@ -162,7 +162,7 @@ func TestPickParity_VoidLine_RefusesAPackedLine(t *testing.T) {
 
 	status, body, err := apiClient.Put(picksPath+"/"+pickID+"/lines/"+line+"/actions/void", nil)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "voiding a packed line is a validation error: %s", string(body))
+	require.Equal(t, 422, status, "voiding a packed line is a validation error: %s", string(body))
 	assert.Contains(t, strings.ToLower(string(body)), "packed")
 	assert.InDelta(t, 5.0, pickLineQuantity(t, pickID, line), 0.001, "the packed quantity is untouched")
 }
@@ -174,7 +174,7 @@ func TestPickParity_UpdateLine_RefusesAPackedLine(t *testing.T) {
 	status, body, err := apiClient.Patch(picksPath+"/"+pickID+"/lines/"+line,
 		map[string]any{"quantity_value": "2"}, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "editing a packed line is a validation error: %s", string(body))
+	require.Equal(t, 422, status, "editing a packed line is a validation error: %s", string(body))
 	assert.Contains(t, strings.ToLower(string(body)), "packed")
 	assert.InDelta(t, 5.0, pickLineQuantity(t, pickID, line), 0.001, "the packed quantity still matches its shipment line")
 }
@@ -194,7 +194,7 @@ func TestPickParity_Pack_RefusesAFinishedPick(t *testing.T) {
 	status, body, err := apiClient.Post(picksPath+"/"+pickID+"/actions/pack",
 		map[string]any{"shipment_case_count": 1}, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "packing a finished pick is refused at accept: %s", string(body))
+	require.Equal(t, 422, status, "packing a finished pick is refused at accept: %s", string(body))
 	assert.Contains(t, strings.ToLower(string(body)), "finished")
 	assert.Empty(t, pickShipmentNumbers(t, pickID), "no shipment was raised")
 }
@@ -259,7 +259,7 @@ func TestPickParity_Void_RefusedOnceShipped(t *testing.T) {
 
 	status, body, err := apiClient.Put(picksPath+"/"+pickID+"/actions/void", nil)
 	require.NoError(t, err)
-	require.Equal(t, 400, status, "voiding a pick whose order has a shipment is refused: %s", string(body))
+	require.Equal(t, 422, status, "voiding a pick whose order has a shipment is refused: %s", string(body))
 	assert.Contains(t, strings.ToLower(string(body)), "shipped")
 	assert.InDelta(t, 5.0, pickLineQuantity(t, pickID, line), 0.001)
 	assert.True(t, pickIsFinished(t, pickID), "the refused void leaves the pick finished")
@@ -298,7 +298,7 @@ func TestPickParity_ReopenOrder_KeepsShippedLinesPacked(t *testing.T) {
 
 	status, body, err := apiClient.Put(picksPath+"/"+pickID+"/lines/"+shippedLine+"/actions/void", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "the shipped line cannot be voided: %s", string(body))
+	assert.Equal(t, 422, status, "the shipped line cannot be voided: %s", string(body))
 
 	// Finishing the order ships exactly the four still outstanding.
 	pickAllLines(t, pickID)

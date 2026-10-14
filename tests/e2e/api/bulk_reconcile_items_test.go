@@ -321,7 +321,7 @@ func TestBulkReconcileItems_RejectsAMissingReconcileType(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing reconcile type is a client error: %s", string(body))
-	assert.Equal(t, 400, status, "reconcile_type is required: %s", string(body))
+	assert.Equal(t, 422, status, "reconcile_type is required: %s", string(body))
 }
 
 func TestBulkReconcileItems_RejectsMissingData(t *testing.T) {
@@ -332,7 +332,7 @@ func TestBulkReconcileItems_RejectsMissingData(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing data array is a client error: %s", string(body))
-	assert.Equal(t, 400, status, "data is required: %s", string(body))
+	assert.Equal(t, 422, status, "data is required: %s", string(body))
 }
 
 // The three row fields are documented as required, but only the quantity is enforced up front. A
@@ -377,7 +377,7 @@ func TestBulkReconcileItems_RejectsAMalformedQuantity(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a malformed quantity is a client error: %s", string(body))
-	assert.Equal(t, 400, status, "quantity must be a decimal: %s", string(body))
+	assert.Equal(t, 422, status, "quantity must be a decimal: %s", string(body))
 }
 
 func TestBulkReconcileItems_RejectsAnUnknownBodyField(t *testing.T) {

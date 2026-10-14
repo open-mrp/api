@@ -100,7 +100,7 @@ func TestCovAuthLogin_ThrottleExceeded(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 429, status, body)
 
-	requireErrorResponse(t, body, "rate_limit_exceeded", "invalid_request_error")
+	requireErrorResponse(t, body, "rate_limited", "invalid_request_error")
 }
 
 // ──────────────────────────────────────────────
@@ -162,5 +162,5 @@ func TestCovAuthLogin_IdempotencyConflictDifferentBody(t *testing.T) {
 	}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)
-	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body2, "idempotency_key_reused", "idempotency_error")
 }

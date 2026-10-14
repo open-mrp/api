@@ -165,10 +165,10 @@ func TestScheduledMessages_RescheduleRefusals(t *testing.T) {
 		{"a role holding messaging:create alone", creator, messageID, map[string]any{"scheduled_at": future}, http.StatusForbidden, "insufficient_permissions", ""},
 		{"someone else's scheduled message", stranger, messageID, map[string]any{"scheduled_at": future}, http.StatusNotFound, "resource_not_found", ""},
 		{"a message that does not exist", author, "mg_01e2edoesnotexist00", map[string]any{"scheduled_at": future}, http.StatusNotFound, "resource_not_found", ""},
-		{"a canceled message", author, canceledID, map[string]any{"scheduled_at": future}, http.StatusBadRequest, "validation_failed", ""},
+		{"a canceled message", author, canceledID, map[string]any{"scheduled_at": future}, http.StatusUnprocessableEntity, "validation_failed", ""},
 		{"a time that has passed", author, messageID, map[string]any{"scheduled_at": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)}, http.StatusBadRequest, "parameter_invalid", "scheduled_at"},
-		{"no time", author, messageID, map[string]any{"body": "x"}, http.StatusBadRequest, "", "scheduled_at"},
-		{"a blank body", author, messageID, map[string]any{"scheduled_at": future, "body": ""}, http.StatusBadRequest, "invalid_format", "body"},
+		{"no time", author, messageID, map[string]any{"body": "x"}, http.StatusUnprocessableEntity, "", "scheduled_at"},
+		{"a blank body", author, messageID, map[string]any{"scheduled_at": future, "body": ""}, http.StatusUnprocessableEntity, "validation_failed", "body"},
 	}
 	for _, tc := range cases {
 		status, body, err := tc.client.Post(reschedulePath(tc.id), tc.body, newIdempotencyKey())

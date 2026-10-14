@@ -427,7 +427,7 @@ func TestCarrierTransit_ServiceLevelDefaultIsConfigurable(t *testing.T) {
 			map[string]any{"default_transit_days": -1}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, patchStatus, 500, "a bad value must not 5xx: %s", string(patchBody))
-		assert.Equal(t, 400, patchStatus, "body: %s", string(patchBody))
+		assert.Equal(t, 422, patchStatus, "body: %s", string(patchBody))
 	})
 }
 

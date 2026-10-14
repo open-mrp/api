@@ -442,7 +442,7 @@ func TestBatchScanning_ChainMovesInventoryAtEveryScan(t *testing.T) {
 
 	// Initializing twice is refused.
 	requireScanError(t, "initialize", map[string]any{"batch_id": planned, "scanning_station_id": c.initStation},
-		400, "This batch has been scanned already.")
+		422, "This batch has been scanned already.")
 
 	// Move: a new batch of B, already scanned, made from the whole of A, which closes.
 	moved := moveScan(t, c.moveStation, c.moveStep, planned)
@@ -461,7 +461,7 @@ func TestBatchScanning_ChainMovesInventoryAtEveryScan(t *testing.T) {
 
 	// The source is used up, so moving it again finds nothing waiting at the step.
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{planned}, "production_step_id": c.moveStep, "scanning_station_id": c.moveStation},
-		400, "Batch not compatible with production step.")
+		422, "Batch not compatible with production step.")
 
 	// Split, scanned by the batch first initialized: the flow is followed to B.
 	requireRemaining(t, c.splitStep, "10", unitEach, planned)
@@ -485,7 +485,7 @@ func TestBatchScanning_ChainMovesInventoryAtEveryScan(t *testing.T) {
 	secondID := jsonField(second, "id")
 	requireClosed(t, planned, movedID)
 	status, _, raw := remainingToSplit(t, c.splitStep, planned)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	waitForOnHand(t, c.c.id, "8")
 	waitForOnHand(t, c.b.id, "0")
 
@@ -520,7 +520,7 @@ func TestBatchScanning_SplitCanCloseTheSourceEarly(t *testing.T) {
 	mustScan(t, "split", splitBody(c.splitStation, c.splitStep, []string{moved}, "2", "", "", true))
 	requireClosed(t, moved, moved)
 	requireScanError(t, "split", splitBody(c.splitStation, c.splitStep, []string{moved}, "1", "", "", false),
-		400, "Batch not compatible with production step.")
+		422, "Batch not compatible with production step.")
 }
 
 func TestBatchScanning_RejectsWhatTheStationCannotDo(t *testing.T) {
@@ -532,9 +532,9 @@ func TestBatchScanning_RejectsWhatTheStationCannotDo(t *testing.T) {
 	initializeScan(t, second, c.initStation, nil)
 
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{}, "production_step_id": c.moveStep, "scanning_station_id": c.moveStation},
-		400, "No batches to move.")
+		422, "No batches to move.")
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{first, second}, "production_step_id": c.moveStep, "scanning_station_id": c.moveStation},
-		400, "Single-part production step can only accept one batch at a time.")
+		422, "Single-part production step can only accept one batch at a time.")
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{first}, "production_step_id": c.moveStep, "scanning_station_id": "sgsn_doesnotexist"},
 		404, "Scanning Station not found.")
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{first}, "production_step_id": "prst_doesnotexist", "scanning_station_id": c.moveStation},
@@ -542,9 +542,9 @@ func TestBatchScanning_RejectsWhatTheStationCannotDo(t *testing.T) {
 
 	moved := jsonField(moveScan(t, c.moveStation, c.moveStep, first), "id")
 	requireScanError(t, "split", splitBody(c.splitStation, c.splitStep, []string{moved}, "0", "0", "", false),
-		400, "No quantity to split.")
+		422, "No quantity to split.")
 	requireScanError(t, "split", splitBody(c.splitStation, c.splitStep, []string{moved, moved}, "1", "", "", false),
-		400, "Duplicate batches provided.")
+		422, "Duplicate batches provided.")
 }
 
 // ──────────────────────────────────────────────
@@ -600,9 +600,9 @@ func TestBatchScanning_MultiPartMoveNeedsEveryPartInStep(t *testing.T) {
 		return map[string]any{"batch_ids": ids, "production_step_id": f.step, "scanning_station_id": f.station}
 	}
 	// The material is consumed, not scanned in, so the part is all that is missing.
-	requireScanError(t, "move", move(p1), 400, "Missing required part: "+f.p2.sku)
-	requireScanError(t, "move", move(p1, p2Short), 400, "All batches must have the same measure.")
-	requireScanError(t, "move", move(p1, p1), 400, "Duplicate batches provided.")
+	requireScanError(t, "move", move(p1), 422, "Missing required part: "+f.p2.sku)
+	requireScanError(t, "move", move(p1, p2Short), 422, "All batches must have the same measure.")
+	requireScanError(t, "move", move(p1, p1), 422, "Duplicate batches provided.")
 
 	assembled := mustScan(t, "move", move(p1, p2))
 	assertDecimalEqual(t, "5", jsonField(jsonObject(assembled, "quantity"), "value"), "assembled quantity")
@@ -625,7 +625,7 @@ func TestBatchScanning_MultiPartSplitAndRemaining(t *testing.T) {
 
 	requireRemaining(t, f.step, "6", unitEach, p1, p2)
 	status, got, raw := postScan(t, "split", splitBody(f.station, f.step, []string{p1}, "1", "", "", false))
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assert.Equal(t, "Cannot split a single batch.", jsonField(jsonObject(got, "error"), "message"))
 
 	mustScan(t, "split", splitBody(f.station, f.step, []string{p1, p2}, "2", "1", "", false))
@@ -639,7 +639,7 @@ func TestBatchScanning_MultiPartSplitAndRemaining(t *testing.T) {
 	requireClosed(t, p1, p1)
 	requireOpen(t, p2, p2)
 	status, got, raw = remainingToSplit(t, f.step, p1, p2)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assert.Equal(t, "Batch not compatible with production step.", jsonField(jsonObject(got, "error"), "message"))
 	waitForOnHand(t, f.out.id, "5")
 }
@@ -667,7 +667,7 @@ func TestBatchScanning_MergeSinglePartTotalsTheBatches(t *testing.T) {
 	initializeScan(t, seven, initStation, nil)
 
 	requireScanError(t, "merge", map[string]any{"batch_ids": []string{}, "production_step_id": mergeStep, "scanning_station_id": mergeStation},
-		400, "No batches to merge.")
+		422, "No batches to merge.")
 
 	merged := mustScan(t, "merge", map[string]any{"batch_ids": []string{five, seven}, "production_step_id": mergeStep, "scanning_station_id": mergeStation})
 	// 12 of the part make 24 at two per part.
@@ -691,8 +691,8 @@ func TestBatchScanning_MergeMultiPartTotalsEachPart(t *testing.T) {
 	merge := func(ids ...string) map[string]any {
 		return map[string]any{"batch_ids": ids, "production_step_id": f.step, "scanning_station_id": f.station}
 	}
-	requireScanError(t, "merge", merge(p1a, p1b), 400, "Missing required part: "+f.p2.sku)
-	requireScanError(t, "merge", merge(p1a, p1b, p2Short), 400, "All batches must have the same measure.")
+	requireScanError(t, "merge", merge(p1a, p1b), 422, "Missing required part: "+f.p2.sku)
+	requireScanError(t, "merge", merge(p1a, p1b, p2Short), 422, "All batches must have the same measure.")
 
 	merged := mustScan(t, "merge", merge(p1a, p1b, p2))
 	assertDecimalEqual(t, "5", jsonField(jsonObject(merged, "quantity"), "value"), "merged quantity")
@@ -745,7 +745,7 @@ func TestBatchScanning_QuantitiesConvertIntoTheStepsUnit(t *testing.T) {
 			"firsts": map[string]any{"measure": measure, "unit_id": unitID}, "close_batch": false,
 		}
 	}
-	requireScanError(t, "split", splitIn("4", unitEach), 400, "Produced unit mismatch.")
+	requireScanError(t, "split", splitIn("4", unitEach), 422, "Produced unit mismatch.")
 
 	split := mustScan(t, "split", splitIn("2", SeedPairUnitID))
 	assertDecimalEqual(t, "2", jsonField(jsonObject(split, "quantity"), "value"), "split firsts as entered")
@@ -770,7 +770,7 @@ func TestBatchScanning_RemainingRefusesAStepNotWrittenInItsBaseUnit(t *testing.T
 	initializeScan(t, planned, initStation, nil)
 
 	status, got, raw := remainingToSplit(t, splitStep, planned)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assert.Equal(t, "Produced unit mismatch.", jsonField(jsonObject(got, "error"), "message"))
 }
 
@@ -848,9 +848,9 @@ func TestBatchScanning_InitializeAsAnotherStationType(t *testing.T) {
 	// Two do: the operator has to pick, and the pick has to be one of them.
 	ambiguous := planScanBatch(t, other.id, "2", unitEach)
 	requireScanError(t, "initialize", map[string]any{"batch_id": ambiguous, "scanning_station_id": ambiguousStation, "type_override": "init_batch"},
-		400, "Multiple production steps match. Please select one.")
+		422, "Multiple production steps match. Please select one.")
 	requireScanError(t, "initialize", map[string]any{"batch_id": ambiguous, "scanning_station_id": ambiguousStation, "type_override": "init_batch", "production_step_id": only},
-		400, "Selected production step is not valid for this scanning station and part.")
+		422, "Selected production step is not valid for this scanning station and part.")
 
 	status, raw, err := apiClient.Post(batchesPath+"/"+ambiguous+"/init-steps", map[string]any{"scanning_station_id": ambiguousStation}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -906,7 +906,7 @@ func TestBatchScanning_ConsumptionPreviewForEachStationType(t *testing.T) {
 		"batch_ids": []string{planned}, "production_step_id": c.splitStep,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assert.Equal(t, "Split quantity not found.", jsonField(jsonObject(parseJSON(raw), "error"), "message"))
 }
 
@@ -967,7 +967,7 @@ func TestBatchScanning_UndoIsRefusedWhileALaterScanHoldsTheBatch(t *testing.T) {
 
 	status, raw, err := apiClient.Delete(batchesPath + "/" + planned)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assert.Equal(t, "This batch has already been used by a later scan. Delete that batch first.", jsonField(jsonObject(parseJSON(raw), "error"), "message"))
 
 	deleteBatch(t, moved)

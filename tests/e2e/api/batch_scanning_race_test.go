@@ -71,7 +71,7 @@ func requireScansWon(t *testing.T, action string, results []scanRaceResult, want
 		if r.status == http.StatusCreated {
 			continue
 		}
-		require.Equal(t, http.StatusBadRequest, r.status, "a %s that lost the race is refused, not failed: %s", action, r)
+		require.Equal(t, http.StatusUnprocessableEntity, r.status, "a %s that lost the race is refused, not failed: %s", action, r)
 		assert.Equal(t, refusal, jsonField(jsonObject(parseJSON(r.body), "error"), "message"), "a %s that lost the race", action)
 	}
 	return won
@@ -81,7 +81,7 @@ func requireScansWon(t *testing.T, action string, results []scanRaceResult, want
 func repeatRefusal(t *testing.T, action string, body map[string]any) string {
 	t.Helper()
 	status, got, raw := postScan(t, action, body)
-	requireStatus(t, http.StatusBadRequest, status, raw)
+	requireStatus(t, http.StatusUnprocessableEntity, status, raw)
 	return jsonField(jsonObject(got, "error"), "message")
 }
 

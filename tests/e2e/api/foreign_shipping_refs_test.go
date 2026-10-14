@@ -157,7 +157,7 @@ func TestForeignShippingRefs_SalesOrderCreateRefusesAForeignServiceLevel(t *test
 	if status == 201 {
 		deleteOrder(t, jsonField(parseJSON(resp), "id"))
 	}
-	requireStatus(t, 400, status, resp)
+	requireStatus(t, 422, status, resp)
 	assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), "service_level_id")
 }
 

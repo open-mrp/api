@@ -146,7 +146,7 @@ func TestShipmentsAdmin_TrackingOverrideRejectsAnUnshippedShipment(t *testing.T)
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+adminUpdateTrackingAction,
 		map[string]any{"master_tracking_number": "1Z-TOO-EARLY"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "has not been shipped yet",
 		"the override is only for a dispatch that already happened")
 }
@@ -187,7 +187,7 @@ func TestShippingCasesAdmin_TrackingOverrideRejectsAnUnshippedCase(t *testing.T)
 	status, body, err := apiClient.Post(shippingCasesPath+"/"+caseIDs[0]+adminUpdateTrackingAction,
 		map[string]any{"tracking_number": "1Z-TOO-EARLY"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "has not been shipped yet",
 		"the override is only for a case that already went out")
 }

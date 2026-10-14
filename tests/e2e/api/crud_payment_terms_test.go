@@ -312,7 +312,7 @@ func TestPaymentTerms_UpdateEmptyBodyRejected(t *testing.T) {
 
 	patchStatus, _, err := apiClient.Patch(paymentTermsPath+"/"+id, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "Empty PATCH body should return 400")
+	assert.Equal(t, 422, patchStatus, "Empty PATCH body should return 422")
 
 	apiClient.Delete(paymentTermsPath + "/" + id)
 }

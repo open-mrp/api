@@ -433,7 +433,7 @@ func TestUnits_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assert.Equal(t, "units[1].name", errObj["param"])
-	assert.Contains(t, errObj["message"], "duplicate name")
+	assert.Contains(t, errorMessages(errObj), "duplicate name")
 }
 
 func TestUnits_BulkUpsert_DuplicateAbbreviationInRequest(t *testing.T) {
@@ -450,7 +450,7 @@ func TestUnits_BulkUpsert_DuplicateAbbreviationInRequest(t *testing.T) {
 		"duplicate abbreviation in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assert.Equal(t, "units[1].abbreviation", errObj["param"])
-	assert.Contains(t, errObj["message"], "duplicate abbreviation")
+	assert.Contains(t, errorMessages(errObj), "duplicate abbreviation")
 }
 
 func TestUnits_BulkUpsert_ZeroRatioDenominator(t *testing.T) {

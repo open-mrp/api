@@ -418,7 +418,7 @@ func TestDashShipments_UpdateValidation(t *testing.T) {
 	} {
 		status, body, err := apiClient.Patch(path, tc.body, newIdempotencyKey())
 		require.NoError(t, err)
-		if assert.Equal(t, 400, status, "%s: %s", tc.name, string(body)) {
+		if assert.Equal(t, 422, status, "%s: %s", tc.name, string(body)) {
 			assert.Equal(t, tc.param, requireErrorResponse(t, body, "", "invalid_request_error")["param"], tc.name)
 		}
 	}
@@ -494,7 +494,7 @@ func TestDashShipments_UpdateReplayDoesNotReapply(t *testing.T) {
 	status, body, err = apiClient.Patch(path, map[string]any{"note": "different body"}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 }
 
 // --- ship ---
@@ -525,7 +525,7 @@ func TestDashShipments_ShipReplayShipsOnce(t *testing.T) {
 
 	different := dashShipmentsAction(t, shipmentID, "ship", map[string]any{"email_customer": true}, key)
 	requireStatus(t, 422, different.StatusCode, different.Body)
-	requireErrorResponse(t, different.Body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, different.Body, "idempotency_key_reused", "idempotency_error")
 
 	voided := dashShipmentsAction(t, shipmentID, "void", nil, newIdempotencyKey())
 	requireStatus(t, 200, voided.StatusCode, voided.Body)
@@ -648,8 +648,8 @@ func TestDashShipments_AdminTrackingValidatesRouting(t *testing.T) {
 	}{
 		{"unknown carrier", map[string]any{"carrier_id": "cr_doesnotexist0000"}, 404},
 		{"unknown service level", map[string]any{"service_level_id": "crop_doesnotexist000"}, 404},
-		{"tracking over 255", map[string]any{"master_tracking_number": strings.Repeat("x", 256)}, 400},
-		{"null carrier", map[string]any{"carrier_id": nil}, 400},
+		{"tracking over 255", map[string]any{"master_tracking_number": strings.Repeat("x", 256)}, 422},
+		{"null carrier", map[string]any{"carrier_id": nil}, 422},
 	} {
 		status, body, err := apiClient.Post(path, tc.body, newIdempotencyKey())
 		require.NoError(t, err)
@@ -748,10 +748,10 @@ func TestDashShipments_CaseUpdateValidation(t *testing.T) {
 		body   map[string]any
 		status int
 	}{
-		{"non-numeric weight", map[string]any{"freight_weight_value": "heavy"}, 400},
-		{"non-numeric amount", map[string]any{"freight_amount_value": "lots"}, 400},
-		{"null weight", map[string]any{"freight_weight_value": nil}, 400},
-		{"tracking over 255", map[string]any{"tracking_number": strings.Repeat("x", 256)}, 400},
+		{"non-numeric weight", map[string]any{"freight_weight_value": "heavy"}, 422},
+		{"non-numeric amount", map[string]any{"freight_amount_value": "lots"}, 422},
+		{"null weight", map[string]any{"freight_weight_value": nil}, 422},
+		{"tracking over 255", map[string]any{"tracking_number": strings.Repeat("x", 256)}, 422},
 		{"unknown weight unit", map[string]any{"freight_weight_unit_id": "un_doesnotexist0000"}, 404},
 	} {
 		status, body, err := apiClient.Patch(path, tc.body, newIdempotencyKey())
@@ -824,7 +824,7 @@ func TestDashShipments_RateShopValidation(t *testing.T) {
 	} {
 		status, body, err := apiClient.Post(rateShopPath, tc.body, newIdempotencyKey())
 		require.NoError(t, err)
-		if assert.Equal(t, 400, status, "%s: %s", tc.name, string(body)) {
+		if assert.Equal(t, 422, status, "%s: %s", tc.name, string(body)) {
 			errObj := requireErrorResponse(t, body, tc.code, "invalid_request_error")
 			assert.Equal(t, tc.param, errObj["param"], tc.name)
 		}

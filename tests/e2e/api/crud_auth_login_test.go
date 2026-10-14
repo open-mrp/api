@@ -161,7 +161,7 @@ func TestLogin_EmptyBody(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(loginPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// Multiple missing fields may produce validation_failed or missing_field
 	requireErrorResponse(t, body, "", "invalid_request_error")
@@ -200,7 +200,7 @@ func TestLogin_PasswordTooLong(t *testing.T) {
 		"password":   strings.Repeat("a", 73),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	requireErrorResponse(t, body, "", "invalid_request_error")
 }

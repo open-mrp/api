@@ -161,7 +161,7 @@ func TestPicks_Void_RejectedWhenOrderHasShipments(t *testing.T) {
 	status, body, err := apiClient.Put(picksPath+"/"+SeedPickID+"/actions/void", nil)
 	require.NoError(t, err)
 	assert.Less(t, status, 500, "shipped-items guard must not 5xx: %s", string(body))
-	require.Equal(t, 400, status, "expected a validation error, got %d: %s", status, string(body))
+	require.Equal(t, 422, status, "expected a validation error, got %d: %s", status, string(body))
 	assert.Contains(t, strings.ToLower(string(body)), "shipped",
 		"error should name the shipped-items guard")
 }
@@ -259,7 +259,7 @@ func TestPicks_Pack_RejectsCaseCountBelowOne(t *testing.T) {
 		map[string]any{"shipment_case_count": 0}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Less(t, status, 500, "validation must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "shipment_case_count must be >= 1")
+	assert.Equal(t, 422, status, "shipment_case_count must be >= 1")
 }
 
 // --- pick line quantity unit ----------------------------------------------

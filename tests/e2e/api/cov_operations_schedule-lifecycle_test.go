@@ -249,7 +249,7 @@ func TestScheduleLifecycle_AddLineRejectsWeekOutsideHorizon(t *testing.T) {
 		"quantity":   100,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "week_index")
 }
 
@@ -460,7 +460,7 @@ func TestScheduleLifecycle_FrozenEditRequiresReason(t *testing.T) {
 	status, body, err = apiClient.Patch(schedulePath(scheduleID)+"/lines/"+lineID,
 		map[string]any{"quantity": 500}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "reason")
 
 	// With one it succeeds and is recorded as a frozen-week deviation.
@@ -574,7 +574,7 @@ func TestScheduleLifecycle_PublishTwiceIsRejected(t *testing.T) {
 
 	status, body, err = apiClient.Put(schedulePath(scheduleID)+"/actions/publish", map[string]any{})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // ──────────────────────────────────────────────
@@ -624,7 +624,7 @@ func TestScheduleLifecycle_DeletePublishedIsRejected(t *testing.T) {
 
 	status, body, err = apiClient.Delete(schedulePath(scheduleID))
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "Archive")
 }
 
@@ -643,7 +643,7 @@ func TestScheduleLifecycle_EditArchivedIsRejected(t *testing.T) {
 	status, body, err = apiClient.Patch(schedulePath(scheduleID)+"/lines/"+lineID,
 		map[string]any{"quantity": 800}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // plannedItem returns a SKU the version actually planned, with the machine it runs on.
@@ -814,7 +814,7 @@ func TestScheduleLifecycle_ZeroQuantityIsRejected(t *testing.T) {
 	status, body, err := apiClient.Patch(schedulePath(scheduleID)+"/lines/"+lineID,
 		map[string]any{"quantity": 0}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // Overriding an empty slot is a create, and the plan has to show it in that week afterwards rather than only in the deviation log.

@@ -36,7 +36,7 @@ func TestRedaction_LegalHoldBlocksThenAllowsRedaction(t *testing.T) {
 	// Redaction is refused while held.
 	resp, err = admin.PostFull(redactPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	requireStatus(t, 422, resp.StatusCode, resp.Body)
 
 	// Release the hold.
 	resp, err = admin.PostFull(holdPath, map[string]any{"legal_hold": "released"}, newIdempotencyKey())

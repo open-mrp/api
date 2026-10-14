@@ -174,12 +174,12 @@ func TestChatGroup_DMCannotBeManaged(t *testing.T) {
 
 	patch, err := user.PatchFull(conversationsPath+"/"+convID, map[string]any{"title": "nope"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, patch.StatusCode, patch.Body)
+	requireStatus(t, 422, patch.StatusCode, patch.Body)
 
 	add, err := user.PostFull(conversationsPath+"/"+convID+"/participants",
 		map[string]any{"account_user_id": SeedAccountUserID}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, add.StatusCode, add.Body)
+	requireStatus(t, 422, add.StatusCode, add.Body)
 }
 
 func TestChatGroup_BlockPreventsDM(t *testing.T) {

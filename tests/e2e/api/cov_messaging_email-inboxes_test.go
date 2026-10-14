@@ -213,11 +213,11 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
 		status, body, err := apiClient.Post(covMessagingEmailInboxesPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 422 || status == 422,
+		assert.True(t, status == 422,
 			"missing email_domain_id and address should return 400 or 422, got %d: %s", status, string(body))
 		errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-		assert.Contains(t, errObj["message"], "email_domain_id")
-		assert.Contains(t, errObj["message"], "address")
+		assert.Contains(t, errorMessages(errObj), "email_domain_id")
+		assert.Contains(t, errorMessages(errObj), "address")
 	})
 
 	t.Run("CreateMissingAddressOnly", func(t *testing.T) {
@@ -225,7 +225,7 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 			"email_domain_id": SeedEmailDomainID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 422 || status == 422,
+		assert.True(t, status == 422,
 			"missing address should return 400 or 422, got %d: %s", status, string(body))
 	})
 
@@ -612,7 +612,7 @@ func TestCovMessagingEmailInboxes_UpdateValidation_MissingStatus(t *testing.T) {
 		"from_name": "X",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422 || status == 422, "missing status should return 400 or 422, got %d: %s", status, string(respBody))
+	assert.True(t, status == 422, "missing status should return 400 or 422, got %d: %s", status, string(respBody))
 	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "status")
 }

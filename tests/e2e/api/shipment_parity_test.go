@@ -258,7 +258,7 @@ func TestShipmentParity_RefusedRefundStopsTheVoid(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	status, body = voidParity(t, shipmentID)
-	assert.Equal(t, 400, status, "the carrier refused the refund: %s", string(body))
+	assert.Equal(t, 422, status, "the carrier refused the refund: %s", string(body))
 
 	assert.Equal(t, "shipped", jsonField(readShipment(t, shipmentID), "status"), "nothing is unwound")
 	cases := shipmentCases(t, shipmentID)

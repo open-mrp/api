@@ -245,7 +245,7 @@ func TestCovMessagingMessages_UpdateDraftIdempotencyKeyConflict(t *testing.T) {
 	status2, body2, err := dane.Patch(path, map[string]any{"body": uniqueName("idem body B")}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)
-	requireErrorResponse(t, body2, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body2, "idempotency_key_reused", "idempotency_error")
 }
 
 // ──────────────────────────────────────────────
@@ -321,7 +321,7 @@ func TestCovMessagingMessages_ApproveSendDraftValidation(t *testing.T) {
 	t.Run("missing client_message_id", func(t *testing.T) {
 		status, body, err := dane.Post("/v1/messaging/messages/"+draftID+"/actions/approve-send", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("unknown message id 404s", func(t *testing.T) {

@@ -257,7 +257,7 @@ func TestSalesOrderMetadata_FiftyKeyLimitAppliesToTheMergedResult(t *testing.T) 
 
 	// One more key in a request that is itself valid pushes the object over the limit; nothing is written.
 	status, body := patchStatus(t, path, map[string]any{"note": "must not stick", "metadata": map[string]any{"k50": "v"}})
-	assert.Equal(t, 400, status, "%v", body)
+	assert.Equal(t, 422, status, "%v", body)
 	assert.Equal(t, "metadata", errParam(body))
 	assert.Len(t, orderMetadata(t, orderID), 50, "the rejected update is rolled back")
 	assert.NotEqual(t, "must not stick", getSalesOrder(t, orderID, url.Values{})["note"], "the whole update is rolled back")
@@ -303,7 +303,7 @@ func TestSalesOrderMetadata_InvalidMapsAreRejected(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			status, body := patchStatus(t, path, map[string]any{"metadata": tc.metadata})
-			require.Equal(t, 400, status, "%v", body)
+			require.Equal(t, 422, status, "%v", body)
 			if tc.param != "" {
 				assert.Equal(t, tc.param, errParam(body))
 			}
@@ -332,7 +332,7 @@ func TestSalesOrderMetadata_InvalidMapOnCreateIsRejected(t *testing.T) {
 			if status == 201 {
 				_, _, _ = apiClient.Delete(salesOrdersPath + "/" + jsonField(parseJSON(b), "id"))
 			}
-			assert.Equal(t, 400, status, string(b))
+			assert.Equal(t, 422, status, string(b))
 		})
 	}
 }
@@ -400,7 +400,7 @@ func TestSalesOrderLineMetadata_CreateAndUpdateSemantics(t *testing.T) {
 	}
 
 	status, body := patchStatus(t, linePath, map[string]any{"metadata": map[string]any{"a]": "v"}})
-	assert.Equal(t, 400, status, "%v", body)
+	assert.Equal(t, 422, status, "%v", body)
 	assert.Equal(t, "metadata[a]]", errParam(body))
 }
 
@@ -465,7 +465,7 @@ func TestInvoiceMetadata_UpdateSemantics(t *testing.T) {
 	step("null clears", map[string]any{"metadata": nil}, map[string]any{})
 
 	status, body := patchStatus(t, path, map[string]any{"metadata": map[string]any{"k": strings.Repeat("v", 501)}})
-	assert.Equal(t, 400, status, "%v", body)
+	assert.Equal(t, 422, status, "%v", body)
 	assert.Equal(t, "metadata[k]", errParam(body))
 }
 

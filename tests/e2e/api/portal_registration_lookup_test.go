@@ -146,7 +146,7 @@ func TestPortalRegistrationLookup_RequiresNumberAndZIP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			_, status, body := completeExistingLookup(t, tc.data)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			assert.Equal(t, tc.param, jsonField(jsonObject(parseJSON(body), "error"), "param"))
 		})
 	}
@@ -182,7 +182,7 @@ func TestPortalRegistrationLookup_OneShotRegisterNeedsTheZIPToo(t *testing.T) {
 		"customer_number":      SeedCustomerNumber,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	status, body, err = buyer.Post("/v1/sales/customers/registration", map[string]any{
 		"account_slug":         SeedAccountSlug,

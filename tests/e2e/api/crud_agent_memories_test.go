@@ -32,7 +32,7 @@ func TestAgentMemories_ImportanceRejectsOutOfRangeAndNonTenthIncrements(t *testi
 			"importance": importance,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, respBody)
+		requireStatus(t, 422, status, respBody)
 	}
 }
 
@@ -69,7 +69,7 @@ func TestAgentMemories_UpdateImportanceValidated(t *testing.T) {
 
 	status, respBody, err := apiClient.Patch(agentMemoriesPath+"/"+id, map[string]any{"importance": 0.05}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	status, respBody, err = apiClient.Patch(agentMemoriesPath+"/"+id, map[string]any{"importance": 0.9}, newIdempotencyKey())
 	require.NoError(t, err)

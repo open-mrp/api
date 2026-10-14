@@ -391,7 +391,7 @@ func TestPurchaseOrders_TransitionsRejectedFromTheWrongStatus(t *testing.T) {
 
 	for _, change := range []string{"unissue", "close", "open"} {
 		status, body := changePurchaseOrderStatus(t, orderID, change)
-		assert.Equal(t, 400, status, "%q must be refused on an estimate: %s", change, string(body))
+		assert.Equal(t, 422, status, "%q must be refused on an estimate: %s", change, string(body))
 	}
 
 	resp, err := apiClient.GetFull(purchaseOrdersPath+"/"+orderID, nil)

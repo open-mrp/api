@@ -241,7 +241,7 @@ func TestRegistration_CreateSessionValidation(t *testing.T) {
 			t.Parallel()
 			status, body, err := apiClient.Post(registrationSessionsPath, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireClientRejection(t, status, body)
 		})
 	}
 }
@@ -276,7 +276,7 @@ func TestRegistration_CreateUserBeforeVerificationRejected(t *testing.T) {
 		"password": "P@ssw0rd123!",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestRegistration_RetrieveUnknownSessionNotFound confirms retrieving a

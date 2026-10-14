@@ -150,7 +150,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 			"the seed job is reset to review_pending, got %q", jsonField(job, "status"))
 		status, body, err := apiClient.Post(hubspotSyncPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		requireErrorResponse(t, body, "", "invalid_request_error")
 	})
 
@@ -159,7 +159,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 			"the seed review is reset to pending, so it blocks execute")
 		status, body, err := apiClient.Post(hubspotSyncPath+"/"+SeedHubspotSyncJobID+"/actions/execute", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		requireErrorResponse(t, body, "", "invalid_request_error")
 	})
 
@@ -169,7 +169,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/company-reviews/%s/actions/link", hubspotSyncPath, SeedHubspotSyncJobID, SeedHubspotCompanyReviewID)
 		status, body, err := apiClient.Post(path, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		if errObj["param"] != nil {
 			assert.Equal(t, "resolved_hubspot_id", errObj["param"], "validation error should name the missing field")
@@ -245,7 +245,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 		} {
 			status, body, err := apiClient.Post(path, payload, newIdempotencyKey())
 			require.NoError(t, err)
-			require.Equal(t, 400, status, "%s should be rejected synchronously: %s", name, string(body))
+			require.Equal(t, 422, status, "%s should be rejected synchronously: %s", name, string(body))
 			requireErrorResponse(t, body, "", "invalid_request_error")
 		}
 	})
@@ -258,7 +258,7 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 			map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "skip"},
 		}}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Contains(t, []int{400, 404}, status,
+		assert.Contains(t, []int{422, 404}, status,
 			"resolving the seed review through another job must not succeed: %s", string(body))
 	})
 

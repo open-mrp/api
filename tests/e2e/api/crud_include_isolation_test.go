@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"github.com/open-mrp/apikit/include"
 	"net/url"
 	"testing"
 

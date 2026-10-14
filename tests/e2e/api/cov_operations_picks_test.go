@@ -198,7 +198,7 @@ func TestCovOperationsPicks_UpdateLineRejectsANonNumericQuantity(t *testing.T) {
 			map[string]any{"quantity_value": value}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "quantity_value=%q must not 5xx: %s", value, string(body))
-		assert.Equal(t, 400, status, "quantity_value=%q is not a decimal: %s", value, string(body))
+		assert.Equal(t, 422, status, "quantity_value=%q is not a decimal: %s", value, string(body))
 	}
 }
 
@@ -290,7 +290,7 @@ func TestCovOperationsPicks_PackingEverythingClosesThePick(t *testing.T) {
 		map[string]any{"shipment_case_count": 1}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "re-packing a closed pick must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a fully packed pick has nothing left to pack: %s", string(body))
+	assert.Equal(t, 422, status, "a fully packed pick has nothing left to pack: %s", string(body))
 }
 
 // ──────────────────────────────────────────────

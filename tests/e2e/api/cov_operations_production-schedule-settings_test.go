@@ -164,7 +164,7 @@ func TestScheduleSettings_UpdateRejectsUnworkableAssumptions(t *testing.T) {
 			status, respBody, err := apiClient.Put(scheduleSettingsPath, body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "a bad assumption must be a 400, not a crash: %s", string(respBody))
-			assert.Equal(t, 400, status, "%s must be rejected: %s", tc.field, string(respBody))
+			assertClientRejection(t, status, respBody, "%s must be rejected: %s", tc.field, string(respBody))
 		})
 	}
 }
@@ -181,7 +181,7 @@ func TestScheduleSettings_CadenceRequiresParseableCron(t *testing.T) {
 	status, respBody, err := apiClient.Put(scheduleSettingsPath, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(respBody))
-	assert.Equal(t, 400, status, "an unparseable cron must be rejected: %s", string(respBody))
+	assert.Equal(t, 422, status, "an unparseable cron must be rejected: %s", string(respBody))
 
 	// A real expression turns the cadence on.
 	valid := settingsWriteBody(original)
@@ -436,7 +436,7 @@ func TestScheduleSettings_RejectsContradictoryAssumptions(t *testing.T) {
 			status, respBody, err := apiClient.Put(scheduleSettingsPath, body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "a contradictory setting must be a 400, not a crash: %s", string(respBody))
-			assert.Equal(t, 400, status, "body: %s", string(respBody))
+			assertClientRejection(t, status, respBody, "body: %s", string(respBody))
 		})
 	}
 

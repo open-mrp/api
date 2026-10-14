@@ -326,7 +326,7 @@ func TestCovOperationsShippingTerms_UpdateValidation_NullNameRejected(t *testing
 		"name": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "explicit null on non-clearable 'name' should return 400, got body: %s", string(patchBody))
+	assert.Equal(t, 422, patchStatus, "explicit null on non-clearable 'name' should return 422, got body: %s", string(patchBody))
 }
 
 func TestCovOperationsShippingTerms_UpdateValidation_NullTypeRejected(t *testing.T) {
@@ -345,7 +345,7 @@ func TestCovOperationsShippingTerms_UpdateValidation_NullTypeRejected(t *testing
 		"type": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "explicit null on non-clearable 'type' should return 400, got body: %s", string(patchBody))
+	assert.Equal(t, 422, patchStatus, "explicit null on non-clearable 'type' should return 422, got body: %s", string(patchBody))
 }
 
 // --- update: clearing minimum_order_value and free_shipping_service_level_ids via explicit null ---

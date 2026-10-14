@@ -173,9 +173,9 @@ func TestContacts_FindByEmail_Validation(t *testing.T) {
 
 	missingStatus, missingBody, err := apiClient.Post(contactsFindByEmailPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, missingStatus, missingBody)
+	requireStatus(t, 422, missingStatus, missingBody)
 
 	invalidStatus, invalidBody, err := apiClient.Post(contactsFindByEmailPath, map[string]any{"email": "not-an-email"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, invalidStatus, invalidBody)
+	requireStatus(t, 422, invalidStatus, invalidBody)
 }

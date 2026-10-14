@@ -143,7 +143,11 @@ func dashInvoicesEmailRecord(t *testing.T, client *Client, body map[string]any, 
 
 func dashInvoicesRequireBadRequest(t *testing.T, status int, body []byte, code, param string) {
 	t.Helper()
-	requireStatus(t, http.StatusBadRequest, status, body)
+	want := http.StatusUnprocessableEntity
+	if code == "parameter_invalid" {
+		want = http.StatusBadRequest
+	}
+	requireStatus(t, want, status, body)
 	errObj := requireErrorResponse(t, body, code, "invalid_request_error")
 	if param != "" {
 		assertErrorParam(t, errObj, param)
@@ -308,7 +312,7 @@ func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 	for _, flag := range []string{"has_been_sent"} {
 		status, body, err := apiClient.Patch(path, map[string]any{flag: nil}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, http.StatusBadRequest, status, body)
+		requireStatus(t, http.StatusUnprocessableEntity, status, body)
 	}
 
 	status, body, err = apiClient.Patch(invoicesPath+"/iv_01nosuchinvoice0000", map[string]any{"note": "nobody's"}, newIdempotencyKey())
@@ -350,7 +354,7 @@ func TestDashInvoices_UpdateReplayReturnsTheFirstResultWithoutReapplying(t *test
 	status, body, err := apiClient.Patch(path, map[string]any{"note": uniqueName("e2e other note")}, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusUnprocessableEntity, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assert.Equal(t, second, jsonField(getInvoice(t, inv.invoiceID), "note"))
 	assert.Equal(t, 2, dashInvoicesAuditedUpdates(t, inv.invoiceID), "one audit event per applied PATCH, none for the replays")
 }
@@ -640,7 +644,7 @@ func TestDashInvoices_StatementEmailRefusesBadRecipients(t *testing.T) {
 	token := searchToken("e2edashinvbad")
 	for _, bad := range [][]string{{""}, {"not-an-address-" + token}, {dashInvoicesAddress(token), "also-not-" + token}} {
 		status, body := post(map[string]any{"recipient_emails": bad})
-		assert.Equal(t, http.StatusBadRequest, status, "%q must be refused: %s", bad, string(body))
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "%q must be refused: %s", bad, string(body))
 	}
 	assert.Zero(t, len(dashInvoicesQueuedEmails(t, token)), "nothing was queued for a refused request")
 }
@@ -677,7 +681,7 @@ func TestDashInvoices_StatementEmailReplaySendsOnce(t *testing.T) {
 	status, body, err = apiClient.Post(path, map[string]any{"recipient_emails": []string{first}}, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusUnprocessableEntity, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 	assert.Equal(t, 1, len(dashInvoicesQueuedEmails(t, token)))
 
 	logged := dashInvoicesAwaitEmailLog(t, first, subject)
@@ -733,7 +737,7 @@ func TestDashInvoices_EmailInvoiceSendsToItsContactsOnce(t *testing.T) {
 
 	status, body = dashInvoicesEmailRecord(t, apiClient, map[string]any{"type": "sales_order", "id": inv.orderID}, key)
 	requireStatus(t, http.StatusUnprocessableEntity, status, body)
-	requireErrorResponse(t, body, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, body, "idempotency_key_reused", "idempotency_error")
 
 	logged := dashInvoicesAwaitEmailLog(t, contactEmail, subject)
 	assert.Equal(t, []any{contactEmail}, logged["recipients"])

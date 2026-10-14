@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,7 +87,7 @@ func TestMakeToOrderTools_WriteEndpointsAreExposed(t *testing.T) {
 func agentToolCatalog(t *testing.T) map[string]map[string]any {
 	t.Helper()
 
-	list, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	list, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 

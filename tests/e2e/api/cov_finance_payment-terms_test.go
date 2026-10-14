@@ -27,7 +27,7 @@ func TestCovFinancePaymentTerms_CreateValidation_EmptyName(t *testing.T) {
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "empty-string name should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "empty-string name should return 422: %s", string(body))
 
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")

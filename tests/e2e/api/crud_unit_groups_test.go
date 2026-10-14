@@ -1379,11 +1379,11 @@ func TestUnitGroups_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422 || status == 422,
+	assert.True(t, status == 422,
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
 	errObj := requireErrorResponse(t, body, "validation_failed", "")
 	assertErrorParam(t, errObj, "unit_groups[1].name")
-	assert.Contains(t, errObj["message"], "duplicate name")
+	assert.Contains(t, errorMessages(errObj), "duplicate name")
 }
 
 func TestUnitGroups_BulkUpsert_DuplicateUnitInGroup(t *testing.T) {

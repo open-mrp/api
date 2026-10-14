@@ -121,7 +121,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 			}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
-			assert.Equal(t, 400, status, "body: %s", string(body))
+			assert.Equal(t, 422, status, "body: %s", string(body))
 		})
 
 		t.Run("group update rejects "+tc.name, func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 				map[string]any{"default_lead_time_days": tc.value}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
-			assert.Equal(t, 400, status, "body: %s", string(body))
+			assert.Equal(t, 422, status, "body: %s", string(body))
 		})
 
 		t.Run("customer create rejects "+tc.name, func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 			status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(respBody))
-			assert.Equal(t, 400, status, "body: %s", string(respBody))
+			assert.Equal(t, 422, status, "body: %s", string(respBody))
 		})
 
 		t.Run("customer update rejects "+tc.name, func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 				map[string]any{"lead_time_days": tc.value}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(respBody))
-			assert.Equal(t, 400, status, "body: %s", string(respBody))
+			assert.Equal(t, 422, status, "body: %s", string(respBody))
 		})
 	}
 }

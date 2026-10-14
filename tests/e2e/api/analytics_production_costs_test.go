@@ -547,14 +547,14 @@ func TestAnalyticsProductionCosts_Validation(t *testing.T) {
 	t.Parallel()
 
 	status, _, raw := putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"ends_at": pcTimestamp(pcWindowEnd)})
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "starts_at")
 
 	status, _, raw = putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowStart)})
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "ends_at")
 
 	status, _, raw = putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowEnd), "ends_at": pcTimestamp(pcWindowStart)})
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "ends_at")
 }

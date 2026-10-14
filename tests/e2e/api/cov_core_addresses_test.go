@@ -90,7 +90,7 @@ func TestCovCoreAddresses_ValidateAddress_Line2Null(t *testing.T) {
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 	assertErrorParam(t, errObj, "address_line_2")

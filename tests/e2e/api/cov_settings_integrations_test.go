@@ -317,7 +317,7 @@ func TestCovSettingsIntegrations_OmittedFields(t *testing.T) {
 			"credentials": covSettingsIntegrationsStripeCredentials("missingname"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -328,7 +328,7 @@ func TestCovSettingsIntegrations_OmittedFields(t *testing.T) {
 			"credentials": "{}",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "provider")
 	})
@@ -442,7 +442,7 @@ func TestCovSettingsIntegrations_ListInvalidCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(covSettingsIntegrationsPath, url.Values{"cursor": {"bogus___not_a_real_cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "", "invalid_request_error")
 }
 
@@ -467,7 +467,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": covSettingsIntegrationsStripeCredentials("val1"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -480,7 +480,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": covSettingsIntegrationsStripeCredentials("val2"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -493,7 +493,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": covSettingsIntegrationsStripeCredentials("val3"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -505,7 +505,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": "{}",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "provider")
 	})
@@ -530,7 +530,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"provider": "stripe",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -543,7 +543,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": "not-json",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -556,7 +556,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": `{"private_key":"abc","publishable_key":"def","webhook_secret":"ghi"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -569,7 +569,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": `{"private_key":"sk_test_x","publishable_key":"pk_test_x","webhook_secret":"whsec_x"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -582,7 +582,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": `{"api_key":"abc"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -596,7 +596,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": `{"api_key":"shippo_live_x"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -609,7 +609,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": `{"access_token":"abc"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "credentials")
 	})
@@ -646,7 +646,7 @@ func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 			"name": nil,
 		})
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -657,7 +657,7 @@ func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 			"name": "",
 		})
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -668,7 +668,7 @@ func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 			"status": nil,
 		})
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "status")
 	})

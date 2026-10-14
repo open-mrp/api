@@ -302,7 +302,7 @@ var counterpartyWrites = []counterpartyWrite{
 			return counterpartyPost(t, c, purchaseOrdersPath+"/"+SeedPurchaseOrderID+"/lines", purchaseOrderLineBody(uniqueName("E2E-CP-PO")))
 		},
 		// The seller's product is not the counterparty's either, and the line is refused for it before the order is looked up.
-		wantCounterparty: http.StatusBadRequest,
+		wantCounterparty: http.StatusUnprocessableEntity,
 	},
 	{
 		name: "update purchase order line", own: "purchase_orders:update", customer: "purchase_orders:update", supplier: "suppliers:update",

@@ -169,5 +169,5 @@ func TestGenPackList_RequiresShipmentID(t *testing.T) {
 	// shipment_id is required; omitting it is a request-validation error, not a 5xx.
 	status, body, err := apiClient.Post(genPackListPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }

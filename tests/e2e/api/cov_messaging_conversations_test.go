@@ -424,7 +424,7 @@ func TestCovMessagingConversations_Idempotency_CreateConversation(t *testing.T) 
 		"participant_account_user_ids": []string{SeedAccountUser2ID},
 	}, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "", "idempotency_error")
 }
 
@@ -458,7 +458,7 @@ func TestCovMessagingConversations_Idempotency_AssignAction(t *testing.T) {
 		"assignee_resource_id":   SeedAccountUser2ID,
 	}, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "", "idempotency_error")
 
 	// Leave the shared case unassigned for other tests.
@@ -630,7 +630,7 @@ func TestCovMessagingConversations_RemoveParticipant_SelfRejected(t *testing.T) 
 
 	status, body, err := owner.Delete(conversationsPath + "/" + convID + "/participants/" + pid)
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "Use leave to remove yourself")
 }
 
@@ -697,7 +697,7 @@ func TestCovMessagingConversations_AddParticipant_Validation(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/participants",
 			map[string]any{"account_user_id": "acus_doesnotexist000"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
+		requireStatus(t, 400, status, body)
 		assert.Contains(t, string(body), "does not exist")
 	})
 }
@@ -720,7 +720,7 @@ func TestCovMessagingConversations_AddAgent_Validation(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/agents",
 			map[string]any{"agent_config_id": SeedAgentConfigID, "trigger_policy": "bogus"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
+		requireStatus(t, 400, status, body)
 		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 		assertErrorParam(t, errObj, "trigger_policy")
 	})

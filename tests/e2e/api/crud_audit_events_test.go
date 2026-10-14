@@ -390,7 +390,7 @@ func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_ids": {actorA, actorB},
 		"include":   {"actor"},
-		"limit":     {"200"},
+		"limit":     {"100"},
 	})
 	require.NoError(t, err)
 

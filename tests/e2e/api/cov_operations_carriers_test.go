@@ -758,7 +758,7 @@ func TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber(t *testing.
 		"code": "ups",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status,
+	assert.Equal(t, 422, status,
 		"code=ups without account_number should return 400, got %d: %s", status, string(body))
 	if status == 201 {
 		id := jsonField(parseJSON(body), "id")

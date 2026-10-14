@@ -5,6 +5,7 @@ package api_test
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,6 +28,43 @@ import (
 // (see the cursor tests below).
 // ──────────────────────────────────────────────
 
+// walkToolCatalog lists the whole tool catalog. The catalog sets no page URLs, so it resumes from the last
+// slug as the cursor until a page comes back short.
+func walkToolCatalog(c *Client, params url.Values) (*ListResponse, int, error) {
+	return walkCatalog(c, aiToolsPath, params, "slug")
+}
+
+// walkToolGroups lists every tool group, resuming from the last group's id.
+func walkToolGroups(c *Client, params url.Values) (*ListResponse, int, error) {
+	return walkCatalog(c, toolGroupsPath, params, "id")
+}
+
+func walkCatalog(c *Client, path string, params url.Values, cursorField string) (*ListResponse, int, error) {
+	const pageSize = 100
+	out := &ListResponse{}
+	cursor := ""
+	for {
+		q := url.Values{}
+		for k, vs := range params {
+			q[k] = vs
+		}
+		q.Set("limit", strconv.Itoa(pageSize))
+		if cursor != "" {
+			q.Set("cursor", cursor)
+		}
+		page, status, err := c.GetList(path, q)
+		if err != nil {
+			return nil, status, err
+		}
+		out.Object = page.Object
+		out.Data = append(out.Data, page.Data...)
+		if len(page.Data) < pageSize {
+			return out, status, nil
+		}
+		cursor = jsonField(parseJSON(page.Data[len(page.Data)-1]), cursorField)
+	}
+}
+
 // covAiToolsAdminGatedSlug is a stable admin-role-gated endpoint tool used to
 // pin an exact non-null required_role_type assertion.
 const covAiToolsAdminGatedSlug = "create_account_integration"
@@ -45,10 +83,10 @@ const covAiToolsAdminGatedSlug = "create_account_integration"
 func TestCovAiTools_ToolsAllFieldsAsserted(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	list, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 100, "the catalog should exceed the default page size of 100")
+	require.GreaterOrEqual(t, len(list.Data), 100, "the catalog should exceed the maximum page size of 100")
 
 	var sawAdminRoleType, sawNullRoleType bool
 	var sawBuiltIn, sawEndpoint bool
@@ -177,13 +215,9 @@ func TestCovAiTools_ToolsBuiltInToolCanBeMutating(t *testing.T) {
 func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"include": {"tools"}, "limit": {"1000"}})
+	groups, status, err := walkToolGroups(apiClient, url.Values{"include": {"tools"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	var groups struct {
-		Data []json.RawMessage `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(body, &groups))
+	require.Equal(t, 200, status)
 
 	var expectedSlugs []string
 	for _, raw := range groups.Data {
@@ -200,7 +234,7 @@ func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 	require.NotContains(t, expectedSlugs, "send_email")
 
 	for _, q := range []string{"customer", "CUSTOMER", "CuStOmEr"} {
-		list, status, err := apiClient.GetList(aiToolsPath, url.Values{"q": {q}, "limit": {"1000"}})
+		list, status, err := walkToolCatalog(apiClient, url.Values{"q": {q}})
 		require.NoError(t, err)
 		require.Equal(t, 200, status)
 
@@ -224,11 +258,11 @@ func TestCovAiTools_ToolsSearchNoResults(t *testing.T) {
 func TestCovAiTools_ToolsSearchEmptyIsNoOp(t *testing.T) {
 	t.Parallel()
 
-	withQ, status, err := apiClient.GetList(aiToolsPath, url.Values{"q": {""}, "limit": {"1000"}})
+	withQ, status, err := walkToolCatalog(apiClient, url.Values{"q": {""}})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 
-	withoutQ, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	withoutQ, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 
@@ -303,7 +337,7 @@ func TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 func TestCovAiTools_ToolsCursorAdvancesDataButPageInfoStaysEmpty(t *testing.T) {
 	t.Parallel()
 
-	full, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	full, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.GreaterOrEqual(t, len(full.Data), 10, "the catalog should have at least 10 tools")
@@ -396,7 +430,7 @@ func TestCovAiTools_ToolsUnknownQueryParamRejected(t *testing.T) {
 func TestCovAiTools_ToolGroupsAllFieldsAsserted(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	list, status, err := walkToolGroups(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.NotEmpty(t, list.Data)
@@ -432,7 +466,7 @@ func TestCovAiTools_ToolGroupsAllFieldsAsserted(t *testing.T) {
 func TestCovAiTools_ToolGroupsDescriptionNullable(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	list, status, err := walkToolGroups(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.NotEmpty(t, list.Data)
@@ -482,20 +516,15 @@ func TestCovAiTools_ToolGroupsKnownBuiltinGroups(t *testing.T) {
 func TestCovAiTools_ToolGroupsIncludeToolsCountMatchesFlatTotal(t *testing.T) {
 	t.Parallel()
 
-	flat, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	flat, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	flatTotal := len(flat.Data)
-	require.Greater(t, flatTotal, 100, "the flat tool catalog should exceed the default page size of 100")
+	require.Greater(t, flatTotal, 100, "the flat tool catalog should exceed the maximum page size of 100")
 
-	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"include": {"tools"}, "limit": {"1000"}})
+	list, status, err := walkToolGroups(apiClient, url.Values{"include": {"tools"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	var list struct {
-		Data []json.RawMessage `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(body, &list))
+	require.Equal(t, 200, status)
 	require.NotEmpty(t, list.Data)
 
 	seenSlugs := map[string]bool{}
@@ -613,7 +642,7 @@ func TestCovAiTools_ToolGroupsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 func TestCovAiTools_ToolGroupsCursorAdvancesDataButPageInfoStaysEmpty(t *testing.T) {
 	t.Parallel()
 
-	full, status, err := apiClient.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	full, status, err := walkToolGroups(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.GreaterOrEqual(t, len(full.Data), 10, "the catalog should have at least 10 groups")
@@ -655,7 +684,7 @@ func TestCovAiTools_ToolGroupsCursorInvalidRejected(t *testing.T) {
 func TestCovAiTools_ToolGroupsIncludeToolsCursorWipesNestedTools(t *testing.T) {
 	t.Parallel()
 
-	full, status, err := apiClient.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	full, status, err := walkToolGroups(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	require.GreaterOrEqual(t, len(full.Data), 10, "the catalog should have at least 10 groups")
@@ -666,7 +695,7 @@ func TestCovAiTools_ToolGroupsIncludeToolsCursorWipesNestedTools(t *testing.T) {
 	require.NotEmpty(t, cursorGroupID)
 	assertIDFormat(t, cursorGroupID, "tgrp")
 
-	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"cursor": {cursorGroupID}, "include": {"tools"}, "limit": {"1000"}})
+	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"cursor": {cursorGroupID}, "include": {"tools"}, "limit": {"100"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -786,18 +815,18 @@ func TestCovAiTools_NoAccountScopingBothRoutes(t *testing.T) {
 
 	tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
 
-	toolsA, status, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	toolsA, status, err := walkToolCatalog(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	toolsB, status, err := tenantB.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	toolsB, status, err := walkToolCatalog(tenantB, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	assert.Equal(t, len(toolsA.Data), len(toolsB.Data), "the code-defined tool catalog is not account-scoped")
 
-	groupsA, status, err := apiClient.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	groupsA, status, err := walkToolGroups(apiClient, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	groupsB, status, err := tenantB.GetList(toolGroupsPath, url.Values{"limit": {"1000"}})
+	groupsB, status, err := walkToolGroups(tenantB, nil)
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
 	assert.Equal(t, len(groupsA.Data), len(groupsB.Data), "the code-defined tool-group catalog is not account-scoped")

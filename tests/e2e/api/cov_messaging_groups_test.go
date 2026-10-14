@@ -258,7 +258,7 @@ func TestCovMessagingGroups_OmittedFields(t *testing.T) {
 	t.Run("CreateWhitespaceName", func(t *testing.T) {
 		resp, err := owner.PostFull(messagingGroupsPath, map[string]any{"name": "   "}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -298,7 +298,7 @@ func TestCovMessagingGroups_OmittedFields(t *testing.T) {
 
 		resp, err := owner.PatchFull(messagingGroupsPath+"/"+id, map[string]any{"name": "   "}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
@@ -581,7 +581,7 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("InvalidMemberType", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "robot", "account_user_id": SeedAccountUser2ID}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_invalid", "invalid_request_error")
 		assertErrorParam(t, errObj, "member_type")
 	})
@@ -589,7 +589,7 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("UserMissingAccountUserID", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "user"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
 		assertErrorParam(t, errObj, "account_user_id")
 	})
@@ -597,7 +597,7 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("AgentMissingAgentConfigID", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "agent"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
 		assertErrorParam(t, errObj, "agent_config_id")
 	})
@@ -605,7 +605,7 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("NonexistentAccountUserID", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "user", "account_user_id": "acus_doesnotexist000000"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		requireStatus(t, 400, resp.StatusCode, resp.Body)
 		errObj := requireErrorResponse(t, resp.Body, "parameter_invalid", "invalid_request_error")
 		assertErrorParam(t, errObj, "account_user_id")
 	})

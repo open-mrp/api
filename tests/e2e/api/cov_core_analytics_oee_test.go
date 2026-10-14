@@ -454,7 +454,7 @@ func TestAnalyticsOee_RejectsMissingDates(t *testing.T) {
 	status, body, err := apiClient.Put(analyticsOeePath, map[string]any{})
 	require.NoError(t, err)
 	assert.Less(t, status, 500, "a missing date must be a client error, not a 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "starts_at and ends_at are required, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "starts_at and ends_at are required, got %d: %s", status, string(body))
 }
 
 // planned_time for a department that produced nothing must not invent a row or crash.

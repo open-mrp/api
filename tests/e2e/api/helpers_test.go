@@ -209,7 +209,7 @@ func assertListPageLen(t *testing.T, path string, params url.Values, expected in
 const maxListScanPages = 25
 
 // listFindByField pages through a cursor-paginated list endpoint (following
-// next_page_url with limit=1000, up to maxListScanPages pages) and returns
+// next_page_url with limit=100, up to maxListScanPages pages) and returns
 // the first item whose field equals value, or nil when no page contains it.
 //
 // List tests must never assume a row lands on the first page: repeated e2e
@@ -218,7 +218,7 @@ const maxListScanPages = 25
 func listFindByField(t *testing.T, path string, params url.Values, field, value string) json.RawMessage {
 	t.Helper()
 
-	merged := url.Values{"limit": {"1000"}}
+	merged := url.Values{"limit": {"100"}}
 	for k, vs := range params {
 		merged[k] = vs
 	}
@@ -332,6 +332,51 @@ func requireStatus(t *testing.T, expected, actual int, body []byte) {
 	t.Helper()
 	if expected != actual {
 		t.Fatalf("expected status %d, got %d: %s", expected, actual, string(body))
+	}
+}
+
+// errorMessages joins an error's message with each failing field's param and message. When several fields fail,
+// the top-level message only counts them and each field's own message is on its entry in errors.
+func errorMessages(errObj map[string]any) string {
+	parts := []string{fmt.Sprint(errObj["message"])}
+	entries, _ := errObj["errors"].([]any)
+	for _, e := range entries {
+		m, _ := e.(map[string]any)
+		parts = append(parts, fmt.Sprint(m["param"]), fmt.Sprint(m["message"]))
+	}
+	return strings.Join(parts, "\n")
+}
+
+// parameterErrorCodes are the codes a 400 carries: the request itself was malformed. Anything else a request is
+// refused for is a 422 validation_failed.
+var parameterErrorCodes = []string{"parameter_invalid", "parameter_missing", "parameter_unknown"}
+
+// assertClientRejection asserts a refused request's status agrees with its code: 400 for a parameter error, 422 for a
+// validation failure. Tables mixing both kinds of refusal use it instead of one fixed status.
+func assertClientRejection(t *testing.T, status int, body []byte, msgAndArgs ...any) bool {
+	t.Helper()
+	if !assert.Contains(t, []int{http.StatusBadRequest, http.StatusUnprocessableEntity}, status, msgAndArgs...) {
+		return false
+	}
+	var envelope struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if !assert.NoError(t, json.Unmarshal(body, &envelope), "error body is not JSON: %s", string(body)) {
+		return false
+	}
+	if status == http.StatusBadRequest {
+		return assert.Contains(t, parameterErrorCodes, envelope.Error.Code, "a 400 is a parameter error: %s", string(body))
+	}
+	return assert.Equal(t, "validation_failed", envelope.Error.Code, "a 422 is validation_failed: %s", string(body))
+}
+
+// requireClientRejection is assertClientRejection that stops the test.
+func requireClientRejection(t *testing.T, status int, body []byte) {
+	t.Helper()
+	if !assertClientRejection(t, status, body) {
+		t.FailNow()
 	}
 }
 

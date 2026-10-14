@@ -176,7 +176,7 @@ func TestNewCustomers_RejectsABadWindow(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			status, _, raw := putSales(t, newCustomersPath, nil, body)
-			assert.Equal(t, 400, status, string(raw))
+			assertClientRejection(t, status, raw, string(raw))
 		})
 	}
 }

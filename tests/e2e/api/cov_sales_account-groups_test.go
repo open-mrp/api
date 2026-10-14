@@ -456,7 +456,7 @@ func TestCovSalesAccountGroups_ListMalformedCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"cursor": {"not-a-valid-cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestCovSalesAccountGroups_ListInvalidTypeFilter asserts an invalid `type`

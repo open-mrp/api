@@ -31,7 +31,7 @@ func TestScheduledMessages_ValidationErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			status, body, err := dane.Post(conversationsPath+"/"+convID+"/messages", tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 		})
 	}
 }

@@ -212,7 +212,7 @@ func TestBatchScanningScanner_RunsEveryStation(t *testing.T) {
 	// Undo, the way the station does: the latest scan first.
 	postAs(t, operator, batchesPath+"/actions/bulk-delete", map[string]any{"batch_ids": []string{jsonField(mergedBatch, "id")}}, http.StatusOK)
 	waitForMessagesSettled(t, "core.cmd.undo_batch_scan", "core.undo_batch_scan", jsonField(mergedBatch, "id"))
-	status, raw, err := operator.Delete(batchesPath + "/" + jsonField(rest, "id") + "?include=" + stationBatchIncludes)
+	status, raw, err := operator.Delete(batchesPath + "/" + jsonField(rest, "id"))
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, raw)
 }

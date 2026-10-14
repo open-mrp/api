@@ -86,7 +86,7 @@ func TestOperatingCalendar_RejectsACalendarThatNeverRuns(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "an all-closed mask must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "an all-closed mask must be rejected: %s", string(body))
 }
 
 func TestOperatingCalendar_RejectsCutoffOnAReceivingCalendar(t *testing.T) {
@@ -102,7 +102,7 @@ func TestOperatingCalendar_RejectsCutoffOnAReceivingCalendar(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "a receiving calendar must reject a cutoff: %s", string(body))
+	assert.Equal(t, 422, status, "a receiving calendar must reject a cutoff: %s", string(body))
 }
 
 func TestOperatingCalendar_RejectsUnknownTimezone(t *testing.T) {
@@ -117,7 +117,7 @@ func TestOperatingCalendar_RejectsUnknownTimezone(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "an unloadable zone must be rejected: %s", string(body))
+	assert.Equal(t, 422, status, "an unloadable zone must be rejected: %s", string(body))
 }
 
 func TestOperatingCalendar_ClosuresRoundTrip(t *testing.T) {

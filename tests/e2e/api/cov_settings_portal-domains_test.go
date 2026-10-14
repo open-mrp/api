@@ -323,7 +323,7 @@ func TestCovPortalDomains_CreateValidation_MissingDomain(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "missing domain should return 400: %s", string(body))
+	assert.Equal(t, 422, status, "missing domain should return 422: %s", string(body))
 }
 
 // TestCovPortalDomains_CreateValidation_NoDot covers a hostname with no dot.

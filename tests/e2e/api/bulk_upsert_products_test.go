@@ -146,7 +146,7 @@ func TestProducts_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "products[1].sku")
-	assert.Contains(t, errObj["message"], "duplicate SKU")
+	assert.Contains(t, errorMessages(errObj), "duplicate SKU")
 }
 
 // TestProducts_BulkUpsert_RejectsCrossTypeSKUConflict: a SKU already used by a part
@@ -175,7 +175,7 @@ func TestProducts_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(productsBulkUpsertPath, map[string]any{"products": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestProducts_BulkUpsert_RejectsUnknownCategory: a create row whose category does not

@@ -26,7 +26,7 @@ const (
 // more shipments for the seeded customer, which push the seeded ones off the newest-first front page.
 func shipmentIDsFiltered(t *testing.T, params url.Values) []string {
 	t.Helper()
-	merged := url.Values{"limit": {"1000"}}
+	merged := url.Values{"limit": {"100"}}
 	for k, vs := range params {
 		merged[k] = vs
 	}

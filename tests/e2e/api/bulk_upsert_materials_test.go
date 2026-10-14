@@ -150,7 +150,7 @@ func TestMaterials_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "materials[1].sku")
-	assert.Contains(t, errObj["message"], "duplicate SKU")
+	assert.Contains(t, errorMessages(errObj), "duplicate SKU")
 }
 
 // TestMaterials_BulkUpsert_RejectsCrossTypeSKUConflict: a SKU already used by a product
@@ -179,7 +179,7 @@ func TestMaterials_BulkUpsert_EmptyRejected(t *testing.T) {
 
 	status, body, err := apiClient.Post(materialsBulkUpsertPath, map[string]any{"materials": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // TestMaterials_BulkUpsert_ResolvesCategoryByName: the category is a fuzzy reference —

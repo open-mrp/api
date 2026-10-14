@@ -235,7 +235,7 @@ func TestDashSuppliers_CreateReplayMakesOneSupplierAndItsAddressesOnce(t *testin
 	status, resp, err := apiClient.Post(path, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
 }
 
 // A replayed save answers from the first response without writing again, so it cannot undo a later edit.
@@ -262,7 +262,7 @@ func TestDashSuppliers_UpdateReplayDoesNotWriteAgain(t *testing.T) {
 	status, resp, err := apiClient.Patch(path, map[string]any{"note": "third", "update_note": true}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
 	assert.Equal(t, "second", jsonField(getSupplier(t, id), "note"))
 }
 
@@ -312,7 +312,7 @@ func TestDashSuppliers_CreateRejectsInvalidFields(t *testing.T) {
 				id := jsonField(parseJSON(resp), "id")
 				t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
 			}
-			requireStatus(t, 400, status, resp)
+			requireStatus(t, 422, status, resp)
 			assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), tc.param)
 		})
 	}
@@ -348,7 +348,7 @@ func TestDashSuppliers_UpdateRejectsInvalidFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			status, resp, err := apiClient.Patch(suppliersPath+"/"+id, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, resp)
+			requireStatus(t, 422, status, resp)
 			errObj := requireErrorResponse(t, resp, tc.code, "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -422,7 +422,7 @@ func TestDashSuppliers_MaterialLinkReplayLinksOnce(t *testing.T) {
 	status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), body, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
 }
 
 func TestDashSuppliers_MaterialUpdateReplayDoesNotWriteAgain(t *testing.T) {
@@ -473,7 +473,7 @@ func TestDashSuppliers_MaterialRejectsInvalidFields(t *testing.T) {
 		t.Run("create "+tc.name, func(t *testing.T) {
 			status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, resp)
+			requireStatus(t, 422, status, resp)
 			assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), tc.param)
 		})
 	}
@@ -494,7 +494,7 @@ func TestDashSuppliers_MaterialRejectsInvalidFields(t *testing.T) {
 		t.Run("update "+tc.name, func(t *testing.T) {
 			status, resp, err := apiClient.Patch(path, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, resp)
+			requireStatus(t, 422, status, resp)
 			errObj := requireErrorResponse(t, resp, "", "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -612,7 +612,7 @@ func TestDashAccounts_TeamMemberStatusTransitions(t *testing.T) {
 		{"disable", 200, "disabled"},
 		{"remove", 200, "removed"},
 		{"remove", 200, "removed"},
-		{"disable", 400, "removed"},
+		{"disable", 422, "removed"},
 		{"activate", 200, "active"},
 		{"activate", 200, "active"},
 		{"disable", 200, "disabled"},
@@ -683,7 +683,7 @@ func TestDashAccounts_CreateReplaySendsOneWelcomeEmail(t *testing.T) {
 	status, resp, err := apiClient.Post(accountUsersPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	requireErrorResponse(t, resp, "validation_failed", "idempotency_error")
+	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
 }
 
 // An email or username belongs to one user, so an update may not take one another user holds; keeping one's own
@@ -734,7 +734,7 @@ func TestDashAccounts_CreateAndUpdateRejectInvalidFields(t *testing.T) {
 				created := jsonField(parseJSON(body), "id")
 				t.Cleanup(func() { removeAccountUser(created) })
 			}
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, tc.code, "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -759,7 +759,7 @@ func TestDashAccounts_CreateAndUpdateRejectInvalidFields(t *testing.T) {
 		t.Run("update "+tc.name, func(t *testing.T) {
 			status, body, err := apiClient.Patch(accountUsersPath+"/"+id, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
-			requireStatus(t, 400, status, body)
+			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, tc.code, "invalid_request_error")
 			if tc.param != "" {
 				assertErrorParam(t, errObj, tc.param)
@@ -940,9 +940,9 @@ func TestDashAccounts_UploadsJudgeTheImageByItsBytes(t *testing.T) {
 		want                     int
 		code                     string
 	}{
-		{"ico as a logo", "photo", "image/x-icon", ico, 400, "invalid_format"},
-		{"svg as a logo", "photo", "image/svg+xml", svg, 400, "invalid_format"},
-		{"svg as a favicon", "favicon", "image/svg+xml", svg, 400, "invalid_format"},
+		{"ico as a logo", "photo", "image/x-icon", ico, 422, "invalid_format"},
+		{"svg as a logo", "photo", "image/svg+xml", svg, 422, "invalid_format"},
+		{"svg as a favicon", "favicon", "image/svg+xml", svg, 422, "invalid_format"},
 		{"oversized logo", "photo", "image/png", oversizedPNG(t), 413, "request_too_large"},
 		{"oversized favicon", "favicon", "image/png", oversizedPNG(t), 413, "request_too_large"},
 	} {

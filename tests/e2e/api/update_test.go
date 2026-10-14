@@ -89,8 +89,8 @@ func TestUpdateEndpoints_EmptyBodyRejected(t *testing.T) {
 			require.NoError(t, err, "PATCH %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
-			assert.Equal(t, 400, statusCode,
-				"PATCH %s with empty body should return 400, got %d: %s",
+			assert.Equal(t, 422, statusCode,
+				"PATCH %s with empty body should return 422, got %d: %s",
 				path, statusCode, string(body))
 		})
 	}

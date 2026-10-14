@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.2](https://github.com/open-mrp/api/compare/v4.10.1...v4.10.2) (2026-10-14)
+
+
+### Bug Fixes
+
+* retag merged open orders and confirm portal account links by ZIP ([#337](https://github.com/open-mrp/api/issues/337)) ([8f5c462](https://github.com/open-mrp/api/commit/8f5c462f879c9c07ed362f540659c395524d7709))
+
 ## [4.10.1](https://github.com/open-mrp/api/compare/v4.10.0...v4.10.1) (2026-10-13)
 
 

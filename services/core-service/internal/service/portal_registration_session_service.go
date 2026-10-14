@@ -277,6 +277,11 @@ func registerCustomerParamsFromSession(session *domain.PortalRegistrationSession
 		AccountSlug:        session.SellerSlug,
 		IsExistingCustomer: isExisting,
 		CustomerData:       data,
+		Lookup: domain.ExistingCustomerLookup{
+			Type:       constants.PortalRegistrationLookupType(d.LookupType),
+			Number:     d.LookupNumber,
+			PostalCode: d.LookupPostalCode,
+		},
 	}
 }
 

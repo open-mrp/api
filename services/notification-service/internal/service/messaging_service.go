@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -292,12 +293,17 @@ func (s *messagingSvcImpl) NotifyCustomerRegistered(ctx context.Context, seed st
 	} else {
 		body = name + " registered on your customer portal."
 	}
+	title := "New customer registration"
+	if len(data.PossibleDuplicates) > 0 {
+		title = "New customer registration: possible duplicate"
+		body += " " + possibleDuplicatesSentence(data.PossibleDuplicates)
+	}
 
 	return tracing.Trace(span, s.FanOut(ctx, seed, messaging.AlertFanoutData{
 		AccountID:               data.SellerAccountID,
 		Category:                string(constants.NotificationCategoryCustomerRegistered),
 		Kind:                    "alert",
-		Title:                   "New customer registration",
+		Title:                   title,
 		Body:                    body,
 		LinkResourceType:        string(constants.ObjectTypeCustomer),
 		LinkResourceID:          data.CustomerAccountID,
@@ -305,6 +311,27 @@ func (s *messagingSvcImpl) NotifyCustomerRegistered(ctx context.Context, seed st
 		SenderType:              string(constants.NotificationSenderTypeSystem),
 		RecipientAccountUserIDs: recipients,
 	}))
+}
+
+// possibleDuplicatesSentence tells customer service which existing customers the new one resembles, so they merge it before its first order picks up the wrong rep and terms.
+func possibleDuplicatesSentence(dups []messaging.PossibleDuplicateCustomer) string {
+	const shown = 3
+	parts := make([]string, 0, shown)
+	for _, d := range dups[:min(len(dups), shown)] {
+		label := strings.TrimSpace(d.CustomerName)
+		if d.CustomerNumber != "" {
+			label += " (#" + d.CustomerNumber + ")"
+		}
+		if len(d.Reasons) > 0 {
+			label += ": " + strings.Join(d.Reasons, " and ")
+		}
+		parts = append(parts, label)
+	}
+	sentence := "It may duplicate " + strings.Join(parts, "; ")
+	if extra := len(dups) - shown; extra > 0 {
+		sentence += fmt.Sprintf("; and %d more", extra)
+	}
+	return sentence + ". If it does, merge it into that customer before its first order."
 }
 
 // recipientRef pairs the account_user id a notification row is keyed by with the user id its realtime push targets (the WS user-topic).

@@ -434,15 +434,11 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 	meds domain.Mediators,
 	idempotencyKeyTypeID string,
 ) *apierror.APIError {
-	if params.CustomerData.Number == nil || strings.TrimSpace(*params.CustomerData.Number) == "" {
-		return tracing.Trace(span, apierror.NewValidationError("Customer number is required for existing customer registration."))
+	customerAccountID, apiErr := findExistingCustomer(ctx, s.repos.NewCustomerRegistrationRepo(), ownerAccountID, params)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
-
-	customerNumber := strings.TrimSpace(*params.CustomerData.Number)
-
-	customerRepo := s.repos.NewCustomerRegistrationRepo()
-
-	customerAccountID, apiErr := customerRepo.FindCustomerAccountByExternalNumber(ctx, ownerAccountID, customerNumber)
+	customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, ownerAccountID, customerAccountID, nil)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -467,7 +463,8 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
 			SellerAccountID:    ownerAccountID,
 			CustomerAccountID:  customerAccountID,
-			CustomerNumber:     customerNumber,
+			CustomerName:       customer.Name,
+			CustomerNumber:     customer.Number,
 			RegistrantUserID:   userID,
 			IsExistingCustomer: true,
 		}); apiErr != nil {
@@ -540,6 +537,8 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 		return tracing.Trace(span, apiErr)
 	}
 
+	possibleDuplicates := findPossibleDuplicateCustomers(ctx, customerRepo, ownerAccountID, email, data.Address)
+
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -606,11 +605,12 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 
 		// Notify the seller's customer-service group that a new customer registered on the portal. Emitted in-tx so it commits atomically with the registration.
 		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
-			SellerAccountID:   ownerAccountID,
-			CustomerAccountID: customerAccountID,
-			CustomerName:      strings.TrimSpace(*data.Name),
-			CustomerNumber:    customerNumber,
-			RegistrantUserID:  userID,
+			SellerAccountID:    ownerAccountID,
+			CustomerAccountID:  customerAccountID,
+			CustomerName:       strings.TrimSpace(*data.Name),
+			CustomerNumber:     customerNumber,
+			RegistrantUserID:   userID,
+			PossibleDuplicates: possibleDuplicates,
 		}); apiErr != nil {
 			return apiErr
 		}

@@ -1336,6 +1336,43 @@ func (r *customerRepoImpl) GetRelationID(ctx context.Context, ownerAccountID, cu
 	return relID, nil
 }
 
+func (r *customerRepoImpl) ListMergeRetaggableOrders(ctx context.Context, ownerAccountID string, sourceAccountIDs []string, salesRepID string) ([]domain.OrderSalesRep, *apierror.APIError) {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.list_merge_retaggable_orders")
+	defer span.End()
+
+	rows, err := r.queries.ListMergeRetaggableOrders(ctx, sqlc.ListMergeRetaggableOrdersParams{
+		OwnerAccountID:   ownerAccountID,
+		SourceAccountIds: sourceAccountIDs,
+		SalesRepID:       gosql.NullString{String: salesRepID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	orders := make([]domain.OrderSalesRep, len(rows))
+	for i, row := range rows {
+		orders[i] = domain.OrderSalesRep{OrderID: row.ID, SalesRepID: nullStringPtr(row.SalesRepID)}
+	}
+	return orders, nil
+}
+
+func (r *customerRepoImpl) SetOrdersSalesRep(ctx context.Context, ownerAccountID, salesRepID string, orderIDs []string) *apierror.APIError {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.set_orders_sales_rep")
+	defer span.End()
+
+	if len(orderIDs) == 0 {
+		return nil
+	}
+	err := r.queries.SetSalesOrdersSalesRep(ctx, sqlc.SetSalesOrdersSalesRepParams{
+		SalesRepID:     gosql.NullString{String: salesRepID, Valid: true},
+		OwnerAccountID: ownerAccountID,
+		Ids:            orderIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *customerRepoImpl) MergeOrders(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.merge_orders")
 	defer span.End()

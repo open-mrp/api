@@ -1083,6 +1083,23 @@ WHERE fg.product_type_code = 'sale'
   AND fg.is_portal_ready = 1
 GROUP BY fg.item_id;
 
+-- name: ListMergeRetaggableOrders :many
+-- Open, uninvoiced orders of the merging customers whose rep differs from the target's default.
+-- Orders without a rep are left alone: no rep means the order earns no commission.
+SELECT so.id, so.sales_rep_id
+FROM sales_order so
+WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+  AND so.buyer_account_id IN (sqlc.slice('source_account_ids'))
+  AND so.sales_order_status_code IN ('estimate', 'issued')
+  AND so.sales_rep_id IS NOT NULL
+  AND so.sales_rep_id <> sqlc.arg('sales_rep_id')
+  AND NOT EXISTS (SELECT 1 FROM invoice i WHERE i.sales_order_id = so.id);
+
+-- name: SetSalesOrdersSalesRep :exec
+UPDATE sales_order SET sales_rep_id = sqlc.arg('sales_rep_id'), updated_at = NOW(3)
+WHERE owner_account_id = sqlc.arg('owner_account_id')
+  AND id IN (sqlc.slice('ids'));
+
 -- name: MergeCustomerOrders :exec
 UPDATE sales_order SET buyer_account_id = sqlc.arg('target_account_id'), updated_at = NOW(3)
 WHERE owner_account_id = sqlc.arg('owner_account_id')

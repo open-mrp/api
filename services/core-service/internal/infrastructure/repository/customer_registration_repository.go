@@ -203,3 +203,93 @@ func stringPtrVal(s *string) string {
 	}
 	return *s
 }
+
+func (r *customerRegistrationRepoImpl) FindCustomerAccountBySalesOrderNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.find_by_sales_order_number")
+	defer span.End()
+
+	accountID, err := r.queries.FindCustomerAccountBySalesOrderNumber(ctx, sqlc.FindCustomerAccountBySalesOrderNumberParams{
+		OwnerAccountID: ownerAccountID,
+		Number:         number,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return accountID, nil
+}
+
+func (r *customerRegistrationRepoImpl) FindCustomerAccountByInvoiceNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.find_by_invoice_number")
+	defer span.End()
+
+	accountID, err := r.queries.FindCustomerAccountByInvoiceNumber(ctx, sqlc.FindCustomerAccountByInvoiceNumberParams{
+		OwnerAccountID: ownerAccountID,
+		Number:         number,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return accountID, nil
+}
+
+func (r *customerRegistrationRepoImpl) GetCustomerDefaultPostalCodes(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.get_default_postal_codes")
+	defer span.End()
+
+	row, err := r.queries.GetCustomerDefaultPostalCodes(ctx, sqlc.GetCustomerDefaultPostalCodesParams{
+		OwnerAccountID:    ownerAccountID,
+		CustomerAccountID: customerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	var codes []string
+	for _, code := range []gosql.NullString{row.BillingPostalCode, row.ShippingPostalCode} {
+		if code.Valid && code.String != "" {
+			codes = append(codes, code.String)
+		}
+	}
+	return codes, nil
+}
+
+func (r *customerRegistrationRepoImpl) ListCustomerDefaultAddressesInPostalArea(ctx context.Context, ownerAccountID, postalPrefix string) ([]domain.CustomerDefaultAddresses, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.list_default_addresses_in_postal_area")
+	defer span.End()
+
+	rows, err := r.queries.ListCustomerDefaultAddressesInPostalArea(ctx, sqlc.ListCustomerDefaultAddressesInPostalAreaParams{
+		OwnerAccountID: ownerAccountID,
+		PostalPrefix:   gosql.NullString{String: postalPrefix, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]domain.CustomerDefaultAddresses, len(rows))
+	for i, row := range rows {
+		out[i] = domain.CustomerDefaultAddresses{
+			CustomerMatch:       domain.CustomerMatch{AccountID: row.CounterpartyAccountID, Name: row.Name, Number: row.ExternalNumber},
+			BillingStreetLine1:  nullStringPtr(row.BillingStreetLine1),
+			BillingPostalCode:   nullStringPtr(row.BillingPostalCode),
+			ShippingStreetLine1: nullStringPtr(row.ShippingStreetLine1),
+			ShippingPostalCode:  nullStringPtr(row.ShippingPostalCode),
+		}
+	}
+	return out, nil
+}
+
+func (r *customerRegistrationRepoImpl) ListCustomersWithUserEmailDomain(ctx context.Context, ownerAccountID, emailDomain string) ([]domain.CustomerMatch, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.list_with_user_email_domain")
+	defer span.End()
+
+	rows, err := r.queries.ListCustomersWithUserEmailDomain(ctx, sqlc.ListCustomersWithUserEmailDomainParams{
+		OwnerAccountID: ownerAccountID,
+		EmailDomain:    gosql.NullString{String: emailDomain, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]domain.CustomerMatch, len(rows))
+	for i, row := range rows {
+		out[i] = domain.CustomerMatch{AccountID: row.CounterpartyAccountID, Name: row.Name, Number: row.ExternalNumber}
+	}
+	return out, nil
+}

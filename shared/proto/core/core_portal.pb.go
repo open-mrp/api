@@ -226,6 +226,9 @@ type PortalRegistrationSessionData struct {
 	AddressState      string                 `protobuf:"bytes,11,opt,name=address_state,json=addressState,proto3" json:"address_state,omitempty"`
 	AddressPostalCode string                 `protobuf:"bytes,12,opt,name=address_postal_code,json=addressPostalCode,proto3" json:"address_postal_code,omitempty"`
 	AddressCountry    string                 `protobuf:"bytes,13,opt,name=address_country,json=addressCountry,proto3" json:"address_country,omitempty"`
+	LookupType        string                 `protobuf:"bytes,14,opt,name=lookup_type,json=lookupType,proto3" json:"lookup_type,omitempty"`
+	LookupNumber      string                 `protobuf:"bytes,15,opt,name=lookup_number,json=lookupNumber,proto3" json:"lookup_number,omitempty"`
+	LookupPostalCode  string                 `protobuf:"bytes,16,opt,name=lookup_postal_code,json=lookupPostalCode,proto3" json:"lookup_postal_code,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -347,6 +350,27 @@ func (x *PortalRegistrationSessionData) GetAddressPostalCode() string {
 func (x *PortalRegistrationSessionData) GetAddressCountry() string {
 	if x != nil {
 		return x.AddressCountry
+	}
+	return ""
+}
+
+func (x *PortalRegistrationSessionData) GetLookupType() string {
+	if x != nil {
+		return x.LookupType
+	}
+	return ""
+}
+
+func (x *PortalRegistrationSessionData) GetLookupNumber() string {
+	if x != nil {
+		return x.LookupNumber
+	}
+	return ""
+}
+
+func (x *PortalRegistrationSessionData) GetLookupPostalCode() string {
+	if x != nil {
+		return x.LookupPostalCode
 	}
 	return ""
 }
@@ -922,7 +946,7 @@ const file_core_core_portal_proto_rawDesc = "" +
 	"\x1dGetPortalProfileBySlugRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"S\n" +
 	"\x1eGetPortalProfileBySlugResponse\x121\n" +
-	"\aprofile\x18\x01 \x01(\v2\x17.core.PortalProfileInfoR\aprofile\"\xa1\x04\n" +
+	"\aprofile\x18\x01 \x01(\v2\x17.core.PortalProfileInfoR\aprofile\"\x95\x05\n" +
 	"\x1dPortalRegistrationSessionData\x12#\n" +
 	"\rcustomer_name\x18\x01 \x01(\tR\fcustomerName\x12'\n" +
 	"\x0fcustomer_number\x18\x02 \x01(\tR\x0ecustomerNumber\x12*\n" +
@@ -937,7 +961,11 @@ const file_core_core_portal_proto_rawDesc = "" +
 	" \x01(\tR\x0faddressLocality\x12#\n" +
 	"\raddress_state\x18\v \x01(\tR\faddressState\x12.\n" +
 	"\x13address_postal_code\x18\f \x01(\tR\x11addressPostalCode\x12'\n" +
-	"\x0faddress_country\x18\r \x01(\tR\x0eaddressCountry\"\xaf\x05\n" +
+	"\x0faddress_country\x18\r \x01(\tR\x0eaddressCountry\x12\x1f\n" +
+	"\vlookup_type\x18\x0e \x01(\tR\n" +
+	"lookupType\x12#\n" +
+	"\rlookup_number\x18\x0f \x01(\tR\flookupNumber\x12,\n" +
+	"\x12lookup_postal_code\x18\x10 \x01(\tR\x10lookupPostalCode\"\xaf\x05\n" +
 	"\x1dPortalRegistrationSessionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12*\n" +

@@ -1110,6 +1110,18 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 		sourceCustomers = append(sourceCustomers, source)
 	}
 
+	// Open orders moving onto the target take its default rep, as if they had been placed under it. An exempt target earns no commission, so its orders keep theirs.
+	retagRepID := targetOld.DefaultSalesRepID
+	if retagRepID != nil {
+		exempt, apiErr := customerRepo.IsCommissionExempt(ctx, params.OwnerAccountID, params.TargetCustomerID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if exempt {
+			retagRepID = nil
+		}
+	}
+
 	// Get target relation ID.
 	targetRelationID, apiErr := customerRepo.GetRelationID(ctx, params.OwnerAccountID, params.TargetCustomerID)
 	if apiErr != nil {
@@ -1145,6 +1157,12 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 		var result *domain.Customer
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
+
+			if retagRepID != nil {
+				if apiErr := retagMergedOrders(txCtx, txSvc.repos, params.OwnerAccountID, params.SourceCustomerIDs, *retagRepID); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			// Phase 1: Reassign all foreign key references from sources to target.
 			if apiErr := txCustomerRepo.MergeOrders(txCtx, params.OwnerAccountID, params.TargetCustomerID, params.SourceCustomerIDs); apiErr != nil {
@@ -1366,6 +1384,37 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// retagMergedOrders moves the source customers' open, uninvoiced orders onto salesRepID. Invoiced orders keep their rep so commission already reported does not move.
+func retagMergedOrders(txCtx context.Context, repos domain.RepoFactory, ownerAccountID string, sourceCustomerIDs []string, salesRepID string) *apierror.APIError {
+	customerRepo := repos.NewCustomerRepo()
+	orders, apiErr := customerRepo.ListMergeRetaggableOrders(txCtx, ownerAccountID, sourceCustomerIDs, salesRepID)
+	if apiErr != nil || len(orders) == 0 {
+		return apiErr
+	}
+	orderIDs := make([]string, len(orders))
+	for i, o := range orders {
+		orderIDs[i] = o.OrderID
+	}
+	if apiErr := customerRepo.SetOrdersSalesRep(txCtx, ownerAccountID, salesRepID, orderIDs); apiErr != nil {
+		return apiErr
+	}
+	publisher := audit.NewPublisher()
+	outboxRepo := repos.NewOutboxRepo()
+	for _, o := range orders {
+		if apiErr := publisher.Publish(txCtx, outboxRepo, audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeSalesOrder,
+			ResourceID:   o.OrderID,
+			Changes:      []audit.FieldChange{audit.NewFieldChange("sales_rep_id", o.SalesRepID, &salesRepID)},
+			Metadata:     map[string]any{"source": "customer_merge"},
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 // checkCustomerReadPermission checks the appropriate read permission based on the identity context.

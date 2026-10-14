@@ -222,6 +222,12 @@ type MergeCustomersParams struct {
 	Includes          []string
 }
 
+// OrderSalesRep is an order's ID and its current sales rep.
+type OrderSalesRep struct {
+	OrderID    string
+	SalesRepID *string
+}
+
 // RelationPriceGroup is a lightweight reference to an account relation price group.
 type RelationPriceGroup struct {
 	ID             string

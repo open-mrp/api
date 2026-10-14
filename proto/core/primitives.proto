@@ -52,3 +52,10 @@ message CreatedRange {
   optional google.protobuf.Timestamp created_after = 1;
   optional google.protobuf.Timestamp created_before = 2;
 }
+
+// One person who receives a customer's or supplier's documents by email, and which documents.
+// documents are constants.RecipientDocument values.
+message EmailRecipient {
+  string account_user_id = 1;
+  repeated string documents = 2;
+}

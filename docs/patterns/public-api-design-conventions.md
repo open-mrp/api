@@ -181,7 +181,7 @@ Definitions that drive work (a manufacturing method) are versioned: `status: dra
 
 ## Private beta
 
-An area still being designed ships internal: its routes are `Public: false`, and fields it adds to public resources are internal fields excluded from the public OpenAPI. Making it public later is additive; making a public shape private is not.
+An area still being designed ships internal: its routes are `Public: false`, and fields it adds to public resources are internal fields excluded from the public OpenAPI. Tag such a field `visibility:"internal"`: it is served to every caller but only the internal spec documents it. (`sensitive:"internal"` is different: a documented field that reads `null` for anyone outside the account, such as `instructions` for portal users.) Making it public later is additive; making a public shape private is not.
 
 ## Notes, instructions, comments
 

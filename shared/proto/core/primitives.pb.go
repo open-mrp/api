@@ -383,6 +383,60 @@ func (x *CreatedRange) GetCreatedBefore() *timestamppb.Timestamp {
 	return nil
 }
 
+// One person who receives a customer's or supplier's documents by email, and which documents.
+// documents are constants.RecipientDocument values.
+type EmailRecipient struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	Documents     []string               `protobuf:"bytes,2,rep,name=documents,proto3" json:"documents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmailRecipient) Reset() {
+	*x = EmailRecipient{}
+	mi := &file_core_primitives_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmailRecipient) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmailRecipient) ProtoMessage() {}
+
+func (x *EmailRecipient) ProtoReflect() protoreflect.Message {
+	mi := &file_core_primitives_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmailRecipient.ProtoReflect.Descriptor instead.
+func (*EmailRecipient) Descriptor() ([]byte, []int) {
+	return file_core_primitives_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *EmailRecipient) GetAccountUserId() string {
+	if x != nil {
+		return x.AccountUserId
+	}
+	return ""
+}
+
+func (x *EmailRecipient) GetDocuments() []string {
+	if x != nil {
+		return x.Documents
+	}
+	return nil
+}
+
 var File_core_primitives_proto protoreflect.FileDescriptor
 
 const file_core_primitives_proto_rawDesc = "" +
@@ -431,7 +485,10 @@ const file_core_primitives_proto_rawDesc = "" +
 	"\rcreated_after\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\fcreatedAfter\x88\x01\x01\x12F\n" +
 	"\x0ecreated_before\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\rcreatedBefore\x88\x01\x01B\x10\n" +
 	"\x0e_created_afterB\x11\n" +
-	"\x0f_created_beforeB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x0f_created_before\"V\n" +
+	"\x0eEmailRecipient\x12&\n" +
+	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x1c\n" +
+	"\tdocuments\x18\x02 \x03(\tR\tdocumentsB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_primitives_proto_rawDescOnce sync.Once
@@ -445,19 +502,20 @@ func file_core_primitives_proto_rawDescGZIP() []byte {
 	return file_core_primitives_proto_rawDescData
 }
 
-var file_core_primitives_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_core_primitives_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_core_primitives_proto_goTypes = []any{
 	(*Actor)(nil),                 // 0: core.Actor
 	(*Date)(nil),                  // 1: core.Date
 	(*DatePatch)(nil),             // 2: core.DatePatch
 	(*AddressSnapshot)(nil),       // 3: core.AddressSnapshot
 	(*CreatedRange)(nil),          // 4: core.CreatedRange
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*EmailRecipient)(nil),        // 5: core.EmailRecipient
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_core_primitives_proto_depIdxs = []int32{
 	1, // 0: core.DatePatch.value:type_name -> core.Date
-	5, // 1: core.CreatedRange.created_after:type_name -> google.protobuf.Timestamp
-	5, // 2: core.CreatedRange.created_before:type_name -> google.protobuf.Timestamp
+	6, // 1: core.CreatedRange.created_after:type_name -> google.protobuf.Timestamp
+	6, // 2: core.CreatedRange.created_before:type_name -> google.protobuf.Timestamp
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -480,7 +538,7 @@ func file_core_primitives_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_primitives_proto_rawDesc), len(file_core_primitives_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -94,6 +94,60 @@ service AuthService {
 
   // Returns the caller's most recent incomplete registration session, or no session if none exists.
   rpc GetIncompleteRegistrationSession(GetIncompleteRegistrationSessionRequest) returns (GetIncompleteRegistrationSessionResponse);
+
+  // Sets the caller's own signing PIN, replacing any PIN they had (including a temporary one).
+  rpc SetSigningPin(SetSigningPinRequest) returns (google.protobuf.Empty);
+
+  // Sets a temporary signing PIN for an account user who can't set their own; it must be changed on first use.
+  rpc SetTemporarySigningPin(SetTemporarySigningPinRequest) returns (google.protobuf.Empty);
+
+  // Removes an account user's signing PIN, so they must set a new one before signing.
+  rpc ClearSigningPin(ClearSigningPinRequest) returns (google.protobuf.Empty);
+
+  // Replaces an account user's PIN after checking their current one; the only way to use a temporary PIN.
+  rpc ChangeSigningPin(ChangeSigningPinRequest) returns (google.protobuf.Empty);
+
+  // Checks an account user's signing PIN in the caller's account. Fails with signing_pin_invalid,
+  // signing_pin_locked, signing_pin_not_set or signing_pin_change_required.
+  rpc VerifySigningPin(VerifySigningPinRequest) returns (VerifySigningPinResponse);
+}
+
+message SetSigningPinRequest {
+  string pin = 1;
+}
+
+message SetTemporarySigningPinRequest {
+  string account_user_id = 1;
+  string pin = 2;
+}
+
+message ClearSigningPinRequest {
+  string account_user_id = 1;
+}
+
+message ChangeSigningPinRequest {
+  string account_user_id = 1;
+  string current_pin = 2;
+  string new_pin = 3;
+}
+
+message VerifySigningPinRequest {
+  string account_user_id = 1;
+  string pin = 2;
+}
+
+// The signer as of the moment the PIN was checked, so callers can decide whether they may sign and copy who signed onto the record.
+message VerifySigningPinResponse {
+  string account_user_id = 1;
+  string user_id = 2;
+  string name = 3;
+  string role_id = 4;
+  string role_name = 5;
+  string role_type_code = 6;
+  // Empty when the account user has no department.
+  string department_id = 7;
+  // Effective permissions as "<domain>:<action>". Empty for admins, who hold every permission.
+  repeated string permissions = 8;
 }
 
 message CompleteRegistrationRequest {

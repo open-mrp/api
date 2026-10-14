@@ -317,6 +317,36 @@ func (mr *MockUserRepoMockRecorder) Find(ctx, identifier any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockUserRepo)(nil).Find), ctx, identifier)
 }
 
+// FindAccountUser mocks base method.
+func (m *MockUserRepo) FindAccountUser(ctx context.Context, accountID, accountUserID string) (*domain.SigningAccountUser, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAccountUser", ctx, accountID, accountUserID)
+	ret0, _ := ret[0].(*domain.SigningAccountUser)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindAccountUser indicates an expected call of FindAccountUser.
+func (mr *MockUserRepoMockRecorder) FindAccountUser(ctx, accountID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAccountUser", reflect.TypeOf((*MockUserRepo)(nil).FindAccountUser), ctx, accountID, accountUserID)
+}
+
+// FindAccountUserByUserID mocks base method.
+func (m *MockUserRepo) FindAccountUserByUserID(ctx context.Context, accountID, userID string) (*domain.SigningAccountUser, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAccountUserByUserID", ctx, accountID, userID)
+	ret0, _ := ret[0].(*domain.SigningAccountUser)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindAccountUserByUserID indicates an expected call of FindAccountUserByUserID.
+func (mr *MockUserRepoMockRecorder) FindAccountUserByUserID(ctx, accountID, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAccountUserByUserID", reflect.TypeOf((*MockUserRepo)(nil).FindAccountUserByUserID), ctx, accountID, userID)
+}
+
 // FindLastUsedAccountID mocks base method.
 func (m *MockUserRepo) FindLastUsedAccountID(ctx context.Context, userID string) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -344,6 +374,102 @@ func (m *MockUserRepo) UpdatePassword(ctx context.Context, userID, hashedPasswor
 func (mr *MockUserRepoMockRecorder) UpdatePassword(ctx, userID, hashedPassword any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockUserRepo)(nil).UpdatePassword), ctx, userID, hashedPassword)
+}
+
+// MockSigningPinRepo is a mock of SigningPinRepo interface.
+type MockSigningPinRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockSigningPinRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockSigningPinRepoMockRecorder is the mock recorder for MockSigningPinRepo.
+type MockSigningPinRepoMockRecorder struct {
+	mock *MockSigningPinRepo
+}
+
+// NewMockSigningPinRepo creates a new mock instance.
+func NewMockSigningPinRepo(ctrl *gomock.Controller) *MockSigningPinRepo {
+	mock := &MockSigningPinRepo{ctrl: ctrl}
+	mock.recorder = &MockSigningPinRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSigningPinRepo) EXPECT() *MockSigningPinRepoMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockSigningPinRepo) Delete(ctx context.Context, userID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, userID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockSigningPinRepoMockRecorder) Delete(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSigningPinRepo)(nil).Delete), ctx, userID)
+}
+
+// FindByUserID mocks base method.
+func (m *MockSigningPinRepo) FindByUserID(ctx context.Context, userID string) (*domain.SigningPin, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByUserID", ctx, userID)
+	ret0, _ := ret[0].(*domain.SigningPin)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindByUserID indicates an expected call of FindByUserID.
+func (mr *MockSigningPinRepoMockRecorder) FindByUserID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByUserID", reflect.TypeOf((*MockSigningPinRepo)(nil).FindByUserID), ctx, userID)
+}
+
+// RecordFailure mocks base method.
+func (m *MockSigningPinRepo) RecordFailure(ctx context.Context, userID, pinHash string, maxAttempts int, lockUntil time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordFailure", ctx, userID, pinHash, maxAttempts, lockUntil)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RecordFailure indicates an expected call of RecordFailure.
+func (mr *MockSigningPinRepoMockRecorder) RecordFailure(ctx, userID, pinHash, maxAttempts, lockUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordFailure", reflect.TypeOf((*MockSigningPinRepo)(nil).RecordFailure), ctx, userID, pinHash, maxAttempts, lockUntil)
+}
+
+// ResetFailures mocks base method.
+func (m *MockSigningPinRepo) ResetFailures(ctx context.Context, userID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetFailures", ctx, userID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ResetFailures indicates an expected call of ResetFailures.
+func (mr *MockSigningPinRepoMockRecorder) ResetFailures(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetFailures", reflect.TypeOf((*MockSigningPinRepo)(nil).ResetFailures), ctx, userID)
+}
+
+// Upsert mocks base method.
+func (m *MockSigningPinRepo) Upsert(ctx context.Context, userID, pinHash string, isTemporary bool) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, userID, pinHash, isTemporary)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockSigningPinRepoMockRecorder) Upsert(ctx, userID, pinHash, isTemporary any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockSigningPinRepo)(nil).Upsert), ctx, userID, pinHash, isTemporary)
 }
 
 // MockDocAPIKeyRepo is a mock of DocAPIKeyRepo interface.

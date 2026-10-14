@@ -147,7 +147,10 @@ SELECT
     ps.id AS production_step_id,
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
-    pr.number AS production_run_number
+    pr.number AS production_run_number,
+    b.operator_account_user_id,
+    COALESCE(ou.name, ou.username) AS operator_name,
+    rl.lot_number AS release_lot_number
 FROM batch b FORCE INDEX (PRIMARY)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
@@ -160,6 +163,9 @@ LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
 LEFT JOIN production_step ps ON b.production_step_id = ps.id
 LEFT JOIN production_run pr ON b.production_run_id = pr.id
+LEFT JOIN account_user oau ON b.operator_account_user_id = oau.id
+LEFT JOIN `user` ou ON oau.user_id = ou.id
+LEFT JOIN lot rl ON rl.id = b.release_lot_id
 WHERE b.id IN (sqlc.slice('ids'))
 AND b.account_id = sqlc.arg('account_id');
 

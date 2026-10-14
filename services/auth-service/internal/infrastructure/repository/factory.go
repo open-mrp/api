@@ -43,6 +43,10 @@ func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
 	return NewIdempotencyKeyRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewSigningPinRepo() domain.SigningPinRepo {
+	return NewSigningPinRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
 	return NewOutboxRepo(r.queries)
 }

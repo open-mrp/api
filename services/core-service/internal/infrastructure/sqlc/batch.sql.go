@@ -12,6 +12,23 @@ import (
 	"time"
 )
 
+const allocateNextReleaseLotNumber = `-- name: AllocateNextReleaseLotNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'release_lot_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextReleaseLotNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// AllocateNextReleaseLotNumber takes the account's next release lot sequence number. The counter row
+// lock holds until the transaction ends, so concurrent final releases queue rather than share a number.
+func (q *Queries) AllocateNextReleaseLotNumber(ctx context.Context, arg AllocateNextReleaseLotNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextReleaseLotNumber, arg.ID, arg.AccountID)
+}
+
 const countBatchesByScanningStation = `-- name: CountBatchesByScanningStation :one
 SELECT COUNT(*) FROM batch b
 WHERE b.account_id = ?
@@ -372,7 +389,10 @@ SELECT
     ps.id AS production_step_id,
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
-    pr.number AS production_run_number
+    pr.number AS production_run_number,
+    b.operator_account_user_id,
+    COALESCE(ou.name, ou.username) AS operator_name,
+    rl.lot_number AS release_lot_number
 FROM batch b
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
@@ -385,6 +405,9 @@ LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
 LEFT JOIN production_step ps ON b.production_step_id = ps.id
 LEFT JOIN production_run pr ON b.production_run_id = pr.id
+LEFT JOIN account_user oau ON b.operator_account_user_id = oau.id
+LEFT JOIN ` + "`" + `user` + "`" + ` ou ON oau.user_id = ou.id
+LEFT JOIN lot rl ON rl.id = b.release_lot_id
 WHERE b.id = ?
 AND b.account_id = ?
 `
@@ -428,6 +451,9 @@ type GetBatchRow struct {
 	ProductionStepName       sql.NullString
 	ProductionRunID2         sql.NullString
 	ProductionRunNumber      sql.NullString
+	OperatorAccountUserID    sql.NullString
+	OperatorName             sql.NullString
+	ReleaseLotNumber         sql.NullString
 }
 
 func (q *Queries) GetBatch(ctx context.Context, arg GetBatchParams) (GetBatchRow, error) {
@@ -467,6 +493,9 @@ func (q *Queries) GetBatch(ctx context.Context, arg GetBatchParams) (GetBatchRow
 		&i.ProductionStepName,
 		&i.ProductionRunID2,
 		&i.ProductionRunNumber,
+		&i.OperatorAccountUserID,
+		&i.OperatorName,
+		&i.ReleaseLotNumber,
 	)
 	return i, err
 }
@@ -731,6 +760,37 @@ func (q *Queries) GetBatchMachines(ctx context.Context, batchID string) ([]GetBa
 	return items, nil
 }
 
+const getBatchReleaseLot = `-- name: GetBatchReleaseLot :one
+SELECT l.id, l.lot_number, l.item_id, l.manufactured_at
+FROM batch b
+JOIN lot l ON l.id = b.release_lot_id
+WHERE b.id = ? AND b.account_id = ?
+`
+
+type GetBatchReleaseLotParams struct {
+	ID        string
+	AccountID string
+}
+
+type GetBatchReleaseLotRow struct {
+	ID             string
+	LotNumber      string
+	ItemID         string
+	ManufacturedAt sql.NullTime
+}
+
+func (q *Queries) GetBatchReleaseLot(ctx context.Context, arg GetBatchReleaseLotParams) (GetBatchReleaseLotRow, error) {
+	row := q.db.QueryRowContext(ctx, getBatchReleaseLot, arg.ID, arg.AccountID)
+	var i GetBatchReleaseLotRow
+	err := row.Scan(
+		&i.ID,
+		&i.LotNumber,
+		&i.ItemID,
+		&i.ManufacturedAt,
+	)
+	return i, err
+}
+
 const insertBatch = `-- name: InsertBatch :exec
 INSERT INTO batch (
     id, account_id, item_id, quantity_id,
@@ -835,6 +895,30 @@ type InsertBatchQuantityParams struct {
 
 func (q *Queries) InsertBatchQuantity(ctx context.Context, arg InsertBatchQuantityParams) error {
 	_, err := q.db.ExecContext(ctx, insertBatchQuantity, arg.ID, arg.Value, arg.UnitID)
+	return err
+}
+
+const insertReleaseLot = `-- name: InsertReleaseLot :exec
+INSERT INTO lot (id, account_id, item_id, lot_number, manufactured_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertReleaseLotParams struct {
+	ID             string
+	AccountID      string
+	ItemID         string
+	LotNumber      string
+	ManufacturedAt sql.NullTime
+}
+
+func (q *Queries) InsertReleaseLot(ctx context.Context, arg InsertReleaseLotParams) error {
+	_, err := q.db.ExecContext(ctx, insertReleaseLot,
+		arg.ID,
+		arg.AccountID,
+		arg.ItemID,
+		arg.LotNumber,
+		arg.ManufacturedAt,
+	)
 	return err
 }
 
@@ -1435,6 +1519,22 @@ func (q *Queries) ListBatchesByScanningStationForward(ctx context.Context, arg L
 	return items, nil
 }
 
+const setBatchReleaseLot = `-- name: SetBatchReleaseLot :exec
+UPDATE batch SET release_lot_id = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?
+`
+
+type SetBatchReleaseLotParams struct {
+	ReleaseLotID sql.NullString
+	ID           string
+	AccountID    string
+}
+
+func (q *Queries) SetBatchReleaseLot(ctx context.Context, arg SetBatchReleaseLotParams) error {
+	_, err := q.db.ExecContext(ctx, setBatchReleaseLot, arg.ReleaseLotID, arg.ID, arg.AccountID)
+	return err
+}
+
 const unlinkBatchMachinesExcept = `-- name: UnlinkBatchMachinesExcept :exec
 DELETE FROM _batches_machines WHERE A = ? AND B != ?
 `
@@ -1464,6 +1564,22 @@ type UpdateBatchClosedAtParams struct {
 
 func (q *Queries) UpdateBatchClosedAt(ctx context.Context, arg UpdateBatchClosedAtParams) error {
 	_, err := q.db.ExecContext(ctx, updateBatchClosedAt, arg.ID, arg.AccountID)
+	return err
+}
+
+const updateBatchOperator = `-- name: UpdateBatchOperator :exec
+UPDATE batch SET operator_account_user_id = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?
+`
+
+type UpdateBatchOperatorParams struct {
+	OperatorAccountUserID sql.NullString
+	ID                    string
+	AccountID             string
+}
+
+func (q *Queries) UpdateBatchOperator(ctx context.Context, arg UpdateBatchOperatorParams) error {
+	_, err := q.db.ExecContext(ctx, updateBatchOperator, arg.OperatorAccountUserID, arg.ID, arg.AccountID)
 	return err
 }
 

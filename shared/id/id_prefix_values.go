@@ -84,6 +84,9 @@ const (
 	VocOrganization = "og"
 	VocOnboarding   = "ob"
 	VocOperating    = "oc"
+	VocOperator     = "oe"
+	VocSignature    = "gn"
+	VocCheckIn      = "ki"
 	VocOption       = "op"
 	VocOrder        = "or"
 	VocOutbox       = "ox"
@@ -226,6 +229,8 @@ var (
 	// Batch-related prefix values
 	BatchIDPrefix                = composePrefix(VocBatch)
 	BatchCountAdjustmentIDPrefix = composePrefix(VocBatch, VocAdjustment)
+	BatchSignatureIDPrefix       = composePrefix(VocBatch, VocSignature)
+	OperatorCheckInIDPrefix      = composePrefix(VocOperator, VocCheckIn)
 
 	// Carrier-related prefix values
 	CarrierIDPrefix                = composePrefix(VocCarrier)

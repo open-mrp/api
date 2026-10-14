@@ -118,6 +118,7 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 			UserMed:               userMed,
 			RefreshTokenMed:       refreshTokenMed,
 		}),
+		SigningPin: NewSigningPinMed(&SigningPinMedConfig{Repos: repoFactory}),
 	}
 
 	if len(f.docAPIKeyEncryptionKey) > 0 {

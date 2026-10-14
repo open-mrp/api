@@ -186,3 +186,29 @@ type ProductionRunActivityMed interface {
 	//  3. Enqueue a standalone bell alert with no link.
 	NotifyRunDeleted(ctx context.Context, identity *types.Identity, run *ProductionRun) *apierror.APIError
 }
+
+// BatchReleaseMed decides whether batches may move on from the production steps they are at.
+type BatchReleaseMed interface {
+	// CheckCanLeave refuses a scan that would take batches on before the sign-off their departments require.
+	//
+	//  1. Read the batches and the release policies of their departments; batches in departments requiring none pass.
+	//  2. Work out each remaining batch's release state from its signatures (see ReleaseState).
+	//  3. Refuse a batch on hold, whatever its department's enforcement.
+	//  4. Refuse an unreleased batch in a department that blocks; let it through in one that only warns.
+	CheckCanLeave(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
+
+	// CheckLineageReleased refuses a final release while any batch upstream of this one still lacks a
+	// sign-off its department requires, including the ones a warn department let through.
+	//
+	//  1. Walk the batch's flow upstream from it.
+	//  2. Work out the release state of every upstream batch in a department that requires a sign-off.
+	//  3. Refuse when any of them is unreleased or on hold, saying how many.
+	CheckLineageReleased(ctx context.Context, accountID, batchID string) *apierror.APIError
+
+	// ReleaseState reports whether a batch has the sign-off its department requires, and whether it is on hold.
+	//
+	//  1. Count only release signatures made at the batch's current step since it was scanned there.
+	//  2. In a first-article department, the latest supervisor and the latest quality signature any batch of the run received at the step must both approve; the batch is on hold only when its own latest release was a rejection.
+	//  3. Otherwise the batch's latest release decides: approved is released, rejected is on hold, none is unreleased.
+	ReleaseState(ctx context.Context, accountID string, batch *BaseBatch, policy *ReleasePolicy) (released bool, onHold bool, apiErr *apierror.APIError)
+}

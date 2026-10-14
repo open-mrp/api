@@ -57,6 +57,21 @@ func (mr *MockCoreAuthClientMockRecorder) GetIncompleteRegistrationSession(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteRegistrationSession", reflect.TypeOf((*MockCoreAuthClient)(nil).GetIncompleteRegistrationSession), ctx, userID)
 }
 
+// VerifySigningPin mocks base method.
+func (m *MockCoreAuthClient) VerifySigningPin(ctx context.Context, accountUserID, pin string) (*domain.Signer, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifySigningPin", ctx, accountUserID, pin)
+	ret0, _ := ret[0].(*domain.Signer)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// VerifySigningPin indicates an expected call of VerifySigningPin.
+func (mr *MockCoreAuthClientMockRecorder) VerifySigningPin(ctx, accountUserID, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySigningPin", reflect.TypeOf((*MockCoreAuthClient)(nil).VerifySigningPin), ctx, accountUserID, pin)
+}
+
 // MockShippoClient is a mock of ShippoClient interface.
 type MockShippoClient struct {
 	ctrl     *gomock.Controller

@@ -139,6 +139,20 @@ func (mr *MockRepoFactoryMockRecorder) NewRegistrationSessionRepo() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRegistrationSessionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRegistrationSessionRepo))
 }
 
+// NewSigningPinRepo mocks base method.
+func (m *MockRepoFactory) NewSigningPinRepo() domain.SigningPinRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewSigningPinRepo")
+	ret0, _ := ret[0].(domain.SigningPinRepo)
+	return ret0
+}
+
+// NewSigningPinRepo indicates an expected call of NewSigningPinRepo.
+func (mr *MockRepoFactoryMockRecorder) NewSigningPinRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSigningPinRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSigningPinRepo))
+}
+
 // NewUserRepo mocks base method.
 func (m *MockRepoFactory) NewUserRepo() domain.UserRepo {
 	m.ctrl.T.Helper()

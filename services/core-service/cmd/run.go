@@ -661,6 +661,13 @@ func Run(
 		TxManager: txManager,
 	})
 
+	batchReleaseSvc := service.NewBatchReleaseSvc(&service.BatchReleaseSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		AuthClient:      authClient,
+	})
+
 	machineDowntimeSvc := service.NewMachineDowntimeSvc(&service.MachineDowntimeSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1029,6 +1036,7 @@ func Run(
 	grpc.RegisterJobService(srv, jobSvc, exportSvc)
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
+	grpc.RegisterBatchReleaseService(srv, batchReleaseSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)

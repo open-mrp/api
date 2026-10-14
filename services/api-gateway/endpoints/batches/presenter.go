@@ -63,6 +63,8 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 
 	department := batchRef(ptrutil.Deref(b.DepartmentId), constants.ObjectTypeDepartment, ptrutil.Deref(b.DepartmentName))
 
+	operator := batchRef(ptrutil.Deref(b.OperatorAccountUserId), constants.ObjectTypeAccountUser, ptrutil.Deref(b.OperatorName))
+
 	return apiresource.Batch{
 		ID:              b.Id,
 		Object:          constants.ObjectTypeBatch,
@@ -74,6 +76,7 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 		Department:      department,
 		ProductionStep:  productionStep,
 		ProductionRun:   productionRun,
+		Operator:        operator,
 		Machines:        batchMachineList(b.Machines),
 		Lots:            batchLotList(b.Lots),
 		InputBatches:    batchReferenceList(b.InputBatchIds),

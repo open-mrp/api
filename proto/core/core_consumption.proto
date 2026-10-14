@@ -138,6 +138,7 @@ message LightScanningStationInfo {
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
   string operator_requirement = 6;
+  string operator_check_in = 7;
 }
 message LightProductionStepInfo {
   string id = 1;
@@ -162,6 +163,7 @@ message ScanningStationInfo {
   repeated LightProductionStepInfo production_steps = 10;
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
+  string operator_check_in = 15;
 }
 message ListScanningStationsRequest {
   optional string cursor = 1;
@@ -195,6 +197,7 @@ message CreateScanningStationRequest {
   optional string label_size_code = 6;
   optional string label_type_code = 7;
   repeated string includes = 8;
+  optional string operator_check_in = 9;
 }
 message CreateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;
@@ -207,6 +210,7 @@ message UpdateScanningStationRequest {
   optional StringPatch label_type_code = 5;
   optional string operator_requirement = 6;
   repeated string includes = 7;
+  optional string operator_check_in = 8;
 }
 message UpdateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;

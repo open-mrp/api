@@ -53,6 +53,23 @@ type UserRepo interface {
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) *apierror.APIError
 	// FindLastUsedAccountID returns the active account the user last used, or nil when they belong to none.
 	FindLastUsedAccountID(ctx context.Context, userID string) (*string, *apierror.APIError)
+	// FindAccountUser returns the account user with this ID in the account, or a not-found error.
+	FindAccountUser(ctx context.Context, accountID, accountUserID string) (*SigningAccountUser, *apierror.APIError)
+	// FindAccountUserByUserID returns the user's membership in the account, or a not-found error.
+	FindAccountUserByUserID(ctx context.Context, accountID, userID string) (*SigningAccountUser, *apierror.APIError)
+}
+
+type SigningPinRepo interface {
+	// FindByUserID returns the user's signing PIN, or a not-found error when they have none.
+	FindByUserID(ctx context.Context, userID string) (*SigningPin, *apierror.APIError)
+	// Upsert replaces the user's PIN and clears any failed attempts and lockout.
+	Upsert(ctx context.Context, userID, pinHash string, isTemporary bool) *apierror.APIError
+	// Delete removes the user's PIN, reporting whether one existed.
+	Delete(ctx context.Context, userID string) (bool, *apierror.APIError)
+	// RecordFailure counts one wrong PIN against pinHash in a single statement; the attempt that reaches maxAttempts locks signing until lockUntil and restarts the count. A PIN replaced since pinHash was read is left alone.
+	RecordFailure(ctx context.Context, userID, pinHash string, maxAttempts int, lockUntil time.Time) *apierror.APIError
+	// ResetFailures clears failed attempts and any lockout.
+	ResetFailures(ctx context.Context, userID string) *apierror.APIError
 }
 
 type DocAPIKeyRepo interface {

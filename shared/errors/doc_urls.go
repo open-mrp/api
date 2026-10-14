@@ -12,6 +12,16 @@ const (
 	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment_required"
 	docURLAgentSpendingCap   = docsBaseURL + "/api/errors#agent_spending_cap_reached"
 
+	// Signatures
+	docURLSigningPINInvalid           = docsBaseURL + "/api/errors#signing_pin_invalid"
+	docURLSigningPINLocked            = docsBaseURL + "/api/errors#signing_pin_locked"
+	docURLSigningPINNotSet            = docsBaseURL + "/api/errors#signing_pin_not_set"
+	docURLSigningPINChangeRequired    = docsBaseURL + "/api/errors#signing_pin_change_required"
+	docURLBatchReleaseRequired        = docsBaseURL + "/api/errors#batch_release_required"
+	docURLBatchOnHold                 = docsBaseURL + "/api/errors#batch_on_hold"
+	docURLCorrectionSignatureRequired = docsBaseURL + "/api/errors#correction_signature_required"
+	docURLOperatorCheckInRequired     = docsBaseURL + "/api/errors#operator_check_in_required"
+
 	// Validation
 	docURLValidationFailed = docsBaseURL + "/api/errors#validation_failed"
 	docURLMissingField     = docsBaseURL + "/api/errors#missing_field"

@@ -126,3 +126,58 @@ func (k *IdempotencyKey) HasResponse() bool {
 func (k *IdempotencyKey) IsFinished() bool {
 	return k.RecoveryPoint.IsFinished()
 }
+
+// SigningPin is a person's signing PIN as stored; PinHash never leaves auth-service.
+type SigningPin struct {
+	UserID         string
+	PinHash        string
+	IsTemporary    bool
+	FailedAttempts int
+	LockedUntil    *time.Time
+	SetAt          time.Time
+}
+
+// IsLocked reports whether too many wrong PINs have locked signing at now.
+func (p *SigningPin) IsLocked(now time.Time) bool {
+	return p.LockedUntil != nil && p.LockedUntil.After(now)
+}
+
+// SigningAccountUser is an account member whose signing PIN is being set or checked.
+type SigningAccountUser struct {
+	ID           string
+	UserID       string
+	AccountID    string
+	DepartmentID *string
+	StatusCode   string
+	Name         *string
+	Username     *string
+}
+
+// IsActive reports whether the member may still sign in the account.
+func (u *SigningAccountUser) IsActive() bool {
+	return u.StatusCode == "active"
+}
+
+// DisplayName is the name copied onto what they sign; members without a name sign as their username.
+func (u *SigningAccountUser) DisplayName() string {
+	if u.Name != nil && *u.Name != "" {
+		return *u.Name
+	}
+	if u.Username != nil {
+		return *u.Username
+	}
+	return ""
+}
+
+// VerifiedSigner is who a correct signing PIN identified, as of the check.
+type VerifiedSigner struct {
+	AccountUserID string
+	UserID        string
+	Name          string
+	RoleID        *string
+	RoleName      *string
+	RoleTypeCode  *string
+	DepartmentID  *string
+	// Permissions are "<domain>:<action>", sorted; empty for admins, who hold every permission.
+	Permissions []string
+}

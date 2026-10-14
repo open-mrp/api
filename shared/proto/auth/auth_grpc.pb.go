@@ -54,6 +54,11 @@ const (
 	AuthService_CompleteRegistration_FullMethodName             = "/auth.AuthService/CompleteRegistration"
 	AuthService_MagicLogin_FullMethodName                       = "/auth.AuthService/MagicLogin"
 	AuthService_GetIncompleteRegistrationSession_FullMethodName = "/auth.AuthService/GetIncompleteRegistrationSession"
+	AuthService_SetSigningPin_FullMethodName                    = "/auth.AuthService/SetSigningPin"
+	AuthService_SetTemporarySigningPin_FullMethodName           = "/auth.AuthService/SetTemporarySigningPin"
+	AuthService_ClearSigningPin_FullMethodName                  = "/auth.AuthService/ClearSigningPin"
+	AuthService_ChangeSigningPin_FullMethodName                 = "/auth.AuthService/ChangeSigningPin"
+	AuthService_VerifySigningPin_FullMethodName                 = "/auth.AuthService/VerifySigningPin"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -115,6 +120,17 @@ type AuthServiceClient interface {
 	MagicLogin(ctx context.Context, in *MagicLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// Returns the caller's most recent incomplete registration session, or no session if none exists.
 	GetIncompleteRegistrationSession(ctx context.Context, in *GetIncompleteRegistrationSessionRequest, opts ...grpc.CallOption) (*GetIncompleteRegistrationSessionResponse, error)
+	// Sets the caller's own signing PIN, replacing any PIN they had (including a temporary one).
+	SetSigningPin(ctx context.Context, in *SetSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Sets a temporary signing PIN for an account user who can't set their own; it must be changed on first use.
+	SetTemporarySigningPin(ctx context.Context, in *SetTemporarySigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Removes an account user's signing PIN, so they must set a new one before signing.
+	ClearSigningPin(ctx context.Context, in *ClearSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Replaces an account user's PIN after checking their current one; the only way to use a temporary PIN.
+	ChangeSigningPin(ctx context.Context, in *ChangeSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Checks an account user's signing PIN in the caller's account. Fails with signing_pin_invalid,
+	// signing_pin_locked, signing_pin_not_set or signing_pin_change_required.
+	VerifySigningPin(ctx context.Context, in *VerifySigningPinRequest, opts ...grpc.CallOption) (*VerifySigningPinResponse, error)
 }
 
 type authServiceClient struct {
@@ -395,6 +411,56 @@ func (c *authServiceClient) GetIncompleteRegistrationSession(ctx context.Context
 	return out, nil
 }
 
+func (c *authServiceClient) SetSigningPin(ctx context.Context, in *SetSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_SetSigningPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) SetTemporarySigningPin(ctx context.Context, in *SetTemporarySigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_SetTemporarySigningPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ClearSigningPin(ctx context.Context, in *ClearSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_ClearSigningPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ChangeSigningPin(ctx context.Context, in *ChangeSigningPinRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_ChangeSigningPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) VerifySigningPin(ctx context.Context, in *VerifySigningPinRequest, opts ...grpc.CallOption) (*VerifySigningPinResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifySigningPinResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifySigningPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -454,6 +520,17 @@ type AuthServiceServer interface {
 	MagicLogin(context.Context, *MagicLoginRequest) (*LoginResponse, error)
 	// Returns the caller's most recent incomplete registration session, or no session if none exists.
 	GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error)
+	// Sets the caller's own signing PIN, replacing any PIN they had (including a temporary one).
+	SetSigningPin(context.Context, *SetSigningPinRequest) (*emptypb.Empty, error)
+	// Sets a temporary signing PIN for an account user who can't set their own; it must be changed on first use.
+	SetTemporarySigningPin(context.Context, *SetTemporarySigningPinRequest) (*emptypb.Empty, error)
+	// Removes an account user's signing PIN, so they must set a new one before signing.
+	ClearSigningPin(context.Context, *ClearSigningPinRequest) (*emptypb.Empty, error)
+	// Replaces an account user's PIN after checking their current one; the only way to use a temporary PIN.
+	ChangeSigningPin(context.Context, *ChangeSigningPinRequest) (*emptypb.Empty, error)
+	// Checks an account user's signing PIN in the caller's account. Fails with signing_pin_invalid,
+	// signing_pin_locked, signing_pin_not_set or signing_pin_change_required.
+	VerifySigningPin(context.Context, *VerifySigningPinRequest) (*VerifySigningPinResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -544,6 +621,21 @@ func (UnimplementedAuthServiceServer) MagicLogin(context.Context, *MagicLoginReq
 }
 func (UnimplementedAuthServiceServer) GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetIncompleteRegistrationSession not implemented")
+}
+func (UnimplementedAuthServiceServer) SetSigningPin(context.Context, *SetSigningPinRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetSigningPin not implemented")
+}
+func (UnimplementedAuthServiceServer) SetTemporarySigningPin(context.Context, *SetTemporarySigningPinRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetTemporarySigningPin not implemented")
+}
+func (UnimplementedAuthServiceServer) ClearSigningPin(context.Context, *ClearSigningPinRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ClearSigningPin not implemented")
+}
+func (UnimplementedAuthServiceServer) ChangeSigningPin(context.Context, *ChangeSigningPinRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeSigningPin not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifySigningPin(context.Context, *VerifySigningPinRequest) (*VerifySigningPinResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifySigningPin not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -1052,6 +1144,96 @@ func _AuthService_GetIncompleteRegistrationSession_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_SetSigningPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSigningPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SetSigningPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SetSigningPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SetSigningPin(ctx, req.(*SetSigningPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_SetTemporarySigningPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetTemporarySigningPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SetTemporarySigningPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SetTemporarySigningPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SetTemporarySigningPin(ctx, req.(*SetTemporarySigningPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ClearSigningPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearSigningPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ClearSigningPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ClearSigningPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ClearSigningPin(ctx, req.(*ClearSigningPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ChangeSigningPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeSigningPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ChangeSigningPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ChangeSigningPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ChangeSigningPin(ctx, req.(*ChangeSigningPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_VerifySigningPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifySigningPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifySigningPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifySigningPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifySigningPin(ctx, req.(*VerifySigningPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1166,6 +1348,26 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetIncompleteRegistrationSession",
 			Handler:    _AuthService_GetIncompleteRegistrationSession_Handler,
+		},
+		{
+			MethodName: "SetSigningPin",
+			Handler:    _AuthService_SetSigningPin_Handler,
+		},
+		{
+			MethodName: "SetTemporarySigningPin",
+			Handler:    _AuthService_SetTemporarySigningPin_Handler,
+		},
+		{
+			MethodName: "ClearSigningPin",
+			Handler:    _AuthService_ClearSigningPin_Handler,
+		},
+		{
+			MethodName: "ChangeSigningPin",
+			Handler:    _AuthService_ChangeSigningPin_Handler,
+		},
+		{
+			MethodName: "VerifySigningPin",
+			Handler:    _AuthService_VerifySigningPin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

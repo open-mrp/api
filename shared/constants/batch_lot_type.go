@@ -8,11 +8,13 @@ const (
 	BatchLotTypeMaterial BatchLotType = "material"
 	// BatchLotTypeProductionRun means the lot number is the production run number the batch belongs to.
 	BatchLotTypeProductionRun BatchLotType = "productionRun"
+	// BatchLotTypeRelease means the lot number is the finished-goods lot the batch's final release assigned.
+	BatchLotTypeRelease BatchLotType = "release"
 )
 
 func (t BatchLotType) IsValid() bool {
 	switch t {
-	case BatchLotTypeMaterial, BatchLotTypeProductionRun:
+	case BatchLotTypeMaterial, BatchLotTypeProductionRun, BatchLotTypeRelease:
 		return true
 	default:
 		return false
@@ -23,5 +25,6 @@ func (t BatchLotType) EnumValues() []string {
 	return []string{
 		string(BatchLotTypeMaterial),
 		string(BatchLotTypeProductionRun),
+		string(BatchLotTypeRelease),
 	}
 }

@@ -15,6 +15,8 @@ const (
 	PermissionDomainSettlements                   PermissionDomain = "settlements"
 	PermissionDomainTransactions                  PermissionDomain = "transactions"
 	PermissionDomainBatches                       PermissionDomain = "batches"
+	PermissionDomainBatchReleases                 PermissionDomain = "batch_releases"
+	PermissionDomainQualityReleases               PermissionDomain = "quality_releases"
 	PermissionDomainCarriers                      PermissionDomain = "carriers"
 	PermissionDomainCustomerGroups                PermissionDomain = "customer_groups"
 	PermissionDomainCustomers                     PermissionDomain = "customers"
@@ -120,6 +122,8 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainSettlements,
 		PermissionDomainTransactions,
 		PermissionDomainBatches,
+		PermissionDomainBatchReleases,
+		PermissionDomainQualityReleases,
 		PermissionDomainCarriers,
 		PermissionDomainCustomerGroups,
 		PermissionDomainCustomers,

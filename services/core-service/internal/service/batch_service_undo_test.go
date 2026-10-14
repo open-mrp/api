@@ -81,7 +81,13 @@ type BatchUndoTestSuite struct {
 	runActivity       *mediatormock.MockProductionRunActivityMed
 	outbox            *recordingOutboxRepo
 	// recounts is what the undone batch recounted when it closed its source; none unless a test says so.
-	recounts []domain.BatchCountAdjustment
+	recounts      []domain.BatchCountAdjustment
+	policyRepo    *repositorymock.MockReleasePolicyRepo
+	signatureRepo *repositorymock.MockBatchSignatureRepo
+	// requirement is the release every step requires; none unless a test says so.
+	requirement constants.ReleaseRequirement
+	// signatures are the undone batch's signatures, newest first.
+	signatures []*domain.BatchSignature
 }
 
 func (s *BatchUndoTestSuite) SetupTest() {
@@ -109,6 +115,21 @@ func (s *BatchUndoTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewOrderQueryRepo().Return(s.orderRepo).AnyTimes()
 	repoFactory.EXPECT().NewDeletedRecordRepo().Return(s.deletedRecordRepo).AnyTimes()
 	repoFactory.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
+	// Steps require no sign-off unless a test says otherwise.
+	s.policyRepo = repositorymock.NewMockReleasePolicyRepo(s.ctrl)
+	s.policyRepo.EXPECT().Get(gomock.Any(), undoAccountID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, departmentID string) (*domain.ReleasePolicy, *apierror.APIError) {
+			return &domain.ReleasePolicy{DepartmentID: departmentID, Requirement: s.requirement, Enforcement: constants.ReleaseEnforcementBlock}, nil
+		}).AnyTimes()
+	s.signatureRepo = repositorymock.NewMockBatchSignatureRepo(s.ctrl)
+	s.signatureRepo.EXPECT().ListForBatch(gomock.Any(), undoAccountID, gomock.Any()).
+		DoAndReturn(func(context.Context, string, string) ([]*domain.BatchSignature, *apierror.APIError) {
+			return s.signatures, nil
+		}).AnyTimes()
+	s.requirement = constants.ReleaseRequirementNone
+	s.signatures = nil
+	repoFactory.EXPECT().NewReleasePolicyRepo().Return(s.policyRepo).AnyTimes()
+	repoFactory.EXPECT().NewBatchSignatureRepo().Return(s.signatureRepo).AnyTimes()
 
 	mediatorFactory := factorymock.NewMockMediatorFactory(s.ctrl)
 	mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{ProductionRunActivity: s.runActivity}).AnyTimes()
@@ -149,8 +170,10 @@ type batchOption func(*domain.Batch)
 
 func scannedBatch(id string, opts ...batchOption) *domain.Batch {
 	scannedAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	departmentID := "dp_undo"
 	batch := &domain.Batch{
 		ID:              id,
+		DepartmentID:    &departmentID,
 		Item:            domain.LightItem{ID: "it_product"},
 		Quantity:        domain.BatchQuantity{ID: "qu_1", Measure: decimal.NewFromInt(10), Unit: domain.LightUnit{ID: "each"}},
 		ScannedAt:       &scannedAt,
@@ -432,4 +455,82 @@ func (s *BatchUndoTestSuite) TestUndoingARecountingSplitRestoresItsSourceBeforeR
 
 	s.Require().Nil(apiErr)
 	s.Require().Len(s.outbox.undoEvents(), 1)
+}
+
+// expectHeldForCorrection sets up an init batch's undo up to the correction check.
+func (s *BatchUndoTestSuite) expectHeldForCorrection(batch *domain.Batch) {
+	s.expectScanUndoPlanned(batch)
+	s.expectHeld(batch)
+	s.batchRepo.EXPECT().CountDownstreamBatches(gomock.Any(), batch.ID).Return(int64(0), nil)
+	s.inventoryMutRepo.EXPECT().CountAllocatedReceiptsForBatch(gomock.Any(), undoAccountID, batch.ID).Return(int64(0), nil)
+}
+
+func undoSignature(batch *domain.Batch, signatureType constants.BatchSignatureType, decision constants.BatchSignatureDecision, after time.Duration) *domain.BatchSignature {
+	return &domain.BatchSignature{
+		ID:               "btgn_" + string(signatureType),
+		BatchID:          batch.ID,
+		ProductionStepID: undoStepID,
+		Type:             signatureType,
+		Decision:         decision,
+		SignedAt:         batch.ScannedAt.Add(after),
+	}
+}
+
+func (s *BatchUndoTestSuite) TestRefusesUndoAtAGatedStepWithoutACorrection() {
+	batch := scannedBatch("bt_1", inRun())
+	s.requirement = constants.ReleaseRequirementSupervisor
+	s.expectHeldForCorrection(batch)
+
+	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
+
+	s.Require().NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeCorrectionSignatureRequired, apiErr.Code)
+	s.Empty(s.outbox.undoEvents())
+}
+
+func (s *BatchUndoTestSuite) TestRefusesUndoOfAReleasedBatchEvenWithACorrection() {
+	batch := scannedBatch("bt_1", inRun())
+	s.requirement = constants.ReleaseRequirementQuality
+	s.signatures = []*domain.BatchSignature{
+		undoSignature(batch, constants.BatchSignatureTypeCorrection, constants.BatchSignatureDecisionApproved, 2*time.Minute),
+		undoSignature(batch, constants.BatchSignatureTypeStepRelease, constants.BatchSignatureDecisionApproved, time.Minute),
+	}
+	s.expectHeldForCorrection(batch)
+
+	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
+
+	s.Require().NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+}
+
+func (s *BatchUndoTestSuite) TestIgnoresACorrectionSignedBeforeTheBatchWasLastScanned() {
+	batch := scannedBatch("bt_1", inRun())
+	s.requirement = constants.ReleaseRequirementSupervisor
+	s.signatures = []*domain.BatchSignature{
+		undoSignature(batch, constants.BatchSignatureTypeCorrection, constants.BatchSignatureDecisionApproved, -time.Minute),
+	}
+	s.expectHeldForCorrection(batch)
+
+	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
+
+	s.Require().NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeCorrectionSignatureRequired, apiErr.Code)
+}
+
+func (s *BatchUndoTestSuite) TestUndoesAtAGatedStepOnceACorrectionIsSigned() {
+	batch := scannedBatch("bt_1", inRun())
+	s.requirement = constants.ReleaseRequirementSupervisor
+	s.signatures = []*domain.BatchSignature{
+		undoSignature(batch, constants.BatchSignatureTypeCorrection, constants.BatchSignatureDecisionApproved, time.Minute),
+		// A rejection withdrew the release, so the batch is no longer released.
+		undoSignature(batch, constants.BatchSignatureTypeStepRelease, constants.BatchSignatureDecisionRejected, 30*time.Second),
+	}
+	s.expectHeldForCorrection(batch)
+	s.batchRepo.EXPECT().Unscan(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
+	s.runRepo.EXPECT().Reopen(gomock.Any(), undoAccountID, undoRunID).Return(nil)
+
+	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
+
+	s.Require().Nil(apiErr)
+	s.Len(s.outbox.undoEvents(), 1)
 }

@@ -163,6 +163,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(accountUsersGroup.APIEndpointGroup)
 	}
 
+	// Signing PINs
+	signingPinsGroup := (&httpgroup.SigningPinsEndpointGroup{}).Materialize(&httpgroup.SigningPinsEndpointGroupConfig{
+		AuthClient: config.AuthClient,
+	})
+	if signingPinsGroup != nil {
+		registry.RegisterGroup(signingPinsGroup.APIEndpointGroup)
+	}
+
 	// Sales Targets
 	salesTargetsGroup := (&httpgroup.SalesTargetsEndpointGroup{}).Materialize(&httpgroup.SalesTargetsEndpointGroupConfig{
 		CoreClient: config.CoreClient,
@@ -465,6 +473,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	})
 	if machineDowntimeGroup != nil {
 		registry.RegisterGroup(machineDowntimeGroup.APIEndpointGroup)
+	}
+
+	// Batch Releases
+	batchReleasesGroup := (&httpgroup.BatchReleasesEndpointGroup{}).Materialize(&httpgroup.BatchReleasesEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if batchReleasesGroup != nil {
+		registry.RegisterGroup(batchReleasesGroup.APIEndpointGroup)
 	}
 
 	// Machine Status

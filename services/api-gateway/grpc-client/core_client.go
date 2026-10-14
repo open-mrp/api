@@ -19,6 +19,7 @@ type CoreServiceClient struct {
 	ProductionRun      pb.CoreProductionRunServiceClient
 	ProductionStep     pb.CoreProductionStepServiceClient
 	MachineDowntime    pb.CoreMachineDowntimeServiceClient
+	BatchRelease       pb.CoreBatchReleaseServiceClient
 	DemandOverride     pb.CoreDemandOverrideServiceClient
 	ProductionSchedule pb.CoreProductionScheduleServiceClient
 	Receiving          pb.CoreReceivingServiceClient
@@ -46,6 +47,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		ProductionRun:      pb.NewCoreProductionRunServiceClient(conn),
 		ProductionStep:     pb.NewCoreProductionStepServiceClient(conn),
 		MachineDowntime:    pb.NewCoreMachineDowntimeServiceClient(conn),
+		BatchRelease:       pb.NewCoreBatchReleaseServiceClient(conn),
 		DemandOverride:     pb.NewCoreDemandOverrideServiceClient(conn),
 		ProductionSchedule: pb.NewCoreProductionScheduleServiceClient(conn),
 		Receiving:          pb.NewCoreReceivingServiceClient(conn),

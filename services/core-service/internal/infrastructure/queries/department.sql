@@ -26,7 +26,7 @@ WHERE d.id IN (sqlc.slice('ids'))
 AND d.account_id = sqlc.arg('account_id');
 
 -- name: ListScanningStationsByDepartmentIDs :many
-SELECT id, name, scanning_station_type_code, material_check_required, department_id, created_at, updated_at
+SELECT id, name, scanning_station_type_code, material_check_required, operator_check_in_code, department_id, created_at, updated_at
 FROM scanning_station
 WHERE department_id IN (sqlc.slice('department_ids'))
 AND account_id = sqlc.arg('account_id')
@@ -196,7 +196,7 @@ WHERE d.name IN (sqlc.slice('names'))
 AND d.account_id = sqlc.arg('account_id');
 
 -- name: ListScanningStationsByDepartmentID :many
-SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
+SELECT id, name, scanning_station_type_code, material_check_required, operator_check_in_code, created_at, updated_at
 FROM scanning_station
 WHERE department_id = sqlc.arg('department_id')
 AND account_id = sqlc.arg('account_id')

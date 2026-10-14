@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/auth"
+	"github.com/open-mrp/api/shared/ptrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -24,9 +25,10 @@ type gRPCHandler struct {
 	apiKeySvc              domain.APIKeySvc
 	docAPIKeySvc           domain.DocAPIKeySvc
 	registrationSessionSvc domain.RegistrationSessionSvc
+	signingPinSvc          domain.SigningPinSvc
 }
 
-func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.UserSvc, tokenSvc domain.TokenSvc, passwordSvc domain.PasswordSvc, apiKeySvc domain.APIKeySvc, docAPIKeySvc domain.DocAPIKeySvc, registrationSessionSvc domain.RegistrationSessionSvc) *gRPCHandler {
+func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.UserSvc, tokenSvc domain.TokenSvc, passwordSvc domain.PasswordSvc, apiKeySvc domain.APIKeySvc, docAPIKeySvc domain.DocAPIKeySvc, registrationSessionSvc domain.RegistrationSessionSvc, signingPinSvc domain.SigningPinSvc) *gRPCHandler {
 	handler := &gRPCHandler{
 		authSvc:                authSvc,
 		userSvc:                userSvc,
@@ -35,6 +37,7 @@ func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.
 		apiKeySvc:              apiKeySvc,
 		docAPIKeySvc:           docAPIKeySvc,
 		registrationSessionSvc: registrationSessionSvc,
+		signingPinSvc:          signingPinSvc,
 	}
 
 	pb.RegisterAuthServiceServer(server, handler)
@@ -614,5 +617,83 @@ func (h *gRPCHandler) ConfirmRegistrationPayment(ctx context.Context, req *pb.Co
 	return &pb.ConfirmRegistrationPaymentResponse{
 		Status:          result.Status,
 		PaymentMethodId: result.PaymentMethodID,
+	}, nil
+}
+
+func (h *gRPCHandler) SetSigningPin(ctx context.Context, req *pb.SetSigningPinRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	if apiErr := h.signingPinSvc.SetSigningPin(ctx, req.Pin); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) SetTemporarySigningPin(ctx context.Context, req *pb.SetTemporarySigningPinRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	if apiErr := h.signingPinSvc.SetTemporarySigningPin(ctx, req.AccountUserId, req.Pin); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) ClearSigningPin(ctx context.Context, req *pb.ClearSigningPinRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	if apiErr := h.signingPinSvc.ClearSigningPin(ctx, req.AccountUserId); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) ChangeSigningPin(ctx context.Context, req *pb.ChangeSigningPinRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	if apiErr := h.signingPinSvc.ChangeSigningPin(ctx, req.AccountUserId, req.CurrentPin, req.NewPin); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) VerifySigningPin(ctx context.Context, req *pb.VerifySigningPinRequest) (*pb.VerifySigningPinResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	signer, apiErr := h.signingPinSvc.VerifySigningPin(ctx, req.AccountUserId, req.Pin)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.VerifySigningPinResponse{
+		AccountUserId: signer.AccountUserID,
+		UserId:        signer.UserID,
+		Name:          signer.Name,
+		RoleId:        ptrutil.Deref(signer.RoleID),
+		RoleName:      ptrutil.Deref(signer.RoleName),
+		RoleTypeCode:  ptrutil.Deref(signer.RoleTypeCode),
+		DepartmentId:  ptrutil.Deref(signer.DepartmentID),
+		Permissions:   signer.Permissions,
 	}, nil
 }

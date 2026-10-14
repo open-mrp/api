@@ -46,6 +46,11 @@ type CreateScanningStationRequest struct {
 	// - `tag`: a label attached to the physical product.
 	// - `traveler`: a routing sheet that accompanies the batch through every production step.
 	LabelTypeCode field.Optional[constants.LabelTypeCode] `json:"label_type,omitzero"`
+	// Whether the station scans only while an operator is checked in. Defaults to `optional`.
+	//
+	// - `optional`: scans record the checked-in operator when there is one.
+	// - `required`: scans are refused while nobody is checked in.
+	OperatorCheckIn field.Optional[constants.OperatorCheckInRequirement] `json:"operator_check_in,omitzero"`
 }
 
 var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne

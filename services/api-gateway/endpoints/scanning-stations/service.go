@@ -141,6 +141,7 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 		DepartmentId:        req.DepartmentID,
 		LabelSizeCode:       req.LabelSizeCode.Ptr().StringPtr(),
 		LabelTypeCode:       req.LabelTypeCode.Ptr().StringPtr(),
+		OperatorCheckIn:     req.OperatorCheckIn.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.create", domain.ServiceName,
@@ -193,6 +194,7 @@ func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req 
 			}
 			return nil
 		}(),
+		OperatorCheckIn: req.OperatorCheckIn.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.update", domain.ServiceName,

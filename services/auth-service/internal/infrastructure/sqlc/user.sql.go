@@ -32,6 +32,80 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const findAccountUserByUserIDInAccount = `-- name: FindAccountUserByUserIDInAccount :one
+SELECT account_user.id, account_user.user_id, account_user.account_id, account_user.department_id, account_user.status_code, ` + "`" + `user` + "`" + `.name, ` + "`" + `user` + "`" + `.username
+FROM account_user
+JOIN ` + "`" + `user` + "`" + ` ON ` + "`" + `user` + "`" + `.id = account_user.user_id
+WHERE account_user.user_id = ? AND account_user.account_id = ?
+`
+
+type FindAccountUserByUserIDInAccountParams struct {
+	UserID    string
+	AccountID string
+}
+
+type FindAccountUserByUserIDInAccountRow struct {
+	ID           string
+	UserID       string
+	AccountID    string
+	DepartmentID sql.NullString
+	StatusCode   string
+	Name         sql.NullString
+	Username     sql.NullString
+}
+
+func (q *Queries) FindAccountUserByUserIDInAccount(ctx context.Context, arg FindAccountUserByUserIDInAccountParams) (FindAccountUserByUserIDInAccountRow, error) {
+	row := q.db.QueryRowContext(ctx, findAccountUserByUserIDInAccount, arg.UserID, arg.AccountID)
+	var i FindAccountUserByUserIDInAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AccountID,
+		&i.DepartmentID,
+		&i.StatusCode,
+		&i.Name,
+		&i.Username,
+	)
+	return i, err
+}
+
+const findAccountUserInAccount = `-- name: FindAccountUserInAccount :one
+SELECT account_user.id, account_user.user_id, account_user.account_id, account_user.department_id, account_user.status_code, ` + "`" + `user` + "`" + `.name, ` + "`" + `user` + "`" + `.username
+FROM account_user
+JOIN ` + "`" + `user` + "`" + ` ON ` + "`" + `user` + "`" + `.id = account_user.user_id
+WHERE account_user.id = ? AND account_user.account_id = ?
+`
+
+type FindAccountUserInAccountParams struct {
+	ID        string
+	AccountID string
+}
+
+type FindAccountUserInAccountRow struct {
+	ID           string
+	UserID       string
+	AccountID    string
+	DepartmentID sql.NullString
+	StatusCode   string
+	Name         sql.NullString
+	Username     sql.NullString
+}
+
+func (q *Queries) FindAccountUserInAccount(ctx context.Context, arg FindAccountUserInAccountParams) (FindAccountUserInAccountRow, error) {
+	row := q.db.QueryRowContext(ctx, findAccountUserInAccount, arg.ID, arg.AccountID)
+	var i FindAccountUserInAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AccountID,
+		&i.DepartmentID,
+		&i.StatusCode,
+		&i.Name,
+		&i.Username,
+	)
+	return i, err
+}
+
 const findLastUsedAccountID = `-- name: FindLastUsedAccountID :one
 SELECT account_id FROM account_user 
 WHERE user_id = ? 

@@ -11,6 +11,11 @@ const (
 	ErrRefreshTokenRevoked = "Refresh token has been revoked."
 	// Actor account header: user must be an account member
 	ErrActorAccountRequiresMember = "You do not have access to act on behalf of this account. The OpenMRP-Actor-Account header requires you to be a member of the account."
+	// Signing PIN errors
+	ErrSigningPinNotSet         = "This person has no signing PIN yet. They must set one before signing."
+	ErrSigningPinLocked         = "Too many wrong signing PINs. Signing is locked for this person for 15 minutes."
+	ErrSigningPinInvalid        = "The signing PIN is wrong."
+	ErrSigningPinChangeRequired = "This signing PIN is temporary. Change it before signing."
 )
 
 func errNoAccountAccess(accountID string) string {

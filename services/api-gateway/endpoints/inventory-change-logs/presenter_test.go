@@ -57,10 +57,11 @@ func TestInventoryChangeLogFromProto(t *testing.T) {
 		Object: "user",
 	}
 	result.ResponsibleScanningStation = &apiresource.ScanningStation{
-		ID:     stationID,
-		Object: "scanning_station",
-		Name:   stationName,
-		Type:   "init_batch",
+		ID:              stationID,
+		Object:          "scanning_station",
+		Name:            stationName,
+		Type:            "init_batch",
+		OperatorCheckIn: "optional",
 	}
 	resourcetest.ValidateResourceStruct(t, "InventoryChangeLog", result)
 	resourcetest.ValidateExpandableStubs(t, "InventoryChangeLog", result)

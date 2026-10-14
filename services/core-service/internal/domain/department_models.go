@@ -21,6 +21,7 @@ type DepartmentScanningStation struct {
 	Name                string
 	Type                string
 	OperatorRequirement string
+	OperatorCheckIn     string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }

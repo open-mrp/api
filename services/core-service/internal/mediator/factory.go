@@ -19,5 +19,6 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 		PaymentFlags:          NewPaymentFlagsMed(&PaymentFlagsMedConfig{Repos: repoFactory}),
 		ProductionRunActivity: NewProductionRunActivityMed(&ProductionRunActivityMedConfig{Repos: repoFactory}),
 		Address:               NewAddressMed(&AddressMedConfig{Repos: repoFactory}),
+		BatchRelease:          NewBatchReleaseMed(&BatchReleaseMedConfig{Repos: repoFactory}),
 	}
 }

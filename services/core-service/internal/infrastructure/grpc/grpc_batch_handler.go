@@ -56,6 +56,11 @@ func batchToProto(b *domain.Batch) *pb.BatchInfo {
 		pbBatch.ProductionRunNumber = &b.ProductionRun.Number
 	}
 
+	if b.Operator != nil {
+		pbBatch.OperatorAccountUserId = &b.Operator.AccountUserID
+		pbBatch.OperatorName = &b.Operator.Name
+	}
+
 	if b.Machines != nil {
 		pbBatch.Machines = make([]*pb.LightMachineInfo, len(b.Machines))
 		for i, m := range b.Machines {

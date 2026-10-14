@@ -551,3 +551,71 @@ func (mr *MockProductionRunActivityMedMockRecorder) NotifyRunDeleted(ctx, identi
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyRunDeleted", reflect.TypeOf((*MockProductionRunActivityMed)(nil).NotifyRunDeleted), ctx, identity, run)
 }
+
+// MockBatchReleaseMed is a mock of BatchReleaseMed interface.
+type MockBatchReleaseMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockBatchReleaseMedMockRecorder
+	isgomock struct{}
+}
+
+// MockBatchReleaseMedMockRecorder is the mock recorder for MockBatchReleaseMed.
+type MockBatchReleaseMedMockRecorder struct {
+	mock *MockBatchReleaseMed
+}
+
+// NewMockBatchReleaseMed creates a new mock instance.
+func NewMockBatchReleaseMed(ctrl *gomock.Controller) *MockBatchReleaseMed {
+	mock := &MockBatchReleaseMed{ctrl: ctrl}
+	mock.recorder = &MockBatchReleaseMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBatchReleaseMed) EXPECT() *MockBatchReleaseMedMockRecorder {
+	return m.recorder
+}
+
+// CheckCanLeave mocks base method.
+func (m *MockBatchReleaseMed) CheckCanLeave(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckCanLeave", ctx, accountID, batchIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CheckCanLeave indicates an expected call of CheckCanLeave.
+func (mr *MockBatchReleaseMedMockRecorder) CheckCanLeave(ctx, accountID, batchIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckCanLeave", reflect.TypeOf((*MockBatchReleaseMed)(nil).CheckCanLeave), ctx, accountID, batchIDs)
+}
+
+// CheckLineageReleased mocks base method.
+func (m *MockBatchReleaseMed) CheckLineageReleased(ctx context.Context, accountID, batchID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckLineageReleased", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CheckLineageReleased indicates an expected call of CheckLineageReleased.
+func (mr *MockBatchReleaseMedMockRecorder) CheckLineageReleased(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckLineageReleased", reflect.TypeOf((*MockBatchReleaseMed)(nil).CheckLineageReleased), ctx, accountID, batchID)
+}
+
+// ReleaseState mocks base method.
+func (m *MockBatchReleaseMed) ReleaseState(ctx context.Context, accountID string, batch *domain.BaseBatch, policy *domain.ReleasePolicy) (bool, bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseState", ctx, accountID, batch, policy)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// ReleaseState indicates an expected call of ReleaseState.
+func (mr *MockBatchReleaseMedMockRecorder) ReleaseState(ctx, accountID, batch, policy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseState", reflect.TypeOf((*MockBatchReleaseMed)(nil).ReleaseState), ctx, accountID, batch, policy)
+}

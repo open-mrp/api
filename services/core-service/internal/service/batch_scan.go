@@ -222,8 +222,15 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 		if apiErr := checkInitializable(held); apiErr != nil {
 			return apiErr
 		}
+		operatorID, apiErr := txSvc.resolveOperator(txCtx, accountID, params.ScanningStationID)
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txBatchRepo.MarkAsScanned(txCtx, accountID, batch.ID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txBatchRepo.SetOperator(txCtx, accountID, batch.ID, operatorID); apiErr != nil {
 			return apiErr
 		}
 		if apiErr := txBatchRepo.ConnectProductionStep(txCtx, accountID, batch.ID, productionStepID); apiErr != nil {
@@ -278,6 +285,28 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 	}
 
 	return result, nil
+}
+
+// resolveOperator returns the operator checked in at the station, whom the scan is recorded against. A
+// station that requires a check-in refuses to scan while nobody is checked in; elsewhere the scan is
+// recorded without one.
+func (s *batchSvcImpl) resolveOperator(ctx context.Context, accountID, scanningStationID string) (*string, *apierror.APIError) {
+	checkIn, apiErr := s.repos.NewOperatorCheckInRepo().GetLatestForStation(ctx, accountID, scanningStationID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if checkIn != nil && checkIn.StatusAt(time.Now()) == constants.OperatorCheckInStatusActive {
+		return &checkIn.AccountUserID, nil
+	}
+
+	requirement, apiErr := s.repos.NewScanningStationQueryRepo().FindOperatorCheckIn(ctx, accountID, scanningStationID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if requirement == constants.OperatorCheckInRequired {
+		return nil, apierror.NewOperatorCheckInRequiredError("Check in at this station before scanning.")
+	}
+	return nil, nil
 }
 
 // checkInitializable refuses a batch an init station cannot stamp.
@@ -1287,6 +1316,13 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 				return errScanSourcesMoved
 			}
 		}
+		if apiErr := txSvc.mediators().BatchRelease.CheckCanLeave(txCtx, accountID, out.sourceIDs); apiErr != nil {
+			return apiErr
+		}
+		operatorID, apiErr := txSvc.resolveOperator(txCtx, accountID, out.scanningStationID)
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if _, apiErr := txBatchRepo.Create(txCtx, newBatchID, domain.CreateBatchParams{
 			AccountID:         accountID,
@@ -1300,6 +1336,9 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 			return apiErr
 		}
 		if apiErr := txBatchRepo.MarkAsScanned(txCtx, accountID, newBatchID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txBatchRepo.SetOperator(txCtx, accountID, newBatchID, operatorID); apiErr != nil {
 			return apiErr
 		}
 

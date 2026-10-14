@@ -249,6 +249,101 @@ func (mr *MockPasswordSvcMockRecorder) UpdatePassword(ctx, oldPassword, newPassw
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockPasswordSvc)(nil).UpdatePassword), ctx, oldPassword, newPassword)
 }
 
+// MockSigningPinSvc is a mock of SigningPinSvc interface.
+type MockSigningPinSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockSigningPinSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockSigningPinSvcMockRecorder is the mock recorder for MockSigningPinSvc.
+type MockSigningPinSvcMockRecorder struct {
+	mock *MockSigningPinSvc
+}
+
+// NewMockSigningPinSvc creates a new mock instance.
+func NewMockSigningPinSvc(ctrl *gomock.Controller) *MockSigningPinSvc {
+	mock := &MockSigningPinSvc{ctrl: ctrl}
+	mock.recorder = &MockSigningPinSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSigningPinSvc) EXPECT() *MockSigningPinSvcMockRecorder {
+	return m.recorder
+}
+
+// ChangeSigningPin mocks base method.
+func (m *MockSigningPinSvc) ChangeSigningPin(ctx context.Context, accountUserID, currentPin, newPin string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeSigningPin", ctx, accountUserID, currentPin, newPin)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ChangeSigningPin indicates an expected call of ChangeSigningPin.
+func (mr *MockSigningPinSvcMockRecorder) ChangeSigningPin(ctx, accountUserID, currentPin, newPin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeSigningPin", reflect.TypeOf((*MockSigningPinSvc)(nil).ChangeSigningPin), ctx, accountUserID, currentPin, newPin)
+}
+
+// ClearSigningPin mocks base method.
+func (m *MockSigningPinSvc) ClearSigningPin(ctx context.Context, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearSigningPin", ctx, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearSigningPin indicates an expected call of ClearSigningPin.
+func (mr *MockSigningPinSvcMockRecorder) ClearSigningPin(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearSigningPin", reflect.TypeOf((*MockSigningPinSvc)(nil).ClearSigningPin), ctx, accountUserID)
+}
+
+// SetSigningPin mocks base method.
+func (m *MockSigningPinSvc) SetSigningPin(ctx context.Context, pin string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetSigningPin", ctx, pin)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetSigningPin indicates an expected call of SetSigningPin.
+func (mr *MockSigningPinSvcMockRecorder) SetSigningPin(ctx, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSigningPin", reflect.TypeOf((*MockSigningPinSvc)(nil).SetSigningPin), ctx, pin)
+}
+
+// SetTemporarySigningPin mocks base method.
+func (m *MockSigningPinSvc) SetTemporarySigningPin(ctx context.Context, accountUserID, pin string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetTemporarySigningPin", ctx, accountUserID, pin)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetTemporarySigningPin indicates an expected call of SetTemporarySigningPin.
+func (mr *MockSigningPinSvcMockRecorder) SetTemporarySigningPin(ctx, accountUserID, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTemporarySigningPin", reflect.TypeOf((*MockSigningPinSvc)(nil).SetTemporarySigningPin), ctx, accountUserID, pin)
+}
+
+// VerifySigningPin mocks base method.
+func (m *MockSigningPinSvc) VerifySigningPin(ctx context.Context, accountUserID, pin string) (*domain.VerifiedSigner, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifySigningPin", ctx, accountUserID, pin)
+	ret0, _ := ret[0].(*domain.VerifiedSigner)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// VerifySigningPin indicates an expected call of VerifySigningPin.
+func (mr *MockSigningPinSvcMockRecorder) VerifySigningPin(ctx, accountUserID, pin any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySigningPin", reflect.TypeOf((*MockSigningPinSvc)(nil).VerifySigningPin), ctx, accountUserID, pin)
+}
+
 // MockRegistrationSessionSvc is a mock of RegistrationSessionSvc interface.
 type MockRegistrationSessionSvc struct {
 	ctrl     *gomock.Controller

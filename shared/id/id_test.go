@@ -196,6 +196,8 @@ func TestIDPrefixes_NoDuplicates(t *testing.T) {
 		value IDPrefix
 	}{
 		{"AccountIDPrefix", AccountIDPrefix},
+		{"BatchSignatureIDPrefix", BatchSignatureIDPrefix},
+		{"OperatorCheckInIDPrefix", OperatorCheckInIDPrefix},
 		{"AccountAddressIDPrefix", AccountAddressIDPrefix},
 		{"AccountBillingIDPrefix", AccountBillingIDPrefix},
 		{"AccountBrandingIDPrefix", AccountBrandingIDPrefix},
@@ -425,7 +427,7 @@ func TestIDPrefixes_ValidVocabularyComposition(t *testing.T) {
 		VocAudit:      true,
 		VocAllocation: true, VocAssignment: true, VocBatch: true, VocBilling: true,
 		VocBranding: true, VocCache: true, VocCalendar: true, VocChange: true, VocColor: true,
-		VocClosure: true, VocOperating: true,
+		VocClosure: true, VocOperating: true, VocOperator: true, VocSignature: true, VocCheckIn: true,
 		VocCommission: true, VocConsumption: true, VocCarrier: true, VocCase: true,
 		VocContact: true, VocCustomer: true, VocConversion: true, VocCategory: true,
 		VocDC: true, VocDelivery: true, VocDimension: true, VocDiscount: true, VocDefinition: true,

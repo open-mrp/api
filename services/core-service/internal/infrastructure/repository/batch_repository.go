@@ -119,6 +119,14 @@ func mapBatchRow(row sqlc.GetBatchRow) *domain.Batch {
 		}
 	}
 
+	if row.OperatorAccountUserID.Valid {
+		b.Operator = &domain.LightOperator{
+			AccountUserID: row.OperatorAccountUserID.String,
+			Name:          row.OperatorName.String,
+		}
+	}
+	b.ReleaseLotNumber = db.StringFromNullString(row.ReleaseLotNumber)
+
 	return b
 }
 
@@ -375,6 +383,24 @@ func (r *batchRepoImpl) Find(ctx context.Context, accountID, batchID string) (*d
 	}
 
 	return batch, nil
+}
+
+func (r *batchRepoImpl) ListBasesByIDs(ctx context.Context, accountID string, batchIDs []string) ([]*domain.BaseBatch, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.list_bases_by_ids")
+	defer span.End()
+
+	if len(batchIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.ListBatchBasesByIDs(ctx, sqlc.ListBatchBasesByIDsParams{Ids: batchIDs, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	batches := make([]*domain.BaseBatch, 0, len(rows))
+	for _, row := range rows {
+		batches = append(batches, mapBaseBatchRow(sqlc.GetBatchBaseRow(row)))
+	}
+	return batches, nil
 }
 
 func (r *batchRepoImpl) FindBatchFlow(ctx context.Context, accountID, batchID string) ([]domain.BatchFlowNode, *apierror.APIError) {
@@ -993,6 +1019,79 @@ func (r *batchRepoImpl) Create(ctx context.Context, batchID string, params domai
 	}
 
 	return mapBaseBatchRow(row), nil
+}
+
+func (r *batchRepoImpl) GetReleaseLot(ctx context.Context, accountID, batchID string) (*domain.ReleaseLot, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.get_release_lot")
+	defer span.End()
+
+	row, err := r.queries.GetBatchReleaseLot(ctx, sqlc.GetBatchReleaseLotParams{ID: batchID, AccountID: accountID})
+	if errors.Is(err, gosql.ErrNoRows) {
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return &domain.ReleaseLot{ID: row.ID, LotNumber: row.LotNumber}, nil
+}
+
+func (r *batchRepoImpl) AllocateReleaseLotSequence(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.allocate_release_lot_sequence")
+	defer span.End()
+
+	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	result, err := r.queries.AllocateNextReleaseLotNumber(ctx, sqlc.AllocateNextReleaseLotNumberParams{ID: sysPropertyID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	sequence, err := result.LastInsertId()
+	if err != nil {
+		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Could not read the allocated lot number."))
+	}
+	return sequence, nil
+}
+
+func (r *batchRepoImpl) CreateReleaseLot(ctx context.Context, accountID, batchID, itemID string, lot domain.ReleaseLot, manufacturedAt time.Time) *apierror.APIError {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.create_release_lot")
+	defer span.End()
+
+	err := r.queries.InsertReleaseLot(ctx, sqlc.InsertReleaseLotParams{
+		ID:             lot.ID,
+		AccountID:      accountID,
+		ItemID:         itemID,
+		LotNumber:      lot.LotNumber,
+		ManufacturedAt: gosql.NullTime{Time: manufacturedAt, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	err = r.queries.SetBatchReleaseLot(ctx, sqlc.SetBatchReleaseLotParams{
+		ID:           batchID,
+		AccountID:    accountID,
+		ReleaseLotID: gosql.NullString{String: lot.ID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *batchRepoImpl) SetOperator(ctx context.Context, accountID, batchID string, operatorAccountUserID *string) *apierror.APIError {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.set_operator")
+	defer span.End()
+
+	err := r.queries.UpdateBatchOperator(ctx, sqlc.UpdateBatchOperatorParams{
+		ID:                    batchID,
+		AccountID:             accountID,
+		OperatorAccountUserID: db.NullStringPtr(operatorAccountUserID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *batchRepoImpl) MarkAsScanned(ctx context.Context, accountID, batchID string) *apierror.APIError {
@@ -1745,6 +1844,9 @@ func attachMachinesAndLots(ctx context.Context, queries *sqlc.Queries, batches [
 		}
 		if batch.ProductionRun != nil && batch.ProductionRun.Number != "" && !seenLots[batch.ProductionRun.Number] {
 			lots = append(lots, domain.BatchLot{LotNumber: batch.ProductionRun.Number, Type: string(constants.BatchLotTypeProductionRun)})
+		}
+		if batch.ReleaseLotNumber != nil {
+			lots = append(lots, domain.BatchLot{LotNumber: *batch.ReleaseLotNumber, Type: string(constants.BatchLotTypeRelease)})
 		}
 		batch.Lots = lots
 	}

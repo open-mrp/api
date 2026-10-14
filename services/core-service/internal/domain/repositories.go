@@ -570,6 +570,8 @@ type BatchRepo interface {
 	// LockScan locks the batch row and reports when it was scanned. exists is false for a deleted batch.
 	LockScan(ctx context.Context, accountID, batchID string) (scannedAt *time.Time, exists bool, apiErr *apierror.APIError)
 	Find(ctx context.Context, accountID, batchID string) (*Batch, *apierror.APIError)
+	// ListBasesByIDs returns the batches that exist in the account, without machines or lots, in no fixed order.
+	ListBasesByIDs(ctx context.Context, accountID string, batchIDs []string) ([]*BaseBatch, *apierror.APIError)
 	FindBatchFlow(ctx context.Context, accountID, batchID string) ([]BatchFlowNode, *apierror.APIError)
 	FindByScanningStation(ctx context.Context, params ListBatchesByScanningStationParams) (*ListBatchesByScanningStationResult, *apierror.APIError)
 	FindPossibleNextSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
@@ -583,6 +585,14 @@ type BatchRepo interface {
 	// CreateMany inserts the batches in a fixed number of statements, however many there are, and returns them in input order.
 	CreateMany(ctx context.Context, batches []NewBatch) ([]*BaseBatch, *apierror.APIError)
 	MarkAsScanned(ctx context.Context, accountID, batchID string) *apierror.APIError
+	// SetOperator records the operator checked in at the station when the batch was scanned; nil clears it.
+	SetOperator(ctx context.Context, accountID, batchID string, operatorAccountUserID *string) *apierror.APIError
+	// GetReleaseLot returns the lot the batch's final release assigned, or nil when it has none.
+	GetReleaseLot(ctx context.Context, accountID, batchID string) (*ReleaseLot, *apierror.APIError)
+	// AllocateReleaseLotSequence takes the account's next release lot sequence number. Call it inside the transaction that uses it.
+	AllocateReleaseLotSequence(ctx context.Context, accountID string) (int64, *apierror.APIError)
+	// CreateReleaseLot writes the lot and attaches it to the batch.
+	CreateReleaseLot(ctx context.Context, accountID, batchID, itemID string, lot ReleaseLot, manufacturedAt time.Time) *apierror.APIError
 	ConnectProductionStep(ctx context.Context, accountID, batchID, productionStepID string) *apierror.APIError
 	ConnectScanningStation(ctx context.Context, accountID, batchID, scanningStationID string) *apierror.APIError
 	ConnectOneToOne(ctx context.Context, accountID, sourceBatchID, targetBatchID string, autoClose bool) *apierror.APIError
@@ -642,6 +652,8 @@ type ProductionStepQueryRepo interface {
 type ScanningStationQueryRepo interface {
 	IsInAccount(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	FindType(ctx context.Context, accountID, id string) (string, *apierror.APIError)
+	// FindOperatorCheckIn reports whether the station scans only while an operator is checked in.
+	FindOperatorCheckIn(ctx context.Context, accountID, id string) (constants.OperatorCheckInRequirement, *apierror.APIError)
 }
 
 // ProductionRunQueryRepo provides limited write access for starting and closing production runs.
@@ -2056,4 +2068,38 @@ type PortalDomainRepo interface {
 	Delete(ctx context.Context, accountID, portalDomainID string) (bool, *apierror.APIError)
 	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
 	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
+}
+
+// BatchSignatureRepo stores batch signatures. It only inserts and reads: signatures are never changed.
+type BatchSignatureRepo interface {
+	Create(ctx context.Context, signature *BatchSignature) (*BatchSignature, *apierror.APIError)
+	Get(ctx context.Context, accountID, id string) (*BatchSignature, *apierror.APIError)
+	// ListForBatch returns a batch's signatures, newest first.
+	ListForBatch(ctx context.Context, accountID, batchID string) ([]*BatchSignature, *apierror.APIError)
+	// ListForBatches returns the signatures of several batches, newest first.
+	ListForBatches(ctx context.Context, accountID string, batchIDs []string) ([]*BatchSignature, *apierror.APIError)
+	// ListRunStepReleases returns the step releases any batch of a production run received at a step, newest first.
+	ListRunStepReleases(ctx context.Context, accountID, productionRunID, productionStepID string) ([]*BatchSignature, *apierror.APIError)
+	// ListSignerCandidates returns the account's active users who may sign in some capacity, by name.
+	ListSignerCandidates(ctx context.Context, accountID string) ([]SignerCandidate, *apierror.APIError)
+}
+
+// OperatorCheckInRepo stores operator check-ins.
+type OperatorCheckInRepo interface {
+	Create(ctx context.Context, checkIn *OperatorCheckIn) (*OperatorCheckIn, *apierror.APIError)
+	Get(ctx context.Context, accountID, id string) (*OperatorCheckIn, *apierror.APIError)
+	// GetLatestForStation returns the station's most recent check-in, or nil when it has none.
+	GetLatestForStation(ctx context.Context, accountID, scanningStationID string) (*OperatorCheckIn, *apierror.APIError)
+	// EndOpenForStation checks out whoever is still checked in at the station.
+	EndOpenForStation(ctx context.Context, accountID, scanningStationID string) *apierror.APIError
+	// CheckOut ends a check-in; ended is false when it had already ended.
+	CheckOut(ctx context.Context, accountID, id string) (ended bool, apiErr *apierror.APIError)
+}
+
+// ReleasePolicyRepo reads and writes the release policy columns of departments.
+type ReleasePolicyRepo interface {
+	Get(ctx context.Context, accountID, departmentID string) (*ReleasePolicy, *apierror.APIError)
+	// ListByDepartmentIDs returns the policies of the departments that exist in the account, keyed by department ID.
+	ListByDepartmentIDs(ctx context.Context, accountID string, departmentIDs []string) (map[string]*ReleasePolicy, *apierror.APIError)
+	Update(ctx context.Context, accountID string, params UpdateReleasePolicyParams) *apierror.APIError
 }

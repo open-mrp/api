@@ -11754,3 +11754,147 @@ func (mr *MockOperatingCalendarSvcMockRecorder) UpdateOperatingCalendar(ctx, par
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).UpdateOperatingCalendar), ctx, params)
 }
+
+// MockBatchReleaseSvc is a mock of BatchReleaseSvc interface.
+type MockBatchReleaseSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockBatchReleaseSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockBatchReleaseSvcMockRecorder is the mock recorder for MockBatchReleaseSvc.
+type MockBatchReleaseSvcMockRecorder struct {
+	mock *MockBatchReleaseSvc
+}
+
+// NewMockBatchReleaseSvc creates a new mock instance.
+func NewMockBatchReleaseSvc(ctrl *gomock.Controller) *MockBatchReleaseSvc {
+	mock := &MockBatchReleaseSvc{ctrl: ctrl}
+	mock.recorder = &MockBatchReleaseSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBatchReleaseSvc) EXPECT() *MockBatchReleaseSvcMockRecorder {
+	return m.recorder
+}
+
+// CheckInOperator mocks base method.
+func (m *MockBatchReleaseSvc) CheckInOperator(ctx context.Context, params domain.CheckInOperatorParams) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckInOperator", ctx, params)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CheckInOperator indicates an expected call of CheckInOperator.
+func (mr *MockBatchReleaseSvcMockRecorder) CheckInOperator(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInOperator", reflect.TypeOf((*MockBatchReleaseSvc)(nil).CheckInOperator), ctx, params)
+}
+
+// CheckOutOperator mocks base method.
+func (m *MockBatchReleaseSvc) CheckOutOperator(ctx context.Context, scanningStationID, checkInID string) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckOutOperator", ctx, scanningStationID, checkInID)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CheckOutOperator indicates an expected call of CheckOutOperator.
+func (mr *MockBatchReleaseSvcMockRecorder) CheckOutOperator(ctx, scanningStationID, checkInID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckOutOperator", reflect.TypeOf((*MockBatchReleaseSvc)(nil).CheckOutOperator), ctx, scanningStationID, checkInID)
+}
+
+// GetActiveOperatorCheckIn mocks base method.
+func (m *MockBatchReleaseSvc) GetActiveOperatorCheckIn(ctx context.Context, scanningStationID string) (*domain.OperatorCheckIn, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActiveOperatorCheckIn", ctx, scanningStationID)
+	ret0, _ := ret[0].(*domain.OperatorCheckIn)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetActiveOperatorCheckIn indicates an expected call of GetActiveOperatorCheckIn.
+func (mr *MockBatchReleaseSvcMockRecorder) GetActiveOperatorCheckIn(ctx, scanningStationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveOperatorCheckIn", reflect.TypeOf((*MockBatchReleaseSvc)(nil).GetActiveOperatorCheckIn), ctx, scanningStationID)
+}
+
+// GetReleasePolicy mocks base method.
+func (m *MockBatchReleaseSvc) GetReleasePolicy(ctx context.Context, productionStepID string) (*domain.ReleasePolicy, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReleasePolicy", ctx, productionStepID)
+	ret0, _ := ret[0].(*domain.ReleasePolicy)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetReleasePolicy indicates an expected call of GetReleasePolicy.
+func (mr *MockBatchReleaseSvcMockRecorder) GetReleasePolicy(ctx, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReleasePolicy", reflect.TypeOf((*MockBatchReleaseSvc)(nil).GetReleasePolicy), ctx, productionStepID)
+}
+
+// ListBatchSignatures mocks base method.
+func (m *MockBatchReleaseSvc) ListBatchSignatures(ctx context.Context, batchID string) ([]*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBatchSignatures", ctx, batchID)
+	ret0, _ := ret[0].([]*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListBatchSignatures indicates an expected call of ListBatchSignatures.
+func (mr *MockBatchReleaseSvcMockRecorder) ListBatchSignatures(ctx, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBatchSignatures", reflect.TypeOf((*MockBatchReleaseSvc)(nil).ListBatchSignatures), ctx, batchID)
+}
+
+// ListEligibleSigners mocks base method.
+func (m *MockBatchReleaseSvc) ListEligibleSigners(ctx context.Context, productionStepID string, batchID *string) ([]domain.EligibleSigner, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEligibleSigners", ctx, productionStepID, batchID)
+	ret0, _ := ret[0].([]domain.EligibleSigner)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListEligibleSigners indicates an expected call of ListEligibleSigners.
+func (mr *MockBatchReleaseSvcMockRecorder) ListEligibleSigners(ctx, productionStepID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEligibleSigners", reflect.TypeOf((*MockBatchReleaseSvc)(nil).ListEligibleSigners), ctx, productionStepID, batchID)
+}
+
+// SignBatch mocks base method.
+func (m *MockBatchReleaseSvc) SignBatch(ctx context.Context, params domain.SignBatchParams) (*domain.BatchSignature, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SignBatch", ctx, params)
+	ret0, _ := ret[0].(*domain.BatchSignature)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SignBatch indicates an expected call of SignBatch.
+func (mr *MockBatchReleaseSvcMockRecorder) SignBatch(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignBatch", reflect.TypeOf((*MockBatchReleaseSvc)(nil).SignBatch), ctx, params)
+}
+
+// UpdateReleasePolicy mocks base method.
+func (m *MockBatchReleaseSvc) UpdateReleasePolicy(ctx context.Context, params domain.UpdateReleasePolicyParams) (*domain.ReleasePolicy, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateReleasePolicy", ctx, params)
+	ret0, _ := ret[0].(*domain.ReleasePolicy)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateReleasePolicy indicates an expected call of UpdateReleasePolicy.
+func (mr *MockBatchReleaseSvcMockRecorder) UpdateReleasePolicy(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateReleasePolicy", reflect.TypeOf((*MockBatchReleaseSvc)(nil).UpdateReleasePolicy), ctx, params)
+}

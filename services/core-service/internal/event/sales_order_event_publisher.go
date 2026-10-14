@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -40,7 +41,7 @@ func (p *outboxSalesOrderEventPublisher) PublishSalesOrderCreated(ctx context.Co
 		Data: dataJSON,
 	}
 
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -78,7 +79,7 @@ func (p *outboxSalesOrderEventPublisher) PublishSalesOrderShippingUpdated(ctx co
 	}
 
 	msg := contracts.AmqpMessage{Data: dataJSON}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -115,7 +116,7 @@ func (p *outboxSalesOrderEventPublisher) PublishSalesOrderAcknowledged(ctx conte
 	}
 
 	msg := contracts.AmqpMessage{Data: dataJSON}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

@@ -8,12 +8,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -290,7 +290,7 @@ func (s *conversationSvcImpl) CreateReplyDraft(ctx context.Context, input domain
 		return nil, tracing.Trace(span, apiErr)
 	}
 	// Recovery-point idempotency: a draft mints a fresh id with no dedup key, so a retry would create a duplicate draft.
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, _ := appctx.Identity[*types.Identity](ctx)
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -711,7 +711,7 @@ func (s *conversationSvcImpl) autoSetCaseWorkflow(ctx context.Context, conversat
 			return apiErr
 		}
 		// Inbound email advances the lane with no request identity, so there is no actor to attribute it to.
-		if identity, ok := appctx.GetIdentityFromContext(txCtx); !ok || identity == nil || !identity.IsTargetAccountSet() {
+		if identity, ok := appctx.Identity[*types.Identity](txCtx); !ok || identity == nil || !identity.IsTargetAccountSet() {
 			return nil
 		}
 		after := *before

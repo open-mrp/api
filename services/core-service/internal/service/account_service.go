@@ -17,7 +17,6 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -27,6 +26,7 @@ import (
 	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -490,7 +490,7 @@ func (s *accountSvcImpl) reconcileSeats(ctx context.Context, accountID, planCode
 
 	if activeCount > limit {
 		// Downgrade: we must know which user to protect. A Stripe webhook acts for nobody, so it cannot safely choose and skips deactivation. The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries the user and handles deactivation.
-		identity, ok := appctx.GetIdentityFromContext(ctx)
+		identity, ok := appctx.Identity[*types.Identity](ctx)
 		if !ok || identity == nil || identity.Actor == nil || identity.IsSystem() {
 			slog.WarnContext(ctx, "[seat-adjust] skipping deactivation — no user to keep active (webhook path)",
 				"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
@@ -797,7 +797,7 @@ func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *i
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_agent_spending_cap")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -876,7 +876,7 @@ func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*dom
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -905,7 +905,7 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1010,7 +1010,7 @@ func (s *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, slug string
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_portal_profile_by_slug")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1050,7 +1050,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1228,7 +1228,7 @@ func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID strin
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_photo")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1290,7 +1290,7 @@ func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_logo_url")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1324,7 +1324,7 @@ func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID str
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_favicon")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1363,7 +1363,7 @@ func (s *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, accountID str
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_favicon_url")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

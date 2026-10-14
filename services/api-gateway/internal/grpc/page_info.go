@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )

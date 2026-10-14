@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"

@@ -3,8 +3,9 @@ package rpc
 import (
 	"context"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/apikit/appctx"
 
 	"google.golang.org/grpc/metadata"
 )
@@ -15,7 +16,7 @@ type MetadataOption func(metadata.MD)
 // WithIdentity adds the caller's identity from the context to the outgoing gRPC metadata. If the context does not carry an identity the option is a no-op.
 func WithIdentity(ctx context.Context) MetadataOption {
 	return func(md metadata.MD) {
-		if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil {
+		if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity != nil {
 			contracts.SetIdentityInMetadata(md, identity)
 		}
 	}

@@ -10,8 +10,8 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/require"
@@ -76,7 +76,7 @@ func TestFailScheduledGeneration_AuditsTheFailure(t *testing.T) {
 		f.scheduleRepo.EXPECT().FailGeneration(gomock.Any(), "ac_1", "ps_1", "solver unavailable").Return(nil),
 		f.scheduleRepo.EXPECT().Get(gomock.Any(), params).Return(&domain.ProductionSchedule{ID: "ps_1", StatusCode: "failed"}, nil),
 	)
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorScheduler, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorScheduler, "ac_1")
 
 	require.Nil(t, f.svc.failScheduledGeneration(ctx, "ac_1", "ps_1", "solver unavailable"))
 

@@ -8,12 +8,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -94,7 +94,7 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -150,7 +150,7 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -245,7 +245,7 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -355,7 +355,7 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -481,7 +481,7 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -555,7 +555,7 @@ func (s *productLineSvcImpl) BatchGetProductLinesByIDs(ctx context.Context, ids 
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

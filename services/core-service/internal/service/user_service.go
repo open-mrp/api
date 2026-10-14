@@ -9,12 +9,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/imageupload"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -97,7 +97,7 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 	ctx, span := userSvcTracer.Start(ctx, "service.user.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -156,7 +156,7 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 	ctx, span := userSvcTracer.Start(ctx, "service.user.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -215,7 +215,7 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 	ctx, span := userSvcTracer.Start(ctx, "service.user.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -299,7 +299,7 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	ctx, span := userSvcTracer.Start(ctx, "service.user.upload_photo")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -372,7 +372,7 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 	ctx, span := userSvcTracer.Start(ctx, "service.user.get_photo_url")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

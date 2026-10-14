@@ -10,7 +10,7 @@ import (
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // mockProtoPageInfo is a test implementation of ProtoPageInfo.

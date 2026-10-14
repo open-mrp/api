@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -87,7 +87,7 @@ func (s *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, params 
 	ctx, span := volumeDiscountSvcTracer.Start(ctx, "service.volume_discount.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -123,7 +123,7 @@ func (s *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, params do
 	ctx, span := volumeDiscountSvcTracer.Start(ctx, "service.volume_discount.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -172,7 +172,7 @@ func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params
 	ctx, span := volumeDiscountSvcTracer.Start(ctx, "service.volume_discount.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -282,7 +282,7 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 	ctx, span := volumeDiscountSvcTracer.Start(ctx, "service.volume_discount.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -405,7 +405,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	ctx, span := volumeDiscountSvcTracer.Start(ctx, "service.volume_discount.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

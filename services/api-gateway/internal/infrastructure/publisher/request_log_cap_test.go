@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -30,7 +30,7 @@ func TestPublisher_CapsBodiesKeptOnTheMessage(t *testing.T) {
 	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", "", constants.PlatformModeDevelopment)
 
 	rl := bodiedRequestLog("rlog_capped")
-	large := `"` + strings.Repeat("x", appctx.MaxMessageBodyBytes) + `"`
+	large := `"` + strings.Repeat("x", omrpctx.MaxMessageBodyBytes) + `"`
 	rl.ResponseJSON = &large
 
 	if err := pub.Create(context.Background(), rl); err != nil {
@@ -55,7 +55,7 @@ func TestPublisher_StoresLargeBodiesWhole(t *testing.T) {
 	pub := NewRequestLogOutboxPublisher(repo, nil, store, "", "", constants.PlatformModeDevelopment)
 
 	rl := bodiedRequestLog("rlog_large")
-	large := `"` + strings.Repeat("x", appctx.MaxMessageBodyBytes*4) + `"`
+	large := `"` + strings.Repeat("x", omrpctx.MaxMessageBodyBytes*4) + `"`
 	rl.ResponseJSON = &large
 
 	if err := pub.Create(context.Background(), rl); err != nil {

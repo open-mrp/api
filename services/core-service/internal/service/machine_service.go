@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -91,7 +91,7 @@ func (s *machineSvcImpl) BatchGetMachinesByIDs(ctx context.Context, ids []string
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -110,7 +110,7 @@ func (s *machineSvcImpl) ListMachines(ctx context.Context, params domain.ListMac
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -131,7 +131,7 @@ func (s *machineSvcImpl) GetMachine(ctx context.Context, machineID string) (*dom
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -153,7 +153,7 @@ func (s *machineSvcImpl) CreateMachine(ctx context.Context, params domain.Create
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -253,7 +253,7 @@ func (s *machineSvcImpl) UpdateMachine(ctx context.Context, params domain.Update
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -354,7 +354,7 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

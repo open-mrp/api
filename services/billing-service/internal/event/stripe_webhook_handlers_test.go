@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -545,7 +546,7 @@ func TestSubscriptionWebhooks_ActAsStripeOnTheResolvedAccount(t *testing.T) {
 				},
 				updateAccountSubscription: func(ctx context.Context, _, _ string, _ *string, _ string, _ *string, _ *time.Time, _ *string, _ *string, _ *string, _ *string, _ *string, _ *string) *apierror.APIError {
 					called = true
-					identity, ok := appctx.GetIdentityFromContext(ctx)
+					identity, ok := appctx.Identity[*types.Identity](ctx)
 					require.True(t, ok)
 					assert.True(t, identity.IsSystem())
 					assert.Equal(t, constants.SystemActorStripe.ActorID(), identity.Actor.ID)

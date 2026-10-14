@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/version"
+	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/version"
 )
 
 type RespondOption func(http.Header)
@@ -27,7 +27,7 @@ func applyRespondOptions(w http.ResponseWriter, ctx context.Context, code int, o
 	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok {
 		w.Header().Set(header.VersionHeader, v.String())
 	} else {
-		w.Header().Set(header.VersionHeader, version.Latest.String())
+		w.Header().Set(header.VersionHeader, version.Latest().String())
 	}
 	rl, ok := appctx.GetRequestLog(ctx)
 	if ok && rl != nil {
@@ -84,7 +84,7 @@ func RespondWithFile(ctx context.Context, w http.ResponseWriter, code int, fd *F
 	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok {
 		w.Header().Set(header.VersionHeader, v.String())
 	} else {
-		w.Header().Set(header.VersionHeader, version.Latest.String())
+		w.Header().Set(header.VersionHeader, version.Latest().String())
 	}
 	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil {
 		w.Header().Set(header.RequestIDHeader, rl.ID)

@@ -7,10 +7,10 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -54,7 +54,7 @@ func NewPortalRegistrationSessionSvc(config *PortalRegistrationSessionSvcConfig)
 }
 
 func (s *portalRegistrationSessionSvcImpl) authedUserID(ctx context.Context) (string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", apierror.NewInvariantViolationError("Identity not found in context.")
 	}
@@ -144,7 +144,7 @@ func (s *portalRegistrationSessionSvcImpl) ListSessions(ctx context.Context, par
 	ctx, span := portalRegSessionSvcTracer.Start(ctx, "service.portal_registration_session.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

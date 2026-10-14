@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 //go:fix inline

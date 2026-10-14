@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 func ctxWithPerms(perms map[string]bool, roleType string) context.Context {
@@ -214,7 +214,7 @@ func ctxActingIn(relation types.IdentityRelationType, perms map[string]bool, rol
 	if relation == "" {
 		return ctx
 	}
-	id, _ := appctx.GetIdentityFromContext(ctx)
+	id, _ := appctx.Identity[*types.Identity](ctx)
 	id.Target = &types.IdentityTarget{AccountID: "acct_counterparty", RelationType: &relation}
 	return ctx
 }

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 type stubSaver struct {
@@ -32,7 +32,7 @@ func TestLoggingMiddleware_CapturesAPIVersion(t *testing.T) {
 	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	req.Header.Set(header.VersionHeader, "1.0.forge-preview.1")
+	req.Header.Set(header.VersionHeader, "1.0.forge-preview.9")
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -43,7 +43,7 @@ func TestLoggingMiddleware_CapturesAPIVersion(t *testing.T) {
 	if saver.savedRL.APIVersion == nil {
 		t.Fatal("Expected APIVersion to be captured, got nil")
 	}
-	if *saver.savedRL.APIVersion != "1.0.forge-preview.1" {
+	if *saver.savedRL.APIVersion != "1.0.forge-preview.9" {
 		t.Errorf("Expected APIVersion '1.0.forge', got '%s'", *saver.savedRL.APIVersion)
 	}
 }
@@ -115,7 +115,7 @@ func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
 	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	req.Header.Set(header.VersionHeader, "1.0.forge-preview.1")
+	req.Header.Set(header.VersionHeader, "1.0.forge-preview.9")
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -128,7 +128,7 @@ func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
 		t.Fatal("Expected APIVersion in context request log, got nil")
 	}
 
-	if *capturedRL.APIVersion != "1.0.forge-preview.1" {
+	if *capturedRL.APIVersion != "1.0.forge-preview.9" {
 		t.Errorf("Expected APIVersion '1.0.forge' in context, got '%s'", *capturedRL.APIVersion)
 	}
 }

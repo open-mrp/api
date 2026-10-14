@@ -6,11 +6,11 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -76,7 +76,7 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 	ctx, span := receivingOrderLineSvcTracer.Start(ctx, "service.receiving_order_line.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -187,7 +187,7 @@ func (s *receivingOrderLineSvcImpl) VoidReceivingOrderLine(ctx context.Context, 
 	ctx, span := receivingOrderLineSvcTracer.Start(ctx, "service.receiving_order_line.void")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -290,7 +290,7 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 	ctx, span := receivingOrderLineSvcTracer.Start(ctx, "service.receiving_order_line.receive")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

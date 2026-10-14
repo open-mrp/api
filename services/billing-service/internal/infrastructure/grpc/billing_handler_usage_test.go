@@ -7,10 +7,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	servicemock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/service"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

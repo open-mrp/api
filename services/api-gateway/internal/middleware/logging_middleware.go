@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	"github.com/open-mrp/api/shared/redact"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -206,7 +207,7 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 	}
 }
 
-const maxResponseLogSize = appctx.MaxLoggedBodyBytes
+const maxResponseLogSize = omrpctx.MaxLoggedBodyBytes
 
 type loggingResponseWriter struct {
 	http.ResponseWriter

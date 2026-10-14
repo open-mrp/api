@@ -18,14 +18,15 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 	"github.com/open-mrp/api/shared/redact"
-	"github.com/open-mrp/api/shared/version"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"github.com/open-mrp/apikit/validate"
+	"github.com/open-mrp/apikit/version"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -198,7 +199,7 @@ func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIE
 	if e.RequiredRoleType == "" && len(e.RequiredPermissions) == 0 {
 		return nil
 	}
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return apierror.NewAuthenticationError("You must be authenticated to access this resource.")
 	}
@@ -240,7 +241,7 @@ func (e *APIEndpoint[TReq, TResp]) actsOnSelf(r *http.Request) bool {
 	if e.SelfPathParam == "" {
 		return false
 	}
-	identity, ok := appctx.GetIdentityFromContext(r.Context())
+	identity, ok := appctx.Identity[*types.Identity](r.Context())
 	if !ok || identity == nil || !identity.HasUserActor() {
 		return false
 	}
@@ -297,9 +298,9 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	// An older version's query string is upgraded before binding, the same way its body is before decoding.
 	if e.ObjectType != "" {
-		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
+		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest()) {
 			before := r.URL.Query().Encode()
-			if after := version.TransformQuery(requestVersion, version.Latest, e.ObjectType, e.Route, r.URL.Query()).Encode(); after != before {
+			if after := version.TransformQuery(requestVersion, version.Latest(), e.ObjectType, e.Route, r.URL.Query()).Encode(); after != before {
 				r.URL.RawQuery = after
 			}
 		}
@@ -328,8 +329,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		// the tree — forcing them unconditionally would expand sub-resources
 		// the caller never asked for, which is itself a shape change.
 		if e.ObjectType != "" {
-			if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
-				for _, key := range version.ForcedIncludes(version.Latest, requestVersion, e.ObjectType) {
+			if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest()) {
+				for _, key := range version.ForcedIncludes(version.Latest(), requestVersion, e.ObjectType) {
 					if idx := strings.LastIndex(key, "."); idx >= 0 && !includeTree.Has(key[:idx]) {
 						continue
 					}
@@ -363,7 +364,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 		jsonBodyBytes = bodyBytes
 		if rl, ok := appctx.GetRequestLog(ctx); ok && len(bodyBytes) > 0 {
-			if len(bodyBytes) > appctx.MaxLoggedBodyBytes {
+			if len(bodyBytes) > omrpctx.MaxLoggedBodyBytes {
 				s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
 				rl.BodyJSON = &s
 			} else if len(e.sensitiveReqPaths) > 0 {
@@ -393,9 +394,9 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		// Transform request body if versioned and ObjectType is set
 		if e.ObjectType != "" {
 			if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok {
-				if !requestVersion.Equal(version.Latest) {
+				if !requestVersion.Equal(version.Latest()) {
 					var err error
-					r, err = e.transformRequestBody(r, requestVersion, version.Latest)
+					r, err = e.transformRequestBody(r, requestVersion, version.Latest())
 					if err != nil {
 						recordAndRespondAPIError(ctx, w, span, "version_transform", apierror.NewValidationError(err.Error()))
 						return
@@ -522,8 +523,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	// Downgrade the response shape when the caller is on an older API version.
 	if e.ObjectType != "" {
-		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
-			if transformed, ok := transformResponsePayload(respPayload, version.Latest, requestVersion, e.ObjectType); ok {
+		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest()) {
+			if transformed, ok := transformResponsePayload(respPayload, version.Latest(), requestVersion, e.ObjectType); ok {
 				respPayload = transformed
 			}
 		}

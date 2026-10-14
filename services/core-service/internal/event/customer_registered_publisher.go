@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -36,7 +37,7 @@ func (p *CustomerRegisteredPublisher) Publish(ctx context.Context, outboxRepo me
 	}
 
 	msg := contracts.AmqpMessage{Data: dataJSON}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

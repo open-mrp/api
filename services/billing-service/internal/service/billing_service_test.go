@@ -12,8 +12,8 @@ import (
 	mediatormock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/service"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 

@@ -9,11 +9,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -98,7 +98,7 @@ func (s *receivableSvcImpl) ListReceivables(ctx context.Context, params domain.L
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -120,7 +120,7 @@ func (s *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, param
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.list_by_customer")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -142,7 +142,7 @@ func (s *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, par
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.export_by_customer")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -171,7 +171,7 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.email_for_customer")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

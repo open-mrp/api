@@ -7,14 +7,15 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/email"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/aws"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/stub"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -327,7 +328,7 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 }
 
 func (s *notificationSvcImpl) isSandboxRequest(ctx context.Context) bool {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	return ok && identity.AccountMode == constants.AccountModeSandbox
 }
 

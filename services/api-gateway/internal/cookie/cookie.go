@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -77,7 +77,7 @@ func firstPartyCookieDomain(host string) string {
 
 // externalHostFromContext reads the browser-facing host captured by ExternalHostMiddleware; empty when unset.
 func externalHostFromContext(ctx context.Context) string {
-	host, _ := appctx.GetExternalHost(ctx)
+	host, _ := omrpctx.GetExternalHost(ctx)
 	return host
 }
 
@@ -113,7 +113,7 @@ func GetRefreshTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 }
 
 func MakeAuthCookies(ctx context.Context, accessToken, refreshToken string) []*http.Cookie {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
+	platform, okp := omrpctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -127,7 +127,7 @@ func MakeAuthCookies(ctx context.Context, accessToken, refreshToken string) []*h
 }
 
 func MakeAccessTokenCookie(ctx context.Context, accessToken string) *http.Cookie {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
+	platform, okp := omrpctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -137,7 +137,7 @@ func MakeAccessTokenCookie(ctx context.Context, accessToken string) *http.Cookie
 }
 
 func MakeClearAuthCookies(ctx context.Context) []*http.Cookie {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
+	platform, okp := omrpctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}

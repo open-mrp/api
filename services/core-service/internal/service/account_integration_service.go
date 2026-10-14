@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/tracing"
 
@@ -110,7 +111,7 @@ func (s *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context,
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -132,7 +133,7 @@ func (s *accountIntegrationSvcImpl) BatchGetAccountIntegrationsByIDs(ctx context
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -155,7 +156,7 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -377,7 +378,7 @@ func (s *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -452,7 +453,7 @@ func (s *accountIntegrationSvcImpl) DeleteAccountIntegration(ctx context.Context
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -518,7 +519,7 @@ func (s *accountIntegrationSvcImpl) GetStripePublishableKey(ctx context.Context)
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.get_stripe_publishable_key")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -570,7 +571,7 @@ func (s *accountIntegrationSvcImpl) HasStripeIntegration(ctx context.Context) (b
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.has_stripe_integration")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return false, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

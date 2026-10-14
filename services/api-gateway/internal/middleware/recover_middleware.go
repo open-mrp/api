@@ -7,8 +7,8 @@ import (
 	"runtime/debug"
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // RecoverMiddleware recovers from a handler panic, records the panic as the request log's error message (when one is not already set), and responds to the client with a generic internal server error instead of letting the connection drop.

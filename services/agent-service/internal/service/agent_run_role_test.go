@@ -15,11 +15,11 @@ import (
 	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"go.uber.org/mock/gomock"
 )
 

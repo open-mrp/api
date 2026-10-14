@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
@@ -145,7 +145,7 @@ func TestSetIdentityInMetadata_IncludeReadsRoundTrip(t *testing.T) {
 	}
 
 	flagged := metadata.New(nil)
-	SetIdentityInMetadata(flagged, identity.ForIncludeReads())
+	SetIdentityInMetadata(flagged, identity.WithIncludeReads())
 	decoded, apiErr = GetIdentityFromMetadata(flagged)
 	if apiErr != nil {
 		t.Fatalf("expected no error, got %v", apiErr)
@@ -234,7 +234,7 @@ func TestIdentityUnaryServerInterceptor_MalformedHeader(t *testing.T) {
 				t.Errorf("expected handler response to pass through, got %v", resp)
 			}
 
-			identity, ok := appctx.GetIdentityFromContext(handlerCtx)
+			identity, ok := appctx.Identity[*types.Identity](handlerCtx)
 			if ok != tt.wantIdentity {
 				t.Fatalf("expected identity present=%v, got %v", tt.wantIdentity, ok)
 			}
@@ -258,7 +258,7 @@ func TestIdentityUnaryServerInterceptor_NoIncomingMetadata(t *testing.T) {
 	if _, err := interceptor(context.Background(), nil, nil, handler); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, ok := appctx.GetIdentityFromContext(handlerCtx); ok {
+	if _, ok := appctx.Identity[*types.Identity](handlerCtx); ok {
 		t.Error("expected no identity in context")
 	}
 }

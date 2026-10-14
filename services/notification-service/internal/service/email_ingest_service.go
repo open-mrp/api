@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -93,7 +93,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		return nil
 	}
 	accountID := inbox.AccountID
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorEmailIngest, accountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorEmailIngest, accountID)
 
 	// Redelivery dedup: if this rfc Message-ID is already recorded, ack and skip.
 	if _, apiErr := s.repoFactory.NewEmailMessageRepo().GetByRfcID(ctx, in.RfcMessageID); apiErr == nil {

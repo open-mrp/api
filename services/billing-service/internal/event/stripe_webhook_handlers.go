@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -303,7 +303,7 @@ func (c *StripeWebhookConsumer) handleCadenceCanceled(ctx context.Context, event
 
 // asStripe attributes what a webhook changes on the account to Stripe, which reported it.
 func asStripe(ctx context.Context, accountID string) context.Context {
-	return appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
+	return omrpctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 }
 
 func apiErrToErr(apiErr *apierror.APIError) error {

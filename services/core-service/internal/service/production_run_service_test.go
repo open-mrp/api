@@ -13,11 +13,11 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -1089,7 +1089,7 @@ func (suite *ProductionRunBulkCreateTestSuite) exportedRows(export *domain.Expor
 // renders the workbook the export consumer would build, for the account the caller is
 // acting for. The job machinery around it belongs to the engine.
 func (suite *ProductionRunBulkCreateTestSuite) buildExport(ctx context.Context, params domain.ExportProductionRunsParams) (*domain.Export, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	suite.Require().True(ok)
 	impl := suite.productionRunSvc.(*productionRunSvcImpl)
 	spec := impl.exportSpec()

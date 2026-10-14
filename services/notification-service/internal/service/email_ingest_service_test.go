@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
@@ -128,7 +128,7 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 		AgentConfigID: new("agdf_inbox"),
 		GroupID:       new("mggp_1"),
 	}
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorEmailIngest, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorEmailIngest, "ac_1")
 	convID, apiErr := svc.createEmailThreadConversation(ctx, factory, inbox, domain.IngestInboundEmailInput{
 		From:    "cust@out.com",
 		Subject: "Help",

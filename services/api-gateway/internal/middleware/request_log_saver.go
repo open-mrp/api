@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 type saver interface {

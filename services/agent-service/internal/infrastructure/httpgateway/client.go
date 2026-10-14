@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	"github.com/open-mrp/api/shared/version"
+	"github.com/open-mrp/apikit/version"
 )
 
 const (
@@ -41,7 +41,7 @@ func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
-		apiVersion:   version.Latest.Version,
+		apiVersion:   version.Latest().Version,
 		httpClient:   &http.Client{Timeout: defaultTimeout},
 	}
 }

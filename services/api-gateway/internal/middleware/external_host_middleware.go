@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/omrpctx"
 )
 
 // ExternalHostMiddleware stores the host the browser addressed in the request context. Requests proxied through the frontend on a customer's custom portal domain arrive with the original host in X-Forwarded-Host; direct requests use the Host header. Cookie scoping uses this to decide between the shared .openmrp.ai domain and a host-only cookie — a spoofed X-Forwarded-Host can only downgrade the caller to a host-only cookie on the spoofed host, so the header does not need to be validated against a domain allowlist.
@@ -25,7 +25,7 @@ func ExternalHostMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 				host = h
 			}
 
-			ctx := appctx.WithExternalHost(r.Context(), strings.ToLower(host))
+			ctx := omrpctx.WithExternalHost(r.Context(), strings.ToLower(host))
 			next(w, r.WithContext(ctx))
 		}
 	}

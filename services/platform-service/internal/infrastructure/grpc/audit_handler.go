@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
@@ -44,7 +45,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("Audit event actor is required."))
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}

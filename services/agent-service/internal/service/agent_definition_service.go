@@ -14,7 +14,6 @@ import (
 	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -22,6 +21,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -147,7 +147,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -304,7 +304,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -640,7 +640,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -725,7 +725,7 @@ func (s *agentDefSvcImpl) GetAgentDefinition(ctx context.Context, agentDefinitio
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -764,7 +764,7 @@ func (s *agentDefSvcImpl) ListAgentDefinitions(ctx context.Context, params domai
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -888,7 +888,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.list_available_tools")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1069,7 +1069,7 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.update_account_status")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1558,7 +1558,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.trigger_run")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1735,7 +1735,7 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.cancel_run")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1882,7 +1882,7 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.continue_run")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2064,7 +2064,7 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.retry_run")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2300,7 +2300,7 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.create_agent_memory")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2409,7 +2409,7 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.update_agent_memory")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2536,7 +2536,7 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.delete_agent_memory")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

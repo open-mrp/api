@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -90,7 +90,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, par
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -116,7 +116,7 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, suppl
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -143,7 +143,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -241,7 +241,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -316,7 +316,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

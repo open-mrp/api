@@ -9,12 +9,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -452,7 +452,7 @@ func (s *hubspotSyncSvcImpl) CancelJob(ctx context.Context, jobID string) (*doma
 
 // authorize verifies the caller is an internal actor with the requested integrations permission and returns the request identity. HubSpot sync is an integration operation, so it is gated on the integrations domain.
 func (s *hubspotSyncSvcImpl) authorize(ctx context.Context, action types.Action) (*types.Identity, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}

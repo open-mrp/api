@@ -6,7 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/open-mrp/api/shared/version"
+	_ "github.com/open-mrp/api/shared/apiversion"
+	"github.com/open-mrp/apikit/version"
 )
 
 func main() {
@@ -23,6 +24,6 @@ func Run(
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
-	_, err := fmt.Fprint(stdout, version.Latest.Version)
+	_, err := fmt.Fprint(stdout, version.Latest().Version)
 	return err
 }

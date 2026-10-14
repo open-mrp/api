@@ -3,11 +3,12 @@ package grpc
 import (
 	"context"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/grpc"
@@ -196,7 +197,7 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -262,7 +263,7 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -289,7 +290,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -333,7 +334,7 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 	if req.AccountId != nil && *req.AccountId != "" {
 		accountID = *req.AccountId
 	} else {
-		identity, ok := appctx.GetIdentityFromContext(ctx)
+		identity, ok := appctx.Identity[*types.Identity](ctx)
 		if !ok || identity == nil {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 		}
@@ -371,7 +372,7 @@ func (h *billingHandler) GetAgentSpend(ctx context.Context, req *pb.GetAgentSpen
 	if req.AccountId != nil && *req.AccountId != "" {
 		accountID = *req.AccountId
 	} else {
-		identity, ok := appctx.GetIdentityFromContext(ctx)
+		identity, ok := appctx.Identity[*types.Identity](ctx)
 		if !ok || identity == nil {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 		}
@@ -414,7 +415,7 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -445,7 +446,7 @@ func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewP
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}

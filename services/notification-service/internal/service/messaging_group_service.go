@@ -6,11 +6,11 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
+	"github.com/open-mrp/apikit/appctx"
 
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -39,7 +39,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 	}
 
 	// Recovery-point idempotency: a roster has no natural dedup key, so a client retry would otherwise create a duplicate group. Scope on the client's Idempotency-Key.
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, _ := appctx.Identity[*types.Identity](ctx)
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -361,7 +361,7 @@ func (s *conversationSvcImpl) RemoveMessagingGroupMember(ctx context.Context, gr
 
 // messagingGroupCaller authorizes a roster operation: rosters are internal to an account, so the caller must be one of its internal actors holding the messaging permission for action.
 func (s *conversationSvcImpl) messagingGroupCaller(ctx context.Context, action types.Action) (string, string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return "", "", apierror.NewAuthenticationError("Authentication is required.")
 	}

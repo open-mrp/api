@@ -7,10 +7,10 @@ import (
 
 	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -60,7 +60,7 @@ func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resour
 	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.batch_get_resource_creators")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*authtypes.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -84,7 +84,7 @@ func (s *auditEventSvcImpl) GetAuditEvent(ctx context.Context, id string, includ
 	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.get_audit_event")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*authtypes.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -106,7 +106,7 @@ func (s *auditEventSvcImpl) ListAuditEvents(ctx context.Context, filter *domain.
 	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.list_audit_events")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*authtypes.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -148,7 +148,7 @@ func (s *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context) ([]
 	_, span := auditEventSvcTracer.Start(ctx, "service.audit_event.list_audit_event_resource_types")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*authtypes.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

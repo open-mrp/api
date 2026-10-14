@@ -11,9 +11,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

@@ -96,7 +96,6 @@ func (m *AcknowledgmentStatus) StringPtr() *string {
 func (f *SubassemblyFilter) StringPtr() *string   { return stringPtrEnum(f) }
 func (m *OrderDiscountType) StringPtr() *string   { return stringPtrEnum(m) }
 func (m *SandboxMode) StringPtr() *string         { return stringPtrEnum(m) }
-func (m *ObjectType) StringPtr() *string          { return stringPtrEnum(m) }
 func (m *SysPropertyTypeCode) StringPtr() *string { return stringPtrEnum(m) }
 func (s *AgentActionStatus) StringPtr() *string   { return stringPtrEnum(s) }
 func (s *APIKeyStatus) StringPtr() *string        { return stringPtrEnum(s) }

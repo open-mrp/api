@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -82,7 +82,7 @@ func (s *paymentTermSvcImpl) ListPaymentTerms(ctx context.Context, params domain
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -103,7 +103,7 @@ func (s *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, paymentTermID s
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -126,7 +126,7 @@ func (s *paymentTermSvcImpl) BatchGetPaymentTermsByIDs(ctx context.Context, ids 
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -149,7 +149,7 @@ func (s *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, params domai
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -232,7 +232,7 @@ func (s *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, params domai
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -320,7 +320,7 @@ func (s *paymentTermSvcImpl) DeletePaymentTerm(ctx context.Context, paymentTermI
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

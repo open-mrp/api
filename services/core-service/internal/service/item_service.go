@@ -14,7 +14,6 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -23,6 +22,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -37,7 +37,7 @@ func (s *itemSvcImpl) enqueueInventoryReceived(ctx context.Context, repos domain
 	}
 
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -105,7 +105,7 @@ func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string, embe
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -178,7 +178,7 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -205,7 +205,7 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -240,7 +240,7 @@ func (s *itemSvcImpl) GetItemInventory(ctx context.Context, itemID string) (*dom
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_inventory")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -260,7 +260,7 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_costs")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -680,7 +680,7 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_trends")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -756,7 +756,7 @@ func (s *itemSvcImpl) ExportItems(ctx context.Context) (*domain.ExportItemsResul
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.export")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -817,7 +817,7 @@ func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemPa
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -914,7 +914,7 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.add_attribute")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1015,7 +1015,7 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.remove_attribute")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1204,7 +1204,7 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.change_category")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1261,7 +1261,7 @@ func (s *itemSvcImpl) ListInventories(ctx context.Context, params domain.ListInv
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.list_inventories")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1346,7 +1346,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.update_item_inventory")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1566,7 +1566,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.bulk_create_items")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -6,9 +6,9 @@ import (
 	"log"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"

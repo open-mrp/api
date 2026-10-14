@@ -8,11 +8,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -85,7 +85,7 @@ func (s *operatingCalendarSvcImpl) demoteOtherDefaults(ctx context.Context, acco
 //
 // The permission check is deliberately left to each method rather than folded in here. The drift guard reads for a literal check per handler, and an endpoint whose permissions are only visible one indirection away is exactly what that guard exists to catch.
 func (s *operatingCalendarSvcImpl) actingAccount(ctx context.Context) (*types.Identity, string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, "", apierror.NewInvariantViolationError("Identity not found in context.")
 	}

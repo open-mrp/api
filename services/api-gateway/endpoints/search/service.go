@@ -12,12 +12,12 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
 	corepb "github.com/open-mrp/api/shared/proto/core"
 	notifpb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
@@ -124,7 +124,7 @@ func NewSearchSvc(config *SearchSvcConfig) SearchSvc {
 }
 
 func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.Entity], *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewAuthorizationError("You do not have permission to access this resource.")
 	}

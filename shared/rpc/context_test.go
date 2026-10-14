@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/apikit/appctx"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -77,7 +77,7 @@ func TestPrepareServiceCallCtx_ForwardsContextValues(t *testing.T) {
 // A service that forwards a call made while loading includes forwards the include-reads flag with the identity.
 func TestPrepareServiceCallCtx_ForwardsIncludeReads(t *testing.T) {
 	t.Parallel()
-	ctx := appctx.WithIdentity(context.Background(), testIdentity("usr_123").ForIncludeReads())
+	ctx := appctx.WithIdentity(context.Background(), testIdentity("usr_123").WithIncludeReads())
 
 	identity, apiErr := contracts.GetIdentityFromMetadata(outgoingMD(t, PrepareServiceCallCtx(ctx)))
 	if apiErr != nil {
@@ -110,7 +110,7 @@ func TestPrepareServiceCallCtx_OmitsMissingValues(t *testing.T) {
 		{
 			name: "nil identity and empty strings",
 			ctx: func() context.Context {
-				ctx := appctx.WithIdentity(context.Background(), nil)
+				ctx := appctx.WithIdentity[*types.Identity](context.Background(), nil)
 				ctx = appctx.WithIdempotencyKey(ctx, "")
 				ctx = appctx.WithRequestID(ctx, "")
 				return appctx.WithPropagatedClientIP(ctx, "")
@@ -281,7 +281,7 @@ func TestPrepareServiceCallCtx_ValuesReadableDownstream(t *testing.T) {
 	ctx = appctx.WithPropagatedClientIP(ctx, "203.0.113.7")
 
 	hop(t, PrepareServiceCallCtx(ctx), method, func(downstream context.Context, req any) (any, error) {
-		identity, ok := appctx.GetIdentityFromContext(downstream)
+		identity, ok := appctx.Identity[*types.Identity](downstream)
 		if !ok || identity == nil || identity.Actor == nil || identity.Actor.ID != "usr_123" {
 			t.Errorf("expected identity usr_123 downstream, got %+v", identity)
 		}

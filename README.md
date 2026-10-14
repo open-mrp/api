@@ -172,7 +172,7 @@ Authenticate with a bearer API key, name the account you're acting on, and pin a
 curl https://api.openmrp.ai/v1/catalog/items \
   -H "Authorization: Bearer $OPENMRP_API_KEY" \
   -H "OpenMRP-Account: acct_..." \
-  -H "OpenMRP-Version: 1.0.forge-preview.3"
+  -H "OpenMRP-Version: 1.0.forge"
 ```
 
 ```ts

@@ -42,7 +42,7 @@ func TestPortalAccountID(t *testing.T) {
 	}{
 		{name: "customer portal narrows to its own account", identity: customerPortalIdentity(), want: new("acct_customer")},
 		{name: "supplier portal narrows to its own account", identity: supplierPortalIdentity(), want: new("acct_supplier")},
-		{name: "a portal loading what its request includes is still a portal", identity: supplierPortalIdentity().ForIncludeReads(), want: new("acct_supplier")},
+		{name: "a portal loading what its request includes is still a portal", identity: supplierPortalIdentity().WithIncludeReads(), want: new("acct_supplier")},
 		{name: "seller staff read the whole account", identity: internalIdentityWithout(map[string]bool{"sales_orders:read": true}), want: nil},
 		{name: "seller staff acting in a customer's account are not a portal", identity: merchantTargetingCustomerIdentity(), want: nil},
 		{name: "unauthenticated", identity: GetUnauthenticatedIdentity(new("acct_merchant")), want: nil},

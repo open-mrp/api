@@ -7,16 +7,16 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/excel"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
 // orderReportAccessFor gates an order-book report as the dashboard's analytics did: internal actors with read access to permissionDomain; a sales rep sees only their own orders and no cost.
 func (s *analyticsSvcImpl) orderReportAccessFor(ctx context.Context, permissionDomain types.PermissionDomain) (*salesReportAccess, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}

@@ -12,10 +12,10 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -223,7 +223,7 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap[string(constants.AccountPlanLimitBatchesMaximum)]}
 
 	spend, plan := s.currentAgentSpend(ctx, accountID, periodStart)
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.CheckHasPermission(types.PermissionDomainBilling, types.ActionRead) == nil {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity != nil && identity.CheckHasPermission(types.PermissionDomainBilling, types.ActionRead) == nil {
 		usage.EstimatedAgentSpendCents = &spend
 	}
 	// Surface the plan name and base fee the customer is actually billed, from the same resolved Stripe plan.
@@ -588,7 +588,7 @@ func (s *billingSvcImpl) RequestEnterpriseUpgrade(ctx context.Context, input dom
 	// The inquiry is a request for a salesperson to contact a person, and it carries that
 	// person's name and email. An API key names nobody, so the actor lookup below would
 	// otherwise fail as a bare not-found that says nothing about why.
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -626,7 +626,7 @@ func (s *billingSvcImpl) EnsureBillingCustomer(ctx context.Context, accountID st
 	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.ensure_billing_customer")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -737,7 +737,7 @@ func (s *billingSvcImpl) SetupBillingProfile(ctx context.Context, accountID stri
 	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.setup_billing_profile")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -852,7 +852,7 @@ func (s *billingSvcImpl) SwitchPlan(ctx context.Context, accountID string, planI
 	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.switch_plan")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1114,7 +1114,7 @@ func (s *billingSvcImpl) SubscribeToPricingPlan(ctx context.Context, stripeCusto
 	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.subscribe_to_pricing_plan")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

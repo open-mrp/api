@@ -9,13 +9,13 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/ptrutil"
@@ -161,7 +161,7 @@ func (s *accountUserSvcImpl) ListAccountUsers(ctx context.Context, params domain
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -201,7 +201,7 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -240,7 +240,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -581,7 +581,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -793,7 +793,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		return tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid status: %s", targetStatus)))
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -942,7 +942,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_password")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1080,7 +1080,7 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

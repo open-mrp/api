@@ -17,8 +17,8 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/fuzzy"
 )
@@ -31,7 +31,7 @@ const (
 )
 
 func GetIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		return identity, nil
 	}
 	return nil, apierror.NewAuthenticationError("Identity not found in context")

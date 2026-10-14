@@ -8,11 +8,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/omrpctx"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -78,7 +79,7 @@ func TestUpdateAccountSubscription_AuditsWebhookChangeAsStripe(t *testing.T) {
 	f := newSubscriptionFixture(t)
 	f.expectStatusUpdate()
 	pastDue := "past_due"
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
 
 	apiErr := f.svc.UpdateAccountSubscription(ctx, "ac_1", &pastDue, "", nil, nil, nil, nil, nil, nil, nil, nil)
 
@@ -142,7 +143,7 @@ func TestUpdateAccountSubscription_AuditsUsersReactivatedByAPlanChange(t *testin
 		"acus_a": constants.AccountUserStatusActive,
 		"acus_b": constants.AccountUserStatusActive,
 	}, nil).Times(1)
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
 
 	require.Nil(t, f.svc.UpdateAccountSubscription(ctx, "ac_1", nil, "enterprise", nil, nil, nil, nil, nil, nil, nil, nil))
 
@@ -167,7 +168,7 @@ func TestUpdateAccountSubscription_WebhookDowngradeDeactivatesNobody(t *testing.
 	statuses := map[string]constants.AccountUserStatus{"acus_a": constants.AccountUserStatusActive, "acus_b": constants.AccountUserStatusActive}
 	f.accountUserRepo.EXPECT().LockSeatStatuses(gomock.Any(), "ac_1").Return(statuses, nil).Times(2)
 	f.accountUserRepo.EXPECT().CountActive(gomock.Any(), "ac_1").Return(int64(2), nil).Times(1)
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "ac_1")
 
 	require.Nil(t, f.svc.UpdateAccountSubscription(ctx, "ac_1", nil, "starter", nil, nil, nil, nil, nil, nil, nil, nil))
 

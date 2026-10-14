@@ -8,8 +8,8 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // The handler runs as the caller; only the include loads carry the include-reads flag.
@@ -37,7 +37,7 @@ func TestExecute_OnlyIncludeLoadsReadAsTheIncludingRequest(t *testing.T) {
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: v2OTOwner,
 		Load: func(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
-			ownerLoadedAs, _ = appctx.GetIdentityFromContext(ctx)
+			ownerLoadedAs, _ = appctx.Identity[*types.Identity](ctx)
 			out := map[string]any{}
 			for _, id := range ids {
 				out[id] = &v2Owner{ID: id}
@@ -55,7 +55,7 @@ func TestExecute_OnlyIncludeLoadsReadAsTheIncludingRequest(t *testing.T) {
 		IncludeConfig:     v2OwnerIncludeConfig,
 		ServiceHandler: func(any) func(context.Context, *stubRequest) (*v2Carrier, *apierror.APIError) {
 			return func(ctx context.Context, _ *stubRequest) (*v2Carrier, *apierror.APIError) {
-				handledAs, _ = appctx.GetIdentityFromContext(ctx)
+				handledAs, _ = appctx.Identity[*types.Identity](ctx)
 				return &v2Carrier{ID: "c1", OwnerID: "o-c1"}, nil
 			}
 		},

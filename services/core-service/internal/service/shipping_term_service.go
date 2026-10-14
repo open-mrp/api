@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -103,7 +103,7 @@ func (s *shippingTermSvcImpl) BatchGetShippingTermsByIDs(ctx context.Context, id
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -126,7 +126,7 @@ func (s *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, params doma
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -147,7 +147,7 @@ func (s *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, params domain
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -168,7 +168,7 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -303,7 +303,7 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -485,7 +485,7 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

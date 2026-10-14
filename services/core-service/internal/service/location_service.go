@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -91,7 +91,7 @@ func (s *locationSvcImpl) ListLocations(ctx context.Context, params domain.ListL
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -115,7 +115,7 @@ func (s *locationSvcImpl) GetLocation(ctx context.Context, params domain.GetLoca
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -139,7 +139,7 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -239,7 +239,7 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -361,7 +361,7 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -440,7 +440,7 @@ func (s *locationSvcImpl) ListLocationTypes(ctx context.Context, params domain.L
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.list_types")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -459,7 +459,7 @@ func (s *locationSvcImpl) GetLocationType(ctx context.Context, params domain.Get
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.get_type")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -478,7 +478,7 @@ func (s *locationSvcImpl) BatchGetLocationsByIDs(ctx context.Context, ids []stri
 	ctx, span := locationSvcTracer.Start(ctx, "service.location.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -9,10 +9,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -110,7 +111,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 	ctx, span := docAPIKeySvcTracer.Start(ctx, "service.doc_api_key.get_or_create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

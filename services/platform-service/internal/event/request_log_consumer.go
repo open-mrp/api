@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	loggingpb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"

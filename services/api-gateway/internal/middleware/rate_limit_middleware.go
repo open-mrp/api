@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/retry"
 )
@@ -193,7 +193,7 @@ func rateLimitMiddleware(rateLimiter *RateLimiter, trustedProxyHops int) func(ht
 				next.ServeHTTP(w, r)
 				return
 			}
-			if platform, ok := appctx.GetPlatformFromContext(r.Context()); ok && (platform.IsTest() || platform.IsDevelopment()) {
+			if platform, ok := omrpctx.GetPlatformFromContext(r.Context()); ok && (platform.IsTest() || platform.IsDevelopment()) {
 				next.ServeHTTP(w, r)
 				return
 			}

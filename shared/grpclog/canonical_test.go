@@ -1,4 +1,4 @@
-package logging
+package grpclog
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/apikit/appctx"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -153,7 +153,7 @@ func TestExtractIdentityAttrs_UserIdentity(t *testing.T) {
 		AccountMode: constants.AccountModeProduction,
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	assertAttr(t, m, "auth_type", "user")
@@ -171,7 +171,7 @@ func TestExtractIdentityAttrs_APIKeyIdentity(t *testing.T) {
 		},
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	assertAttr(t, m, "auth_type", "api_key")
@@ -191,7 +191,7 @@ func TestExtractIdentityAttrs_AgentIdentity(t *testing.T) {
 		},
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	assertAttr(t, m, "auth_type", "agent")
@@ -212,7 +212,7 @@ func TestExtractIdentityAttrs_NilActor(t *testing.T) {
 		Actor: nil,
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	assertAttr(t, m, "auth_type", "unauthenticated")
@@ -233,7 +233,7 @@ func TestExtractIdentityAttrs_NilTarget(t *testing.T) {
 		Target: nil,
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	if _, ok := m["target_account_id"]; ok {
@@ -249,7 +249,7 @@ func TestExtractIdentityAttrs_EmptyAccountMode(t *testing.T) {
 		AccountMode: "",
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	if _, ok := m["account_mode"]; ok {
@@ -268,7 +268,7 @@ func TestExtractIdentityAttrs_FullIdentity(t *testing.T) {
 		AccountMode: constants.AccountModeProduction,
 	}
 
-	attrs := extractIdentityAttrs(identity)
+	attrs := identity.LogAttrs()
 	m := attrsToMap(attrs)
 
 	expected := []string{"auth_type", "user_id", "target_account_id", "account_mode"}

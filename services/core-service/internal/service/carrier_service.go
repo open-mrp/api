@@ -8,12 +8,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -132,7 +132,7 @@ func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCar
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -182,7 +182,7 @@ func (s *carrierSvcImpl) BatchGetCarriersByIDs(ctx context.Context, ids []string
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -247,7 +247,7 @@ func (s *carrierSvcImpl) BatchGetServiceLevelsByIDs(ctx context.Context, ids []s
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_service_levels_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -281,7 +281,7 @@ func (s *carrierSvcImpl) GetCarrier(ctx context.Context, params domain.GetCarrie
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -328,7 +328,7 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -501,7 +501,7 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -593,7 +593,7 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -688,7 +688,7 @@ func (s *carrierSvcImpl) InitiateOAuth(ctx context.Context, carrierID, redirectU
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.initiate_oauth")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -736,7 +736,7 @@ func (s *carrierSvcImpl) GetOAuthStatus(ctx context.Context, carrierID string) (
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.get_oauth_status")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -788,7 +788,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.sync_options")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

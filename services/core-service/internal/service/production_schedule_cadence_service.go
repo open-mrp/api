@@ -5,10 +5,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
 	"github.com/open-mrp/apikit/tracing"
@@ -22,7 +22,7 @@ import (
 func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Context, params domain.EnqueueGenerationParams) *apierror.APIError {
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.enqueue_scheduled_generation")
 	defer span.End()
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
 
 	scheduleID, apiErr := id.GenID(id.ProductionScheduleIDPrefix, nil)
 	if apiErr != nil {
@@ -95,7 +95,7 @@ func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Conte
 func (s *productionScheduleSvcImpl) RunScheduledGeneration(ctx context.Context, params domain.RunScheduledGenerationParams) *apierror.APIError {
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.run_scheduled_generation")
 	defer span.End()
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
 
 	repo := s.repos.NewProductionScheduleRepo()
 

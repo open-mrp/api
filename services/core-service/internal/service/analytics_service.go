@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -100,7 +100,7 @@ func (s *analyticsSvcImpl) AnalyzeSales(ctx context.Context, params domain.Analy
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_sales")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -162,7 +162,7 @@ func (s *analyticsSvcImpl) AnalyzeOpenBatches(ctx context.Context, params domain
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_open_batches")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -183,7 +183,7 @@ func (s *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, params domain.
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_deliveries")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -204,7 +204,7 @@ func (s *analyticsSvcImpl) AnalyzeManufacturing(ctx context.Context, params doma
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_manufacturing")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return 0, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -235,7 +235,7 @@ func (s *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, params
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_manufacturing_batch")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -256,7 +256,7 @@ func (s *analyticsSvcImpl) AnalyzeOrders(ctx context.Context, params domain.Anal
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_orders")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -300,7 +300,7 @@ func (s *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, params do
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_quarterly_orders")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -350,7 +350,7 @@ func (s *analyticsSvcImpl) AnalyzeMaterials(ctx context.Context, params domain.A
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_materials")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -385,7 +385,7 @@ func (s *analyticsSvcImpl) AnalyzeInventoryReceipts(ctx context.Context, params 
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_inventory_receipts")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -428,7 +428,7 @@ func (s *analyticsSvcImpl) GetNewCustomersAnalytics(ctx context.Context, params 
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.get_new_customers_analytics")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -450,7 +450,7 @@ func (s *analyticsSvcImpl) GetDemandForecast(ctx context.Context, params domain.
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.get_demand_forecast")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -480,7 +480,7 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_oee")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -514,7 +514,7 @@ func (s *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, params domain.An
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_oee_trend")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -548,7 +548,7 @@ func (s *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, params domai
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_weeks_of_sales")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -693,7 +693,7 @@ func (s *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, params
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_schedule_attainment")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/tracing"
 
@@ -159,7 +160,7 @@ func syncOrderShipments(ctx context.Context, repos domain.RepoFactory, accountID
 	}
 
 	// Without an identity (a message from before identities were carried) there is no actor to audit.
-	if _, ok := appctx.GetIdentityFromContext(ctx); !ok {
+	if _, ok := appctx.Identity[*types.Identity](ctx); !ok {
 		return nil
 	}
 	for _, old := range before {

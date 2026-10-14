@@ -13,9 +13,9 @@ import (
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/idempotency"
 	"google.golang.org/grpc"
 )

@@ -7,12 +7,13 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 type PaymentFlagsMedConfig struct {
@@ -42,7 +43,7 @@ func (m *paymentFlagsMedImpl) Enqueue(ctx context.Context, accountID string, tra
 		return apierror.NewInternalError(err, "Failed to marshal recompute payment flags event.")
 	}
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -149,7 +150,7 @@ func (m *paymentFlagsMedImpl) notifyMarkOverturned(ctx context.Context, accountI
 		return apierror.NewInternalError(err, "Failed to marshal invoice payment status alert.")
 	}
 	msg := contracts.AmqpMessage{Data: dataJSON}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

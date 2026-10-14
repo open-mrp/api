@@ -11,10 +11,10 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
@@ -1327,7 +1327,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 // renders the workbook the export consumer would build, for the account the caller is
 // acting for. The job machinery around it belongs to the engine.
 func (s *ProductSvcTestSuite) buildExport(ctx context.Context, params domain.ExportProductsParams) (*domain.Export, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	s.Require().True(ok)
 	impl := s.productSvc.(*productSvcImpl)
 	spec := impl.exportSpec()

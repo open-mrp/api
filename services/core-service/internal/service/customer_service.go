@@ -10,7 +10,6 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -18,6 +17,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -100,7 +100,7 @@ func (s *customerSvcImpl) ListCustomers(ctx context.Context, params domain.ListC
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -122,7 +122,7 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -163,7 +163,7 @@ func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccount
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.batch_get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -205,7 +205,7 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -417,7 +417,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -632,7 +632,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -713,7 +713,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.bulk_delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -793,7 +793,7 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.frequently_ordered_products")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -853,7 +853,7 @@ var managedOrderNotificationTypeCodes = []string{
 
 // authorizeCustomerNotificationRecipientAccess resolves the caller identity and gates access to a customer relationship's notification recipients. Read (write=false) mirrors GetFrequentlyOrderedProducts; write additionally requires the order-placing capability (customer users) or Customers/Suppliers update (internal actors).
 func (s *customerSvcImpl) authorizeCustomerNotificationRecipientAccess(ctx context.Context, customerAccountID string, write bool) (*types.Identity, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}
@@ -1064,7 +1064,7 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.merge")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1538,7 +1538,7 @@ func enqueueStripeCustomerSync(ctx context.Context, repos domain.RepoFactory, ow
 	}
 
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

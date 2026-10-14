@@ -10,8 +10,8 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/suite"

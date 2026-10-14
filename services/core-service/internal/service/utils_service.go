@@ -13,11 +13,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -119,7 +119,7 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.check_duplicate")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -225,7 +225,7 @@ func (s *utilsSvcImpl) EmailRecord(ctx context.Context, params domain.EmailRecor
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.email_record")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -467,7 +467,7 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.submit_feedback")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

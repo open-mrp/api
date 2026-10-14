@@ -15,7 +15,6 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/ratelimit"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -23,6 +22,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	s3 "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/ptrutil"
@@ -88,7 +88,7 @@ func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionMan
 
 // caller resolves the authenticated identity to its account_user id. Chat requires a real account_user, so api-key actors (no membership) are rejected.
 func (s *conversationSvcImpl) caller(ctx context.Context) (*types.Identity, string, string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, "", "", apierror.NewAuthenticationError("Authentication is required.")
 	}
@@ -271,7 +271,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
@@ -486,7 +486,7 @@ func (s *conversationSvcImpl) ContactSupport(ctx context.Context) (*domain.Conve
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.contact_support")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
@@ -570,7 +570,7 @@ func (s *conversationSvcImpl) SupportAvailability(ctx context.Context) (bool, *a
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.support_availability")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return false, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
@@ -755,7 +755,7 @@ type resolvedCaller struct {
 // a member can fetch back the conversation immediately after leaving. Removed ('removed') participants
 // are never permitted.
 func (s *conversationSvcImpl) resolveParticipant(ctx context.Context, conversationID string, allowLeft bool) (*resolvedCaller, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, apierror.NewAuthenticationError("Authentication is required.")
 	}
@@ -1588,7 +1588,7 @@ func enqueueChatRunVia(ctx context.Context, outbox messaging.OutboxRepo, data me
 		return apierror.NewInternalError(err, "Failed to marshal agent chat-run payload.")
 	}
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -1895,7 +1895,7 @@ func (s *conversationSvcImpl) publishMessageUpdated(ctx context.Context, convers
 		return
 	}
 	msg := contracts.AmqpMessage{Data: data}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -2243,7 +2243,7 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 	}
 
 	// Recovery-point idempotency: a scheduled message carries no client dedup key, so a retry would double-schedule.
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, _ := appctx.Identity[*types.Identity](ctx)
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -2664,7 +2664,7 @@ func (s *conversationSvcImpl) emitAgentTyping(ctx context.Context, conversationI
 		return
 	}
 	msg := contracts.AmqpMessage{Data: data}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -2699,7 +2699,7 @@ func (s *conversationSvcImpl) SendTyping(ctx context.Context, conversationID str
 		return nil
 	}
 	msg := contracts.AmqpMessage{Data: data}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -3645,7 +3645,7 @@ func (s *conversationSvcImpl) ListContacts(ctx context.Context, query string) ([
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.list_contacts")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
@@ -3679,7 +3679,7 @@ func (s *conversationSvcImpl) ReportConversation(ctx context.Context, conversati
 	}
 
 	// Recovery-point idempotency: an abuse report mints a fresh id with no dedup key, so a retry would file a duplicate report.
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, _ := appctx.Identity[*types.Identity](ctx)
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -3749,7 +3749,7 @@ func (s *conversationSvcImpl) requireParticipant(ctx context.Context, conversati
 // requireMessagingAdmin authorizes an account-level messaging-admin operation (legal hold, redaction): an internal actor in the target account holding the given messaging permission.
 // Customer relation actors are rejected. Returns the resolved account id.
 func (s *conversationSvcImpl) requireMessagingAdmin(ctx context.Context, action types.Action) (string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return "", apierror.NewAuthenticationError("Authentication is required.")
 	}
@@ -4017,7 +4017,7 @@ func enqueueRealtimeVia(ctx context.Context, outbox messaging.OutboxRepo, rt mes
 		return apierror.NewInternalError(err, "Failed to marshal realtime delivery payload.")
 	}
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -4045,7 +4045,7 @@ func enqueueEmailVia(ctx context.Context, outbox messaging.OutboxRepo, email mes
 		return apierror.NewInternalError(err, "Failed to marshal email payload.")
 	}
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

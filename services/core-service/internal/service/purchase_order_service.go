@@ -10,13 +10,13 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -96,7 +96,7 @@ func (s *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, params do
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -156,7 +156,7 @@ func (s *purchaseOrderSvcImpl) BatchGetPurchaseOrderLinesByIDs(ctx context.Conte
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.batch_get_lines_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -177,7 +177,7 @@ func (s *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, params doma
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -234,7 +234,7 @@ func (s *purchaseOrderSvcImpl) BatchGetPurchaseOrders(ctx context.Context, purch
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.batch_get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -257,7 +257,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -503,7 +503,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -689,7 +689,7 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -754,7 +754,7 @@ func (s *purchaseOrderSvcImpl) BulkDeletePurchaseOrders(ctx context.Context, par
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.bulk_delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -805,7 +805,7 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.change_status")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

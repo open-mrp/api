@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	"go.opentelemetry.io/otel"
@@ -79,14 +79,8 @@ func InternalAuthMiddleware(config *InternalAuthMiddlewareConfig) func(http.Hand
 					actorType := string(identity.Actor.RelationType)
 					rl.ActorType = &actorType
 					rl.ActorID = &identity.Actor.ID
-					rl.AccountID = identity.Actor.AccountID
 				}
-				if identity.IsTargetAccountSet() {
-					accountID := identity.Target.AccountID
-					rl.TargetAccountID = &accountID
-				}
-				identityType := string(identity.Type)
-				rl.IdentityType = &identityType
+				rl.Identity = &identity
 			}
 
 			ctx = appctx.WithIdentity(ctx, &identity)

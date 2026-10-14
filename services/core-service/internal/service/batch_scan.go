@@ -16,7 +16,6 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -24,6 +23,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -48,7 +48,7 @@ var baseUnitIDByType = map[string]string{
 
 // batchActor resolves the internal user a batch operation runs as and checks the batches permission.
 func batchActor(ctx context.Context, action types.Action) (*types.Identity, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}
@@ -1551,7 +1551,7 @@ func publishBatchScanned(ctx context.Context, repos domain.RepoFactory, identity
 	}
 
 	msg := contracts.AmqpMessage{Data: payload}
-	if ctxIdentity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if ctxIdentity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = ctxIdentity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

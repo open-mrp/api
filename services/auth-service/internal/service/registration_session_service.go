@@ -13,12 +13,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -320,7 +320,7 @@ func (s *registrationSessionSvcImpl) UpdateSession(ctx context.Context, input do
 
 	meds := s.mediators()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity.Type != types.IdentityActorTypeUser {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("User authentication required."))
 	}
@@ -380,7 +380,7 @@ func (s *registrationSessionSvcImpl) ListSessions(ctx context.Context, input dom
 	ctx, span := registrationSessionSvcTracer.Start(ctx, "service.registration_session.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -465,7 +465,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 
 	meds := s.mediators()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity.Type != types.IdentityActorTypeUser {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("User authentication required."))
 	}
@@ -620,7 +620,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 			}
 
 			// Stamp the newly created account onto the identity so downstream service calls (billing → core UpdateAccountSubscription → audit publisher) see a Target and don't reject the request.
-			if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil {
+			if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity != nil {
 				identity.Target = &types.IdentityTarget{AccountID: result.AccountID}
 				ctx = appctx.WithIdentity(ctx, identity)
 			}
@@ -732,7 +732,7 @@ func (s *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, input d
 
 	meds := s.mediators()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity.Type != types.IdentityActorTypeUser {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("User authentication required."))
 	}
@@ -841,7 +841,7 @@ func (s *registrationSessionSvcImpl) SetupBilling(ctx context.Context, input dom
 
 	meds := s.mediators()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity.Type != types.IdentityActorTypeUser {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("User authentication required."))
 	}

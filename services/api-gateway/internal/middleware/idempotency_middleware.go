@@ -14,10 +14,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/idempotency"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -178,7 +178,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 			}
 
 			// Identity may not be set depending on the endpoint, so we will handle unset identities as unauthorized
-			identity, _ := appctx.GetIdentityFromContext(r.Context())
+			identity, _ := appctx.Identity[*types.Identity](r.Context())
 
 			bodyBytes, r, bodyErr := readAndRestoreBody(w, r)
 			if bodyErr != nil {

@@ -10,9 +10,9 @@ import (
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/services/notification-service/internal/email"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

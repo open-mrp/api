@@ -9,10 +9,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/omrpctx"
 	pb "github.com/open-mrp/api/shared/proto/auth"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	"go.opentelemetry.io/otel"
@@ -51,7 +52,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			openMRPAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
 			actorAccountIDHeader := r.Header.Get(header.ActorAccountIDHeader)
 
-			platform, _ := appctx.GetPlatformFromContext(r.Context())
+			platform, _ := omrpctx.GetPlatformFromContext(r.Context())
 			isProduction := platform.IsProduction()
 
 			cookieToken, _ := cookie.GetAccessTokenFromRequest(r)
@@ -131,40 +132,21 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			}
 			span.End()
 
+			typedIdentity := types.IdentityFromProto(identity)
 			if rl, ok := appctx.GetRequestLog(r.Context()); ok && rl != nil {
 				if identity.Actor != nil {
 					actorType := normalizeActorType(identity.Actor.RelationType)
 					rl.ActorType = &actorType
 					rl.ActorID = &identity.Actor.Id
-					rl.AccountID = identity.Actor.AccountId
 				}
-				if identity.Target != nil && identity.Target.AccountId != "" {
-					accountId := identity.Target.AccountId
-					rl.TargetAccountID = &accountId
-				}
-				identityType := normalizeIdentityType(identity.Type)
-				rl.IdentityType = &identityType
+				rl.Identity = typedIdentity
 			}
 
-			identityType := types.IdentityFromProto(identity)
-			ctx = appctx.WithIdentity(r.Context(), identityType)
+			ctx = appctx.WithIdentity(r.Context(), typedIdentity)
 			r = r.WithContext(ctx)
 
 			next.ServeHTTP(w, r)
 		}
-	}
-}
-
-func normalizeIdentityType(t pb.IdentityActorType) string {
-	switch t {
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_USER:
-		return "user"
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_API_KEY:
-		return "api_key"
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNAUTHENTICATED:
-		return "unauthenticated"
-	default:
-		return ""
 	}
 }
 

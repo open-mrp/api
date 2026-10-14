@@ -11,12 +11,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -83,7 +83,7 @@ func (s *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, params 
 	ctx, span := receivingOrderSvcTracer.Start(ctx, "service.receiving_order.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -135,7 +135,7 @@ func (s *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, params do
 	ctx, span := receivingOrderSvcTracer.Start(ctx, "service.receiving_order.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -167,7 +167,7 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 	ctx, span := receivingOrderSvcTracer.Start(ctx, "service.receiving_order.stock")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -343,7 +343,7 @@ func (s *receivingOrderSvcImpl) ReceiveReceivingOrder(ctx context.Context, recei
 	ctx, span := receivingOrderSvcTracer.Start(ctx, "service.receiving_order.receive")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -459,7 +459,7 @@ func (s *receivingOrderSvcImpl) VoidReceivingOrder(ctx context.Context, receivin
 	ctx, span := receivingOrderSvcTracer.Start(ctx, "service.receiving_order.void")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

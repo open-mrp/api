@@ -6,10 +6,10 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -94,7 +94,7 @@ func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, re
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -119,7 +119,7 @@ func (s *childAccountSvcImpl) ListChildAccounts(ctx context.Context, cursor *str
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -181,7 +181,7 @@ func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountI
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.add")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -253,7 +253,7 @@ func (s *childAccountSvcImpl) RemoveChildAccount(ctx context.Context, childAccou
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.remove")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

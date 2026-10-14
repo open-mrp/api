@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	agentpagination "github.com/open-mrp/api/services/agent-service/internal/pagination"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/agent"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
 	"github.com/open-mrp/apikit/tracing"
@@ -68,7 +68,7 @@ func (h *agentHandler) checkPlanAccess(ctx context.Context) error {
 }
 
 func getAccountIDFromContext(ctx context.Context) (string, error) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsTargetAccountSet() {
 		return "", status.Error(codes.Unauthenticated, "identity with account ID is required")
 	}
@@ -500,7 +500,7 @@ func (h *agentHandler) ListAvailableModels(ctx context.Context, _ *pb.ListAvaila
 		return nil, err
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -695,7 +695,7 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 		return nil, status.Error(codes.InvalidArgument, "agent_run_id is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -774,7 +774,7 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -904,7 +904,7 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1017,7 +1017,7 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1107,7 +1107,7 @@ func (h *agentHandler) GetAgentMemory(ctx context.Context, req *pb.GetAgentMemor
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1147,7 +1147,7 @@ func (h *agentHandler) BatchGetAgentMemoriesByIDs(ctx context.Context, req *pb.B
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}

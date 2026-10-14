@@ -7,12 +7,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -92,7 +92,7 @@ func (s *departmentSvcImpl) ListDepartments(ctx context.Context, params domain.L
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -113,7 +113,7 @@ func (s *departmentSvcImpl) GetDepartment(ctx context.Context, departmentID stri
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -135,7 +135,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -252,7 +252,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -458,7 +458,7 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -530,7 +530,7 @@ func (s *departmentSvcImpl) BatchGetDepartmentsByIDs(ctx context.Context, ids []
 	ctx, span := departmentSvcTracer.Start(ctx, "service.department.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -6,9 +6,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // DefaultMaxIncludeDepth caps the recursion depth of include resolution, which bounds an include key at that many dot-separated segments. Cycles in the resource graph (e.g. child_accounts.parent_account) are also bounded by per-request memoization, but the depth cap protects against pathological client requests that pile up include paths. Clients cannot reach it on their own — every endpoint whitelists its include keys, and IncludesFor rejects a whitelisted key deeper than this at startup.
@@ -32,11 +33,11 @@ func ResolveIncludes(ctx context.Context, roots []any, objectType constants.Obje
 
 // WithIncludeReads returns ctx with the caller's identity as it loads what an authorized request includes or embeds (types.Identity.ForIncludeReads). Never use it for the request's own records.
 func WithIncludeReads(ctx context.Context) context.Context {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || identity.IncludeReads {
 		return ctx
 	}
-	return appctx.WithIdentity(ctx, identity.ForIncludeReads())
+	return appctx.WithIdentity(ctx, identity.WithIncludeReads())
 }
 
 func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.ObjectType, tree *IncludeNode, depth int) *apierror.APIError {

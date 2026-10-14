@@ -11,9 +11,9 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/safeconv"
 )
 
@@ -38,7 +38,7 @@ func (s *accountPriceSvcImpl) priceListExportSpec() exportSpec[*domain.ProductFu
 
 // ExportPriceList accepts a price-list export: it records the customer on a job and returns it to poll. Nothing is rendered here — pricing a whole catalog is far too slow to hold a request open for.
 func (s *accountPriceSvcImpl) ExportPriceList(ctx context.Context, params domain.ExportPriceListParams) (*domain.Job, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}

@@ -7,12 +7,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -115,7 +115,7 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -175,7 +175,7 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -231,7 +231,7 @@ func (s *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, params dom
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -317,7 +317,7 @@ func (s *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, params dom
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -397,7 +397,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

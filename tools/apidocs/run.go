@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/open-mrp/api/shared/version"
+	"github.com/open-mrp/apikit/version"
 )
 
 var quietOutput bool
@@ -62,7 +62,7 @@ func Run(
 		return fmt.Errorf("changing to root directory %s: %w", *rootDir, err)
 	}
 
-	ver := version.Latest.Version
+	ver := version.Latest().Version
 	logInfof("Generating OpenAPI spec for %s (version %s)...", *name, ver)
 
 	var transforms []Transform

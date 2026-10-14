@@ -10,11 +10,11 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -78,7 +78,7 @@ func (s *jobSvcImpl) GetJob(ctx context.Context, jobID string) (*domain.Job, *ap
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -112,7 +112,7 @@ func (s *jobSvcImpl) GetJobForExecution(ctx context.Context, jobID string) (*dom
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.get_for_execution")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -156,7 +156,7 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -230,7 +230,7 @@ func (s *jobSvcImpl) UpdateJob(ctx context.Context, params domain.UpdateJobServi
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -398,7 +398,7 @@ func (s *jobSvcImpl) CancelJob(ctx context.Context, params domain.CancelJobParam
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.cancel")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // SandboxBillingMiddleware blocks sandbox accounts from accessing billing endpoints. Sandbox accounts inherit their owner's plan and should never interact with Stripe directly.
@@ -19,7 +20,7 @@ func SandboxBillingMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			identity, ok := appctx.GetIdentityFromContext(r.Context())
+			identity, ok := appctx.Identity[*types.Identity](r.Context())
 			if !ok || identity == nil {
 				next.ServeHTTP(w, r)
 				return

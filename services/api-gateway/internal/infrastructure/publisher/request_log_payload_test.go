@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/blobstore"
 	"github.com/open-mrp/apikit/cloud/s3"
 	"google.golang.org/protobuf/encoding/protojson"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apierror "github.com/open-mrp/apikit/apierror"

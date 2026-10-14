@@ -8,12 +8,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -84,7 +84,7 @@ func (s *roleSvcImpl) ListRoles(ctx context.Context, params domain.ListRolesPara
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -129,7 +129,7 @@ func (s *roleSvcImpl) GetRole(ctx context.Context, roleID string, incs []string)
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -163,7 +163,7 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -275,7 +275,7 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -413,7 +413,7 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -490,7 +490,7 @@ func (s *roleSvcImpl) BatchGetRolesByIDs(ctx context.Context, ids []string) ([]*
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

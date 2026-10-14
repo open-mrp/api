@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/version"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/version"
 )
 
 func VersionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
@@ -23,7 +23,7 @@ func VersionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 
 			// Require version header
 			if versionStr == "" {
-				apiErr := apierror.NewAPIVersionRequiredError(header.VersionHeader, version.Latest.String())
+				apiErr := apierror.NewAPIVersionRequiredError(header.VersionHeader, version.Latest().String())
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 				return
 			}

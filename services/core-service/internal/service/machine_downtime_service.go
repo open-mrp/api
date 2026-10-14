@@ -10,12 +10,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -160,7 +160,7 @@ func (s *machineDowntimeSvcImpl) ListDowntimeReasons(ctx context.Context) ([]*do
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.list_reasons")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -180,7 +180,7 @@ func (s *machineDowntimeSvcImpl) BatchGetDowntimeEventsByIDs(ctx context.Context
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -200,7 +200,7 @@ func (s *machineDowntimeSvcImpl) ListDowntimeEvents(ctx context.Context, params 
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -222,7 +222,7 @@ func (s *machineDowntimeSvcImpl) GetDowntimeEvent(ctx context.Context, eventID s
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -251,7 +251,7 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -398,7 +398,7 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -561,7 +561,7 @@ func (s *machineDowntimeSvcImpl) DeleteDowntimeEvent(ctx context.Context, eventI
 	ctx, span := machineDowntimeSvcTracer.Start(ctx, "service.machine_downtime.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

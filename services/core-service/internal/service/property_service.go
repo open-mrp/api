@@ -10,12 +10,12 @@ import (
 
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -93,7 +93,7 @@ func (s *propertySvcImpl) BatchGetPropertiesByIDs(ctx context.Context, ids []str
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -123,7 +123,7 @@ func (s *propertySvcImpl) ListProperties(ctx context.Context, params domain.List
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -158,7 +158,7 @@ func (s *propertySvcImpl) GetProperty(ctx context.Context, propertyID string, in
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -221,7 +221,7 @@ func (s *propertySvcImpl) CreateProperty(ctx context.Context, params domain.Crea
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -305,7 +305,7 @@ func (s *propertySvcImpl) UpdateProperty(ctx context.Context, params domain.Upda
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -392,7 +392,7 @@ func (s *propertySvcImpl) DeleteProperty(ctx context.Context, propertyID string)
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

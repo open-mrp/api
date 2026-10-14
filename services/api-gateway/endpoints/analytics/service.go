@@ -7,10 +7,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/safeconv"
 	"github.com/open-mrp/apikit/tracing"
@@ -197,7 +198,7 @@ func (m *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, req *A
 func (m *analyticsSvcImpl) AnalyzeOrders(ctx context.Context, req *AnalyzeOrdersRequest) (*apiresource.AnalyzeOrdersResponse, *apierror.APIError) {
 	// Determine if the caller is a sales rep from identity, matching dashboard behavior.
 	var isSalesRep bool
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.RoleType != nil {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.RoleType != nil {
 		isSalesRep = *identity.Actor.RoleType == string(constants.RoleTypeSalesRep)
 	}
 

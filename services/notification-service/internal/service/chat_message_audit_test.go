@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func TestPublishChatMessageCreated_RootsAtConversationWithoutContent(t *testing.
 		LinkResourceType:    new(string(constants.ObjectTypeSalesOrder)),
 		LinkResourceID:      new("so_1"),
 	}
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorEmailIngest, "ac_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorEmailIngest, "ac_1")
 	require.Nil(t, publishChatMessageCreated(ctx, factory, msg))
 	require.Len(t, outbox.created, 1)
 

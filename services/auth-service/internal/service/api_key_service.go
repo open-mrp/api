@@ -10,11 +10,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -107,7 +108,7 @@ func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -140,7 +141,7 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -226,7 +227,7 @@ func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit i
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -269,7 +270,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.revoke")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -359,7 +360,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.rotate")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -476,7 +477,7 @@ func (s *apiKeySvcImpl) BatchGetAPIKeysByIDs(ctx context.Context, ids []string) 
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

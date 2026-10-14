@@ -12,11 +12,11 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

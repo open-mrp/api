@@ -17,13 +17,13 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/retry"
 	"github.com/open-mrp/apikit/safeconv"
@@ -556,7 +556,7 @@ func concatThinking(blocks []llm.ThinkingBlock) string {
 
 // actorFromContext pulls the acting identity (id, type, name) out of the request context, defaulting to empty strings when no identity is present.
 func actorFromContext(ctx context.Context) (actorID, actorType, actorName string) {
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity != nil {
 		actorType = string(identity.Type)
 		if identity.Actor != nil {
 			actorID = identity.Actor.ID

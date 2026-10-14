@@ -12,12 +12,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -98,7 +98,7 @@ func (s *batchSvcImpl) GetBatchFlow(ctx context.Context, batchID string) ([]doma
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.get_batch_flow")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -116,7 +116,7 @@ func (s *batchSvcImpl) ListBatchesByScanningStation(ctx context.Context, params 
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.list_by_scanning_station")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -135,7 +135,7 @@ func (s *batchSvcImpl) GetPossibleNextSteps(ctx context.Context, scanningStation
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.get_possible_next_steps")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -153,7 +153,7 @@ func (s *batchSvcImpl) GetPossibleInitSteps(ctx context.Context, scanningStation
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.get_possible_init_steps")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -171,7 +171,7 @@ func (s *batchSvcImpl) AnalyzeOpenBatches(ctx context.Context, itemIDs, productL
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.analyze_open_batches")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -189,7 +189,7 @@ func (s *batchSvcImpl) CloseBatch(ctx context.Context, batchID string) (*domain.
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.close")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -242,7 +242,7 @@ func (s *batchSvcImpl) DeleteBatch(ctx context.Context, batchID string) (*domain
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -274,7 +274,7 @@ func (s *batchSvcImpl) DeleteManyBatches(ctx context.Context, batchIDs []string)
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.delete_many")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -692,7 +692,7 @@ func (s *batchSvcImpl) enqueueUndoBatchScan(ctx context.Context, repos domain.Re
 	}
 
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {

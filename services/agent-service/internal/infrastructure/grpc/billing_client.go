@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 
 	grpclib "google.golang.org/grpc"

@@ -47,7 +47,7 @@ func TestNewSystemIdentity_PassesNoAuthorizationCheck(t *testing.T) {
 		"IsInternalActor":       identity.IsInternalActor,
 		"IsInternalUser":        identity.IsInternalUser,
 		"IsRelationActor":       identity.IsRelationActor,
-		"IsIncludeRead":         identity.ForIncludeReads().IsIncludeRead,
+		"IsIncludeRead":         identity.WithIncludeReads().IsIncludeRead,
 		"IsExternalTarget":      identity.IsExternalTarget,
 		"IsCustomerUser":        identity.IsCustomerUser,
 		"IsUnassignedUser":      identity.IsUnassignedUser,
@@ -79,7 +79,7 @@ func TestNewSystemIdentity_PassesNoAuthorizationCheck(t *testing.T) {
 		"CheckHasRelationCap": func() *apierror.APIError {
 			return identity.CheckHasRelationCapability(PermissionDomainProducts, ActionRead)
 		},
-		"CheckIsInternalForRead": func() *apierror.APIError { return identity.ForIncludeReads().CheckIsInternalActorForRead() },
+		"CheckIsInternalForRead": func() *apierror.APIError { return identity.WithIncludeReads().CheckIsInternalActorForRead() },
 	}
 	for name, check := range errs {
 		if check() == nil {

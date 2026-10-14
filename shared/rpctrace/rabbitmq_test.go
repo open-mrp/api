@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"

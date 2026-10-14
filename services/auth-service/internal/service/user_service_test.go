@@ -12,8 +12,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/assert"

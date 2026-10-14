@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // A no-op update (no changes, no metadata) must be skipped before any
@@ -427,7 +428,7 @@ func TestPublish_surfacesOutboxFailure(t *testing.T) {
 func TestPublish_systemIdentityIsCarriedAsTheActor(t *testing.T) {
 	t.Parallel()
 
-	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "acct_1")
+	ctx := omrpctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "acct_1")
 	msg := publishOnce(t, ctx, sampleEvent())
 
 	identity := msg.Payload.Identity

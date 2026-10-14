@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {

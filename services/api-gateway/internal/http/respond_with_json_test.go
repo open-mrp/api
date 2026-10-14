@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 func TestRespondWithJSON_WithoutRequestLog(t *testing.T) {

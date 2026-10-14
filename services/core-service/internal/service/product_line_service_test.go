@@ -12,9 +12,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 const productLineSheet = "Product Lines"
@@ -62,7 +62,7 @@ func (suite *ProductLineSvcTestSuite) rows(export *domain.Export) [][]string {
 // renders the workbook the export consumer would build, for the account the caller is
 // acting for. The job machinery around it belongs to the engine.
 func (suite *ProductLineSvcTestSuite) buildExport(ctx context.Context, params domain.ExportProductLinesParams) (*domain.Export, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	suite.Require().True(ok)
 	impl := suite.svc.(*productLineSvcImpl)
 	spec := impl.exportSpec()

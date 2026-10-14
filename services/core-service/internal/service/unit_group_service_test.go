@@ -11,9 +11,9 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -1728,7 +1728,7 @@ func (suite *UnitGroupSvcTestSuite) exportedRows(export *domain.Export) [][]stri
 // renders the workbook the export consumer would build, for the account the caller is
 // acting for. The job machinery around it belongs to the engine.
 func (suite *UnitGroupSvcTestSuite) buildExport(ctx context.Context, params domain.ExportUnitGroupsParams) (*domain.Export, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	suite.Require().True(ok)
 	impl := suite.unitGroupSvc.(*unitGroupSvcImpl)
 	spec := impl.exportSpec()

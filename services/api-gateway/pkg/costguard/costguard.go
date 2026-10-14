@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/redact"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 const (
@@ -74,7 +75,7 @@ func Visible(ctx context.Context) bool {
 
 // hiddenFrom is what the caller in ctx may not see. The seller's internal data is for the seller's own actors only, so a portal actor, and anyone unauthenticated, is denied it.
 func hiddenFrom(ctx context.Context) class {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return classCost | classInternal
 	}

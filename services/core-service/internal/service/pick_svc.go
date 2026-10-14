@@ -9,7 +9,6 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -17,6 +16,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -92,7 +92,7 @@ func (s *pickSvcImpl) ListPicks(ctx context.Context, params domain.ListPicksPara
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -161,7 +161,7 @@ func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []str
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -205,7 +205,7 @@ func (s *pickSvcImpl) BatchGetPicksByIDs(ctx context.Context, pickIDs []string) 
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -228,7 +228,7 @@ func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.pick_all_lines")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -301,7 +301,7 @@ func (s *pickSvcImpl) VoidPick(ctx context.Context, pickID string) (*domain.Pick
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.void")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -393,7 +393,7 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.pack.enqueue")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -506,7 +506,7 @@ func (s *pickSvcImpl) ExecutePackPick(ctx context.Context, event domain.BulkOper
 		return tracing.Trace(span, apierror.NewValidationError("Pack job event is missing a job."))
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

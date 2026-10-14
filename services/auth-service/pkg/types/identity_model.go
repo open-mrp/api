@@ -1,6 +1,8 @@
 package types
 
 import (
+	"log/slog"
+
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/auth"
 )
@@ -26,14 +28,44 @@ type Identity struct {
 	IncludeReads bool `json:"IncludeReads,omitempty"`
 }
 
-// ForIncludeReads returns a copy of the identity for loading what a request includes: whoever may make the request may read everything it includes. The identity itself is left unchanged.
-func (i *Identity) ForIncludeReads() *Identity {
+// WithIncludeReads returns a copy of the identity for loading what a request includes: whoever may make the request may read everything it includes. The identity itself is left unchanged.
+func (i *Identity) WithIncludeReads() *Identity {
 	if i == nil {
 		return nil
 	}
 	c := *i
 	c.IncludeReads = true
 	return &c
+}
+
+// ForIncludeReads is WithIncludeReads for apikit's include resolver (include.IncludeReader).
+func (i *Identity) ForIncludeReads() any {
+	if i == nil {
+		return nil
+	}
+	return i.WithIncludeReads()
+}
+
+// LogAttrs is what a canonical log line records about the caller (apikit's logging.IdentityAttrer): the identity type, the actor's ID under a key naming its kind, the target account and the account mode. Optional fields are left out when empty, to keep lines short for unauthenticated calls.
+func (i *Identity) LogAttrs() []slog.Attr {
+	attrs := []slog.Attr{slog.String("auth_type", string(i.Type))}
+	if i.Actor != nil {
+		switch i.Type {
+		case IdentityActorTypeUser:
+			attrs = append(attrs, slog.String("user_id", i.Actor.ID))
+		case IdentityActorTypeAPIKey:
+			attrs = append(attrs, slog.String("key_id", i.Actor.ID))
+		case IdentityActorTypeAgent:
+			attrs = append(attrs, slog.String("agent_id", i.Actor.ID))
+		}
+	}
+	if i.IsTargetAccountSet() {
+		attrs = append(attrs, slog.String("target_account_id", i.Target.AccountID))
+	}
+	if i.AccountMode != "" {
+		attrs = append(attrs, slog.String("account_mode", string(i.AccountMode)))
+	}
+	return attrs
 }
 
 // IsIncludeRead reports whether the identity loads what an authorized request includes, as an internal, customer or supplier actor of the target account.

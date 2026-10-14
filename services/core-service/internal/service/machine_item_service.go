@@ -6,9 +6,9 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -18,7 +18,7 @@ func (s *machineSvcImpl) ListMachineItems(ctx context.Context, params domain.Lis
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.list_items")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -49,7 +49,7 @@ func (s *machineSvcImpl) ReplaceMachineItems(ctx context.Context, params domain.
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.replace_items")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -127,7 +127,7 @@ func (s *machineSvcImpl) SuggestMachineItemsFromScans(ctx context.Context, machi
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.suggest_items_from_scans")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

@@ -8,13 +8,13 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -100,7 +100,7 @@ func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.list_sandbox_accounts")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -129,7 +129,7 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -237,7 +237,7 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, i
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -269,7 +269,7 @@ func (s *sandboxSvcImpl) BatchGetSandboxesByIDs(ctx context.Context, typeIDs []s
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -300,7 +300,7 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

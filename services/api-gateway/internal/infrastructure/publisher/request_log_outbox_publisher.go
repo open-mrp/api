@@ -10,12 +10,14 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/omrpctx"
 	corepb "github.com/open-mrp/api/shared/proto/core"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/blobstore"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
@@ -56,6 +58,7 @@ func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, coreClient ac
 const payloadUploadTimeout = 10 * time.Second
 
 func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.RequestLog) error {
+	accountID, targetAccountID, identityType := identityColumns(rl)
 	ctx, span := requestLogPublisherTracer.Start(ctx, "publisher.request_log.create")
 	defer span.End()
 
@@ -68,7 +71,7 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		QueryJson:            rl.QueryJSON,
 		StatusCode:           int32(rl.StatusCode), // #nosec G115
 		LatencyUs:            rl.LatencyUs,
-		AccountId:            rl.AccountID,
+		AccountId:            accountID,
 		ClientIp:             rl.ClientIP,
 		ClientIpString:       rl.ClientIPString,
 		UserAgent:            rl.UserAgent,
@@ -77,12 +80,12 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		ErrorMessage:         rl.ErrorMessage,
 		OccurredAt:           timestamppb.New(rl.OccurredAt),
 		IdempotencyKeyId:     rl.IdempotencyKeyID,
-		TargetAccountId:      rl.TargetAccountID,
+		TargetAccountId:      targetAccountID,
 		ActorId:              rl.ActorID,
 		ActorType:            rl.ActorType,
 		InternalErrorMessage: rl.InternalErrorMessage,
 		StackTrace:           rl.StackTrace,
-		IdentityType:         rl.IdentityType,
+		IdentityType:         identityType,
 		CreatedAt:            timestamppb.Now(),
 		ApiVersion:           rl.APIVersion,
 		TraceId:              rl.TraceID,
@@ -97,7 +100,7 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 	}
 	// Capture the actor's display name from the identity while the request context is still available; the error-alert goroutine below runs on a detached context that no longer carries it.
 	var actorName *string
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 		if identity != nil && identity.Actor != nil {
 			actorName = identity.Actor.Name
@@ -150,8 +153,8 @@ func (p *requestLogOutboxPublisher) saveToOutbox(pbLog *pb.RequestLog, msg contr
 // for platform-service to store, capped so a multi-megabyte body cannot bloat the outbox.
 func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
 	if !p.uploadPayload(pbLog) {
-		pbLog.BodyJson = appctx.CapBody(pbLog.BodyJson, appctx.MaxMessageBodyBytes)
-		pbLog.ResponseJson = appctx.CapBody(pbLog.ResponseJson, appctx.MaxMessageBodyBytes)
+		pbLog.BodyJson = omrpctx.CapBody(pbLog.BodyJson, omrpctx.MaxMessageBodyBytes)
+		pbLog.ResponseJson = omrpctx.CapBody(pbLog.ResponseJson, omrpctx.MaxMessageBodyBytes)
 	}
 }
 
@@ -188,6 +191,7 @@ func (p *requestLogOutboxPublisher) uploadPayload(pbLog *pb.RequestLog) bool {
 }
 
 func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, actorName *string) {
+	accountID, targetAccountID, _ := identityColumns(rl)
 	params := map[string]any{
 		"RequestID":       rl.ID,
 		"Method":          rl.Method,
@@ -202,22 +206,22 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, act
 	setOptionalParam(params, "ErrorMessage", rl.ErrorMessage)
 	setOptionalParam(params, "InternalErrorMessage", rl.InternalErrorMessage)
 	setOptionalParam(params, "StackTrace", rl.StackTrace)
-	setOptionalParam(params, "RequestBody", appctx.CapBody(rl.BodyJSON, appctx.MaxMessageBodyBytes))
-	setOptionalParam(params, "ResponseBody", appctx.CapBody(rl.ResponseJSON, appctx.MaxMessageBodyBytes))
+	setOptionalParam(params, "RequestBody", omrpctx.CapBody(rl.BodyJSON, omrpctx.MaxMessageBodyBytes))
+	setOptionalParam(params, "ResponseBody", omrpctx.CapBody(rl.ResponseJSON, omrpctx.MaxMessageBodyBytes))
 	setOptionalParam(params, "UserName", actorName)
 	setOptionalParam(params, "ActorID", rl.ActorID)
-	setOptionalParam(params, "AccountID", rl.AccountID)
-	setOptionalParam(params, "TargetAccountID", rl.TargetAccountID)
+	setOptionalParam(params, "AccountID", accountID)
+	setOptionalParam(params, "TargetAccountID", targetAccountID)
 
 	// Resolve the acting and target account names so the alert reads as "who, on what account" rather than opaque IDs.
-	accountNames := p.resolveAccountNames(rl.AccountID, rl.TargetAccountID)
-	if rl.AccountID != nil {
-		if name := accountNames[*rl.AccountID]; name != "" {
+	accountNames := p.resolveAccountNames(accountID, targetAccountID)
+	if accountID != nil {
+		if name := accountNames[*accountID]; name != "" {
 			params["AccountName"] = name
 		}
 	}
-	if rl.TargetAccountID != nil {
-		if name := accountNames[*rl.TargetAccountID]; name != "" {
+	if targetAccountID != nil {
+		if name := accountNames[*targetAccountID]; name != "" {
 			params["TargetAccountName"] = name
 		}
 	}
@@ -305,4 +309,22 @@ func setOptionalParam(params map[string]any, key string, val *string) {
 	if val != nil {
 		params[key] = *val
 	}
+}
+
+// identityColumns are the request log's account and identity-type columns, read from the identity the auth
+// middleware set on it. A request that never authenticated has none.
+func identityColumns(rl *appctx.RequestLog) (accountID, targetAccountID, identityType *string) {
+	identity, ok := rl.Identity.(*types.Identity)
+	if !ok || identity == nil {
+		return nil, nil, nil
+	}
+	if identity.Actor != nil {
+		accountID = identity.Actor.AccountID
+	}
+	if identity.IsTargetAccountSet() {
+		target := identity.Target.AccountID
+		targetAccountID = &target
+	}
+	it := string(identity.Type)
+	return accountID, targetAccountID, &it
 }

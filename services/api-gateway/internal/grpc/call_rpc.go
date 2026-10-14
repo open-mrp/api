@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/apikit/appctx"
 
 	apierror "github.com/open-mrp/apikit/apierror"
 

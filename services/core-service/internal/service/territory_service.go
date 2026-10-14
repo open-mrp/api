@@ -6,12 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -85,7 +85,7 @@ func (s *territorySvcImpl) BatchGetTerritoriesByIDs(ctx context.Context, ids []s
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.batch_get_by_ids")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -108,7 +108,7 @@ func (s *territorySvcImpl) ListTerritories(ctx context.Context, params domain.Li
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -131,7 +131,7 @@ func (s *territorySvcImpl) GetTerritory(ctx context.Context, params domain.GetTe
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -154,7 +154,7 @@ func (s *territorySvcImpl) CreateTerritory(ctx context.Context, params domain.Cr
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -245,7 +245,7 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -356,7 +356,7 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

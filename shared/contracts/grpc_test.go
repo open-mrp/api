@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-mrp/api/shared/appctx"
+	_ "github.com/open-mrp/api/shared/apiversion"
 	"github.com/open-mrp/api/shared/apperr"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/querytag"
 	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
@@ -945,7 +946,7 @@ func TestAPIVersionUnaryServerInterceptor_SetsVersionInContext(t *testing.T) {
 	}{
 		{
 			name:        "valid version",
-			version:     "1.0.forge-preview.1",
+			version:     "1.0.forge-preview.9",
 			expectInCtx: true,
 		},
 		{

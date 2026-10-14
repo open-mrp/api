@@ -10,7 +10,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 const testServiceToken = "test-internal-secret"
@@ -113,7 +113,7 @@ func TestInternalAuthMiddleware(t *testing.T) {
 			var gotIdentity *types.Identity
 			handler := mw(func(w http.ResponseWriter, r *http.Request) {
 				called = true
-				gotIdentity, _ = appctx.GetIdentityFromContext(r.Context())
+				gotIdentity, _ = appctx.Identity[*types.Identity](r.Context())
 				w.WriteHeader(http.StatusOK)
 			})
 
@@ -194,11 +194,12 @@ func TestInternalAuthMiddleware_PopulatesRequestLog(t *testing.T) {
 	if rl == nil {
 		t.Fatal("expected request log to be saved for an agent request")
 	}
-	if rl.AccountID == nil || *rl.AccountID != "acct_123" {
-		t.Errorf("AccountID = %v, want acct_123", rl.AccountID)
+	logged, ok := rl.Identity.(*types.Identity)
+	if !ok || logged.Actor == nil || logged.Actor.AccountID == nil || *logged.Actor.AccountID != "acct_123" {
+		t.Errorf("Identity = %+v, want an actor in acct_123", rl.Identity)
 	}
-	if rl.TargetAccountID == nil || *rl.TargetAccountID != "acct_123" {
-		t.Errorf("TargetAccountID = %v, want acct_123 (else the account-scoped list query hides the log)", rl.TargetAccountID)
+	if !logged.IsTargetAccountSet() || logged.Target.AccountID != "acct_123" {
+		t.Errorf("Identity target = %+v, want acct_123 (else the account-scoped list query hides the log)", logged.Target)
 	}
 	if rl.ActorID == nil || *rl.ActorID != "adef_123" {
 		t.Errorf("ActorID = %v, want adef_123", rl.ActorID)
@@ -206,8 +207,8 @@ func TestInternalAuthMiddleware_PopulatesRequestLog(t *testing.T) {
 	if rl.ActorType == nil || *rl.ActorType != string(types.IdentityRelationTypeInternal) {
 		t.Errorf("ActorType = %v, want %s", rl.ActorType, types.IdentityRelationTypeInternal)
 	}
-	if rl.IdentityType == nil || *rl.IdentityType != string(types.IdentityActorTypeAgent) {
-		t.Errorf("IdentityType = %v, want %s", rl.IdentityType, types.IdentityActorTypeAgent)
+	if logged.Type != types.IdentityActorTypeAgent {
+		t.Errorf("identity type = %v, want %s", logged.Type, types.IdentityActorTypeAgent)
 	}
 }
 

@@ -43,7 +43,7 @@ func TestForIncludeReads_ReturnsAFlaggedCopy(t *testing.T) {
 	t.Parallel()
 
 	original := internalIdentityWithout(map[string]bool{"sales_orders:read": true})
-	flagged := original.ForIncludeReads()
+	flagged := original.WithIncludeReads()
 
 	if flagged == original {
 		t.Fatal("ForIncludeReads returned the identity itself")
@@ -57,7 +57,7 @@ func TestForIncludeReads_ReturnsAFlaggedCopy(t *testing.T) {
 	if flagged.Type != original.Type || flagged.Actor != original.Actor || flagged.Target != original.Target {
 		t.Fatalf("the copy is not the same caller: %+v vs %+v", flagged, original)
 	}
-	if (*Identity)(nil).ForIncludeReads() != nil {
+	if (*Identity)(nil).WithIncludeReads() != nil {
 		t.Fatal("a nil identity must stay nil")
 	}
 }
@@ -84,7 +84,7 @@ func TestCheckHasAnyPermission_IncludeReadsPassReadsOnly(t *testing.T) {
 				t.Fatal("without the flag a read the role does not grant must be refused")
 			}
 
-			flagged := tc.identity.ForIncludeReads()
+			flagged := tc.identity.WithIncludeReads()
 			if apiErr := flagged.CheckHasPermission(read.Domain, read.Action); apiErr != nil {
 				t.Fatalf("an included read must pass: %v", apiErr)
 			}
@@ -121,7 +121,7 @@ func TestCheckHasAnyPermission_IncludeReadsNeverStandInForCostsRead(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			flagged := tc.identity.ForIncludeReads()
+			flagged := tc.identity.WithIncludeReads()
 			if apiErr := flagged.CheckHasAnyPermission(costs); apiErr == nil {
 				t.Fatal("costs:read must never pass on the flag")
 			}
@@ -136,7 +136,7 @@ func TestCheckHasAnyPermission_IncludeReadsNeverAdmitAnUnauthenticatedCaller(t *
 	t.Parallel()
 
 	target := "acct_merchant"
-	identity := GetUnauthenticatedIdentity(&target).ForIncludeReads()
+	identity := GetUnauthenticatedIdentity(&target).WithIncludeReads()
 
 	apiErr := identity.CheckHasPermission(PermissionDomainItems, ActionRead)
 	if apiErr == nil {
@@ -159,7 +159,7 @@ func TestIsIncludeRead_NeedsAnAssignedActorOfTheTarget(t *testing.T) {
 	unassigned := (&Identity{
 		Type:  IdentityActorTypeUser,
 		Actor: &IdentityActor{RelationType: IdentityRelationTypeUnassigned, ID: "usr_new", Permissions: map[string]bool{}},
-	}).ForIncludeReads()
+	}).WithIncludeReads()
 	if unassigned.IsIncludeRead() {
 		t.Fatal("an actor with no account is never an include read")
 	}
@@ -167,7 +167,7 @@ func TestIsIncludeRead_NeedsAnAssignedActorOfTheTarget(t *testing.T) {
 		t.Fatal("an actor with no account must not read on the flag")
 	}
 
-	noTarget := internalIdentityWithout(map[string]bool{}).ForIncludeReads()
+	noTarget := internalIdentityWithout(map[string]bool{}).WithIncludeReads()
 	noTarget.Target = nil
 	if noTarget.IsIncludeRead() {
 		t.Fatal("an identity without a target account is never an include read")
@@ -176,7 +176,7 @@ func TestIsIncludeRead_NeedsAnAssignedActorOfTheTarget(t *testing.T) {
 	if internalIdentityWithout(map[string]bool{}).IsIncludeRead() {
 		t.Fatal("an identity without the flag is never an include read")
 	}
-	if !customerPortalIdentity().ForIncludeReads().IsIncludeRead() {
+	if !customerPortalIdentity().WithIncludeReads().IsIncludeRead() {
 		t.Fatal("a customer portal actor loading includes is an include read")
 	}
 }
@@ -188,10 +188,10 @@ func TestCheckIsInternalActorForRead(t *testing.T) {
 	if apiErr := portal.CheckIsInternalActorForRead(); apiErr == nil {
 		t.Fatal("without the flag a portal actor is not an internal actor")
 	}
-	if apiErr := portal.ForIncludeReads().CheckIsInternalActorForRead(); apiErr != nil {
+	if apiErr := portal.WithIncludeReads().CheckIsInternalActorForRead(); apiErr != nil {
 		t.Fatalf("a portal actor loading includes passes: %v", apiErr)
 	}
-	if apiErr := portal.ForIncludeReads().CheckIsInternalActor(); apiErr == nil {
+	if apiErr := portal.WithIncludeReads().CheckIsInternalActor(); apiErr == nil {
 		t.Fatal("CheckIsInternalActor itself must not honor the flag")
 	}
 	if apiErr := internalIdentityWithout(map[string]bool{}).CheckIsInternalActorForRead(); apiErr != nil {

@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/attribute"

@@ -9,13 +9,13 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/safeconv"
 	"github.com/open-mrp/apikit/tracing"
@@ -375,7 +375,7 @@ func (s exportSpec[TRow, TFilters]) visibleColumns(ctx context.Context, columns 
 
 // reports whether the identity the export was requested under, which its job event carries, may see cost data
 func requesterCanReadCosts(ctx context.Context) bool {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	return ok && identity.CanReadCosts()
 }
 
@@ -392,7 +392,7 @@ func (s exportSpec[TRow, TFilters]) checkPermission() func(*types.Identity) *api
 
 // resolves the caller to the identity whose account's rows may be exported
 func authorizeExport(ctx context.Context, deps asyncBulkDeps, checkPermission func(*types.Identity) *apierror.APIError, access externalAccess) (*types.Identity, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}

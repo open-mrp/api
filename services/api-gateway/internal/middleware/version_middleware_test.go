@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/version"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/version"
 )
 
 func TestVersionMiddleware_MissingHeader(t *testing.T) {
@@ -114,7 +114,7 @@ func TestVersionMiddleware_ValidVersion(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	req.Header.Set(header.VersionHeader, "1.0.forge-preview.1")
+	req.Header.Set(header.VersionHeader, "1.0.forge-preview.9")
 	rl := &appctx.RequestLog{}
 	req = req.WithContext(appctx.WithRequestLog(req.Context(), rl))
 	rr := httptest.NewRecorder()
@@ -129,16 +129,16 @@ func TestVersionMiddleware_ValidVersion(t *testing.T) {
 		t.Error("Expected version in context")
 	}
 
-	if capturedVersion.String() != "1.0.forge-preview.1" {
-		t.Errorf("Expected version %s in context, got %s", "1.0.forge-preview.1", capturedVersion.String())
+	if capturedVersion.String() != "1.0.forge-preview.9" {
+		t.Errorf("Expected version %s in context, got %s", "1.0.forge-preview.9", capturedVersion.String())
 	}
 
 	if capturedVersion.Codename != "forge" {
 		t.Errorf("Expected codename %s, got %s", "forge", capturedVersion.Codename)
 	}
 
-	if rr.Header().Get(header.VersionHeader) != "1.0.forge-preview.1" {
-		t.Errorf("Expected version %s in response header, got %s", "1.0.forge-preview.1", rr.Header().Get(header.VersionHeader))
+	if rr.Header().Get(header.VersionHeader) != "1.0.forge-preview.9" {
+		t.Errorf("Expected version %s in response header, got %s", "1.0.forge-preview.9", rr.Header().Get(header.VersionHeader))
 	}
 }
 

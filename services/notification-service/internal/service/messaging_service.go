@@ -12,13 +12,13 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -42,7 +42,7 @@ func NewMessagingSvc(repoFactory domain.RepoFactory, txManager TransactionManage
 
 // actor resolves and validates the calling identity.
 func (s *messagingSvcImpl) actor(ctx context.Context) (*types.Identity, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return nil, apierror.NewAuthenticationError("Authentication is required.")
 	}
@@ -397,7 +397,7 @@ func (s *messagingSvcImpl) enqueueRealtime(ctx context.Context, rt messaging.Rea
 	}
 
 	msg := contracts.AmqpMessage{Data: payload}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -419,7 +419,7 @@ func (s *messagingSvcImpl) enqueueRealtime(ctx context.Context, rt messaging.Rea
 
 // publishUnreadChanged emits a best-effort unread.changed event to the caller's user topic so the bell badge syncs across the caller's other tabs/devices (and, via the cross-account hint, their connections in other accounts).
 func (s *messagingSvcImpl) publishUnreadChanged(ctx context.Context) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || identity.Actor == nil || identity.Actor.ID == "" || !identity.IsTargetAccountSet() {
 		return
 	}
@@ -555,7 +555,7 @@ func (s *messagingSvcImpl) GetUnreadSummary(ctx context.Context) (*domain.Unread
 
 // accountID returns the caller's target account id, or nil when unauthenticated/unset.
 func (s *messagingSvcImpl) accountID(ctx context.Context) *string {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsTargetAccountSet() {
 		return nil
 	}

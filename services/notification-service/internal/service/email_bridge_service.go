@@ -5,12 +5,13 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -43,7 +44,7 @@ func publishEmailBridgeAudit(ctx context.Context, f domain.RepoFactory, action c
 //
 // This is merchant configuration with no counterparty-facing use, so requiring an internal actor costs no legitimate caller. Agents qualify: they run as same-account internal actors (see the agent identity built in agent-service's runner).
 func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
 		return "", apierror.NewAuthenticationError("Authentication is required.")
 	}
@@ -58,7 +59,7 @@ func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.A
 
 // readAccountID is accountID for a read, which also admits an actor loading what an authorized request includes.
 func (s *emailBridgeSvcImpl) readAccountID(ctx context.Context) (string, *apierror.APIError) {
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity.IsIncludeRead() {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok && identity.IsIncludeRead() {
 		return identity.Target.AccountID, nil
 	}
 	return s.accountID(ctx)

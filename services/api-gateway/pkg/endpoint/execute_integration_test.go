@@ -12,10 +12,10 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/version"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/version"
 )
 
 func bindHandler[TReq, TResp any](ep *APIEndpoint[TReq, TResp]) {
@@ -33,7 +33,7 @@ func decodeErrEnvelope(t *testing.T, w *httptest.ResponseRecorder) apierror.Resp
 
 func TestExecute_MinVersion_rejectsOlderRequestVersion(t *testing.T) {
 	t.Parallel()
-	min := version.Latest
+	min := version.Latest()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{
 		Method:            http.MethodPost,
 		Route:             "/v1/things",
@@ -77,7 +77,7 @@ func TestExecute_MinVersion_rejectsOlderRequestVersion(t *testing.T) {
 
 func TestExecute_MinVersion_skipsWhenNoAPIVersionOnContext(t *testing.T) {
 	t.Parallel()
-	min := version.Latest
+	min := version.Latest()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{
 		Method:            http.MethodPost,
 		Route:             "/v1/things",

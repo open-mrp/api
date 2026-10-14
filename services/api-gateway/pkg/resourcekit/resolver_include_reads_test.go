@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 const (
@@ -45,7 +45,7 @@ type identitySeen struct {
 }
 
 func (s *identitySeen) record(ctx context.Context, ot constants.ObjectType) {
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, _ := appctx.Identity[*types.Identity](ctx)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.seen[ot] = append(s.seen[ot], identity)
@@ -167,7 +167,7 @@ func TestResolveIncludes_LoadsEveryIncludeAsAnIncludeRead(t *testing.T) {
 	if caller.IncludeReads {
 		t.Error("ResolveIncludes flagged the request's own identity")
 	}
-	if got, _ := appctx.GetIdentityFromContext(ctx); got != caller || got.IncludeReads {
+	if got, _ := appctx.Identity[*types.Identity](ctx); got != caller || got.IncludeReads {
 		t.Error("the caller's context now carries a flagged identity")
 	}
 }
@@ -177,7 +177,7 @@ func TestWithIncludeReads(t *testing.T) {
 
 	if got := WithIncludeReads(context.Background()); got == nil {
 		t.Fatal("a context without an identity must stay usable")
-	} else if _, ok := appctx.GetIdentityFromContext(got); ok {
+	} else if _, ok := appctx.Identity[*types.Identity](got); ok {
 		t.Fatal("WithIncludeReads invented an identity")
 	}
 
@@ -188,14 +188,14 @@ func TestWithIncludeReads(t *testing.T) {
 		Actor:  &types.IdentityActor{RelationType: types.IdentityRelationTypeInternal, ID: "apke_1", AccountID: &account},
 	}
 	flaggedCtx := WithIncludeReads(appctx.WithIdentity(context.Background(), caller))
-	flagged, _ := appctx.GetIdentityFromContext(flaggedCtx)
+	flagged, _ := appctx.Identity[*types.Identity](flaggedCtx)
 	if flagged == nil || !flagged.IncludeReads || flagged.Actor != caller.Actor {
 		t.Fatalf("got %+v, want a flagged copy of the caller", flagged)
 	}
 	if caller.IncludeReads {
 		t.Fatal("WithIncludeReads mutated the caller's identity")
 	}
-	if again, _ := appctx.GetIdentityFromContext(WithIncludeReads(flaggedCtx)); again != flagged {
+	if again, _ := appctx.Identity[*types.Identity](WithIncludeReads(flaggedCtx)); again != flagged {
 		t.Error("an already flagged context should be returned as is")
 	}
 }

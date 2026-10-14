@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/apikit/appctx"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -55,6 +56,7 @@ func TestPublisher_MapsAccountID(t *testing.T) {
 	identityType := "user"
 
 	rl := &appctx.RequestLog{
+		Identity:        &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: *&targetAccountID}},
 		ID:              "rlog_test123",
 		Method:          "GET",
 		Host:            "api.example.com",
@@ -62,11 +64,8 @@ func TestPublisher_MapsAccountID(t *testing.T) {
 		NormalizedRoute: "/v1/test",
 		StatusCode:      200,
 		LatencyUs:       1234,
-		AccountID:       &accountID,
-		TargetAccountID: &targetAccountID,
 		ActorID:         &actorID,
 		ActorType:       &actorType,
-		IdentityType:    &identityType,
 		OccurredAt:      time.Now().UTC(),
 		PublicEndpoint:  true,
 	}
@@ -106,6 +105,7 @@ func TestPublisher_NilAccountID(t *testing.T) {
 	pub := NewRequestLogOutboxPublisher(repo, nil, nil, "", "", constants.PlatformModeProduction)
 
 	rl := &appctx.RequestLog{
+		Identity:        &types.Identity{Type: types.IdentityActorType("user")},
 		ID:              "rlog_test456",
 		Method:          "GET",
 		Host:            "api.example.com",
@@ -113,7 +113,6 @@ func TestPublisher_NilAccountID(t *testing.T) {
 		NormalizedRoute: "/v1/test",
 		StatusCode:      200,
 		LatencyUs:       100,
-		AccountID:       nil,
 		OccurredAt:      time.Now().UTC(),
 		PublicEndpoint:  true,
 	}
@@ -159,6 +158,7 @@ func TestPublisher_MapsAllFields(t *testing.T) {
 	clientIPString := "192.168.1.1"
 
 	rl := &appctx.RequestLog{
+		Identity:             &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: *&targetAccountID}},
 		ID:                   "rlog_full",
 		Method:               "POST",
 		Host:                 "api.example.com",
@@ -167,11 +167,8 @@ func TestPublisher_MapsAllFields(t *testing.T) {
 		QueryJSON:            &queryJSON,
 		StatusCode:           422,
 		LatencyUs:            5000,
-		AccountID:            &accountID,
-		TargetAccountID:      &targetAccountID,
 		ActorID:              &actorID,
 		ActorType:            &actorType,
-		IdentityType:         &identityType,
 		ClientIP:             []byte{192, 168, 1, 1},
 		ClientIPString:       &clientIPString,
 		UserAgent:            &userAgent,

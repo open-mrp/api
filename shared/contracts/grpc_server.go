@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/open-mrp/api/shared/logging"
+	"github.com/open-mrp/api/shared/grpclog"
 	"github.com/open-mrp/api/shared/rpctrace"
 
 	"google.golang.org/grpc"
@@ -66,7 +66,7 @@ func (c *GRPCServerConfig) WithDefaults(logger *slog.Logger) *GRPCServerConfig {
 			RequestIDUnaryServerInterceptor(),
 			ClientIPUnaryServerInterceptor(),
 			QueryTagUnaryServerInterceptor(),
-			logging.CanonicalLogInterceptor(logger),
+			grpclog.CanonicalLogInterceptor(logger),
 		}
 	}
 

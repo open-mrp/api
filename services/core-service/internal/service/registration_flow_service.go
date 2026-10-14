@@ -9,13 +9,13 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -87,7 +87,7 @@ func (s *registrationFlowSvcImpl) ListRegistrationFlows(ctx context.Context, par
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -108,7 +108,7 @@ func (s *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, regis
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -127,7 +127,7 @@ func (s *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, pa
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -206,7 +206,7 @@ func (s *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, pa
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -285,7 +285,7 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -351,7 +351,7 @@ func (s *registrationFlowSvcImpl) GetRegistrationFlowBySlug(ctx context.Context,
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.get_by_slug")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -382,7 +382,7 @@ func (s *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, params d
 	ctx, span := registrationFlowSvcTracer.Start(ctx, "service.registration_flow.register_customer")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -628,7 +628,7 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 // publishRegistrationAudit records a self-registration in the seller's audit log as the registrant's doing:
 // the customer when one was created, and the registrant's account user under it.
 func publishRegistrationAudit(txCtx context.Context, repos domain.RepoFactory, ownerAccountID, customerAccountID, accountUserID string, customerCreated bool) *apierror.APIError {
-	identity, ok := appctx.GetIdentityFromContext(txCtx)
+	identity, ok := appctx.Identity[*types.Identity](txCtx)
 	if !ok || identity == nil {
 		return apierror.NewInvariantViolationError("Identity not found in context.")
 	}

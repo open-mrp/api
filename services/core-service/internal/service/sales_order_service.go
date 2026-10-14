@@ -19,16 +19,17 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/omrpctx"
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/textutil"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/metadata"
@@ -136,7 +137,7 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.list")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -182,7 +183,7 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -233,7 +234,7 @@ func (s *salesOrderSvcImpl) BatchGetSalesOrders(ctx context.Context, salesOrderI
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.batch_get")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -388,7 +389,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.create")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -754,7 +755,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.update")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1020,7 +1021,7 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1114,7 +1115,7 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.bulk_delete")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -1216,7 +1217,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.change_status")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2213,7 +2214,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderLinePrices(ctx context.Context, param
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.quote_line_prices")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2253,7 +2254,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, params d
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.quote_freight")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2731,7 +2732,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.checkout")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -2997,7 +2998,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.create_customer_checkout_session")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
@@ -3227,7 +3228,7 @@ func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 
 	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 		return txSvc.linkOrderPayment(txCtx, accountID, salesOrderID, paymentIntentID)
@@ -3311,7 +3312,7 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 		return tracing.Trace(span, apiErr)
 	}
 	// The event is verified as the account's own Stripe reporting it, so what it changes is attributed to Stripe.
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 
 	// Event coverage mirrors the retired legacy webhook: succeeded links the payment and records the receivables transaction, failed/canceled roll that back, and payout.paid stamps when funds actually land. Anything else is acknowledged without action.
 	switch event.Type {
@@ -3390,7 +3391,7 @@ func (s *salesOrderSvcImpl) ReconcileAccountStripePayout(ctx context.Context, ac
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
+	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.checkoutClientFactory.Build(stripeCreds.PrivateKey), event))
 }
 
@@ -3686,7 +3687,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.create_production_run")
 	defer span.End()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
+	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}

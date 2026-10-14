@@ -12,8 +12,8 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/service"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // Sandbox suppression, which gates whether a tenant's mail reaches its real counterparties.

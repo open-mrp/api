@@ -36,7 +36,7 @@ func TestCanReadCosts_AgentFollowsItsRole(t *testing.T) {
 	}{
 		{"agent whose role grants costs:read", agentIdentity("agent", "costs:read", "items:read"), true},
 		{"agent whose role does not", agentIdentity("agent", "items:read"), false},
-		{"agent without costs:read loading an include", agentIdentity("agent", "items:read").ForIncludeReads(), false},
+		{"agent without costs:read loading an include", agentIdentity("agent", "items:read").WithIncludeReads(), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -56,7 +56,7 @@ func TestCheckHasPermission_AgentCostsFollowItsRole(t *testing.T) {
 	if apiErr := agentIdentity("agent", "items:read").CheckHasPermission(PermissionDomainCosts, ActionRead); apiErr == nil {
 		t.Fatal("an agent whose role lacks costs:read is refused")
 	}
-	if apiErr := agentIdentity("agent", "items:read").ForIncludeReads().CheckHasPermission(PermissionDomainCosts, ActionRead); apiErr == nil {
+	if apiErr := agentIdentity("agent", "items:read").WithIncludeReads().CheckHasPermission(PermissionDomainCosts, ActionRead); apiErr == nil {
 		t.Fatal("an include never stands in for costs:read")
 	}
 }

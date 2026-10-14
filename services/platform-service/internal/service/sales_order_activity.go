@@ -9,11 +9,11 @@ import (
 
 	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -129,7 +129,7 @@ func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *do
 
 	messageID := salesOrderActivityMessageID(event, orderID)
 	msg := contracts.AmqpMessage{Data: dataJSON, MessageID: messageID}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+	if identity, ok := appctx.Identity[*authtypes.Identity](ctx); ok {
 		msg.Identity = identity
 	}
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
@@ -284,7 +284,7 @@ func salesOrderActivityTitle(event *domain.AuditEvent, orderNumber string) strin
 // salesOrderActivityBody renders "<actor> <did what>." in plain English — e.g. "Blake Doe issued the order." or "Casey Doe updated line 1 (WIDGET-BLUE) to 2 pairs." — so the recipient understands the change without opening the order.
 func (s *auditEventSvcImpl) salesOrderActivityBody(ctx context.Context, event *domain.AuditEvent) string {
 	actorName := "Someone"
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.Name != nil && *identity.Actor.Name != "" {
+	if identity, ok := appctx.Identity[*authtypes.Identity](ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.Name != nil && *identity.Actor.Name != "" {
 		actorName = *identity.Actor.Name
 	} else if name := systemActorName(event.ActorID); name != "" {
 		actorName = name

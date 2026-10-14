@@ -15,8 +15,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	"github.com/open-mrp/api/shared/appctx"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/metadata"
 )
 

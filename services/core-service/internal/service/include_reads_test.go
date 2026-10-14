@@ -9,8 +9,8 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +35,7 @@ func inclCtx(relation types.IdentityRelationType, actorAccount string, included 
 		Actor:  &types.IdentityActor{RelationType: relation, ID: "us_actor", AccountID: &actorAccount, Permissions: granted},
 	}
 	if included {
-		identity = identity.ForIncludeReads()
+		identity = identity.WithIncludeReads()
 	}
 	return appctx.WithIdentity(context.Background(), identity)
 }

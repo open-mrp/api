@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"

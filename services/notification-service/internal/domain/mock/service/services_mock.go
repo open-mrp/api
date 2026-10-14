@@ -283,6 +283,20 @@ func (mr *MockConversationSvcMockRecorder) CreateReplyDraft(ctx, input any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).CreateReplyDraft), ctx, input)
 }
 
+// DeleteConversation mocks base method.
+func (m *MockConversationSvc) DeleteConversation(ctx context.Context, conversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteConversation", ctx, conversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteConversation indicates an expected call of DeleteConversation.
+func (mr *MockConversationSvcMockRecorder) DeleteConversation(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConversation", reflect.TypeOf((*MockConversationSvc)(nil).DeleteConversation), ctx, conversationID)
+}
+
 // DeleteMessagingGroup mocks base method.
 func (m *MockConversationSvc) DeleteMessagingGroup(ctx context.Context, groupID string) *apierror.APIError {
 	m.ctrl.T.Helper()

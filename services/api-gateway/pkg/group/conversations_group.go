@@ -36,7 +36,7 @@ func (*ConversationsEndpointGroup) Materialize(config *ConversationsEndpointGrou
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Conversations",
-		Description:  "Create conversations, send and read messages (1:1 direct messages).",
+		Description:  "Conversations between people, devices and agents, and the records they're about.",
 		ResourceType: &apiresource.Conversation{},
 	}
 
@@ -44,6 +44,7 @@ func (*ConversationsEndpointGroup) Materialize(config *ConversationsEndpointGrou
 		apiendpoint.From(&conversationep.CreateConversationEndpoint{}).WithService(inner, conversationSvc),
 		apiendpoint.From(&conversationep.ListConversationsEndpoint{}).WithService(inner, conversationSvc),
 		apiendpoint.From(&conversationep.RetrieveConversationEndpoint{}).WithService(inner, conversationSvc),
+		apiendpoint.From(&conversationep.DeleteConversationEndpoint{}).WithService(inner, conversationSvc),
 		apiendpoint.From(&conversationep.ContactSupportEndpoint{}).WithService(inner, conversationSvc),
 		apiendpoint.From(&conversationep.SupportAvailabilityEndpoint{}).WithService(inner, conversationSvc),
 		apiendpoint.From(&conversationep.SetLegalHoldEndpoint{}).WithService(inner, conversationSvc),

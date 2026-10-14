@@ -37,10 +37,10 @@ type MessageAttachment struct {
 	SizeBytes *int64 `json:"size_bytes"`
 	// Where to fetch the attachment: a signed download URL for `file` and `image` attachments, or the target address for `link` attachments.
 	//
-	// Download URLs are signed for one hour and regenerated each time the message is read, so follow the URL promptly instead of persisting it. `resource` attachments have no URL — use `resource` to resolve them.
+	// Download URLs are signed for one hour and regenerated each time the message is read, so follow the URL promptly instead of persisting it. `resource` attachments have no URL; use `record` instead.
 	URL *string `json:"url"`
-	// The in-app record a `resource` attachment points to, such as a sales order.
-	Resource *Entity `json:"resource" expandable:"true"`
+	// The record a `resource` attachment points to, such as a sales order.
+	Record *Record `json:"record" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }

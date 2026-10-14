@@ -31,7 +31,6 @@ func (e *LeaveConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Leav
 		Route:             "/v1/messaging/conversations/{id}/actions/leave",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         false,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),

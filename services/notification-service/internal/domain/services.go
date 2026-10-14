@@ -67,6 +67,8 @@ type ConversationSvc interface {
 	Block(ctx context.Context, blockedAccountUserID string) (*MessageBlock, *apierror.APIError)
 	// Unblock removes a block the caller created.
 	Unblock(ctx context.Context, blockedAccountUserID string) *apierror.APIError
+	// DeleteConversation permanently deletes a conversation the caller shares with no other person.
+	DeleteConversation(ctx context.Context, conversationID string) *apierror.APIError
 	// ListBlocks lists the account_users the caller has blocked.
 	ListBlocks(ctx context.Context, page PageRequest) (Page[*MessageBlock], *apierror.APIError)
 
@@ -188,6 +190,8 @@ type ListConversationsInput struct {
 	Limit  int32
 	Type   *string
 	Status string
+	// ParticipantAccountUserIDs keeps only conversations that also seat any of these account users.
+	ParticipantAccountUserIDs []string
 }
 
 // ListMessagesInput parameterizes a conversation's message history (cursor opaque; the cursor encodes a before_sequence for loading older history).

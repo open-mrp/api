@@ -32,7 +32,6 @@ func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Public:            true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMessagingGroupRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(MessagingGroupSvc).DeleteMessagingGroup, constants.ObjectTypeMessagingGroup, "id")

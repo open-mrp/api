@@ -10,14 +10,17 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to list the account's reusable rosters.
-type ListMessagingGroupsRequest struct{}
+type ListMessagingGroupsRequest struct {
+	object.ListRequest
+}
 
-// Lists the reusable rosters in the caller's account, each with its members.
+// Returns a list of your messaging groups, each with its members.
 //
-// Rosters come back most-recently-updated first, and adding or removing a member counts as an update. The whole account's rosters are returned in one page.
+// The groups are sorted by when they last changed, most recent first; adding or removing a member counts as a change.
 type ListMessagingGroupsEndpoint struct{}
 
 func (e *ListMessagingGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMessagingGroupsRequest, *apiresource.List[apiresource.MessagingGroup]] {
@@ -27,7 +30,6 @@ func (e *ListMessagingGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Route:             "/v1/messaging/groups",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMessagingGroupsRequest) (*apiresource.List[apiresource.MessagingGroup], *apierror.APIError) {

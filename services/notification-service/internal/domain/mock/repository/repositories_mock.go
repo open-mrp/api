@@ -1171,6 +1171,21 @@ func (mr *MockConversationRepoMockRecorder) BindInbox(ctx, id, accountID, inboxI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BindInbox", reflect.TypeOf((*MockConversationRepo)(nil).BindInbox), ctx, id, accountID, inboxID, externalAddress)
 }
 
+// CountOtherPeople mocks base method.
+func (m *MockConversationRepo) CountOtherPeople(ctx context.Context, conversationID, accountUserID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountOtherPeople", ctx, conversationID, accountUserID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountOtherPeople indicates an expected call of CountOtherPeople.
+func (mr *MockConversationRepoMockRecorder) CountOtherPeople(ctx, conversationID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountOtherPeople", reflect.TypeOf((*MockConversationRepo)(nil).CountOtherPeople), ctx, conversationID, accountUserID)
+}
+
 // Create mocks base method.
 func (m *MockConversationRepo) Create(ctx context.Context, id string, input *domain.CreateConversationInput, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -1211,6 +1226,20 @@ func (m *MockConversationRepo) CreateDMKey(ctx context.Context, accountID, dmKey
 func (mr *MockConversationRepoMockRecorder) CreateDMKey(ctx, accountID, dmKey, conversationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDMKey", reflect.TypeOf((*MockConversationRepo)(nil).CreateDMKey), ctx, accountID, dmKey, conversationID)
+}
+
+// Delete mocks base method.
+func (m *MockConversationRepo) Delete(ctx context.Context, conversationID, accountID, recipientAccountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, conversationID, accountID, recipientAccountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockConversationRepoMockRecorder) Delete(ctx, conversationID, accountID, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockConversationRepo)(nil).Delete), ctx, conversationID, accountID, recipientAccountUserID)
 }
 
 // GetByID mocks base method.
@@ -1256,6 +1285,21 @@ func (m *MockConversationRepo) GetDMConversationID(ctx context.Context, accountI
 func (mr *MockConversationRepoMockRecorder) GetDMConversationID(ctx, accountID, dmKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDMConversationID", reflect.TypeOf((*MockConversationRepo)(nil).GetDMConversationID), ctx, accountID, dmKey)
+}
+
+// IsSupportRoute mocks base method.
+func (m *MockConversationRepo) IsSupportRoute(ctx context.Context, accountID, conversationID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsSupportRoute", ctx, accountID, conversationID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsSupportRoute indicates an expected call of IsSupportRoute.
+func (mr *MockConversationRepoMockRecorder) IsSupportRoute(ctx, accountID, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSupportRoute", reflect.TypeOf((*MockConversationRepo)(nil).IsSupportRoute), ctx, accountID, conversationID)
 }
 
 // ListByResource mocks base method.

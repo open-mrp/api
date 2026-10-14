@@ -12,7 +12,7 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Dismisses an announcement for the calling user, removing it from their feed.
+// Marks an announcement dismissed for the calling user, removing it from their feed.
 //
 // The announcement itself is not deleted: it stays retrievable by ID and remains in every other user's feed until they dismiss it too. Dismissing an already-dismissed announcement keeps the original dismissal time. A caller with no user of their own in the account, such as an API key, has no state to record and gets a not-found error.
 type MarkAnnouncementDismissedEndpoint struct{}
@@ -26,7 +26,6 @@ func (e *MarkAnnouncementDismissedEndpoint) Materialize() *apiendpoint.APIEndpoi
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAnnouncement,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MarkAnnouncementRequest) (*apiresource.Announcement, *apierror.APIError) {
@@ -34,7 +33,7 @@ func (e *MarkAnnouncementDismissedEndpoint) Materialize() *apiendpoint.APIEndpoi
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAnnouncement,
-			Fields:     []string{"resource"},
+			Fields:     []string{"related.record"},
 		}),
 	})
 }

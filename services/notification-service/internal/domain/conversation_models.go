@@ -17,11 +17,13 @@ type Conversation struct {
 	GroupID           *string `audit:"group_id"`
 	TopicResourceType *string
 	TopicResourceID   *string
-	NextSequence      int64
-	LastMessageID     *string
-	LastMessageAt     *time.Time
-	IsArchived        bool `audit:"is_archived"`
-	LegalHold         bool `audit:"legal_hold"`
+	// ContinuesConversationID is the conversation this one picks up from, if any.
+	ContinuesConversationID *string `audit:"continues_conversation_id"`
+	NextSequence            int64
+	LastMessageID           *string
+	LastMessageAt           *time.Time
+	IsArchived              bool `audit:"is_archived"`
+	LegalHold               bool `audit:"legal_hold"`
 	// External customer-service case triage (audience=customer only; nil/empty on internal).
 	WorkflowStatus *string `audit:"workflow_status"`
 	// Assignee is the single polymorphic case owner — an account_user or an account_group (type + id).
@@ -166,6 +168,10 @@ type CreateConversationInput struct {
 	ParticipantAccountUserIDs []string
 	// Participants seats group members with the role each starts with; a user also in ParticipantAccountUserIDs or the roster takes the role given here.
 	Participants []ParticipantRoleInput
+	// ContinuesConversationID links the new conversation to one the caller can read.
+	ContinuesConversationID *string
+	// MessageBody, when set, is posted by the caller as the first message.
+	MessageBody *string
 }
 
 // ParticipantRoleInput names an account user to seat in a new group and the role they start with.
@@ -176,13 +182,15 @@ type ParticipantRoleInput struct {
 
 // ConversationListFilter parameterizes the caller's conversation list.
 type ConversationListFilter struct {
-	AccountID           string
-	AccountUserID       string
-	Type                *string
-	Status              string
-	Limit               int32
-	CursorLastMessageAt *time.Time
-	CursorID            *string
+	AccountID     string
+	AccountUserID string
+	Type          *string
+	Status        string
+	// ParticipantAccountUserIDs keeps only conversations that also seat any of these account users.
+	ParticipantAccountUserIDs []string
+	Limit                     int32
+	CursorLastMessageAt       *time.Time
+	CursorID                  *string
 	// CursorInNullTail is set when the cursor row has no messages, which sorts it after every row that has.
 	CursorInNullTail bool
 }

@@ -17,10 +17,7 @@ import (
 // Request to list the caller's active announcements.
 type ListAnnouncementsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
-	Query *string `query:"q" validate:"omitempty,max=500"`
+
 }
 
 // Lists the announcements currently active for the caller, newest first.
@@ -37,7 +34,6 @@ func (e *ListAnnouncementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAnnouncement,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
@@ -46,7 +42,7 @@ func (e *ListAnnouncementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAnnouncement,
-			Fields:     []string{"resource"},
+			Fields:     []string{"related.record"},
 		}),
 	})
 }

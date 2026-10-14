@@ -10,7 +10,7 @@ func attachmentUploadTargetIncludeConfig() *apiendpoint.IncludeConfig {
 		ObjectType: constants.ObjectTypeAttachmentUploadTarget,
 		Fields: []string{
 			"attachment",
-			"attachment.resource",
+			"attachment.record",
 		},
 	})
 }

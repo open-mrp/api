@@ -33,7 +33,6 @@ func (e *DeleteEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailInbox,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteEmailInboxRequest) (*object.Deleted, *apierror.APIError) {

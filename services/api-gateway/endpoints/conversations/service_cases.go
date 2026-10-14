@@ -91,14 +91,8 @@ func (s *conversationSvcImpl) listInbox(ctx context.Context, req *ListConversati
 // listByResource lists conversations anchored to a business record (the topic-filter branch of the
 // unified conversations list).
 func (s *conversationSvcImpl) listByResource(ctx context.Context, req *ListConversationsRequest) (*apiresource.List[apiresource.Conversation], *apierror.APIError) {
-	resourceType := ""
-	if req.TopicResourceType != nil {
-		resourceType = string(*req.TopicResourceType)
-	}
-	resourceID := ""
-	if req.TopicResourceID != nil {
-		resourceID = *req.TopicResourceID
-	}
+	resourceType := string(*req.RecordType)
+	resourceID := *req.RecordID
 	resp, rpcErr := grpcutil.CallRPC(ctx, conversationSvcTracer, "service.conversations.list_by_resource", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListConversationsResponse, error) {
 			return s.chatClient.ListConversationsByResource(ctx, &pb.ListConversationsByResourceRequest{
@@ -119,8 +113,8 @@ func (s *conversationSvcImpl) AddConversationLink(ctx context.Context, req *AddC
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConversationLinkInfo, error) {
 			return s.chatClient.AddConversationLink(ctx, &pb.AddConversationLinkRequest{
 				ConversationId: req.ConversationID,
-				ResourceType:   string(req.ResourceType),
-				ResourceId:     req.ResourceID,
+				ResourceType:   string(req.Record.Type),
+				ResourceId:     req.Record.ID,
 			}, opts...)
 		})
 	if rpcErr != nil {
@@ -148,7 +142,7 @@ func (s *conversationSvcImpl) RemoveConversationLink(ctx context.Context, req *R
 func (s *conversationSvcImpl) ListConversationLinks(ctx context.Context, req *ListConversationLinksRequest) (*apiresource.List[apiresource.ConversationLink], *apierror.APIError) {
 	resp, rpcErr := grpcutil.CallRPC(ctx, conversationSvcTracer, "service.conversations.list_links", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListConversationLinksResponse, error) {
-			return s.chatClient.ListConversationLinks(ctx, &pb.ListConversationLinksRequest{ConversationId: req.ConversationID}, opts...)
+			return s.chatClient.ListConversationLinks(ctx, &pb.ListConversationLinksRequest{ConversationId: req.ConversationID, Cursor: req.Cursor, Limit: req.Limit}, opts...)
 		})
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -159,5 +153,5 @@ func (s *conversationSvcImpl) ListConversationLinks(ctx context.Context, req *Li
 		chatmap.StashConversationLinkMeta(ctx, l, &link)
 		items = append(items, link)
 	}
-	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

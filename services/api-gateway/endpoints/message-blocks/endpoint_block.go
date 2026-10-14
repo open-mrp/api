@@ -29,7 +29,7 @@ func (*BlockRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBlockRequest)
 }
 
-// Blocks another user in your account from exchanging direct messages with you.
+// Creates a block that stops another user in your account from exchanging direct messages with you.
 //
 // While the block stands neither of you can start a direct message with the other or post in one you already share; group conversations and customer cases are unaffected. Blocking someone you have already blocked returns the original block instead of creating a second one.
 type BlockEndpoint struct{}
@@ -42,7 +42,6 @@ func (e *BlockEndpoint) Materialize() *apiendpoint.APIEndpoint[*BlockRequest, *a
 		Route:             "/v1/messaging/blocks",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingBlock,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BlockRequest) (*apiresource.MessagingBlock, *apierror.APIError) {

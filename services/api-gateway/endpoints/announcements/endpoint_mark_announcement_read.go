@@ -26,7 +26,6 @@ func (e *MarkAnnouncementReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*M
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAnnouncement,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MarkAnnouncementRequest) (*apiresource.Announcement, *apierror.APIError) {
@@ -34,7 +33,7 @@ func (e *MarkAnnouncementReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*M
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAnnouncement,
-			Fields:     []string{"resource"},
+			Fields:     []string{"related.record"},
 		}),
 	})
 }

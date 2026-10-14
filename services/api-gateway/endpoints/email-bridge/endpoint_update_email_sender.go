@@ -50,7 +50,6 @@ func (e *UpdateEmailSenderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailSender,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		IncludeConfig:     emailSenderIncludeConfig(),

@@ -5,15 +5,13 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// messageIncludeFields is the whitelist of ?include= keys exposed by the message endpoints. sender,
-// author, resource and attachments are stashed inline by the service; conversation and reply_to are
-// fetched by id via the chat batch loaders.
+// messageIncludeFields is the whitelist of ?include= keys exposed by the message endpoints. sender, author, related.record and attachments are stashed inline by the service; conversation and reply_to are fetched by id via the chat batch loaders.
 var messageIncludeFields = []string{
 	"sender",
 	"author",
-	"resource",
+	"related.record",
 	"attachments",
-	"attachments.resource",
+	"attachments.record",
 	"conversation",
 	"conversation.participants",
 	"conversation.last_message",

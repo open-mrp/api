@@ -59,7 +59,7 @@ func (*UpdateEmailInboxRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateEmailInboxRequest)
 }
 
-// Edits an email inbox's from-name, status, agent configuration, and roster.
+// Updates an email inbox's from-name, status, agent configuration and messaging group.
 //
 // Every field except `status` is merged into the inbox's current settings: a field you omit — and an empty array you send — keeps the value it already has, so this endpoint can change a setting but cannot clear one back to unset. The inbox's address and domain are fixed at creation and cannot be changed here.
 type UpdateEmailInboxEndpoint struct{}
@@ -73,7 +73,6 @@ func (e *UpdateEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailInbox,
 		IncludeConfig:     emailInboxIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

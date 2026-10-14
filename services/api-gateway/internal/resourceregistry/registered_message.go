@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/open-mrp/apikit/include"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -14,10 +15,12 @@ func init() {
 		ObjectType: constants.ObjectTypeChatMessage,
 		Load:       resourceloaders.LoadMessages,
 		Subs: []include.SubField{
-			// sender, author, resource and attachments arrive inline on the message payload and are stashed by chatmap.StashMessageMeta — gated visibility, no extra fetch.
+			// sender, author and attachments arrive inline on the message payload and are stashed by chatmap.StashMessageMeta — gated visibility, no extra fetch.
 			{Key: "sender", Cardinality: include.CardinalityOnePtr, Populate: populateSenderOnMessage},
 			{Key: "author", Cardinality: include.CardinalityOnePtr, Populate: populateAuthorOnMessage},
-			{Key: "resource", Cardinality: include.CardinalityOnePtr, Populate: populateResourceOnMessage},
+			messagingRecordSub("related.record", constants.ObjectTypeChatMessage,
+				func(p any) string { return p.(*apiresource.Message).ID }, chatmap.MetaRelatedRecord,
+				func(p any, r *apiresource.Record) { p.(*apiresource.Message).Related.Record = r }),
 			// attachments arrive inline (stashed whole). Populate sets the list; Target+ExtractRefs let the resolver recurse into each attachment to gate its own expandable `resource`.
 			{
 				Key:         "attachments",
@@ -71,14 +74,6 @@ func populateAuthorOnMessage(ctx context.Context, parent any, _ map[string]any) 
 	m.Author = v.(*apiresource.Actor)
 }
 
-func populateResourceOnMessage(ctx context.Context, parent any, _ map[string]any) {
-	m := parent.(*apiresource.Message)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "resource")
-	if !ok {
-		return
-	}
-	m.Resource = v.(*apiresource.Entity)
-}
 
 func populateAttachmentsOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)

@@ -18,9 +18,9 @@ type RedactConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Permanently erases the content of every message in a conversation, for right-to-erasure requests.
+// Deletes the content of every message in a conversation, permanently, for right-to-erasure requests.
 //
-// Message bodies are cleared and attachments are deleted from storage, leaving the messages behind as an empty audit shell. This cannot be undone, and it is refused while the conversation is under legal hold.
+// Every message becomes `deleted`: its `body` and `attachments` are cleared and its files are removed from storage, but it keeps its place in the conversation. The redaction is recorded with who did it. This cannot be undone, and it is refused while the conversation is under legal hold.
 type RedactConversationEndpoint struct{}
 
 func (e *RedactConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RedactConversationRequest, *apiresource.Conversation] {
@@ -32,7 +32,6 @@ func (e *RedactConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Red
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},

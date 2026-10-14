@@ -67,10 +67,10 @@ func (s *messagingGroupSvcImpl) CreateMessagingGroup(ctx context.Context, req *C
 	return s.hydratedGroup(ctx, resp), nil
 }
 
-func (s *messagingGroupSvcImpl) ListMessagingGroups(ctx context.Context, _ *ListMessagingGroupsRequest) (*apiresource.List[apiresource.MessagingGroup], *apierror.APIError) {
+func (s *messagingGroupSvcImpl) ListMessagingGroups(ctx context.Context, req *ListMessagingGroupsRequest) (*apiresource.List[apiresource.MessagingGroup], *apierror.APIError) {
 	resp, rpcErr := grpcutil.CallRPC(ctx, messagingGroupSvcTracer, "service.messaging_groups.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListMessagingGroupsResponse, error) {
-			return s.chatClient.ListMessagingGroups(ctx, &pb.ListMessagingGroupsRequest{}, opts...)
+			return s.chatClient.ListMessagingGroups(ctx, &pb.ListMessagingGroupsRequest{Cursor: req.Cursor, Limit: req.Limit}, opts...)
 		})
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -83,8 +83,7 @@ func (s *messagingGroupSvcImpl) ListMessagingGroups(ctx context.Context, _ *List
 		actors = append(actors, memberActors(&groups[len(groups)-1])...)
 	}
 	resourceloaders.HydrateActorNames(ctx, actors)
-	list := apiresource.NewList(groups, apiresource.PageInfo{})
-	return list, nil
+	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (s *messagingGroupSvcImpl) GetMessagingGroup(ctx context.Context, req *GetMessagingGroupRequest) (*apiresource.MessagingGroup, *apierror.APIError) {

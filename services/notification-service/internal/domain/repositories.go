@@ -148,6 +148,12 @@ type AnnouncementRepo interface {
 // ConversationRepo persists and queries conversations, their DM-dedup keys, and the caller's membership scoping. Sequence allocation (LockSequence + AdvanceAfterMessage) must run inside a send transaction.
 type ConversationRepo interface {
 	Create(ctx context.Context, id string, input *CreateConversationInput, accountID string) *apierror.APIError
+	// CountOtherPeople counts the active people (users and customers, not agents or the system) in a conversation other than the given account user.
+	CountOtherPeople(ctx context.Context, conversationID, accountUserID string) (int64, *apierror.APIError)
+	// IsSupportRoute reports whether a conversation is designated to handle support.
+	IsSupportRoute(ctx context.Context, accountID, conversationID string) (bool, *apierror.APIError)
+	// Delete removes a conversation with its messages, attachment rows, participants, links, reports and the given recipient's notifications about it.
+	Delete(ctx context.Context, conversationID, accountID, recipientAccountUserID string) *apierror.APIError
 	GetByID(ctx context.Context, id, accountID string) (*Conversation, *apierror.APIError)
 	ListForUser(ctx context.Context, filter ConversationListFilter) ([]*Conversation, *apierror.APIError)
 	// LockSequence locks the conversation row and returns the next sequence to assign.

@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/apikit/include"
+	"github.com/open-mrp/apikit/ptrutil"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
@@ -17,16 +19,27 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// ConversationStatusFromProto maps the proto status + per-caller hidden flag to the resource enum.
-// Hidden takes precedence over the account-level status; an empty status defaults to active.
-func ConversationStatusFromProto(status string, hidden bool) constants.ConversationStatus {
-	if hidden {
-		return constants.ConversationStatusHidden
-	}
+// ConversationStatusFromProto maps the account-level proto status to the resource enum; an empty status is active. The caller's own hidden state is on their participant, not here.
+func ConversationStatusFromProto(status string) constants.ConversationStatus {
 	if status == "" {
 		return constants.ConversationStatusActive
 	}
 	return constants.ConversationStatus(status)
+}
+
+// Load-meta keys of the records messaging resources reference, each a recordstub.Ref.
+const (
+	MetaRelatedRecord    = "related_record"
+	MetaRelatedContinues = "related_continues"
+	MetaRecord           = "record"
+)
+
+// recordRef is the reference to a record of type t, or false when either half is missing.
+func recordRef(t, id *string) (recordstub.Ref, bool) {
+	if t == nil || id == nil || *t == "" || *id == "" {
+		return recordstub.Ref{}, false
+	}
+	return recordstub.Ref{Type: constants.RecordType(*t), ID: *id}, true
 }
 
 // OkMessage builds a human-readable confirmation for actions that produce no resource.
@@ -45,9 +58,10 @@ func ConversationFromProto(c *pb.ConversationInfo) apiresource.Conversation {
 		Type:          constants.ConversationType(c.Type),
 		Audience:      constants.ConversationAudience(c.Audience),
 		Title:         c.Title,
-		Status:        ConversationStatusFromProto(c.Status, c.Hidden),
+		Status:        ConversationStatusFromProto(c.Status),
 		LegalHold:     new(constants.LegalHoldStatusFromHeld(c.LegalHold)),
-		Unread:        c.Unread,
+		Related:       &apiresource.ConversationRelated{Object: constants.ObjectTypeConversationRelated},
+		UnreadCount:   c.Unread,
 		LastMessageAt: TsToPtr(c.LastMessageAt),
 		CreatedAt:     TsToTime(c.CreatedAt),
 		UpdatedAt:     TsToTime(c.UpdatedAt),
@@ -86,8 +100,11 @@ func StashConversationMeta(ctx context.Context, c *pb.ConversationInfo, d *apire
 	}
 	meta.Set(ot, d.ID, "participants", apiresource.NewList(participants, apiresource.PageInfo{}))
 
-	if c.TopicResourceType != nil && c.TopicResourceId != nil {
-		meta.Set(ot, d.ID, "topic", apiresource.NewEntity(*c.TopicResourceId, constants.ObjectType(*c.TopicResourceType), nil, nil))
+	if ref, ok := recordRef(c.TopicResourceType, c.TopicResourceId); ok {
+		meta.Set(ot, d.ID, MetaRelatedRecord, ref)
+	}
+	if c.ContinuesConversationId != nil && *c.ContinuesConversationId != "" {
+		meta.Set(ot, d.ID, MetaRelatedContinues, recordstub.Ref{Type: constants.RecordTypeConversation, ID: *c.ContinuesConversationId})
 	}
 
 	if c.LastMessage != nil {
@@ -137,10 +154,7 @@ func ParticipantFromProto(p *pb.ParticipantInfo) apiresource.ConversationPartici
 	return result
 }
 
-// ConversationLinkFromProto maps a conversation link to its base API resource (the linked record as a
-// bare id+type Entity; the display name is hydrated downstream where needed). The expandable
-// `conversation` sub-object is left nil — call StashConversationLinkMeta to make it resolvable via
-// ?include=conversation.
+// ConversationLinkFromProto maps a conversation link to its base API resource. The expandable `conversation` and `record` are left nil; call StashConversationLinkMeta to make them resolvable via ?include=.
 func ConversationLinkFromProto(l *pb.ConversationLinkInfo) apiresource.ConversationLink {
 	if l == nil {
 		return apiresource.ConversationLink{}
@@ -148,19 +162,20 @@ func ConversationLinkFromProto(l *pb.ConversationLinkInfo) apiresource.Conversat
 	return apiresource.ConversationLink{
 		ID:        l.Id,
 		Object:    constants.ObjectTypeConversationLink,
-		Resource:  apiresource.NewEntity(l.ResourceId, constants.ObjectType(l.ResourceType), nil, nil),
 		CreatedAt: TsToTime(l.CreatedAt),
 	}
 }
 
-// StashConversationLinkMeta stashes the link's conversation FK so ?include=conversation fetches the
-// full conversation by id via the chat batch loader (which in turn stashes the conversation's own
-// sub-objects, letting conversation.* recurse).
+// StashConversationLinkMeta stashes the link's conversation ID and record reference for the include resolver.
 func StashConversationLinkMeta(ctx context.Context, l *pb.ConversationLinkInfo, d *apiresource.ConversationLink) {
 	if l == nil || d == nil {
 		return
 	}
-	include.GetLoadMeta(ctx).Set(constants.ObjectTypeConversationLink, d.ID, "conversation_id", l.ConversationId)
+	meta := include.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeConversationLink, d.ID, "conversation_id", l.ConversationId)
+	if ref, ok := recordRef(&l.ResourceType, &l.ResourceId); ok {
+		meta.Set(constants.ObjectTypeConversationLink, d.ID, MetaRecord, ref)
+	}
 }
 
 // MessageFromProto maps a chat message to its base API resource. Expandable sub-objects (conversation, sender, author, resource, reply_to, attachments) are left nil — call StashMessageMeta to make them resolvable via ?include=.
@@ -184,11 +199,23 @@ func MessageFromProto(m *pb.MessageInfo) apiresource.Message {
 		CreatedAt:       TsToTime(m.CreatedAt),
 		UpdatedAt:       TsToTime(m.UpdatedAt),
 		Channel:         constants.ResolveMessageChannel(m.Channel, m.Kind),
-		AgentRunFailed:  m.AgentRunFailed,
-		AgentErrorCode:  constants.EnumPtr[apierror.Code](m.AgentErrorCode),
+		Related:         &apiresource.MessageRelated{Object: constants.ObjectTypeChatMessageRelated},
 	}
 	if m.Status == "" {
 		msg.Status = constants.MessageStatusSent
+	}
+	switch {
+	case msg.DeletedAt != nil:
+		// A deleted message keeps its place in the timeline but none of its content.
+		msg.Status = constants.MessageStatusDeleted
+		msg.Body = nil
+	case m.AgentRunFailed:
+		msg.Status = constants.MessageStatusFailed
+		code := apierror.CodeInternalError
+		if m.AgentErrorCode != nil && *m.AgentErrorCode != "" {
+			code = apierror.Code(*m.AgentErrorCode)
+		}
+		msg.Error = &apiresource.MessageError{Code: code, Message: ptrutil.Deref(m.Body)}
 	}
 	msg.Sequence = m.Sequence
 	return msg
@@ -202,11 +229,13 @@ func StashMessageMeta(ctx context.Context, m *pb.MessageInfo, d *apiresource.Mes
 	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeChatMessage
 
-	attachments := make([]apiresource.MessageAttachment, 0, len(m.Attachments))
-	for _, a := range m.Attachments {
-		attachments = append(attachments, AttachmentFromProto(ctx, a))
+	if d.Status != constants.MessageStatusDeleted {
+		attachments := make([]apiresource.MessageAttachment, 0, len(m.Attachments))
+		for _, a := range m.Attachments {
+			attachments = append(attachments, AttachmentFromProto(ctx, a))
+		}
+		meta.Set(ot, d.ID, "attachments", apiresource.NewList(attachments, apiresource.PageInfo{}))
 	}
-	meta.Set(ot, d.ID, "attachments", apiresource.NewList(attachments, apiresource.PageInfo{}))
 
 	if sender := SenderActorFromProto(m); sender != nil {
 		meta.Set(ot, d.ID, "sender", sender)
@@ -214,8 +243,8 @@ func StashMessageMeta(ctx context.Context, m *pb.MessageInfo, d *apiresource.Mes
 	if author := AuthorActorFromProto(m); author != nil {
 		meta.Set(ot, d.ID, "author", author)
 	}
-	if m.LinkResourceType != nil && m.LinkResourceId != nil {
-		meta.Set(ot, d.ID, "resource", apiresource.NewEntity(*m.LinkResourceId, constants.ObjectType(*m.LinkResourceType), nil, nil))
+	if ref, ok := recordRef(m.LinkResourceType, m.LinkResourceId); ok {
+		meta.Set(ot, d.ID, MetaRelatedRecord, ref)
 	}
 	meta.Set(ot, d.ID, "conversation_id", m.ConversationId)
 	if m.ReplyToMessageId != nil && *m.ReplyToMessageId != "" {
@@ -288,10 +317,8 @@ func AttachmentFromProto(ctx context.Context, a *pb.AttachmentInfo) apiresource.
 		URL:         a.Url,
 		CreatedAt:   TsToTime(a.CreatedAt),
 	}
-	if a.ResourceType != nil && *a.ResourceType != "" && a.ResourceId != nil && *a.ResourceId != "" {
-		// resource is expandable: left nil on the base attachment, stashed for ?include=attachments.resource.
-		include.GetLoadMeta(ctx).Set(constants.ObjectTypeMessageAttachment, result.ID, "resource",
-			apiresource.NewEntity(*a.ResourceId, constants.ObjectType(*a.ResourceType), nil, nil))
+	if ref, ok := recordRef(a.ResourceType, a.ResourceId); ok {
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeMessageAttachment, result.ID, MetaRecord, ref)
 	}
 	return result
 }

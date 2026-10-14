@@ -58,7 +58,6 @@ func (e *AddAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ad
 		Route:             "/v1/messaging/conversations/{id}/agents",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversationParticipant,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddAgentParticipantRequest) (*apiresource.ConversationParticipant, *apierror.APIError) {

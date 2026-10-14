@@ -32,7 +32,6 @@ func (e *ListEmailDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListE
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEmailDomainsRequest) (*apiresource.List[apiresource.EmailDomain], *apierror.APIError) {

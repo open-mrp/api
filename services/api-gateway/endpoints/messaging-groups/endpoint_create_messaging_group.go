@@ -46,7 +46,6 @@ func (e *CreateMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Route:             "/v1/messaging/groups",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMessagingGroupRequest) (*apiresource.MessagingGroup, *apierror.APIError) {

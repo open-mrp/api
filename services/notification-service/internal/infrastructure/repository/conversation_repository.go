@@ -33,14 +33,15 @@ func (r *conversationRepoImpl) Create(ctx context.Context, id string, input *dom
 		audience = "internal"
 	}
 	err := r.db.CreateConversation(ctx, sqlc.CreateConversationParams{
-		ID:                id,
-		AccountID:         accountID,
-		Type:              input.Type,
-		Audience:          audience,
-		Title:             db.NullStringPtr(input.Title),
-		GroupID:           db.NullStringPtr(input.GroupID),
-		TopicResourceType: db.NullStringPtr(input.TopicResourceType),
-		TopicResourceID:   db.NullStringPtr(input.TopicResourceID),
+		ID:                      id,
+		AccountID:               accountID,
+		Type:                    input.Type,
+		Audience:                audience,
+		Title:                   db.NullStringPtr(input.Title),
+		GroupID:                 db.NullStringPtr(input.GroupID),
+		TopicResourceType:       db.NullStringPtr(input.TopicResourceType),
+		TopicResourceID:         db.NullStringPtr(input.TopicResourceID),
+		ContinuesConversationID: db.NullStringPtr(input.ContinuesConversationID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -67,14 +68,16 @@ func (r *conversationRepoImpl) ListForUser(ctx context.Context, filter domain.Co
 	defer span.End()
 
 	rows, err := r.db.ListConversationsForUser(ctx, sqlc.ListConversationsForUserParams{
-		AccountUserID:       db.NullStringPtr(&filter.AccountUserID),
-		AccountID:           filter.AccountID,
-		Type:                db.NullStringPtr(filter.Type),
-		Status:              sql.NullString{String: filter.Status, Valid: filter.Status != ""},
-		CursorLastMessageAt: db.NullTimePtr(filter.CursorLastMessageAt),
-		CursorID:            db.NullStringPtr(filter.CursorID),
-		CursorInNullTail:    filter.CursorInNullTail,
-		Limit:               filter.Limit,
+		AccountUserID:             db.NullStringPtr(&filter.AccountUserID),
+		AccountID:                 filter.AccountID,
+		Type:                      db.NullStringPtr(filter.Type),
+		Status:                    sql.NullString{String: filter.Status, Valid: filter.Status != ""},
+		IncludeParticipantFilter:  len(filter.ParticipantAccountUserIDs) > 0,
+		ParticipantAccountUserIds: nullStrings(filter.ParticipantAccountUserIDs),
+		CursorLastMessageAt:       db.NullTimePtr(filter.CursorLastMessageAt),
+		CursorID:                  db.NullStringPtr(filter.CursorID),
+		CursorInNullTail:          filter.CursorInNullTail,
+		Limit:                     filter.Limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -83,25 +86,26 @@ func (r *conversationRepoImpl) ListForUser(ctx context.Context, filter domain.Co
 	conversations := make([]*domain.Conversation, 0, len(rows))
 	for _, row := range rows {
 		c := &domain.Conversation{
-			ID:                   row.ID,
-			AccountID:            row.AccountID,
-			Type:                 row.Type,
-			Audience:             row.Audience,
-			Title:                db.StringFromNullString(row.Title),
-			GroupID:              db.StringFromNullString(row.GroupID),
-			TopicResourceType:    db.StringFromNullString(row.TopicResourceType),
-			TopicResourceID:      db.StringFromNullString(row.TopicResourceID),
-			NextSequence:         row.NextSequence,
-			LastMessageID:        db.StringFromNullString(row.LastMessageID),
-			LastMessageAt:        db.TimeFromNullTime(row.LastMessageAt),
-			IsArchived:           row.IsArchived,
-			WorkflowStatus:       db.StringFromNullString(row.WorkflowStatus),
-			AssigneeResourceType: db.StringFromNullString(row.AssigneeResourceType),
-			AssigneeResourceID:   db.StringFromNullString(row.AssigneeResourceID),
-			Metadata:             json.RawMessage(row.Metadata),
-			CreatedAt:            row.CreatedAt,
-			UpdatedAt:            row.UpdatedAt,
-			Hidden:               row.ParticipantHiddenAt.Valid,
+			ID:                      row.ID,
+			AccountID:               row.AccountID,
+			Type:                    row.Type,
+			Audience:                row.Audience,
+			Title:                   db.StringFromNullString(row.Title),
+			GroupID:                 db.StringFromNullString(row.GroupID),
+			TopicResourceType:       db.StringFromNullString(row.TopicResourceType),
+			TopicResourceID:         db.StringFromNullString(row.TopicResourceID),
+			ContinuesConversationID: db.StringFromNullString(row.ContinuesConversationID),
+			NextSequence:            row.NextSequence,
+			LastMessageID:           db.StringFromNullString(row.LastMessageID),
+			LastMessageAt:           db.TimeFromNullTime(row.LastMessageAt),
+			IsArchived:              row.IsArchived,
+			WorkflowStatus:          db.StringFromNullString(row.WorkflowStatus),
+			AssigneeResourceType:    db.StringFromNullString(row.AssigneeResourceType),
+			AssigneeResourceID:      db.StringFromNullString(row.AssigneeResourceID),
+			Metadata:                json.RawMessage(row.Metadata),
+			CreatedAt:               row.CreatedAt,
+			UpdatedAt:               row.UpdatedAt,
+			Hidden:                  row.ParticipantHiddenAt.Valid,
 		}
 		// Unread = messages after the caller's read cursor (their own sends advance it).
 		if maxSeq := row.NextSequence - 1; maxSeq > row.ParticipantLastReadSequence {
@@ -678,28 +682,93 @@ func (r *participantRepoImpl) SetMute(ctx context.Context, conversationID, accou
 	return nil
 }
 
+func (r *conversationRepoImpl) CountOtherPeople(ctx context.Context, conversationID, accountUserID string) (int64, *apierror.APIError) {
+	ctx, span := conversationRepoTracer.Start(ctx, "repository.conversation.count_other_people")
+	defer span.End()
+	n, err := r.db.CountPersonParticipantsOtherThan(ctx, sqlc.CountPersonParticipantsOtherThanParams{
+		ConversationID: conversationID,
+		AccountUserID:  db.NullString(accountUserID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return n, nil
+}
+
+func (r *conversationRepoImpl) IsSupportRoute(ctx context.Context, accountID, conversationID string) (bool, *apierror.APIError) {
+	ctx, span := conversationRepoTracer.Start(ctx, "repository.conversation.is_support_route")
+	defer span.End()
+	used, err := r.db.SupportRouteUsesConversation(ctx, sqlc.SupportRouteUsesConversationParams{AccountID: accountID, GroupConversationID: conversationID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return used, nil
+}
+
+// Delete runs inside the caller's transaction; children go before the conversation row.
+func (r *conversationRepoImpl) Delete(ctx context.Context, conversationID, accountID, recipientAccountUserID string) *apierror.APIError {
+	ctx, span := conversationRepoTracer.Start(ctx, "repository.conversation.delete")
+	defer span.End()
+	steps := []func() error{
+		func() error { return r.db.DeleteConversationAttachmentRows(ctx, conversationID) },
+		func() error { _, err := r.db.DeleteConversationMessages(ctx, conversationID); return err },
+		func() error { return r.db.DeleteConversationLinks(ctx, conversationID) },
+		func() error { return r.db.DeleteConversationReports(ctx, conversationID) },
+		func() error {
+			return r.db.DeleteConversationNotificationsForRecipient(ctx, sqlc.DeleteConversationNotificationsForRecipientParams{
+				RecipientAccountUserID: recipientAccountUserID,
+				ConversationID:         db.NullString(conversationID),
+			})
+		},
+		func() error { return r.db.DeleteConversationParticipants(ctx, conversationID) },
+	}
+	for _, step := range steps {
+		if apiErr := db.MapSQLError(step()); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	n, err := r.db.DeleteConversation(ctx, sqlc.DeleteConversationParams{ID: conversationID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if n == 0 {
+		return apierror.NewNotFoundError("Conversation not found.")
+	}
+	return nil
+}
+
+// nullStrings is ids as the nullable strings a sqlc.slice of a nullable column takes.
+func nullStrings(ids []string) []sql.NullString {
+	out := make([]sql.NullString, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, sql.NullString{String: id, Valid: true})
+	}
+	return out
+}
+
 func conversationFromRow(row sqlc.Conversation) *domain.Conversation {
 	return &domain.Conversation{
-		ID:                   row.ID,
-		AccountID:            row.AccountID,
-		Type:                 row.Type,
-		Audience:             row.Audience,
-		Title:                db.StringFromNullString(row.Title),
-		GroupID:              db.StringFromNullString(row.GroupID),
-		TopicResourceType:    db.StringFromNullString(row.TopicResourceType),
-		TopicResourceID:      db.StringFromNullString(row.TopicResourceID),
-		NextSequence:         row.NextSequence,
-		LastMessageID:        db.StringFromNullString(row.LastMessageID),
-		LastMessageAt:        db.TimeFromNullTime(row.LastMessageAt),
-		IsArchived:           row.IsArchived,
-		LegalHold:            row.LegalHold,
-		WorkflowStatus:       db.StringFromNullString(row.WorkflowStatus),
-		AssigneeResourceType: db.StringFromNullString(row.AssigneeResourceType),
-		AssigneeResourceID:   db.StringFromNullString(row.AssigneeResourceID),
-		EmailInboxID:         db.StringFromNullString(row.EmailInboxID),
-		Metadata:             json.RawMessage(row.Metadata),
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+		ID:                      row.ID,
+		AccountID:               row.AccountID,
+		Type:                    row.Type,
+		Audience:                row.Audience,
+		Title:                   db.StringFromNullString(row.Title),
+		GroupID:                 db.StringFromNullString(row.GroupID),
+		TopicResourceType:       db.StringFromNullString(row.TopicResourceType),
+		TopicResourceID:         db.StringFromNullString(row.TopicResourceID),
+		ContinuesConversationID: db.StringFromNullString(row.ContinuesConversationID),
+		NextSequence:            row.NextSequence,
+		LastMessageID:           db.StringFromNullString(row.LastMessageID),
+		LastMessageAt:           db.TimeFromNullTime(row.LastMessageAt),
+		IsArchived:              row.IsArchived,
+		LegalHold:               row.LegalHold,
+		WorkflowStatus:          db.StringFromNullString(row.WorkflowStatus),
+		AssigneeResourceType:    db.StringFromNullString(row.AssigneeResourceType),
+		AssigneeResourceID:      db.StringFromNullString(row.AssigneeResourceID),
+		EmailInboxID:            db.StringFromNullString(row.EmailInboxID),
+		Metadata:                json.RawMessage(row.Metadata),
+		CreatedAt:               row.CreatedAt,
+		UpdatedAt:               row.UpdatedAt,
 	}
 }
 

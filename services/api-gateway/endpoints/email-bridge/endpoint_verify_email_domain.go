@@ -18,9 +18,9 @@ type VerifyEmailDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Checks whether the domain's DKIM records have been published and marks it `verified` once they are confirmed.
+// Verifies an email domain now, instead of waiting for the automatic check.
 //
-// Call this after publishing the DKIM records returned at registration. It is safe to call repeatedly: a domain whose records are not visible yet is returned unchanged in `pending`, and an already-verified domain is returned as-is without re-checking. DNS propagation can take a while, so expect to poll.
+// Pending domains are checked automatically, so you don't need to call this. It is safe to call repeatedly: a domain whose `dns_records` aren't visible yet stays `pending`, and an already-verified domain is returned as is.
 type VerifyEmailDomainEndpoint struct{}
 
 func (e *VerifyEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*VerifyEmailDomainRequest, *apiresource.EmailDomain] {
@@ -32,7 +32,6 @@ func (e *VerifyEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Veri
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VerifyEmailDomainRequest) (*apiresource.EmailDomain, *apierror.APIError) {

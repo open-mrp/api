@@ -21,7 +21,7 @@ type UnblockRequest struct {
 	BlockedAccountUserID string `path:"id" validate:"required"`
 }
 
-// Lifts a block you placed on another user, letting the two of you message each other again.
+// Removes a block you placed on another user, letting the two of you message each other again.
 //
 // Only your own block is removed: if the other person has also blocked you, direct messages between you stay blocked. Unblocking someone you have not blocked succeeds and changes nothing.
 type UnblockEndpoint struct{}
@@ -35,7 +35,6 @@ func (e *UnblockEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnblockRequest
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeMessagingBlock,
 		Public:            true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnblockRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(BlockSvc).Unblock, constants.ObjectTypeMessagingBlock, "id")

@@ -12,11 +12,12 @@ func conversationIncludeConfig() *apiendpoint.IncludeConfig {
 		ObjectType: constants.ObjectTypeConversation,
 		Fields: []string{
 			"participants",
-			"topic",
+			"related.record",
+			"related.continues",
 			"last_message",
 			"last_message.sender",
 			"last_message.author",
-			"last_message.resource",
+			"last_message.related.record",
 			"last_message.attachments",
 		},
 	})

@@ -46,6 +46,8 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 		TopicResourceID:           req.TopicResourceId,
 		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
 		Participants:              participants,
+		ContinuesConversationID:   req.ContinuesConversationId,
+		MessageBody:               req.MessageBody,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -53,15 +55,26 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 	return conversationToProto(conv), nil
 }
 
+func (h *chatGRPCHandler) DeleteConversation(ctx context.Context, req *pb.DeleteConversationRequest) (*pb.ChatAck, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	if apiErr := h.chatSvc.DeleteConversation(ctx, req.ConversationId); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.ChatAck{}, nil
+}
+
 func (h *chatGRPCHandler) ListConversations(ctx context.Context, req *pb.ListConversationsRequest) (*pb.ListConversationsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 	page, apiErr := h.chatSvc.ListConversations(ctx, domain.ListConversationsInput{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Type:   req.Type,
-		Status: req.Status,
+		Cursor:                    req.Cursor,
+		Limit:                     req.Limit,
+		Type:                      req.Type,
+		Status:                    req.Status,
+		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -592,25 +605,26 @@ func conversationStatusString(isArchived bool) string {
 
 func conversationToProto(c *domain.Conversation) *pb.ConversationInfo {
 	info := &pb.ConversationInfo{
-		Id:                   c.ID,
-		AccountId:            c.AccountID,
-		Type:                 c.Type,
-		Title:                c.Title,
-		GroupId:              c.GroupID,
-		TopicResourceType:    c.TopicResourceType,
-		TopicResourceId:      c.TopicResourceID,
-		LastMessageId:        c.LastMessageID,
-		Status:               conversationStatusString(c.IsArchived),
-		Unread:               c.Unread,
-		Hidden:               c.Hidden,
-		LegalHold:            c.LegalHold,
-		Audience:             c.Audience,
-		WorkflowStatus:       c.WorkflowStatus,
-		AssigneeResourceType: c.AssigneeResourceType,
-		AssigneeResourceId:   c.AssigneeResourceID,
-		EmailInboxId:         c.EmailInboxID,
-		CreatedAt:            timestamppb.New(c.CreatedAt),
-		UpdatedAt:            timestamppb.New(c.UpdatedAt),
+		Id:                      c.ID,
+		AccountId:               c.AccountID,
+		Type:                    c.Type,
+		Title:                   c.Title,
+		GroupId:                 c.GroupID,
+		TopicResourceType:       c.TopicResourceType,
+		TopicResourceId:         c.TopicResourceID,
+		ContinuesConversationId: c.ContinuesConversationID,
+		LastMessageId:           c.LastMessageID,
+		Status:                  conversationStatusString(c.IsArchived),
+		Unread:                  c.Unread,
+		Hidden:                  c.Hidden,
+		LegalHold:               c.LegalHold,
+		Audience:                c.Audience,
+		WorkflowStatus:          c.WorkflowStatus,
+		AssigneeResourceType:    c.AssigneeResourceType,
+		AssigneeResourceId:      c.AssigneeResourceID,
+		EmailInboxId:            c.EmailInboxID,
+		CreatedAt:               timestamppb.New(c.CreatedAt),
+		UpdatedAt:               timestamppb.New(c.UpdatedAt),
 	}
 	if c.LastMessageAt != nil {
 		info.LastMessageAt = timestamppb.New(*c.LastMessageAt)
@@ -658,6 +672,10 @@ func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
 	}
 	if p.LastReadAt != nil {
 		info.LastReadAt = timestamppb.New(*p.LastReadAt)
+	}
+	// Hiding is a member's own state, so it reads as their membership rather than as the conversation's status.
+	if p.HiddenAt != nil && p.Membership == string(constants.ParticipantMembershipActive) {
+		info.Membership = string(constants.ParticipantMembershipHidden)
 	}
 	return info
 }

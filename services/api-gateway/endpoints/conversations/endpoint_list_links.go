@@ -10,17 +10,19 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to list a conversation's business-record links.
 type ListConversationLinksRequest struct {
+	object.ListRequest
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Returns the business records linked to a conversation.
+// Returns a list of the records linked to a conversation, oldest first.
 //
-// Every link is returned in one page. The conversation's primary `topic` anchor is not a link and is not listed here.
+// The record the conversation is about, in its `related.record`, is not a link and is not listed here.
 type ListConversationLinksEndpoint struct{}
 
 func (e *ListConversationLinksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListConversationLinksRequest, *apiresource.List[apiresource.ConversationLink]] {
@@ -32,7 +34,6 @@ func (e *ListConversationLinksEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversationLink,
 		IncludeConfig:     conversationLinkIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},

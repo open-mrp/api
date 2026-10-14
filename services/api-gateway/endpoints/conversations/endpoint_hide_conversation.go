@@ -18,7 +18,7 @@ type HideConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Hides a conversation from the caller's own list without affecting other participants.
+// Marks a conversation hidden in the caller's own list without affecting other participants.
 //
 // The caller stays a member and keeps receiving notifications; the conversation simply stops appearing in their list until they unhide it, and new messages do not bring it back on their own. The owner of a conversation cannot hide it.
 type HideConversationEndpoint struct{}
@@ -31,7 +31,6 @@ func (e *HideConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*HideC
 		Route:             "/v1/messaging/conversations/{id}/actions/hide",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         false,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),

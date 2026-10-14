@@ -55,7 +55,6 @@ func (e *AddParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddPart
 		Route:             "/v1/messaging/conversations/{id}/participants",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},

@@ -17,10 +17,7 @@ import (
 // Request to list a conversation's messages.
 type ListMessagesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
-	Query *string `query:"q" validate:"omitempty,max=500"`
+
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
 	// Which set of the conversation's messages to return.
@@ -47,7 +44,6 @@ func (e *ListMessagesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMessa
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChatMessage,
 		IncludeConfig:     messageIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},

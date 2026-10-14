@@ -30,7 +30,6 @@ func (e *DeleteEmailSenderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailSender,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteEmailSenderRequest) (*object.Deleted, *apierror.APIError) {

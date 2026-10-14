@@ -33,12 +33,13 @@ type Message struct {
 	// - `draft`: a proposed reply to the customer, still editable and waiting for approval before anyone outside sees it.
 	// - `scheduled`: queued to go out at a future time.
 	// - `sent`: delivered, and part of the conversation everyone reads.
+	// - `failed`: a scheduled message that could not be delivered, or an agent reply whose work failed; `error` says why.
+	// - `deleted`: deleted or redacted. It keeps its place in the conversation, but its `body` and `attachments` are null.
 	// - `canceled`: a scheduled message stopped before it went out.
 	// - `rejected`: a draft discarded instead of being sent.
-	// - `failed`: a scheduled message that could not be delivered.
 	// - `superseded`: a draft replaced by a newer one for the same thread.
 	//
-	// Only a `sent` message occupies a place in the conversation; the others are records of messages that never reached it.
+	// Only `sent`, `deleted` and failed agent replies occupy a place in the conversation; the others are records of messages that never reached it.
 	Status constants.MessageStatus `json:"status" validate:"required"`
 	// Who can see this message.
 	//
@@ -56,7 +57,7 @@ type Message struct {
 	Sequence int64 `json:"sequence"`
 	// Message body.
 	//
-	// A message made up of nothing but attachments or a linked record carries no body, and a deleted message has its body cleared.
+	// Null on a message made up of nothing but attachments or a linked record, and on a deleted message.
 	Body *string `json:"body"`
 	// The email subject line.
 	//
@@ -70,12 +71,12 @@ type Message struct {
 	//
 	// Absent on system messages, and on a vendor-side reply read by a customer — the real author behind the branded "Customer Service" party is never revealed to them.
 	Author *Actor `json:"author" expandable:"true"`
-	// Files, images, links, or resources attached to the message.
+	// Files, images, links, or records attached to the message. Null on a deleted message.
 	Attachments *List[MessageAttachment] `json:"attachments" expandable:"true"`
 	// The message this one replies to.
 	ReplyTo *Message `json:"reply_to" expandable:"true"`
-	// The record this message links to, such as the order it is about.
-	Resource *Entity `json:"resource" expandable:"true"`
+	// The record this message links to.
+	Related *MessageRelated `json:"related"`
 	// How the message reached its audience, or how a draft will be sent once it is approved.
 	//
 	// - `message`: appears in the conversation itself.
@@ -95,20 +96,30 @@ type Message struct {
 	EditedAt *time.Time `json:"edited_at"`
 	// When the message was deleted.
 	//
-	// A deleted message keeps its place in the timeline with its body cleared, so surrounding ordering and replies stay intact.
+	// A deleted message keeps its place in the timeline with its content cleared, so surrounding ordering and replies stay intact.
 	DeletedAt *time.Time `json:"deleted_at"`
+	// Why the message failed, when its `status` is `failed` because an agent's work failed; otherwise null.
+	Error *MessageError `json:"error"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// Whether this message is an agent reply reporting that the agent's run failed.
-	//
-	// The body explains the failure to the reader rather than answering the request.
-	AgentRunFailed bool `json:"agent_run_failed"`
-	// Machine-readable reason an agent reply failed.
-	//
-	// A client can react to the specific code rather than just showing the body — `agent_spending_cap_reached`, for example, is a cue to offer raising the agent spending limit.
-	AgentErrorCode *apierror.Code `json:"agent_error_code"`
+}
+
+// The record a message links to, as a lightweight reference. Retrieve the record by its ID for full details.
+type MessageRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=chat_message_related"`
+	// The record the message links to, such as the order it is about.
+	Record *Record `json:"record" expandable:"true"`
+}
+
+// Why a message failed.
+type MessageError struct {
+	// Machine-readable reason, such as `agent_spending_cap_reached`, a cue to offer raising the agent spending limit.
+	Code apierror.Code `json:"code" validate:"required"`
+	// Human-readable explanation, the same text as the message `body`.
+	Message string `json:"message" validate:"required"`
 }
 
 var SampleMessage = &Message{
@@ -124,7 +135,10 @@ var SampleMessage = &Message{
 	Sender:       NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
 	Author:       NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
 	Attachments:  NewList([]MessageAttachment{*SampleMessageAttachment}, PageInfo{}),
-	Resource:     NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new("Order #1042"), nil),
+	Related: &MessageRelated{
+		Object: constants.ObjectTypeChatMessageRelated,
+		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},
+	},
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

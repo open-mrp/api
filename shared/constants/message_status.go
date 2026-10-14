@@ -21,12 +21,14 @@ const (
 	MessageStatusFailed MessageStatus = "failed"
 	// MessageStatusSuperseded is a draft replaced by a newer one for the same source thread (terminal).
 	MessageStatusSuperseded MessageStatus = "superseded"
+	// MessageStatusDeleted is a sent message that was deleted or redacted; it keeps its place in the timeline with its content cleared.
+	MessageStatusDeleted MessageStatus = "deleted"
 )
 
 func (s MessageStatus) IsValid() bool {
 	switch s {
 	case MessageStatusDraft, MessageStatusScheduled, MessageStatusSent,
-		MessageStatusCanceled, MessageStatusRejected, MessageStatusFailed, MessageStatusSuperseded:
+		MessageStatusCanceled, MessageStatusRejected, MessageStatusFailed, MessageStatusSuperseded, MessageStatusDeleted:
 		return true
 	default:
 		return false
@@ -42,6 +44,7 @@ func (s MessageStatus) EnumValues() []string {
 		string(MessageStatusRejected),
 		string(MessageStatusFailed),
 		string(MessageStatusSuperseded),
+		string(MessageStatusDeleted),
 	}
 }
 

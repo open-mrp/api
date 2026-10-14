@@ -33,7 +33,7 @@ func (*SetLegalHoldRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSetLegalHoldRequest)
 }
 
-// Places a conversation under legal hold or releases it.
+// Sets or releases a legal hold on a conversation.
 //
 // Holding it exempts the conversation from automatic retention purging, and any attempt to redact it is refused until the hold is released.
 type SetLegalHoldEndpoint struct{}
@@ -47,7 +47,6 @@ func (e *SetLegalHoldEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetLegalH
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

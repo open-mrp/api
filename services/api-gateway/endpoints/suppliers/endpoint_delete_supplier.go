@@ -21,7 +21,7 @@ type DeleteSupplierRequest struct {
 
 // Deletes a supplier.
 //
-// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the supplier as it looked immediately before deletion, with its addresses when requested with `include`. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.
+// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns a deleted stub. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.
 type DeleteSupplierEndpoint struct{}
 
 func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *object.Deleted] {
@@ -42,9 +42,5 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(SupplierSvc).DeleteSupplier, constants.ObjectTypeSupplier, "id")
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeSupplier,
-			Fields:     []string{"bill_to_address", "ship_to_address"},
-		}),
 	})
 }

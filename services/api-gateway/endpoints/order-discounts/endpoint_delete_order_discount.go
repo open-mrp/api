@@ -19,7 +19,7 @@ type DeleteOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
-// Deletes an order discount and returns it as it was just before deletion.
+// Deletes an order discount and returns a deleted stub.
 //
 // Deletion is permanent; further requests against the deleted ID return an error.
 //

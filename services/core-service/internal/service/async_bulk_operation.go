@@ -108,7 +108,7 @@ func mergeRowOutcomes(results []domain.RowResult, errs []apierror.RowError) []do
 // resolution, id pre-generation, insert vs upsert, flow relinking) lives inside the
 // hooks as plain functions, so it never has to fit a rigid interface.
 //
-// The 202 returns the canonical Job resource (`object: "job"`) for every async bulk
+// The 202 returns the canonical AsyncJob resource (`object: "async_job"`) for every async bulk
 // operation, so there is no per-operation acknowledgment type — the raised job is the
 // acknowledgment, and the client polls it via the Location header.
 //

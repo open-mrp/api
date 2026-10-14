@@ -19,7 +19,7 @@ type DeleteProductRequest struct {
 	ProductID string `path:"id" validate:"required"`
 }
 
-// Soft-deletes a product and returns it as it stood at deletion.
+// Soft-deletes a product and returns a deleted stub.
 //
 // Deletion marks the product's backing item as deleted, so the item and its inventory drop out of catalog and inventory listings too. Deleting the same product again returns an error saying it has already been deleted.
 type DeleteProductEndpoint struct{}
@@ -39,9 +39,5 @@ func (e *DeleteProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ProductSvc).DeleteProduct, constants.ObjectTypeProduct, "id")
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeProduct,
-			Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
-		}),
 	})
 }

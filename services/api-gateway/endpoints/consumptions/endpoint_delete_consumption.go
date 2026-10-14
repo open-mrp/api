@@ -23,7 +23,7 @@ type DeleteConsumptionRequest struct {
 
 // Removes a material input from a production step.
 //
-// Any production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. The deleted consumption is returned; deleting it again reports that it has already been deleted.
+// Any production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. A deleted stub is returned; deleting it again reports that it has already been deleted.
 type DeleteConsumptionEndpoint struct{}
 
 func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *object.Deleted] {
@@ -43,9 +43,5 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteConsumptionRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ConsumptionSvc).DeleteConsumption, constants.ObjectTypeConsumption, "id")
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeConsumption,
-			Fields:     consumptionEndpointIncludes,
-		}),
 	})
 }

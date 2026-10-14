@@ -2363,12 +2363,11 @@ var EndpointTools = []EndpointToolDescriptor{
 		Description:         "Deletes a batch by ID and returns the deleted batch.\n\nDeleting a batch also removes its links to the batches feeding into and out of it, breaking the production flow at that point, and detaches it from any machines. After deletion, the batch's production run is closed automatically once all of its batches are scanned or deleted. Deleting the same batch twice reports that it has already been deleted.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/operations/batches/{id}",
-		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Batch ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"quantity.unit\",\"seconds.unit\",\"waste.unit\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Batch ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Batches",
 		RequiredPermissions: []string{"batches:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
-			{Name: "include", In: EndpointToolParamQuery, Array: true},
 		},
 	},
 	{
@@ -2387,15 +2386,14 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "delete_consumption",
 		DisplayName:         "Delete Consumption",
-		Description:         "Removes a material input from a production step.\n\nAny production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. The deleted consumption is returned; deleting it again reports that it has already been deleted.",
+		Description:         "Removes a material input from a production step.\n\nAny production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. A deleted stub is returned; deleting it again reports that it has already been deleted.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
-		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Consumption ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"consumed_item\",\"consumed_item.category\",\"consumed_item.category.unit_group\",\"consumed_item.category.unit_group.base_unit\",\"consumed_item.category.unit_group.associated_units\",\"consumed_item.category.unit_group.associated_units.unit\",\"consumed_item.unit_cost\",\"quantity.unit\",\"waste_quantity.unit\"],\"type\":\"string\"},\"type\":\"array\"},\"production_step_id\":{\"description\":\"Production step ID.\",\"type\":\"string\"}},\"required\":[\"production_step_id\",\"id\"],\"type\":\"object\"}",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Consumption ID.\",\"type\":\"string\"},\"production_step_id\":{\"description\":\"Production step ID.\",\"type\":\"string\"}},\"required\":[\"production_step_id\",\"id\"],\"type\":\"object\"}",
 		Group:               "Production Steps",
 		RequiredPermissions: []string{"production_steps:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
-			{Name: "include", In: EndpointToolParamQuery, Array: true},
 			{Name: "production_step_id", In: EndpointToolParamPath},
 		},
 	},
@@ -2542,7 +2540,7 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "delete_material",
 		DisplayName:         "Delete Material",
-		Description:         "Deletes a material.\n\nThis is a soft delete: the material and the catalog item behind it stop being returned by other endpoints, but the records are retained. The response is the material as it stood immediately before deletion, and deleting an already-deleted material returns an error.",
+		Description:         "Deletes a material.\n\nThis is a soft delete: the material and the catalog item behind it stop being returned by other endpoints, but the records are retained. The response is a deleted stub, and deleting an already-deleted material returns an error.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/catalog/materials/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the material to delete.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
@@ -2582,7 +2580,7 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "delete_order_discount",
 		DisplayName:         "Delete Order Discount",
-		Description:         "Deletes an order discount and returns it as it was just before deletion.\n\nDeletion is permanent; further requests against the deleted ID return an error.\n\nThe code can no longer be redeemed, but sales orders that already used the discount keep the reduction that was applied to them; their totals are not recalculated.",
+		Description:         "Deletes an order discount and returns a deleted stub.\n\nDeletion is permanent; further requests against the deleted ID return an error.\n\nThe code can no longer be redeemed, but sales orders that already used the discount keep the reduction that was applied to them; their totals are not recalculated.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/sales/order-discounts/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Order discount ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
@@ -2634,15 +2632,14 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "delete_product",
 		DisplayName:         "Delete Product",
-		Description:         "Soft-deletes a product and returns it as it stood at deletion.\n\nDeletion marks the product's backing item as deleted, so the item and its inventory drop out of catalog and inventory listings too. Deleting the same product again returns an error saying it has already been deleted.",
+		Description:         "Soft-deletes a product and returns a deleted stub.\n\nDeletion marks the product's backing item as deleted, so the item and its inventory drop out of catalog and inventory listings too. Deleting the same product again returns an error saying it has already been deleted.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/catalog/products/{id}",
-		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Product ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"product_line\",\"product_line.unit_group\",\"product_line.unit_group.base_unit\",\"product_line.unit_group.associated_units\",\"product_line.unit_group.associated_units.unit\",\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.category.unit_group.base_unit\",\"item.category.unit_group.associated_units\",\"item.category.unit_group.associated_units.unit\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Product ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Products",
 		RequiredPermissions: []string{"items:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
-			{Name: "include", In: EndpointToolParamQuery, Array: true},
 		},
 	},
 	{
@@ -2954,21 +2951,20 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "delete_supplier",
 		DisplayName:         "Delete Supplier",
-		Description:         "Deletes a supplier.\n\nThe supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the supplier as it looked immediately before deletion, with its addresses when requested with `include`. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.",
+		Description:         "Deletes a supplier.\n\nThe supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns a deleted stub. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/operations/suppliers/{id}",
-		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Supplier ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"bill_to_address\",\"ship_to_address\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Supplier ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Suppliers",
 		RequiredPermissions: []string{"suppliers:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
-			{Name: "include", In: EndpointToolParamQuery, Array: true},
 		},
 	},
 	{
 		Slug:                "delete_supplier_material",
 		DisplayName:         "Delete Supplier Material",
-		Description:         "Deletes a supplier material link.\n\nReturns the link as it looked immediately before deletion. Removing the link does not affect the underlying material or supplier.",
+		Description:         "Deletes a supplier material link.\n\nReturns a deleted stub. Removing the link does not affect the underlying material or supplier.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the material whose supplier link to delete.\\n\\nSupplier materials are addressed by the combination of supplier and material, so this path parameter takes the material's ID.\",\"type\":\"string\"},\"supplier_id\":{\"description\":\"ID of the supplier the material is linked to.\",\"type\":\"string\"}},\"required\":[\"supplier_id\",\"id\"],\"type\":\"object\"}",
@@ -2999,12 +2995,11 @@ var EndpointTools = []EndpointToolDescriptor{
 		Description:         "Deletes a transaction along with every allocation that applied it to an invoice, and returns the deleted transaction.\n\nInvoice payment status is not recomputed, so an invoice this transaction had paid off stays marked paid in full until the next settlement against it recalculates the flag. Deleting a transaction that was already deleted returns an already-deleted error rather than a not-found error.",
 		Method:              "DELETE",
 		RouteTemplate:       "/v1/finance/transactions/{id}",
-		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Transaction ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"allocations\",\"allocations.amount\",\"allocations.amount.unit\",\"allocations.transaction\",\"allocations.transaction.amount\",\"allocations.transaction.amount.unit\",\"customer\",\"responsible_user\",\"responsible_user.user\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Transaction ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Transactions",
 		RequiredPermissions: []string{"transactions:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
-			{Name: "include", In: EndpointToolParamQuery, Array: true},
 		},
 	},
 	{

@@ -41,9 +41,5 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 			return apiresource.Deleted(svc.(TransactionSvc).DeleteTransaction, constants.ObjectTypeTransaction, "id")
 		},
 		ObjectType: constants.ObjectTypeTransaction,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeTransaction,
-			Fields:     []string{"allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit", "customer", "responsible_user", "responsible_user.user"},
-		}),
 	})
 }

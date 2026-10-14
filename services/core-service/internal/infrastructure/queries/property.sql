@@ -13,6 +13,13 @@ AND (
     OR property.name LIKE sqlc.narg('search_query')
 )
 AND (
+    sqlc.arg('include_item_category_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_categories_properties icp
+        WHERE icp.B = property.id AND icp.A IN (sqlc.slice('item_category_ids'))
+    )
+)
+AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR property.created_at < sqlc.narg('cursor_created_at')
     OR (property.created_at = sqlc.narg('cursor_created_at') AND property.id < sqlc.narg('cursor_id'))
@@ -33,6 +40,13 @@ WHERE property.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR property.name LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.arg('include_item_category_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_categories_properties icp
+        WHERE icp.B = property.id AND icp.A IN (sqlc.slice('item_category_ids'))
+    )
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL

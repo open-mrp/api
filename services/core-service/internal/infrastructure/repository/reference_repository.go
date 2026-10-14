@@ -22,7 +22,7 @@ func NewReferenceRepo(queries *sqlc.Queries) domain.ReferenceRepo {
 	return &referenceRepoImpl{db: queries.DB()}
 }
 
-var identifierPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+var identifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // probeSQL is the probe's lookup of one referencing row, with id as its only parameter.
 func probeSQL(p domain.ReferenceProbe) (string, error) {

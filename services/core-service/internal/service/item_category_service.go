@@ -398,13 +398,18 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 	// before creating. Vitess does not enforce this FK at the DB level, so an
 	// unvalidated unit_group_id would otherwise be persisted silently and the
 	// category would render with unit_group=null instead of rejecting the request.
-	if params.UnitGroupID != "" {
-		if _, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
-			AccountID:   params.AccountID,
-			UnitGroupID: params.UnitGroupID,
-		}); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if params.UnitGroupID == "" {
+		params.UnitGroupID = domain.DefaultItemCategoryUnitGroupID
+	} else if _, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
+		AccountID:   params.AccountID,
+		UnitGroupID: params.UnitGroupID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	params.PropertyIDs = uniqueIDs(params.PropertyIDs)
+	if apiErr := requirePropertiesInAccount(ctx, s.repos.NewPropertyRepo(), params.AccountID, params.PropertyIDs); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	meds := s.mediators()
@@ -430,6 +435,14 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 			created, apiErr := txRepo.Create(txCtx, categoryID, params)
 			if apiErr != nil {
 				return apiErr
+			}
+			if len(params.PropertyIDs) > 0 {
+				if apiErr := txRepo.ReplaceProperties(txCtx, created.ID, params.PropertyIDs); apiErr != nil {
+					return apiErr
+				}
+				if created.Properties, apiErr = txRepo.GetProperties(txCtx, created.ID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			if slices.Contains(params.Includes, "unit_group") {
@@ -490,6 +503,14 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 
 	params.AccountID = identity.Target.AccountID
 
+	if params.PropertyIDs != nil {
+		ids := uniqueIDs(*params.PropertyIDs)
+		params.PropertyIDs = &ids
+		if apiErr := requirePropertiesInAccount(ctx, s.repos.NewPropertyRepo(), params.AccountID, ids); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -517,10 +538,26 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 			if apiErr != nil {
 				return apiErr
 			}
+			if old.AccountID == nil {
+				return apierror.NewAuthorizationError("System categories cannot be updated.")
+			}
+			if params.PropertyIDs != nil {
+				if old.Properties, apiErr = txRepo.GetProperties(txCtx, params.ItemCategoryID); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
+			}
+			if params.PropertyIDs != nil {
+				if apiErr := txRepo.ReplaceProperties(txCtx, params.ItemCategoryID, *params.PropertyIDs); apiErr != nil {
+					return apiErr
+				}
+				if updated.Properties, apiErr = txRepo.GetProperties(txCtx, params.ItemCategoryID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			if slices.Contains(params.Includes, "unit_group") {
@@ -598,8 +635,20 @@ func (s *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, itemCatego
 		return tracing.Trace(span, apiErr)
 	}
 
+	if category.AccountID == nil {
+		return tracing.Trace(span, apierror.NewAuthorizationError("System categories cannot be deleted."))
+	}
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
+		if apiErr := domain.ItemCategoryReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), category.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeItemCategory, category.ID, accountID, category); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := txSvc.repos.NewItemCategoryRepo().ReplaceProperties(txCtx, category.ID, nil); apiErr != nil {
 			return apiErr
 		}
 
@@ -1089,4 +1138,39 @@ func (s *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, p
 	default:
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// uniqueIDs drops blanks and repeats, keeping first-seen order.
+func uniqueIDs(ids []string) []string {
+	out := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if _, dup := seen[id]; dup || id == "" {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
+// requirePropertiesInAccount rejects property_ids naming a property the account doesn't have.
+func requirePropertiesInAccount(ctx context.Context, repo domain.PropertyRepo, accountID string, ids []string) *apierror.APIError {
+	if len(ids) == 0 {
+		return nil
+	}
+	found, apiErr := repo.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	have := make(map[string]struct{}, len(found))
+	for _, p := range found {
+		have[p.ID] = struct{}{}
+	}
+	for i, id := range ids {
+		if _, ok := have[id]; !ok {
+			return apierror.NewFieldError(fmt.Sprintf("property_ids[%d]", i), apierror.CodeInvalidFormat, fmt.Sprintf("Property %q was not found.", id))
+		}
+	}
+	return nil
 }

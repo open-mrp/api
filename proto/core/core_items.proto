@@ -466,8 +466,10 @@ message GetItemCategoryResponse {
 message CreateItemCategoryRequest {
   string name = 1;
   string type = 2;
+  // Empty uses the system each group.
   string unit_group_id = 3;
   repeated string includes = 4;
+  repeated string property_ids = 5;
 }
 message CreateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;
@@ -477,6 +479,9 @@ message UpdateItemCategoryRequest {
   optional string name = 2;
   optional string notes = 3;
   repeated string includes = 4;
+  // When set, property_ids replaces the category's properties.
+  bool set_property_ids = 5;
+  repeated string property_ids = 6;
 }
 message UpdateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;

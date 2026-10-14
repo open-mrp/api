@@ -317,7 +317,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 	// Both attributes are checked against the account and the category's properties before linking.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red", "attr_large"}).
-		Return([]*domain.Attribute{{ID: "attr_red", PropertyID: "prop_color"}, {ID: "attr_large", PropertyID: "prop_size"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_red", PropertyID: "prop_color", IsActive: true}, {ID: "attr_large", PropertyID: "prop_size", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").
@@ -429,7 +429,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_AttributeOutsideCategoryProperti
 	// The attribute exists in the account but hangs off a property the category doesn't carry.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red"}).
-		Return([]*domain.Attribute{{ID: "attr_red", Value: "Red", PropertyID: "prop_color"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_red", Value: "Red", PropertyID: "prop_color", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").
@@ -495,7 +495,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 	// Blank ids are dropped before validation; only the non-blank one is validated and then linked.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_only"}).
-		Return([]*domain.Attribute{{ID: "attr_only", PropertyID: "prop_color"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_only", PropertyID: "prop_color", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").

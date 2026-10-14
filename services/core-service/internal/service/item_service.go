@@ -1684,6 +1684,9 @@ func validateAttributesForCategory(ctx context.Context, repos domain.RepoFactory
 		if _, ok := linked[attr.PropertyID]; !ok {
 			return apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("Attribute %q is not available on this item's category; link its property to the category first.", attr.Value))
 		}
+		if apiErr := domain.RequireAssignable(param, "attribute", constants.ArchiveStatusFromIsActive(attr.IsActive)); apiErr != nil {
+			return apiErr
+		}
 	}
 
 	return nil

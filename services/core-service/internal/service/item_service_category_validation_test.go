@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 
@@ -59,7 +60,8 @@ func attributeValidationRepos(t *testing.T, attributes []*domain.Attribute, prop
 func TestValidateAttributesForCategory(t *testing.T) {
 	t.Parallel()
 
-	red := &domain.Attribute{ID: "at_red", Value: "Red", PropertyID: "pp_color"}
+	red := &domain.Attribute{ID: "at_red", Value: "Red", PropertyID: "pp_color", IsActive: true}
+	archived := &domain.Attribute{ID: "at_old", Value: "Old", PropertyID: "pp_color"}
 	color := &domain.ItemCategoryProperty{ID: "pp_color"}
 	size := &domain.ItemCategoryProperty{ID: "pp_size"}
 
@@ -74,6 +76,7 @@ func TestValidateAttributesForCategory(t *testing.T) {
 		{"property carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{color, size}, []string{"at_red"}, ""},
 		{"property not carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{size}, []string{"at_red"}, apierror.CodeValidationFailed},
 		{"category carries nothing", []*domain.Attribute{red}, nil, []string{"at_red"}, apierror.CodeValidationFailed},
+		{"archived attribute", []*domain.Attribute{archived}, []*domain.ItemCategoryProperty{color}, []string{"at_old"}, apperr.CodeResourceArchived},
 		{"attribute outside the account", nil, []*domain.ItemCategoryProperty{color}, []string{"at_red"}, apierror.CodeResourceNotFound},
 	}
 

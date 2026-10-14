@@ -18,11 +18,15 @@ func TestProbeSQL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "SELECT 1 FROM `price_list_rule` WHERE `scope_id` = ? AND (scope_type = 'item') LIMIT 1", q)
 
+	q, err = probeSQL(domain.ReferenceProbe{Label: "items", Table: "_item_attributes", Column: "A"})
+	require.NoError(t, err, "join tables name their columns A and B")
+	assert.Equal(t, "SELECT 1 FROM `_item_attributes` WHERE `A` = ? LIMIT 1", q)
+
 	for _, bad := range []domain.ReferenceProbe{
 		{Table: "sales_order", Column: "payment_term_id"},
 		{Label: "x", Table: "sales_order`", Column: "id"},
 		{Label: "x", Table: "sales_order", Column: "id = id OR 1"},
-		{Label: "x", Table: "Sales", Column: "id"},
+		{Label: "x", Table: "1sales", Column: "id"},
 	} {
 		_, err := probeSQL(bad)
 		assert.Error(t, err, "%+v", bad)

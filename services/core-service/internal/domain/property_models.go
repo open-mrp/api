@@ -26,6 +26,7 @@ type Attribute struct {
 	ColorCode  string `audit:"color_code"`
 	SortOrder  int32  `audit:"sort_order"`
 	IsPublic   bool   `audit:"is_public"`
+	IsActive   bool   `audit:"is_active"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -49,6 +50,8 @@ type ListPropertiesParams struct {
 	Query     *string
 	Cursor    *string
 	Limit     int32
+	// ItemCategoryIDs keeps properties attached to at least one of these categories; empty means no filter.
+	ItemCategoryIDs []string
 }
 
 // ListPropertiesResult holds the result of listing properties.
@@ -104,16 +107,6 @@ type ExportPropertiesParams struct {
 	Query     *string
 }
 
-// AttributeTextMatch is an existing attribute matched by its text within an account,
-// with its owning property named. Used by bulk upsert to enforce the account-wide
-// attribute value uniqueness the manual create path enforces.
-type AttributeTextMatch struct {
-	ID           string
-	Text         string
-	PropertyID   string
-	PropertyName string
-}
-
 // CreateAttributeParams holds the parameters for creating an attribute.
 type CreateAttributeParams struct {
 	Value      string
@@ -121,6 +114,7 @@ type CreateAttributeParams struct {
 	AccountID  string
 	ColorCode  string
 	SortOrder  int32
+	IsActive   bool
 }
 
 // UpdateAttributeParams holds the parameters for updating an attribute.
@@ -131,6 +125,7 @@ type UpdateAttributeParams struct {
 	Value       *string
 	ColorCode   *string
 	SortOrder   *int32
+	IsActive    *bool
 }
 
 // ListAttributesParams holds the parameters for listing attributes.
@@ -140,6 +135,8 @@ type ListAttributesParams struct {
 	Query      *string
 	Cursor     *string
 	Limit      int32
+	// IsActive keeps attributes with that status; nil returns every status.
+	IsActive *bool
 }
 
 // ListAttributesResult holds the result of listing attributes.
@@ -161,3 +158,23 @@ type DeleteAttributeParams struct {
 	PropertyID  string
 	AccountID   string
 }
+
+// PropertyReferences blocks deleting a property an item category still lists. Its attributes' own uses are
+// checked separately, since they reference the attributes rather than the property.
+var PropertyReferences = RegisterReferences(References{
+	Noun: "property",
+	Probes: []ReferenceProbe{
+		{Label: "item categories", Table: "_item_categories_properties", Column: "B"},
+	},
+})
+
+// AttributeReferences blocks deleting an attribute that is assigned or that scopes a price.
+var AttributeReferences = RegisterReferences(References{
+	Noun:       "attribute",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "items", Table: "_item_attributes", Column: "A"},
+		{Label: "account prices", Table: "account_price_attribute", Column: "attribute_id"},
+		{Label: "volume discounts", Table: "_quantity_discounts_attributes", Column: "A"},
+	},
+})

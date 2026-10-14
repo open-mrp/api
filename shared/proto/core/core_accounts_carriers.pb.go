@@ -1595,14 +1595,17 @@ func (x *PropertyInfo) GetAttributes() []*AttributeInfo {
 }
 
 type AttributeInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ColorCode     string                 `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3" json:"color_code,omitempty"`
-	SortOrder     int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	IsPublic      bool                   `protobuf:"varint,5,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Value      string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	ColorCode  string                 `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3" json:"color_code,omitempty"`
+	SortOrder  int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	IsPublic   bool                   `protobuf:"varint,5,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	CreatedAt  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	PropertyId string                 `protobuf:"bytes,8,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	// active | archived
+	Status        string `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1686,14 +1689,29 @@ func (x *AttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AttributeInfo) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+func (x *AttributeInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 type ListPropertiesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Cursor          *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit           int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query           *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes        []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	ItemCategoryIds []string               `protobuf:"bytes,5,rep,name=item_category_ids,json=itemCategoryIds,proto3" json:"item_category_ids,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ListPropertiesRequest) Reset() {
@@ -1750,6 +1768,13 @@ func (x *ListPropertiesRequest) GetQuery() string {
 func (x *ListPropertiesRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListPropertiesRequest) GetItemCategoryIds() []string {
+	if x != nil {
+		return x.ItemCategoryIds
 	}
 	return nil
 }
@@ -2427,11 +2452,13 @@ func (x *ExportPropertiesResponse) GetJob() *JobInfo {
 }
 
 type ListAttributesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PropertyId    string                 `protobuf:"bytes,1,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
-	Cursor        *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	PropertyId string                 `protobuf:"bytes,1,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Cursor     *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit      int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query      *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Unset returns every status.
+	IsActive      *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2492,6 +2519,13 @@ func (x *ListAttributesRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListAttributesRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
 }
 
 type ListAttributesResponse struct {
@@ -2643,11 +2677,13 @@ func (x *GetAttributeResponse) GetAttribute() *AttributeInfo {
 }
 
 type CreateAttributeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PropertyId    string                 `protobuf:"bytes,1,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ColorCode     string                 `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3" json:"color_code,omitempty"`
-	SortOrder     int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	PropertyId string                 `protobuf:"bytes,1,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Value      string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	ColorCode  string                 `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3" json:"color_code,omitempty"`
+	SortOrder  int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// active | archived; unset is active.
+	Status        *string `protobuf:"bytes,5,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2710,6 +2746,13 @@ func (x *CreateAttributeRequest) GetSortOrder() int32 {
 	return 0
 }
 
+func (x *CreateAttributeRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
 type CreateAttributeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Attribute     *AttributeInfo         `protobuf:"bytes,1,opt,name=attribute,proto3" json:"attribute,omitempty"`
@@ -2761,6 +2804,7 @@ type UpdateAttributeRequest struct {
 	Value         *string                `protobuf:"bytes,3,opt,name=value,proto3,oneof" json:"value,omitempty"`
 	ColorCode     *string                `protobuf:"bytes,4,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
 	SortOrder     *int32                 `protobuf:"varint,5,opt,name=sort_order,json=sortOrder,proto3,oneof" json:"sort_order,omitempty"`
+	Status        *string                `protobuf:"bytes,6,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2828,6 +2872,13 @@ func (x *UpdateAttributeRequest) GetSortOrder() int32 {
 		return *x.SortOrder
 	}
 	return 0
+}
+
+func (x *UpdateAttributeRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
 }
 
 type UpdateAttributeResponse struct {
@@ -6710,7 +6761,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x123\n" +
 	"\n" +
 	"attributes\x18\x06 \x03(\v2\x13.core.AttributeInfoR\n" +
-	"attributes\"\x86\x02\n" +
+	"attributes\"\xbf\x02\n" +
 	"\rAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x1d\n" +
@@ -6722,12 +6773,16 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x96\x01\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1f\n" +
+	"\vproperty_id\x18\b \x01(\tR\n" +
+	"propertyId\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\"\xc2\x01\n" +
 	"\x15ListPropertiesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12*\n" +
+	"\x11item_category_ids\x18\x05 \x03(\tR\x0fitemCategoryIdsB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"y\n" +
 	"\x16ListPropertiesResponse\x122\n" +
@@ -6774,15 +6829,18 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x05query\x18\x01 \x01(\tH\x00R\x05query\x88\x01\x01B\b\n" +
 	"\x06_query\";\n" +
 	"\x18ExportPropertiesResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x9b\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xcb\x01\n" +
 	"\x15ListAttributesRequest\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12\x1b\n" +
 	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x05 \x01(\bH\x02R\bisActive\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"z\n" +
+	"\x06_queryB\f\n" +
+	"\n" +
+	"_is_active\"z\n" +
 	"\x16ListAttributesResponse\x123\n" +
 	"\n" +
 	"attributes\x18\x01 \x03(\v2\x13.core.AttributeInfoR\n" +
@@ -6793,7 +6851,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"propertyId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"I\n" +
 	"\x14GetAttributeResponse\x121\n" +
-	"\tattribute\x18\x01 \x01(\v2\x13.core.AttributeInfoR\tattribute\"\x8d\x01\n" +
+	"\tattribute\x18\x01 \x01(\v2\x13.core.AttributeInfoR\tattribute\"\xb5\x01\n" +
 	"\x16CreateAttributeRequest\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12\x14\n" +
@@ -6801,9 +6859,11 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"color_code\x18\x03 \x01(\tR\tcolorCode\x12\x1d\n" +
 	"\n" +
-	"sort_order\x18\x04 \x01(\x05R\tsortOrder\"L\n" +
+	"sort_order\x18\x04 \x01(\x05R\tsortOrder\x12\x1b\n" +
+	"\x06status\x18\x05 \x01(\tH\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_status\"L\n" +
 	"\x17CreateAttributeResponse\x121\n" +
-	"\tattribute\x18\x01 \x01(\v2\x13.core.AttributeInfoR\tattribute\"\xd4\x01\n" +
+	"\tattribute\x18\x01 \x01(\v2\x13.core.AttributeInfoR\tattribute\"\xfc\x01\n" +
 	"\x16UpdateAttributeRequest\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12\x0e\n" +
@@ -6812,10 +6872,12 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"color_code\x18\x04 \x01(\tH\x01R\tcolorCode\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"sort_order\x18\x05 \x01(\x05H\x02R\tsortOrder\x88\x01\x01B\b\n" +
+	"sort_order\x18\x05 \x01(\x05H\x02R\tsortOrder\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\x06 \x01(\tH\x03R\x06status\x88\x01\x01B\b\n" +
 	"\x06_valueB\r\n" +
 	"\v_color_codeB\r\n" +
-	"\v_sort_order\"L\n" +
+	"\v_sort_orderB\t\n" +
+	"\a_status\"L\n" +
 	"\x17UpdateAttributeResponse\x121\n" +
 	"\tattribute\x18\x01 \x01(\v2\x13.core.AttributeInfoR\tattribute\"I\n" +
 	"\x16DeleteAttributeRequest\x12\x1f\n" +
@@ -7439,6 +7501,7 @@ func file_core_core_accounts_carriers_proto_init() {
 	file_core_core_accounts_carriers_proto_msgTypes[35].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[39].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[41].OneofWrappers = []any{}
+	file_core_core_accounts_carriers_proto_msgTypes[45].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[47].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[58].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[59].OneofWrappers = []any{}

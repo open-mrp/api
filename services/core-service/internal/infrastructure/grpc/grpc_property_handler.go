@@ -39,9 +39,10 @@ func (h *gRPCHandler) ListProperties(ctx context.Context, req *pb.ListProperties
 	}
 
 	params := domain.ListPropertiesParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:          req.Cursor,
+		Limit:           req.Limit,
+		Query:           req.Query,
+		ItemCategoryIDs: req.ItemCategoryIds,
 	}
 
 	result, apiErr := h.propertySvc.ListProperties(ctx, params, req.Includes)

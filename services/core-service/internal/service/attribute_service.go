@@ -214,12 +214,12 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 
 			txRepo := txSvc.repos.NewAttributeRepo()
 
-			exists, apiErr := txRepo.ExistsByValueInAccount(txCtx, params.AccountID, params.Value, nil)
+			exists, apiErr := txRepo.ExistsByValueInProperty(txCtx, params.PropertyID, params.Value, nil)
 			if apiErr != nil {
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("Attribute %s already exists.", params.Value))
+				return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("This property already has an attribute %q.", params.Value))
 			}
 
 			count, apiErr := txRepo.CountByProperty(txCtx, params.PropertyID, params.AccountID)
@@ -329,12 +329,12 @@ func (s *attributeSvcImpl) UpdateAttribute(ctx context.Context, params domain.Up
 			}
 
 			if params.Value != nil {
-				exists, apiErr := txRepo.ExistsByValueInAccount(txCtx, params.AccountID, *params.Value, &params.AttributeID)
+				exists, apiErr := txRepo.ExistsByValueInProperty(txCtx, params.PropertyID, *params.Value, &params.AttributeID)
 				if apiErr != nil {
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("Attribute name \"%s\" already taken.", *params.Value))
+					return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("This property already has an attribute %q.", *params.Value))
 				}
 			}
 
@@ -429,6 +429,10 @@ func (s *attributeSvcImpl) DeleteAttribute(ctx context.Context, params domain.De
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *attributeSvcImpl) *apierror.APIError {
+		if apiErr := domain.AttributeReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), attribute.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAttribute, attribute.ID, params.AccountID, attribute); apiErr != nil {
 			return apiErr
 		}

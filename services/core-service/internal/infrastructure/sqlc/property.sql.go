@@ -373,6 +373,13 @@ AND (
     OR property.name LIKE ?
 )
 AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_categories_properties icp
+        WHERE icp.B = property.id AND icp.A IN (/*SLICE:item_category_ids*/?)
+    )
+)
+AND (
     ? IS NULL
     OR property.created_at > ?
     OR (property.created_at = ? AND property.id > ?)
@@ -382,11 +389,13 @@ LIMIT ?
 `
 
 type ListPropertiesBackwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
+	AccountID                 string
+	SearchQuery               sql.NullString
+	IncludeItemCategoryFilter interface{}
+	ItemCategoryIds           []string
+	CursorCreatedAt           sql.NullTime
+	CursorID                  sql.NullString
+	Limit                     int32
 }
 
 type ListPropertiesBackwardRow struct {
@@ -399,16 +408,26 @@ type ListPropertiesBackwardRow struct {
 }
 
 func (q *Queries) ListPropertiesBackward(ctx context.Context, arg ListPropertiesBackwardParams) ([]ListPropertiesBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPropertiesBackward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listPropertiesBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeItemCategoryFilter)
+	if len(arg.ItemCategoryIds) > 0 {
+		for _, v := range arg.ItemCategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", strings.Repeat(",?", len(arg.ItemCategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -452,6 +471,13 @@ AND (
     OR property.name LIKE ?
 )
 AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_categories_properties icp
+        WHERE icp.B = property.id AND icp.A IN (/*SLICE:item_category_ids*/?)
+    )
+)
+AND (
     ? IS NULL
     OR property.created_at < ?
     OR (property.created_at = ? AND property.id < ?)
@@ -461,11 +487,13 @@ LIMIT ?
 `
 
 type ListPropertiesForwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
+	AccountID                 string
+	SearchQuery               sql.NullString
+	IncludeItemCategoryFilter interface{}
+	ItemCategoryIds           []string
+	CursorCreatedAt           sql.NullTime
+	CursorID                  sql.NullString
+	Limit                     int32
 }
 
 type ListPropertiesForwardRow struct {
@@ -478,16 +506,26 @@ type ListPropertiesForwardRow struct {
 }
 
 func (q *Queries) ListPropertiesForward(ctx context.Context, arg ListPropertiesForwardParams) ([]ListPropertiesForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPropertiesForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listPropertiesForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeItemCategoryFilter)
+	if len(arg.ItemCategoryIds) > 0 {
+		for _, v := range arg.ItemCategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", strings.Repeat(",?", len(arg.ItemCategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

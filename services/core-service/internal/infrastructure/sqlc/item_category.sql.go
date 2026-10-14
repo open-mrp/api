@@ -110,6 +110,16 @@ func (q *Queries) DeleteItemCategory(ctx context.Context, arg DeleteItemCategory
 	return q.db.ExecContext(ctx, deleteItemCategory, arg.ID, arg.AccountID)
 }
 
+const deleteItemCategoryProperties = `-- name: DeleteItemCategoryProperties :exec
+DELETE FROM _item_categories_properties
+WHERE A = ?
+`
+
+func (q *Queries) DeleteItemCategoryProperties(ctx context.Context, itemCategoryID string) error {
+	_, err := q.db.ExecContext(ctx, deleteItemCategoryProperties, itemCategoryID)
+	return err
+}
+
 const deleteItemCategoryProperty = `-- name: DeleteItemCategoryProperty :exec
 DELETE FROM _item_categories_properties
 WHERE A = ? AND B = ?
@@ -821,6 +831,7 @@ SELECT
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
 WHERE icp.A = ?
+ORDER BY p.name, p.id
 `
 
 type ListItemCategoryPropertiesRow struct {
@@ -868,7 +879,7 @@ SELECT
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
 WHERE icp.A IN (/*SLICE:item_category_ids*/?)
-ORDER BY icp.A, p.name
+ORDER BY icp.A, p.name, p.id
 `
 
 type ListItemCategoryPropertiesForCategoriesRow struct {

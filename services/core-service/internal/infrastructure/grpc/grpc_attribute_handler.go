@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -15,14 +16,25 @@ func attributeToProto(a *domain.Attribute) *pb.AttributeInfo {
 		return nil
 	}
 	return &pb.AttributeInfo{
-		Id:        a.ID,
-		Value:     a.Value,
-		ColorCode: a.ColorCode,
-		SortOrder: a.SortOrder,
-		IsPublic:  a.IsPublic,
-		CreatedAt: timestamppb.New(a.CreatedAt),
-		UpdatedAt: timestamppb.New(a.UpdatedAt),
+		Id:         a.ID,
+		Value:      a.Value,
+		ColorCode:  a.ColorCode,
+		SortOrder:  a.SortOrder,
+		IsPublic:   a.IsPublic,
+		CreatedAt:  timestamppb.New(a.CreatedAt),
+		UpdatedAt:  timestamppb.New(a.UpdatedAt),
+		PropertyId: a.PropertyID,
+		Status:     string(constants.ArchiveStatusFromIsActive(a.IsActive)),
 	}
+}
+
+// archiveStatusIsActive is the is_active a request's optional status sets; nil leaves it unset.
+func archiveStatusIsActive(status *string) *bool {
+	if status == nil {
+		return nil
+	}
+	active := constants.ArchiveStatus(*status).IsActive()
+	return &active
 }
 
 func (h *gRPCHandler) ListAttributes(ctx context.Context, req *pb.ListAttributesRequest) (*pb.ListAttributesResponse, error) {
@@ -35,6 +47,7 @@ func (h *gRPCHandler) ListAttributes(ctx context.Context, req *pb.ListAttributes
 		Cursor:     req.Cursor,
 		Limit:      req.Limit,
 		Query:      req.Query,
+		IsActive:   req.IsActive,
 	}
 
 	result, apiErr := h.attributeSvc.ListAttributes(ctx, params)
@@ -86,6 +99,7 @@ func (h *gRPCHandler) CreateAttribute(ctx context.Context, req *pb.CreateAttribu
 		Value:      req.Value,
 		ColorCode:  req.ColorCode,
 		SortOrder:  req.SortOrder,
+		IsActive:   req.Status == nil || constants.ArchiveStatus(*req.Status).IsActive(),
 	}
 
 	attribute, apiErr := h.attributeSvc.CreateAttribute(ctx, params)
@@ -112,6 +126,7 @@ func (h *gRPCHandler) UpdateAttribute(ctx context.Context, req *pb.UpdateAttribu
 		Value:       req.Value,
 		ColorCode:   req.ColorCode,
 		SortOrder:   req.SortOrder,
+		IsActive:    archiveStatusIsActive(req.Status),
 	}
 
 	attribute, apiErr := h.attributeSvc.UpdateAttribute(ctx, params)

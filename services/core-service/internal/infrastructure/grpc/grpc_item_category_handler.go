@@ -141,6 +141,7 @@ func (h *gRPCHandler) CreateItemCategory(ctx context.Context, req *pb.CreateItem
 		Name:                 req.Name,
 		ItemCategoryTypeCode: req.Type,
 		UnitGroupID:          req.UnitGroupId,
+		PropertyIDs:          req.PropertyIds,
 		Includes:             req.Includes,
 	}
 
@@ -167,6 +168,10 @@ func (h *gRPCHandler) UpdateItemCategory(ctx context.Context, req *pb.UpdateItem
 		Name:           req.Name,
 		Notes:          req.Notes,
 		Includes:       req.Includes,
+	}
+	if req.SetPropertyIds {
+		ids := req.PropertyIds
+		params.PropertyIDs = &ids
 	}
 
 	itemCategory, apiErr := h.itemCategorySvc.UpdateItemCategory(ctx, params)

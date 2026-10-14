@@ -32,8 +32,6 @@ func (s *propertySvcImpl) asyncBulkDeps() asyncBulkDeps {
 // with a stored value needs the DB, so the write reports that one.
 func validateBulkUpsertPropertyRows(rows []domain.UpsertPropertyParams) *apierror.APIError {
 	nameInputSpace := make(map[string]struct{}, len(rows))
-	// One value belongs to one property per account, so the first row to claim it owns it.
-	propertyByValue := make(map[string]string)
 	var rowErrs apierror.RowErrors
 
 	for i, property := range rows {
@@ -58,12 +56,6 @@ func validateBulkUpsertPropertyRows(rows []domain.UpsertPropertyParams) *apierro
 				continue
 			}
 			valueInputSpace[lowerValue] = struct{}{}
-
-			if owner, claimed := propertyByValue[lowerValue]; claimed && !strings.EqualFold(owner, property.Name) {
-				rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("value %q is already used under property %q in this request", attribute.Value, owner))
-				continue
-			}
-			propertyByValue[lowerValue] = property.Name
 		}
 	}
 
@@ -80,7 +72,7 @@ func resolveBulkUpsertPropertyRows(_ context.Context, _ domain.RepoFactory, _ st
 		attributes := make([]domain.ResolvedUpsertPropertyAttribute, 0, len(property.Attributes))
 		for _, attribute := range property.Attributes {
 			value := strings.TrimSpace(attribute.Value)
-			colorCode := attributeColorFor(name, value)
+			colorCode := string(constants.ColorDefault)
 			if attribute.ColorCode != nil {
 				colorCode = *attribute.ColorCode
 			}
@@ -141,8 +133,6 @@ type bulkUpsertPropertyState struct {
 	attributeValuesByProperty map[string]map[string]struct{}
 	// gives each new attribute its next sort order.
 	attributeCountByProperty map[string]int32
-	// owns the account-wide value uniqueness check, keyed by lower-cased value.
-	propertyNameByValue map[string]string
 }
 
 // reads what the rows are matched and checked against, three queries for the whole batch
@@ -182,28 +172,10 @@ func loadBulkUpsertPropertyState(txCtx context.Context, txRepos domain.RepoFacto
 		}
 	}
 
-	var incomingValues []string
-	for _, row := range rows {
-		for _, attribute := range row.Attributes {
-			incomingValues = append(incomingValues, attribute.Value)
-		}
-	}
-	propertyNameByValue := make(map[string]string, len(incomingValues))
-	if len(incomingValues) > 0 {
-		matches, apiErr := attributeRepo.FindByTextsInAccount(txCtx, accountID, incomingValues)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		for _, match := range matches {
-			propertyNameByValue[strings.ToLower(strings.TrimSpace(match.Text))] = match.PropertyName
-		}
-	}
-
 	return &bulkUpsertPropertyState{
 		propertyByName:            propertyByName,
 		attributeValuesByProperty: attributeValuesByProperty,
 		attributeCountByProperty:  attributeCountByProperty,
-		propertyNameByValue:       propertyNameByValue,
 	}, nil
 }
 
@@ -259,15 +231,10 @@ func writeRowAttributesInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 	}
 
 	attributeRepo := txRepos.NewAttributeRepo()
-	for j, attribute := range row.Attributes {
+	for _, attribute := range row.Attributes {
 		lowerValue := strings.ToLower(attribute.Value)
 		if _, defined := values[lowerValue]; defined {
 			continue
-		}
-
-		// One value belongs to one property per account; the single create path 409s too.
-		if owner, taken := state.propertyNameByValue[lowerValue]; taken && !strings.EqualFold(owner, row.Name) {
-			return apierror.NewConflictErrorWithParam(fmt.Sprintf("properties[%d].attributes[%d].value", rowIndex, j), fmt.Sprintf("Attribute value %q already exists under property %q.", attribute.Value, owner))
 		}
 
 		attributeID, apiErr := id.GenID(id.AttributeIDPrefix, nil)
@@ -281,6 +248,7 @@ func writeRowAttributesInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 			AccountID:  accountID,
 			ColorCode:  attribute.ColorCode,
 			SortOrder:  state.attributeCountByProperty[propertyID],
+			IsActive:   true,
 		})
 		if apiErr != nil {
 			return apiErr
@@ -297,7 +265,6 @@ func writeRowAttributesInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 		}
 
 		values[lowerValue] = struct{}{}
-		state.propertyNameByValue[lowerValue] = row.Name
 	}
 
 	return nil
@@ -356,11 +323,11 @@ func (s *propertySvcImpl) exportSpec() exportSpec[*domain.Property, domain.Expor
 			{Header: "Name", Key: "name", Width: 28},
 			{
 				Header: "Attribute", Key: "attribute", Width: 28,
-				Note: `OPTIONAL. One selectable value per row, listed under its property. Values are created if they do not already exist, and must be unique across the account.`,
+				Note: `OPTIONAL. One selectable value per row, listed under its property. Values are created if they do not already exist, and are unique within their property.`,
 			},
 			{
 				Header: "Color", Key: "color", Width: 14,
-				Note: `OPTIONAL. Swatch color for the attribute on the same row. One of: blue, brown, gray, green, orange, pink, purple, red, yellow, default. Assigned automatically when blank.`,
+				Note: `OPTIONAL. Swatch color for the attribute on the same row. One of: blue, brown, gray, green, orange, pink, purple, red, yellow, default. Blank means default.`,
 			},
 		},
 

@@ -465,6 +465,7 @@ type Attribute struct {
 	ColorCode  string
 	AccountID  string
 	IsPublic   bool
+	IsActive   bool
 }
 
 type AuditEvent struct {

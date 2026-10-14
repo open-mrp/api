@@ -117,6 +117,10 @@ VALUES (sqlc.arg('item_category_id'), sqlc.arg('property_id'));
 INSERT IGNORE INTO _item_categories_properties (A, B)
 VALUES (sqlc.arg('item_category_id'), sqlc.arg('property_id'));
 
+-- name: DeleteItemCategoryProperties :exec
+DELETE FROM _item_categories_properties
+WHERE A = sqlc.arg('item_category_id');
+
 -- name: DeleteItemCategoryProperty :exec
 DELETE FROM _item_categories_properties
 WHERE A = sqlc.arg('item_category_id') AND B = sqlc.arg('property_id');
@@ -136,7 +140,8 @@ SELECT
     p.updated_at
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
-WHERE icp.A = sqlc.arg('item_category_id');
+WHERE icp.A = sqlc.arg('item_category_id')
+ORDER BY p.name, p.id;
 
 -- name: ListItemCategoryPropertiesForCategories :many
 SELECT
@@ -148,7 +153,7 @@ SELECT
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
 WHERE icp.A IN (sqlc.slice('item_category_ids'))
-ORDER BY icp.A, p.name;
+ORDER BY icp.A, p.name, p.id;
 
 -- name: CountUnitGroupVisibleToAccount :one
 SELECT COUNT(*) FROM unit_group

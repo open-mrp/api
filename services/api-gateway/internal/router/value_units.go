@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/versiontransforms"
+
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/include"
@@ -29,8 +31,22 @@ func newGroupRegistry() *groupRegistry {
 func (r *groupRegistry) RegisterGroup(group *apiendpoint.APIEndpointGroup) {
 	for _, ep := range group.Endpoints {
 		fillHandlerUnits(ep)
+		registerRouteIncludes(ep)
 	}
 	r.Registry.RegisterGroup(group)
+}
+
+// registerRouteIncludes tells the version transforms which include keys the endpoint's route offers.
+func registerRouteIncludes(ep apiendpoint.APIEndpointer) {
+	v := reflect.ValueOf(ep)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		return
+	}
+	config, ok := v.Elem().FieldByName("IncludeConfig").Interface().(*apiendpoint.IncludeConfig)
+	if !ok || config == nil {
+		return
+	}
+	versiontransforms.RegisterRouteIncludes(ep.GetRoute(), config.AllowedKeys())
 }
 
 var (

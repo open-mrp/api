@@ -10,7 +10,6 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
@@ -29,7 +28,7 @@ type ListMemoriesRequest struct {
 	EntityType *string `query:"entity_type"`
 }
 
-var _ contracts.DocumentedType = (*ListMemoriesRequest)(nil)
+var _ apiexample.Documented = (*ListMemoriesRequest)(nil)
 
 func (*ListMemoriesRequest) SchemaExample() any {
 	category := constants.AgentMemoryCategoryPreference

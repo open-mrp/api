@@ -11,8 +11,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/open-mrp/api/shared/contracts"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // noAccountHeaderGroups are groups where the OpenMRP-Account-ID header should be omitted.
@@ -411,11 +411,11 @@ func getExampleBody(reqType reflect.Type) string {
 
 	// Check if the type implements DocumentedType (SchemaExample)
 	ptrType := reflect.PointerTo(reqType)
-	if !ptrType.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
+	if !ptrType.Implements(reflect.TypeFor[apiexample.Documented]()) {
 		return ""
 	}
 
-	v := reflect.New(reqType).Interface().(contracts.DocumentedType)
+	v := reflect.New(reqType).Interface().(apiexample.Documented)
 	example := v.SchemaExample()
 	if example == nil {
 		return ""

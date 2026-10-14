@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
@@ -51,7 +51,7 @@ type ListItemsRequest struct {
 	CustomerIDs []string `query:"customer_ids"`
 }
 
-var _ contracts.DocumentedType = (*ListItemsRequest)(nil)
+var _ apiexample.Documented = (*ListItemsRequest)(nil)
 
 // SchemaExample aligns list filters with SampleItem for OpenAPI documentation.
 func (*ListItemsRequest) SchemaExample() any {

@@ -8,9 +8,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -28,7 +28,7 @@ type ListHubspotSyncRecordsRequest struct {
 	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
 }
 
-var _ contracts.DocumentedType = (*ListHubspotSyncRecordsRequest)(nil)
+var _ apiexample.Documented = (*ListHubspotSyncRecordsRequest)(nil)
 
 // SchemaExample documents this endpoint's list query parameters for OpenAPI. The cursor keysets on the record's augno_id, so it is a string cursor rather than the id-based one PaginationRequest documents.
 func (*ListHubspotSyncRecordsRequest) SchemaExample() any {

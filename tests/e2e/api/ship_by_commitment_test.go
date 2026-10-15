@@ -37,7 +37,7 @@ func leadTimeCustomer(t *testing.T, namePrefix string, leadTimeDays *int, accoun
 		body["group_id"] = accountGroupID
 	}
 
-	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, respBody, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, respBody)
 	customerID := jsonField(parseJSON(respBody), "id")
@@ -242,7 +242,7 @@ func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *tes
 	require.Equal(t, 7, committedRuleDays(t, order))
 
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"lead_time_days": 90}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"lead_time_days": 90}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, patchStatus, 500, "customer update must not 5xx: %s", string(patchBody))
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -324,7 +324,7 @@ func TestCustomerLeadTime_ClearingReturnsCustomerToItsGroup(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-lt-clear-cust", ptrInt(5), groupID)
 
 	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"lead_time_days": nil}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"lead_time_days": nil}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "clearing must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -346,7 +346,7 @@ func TestCustomerLeadTime_OmittingOnUpdatePreservesIt(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-lt-preserve", ptrInt(12), "")
 
 	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"note": "unrelated edit"}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"note": "unrelated edit"}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "update must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)

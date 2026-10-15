@@ -58,7 +58,7 @@ const allCustomerIncludes = "type,defaults.payment_term,defaults.shipping_term,d
 func assertCustomerIncludedFieldsPopulated(t *testing.T, got map[string]any) {
 	t.Helper()
 
-	if typeGroup := jsonObject(got, "type"); typeGroup != nil {
+	if typeGroup := jsonObject(got, "group"); typeGroup != nil {
 		assert.NotEmpty(t, jsonField(typeGroup, "type"), "type.type must not be empty")
 		assert.NotEmpty(t, jsonField(typeGroup, "commission_policy"), "type.commission_policy must not be empty")
 		assert.NotEmpty(t, jsonField(typeGroup, "freight_policy"), "type.freight_policy must not be empty")
@@ -103,7 +103,7 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	payload["default_priority"] = SeedPriorityCode
 	status, body, err := apiClient.Post(
 		customersPath+"?include="+allCustomerIncludes,
-		payload,
+		forgeCustomerWrite(payload),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	got := parseJSON(body)
 	assertCustomerIncludedFieldsPopulated(t, got)
 
-	p9Client().Delete(customersPath + "/" + jsonField(got, "id"))
+	apiClient.Delete(customersPath + "/" + jsonField(got, "id"))
 }
 
 func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
@@ -120,14 +120,14 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	name := uniqueName("e2e-cust-noempty-u")
 	updPayload := validCustomerBody(name)
 	updPayload["default_priority"] = SeedPriorityCode
-	createStatus, createBody, err := p9Client().Post(customersPath, updPayload, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(updPayload), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
 	patchStatus, patchBody, err := apiClient.Patch(
 		customersPath+"/"+id+"?include="+allCustomerIncludes,
-		map[string]any{"note": "verify enum fields"},
+		forgeCustomerWrite(map[string]any{"note": "verify enum fields"}),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	got := parseJSON(patchBody)
 	assertCustomerIncludedFieldsPopulated(t, got)
 
-	p9Client().Delete(customersPath + "/" + id)
+	apiClient.Delete(customersPath + "/" + id)
 }
 
 // ──────────────────────────────────────────────

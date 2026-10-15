@@ -424,6 +424,11 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 			if apiErr != nil {
 				return apiErr
 			}
+			if slices.Contains(params.Includes, customerIncludeNotificationRecipients) {
+				if apiErr := txSvc.loadNotificationRecipients(txCtx, params.OwnerAccountID, result); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(nil, result)
 
@@ -667,6 +672,11 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, customerAuditIncludes(params.Includes))
 			if apiErr != nil {
 				return apiErr
+			}
+			if slices.Contains(params.Includes, customerIncludeNotificationRecipients) {
+				if apiErr := txSvc.loadNotificationRecipients(txCtx, params.OwnerAccountID, result); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			changes := audit.ComputeChanges(old, result)

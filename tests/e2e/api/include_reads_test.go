@@ -255,7 +255,7 @@ func TestIncludeReads_CustomerInvoicesShowTheParentAccount(t *testing.T) {
 	got := listedRow(t, reader, path, url.Values{"q": {jsonField(want, "number")}}, jsonField(want, "id"), includes...)
 	assertSameIncludes(t, want, got, path, includes...)
 
-	requireRefusedRead(t, reader, accountsPath+"/"+jsonField(jsonObject(want, "parent_account"), "id"))
+	requireRefusedRead(t, reader, accountsPath+"/"+jsonField(jsonObject(want, "parent_customer"), "id"))
 }
 
 func TestIncludeReads_ProductionStepReaderGetsItemsMachinesStationAndDepartment(t *testing.T) {
@@ -349,7 +349,7 @@ func TestIncludeReads_WriteIncludesNeedOnlyTheWritePermission(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	want := parseJSON(mustGetAs(t, apiClient, path, params))
-	assert.Equal(t, "e2e include write", jsonField(want, "note"))
+	assert.Equal(t, "e2e include write", jsonField(want, "instructions"))
 	assertSameIncludes(t, want, parseJSON(raw), "the patched customer", includes...)
 
 	reader := customRoleClient(t, "customers:read")

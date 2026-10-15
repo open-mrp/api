@@ -15,7 +15,7 @@ const customersPath = "/v1/sales/customers"
 
 func TestListCustomers_ReturnsSeededData(t *testing.T) {
 	t.Parallel()
-	list, _, err := p9Client().GetList(customersPath, nil)
+	list, _, err := apiClient.GetList(customersPath, nil)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 seeded customer")
 
@@ -27,7 +27,7 @@ func TestListCustomers_ReturnsSeededData(t *testing.T) {
 
 func TestListCustomers_SearchByName(t *testing.T) {
 	t.Parallel()
-	list, _, err := p9Client().GetList(customersPath, url.Values{"q": {"Global"}})
+	list, _, err := apiClient.GetList(customersPath, url.Values{"q": {"Global"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Global' should return at least 1 result")
 
@@ -42,14 +42,14 @@ func TestListCustomers_SearchByName(t *testing.T) {
 
 func TestListCustomers_SearchNoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := p9Client().GetList(customersPath, url.Values{"q": {"zzzznotacustomer99999"}})
+	list, _, err := apiClient.GetList(customersPath, url.Values{"q": {"zzzznotacustomer99999"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Nonsense search should return empty data")
 }
 
 func TestListCustomers_FilterByCustomerGroup_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := p9Client().GetList(customersPath, url.Values{
+	list, _, err := apiClient.GetList(customersPath, url.Values{
 		"customer_group_ids": {"acgp_00000000000000000000000000"},
 	})
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestListCustomers_FilterByCustomerGroup_NoResults(t *testing.T) {
 
 func TestListCustomers_FilterByCustomerGroup(t *testing.T) {
 	t.Parallel()
-	list, _, err := p9Client().GetList(customersPath, url.Values{
+	list, _, err := apiClient.GetList(customersPath, url.Values{
 		"customer_group_ids": {SeedCustomerGroupID},
 	})
 	require.NoError(t, err)

@@ -129,7 +129,7 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 
 	body := validCustomerBody(uniqueName("e2e-forge-carr-archcust"))
 	customerDefaults(body)["carrier_id"] = jsonField(carrier, "id")
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
@@ -144,7 +144,7 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	status, resp, err = apiClient.Patch(carriersPath+"/"+jsonField(live, "id"), map[string]any{"status": "archived"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
-	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"name": uniqueName("e2e-forge-carr-keep-u")}, newIdempotencyKey())
+	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"name": uniqueName("e2e-forge-carr-keep-u")}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
 	carrierID, _ := customerDefaultRouting(t, customerID)
@@ -278,7 +278,7 @@ func TestForgeServiceLevels_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	body := validCustomerBody(uniqueName("e2e-forge-sl-archcust"))
 	customerDefaults(body)["carrier_id"] = carrierID
 	customerDefaults(body)["service_level_id"] = archivedID
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")

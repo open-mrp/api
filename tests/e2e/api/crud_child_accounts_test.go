@@ -24,8 +24,8 @@ func childEntry(list *ListResponse, accountID string) map[string]any {
 // (the parent customer) and links another of its customers beneath it.
 func TestChildAccounts_ASellerLinksAChildUnderItsCustomer(t *testing.T) {
 	t.Parallel()
-	parentID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-head-office"))), "id")
-	child := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-store")))
+	parentID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-head-office"))), "id")
+	child := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-store")))
 	childID := jsonField(child, "id")
 	asParent := apiClient.WithAccountID(parentID)
 
@@ -65,7 +65,7 @@ func TestChildAccounts_ASellerLinksAChildUnderItsCustomer(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, childEntry(list, childID), "an unlinked child leaves its parent's list")
 
-	status, body, err = p9Client().GetListRaw(customersPath+"/"+childID, nil)
+	status, body, err = apiClient.GetListRaw(customersPath+"/"+childID, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status, "unlinking leaves the customer: %s", body)
 }
@@ -73,9 +73,9 @@ func TestChildAccounts_ASellerLinksAChildUnderItsCustomer(t *testing.T) {
 // Moving a child to another parent takes it out of the first parent's list.
 func TestChildAccounts_ARelinkMovesTheChild(t *testing.T) {
 	t.Parallel()
-	first := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-parent-a"))), "id")
-	second := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-parent-b"))), "id")
-	childID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-moved"))), "id")
+	first := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-parent-a"))), "id")
+	second := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-parent-b"))), "id")
+	childID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-moved"))), "id")
 
 	status, body, err := apiClient.WithAccountID(first).Put(childAccountsPath+"/"+childID, nil)
 	require.NoError(t, err)
@@ -104,8 +104,8 @@ func TestChildAccounts_ARelinkMovesTheChild(t *testing.T) {
 // An account cannot become a child of its own child.
 func TestChildAccounts_ACustomerCannotParentItsParent(t *testing.T) {
 	t.Parallel()
-	parentID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cycle-parent"))), "id")
-	childID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cycle-child"))), "id")
+	parentID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cycle-parent"))), "id")
+	childID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cycle-child"))), "id")
 
 	status, body, err := apiClient.WithAccountID(parentID).Put(childAccountsPath+"/"+childID, nil)
 	require.NoError(t, err)
@@ -121,8 +121,8 @@ func TestChildAccounts_ACustomerCannotParentItsParent(t *testing.T) {
 // not one of the seller's customers cannot be linked.
 func TestChildAccounts_AreTheSellersOwn(t *testing.T) {
 	t.Parallel()
-	parentID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-own-parent"))), "id")
-	childID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-own-child"))), "id")
+	parentID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-own-parent"))), "id")
+	childID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-own-child"))), "id")
 	status, body, err := apiClient.WithAccountID(parentID).Put(childAccountsPath+"/"+childID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

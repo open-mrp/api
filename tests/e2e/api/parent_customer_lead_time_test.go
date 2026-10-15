@@ -194,7 +194,7 @@ func setCustomerLeadTime(t *testing.T, customerID string, days *int) {
 	if days != nil {
 		body["lead_time_days"] = *days
 	}
-	status, respBody, err := p9Client().Patch(customersPath+"/"+customerID, body, newIdempotencyKey())
+	status, respBody, err := apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "setting a lead time must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)
@@ -219,13 +219,13 @@ func TestParentCustomerLeadTime_ParentResolvesItsOwn(t *testing.T) {
 func TestParentCustomerLeadTime_IsNotCopiedOntoTheChild(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := p9Client().GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=defaults", nil)
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	defaults, ok := parseJSON(body)["defaults"].(map[string]any)
 	require.True(t, ok, "a customer carries its ordering defaults: %s", string(body))
-	assert.Nil(t, defaults["lead_time_days"], "the child sets nothing of its own")
+	assert.Nil(t, jsonObject(defaults, "lead_time"), "the child sets nothing of its own")
 
 	assert.Equal(t, "13", jsonField(resolveLeadTime(t, leadTimeChildInheritsID), "days"),
 		"while still being committed to its parent's lead time")

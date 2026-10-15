@@ -34,7 +34,7 @@ func storedCustomerExport(t *testing.T, jobID string) (accountID string, slug st
 func TestCustomerExport_RendersThroughAJob(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-customer-export")
-	createAndCleanupP9(t, customersPath, validCustomerBody(name))
+	createAndCleanup(t, customersPath, validCustomerBody(name))
 
 	resp, err := apiClient.DoFull(http.MethodPost, customerExportPath, map[string]any{"q": name}, newIdempotencyKey())
 	require.NoError(t, err)

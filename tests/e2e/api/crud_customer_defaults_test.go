@@ -25,9 +25,9 @@ func addressOn(t *testing.T, client *Client, accountID, name string) string {
 // customer, so another account's address could be attached and then read through the includes.
 func TestCustomers_DefaultAddressMustBeTheCustomers(t *testing.T) {
 	t.Parallel()
-	customerID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-defaults"))), "id")
+	customerID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-defaults"))), "id")
 	own := addressOn(t, apiClient, customerID, uniqueName("e2e-own-dock"))
-	other := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-other"))), "id")
+	other := jsonField(createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-other"))), "id")
 	elsewhere := addressOn(t, apiClient, other, uniqueName("e2e-other-dock"))
 	path := customersPath + "/" + customerID
 
@@ -46,8 +46,8 @@ func TestCustomers_DefaultAddressMustBeTheCustomers(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
-	assert.Equal(t, own, jsonField(jsonObject(got, "bill_to_address"), "id"), "the refused change left the default")
-	assert.Equal(t, own, jsonField(jsonObject(got, "ship_to_address"), "id"))
+	assert.Equal(t, own, jsonField(jsonObject(jsonObject(got, "defaults"), "bill_to_address"), "id"), "the refused change left the default")
+	assert.Equal(t, own, jsonField(jsonObject(jsonObject(got, "defaults"), "ship_to_address"), "id"))
 
 	var linked int
 	require.NoError(t, authDB(t).QueryRow(
@@ -65,15 +65,15 @@ func TestCustomers_DefaultAddressMustBeTheCustomers(t *testing.T) {
 func TestCustomers_RenameIsTheSellersName(t *testing.T) {
 	t.Parallel()
 	original := uniqueName("e2e-cust-rename")
-	customerID := jsonField(createAndCleanupP9(t, customersPath, validCustomerBody(original)), "id")
+	customerID := jsonField(createAndCleanup(t, customersPath, validCustomerBody(original)), "id")
 	renamed := original + " renamed"
 
-	status, body, err := p9Client().Patch(customersPath+"/"+customerID, map[string]any{"name": renamed}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"name": renamed}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, renamed, jsonField(parseJSON(body), "name"))
 
-	status, body, err = p9Client().GetListRaw(customersPath+"/"+customerID, nil)
+	status, body, err = apiClient.GetListRaw(customersPath+"/"+customerID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, renamed, jsonField(parseJSON(body), "name"), "the customer reads by the new name")

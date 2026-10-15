@@ -376,7 +376,7 @@ func TestDashShipments_UpdateSetsEveryDashboardFieldTogetherThenClears(t *testin
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assert.Equal(t, "Leave at dock 4", jsonField(got, "note"))
+	assert.Equal(t, "Leave at dock 4", jsonField(got, "instructions"))
 	assert.Equal(t, "1Z-DASH-ALL", jsonField(got, "master_tracking_number"))
 	assert.Equal(t, number, jsonField(got, "number"), "an unsent number is kept")
 	freight := jsonObject(got, "freight")
@@ -393,7 +393,7 @@ func TestDashShipments_UpdateSetsEveryDashboardFieldTogetherThenClears(t *testin
 	got = parseJSON(body)
 	assert.Nil(t, got["master_tracking_number"], "null clears the tracking number")
 	assert.Nil(t, jsonObject(got, "freight")["service_level"], "null clears the service level")
-	assert.Equal(t, "Leave at dock 4", jsonField(got, "note"), "an unsent note is kept")
+	assert.Equal(t, "Leave at dock 4", jsonField(got, "instructions"), "an unsent note is kept")
 	assert.Equal(t, SeedTransitCarrierID, jsonField(jsonObject(jsonObject(got, "freight"), "carrier"), "id"), "an unsent carrier is kept")
 }
 

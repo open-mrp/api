@@ -13,7 +13,7 @@ import (
 
 func customerDefaultRouting(t *testing.T, customerID string) (carrierID, serviceLevelID string) {
 	t.Helper()
-	status, got := dashCustomersRead(t, p9Client(), customerID, "freight_preferences,freight_preferences.carrier,freight_preferences.service_level")
+	status, got := dashCustomersRead(t, apiClient, customerID, "freight_preferences,freight_preferences.carrier,freight_preferences.service_level")
 	require.Equal(t, 200, status)
 	freight := jsonObject(got, "freight_preferences")
 	require.NotNil(t, freight)
@@ -31,12 +31,12 @@ func TestCustomerServiceLevelOnCarrier_Create(t *testing.T) {
 	t.Parallel()
 
 	body := validCustomerBody(uniqueName("e2e-cust-sl-off"))
-	customerDefaults(body)["service_level_id"] = SeedTransitGroundServiceLevelID
-	status, resp, err := p9Client().Post(customersPath, body, newIdempotencyKey())
+	body["default_service_level_id"] = SeedTransitGroundServiceLevelID
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
-		t.Cleanup(func() { _, _, _ = p9Client().Delete(customersPath + "/" + id) })
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	assertDefaultServiceLevelOffCarrier(t, status, resp, "another carrier's service level")
 

@@ -362,7 +362,7 @@ func TestForgeCustomers_MergeRunsAsAJob(t *testing.T) {
 	require.Equal(t, "completed", jsonField(job, "status"), "%v", job)
 	results := jsonListData(job, "results")
 	require.Len(t, results, 1)
-	assert.Equal(t, targetID, jsonField(results[0].(map[string]any), "id"))
+	assert.Equal(t, targetID, jsonField(jsonObject(results[0].(map[string]any), "resource"), "id"))
 
 	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+sourceID, nil)
 	require.NoError(t, err)

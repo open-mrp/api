@@ -14,13 +14,13 @@ import (
 
 // Request to validate an address.
 type ValidateAddressRequest struct {
-	// First line of the street address.
-	AddressLine1 string `json:"address_line_1" validate:"required"`
-	// Second line of the street address.
-	AddressLine2 field.Optional[string] `json:"address_line_2,omitzero"`
+	// Street address.
+	Line1 string `json:"line_1" validate:"required"`
+	// Apartment, suite, unit or building.
+	Line2 field.Optional[string] `json:"line_2,omitzero"`
 	// City or locality.
 	City string `json:"city" validate:"required"`
-	// State or administrative area.
+	// State, province or region; in the US and Canada, the two-letter code.
 	State string `json:"state" validate:"required"`
 	// Postal or ZIP code.
 	PostalCode string `json:"postal_code" validate:"required"`
@@ -32,34 +32,33 @@ type ValidateAddressRequest struct {
 
 var sampleValidateAddressLine2 = "Suite 400"
 var sampleValidateAddressRequest = &ValidateAddressRequest{
-	AddressLine1: "123 Main St",
-	AddressLine2: field.Some(sampleValidateAddressLine2),
-	City:         "Springfield",
-	State:        "IL",
-	PostalCode:   "62701",
-	Country:      "US",
+	Line1:      "123 Main St",
+	Line2:      field.Some(sampleValidateAddressLine2),
+	City:       "Springfield",
+	State:      "IL",
+	PostalCode: "62701",
+	Country:    "US",
 }
 
 func (*ValidateAddressRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateAddressRequest)
 }
 
-// Checks an address against an address validation service and returns a standardized version of it.
+// Validates an address and returns a standardized version.
 //
-// Nothing is created or modified. Use this before creating or updating an address to confirm it is complete and to pick up corrected values. When the service can standardize the address, `formatted_address` and `components` carry the corrected values, and `validation_messages` explains anything that was inferred, replaced, or could not be confirmed.
+// Nothing is saved. Use it before creating or updating an address to catch missing or misspelled parts.
 type ValidateAddressEndpoint struct{}
 
 func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress] {
 	return (&apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress]{
 		Title:             "Validate Address",
-		Method:            http.MethodPut,
+		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/actions/validate",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		ReadOnly:          true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeValidatedAddress,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {

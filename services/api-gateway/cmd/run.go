@@ -139,6 +139,7 @@ func Run(
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)
 	resourceloaders.SetCoreProductionRunClient(coreClient.ProductionRun)
+	resourceloaders.SetProductionScheduleClient(coreClient.ProductionSchedule)
 	resourceloaders.SetAuthClient(authClient.Client)
 
 	// Billing Service

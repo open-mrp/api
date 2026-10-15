@@ -3,6 +3,7 @@ package accountep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -125,44 +126,7 @@ func portalProfileFromProto(p *pb.PortalProfileInfo) apiresource.PortalProfile {
 		LogoURL:      p.LogoUrl,
 		FaviconURL:   p.FaviconUrl,
 		SupportEmail: p.SupportEmail,
-		Address:      portalProfileAddressFromProto(p.Address),
-	}
-}
-
-func portalProfileAddressFromProto(a *pb.AddressInfo) *apiresource.Address {
-	if a == nil {
-		return nil
-	}
-	addressType := constants.AddressTypeStandard
-	if a.IsDropShip {
-		addressType = constants.AddressTypeDropShip
-	}
-	return &apiresource.Address{
-		ID:          a.Id,
-		Object:      constants.ObjectTypeAddress,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		Type:        addressType,
-		Geolocation: portalProfileGeolocationFromProto(a.Geolocation),
-		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
-	}
-}
-
-func portalProfileGeolocationFromProto(g *pb.GeolocationInfo) *apiresource.Geolocation {
-	if g == nil {
-		return nil
-	}
-	return &apiresource.Geolocation{
-		ID:          g.Id,
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: g.StreetLine_1,
-		StreetLine2: g.StreetLine_2,
-		Locality:    g.Locality,
-		State:       g.State,
-		PostalCode:  g.PostalCode,
-		Country:     g.Country,
+		Address:      resourceloaders.AddressFromInfo(p.Address),
 	}
 }
 

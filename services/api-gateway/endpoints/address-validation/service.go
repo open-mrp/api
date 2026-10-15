@@ -86,8 +86,8 @@ func (m *addressValidationSvcImpl) GetAddressDetails(ctx context.Context, req *R
 
 func (m *addressValidationSvcImpl) ValidateAddress(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {
 	pbReq := &pb.ValidateAddressRequest{
-		AddressLine_1: req.AddressLine1,
-		AddressLine_2: req.AddressLine2.Ptr(),
+		AddressLine_1: req.Line1,
+		AddressLine_2: req.Line2.Ptr(),
 		City:          req.City,
 		State:         req.State,
 		PostalCode:    req.PostalCode,
@@ -137,14 +137,14 @@ func addressComponentsFromProto(c *pb.AddressComponentsInfo) *apiresource.Addres
 		return nil
 	}
 	return &apiresource.AddressComponents{
-		Object:       constants.ObjectTypeAddressComponents,
-		AddressLine1: c.AddressLine_1,
-		AddressLine2: c.AddressLine_2,
-		City:         c.City,
-		State:        c.State,
-		PostalCode:   c.PostalCode,
-		Country:      c.Country,
-		CountryCode:  c.CountryCode,
+		Object:      constants.ObjectTypeAddressComponents,
+		Line1:       c.AddressLine_1,
+		Line2:       c.AddressLine_2,
+		City:        c.City,
+		State:       c.State,
+		PostalCode:  c.PostalCode,
+		Country:     c.Country,
+		CountryCode: c.CountryCode,
 	}
 }
 

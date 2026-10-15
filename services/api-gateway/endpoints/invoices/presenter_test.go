@@ -137,9 +137,7 @@ func TestInvoicePresenterEmbedsBillingAddressAndPaymentTerm(t *testing.T) {
 	assert.Equal(t, "addr_01abc", inv.BillingAddress.ID)
 	assert.Equal(t, constants.AddressTypeDropShip, inv.BillingAddress.Type)
 	assert.Equal(t, &phone, inv.BillingAddress.Phone)
-	require.NotNil(t, inv.BillingAddress.Geolocation)
-	assert.Equal(t, "geo_01abc", inv.BillingAddress.Geolocation.ID)
-	assert.Equal(t, &street, inv.BillingAddress.Geolocation.StreetLine1)
+	assert.Equal(t, &street, inv.BillingAddress.Line1)
 
 	require.NotNil(t, inv.PaymentTerm)
 	assert.Equal(t, "pytm_01abc", inv.PaymentTerm.ID)

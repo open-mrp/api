@@ -43,10 +43,9 @@ func (e *FindContactByEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*Fin
 		ContentType:       "application/json",
 		Route:             "/v1/sales/contacts/actions/find-by-email",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		ReadOnly:          true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
 		}},

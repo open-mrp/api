@@ -60,6 +60,24 @@ func (r *operatingCalendarRepoImpl) Get(ctx context.Context, accountID, calendar
 	return &cal, nil
 }
 
+func (r *operatingCalendarRepoImpl) GetByIDs(ctx context.Context, accountIDs, ids []string) ([]domain.OperatingCalendar, *apierror.APIError) {
+	ctx, span := operatingCalendarRepoTracer.Start(ctx, "repository.operating_calendar.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 || len(accountIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetOperatingCalendarsByIDs(ctx, sqlc.GetOperatingCalendarsByIDsParams{Ids: ids, AccountIds: accountIDs})
+	if err != nil {
+		return nil, tracing.Trace(span, mapCalendarError(err, "Failed to retrieve operating calendars."))
+	}
+	out := make([]domain.OperatingCalendar, len(rows))
+	for i, row := range rows {
+		out[i] = operatingCalendarFromRow(row)
+	}
+	return out, nil
+}
+
 func (r *operatingCalendarRepoImpl) GetByCode(ctx context.Context, accountID, code string) (*domain.OperatingCalendar, *apierror.APIError) {
 	ctx, span := operatingCalendarRepoTracer.Start(ctx, "repository.operating_calendar.get_by_code")
 	defer span.End()

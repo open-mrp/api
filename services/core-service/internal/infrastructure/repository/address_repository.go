@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"fmt"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -439,49 +438,6 @@ func (r *addressRepoImpl) RelinkGeolocation(ctx context.Context, addressID, geol
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	return nil
-}
-
-func (r *addressRepoImpl) CheckAddressNotInUse(ctx context.Context, addressID string) *apierror.APIError {
-	ctx, span := addressRepoTracer.Start(ctx, "repository.address.check_not_in_use")
-	defer span.End()
-
-	// Check sales orders
-	orderNumber, err := r.queries.CheckAddressUsedInSalesOrder(ctx, sqlc.CheckAddressUsedInSalesOrderParams{AddressID: addressID})
-	if err != nil && err != gosql.ErrNoRows {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check address usage in sales orders."))
-	}
-	if err == nil {
-		return apierror.NewValidationError(fmt.Sprintf("Cannot delete address that is used as a billing or shipping address in a sales order: %s", orderNumber))
-	}
-
-	// Check invoices
-	invoiceNumber, err := r.queries.CheckAddressUsedInInvoice(ctx, addressID)
-	if err != nil && err != gosql.ErrNoRows {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check address usage in invoices."))
-	}
-	if err == nil {
-		return apierror.NewValidationError(fmt.Sprintf("Cannot delete address that is used as a billing address in an invoice: %s", invoiceNumber))
-	}
-
-	// Check shipments
-	shipmentNumber, err := r.queries.CheckAddressUsedInShipment(ctx, addressID)
-	if err != nil && err != gosql.ErrNoRows {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check address usage in shipments."))
-	}
-	if err == nil {
-		return apierror.NewValidationError(fmt.Sprintf("Cannot delete address that is used as a shipping address in a shipment: %s", shipmentNumber))
-	}
-
-	// Check account defaults
-	accountName, err := r.queries.CheckAddressUsedAsAccountDefault(ctx, sqlc.CheckAddressUsedAsAccountDefaultParams{AddressID: gosql.NullString{String: addressID, Valid: true}})
-	if err != nil && err != gosql.ErrNoRows {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check address usage as account default."))
-	}
-	if err == nil {
-		return apierror.NewValidationError(fmt.Sprintf("Cannot delete address that is used as a default billing or shipping address in an account: %s", accountName))
-	}
-
 	return nil
 }
 

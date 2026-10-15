@@ -39,10 +39,10 @@ func (*AddressSuggestion) SchemaExample() any {
 type AddressComponents struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_components"`
-	// First line of the street address.
-	AddressLine1 string `json:"address_line_1" validate:"required"`
-	// Second line of the street address.
-	AddressLine2 *string `json:"address_line_2"`
+	// Street address.
+	Line1 string `json:"line_1" validate:"required"`
+	// Apartment, suite, unit or building.
+	Line2 *string `json:"line_2"`
 	// City or locality.
 	City string `json:"city" validate:"required"`
 	// State or administrative area.
@@ -97,13 +97,13 @@ var SampleValidatedAddress = &ValidatedAddress{
 	Status:           constants.AddressValidationStatusValid,
 	FormattedAddress: &sampleValidatedFormattedAddress,
 	Components: &AddressComponents{
-		Object:       constants.ObjectTypeAddressComponents,
-		AddressLine1: "123 Main St",
-		City:         "Springfield",
-		State:        "IL",
-		PostalCode:   "62701",
-		Country:      "United States",
-		CountryCode:  "US",
+		Object:      constants.ObjectTypeAddressComponents,
+		Line1:       "123 Main St",
+		City:        "Springfield",
+		State:       "IL",
+		PostalCode:  "62701",
+		Country:     "United States",
+		CountryCode: "US",
 	},
 	ValidationMessages: []string{},
 }
@@ -115,13 +115,13 @@ func (*ValidatedAddress) SchemaExample() any {
 var SampleAddressDetailsResult = &AddressDetailsResult{
 	Object: constants.ObjectTypeAddressDetailsResult,
 	Address: &AddressComponents{
-		Object:       constants.ObjectTypeAddressComponents,
-		AddressLine1: "123 Main St",
-		City:         "Springfield",
-		State:        "IL",
-		PostalCode:   "62701",
-		Country:      "United States",
-		CountryCode:  "US",
+		Object:      constants.ObjectTypeAddressComponents,
+		Line1:       "123 Main St",
+		City:        "Springfield",
+		State:       "IL",
+		PostalCode:  "62701",
+		Country:     "United States",
+		CountryCode: "US",
 	},
 	FormattedAddress: "123 Main St, Springfield, IL 62701, USA",
 }

@@ -15,7 +15,7 @@ import (
 
 // Creates an address.
 //
-// The address is saved to the account you are acting in, which may be your own account or a customer or supplier account you manage, and can then be used as a billing or shipping address on sales orders, invoices, and shipments.
+// Saved to the account you're acting in: yours, or a customer's or supplier's you manage. Use it as a billing or shipping address on orders, invoices and shipments.
 type CreateAddressEndpoint struct{}
 
 func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address] {
@@ -23,18 +23,21 @@ func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireque
 		Title:             "Create Address",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/sales/addresses",
+		Route:             addressesRoute,
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionCreate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).CreateAddress
 		},
 		LocationFunc: func(resp *apiresource.Address) string {
-			return "/v1/sales/addresses/" + resp.ID
+			return addressesRoute + "/" + resp.ID
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAddress,
+			Fields:     []string{"receive_calendar"},
+		}),
 	})
 }

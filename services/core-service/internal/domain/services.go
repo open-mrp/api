@@ -1849,6 +1849,9 @@ type CreateAccountParams struct {
 type OperatingCalendarSvc interface {
 	ListOperatingCalendars(ctx context.Context, kindCode *string) ([]OperatingCalendar, *apierror.APIError)
 	GetOperatingCalendar(ctx context.Context, calendarID string) (*OperatingCalendar, *apierror.APIError)
+	// BatchGetOperatingCalendarsByIDs resolves the calendars records reference, among the caller's own and the target
+	// account's. Only an internal caller sees calendars; anyone else gets none.
+	BatchGetOperatingCalendarsByIDs(ctx context.Context, ids []string) ([]OperatingCalendar, *apierror.APIError)
 	CreateOperatingCalendar(ctx context.Context, params CreateOperatingCalendarParams) (*OperatingCalendar, *apierror.APIError)
 	UpdateOperatingCalendar(ctx context.Context, params UpdateOperatingCalendarParams) (*OperatingCalendar, *apierror.APIError)
 	// DeleteOperatingCalendar refuses while anything still references the calendar, rather than silently returning every affected customer to Monday-to-Friday.

@@ -8,6 +8,7 @@ import (
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -282,32 +283,21 @@ func shipToFromPickProto(info *pb.PickInfo) *apiresource.Address {
 	if info.ShippingAddressId == "" {
 		return nil
 	}
-	addr := &apiresource.Address{
-		ID:        info.ShippingAddressId,
-		Object:    constants.ObjectTypeAddress,
-		Name:      ptrutil.Deref(info.ShippingAddressName),
-		Phone:     info.ShippingAddressPhone,
-		Email:     info.ShippingAddressEmail,
-		Type:      constants.AddressTypeStandard,
-		CreatedAt: grpcutil.TimestampToTime(info.ShippingAddressCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.ShippingAddressUpdatedAt),
-	}
-	if info.GetShippingAddressIsDropShip() {
-		addr.Type = constants.AddressTypeDropShip
-	}
-	if info.ShippingAddressGeolocationId != nil {
-		addr.Geolocation = &apiresource.Geolocation{
-			ID:          *info.ShippingAddressGeolocationId,
-			Object:      constants.ObjectTypeGeolocation,
-			StreetLine1: info.ShippingAddressStreetLine_1,
-			StreetLine2: info.ShippingAddressStreetLine_2,
-			Locality:    info.ShippingAddressLocality,
-			State:       info.ShippingAddressState,
-			PostalCode:  info.ShippingAddressPostalCode,
-			Country:     ptrutil.Deref(info.ShippingAddressCountry),
-		}
-	}
-	return addr
+	return resourceloaders.NewAddress(resourceloaders.AddressParts{
+		ID:         info.ShippingAddressId,
+		Name:       ptrutil.Deref(info.ShippingAddressName),
+		IsDropShip: info.GetShippingAddressIsDropShip(),
+		Line1:      info.ShippingAddressStreetLine_1,
+		Line2:      info.ShippingAddressStreetLine_2,
+		City:       info.ShippingAddressLocality,
+		State:      info.ShippingAddressState,
+		PostalCode: info.ShippingAddressPostalCode,
+		Country:    ptrutil.Deref(info.ShippingAddressCountry),
+		Phone:      info.ShippingAddressPhone,
+		Email:      info.ShippingAddressEmail,
+		CreatedAt:  grpcutil.TimestampToTime(info.ShippingAddressCreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(info.ShippingAddressUpdatedAt),
+	})
 }
 
 // Builds the pick's freight from the order's carrier selection, denormalized onto the pick so the

@@ -37,6 +37,28 @@ type addressSvcImpl struct {
 
 var addressSvcTracer = tracing.GetTracer("api-gateway.endpoints.addresses.service")
 
+const (
+	addressesRoute = "/v1/core/addresses"
+	addressRoute   = "/v1/core/addresses/{id}"
+)
+
+// addressTypesToDropShip is the drop-ship filter a types[] filter amounts to: nil when it names both types or none.
+func addressTypesToDropShip(types []constants.AddressType) *bool {
+	var standard, dropShip bool
+	for _, t := range types {
+		switch t {
+		case constants.AddressTypeDropShip:
+			dropShip = true
+		case constants.AddressTypeStandard:
+			standard = true
+		}
+	}
+	if standard == dropShip {
+		return nil
+	}
+	return &dropShip
+}
+
 func addressTypeToDropShipPtr(t *constants.AddressType) *bool {
 	if t == nil {
 		return nil
@@ -68,7 +90,7 @@ func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRe
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		DropShip: addressTypeToDropShipPtr(req.Type),
+		DropShip: addressTypesToDropShip(req.Types),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAddressesResponse, error) {
@@ -105,9 +127,9 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 		Email:             req.Email.Ptr(),
 		IsDropShip:        addressTypeToDropShip(req.Type.Ptr()),
 		ReceiveCalendarId: req.ReceiveCalendarID.Ptr(),
-		StreetLine_1:      req.StreetLine1.Ptr(),
-		StreetLine_2:      req.StreetLine2.Ptr(),
-		Locality:          req.Locality.Ptr(),
+		StreetLine_1:      req.Line1.Ptr(),
+		StreetLine_2:      req.Line2.Ptr(),
+		Locality:          req.City.Ptr(),
 		State:             req.State.Ptr(),
 		PostalCode:        req.PostalCode.Ptr(),
 		Country:           req.Country,
@@ -130,9 +152,9 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 		Email:             fieldpb.StringClearableToProto(req.Email),
 		IsDropShip:        addressTypeToDropShipPtr(req.Type.Ptr()),
 		ReceiveCalendarId: fieldpb.StringClearableToProto(req.ReceiveCalendarID),
-		StreetLine_1:      req.StreetLine1.Ptr(),
-		StreetLine_2:      fieldpb.StringClearableToProto(req.StreetLine2),
-		Locality:          req.Locality.Ptr(),
+		StreetLine_1:      req.Line1.Ptr(),
+		StreetLine_2:      fieldpb.StringClearableToProto(req.Line2),
+		Locality:          req.City.Ptr(),
 		State:             req.State.Ptr(),
 		PostalCode:        req.PostalCode.Ptr(),
 		Country:           req.Country.Ptr(),

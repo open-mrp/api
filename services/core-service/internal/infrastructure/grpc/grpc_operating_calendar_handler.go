@@ -72,6 +72,23 @@ func (h *productionScheduleGRPCHandler) GetOperatingCalendar(ctx context.Context
 	return operatingCalendarToProto(calendar), nil
 }
 
+func (h *productionScheduleGRPCHandler) BatchGetOperatingCalendarsByIDs(ctx context.Context, req *pb.BatchGetOperatingCalendarsByIDsRequest) (*pb.ListOperatingCalendarsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	calendars, apiErr := h.operatingCalendarSvc.BatchGetOperatingCalendarsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	out := &pb.ListOperatingCalendarsResponse{Calendars: make([]*pb.OperatingCalendarInfo, 0, len(calendars))}
+	for _, c := range calendars {
+		out.Calendars = append(out.Calendars, operatingCalendarToProto(&c))
+	}
+	return out, nil
+}
+
 func (h *productionScheduleGRPCHandler) CreateOperatingCalendar(ctx context.Context, req *pb.CreateOperatingCalendarRequest) (*pb.OperatingCalendarInfo, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

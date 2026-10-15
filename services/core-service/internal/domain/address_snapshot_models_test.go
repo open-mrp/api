@@ -29,3 +29,15 @@ func TestSnapshotAddress(t *testing.T) {
 
 	assert.Nil(t, domain.SnapshotAddress(nil))
 }
+
+func TestAddressSnapshotClone(t *testing.T) {
+	t.Parallel()
+
+	line := "1 Elm"
+	src := &domain.AddressSnapshot{Name: "Dock", Line1: &line, Country: "US"}
+	got := src.Clone()
+	assert.Equal(t, src, got)
+	*got.Line1 = "2 Oak"
+	assert.Equal(t, "1 Elm", *src.Line1, "the clone shares nothing with its source")
+	assert.Nil(t, (*domain.AddressSnapshot)(nil).Clone())
+}

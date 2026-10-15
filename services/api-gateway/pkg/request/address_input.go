@@ -15,52 +15,43 @@ func init() {
 //
 // A few requests, such as shipping rate estimates, take these same fields for a one-off address that is never saved to the account.
 type AddressInput struct {
-	// Display name of the address.
+	// A label for the address, such as `Main warehouse`.
 	Name string `json:"name" validate:"required,min=1,max=255"`
-	// Phone number associated with the address.
-	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
-	// Email address associated with the address.
-	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// How the address is used.
 	//
-	// - `standard`: a normal shipping or billing address.
-	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
+	// `standard`: a normal billing or shipping address. `drop_ship`: shipped to directly on the customer's behalf, such as an end customer.
 	Type field.Optional[constants.AddressType] `json:"type,omitzero" default:"standard"`
-	// The operating calendar naming the days this dock accepts freight, overriding the customer's own.
-	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
-	// First line of the street address.
-	StreetLine1 field.Optional[string] `json:"street_line_1,omitzero" validate:"omitempty,max=255"`
-	// Second line of the street address.
-	StreetLine2 field.Optional[string] `json:"street_line_2,omitzero" validate:"omitempty,max=255"`
+	// Street address.
+	Line1 field.Optional[string] `json:"line_1,omitzero" validate:"omitempty,max=255"`
+	// Apartment, suite, unit or building.
+	Line2 field.Optional[string] `json:"line_2,omitzero" validate:"omitempty,max=255"`
 	// City or locality.
-	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
-	// State or administrative area.
+	City field.Optional[string] `json:"city,omitzero" validate:"omitempty,max=255"`
+	// State, province or region; in the US and Canada, the two-letter code.
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
-	// Two-letter ISO 3166-1 country code, such as `US`.
-	Country string `json:"country" validate:"required,max=2"`
+	// Two-letter country code (ISO 3166-1 alpha-2), such as `US`.
+	Country string `json:"country" validate:"required,iso3166_1_alpha2"`
+	// Phone number at the address.
+	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
+	// Email address at the address.
+	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
+	// ID of the operating calendar naming the days this location accepts freight.
+	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty" visibility:"internal"`
 }
 
-var sampleAddressPhone = "555-123-4567"
-var sampleAddressEmail = "warehouse@acme.com"
-var sampleAddressStreetLine1 = "123 Main St"
-var sampleAddressStreetLine2 = "Suite 400"
-var sampleAddressLocality = "Springfield"
-var sampleAddressState = "IL"
-var sampleAddressPostalCode = "62701"
-
 var sampleAddressInput = &AddressInput{
-	Name:        "Headquarters",
-	Phone:       field.SomePtr(&sampleAddressPhone),
-	Email:       field.SomePtr(&sampleAddressEmail),
-	Type:        field.Some(constants.AddressTypeStandard),
-	StreetLine1: field.SomePtr(&sampleAddressStreetLine1),
-	StreetLine2: field.SomePtr(&sampleAddressStreetLine2),
-	Locality:    field.SomePtr(&sampleAddressLocality),
-	State:       field.SomePtr(&sampleAddressState),
-	PostalCode:  field.SomePtr(&sampleAddressPostalCode),
-	Country:     "US",
+	Name:       "Headquarters",
+	Type:       field.Some(constants.AddressTypeStandard),
+	Line1:      field.Some("123 Main St"),
+	Line2:      field.Some("Suite 400"),
+	City:       field.Some("Springfield"),
+	State:      field.Some("IL"),
+	PostalCode: field.Some("62701"),
+	Country:    "US",
+	Phone:      field.Some("555-123-4567"),
+	Email:      field.Some("warehouse@acme.com"),
 }
 
 func (*AddressInput) SchemaExample() any {

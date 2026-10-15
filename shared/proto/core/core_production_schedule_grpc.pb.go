@@ -60,6 +60,7 @@ const (
 	CoreProductionScheduleService_DeleteProductionSchedule_FullMethodName                = "/core.CoreProductionScheduleService/DeleteProductionSchedule"
 	CoreProductionScheduleService_ListOperatingCalendars_FullMethodName                  = "/core.CoreProductionScheduleService/ListOperatingCalendars"
 	CoreProductionScheduleService_GetOperatingCalendar_FullMethodName                    = "/core.CoreProductionScheduleService/GetOperatingCalendar"
+	CoreProductionScheduleService_BatchGetOperatingCalendarsByIDs_FullMethodName         = "/core.CoreProductionScheduleService/BatchGetOperatingCalendarsByIDs"
 	CoreProductionScheduleService_CreateOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/CreateOperatingCalendar"
 	CoreProductionScheduleService_UpdateOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/UpdateOperatingCalendar"
 	CoreProductionScheduleService_DeleteOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/DeleteOperatingCalendar"
@@ -148,6 +149,9 @@ type CoreProductionScheduleServiceClient interface {
 	// account settings that select them are the same settings the solver is configured with.
 	ListOperatingCalendars(ctx context.Context, in *ListOperatingCalendarsRequest, opts ...grpc.CallOption) (*ListOperatingCalendarsResponse, error)
 	GetOperatingCalendar(ctx context.Context, in *GetOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
+	// BatchGetOperatingCalendarsByIDs resolves the calendars records reference (an address's receive calendar), among the
+	// caller's own and the target account's. IDs it can't see are left out.
+	BatchGetOperatingCalendarsByIDs(ctx context.Context, in *BatchGetOperatingCalendarsByIDsRequest, opts ...grpc.CallOption) (*ListOperatingCalendarsResponse, error)
 	CreateOperatingCalendar(ctx context.Context, in *CreateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
 	UpdateOperatingCalendar(ctx context.Context, in *UpdateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
 	DeleteOperatingCalendar(ctx context.Context, in *DeleteOperatingCalendarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -524,6 +528,16 @@ func (c *coreProductionScheduleServiceClient) GetOperatingCalendar(ctx context.C
 	return out, nil
 }
 
+func (c *coreProductionScheduleServiceClient) BatchGetOperatingCalendarsByIDs(ctx context.Context, in *BatchGetOperatingCalendarsByIDsRequest, opts ...grpc.CallOption) (*ListOperatingCalendarsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOperatingCalendarsResponse)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_BatchGetOperatingCalendarsByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreProductionScheduleServiceClient) CreateOperatingCalendar(ctx context.Context, in *CreateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(OperatingCalendarInfo)
@@ -664,6 +678,9 @@ type CoreProductionScheduleServiceServer interface {
 	// account settings that select them are the same settings the solver is configured with.
 	ListOperatingCalendars(context.Context, *ListOperatingCalendarsRequest) (*ListOperatingCalendarsResponse, error)
 	GetOperatingCalendar(context.Context, *GetOperatingCalendarRequest) (*OperatingCalendarInfo, error)
+	// BatchGetOperatingCalendarsByIDs resolves the calendars records reference (an address's receive calendar), among the
+	// caller's own and the target account's. IDs it can't see are left out.
+	BatchGetOperatingCalendarsByIDs(context.Context, *BatchGetOperatingCalendarsByIDsRequest) (*ListOperatingCalendarsResponse, error)
 	CreateOperatingCalendar(context.Context, *CreateOperatingCalendarRequest) (*OperatingCalendarInfo, error)
 	UpdateOperatingCalendar(context.Context, *UpdateOperatingCalendarRequest) (*OperatingCalendarInfo, error)
 	DeleteOperatingCalendar(context.Context, *DeleteOperatingCalendarRequest) (*emptypb.Empty, error)
@@ -787,6 +804,9 @@ func (UnimplementedCoreProductionScheduleServiceServer) ListOperatingCalendars(c
 }
 func (UnimplementedCoreProductionScheduleServiceServer) GetOperatingCalendar(context.Context, *GetOperatingCalendarRequest) (*OperatingCalendarInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOperatingCalendar not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) BatchGetOperatingCalendarsByIDs(context.Context, *BatchGetOperatingCalendarsByIDsRequest) (*ListOperatingCalendarsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetOperatingCalendarsByIDs not implemented")
 }
 func (UnimplementedCoreProductionScheduleServiceServer) CreateOperatingCalendar(context.Context, *CreateOperatingCalendarRequest) (*OperatingCalendarInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOperatingCalendar not implemented")
@@ -1476,6 +1496,24 @@ func _CoreProductionScheduleService_GetOperatingCalendar_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreProductionScheduleService_BatchGetOperatingCalendarsByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetOperatingCalendarsByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).BatchGetOperatingCalendarsByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_BatchGetOperatingCalendarsByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).BatchGetOperatingCalendarsByIDs(ctx, req.(*BatchGetOperatingCalendarsByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreProductionScheduleService_CreateOperatingCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateOperatingCalendarRequest)
 	if err := dec(in); err != nil {
@@ -1734,6 +1772,10 @@ var CoreProductionScheduleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetOperatingCalendar",
 			Handler:    _CoreProductionScheduleService_GetOperatingCalendar_Handler,
+		},
+		{
+			MethodName: "BatchGetOperatingCalendarsByIDs",
+			Handler:    _CoreProductionScheduleService_BatchGetOperatingCalendarsByIDs_Handler,
 		},
 		{
 			MethodName: "CreateOperatingCalendar",

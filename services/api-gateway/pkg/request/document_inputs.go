@@ -19,20 +19,20 @@ func init() {
 type AddressSnapshotInput struct {
 	// ID of a saved address to copy. Omit to give the address inline.
 	AddressID field.Optional[string] `json:"address_id,omitzero"`
-	// Name on the address. Required when `address_id` is omitted.
+	// A label for the address, such as `Main warehouse`. Required when `address_id` is omitted.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,min=1,max=255"`
-	// First line of the street address.
+	// Street address.
 	Line1 field.Optional[string] `json:"line_1,omitzero" validate:"omitempty,max=255"`
-	// Second line of the street address.
+	// Apartment, suite, unit or building.
 	Line2 field.Optional[string] `json:"line_2,omitzero" validate:"omitempty,max=255"`
 	// City or locality.
 	City field.Optional[string] `json:"city,omitzero" validate:"omitempty,max=255"`
-	// State or administrative area.
+	// State, province or region; in the US and Canada, the two-letter code.
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
-	// Two-letter ISO 3166-1 country code, such as `US`. Required when `address_id` is omitted.
-	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,len=2"`
+	// Two-letter country code (ISO 3166-1 alpha-2), such as `US`. Required when `address_id` is omitted.
+	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,iso3166_1_alpha2"`
 	// Phone number at the address.
 	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Email address at the address.

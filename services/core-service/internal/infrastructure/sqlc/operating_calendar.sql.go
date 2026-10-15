@@ -285,6 +285,70 @@ func (q *Queries) GetOperatingCalendarClosureByDate(ctx context.Context, arg Get
 	return i, err
 }
 
+const getOperatingCalendarsByIDs = `-- name: GetOperatingCalendarsByIDs :many
+SELECT id, account_id, code, name, operating_calendar_kind_code, days_of_week, cutoff_at, timezone, is_default, created_at, updated_at, deleted_at FROM operating_calendar
+WHERE id IN (/*SLICE:ids*/?) AND account_id IN (/*SLICE:account_ids*/?) AND deleted_at IS NULL
+`
+
+type GetOperatingCalendarsByIDsParams struct {
+	Ids        []string
+	AccountIds []string
+}
+
+func (q *Queries) GetOperatingCalendarsByIDs(ctx context.Context, arg GetOperatingCalendarsByIDsParams) ([]OperatingCalendar, error) {
+	query := getOperatingCalendarsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	if len(arg.AccountIds) > 0 {
+		for _, v := range arg.AccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OperatingCalendar
+	for rows.Next() {
+		var i OperatingCalendar
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Code,
+			&i.Name,
+			&i.OperatingCalendarKindCode,
+			&i.DaysOfWeek,
+			&i.CutoffAt,
+			&i.Timezone,
+			&i.IsDefault,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOperatingCalendarClosures = `-- name: ListOperatingCalendarClosures :many
 SELECT id, account_id, operating_calendar_id, closed_on, name, created_at, updated_at
 FROM operating_calendar_closure

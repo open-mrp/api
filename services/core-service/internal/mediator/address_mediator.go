@@ -150,6 +150,41 @@ func (m *addressMedImpl) Save(ctx context.Context, accountID string, input domai
 	return updated, nil
 }
 
+// Snapshot is the copy a document keeps of the address input gives: the saved address its AddressID names, or the
+// inline fields. nil stays nil. Errors name fields under param, the request field the address was sent in.
+//
+//  1. With an AddressID, return not-found on `<param>.address_id` unless the address is linked to accountID, then copy it.
+//  2. Without one, require a name and a country, and copy the inline fields with the name trimmed.
+func (m *addressMedImpl) Snapshot(ctx context.Context, accountID string, input *domain.AddressSnapshot, param string) (*domain.AddressSnapshot, *apierror.APIError) {
+	ctx, span := addressMedTracer.Start(ctx, "mediator.address.snapshot")
+	defer span.End()
+
+	if input == nil {
+		return nil, nil
+	}
+	if input.AddressID != nil {
+		stored, apiErr := m.repos.NewAddressRepo().Get(ctx, domain.GetAddressParams{AccountID: accountID, AddressID: *input.AddressID})
+		if apiErr != nil {
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, tracing.Trace(span, apierror.NewNotFoundError("No address found with the provided ID.").WithParam(param+".address_id"))
+			}
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return domain.SnapshotAddress(stored), nil
+	}
+
+	snap := input.Clone()
+	if strings.TrimSpace(snap.Country) == "" {
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError(param+".country", fmt.Sprintf("Field '%s.country' is required when no address_id is given.", param)))
+	}
+	name, apiErr := NormalizeAddressName(snap.Name)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr.WithParam(param+".name"))
+	}
+	snap.Name = name
+	return snap, nil
+}
+
 // inlineUpdate is an inline address naming a stored one as update params, once the address is known to be the account's and any new name is valid.
 func (m *addressMedImpl) inlineUpdate(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (domain.UpdateAddressParams, *apierror.APIError) {
 	params := input.UpdateParams(accountID)

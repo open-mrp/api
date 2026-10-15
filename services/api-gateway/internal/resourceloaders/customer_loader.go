@@ -35,10 +35,10 @@ func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror
 		// The addresses come with the customer; stash them so a caller reaching the customer
 		// through an include (a transaction's `customer.bill_to_address`) gets them in full.
 		if c.BillToAddress != nil {
-			meta.Set(constants.ObjectTypeCustomer, c.Id, "bill_to_address", customerAddressFromProto(c.BillToAddress))
+			meta.Set(constants.ObjectTypeCustomer, c.Id, "bill_to_address", CustomerAddressFromProto(c.BillToAddress))
 		}
 		if c.ShipToAddress != nil {
-			meta.Set(constants.ObjectTypeCustomer, c.Id, "ship_to_address", customerAddressFromProto(c.ShipToAddress))
+			meta.Set(constants.ObjectTypeCustomer, c.Id, "ship_to_address", CustomerAddressFromProto(c.ShipToAddress))
 		}
 	}
 	return out, nil
@@ -101,33 +101,22 @@ func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
 	}
 }
 
-func customerAddressFromProto(a *pb.CustomerAddressProto) *apiresource.Address {
-	var geolocation *apiresource.Geolocation
-	if a.Geolocation != nil {
-		geolocation = &apiresource.Geolocation{
-			ID:          a.Geolocation.Id,
-			Object:      constants.ObjectTypeGeolocation,
-			StreetLine1: a.Geolocation.StreetLine_1,
-			StreetLine2: a.Geolocation.StreetLine_2,
-			Locality:    a.Geolocation.Locality,
-			State:       a.Geolocation.State,
-			PostalCode:  a.Geolocation.PostalCode,
-			Country:     a.Geolocation.Country,
-		}
+// CustomerAddressFromProto is a customer's or supplier's default address as the response shows it. nil stays nil.
+func CustomerAddressFromProto(a *pb.CustomerAddressProto) *apiresource.Address {
+	if a == nil {
+		return nil
 	}
-	addressType := constants.AddressTypeStandard
-	if a.IsDropShip {
-		addressType = constants.AddressTypeDropShip
+	parts := AddressParts{
+		ID:         a.Id,
+		Name:       a.Name,
+		IsDropShip: a.IsDropShip,
+		Phone:      a.Phone,
+		Email:      a.Email,
+		CreatedAt:  grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(a.UpdatedAt),
 	}
-	return &apiresource.Address{
-		ID:          a.Id,
-		Object:      constants.ObjectTypeAddress,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		Type:        addressType,
-		Geolocation: geolocation,
-		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
+	if g := a.Geolocation; g != nil {
+		parts.Line1, parts.Line2, parts.City, parts.State, parts.PostalCode, parts.Country = g.StreetLine_1, g.StreetLine_2, g.Locality, g.State, g.PostalCode, g.Country
 	}
+	return NewAddress(parts)
 }

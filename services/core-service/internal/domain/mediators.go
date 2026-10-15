@@ -84,6 +84,13 @@ type AddressMed interface {
 	//  1. Validate the inline address as Preview does.
 	//  2. Update the named address as Update does, or create a new one as Create does.
 	Save(ctx context.Context, accountID string, input InlineAddressParams, param string) (*Address, *apierror.APIError)
+
+	// Snapshot is the copy a document keeps of the address input gives: the saved address its AddressID names, or the
+	// inline fields. nil stays nil. Errors name fields under param, the request field the address was sent in.
+	//
+	//  1. With an AddressID, return not-found on `<param>.address_id` unless the address is linked to accountID, then copy it.
+	//  2. Without one, require a name and a country, and copy the inline fields with the name trimmed.
+	Snapshot(ctx context.Context, accountID string, input *AddressSnapshot, param string) (*AddressSnapshot, *apierror.APIError)
 }
 
 type ProductionFlowMed interface {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
@@ -55,19 +56,7 @@ func NewOperatingCalendarSvc(config *OperatingCalendarSvcConfig) OperatingCalend
 }
 
 func calendarFromProto(info *pb.OperatingCalendarInfo) apiresource.OperatingCalendar {
-	return apiresource.OperatingCalendar{
-		Object:     constants.ObjectTypeOperatingCalendar,
-		ID:         info.Id,
-		Code:       info.Code,
-		Name:       info.Name,
-		Kind:       constants.OperatingCalendarKind(info.KindCode),
-		DaysOfWeek: info.DaysOfWeek,
-		CutoffAt:   info.CutoffAt,
-		Timezone:   info.Timezone,
-		IsDefault:  info.IsDefault,
-		CreatedAt:  grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
-	}
+	return *resourceloaders.OperatingCalendarFromProto(info)
 }
 
 func closureFromProto(info *pb.OperatingCalendarClosureInfo) apiresource.OperatingCalendarClosure {

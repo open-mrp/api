@@ -367,6 +367,50 @@ func (x *GetOperatingCalendarRequest) GetId() string {
 	return ""
 }
 
+type BatchGetOperatingCalendarsByIDsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchGetOperatingCalendarsByIDsRequest) Reset() {
+	*x = BatchGetOperatingCalendarsByIDsRequest{}
+	mi := &file_core_core_production_schedule_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchGetOperatingCalendarsByIDsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchGetOperatingCalendarsByIDsRequest) ProtoMessage() {}
+
+func (x *BatchGetOperatingCalendarsByIDsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_production_schedule_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchGetOperatingCalendarsByIDsRequest.ProtoReflect.Descriptor instead.
+func (*BatchGetOperatingCalendarsByIDsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *BatchGetOperatingCalendarsByIDsRequest) GetIds() []string {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
 type CreateOperatingCalendarRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
@@ -382,7 +426,7 @@ type CreateOperatingCalendarRequest struct {
 
 func (x *CreateOperatingCalendarRequest) Reset() {
 	*x = CreateOperatingCalendarRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[5]
+	mi := &file_core_core_production_schedule_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -394,7 +438,7 @@ func (x *CreateOperatingCalendarRequest) String() string {
 func (*CreateOperatingCalendarRequest) ProtoMessage() {}
 
 func (x *CreateOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[5]
+	mi := &file_core_core_production_schedule_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +451,7 @@ func (x *CreateOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOperatingCalendarRequest.ProtoReflect.Descriptor instead.
 func (*CreateOperatingCalendarRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{5}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateOperatingCalendarRequest) GetCode() string {
@@ -473,7 +517,7 @@ type UpdateOperatingCalendarRequest struct {
 
 func (x *UpdateOperatingCalendarRequest) Reset() {
 	*x = UpdateOperatingCalendarRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[6]
+	mi := &file_core_core_production_schedule_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +529,7 @@ func (x *UpdateOperatingCalendarRequest) String() string {
 func (*UpdateOperatingCalendarRequest) ProtoMessage() {}
 
 func (x *UpdateOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[6]
+	mi := &file_core_core_production_schedule_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +542,7 @@ func (x *UpdateOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOperatingCalendarRequest.ProtoReflect.Descriptor instead.
 func (*UpdateOperatingCalendarRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{6}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateOperatingCalendarRequest) GetId() string {
@@ -552,7 +596,7 @@ type DeleteOperatingCalendarRequest struct {
 
 func (x *DeleteOperatingCalendarRequest) Reset() {
 	*x = DeleteOperatingCalendarRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[7]
+	mi := &file_core_core_production_schedule_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +608,7 @@ func (x *DeleteOperatingCalendarRequest) String() string {
 func (*DeleteOperatingCalendarRequest) ProtoMessage() {}
 
 func (x *DeleteOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[7]
+	mi := &file_core_core_production_schedule_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +621,7 @@ func (x *DeleteOperatingCalendarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteOperatingCalendarRequest.ProtoReflect.Descriptor instead.
 func (*DeleteOperatingCalendarRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{7}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteOperatingCalendarRequest) GetId() string {
@@ -600,7 +644,7 @@ type ListOperatingCalendarClosuresRequest struct {
 
 func (x *ListOperatingCalendarClosuresRequest) Reset() {
 	*x = ListOperatingCalendarClosuresRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[8]
+	mi := &file_core_core_production_schedule_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -612,7 +656,7 @@ func (x *ListOperatingCalendarClosuresRequest) String() string {
 func (*ListOperatingCalendarClosuresRequest) ProtoMessage() {}
 
 func (x *ListOperatingCalendarClosuresRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[8]
+	mi := &file_core_core_production_schedule_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,7 +669,7 @@ func (x *ListOperatingCalendarClosuresRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListOperatingCalendarClosuresRequest.ProtoReflect.Descriptor instead.
 func (*ListOperatingCalendarClosuresRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{8}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListOperatingCalendarClosuresRequest) GetOperatingCalendarId() string {
@@ -658,7 +702,7 @@ type ListOperatingCalendarClosuresResponse struct {
 
 func (x *ListOperatingCalendarClosuresResponse) Reset() {
 	*x = ListOperatingCalendarClosuresResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[9]
+	mi := &file_core_core_production_schedule_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +714,7 @@ func (x *ListOperatingCalendarClosuresResponse) String() string {
 func (*ListOperatingCalendarClosuresResponse) ProtoMessage() {}
 
 func (x *ListOperatingCalendarClosuresResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[9]
+	mi := &file_core_core_production_schedule_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +727,7 @@ func (x *ListOperatingCalendarClosuresResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ListOperatingCalendarClosuresResponse.ProtoReflect.Descriptor instead.
 func (*ListOperatingCalendarClosuresResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{9}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListOperatingCalendarClosuresResponse) GetClosures() []*OperatingCalendarClosureInfo {
@@ -704,7 +748,7 @@ type CreateOperatingCalendarClosureRequest struct {
 
 func (x *CreateOperatingCalendarClosureRequest) Reset() {
 	*x = CreateOperatingCalendarClosureRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[10]
+	mi := &file_core_core_production_schedule_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -716,7 +760,7 @@ func (x *CreateOperatingCalendarClosureRequest) String() string {
 func (*CreateOperatingCalendarClosureRequest) ProtoMessage() {}
 
 func (x *CreateOperatingCalendarClosureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[10]
+	mi := &file_core_core_production_schedule_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -729,7 +773,7 @@ func (x *CreateOperatingCalendarClosureRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CreateOperatingCalendarClosureRequest.ProtoReflect.Descriptor instead.
 func (*CreateOperatingCalendarClosureRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{10}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateOperatingCalendarClosureRequest) GetOperatingCalendarId() string {
@@ -762,7 +806,7 @@ type DeleteOperatingCalendarClosureRequest struct {
 
 func (x *DeleteOperatingCalendarClosureRequest) Reset() {
 	*x = DeleteOperatingCalendarClosureRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[11]
+	mi := &file_core_core_production_schedule_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -774,7 +818,7 @@ func (x *DeleteOperatingCalendarClosureRequest) String() string {
 func (*DeleteOperatingCalendarClosureRequest) ProtoMessage() {}
 
 func (x *DeleteOperatingCalendarClosureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[11]
+	mi := &file_core_core_production_schedule_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -787,7 +831,7 @@ func (x *DeleteOperatingCalendarClosureRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use DeleteOperatingCalendarClosureRequest.ProtoReflect.Descriptor instead.
 func (*DeleteOperatingCalendarClosureRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{11}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteOperatingCalendarClosureRequest) GetId() string {
@@ -831,7 +875,7 @@ type ProductionScheduleInfo struct {
 
 func (x *ProductionScheduleInfo) Reset() {
 	*x = ProductionScheduleInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[12]
+	mi := &file_core_core_production_schedule_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -843,7 +887,7 @@ func (x *ProductionScheduleInfo) String() string {
 func (*ProductionScheduleInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[12]
+	mi := &file_core_core_production_schedule_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -856,7 +900,7 @@ func (x *ProductionScheduleInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionScheduleInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{12}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ProductionScheduleInfo) GetId() string {
@@ -1064,7 +1108,7 @@ type ProductionScheduleLineInfo struct {
 
 func (x *ProductionScheduleLineInfo) Reset() {
 	*x = ProductionScheduleLineInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[13]
+	mi := &file_core_core_production_schedule_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1076,7 +1120,7 @@ func (x *ProductionScheduleLineInfo) String() string {
 func (*ProductionScheduleLineInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[13]
+	mi := &file_core_core_production_schedule_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1089,7 +1133,7 @@ func (x *ProductionScheduleLineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionScheduleLineInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{13}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ProductionScheduleLineInfo) GetId() string {
@@ -1352,7 +1396,7 @@ type ProductionScheduleItemPolicyInfo struct {
 
 func (x *ProductionScheduleItemPolicyInfo) Reset() {
 	*x = ProductionScheduleItemPolicyInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[14]
+	mi := &file_core_core_production_schedule_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1364,7 +1408,7 @@ func (x *ProductionScheduleItemPolicyInfo) String() string {
 func (*ProductionScheduleItemPolicyInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleItemPolicyInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[14]
+	mi := &file_core_core_production_schedule_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1377,7 +1421,7 @@ func (x *ProductionScheduleItemPolicyInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionScheduleItemPolicyInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleItemPolicyInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{14}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ProductionScheduleItemPolicyInfo) GetId() string {
@@ -1686,7 +1730,7 @@ type ProductionScheduleFinishedPolicyInfo struct {
 
 func (x *ProductionScheduleFinishedPolicyInfo) Reset() {
 	*x = ProductionScheduleFinishedPolicyInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[15]
+	mi := &file_core_core_production_schedule_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1698,7 +1742,7 @@ func (x *ProductionScheduleFinishedPolicyInfo) String() string {
 func (*ProductionScheduleFinishedPolicyInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleFinishedPolicyInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[15]
+	mi := &file_core_core_production_schedule_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1711,7 +1755,7 @@ func (x *ProductionScheduleFinishedPolicyInfo) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ProductionScheduleFinishedPolicyInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleFinishedPolicyInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{15}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ProductionScheduleFinishedPolicyInfo) GetId() string {
@@ -1861,7 +1905,7 @@ type ProductionScheduleFinishingLineInfo struct {
 
 func (x *ProductionScheduleFinishingLineInfo) Reset() {
 	*x = ProductionScheduleFinishingLineInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[16]
+	mi := &file_core_core_production_schedule_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1873,7 +1917,7 @@ func (x *ProductionScheduleFinishingLineInfo) String() string {
 func (*ProductionScheduleFinishingLineInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleFinishingLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[16]
+	mi := &file_core_core_production_schedule_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1886,7 +1930,7 @@ func (x *ProductionScheduleFinishingLineInfo) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ProductionScheduleFinishingLineInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleFinishingLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{16}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ProductionScheduleFinishingLineInfo) GetId() string {
@@ -2075,7 +2119,7 @@ type ListProductionScheduleFinishingLinesRequest struct {
 
 func (x *ListProductionScheduleFinishingLinesRequest) Reset() {
 	*x = ListProductionScheduleFinishingLinesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[17]
+	mi := &file_core_core_production_schedule_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2087,7 +2131,7 @@ func (x *ListProductionScheduleFinishingLinesRequest) String() string {
 func (*ListProductionScheduleFinishingLinesRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleFinishingLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[17]
+	mi := &file_core_core_production_schedule_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2100,7 +2144,7 @@ func (x *ListProductionScheduleFinishingLinesRequest) ProtoReflect() protoreflec
 
 // Deprecated: Use ListProductionScheduleFinishingLinesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleFinishingLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{17}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListProductionScheduleFinishingLinesRequest) GetProductionScheduleId() string {
@@ -2133,7 +2177,7 @@ type ListProductionScheduleFinishingLinesResponse struct {
 
 func (x *ListProductionScheduleFinishingLinesResponse) Reset() {
 	*x = ListProductionScheduleFinishingLinesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[18]
+	mi := &file_core_core_production_schedule_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2145,7 +2189,7 @@ func (x *ListProductionScheduleFinishingLinesResponse) String() string {
 func (*ListProductionScheduleFinishingLinesResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleFinishingLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[18]
+	mi := &file_core_core_production_schedule_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2158,7 +2202,7 @@ func (x *ListProductionScheduleFinishingLinesResponse) ProtoReflect() protorefle
 
 // Deprecated: Use ListProductionScheduleFinishingLinesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleFinishingLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{18}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListProductionScheduleFinishingLinesResponse) GetLines() []*ProductionScheduleFinishingLineInfo {
@@ -2177,7 +2221,7 @@ type ListProductionScheduleFinishedPoliciesRequest struct {
 
 func (x *ListProductionScheduleFinishedPoliciesRequest) Reset() {
 	*x = ListProductionScheduleFinishedPoliciesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[19]
+	mi := &file_core_core_production_schedule_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2189,7 +2233,7 @@ func (x *ListProductionScheduleFinishedPoliciesRequest) String() string {
 func (*ListProductionScheduleFinishedPoliciesRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleFinishedPoliciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[19]
+	mi := &file_core_core_production_schedule_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2202,7 +2246,7 @@ func (x *ListProductionScheduleFinishedPoliciesRequest) ProtoReflect() protorefl
 
 // Deprecated: Use ListProductionScheduleFinishedPoliciesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleFinishedPoliciesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{19}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListProductionScheduleFinishedPoliciesRequest) GetProductionScheduleId() string {
@@ -2221,7 +2265,7 @@ type ListProductionScheduleFinishedPoliciesResponse struct {
 
 func (x *ListProductionScheduleFinishedPoliciesResponse) Reset() {
 	*x = ListProductionScheduleFinishedPoliciesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[20]
+	mi := &file_core_core_production_schedule_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2233,7 +2277,7 @@ func (x *ListProductionScheduleFinishedPoliciesResponse) String() string {
 func (*ListProductionScheduleFinishedPoliciesResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleFinishedPoliciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[20]
+	mi := &file_core_core_production_schedule_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2246,7 +2290,7 @@ func (x *ListProductionScheduleFinishedPoliciesResponse) ProtoReflect() protoref
 
 // Deprecated: Use ListProductionScheduleFinishedPoliciesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleFinishedPoliciesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{20}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListProductionScheduleFinishedPoliciesResponse) GetPolicies() []*ProductionScheduleFinishedPolicyInfo {
@@ -2268,7 +2312,7 @@ type GenerateProductionScheduleRequest struct {
 
 func (x *GenerateProductionScheduleRequest) Reset() {
 	*x = GenerateProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[21]
+	mi := &file_core_core_production_schedule_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2280,7 +2324,7 @@ func (x *GenerateProductionScheduleRequest) String() string {
 func (*GenerateProductionScheduleRequest) ProtoMessage() {}
 
 func (x *GenerateProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[21]
+	mi := &file_core_core_production_schedule_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2293,7 +2337,7 @@ func (x *GenerateProductionScheduleRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GenerateProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*GenerateProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{21}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GenerateProductionScheduleRequest) GetPlanningAsOf() *timestamppb.Timestamp {
@@ -2333,7 +2377,7 @@ type GenerateProductionScheduleResponse struct {
 
 func (x *GenerateProductionScheduleResponse) Reset() {
 	*x = GenerateProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[22]
+	mi := &file_core_core_production_schedule_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2345,7 +2389,7 @@ func (x *GenerateProductionScheduleResponse) String() string {
 func (*GenerateProductionScheduleResponse) ProtoMessage() {}
 
 func (x *GenerateProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[22]
+	mi := &file_core_core_production_schedule_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2358,7 +2402,7 @@ func (x *GenerateProductionScheduleResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GenerateProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*GenerateProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{22}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GenerateProductionScheduleResponse) GetSchedule() *ProductionScheduleInfo {
@@ -2384,7 +2428,7 @@ type RegenerateProductionScheduleRequest struct {
 
 func (x *RegenerateProductionScheduleRequest) Reset() {
 	*x = RegenerateProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[23]
+	mi := &file_core_core_production_schedule_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2396,7 +2440,7 @@ func (x *RegenerateProductionScheduleRequest) String() string {
 func (*RegenerateProductionScheduleRequest) ProtoMessage() {}
 
 func (x *RegenerateProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[23]
+	mi := &file_core_core_production_schedule_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2409,7 +2453,7 @@ func (x *RegenerateProductionScheduleRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use RegenerateProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*RegenerateProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{23}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *RegenerateProductionScheduleRequest) GetId() string {
@@ -2463,7 +2507,7 @@ type ScheduleDiffLineProto struct {
 
 func (x *ScheduleDiffLineProto) Reset() {
 	*x = ScheduleDiffLineProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[24]
+	mi := &file_core_core_production_schedule_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2475,7 +2519,7 @@ func (x *ScheduleDiffLineProto) String() string {
 func (*ScheduleDiffLineProto) ProtoMessage() {}
 
 func (x *ScheduleDiffLineProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[24]
+	mi := &file_core_core_production_schedule_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2488,7 +2532,7 @@ func (x *ScheduleDiffLineProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleDiffLineProto.ProtoReflect.Descriptor instead.
 func (*ScheduleDiffLineProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{24}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ScheduleDiffLineProto) GetChangeCode() string {
@@ -2564,7 +2608,7 @@ type PreviewRegenerateProductionScheduleResponse struct {
 
 func (x *PreviewRegenerateProductionScheduleResponse) Reset() {
 	*x = PreviewRegenerateProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[25]
+	mi := &file_core_core_production_schedule_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2576,7 +2620,7 @@ func (x *PreviewRegenerateProductionScheduleResponse) String() string {
 func (*PreviewRegenerateProductionScheduleResponse) ProtoMessage() {}
 
 func (x *PreviewRegenerateProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[25]
+	mi := &file_core_core_production_schedule_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2589,7 +2633,7 @@ func (x *PreviewRegenerateProductionScheduleResponse) ProtoReflect() protoreflec
 
 // Deprecated: Use PreviewRegenerateProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*PreviewRegenerateProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{25}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PreviewRegenerateProductionScheduleResponse) GetScheduleId() string {
@@ -2664,7 +2708,7 @@ type RegenerateProductionScheduleResponse struct {
 
 func (x *RegenerateProductionScheduleResponse) Reset() {
 	*x = RegenerateProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[26]
+	mi := &file_core_core_production_schedule_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2676,7 +2720,7 @@ func (x *RegenerateProductionScheduleResponse) String() string {
 func (*RegenerateProductionScheduleResponse) ProtoMessage() {}
 
 func (x *RegenerateProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[26]
+	mi := &file_core_core_production_schedule_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2689,7 +2733,7 @@ func (x *RegenerateProductionScheduleResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use RegenerateProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*RegenerateProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{26}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RegenerateProductionScheduleResponse) GetSchedule() *ProductionScheduleInfo {
@@ -2708,7 +2752,7 @@ type GetProductionScheduleRequest struct {
 
 func (x *GetProductionScheduleRequest) Reset() {
 	*x = GetProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[27]
+	mi := &file_core_core_production_schedule_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2720,7 +2764,7 @@ func (x *GetProductionScheduleRequest) String() string {
 func (*GetProductionScheduleRequest) ProtoMessage() {}
 
 func (x *GetProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[27]
+	mi := &file_core_core_production_schedule_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2733,7 +2777,7 @@ func (x *GetProductionScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*GetProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{27}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetProductionScheduleRequest) GetId() string {
@@ -2751,7 +2795,7 @@ type GetCurrentProductionScheduleRequest struct {
 
 func (x *GetCurrentProductionScheduleRequest) Reset() {
 	*x = GetCurrentProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[28]
+	mi := &file_core_core_production_schedule_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2763,7 +2807,7 @@ func (x *GetCurrentProductionScheduleRequest) String() string {
 func (*GetCurrentProductionScheduleRequest) ProtoMessage() {}
 
 func (x *GetCurrentProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[28]
+	mi := &file_core_core_production_schedule_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2776,7 +2820,7 @@ func (x *GetCurrentProductionScheduleRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetCurrentProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{28}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{29}
 }
 
 type GetProductionScheduleResponse struct {
@@ -2789,7 +2833,7 @@ type GetProductionScheduleResponse struct {
 
 func (x *GetProductionScheduleResponse) Reset() {
 	*x = GetProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[29]
+	mi := &file_core_core_production_schedule_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2801,7 +2845,7 @@ func (x *GetProductionScheduleResponse) String() string {
 func (*GetProductionScheduleResponse) ProtoMessage() {}
 
 func (x *GetProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[29]
+	mi := &file_core_core_production_schedule_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2814,7 +2858,7 @@ func (x *GetProductionScheduleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*GetProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{29}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetProductionScheduleResponse) GetSchedule() *ProductionScheduleInfo {
@@ -2836,7 +2880,7 @@ type ListProductionSchedulesRequest struct {
 
 func (x *ListProductionSchedulesRequest) Reset() {
 	*x = ListProductionSchedulesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[30]
+	mi := &file_core_core_production_schedule_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2848,7 +2892,7 @@ func (x *ListProductionSchedulesRequest) String() string {
 func (*ListProductionSchedulesRequest) ProtoMessage() {}
 
 func (x *ListProductionSchedulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[30]
+	mi := &file_core_core_production_schedule_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2861,7 +2905,7 @@ func (x *ListProductionSchedulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProductionSchedulesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionSchedulesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{30}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListProductionSchedulesRequest) GetCursor() string {
@@ -2902,7 +2946,7 @@ type ListProductionSchedulesResponse struct {
 
 func (x *ListProductionSchedulesResponse) Reset() {
 	*x = ListProductionSchedulesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[31]
+	mi := &file_core_core_production_schedule_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2914,7 +2958,7 @@ func (x *ListProductionSchedulesResponse) String() string {
 func (*ListProductionSchedulesResponse) ProtoMessage() {}
 
 func (x *ListProductionSchedulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[31]
+	mi := &file_core_core_production_schedule_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2927,7 +2971,7 @@ func (x *ListProductionSchedulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProductionSchedulesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionSchedulesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{31}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListProductionSchedulesResponse) GetSchedules() []*ProductionScheduleInfo {
@@ -2955,7 +2999,7 @@ type ListProductionScheduleLinesRequest struct {
 
 func (x *ListProductionScheduleLinesRequest) Reset() {
 	*x = ListProductionScheduleLinesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[32]
+	mi := &file_core_core_production_schedule_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2967,7 +3011,7 @@ func (x *ListProductionScheduleLinesRequest) String() string {
 func (*ListProductionScheduleLinesRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[32]
+	mi := &file_core_core_production_schedule_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2980,7 +3024,7 @@ func (x *ListProductionScheduleLinesRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListProductionScheduleLinesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{32}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListProductionScheduleLinesRequest) GetProductionScheduleId() string {
@@ -3013,7 +3057,7 @@ type ListProductionScheduleLinesResponse struct {
 
 func (x *ListProductionScheduleLinesResponse) Reset() {
 	*x = ListProductionScheduleLinesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[33]
+	mi := &file_core_core_production_schedule_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3025,7 +3069,7 @@ func (x *ListProductionScheduleLinesResponse) String() string {
 func (*ListProductionScheduleLinesResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[33]
+	mi := &file_core_core_production_schedule_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3038,7 +3082,7 @@ func (x *ListProductionScheduleLinesResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListProductionScheduleLinesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{33}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListProductionScheduleLinesResponse) GetLines() []*ProductionScheduleLineInfo {
@@ -3057,7 +3101,7 @@ type ListProductionScheduleItemPoliciesRequest struct {
 
 func (x *ListProductionScheduleItemPoliciesRequest) Reset() {
 	*x = ListProductionScheduleItemPoliciesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[34]
+	mi := &file_core_core_production_schedule_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3069,7 +3113,7 @@ func (x *ListProductionScheduleItemPoliciesRequest) String() string {
 func (*ListProductionScheduleItemPoliciesRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleItemPoliciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[34]
+	mi := &file_core_core_production_schedule_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3082,7 +3126,7 @@ func (x *ListProductionScheduleItemPoliciesRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListProductionScheduleItemPoliciesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleItemPoliciesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{34}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListProductionScheduleItemPoliciesRequest) GetProductionScheduleId() string {
@@ -3101,7 +3145,7 @@ type ListProductionScheduleItemPoliciesResponse struct {
 
 func (x *ListProductionScheduleItemPoliciesResponse) Reset() {
 	*x = ListProductionScheduleItemPoliciesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[35]
+	mi := &file_core_core_production_schedule_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3113,7 +3157,7 @@ func (x *ListProductionScheduleItemPoliciesResponse) String() string {
 func (*ListProductionScheduleItemPoliciesResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleItemPoliciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[35]
+	mi := &file_core_core_production_schedule_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3126,7 +3170,7 @@ func (x *ListProductionScheduleItemPoliciesResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use ListProductionScheduleItemPoliciesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleItemPoliciesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{35}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListProductionScheduleItemPoliciesResponse) GetPolicies() []*ProductionScheduleItemPolicyInfo {
@@ -3148,7 +3192,7 @@ type PreviewProductionScheduleRequest struct {
 
 func (x *PreviewProductionScheduleRequest) Reset() {
 	*x = PreviewProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[36]
+	mi := &file_core_core_production_schedule_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3160,7 +3204,7 @@ func (x *PreviewProductionScheduleRequest) String() string {
 func (*PreviewProductionScheduleRequest) ProtoMessage() {}
 
 func (x *PreviewProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[36]
+	mi := &file_core_core_production_schedule_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3173,7 +3217,7 @@ func (x *PreviewProductionScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*PreviewProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{36}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *PreviewProductionScheduleRequest) GetPlanningAsOf() *timestamppb.Timestamp {
@@ -3235,7 +3279,7 @@ type SchedulePolicyProto struct {
 
 func (x *SchedulePolicyProto) Reset() {
 	*x = SchedulePolicyProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[37]
+	mi := &file_core_core_production_schedule_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3247,7 +3291,7 @@ func (x *SchedulePolicyProto) String() string {
 func (*SchedulePolicyProto) ProtoMessage() {}
 
 func (x *SchedulePolicyProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[37]
+	mi := &file_core_core_production_schedule_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3260,7 +3304,7 @@ func (x *SchedulePolicyProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchedulePolicyProto.ProtoReflect.Descriptor instead.
 func (*SchedulePolicyProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{37}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SchedulePolicyProto) GetItemId() string {
@@ -3461,7 +3505,7 @@ type ScheduleCampaignProto struct {
 
 func (x *ScheduleCampaignProto) Reset() {
 	*x = ScheduleCampaignProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[38]
+	mi := &file_core_core_production_schedule_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3473,7 +3517,7 @@ func (x *ScheduleCampaignProto) String() string {
 func (*ScheduleCampaignProto) ProtoMessage() {}
 
 func (x *ScheduleCampaignProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[38]
+	mi := &file_core_core_production_schedule_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3486,7 +3530,7 @@ func (x *ScheduleCampaignProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleCampaignProto.ProtoReflect.Descriptor instead.
 func (*ScheduleCampaignProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{38}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ScheduleCampaignProto) GetItemId() string {
@@ -3549,7 +3593,7 @@ type ScheduleProjectionProto struct {
 
 func (x *ScheduleProjectionProto) Reset() {
 	*x = ScheduleProjectionProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[39]
+	mi := &file_core_core_production_schedule_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3561,7 +3605,7 @@ func (x *ScheduleProjectionProto) String() string {
 func (*ScheduleProjectionProto) ProtoMessage() {}
 
 func (x *ScheduleProjectionProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[39]
+	mi := &file_core_core_production_schedule_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3574,7 +3618,7 @@ func (x *ScheduleProjectionProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleProjectionProto.ProtoReflect.Descriptor instead.
 func (*ScheduleProjectionProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{39}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ScheduleProjectionProto) GetItemId() string {
@@ -3608,7 +3652,7 @@ type ScheduleAppliedOverrideProto struct {
 
 func (x *ScheduleAppliedOverrideProto) Reset() {
 	*x = ScheduleAppliedOverrideProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[40]
+	mi := &file_core_core_production_schedule_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3620,7 +3664,7 @@ func (x *ScheduleAppliedOverrideProto) String() string {
 func (*ScheduleAppliedOverrideProto) ProtoMessage() {}
 
 func (x *ScheduleAppliedOverrideProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[40]
+	mi := &file_core_core_production_schedule_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3633,7 +3677,7 @@ func (x *ScheduleAppliedOverrideProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleAppliedOverrideProto.ProtoReflect.Descriptor instead.
 func (*ScheduleAppliedOverrideProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{40}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ScheduleAppliedOverrideProto) GetOverrideId() string {
@@ -3719,7 +3763,7 @@ type ScheduleDiagnosticsProto struct {
 
 func (x *ScheduleDiagnosticsProto) Reset() {
 	*x = ScheduleDiagnosticsProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[41]
+	mi := &file_core_core_production_schedule_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3731,7 +3775,7 @@ func (x *ScheduleDiagnosticsProto) String() string {
 func (*ScheduleDiagnosticsProto) ProtoMessage() {}
 
 func (x *ScheduleDiagnosticsProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[41]
+	mi := &file_core_core_production_schedule_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3744,7 +3788,7 @@ func (x *ScheduleDiagnosticsProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleDiagnosticsProto.ProtoReflect.Descriptor instead.
 func (*ScheduleDiagnosticsProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{41}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ScheduleDiagnosticsProto) GetEoqCappedSkus() []string {
@@ -3899,7 +3943,7 @@ type ScheduleFinishingDiagnosticsProto struct {
 
 func (x *ScheduleFinishingDiagnosticsProto) Reset() {
 	*x = ScheduleFinishingDiagnosticsProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[42]
+	mi := &file_core_core_production_schedule_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3911,7 +3955,7 @@ func (x *ScheduleFinishingDiagnosticsProto) String() string {
 func (*ScheduleFinishingDiagnosticsProto) ProtoMessage() {}
 
 func (x *ScheduleFinishingDiagnosticsProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[42]
+	mi := &file_core_core_production_schedule_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3924,7 +3968,7 @@ func (x *ScheduleFinishingDiagnosticsProto) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ScheduleFinishingDiagnosticsProto.ProtoReflect.Descriptor instead.
 func (*ScheduleFinishingDiagnosticsProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{42}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ScheduleFinishingDiagnosticsProto) GetWeeklyCapacityHours() float64 {
@@ -4006,7 +4050,7 @@ type ScheduleAtRiskOrderProto struct {
 
 func (x *ScheduleAtRiskOrderProto) Reset() {
 	*x = ScheduleAtRiskOrderProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[43]
+	mi := &file_core_core_production_schedule_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4018,7 +4062,7 @@ func (x *ScheduleAtRiskOrderProto) String() string {
 func (*ScheduleAtRiskOrderProto) ProtoMessage() {}
 
 func (x *ScheduleAtRiskOrderProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[43]
+	mi := &file_core_core_production_schedule_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4031,7 +4075,7 @@ func (x *ScheduleAtRiskOrderProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleAtRiskOrderProto.ProtoReflect.Descriptor instead.
 func (*ScheduleAtRiskOrderProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{43}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ScheduleAtRiskOrderProto) GetSalesOrderId() string {
@@ -4097,7 +4141,7 @@ type PreviewProductionScheduleResponse struct {
 
 func (x *PreviewProductionScheduleResponse) Reset() {
 	*x = PreviewProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[44]
+	mi := &file_core_core_production_schedule_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4109,7 +4153,7 @@ func (x *PreviewProductionScheduleResponse) String() string {
 func (*PreviewProductionScheduleResponse) ProtoMessage() {}
 
 func (x *PreviewProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[44]
+	mi := &file_core_core_production_schedule_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4122,7 +4166,7 @@ func (x *PreviewProductionScheduleResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use PreviewProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*PreviewProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{44}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *PreviewProductionScheduleResponse) GetSolverVersion() string {
@@ -4181,7 +4225,7 @@ type ScheduleDeviationTypeInfo struct {
 
 func (x *ScheduleDeviationTypeInfo) Reset() {
 	*x = ScheduleDeviationTypeInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[45]
+	mi := &file_core_core_production_schedule_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4193,7 +4237,7 @@ func (x *ScheduleDeviationTypeInfo) String() string {
 func (*ScheduleDeviationTypeInfo) ProtoMessage() {}
 
 func (x *ScheduleDeviationTypeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[45]
+	mi := &file_core_core_production_schedule_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4206,7 +4250,7 @@ func (x *ScheduleDeviationTypeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleDeviationTypeInfo.ProtoReflect.Descriptor instead.
 func (*ScheduleDeviationTypeInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{45}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ScheduleDeviationTypeInfo) GetId() string {
@@ -4270,7 +4314,7 @@ type ProductionScheduleDeviationInfo struct {
 
 func (x *ProductionScheduleDeviationInfo) Reset() {
 	*x = ProductionScheduleDeviationInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[46]
+	mi := &file_core_core_production_schedule_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4282,7 +4326,7 @@ func (x *ProductionScheduleDeviationInfo) String() string {
 func (*ProductionScheduleDeviationInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleDeviationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[46]
+	mi := &file_core_core_production_schedule_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4295,7 +4339,7 @@ func (x *ProductionScheduleDeviationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionScheduleDeviationInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleDeviationInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{46}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ProductionScheduleDeviationInfo) GetId() string {
@@ -4418,7 +4462,7 @@ type ListScheduleDeviationTypesRequest struct {
 
 func (x *ListScheduleDeviationTypesRequest) Reset() {
 	*x = ListScheduleDeviationTypesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[47]
+	mi := &file_core_core_production_schedule_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4430,7 +4474,7 @@ func (x *ListScheduleDeviationTypesRequest) String() string {
 func (*ListScheduleDeviationTypesRequest) ProtoMessage() {}
 
 func (x *ListScheduleDeviationTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[47]
+	mi := &file_core_core_production_schedule_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4443,7 +4487,7 @@ func (x *ListScheduleDeviationTypesRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListScheduleDeviationTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListScheduleDeviationTypesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{47}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{48}
 }
 
 type ListScheduleDeviationTypesResponse struct {
@@ -4455,7 +4499,7 @@ type ListScheduleDeviationTypesResponse struct {
 
 func (x *ListScheduleDeviationTypesResponse) Reset() {
 	*x = ListScheduleDeviationTypesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[48]
+	mi := &file_core_core_production_schedule_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4467,7 +4511,7 @@ func (x *ListScheduleDeviationTypesResponse) String() string {
 func (*ListScheduleDeviationTypesResponse) ProtoMessage() {}
 
 func (x *ListScheduleDeviationTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[48]
+	mi := &file_core_core_production_schedule_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4480,7 +4524,7 @@ func (x *ListScheduleDeviationTypesResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListScheduleDeviationTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListScheduleDeviationTypesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{48}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListScheduleDeviationTypesResponse) GetTypes() []*ScheduleDeviationTypeInfo {
@@ -4503,7 +4547,7 @@ type ListProductionScheduleDeviationsRequest struct {
 
 func (x *ListProductionScheduleDeviationsRequest) Reset() {
 	*x = ListProductionScheduleDeviationsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[49]
+	mi := &file_core_core_production_schedule_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4515,7 +4559,7 @@ func (x *ListProductionScheduleDeviationsRequest) String() string {
 func (*ListProductionScheduleDeviationsRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleDeviationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[49]
+	mi := &file_core_core_production_schedule_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4528,7 +4572,7 @@ func (x *ListProductionScheduleDeviationsRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ListProductionScheduleDeviationsRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleDeviationsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{49}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListProductionScheduleDeviationsRequest) GetScheduleId() string {
@@ -4576,7 +4620,7 @@ type ListProductionScheduleDeviationsResponse struct {
 
 func (x *ListProductionScheduleDeviationsResponse) Reset() {
 	*x = ListProductionScheduleDeviationsResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[50]
+	mi := &file_core_core_production_schedule_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4588,7 +4632,7 @@ func (x *ListProductionScheduleDeviationsResponse) String() string {
 func (*ListProductionScheduleDeviationsResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleDeviationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[50]
+	mi := &file_core_core_production_schedule_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4601,7 +4645,7 @@ func (x *ListProductionScheduleDeviationsResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListProductionScheduleDeviationsResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleDeviationsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{50}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ListProductionScheduleDeviationsResponse) GetDeviations() []*ProductionScheduleDeviationInfo {
@@ -4635,7 +4679,7 @@ type CreateProductionScheduleLineRequest struct {
 
 func (x *CreateProductionScheduleLineRequest) Reset() {
 	*x = CreateProductionScheduleLineRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[51]
+	mi := &file_core_core_production_schedule_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4647,7 +4691,7 @@ func (x *CreateProductionScheduleLineRequest) String() string {
 func (*CreateProductionScheduleLineRequest) ProtoMessage() {}
 
 func (x *CreateProductionScheduleLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[51]
+	mi := &file_core_core_production_schedule_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4660,7 +4704,7 @@ func (x *CreateProductionScheduleLineRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CreateProductionScheduleLineRequest.ProtoReflect.Descriptor instead.
 func (*CreateProductionScheduleLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{51}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *CreateProductionScheduleLineRequest) GetScheduleId() string {
@@ -4735,7 +4779,7 @@ type CreateProductionScheduleLineResponse struct {
 
 func (x *CreateProductionScheduleLineResponse) Reset() {
 	*x = CreateProductionScheduleLineResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[52]
+	mi := &file_core_core_production_schedule_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4747,7 +4791,7 @@ func (x *CreateProductionScheduleLineResponse) String() string {
 func (*CreateProductionScheduleLineResponse) ProtoMessage() {}
 
 func (x *CreateProductionScheduleLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[52]
+	mi := &file_core_core_production_schedule_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4760,7 +4804,7 @@ func (x *CreateProductionScheduleLineResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CreateProductionScheduleLineResponse.ProtoReflect.Descriptor instead.
 func (*CreateProductionScheduleLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{52}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *CreateProductionScheduleLineResponse) GetLine() *ProductionScheduleLineInfo {
@@ -4789,7 +4833,7 @@ type UpdateProductionScheduleLineRequest struct {
 
 func (x *UpdateProductionScheduleLineRequest) Reset() {
 	*x = UpdateProductionScheduleLineRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[53]
+	mi := &file_core_core_production_schedule_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4801,7 +4845,7 @@ func (x *UpdateProductionScheduleLineRequest) String() string {
 func (*UpdateProductionScheduleLineRequest) ProtoMessage() {}
 
 func (x *UpdateProductionScheduleLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[53]
+	mi := &file_core_core_production_schedule_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4814,7 +4858,7 @@ func (x *UpdateProductionScheduleLineRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UpdateProductionScheduleLineRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductionScheduleLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{53}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *UpdateProductionScheduleLineRequest) GetScheduleId() string {
@@ -4903,7 +4947,7 @@ type UpdateProductionScheduleLineResponse struct {
 
 func (x *UpdateProductionScheduleLineResponse) Reset() {
 	*x = UpdateProductionScheduleLineResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[54]
+	mi := &file_core_core_production_schedule_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4915,7 +4959,7 @@ func (x *UpdateProductionScheduleLineResponse) String() string {
 func (*UpdateProductionScheduleLineResponse) ProtoMessage() {}
 
 func (x *UpdateProductionScheduleLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[54]
+	mi := &file_core_core_production_schedule_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4928,7 +4972,7 @@ func (x *UpdateProductionScheduleLineResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use UpdateProductionScheduleLineResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProductionScheduleLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{54}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *UpdateProductionScheduleLineResponse) GetLine() *ProductionScheduleLineInfo {
@@ -4950,7 +4994,7 @@ type DeleteProductionScheduleLineRequest struct {
 
 func (x *DeleteProductionScheduleLineRequest) Reset() {
 	*x = DeleteProductionScheduleLineRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[55]
+	mi := &file_core_core_production_schedule_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4962,7 +5006,7 @@ func (x *DeleteProductionScheduleLineRequest) String() string {
 func (*DeleteProductionScheduleLineRequest) ProtoMessage() {}
 
 func (x *DeleteProductionScheduleLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[55]
+	mi := &file_core_core_production_schedule_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4975,7 +5019,7 @@ func (x *DeleteProductionScheduleLineRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use DeleteProductionScheduleLineRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionScheduleLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{55}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteProductionScheduleLineRequest) GetScheduleId() string {
@@ -5015,7 +5059,7 @@ type PublishProductionScheduleRequest struct {
 
 func (x *PublishProductionScheduleRequest) Reset() {
 	*x = PublishProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[56]
+	mi := &file_core_core_production_schedule_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5027,7 +5071,7 @@ func (x *PublishProductionScheduleRequest) String() string {
 func (*PublishProductionScheduleRequest) ProtoMessage() {}
 
 func (x *PublishProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[56]
+	mi := &file_core_core_production_schedule_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5040,7 +5084,7 @@ func (x *PublishProductionScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*PublishProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{56}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *PublishProductionScheduleRequest) GetId() string {
@@ -5059,7 +5103,7 @@ type PublishProductionScheduleResponse struct {
 
 func (x *PublishProductionScheduleResponse) Reset() {
 	*x = PublishProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[57]
+	mi := &file_core_core_production_schedule_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5071,7 +5115,7 @@ func (x *PublishProductionScheduleResponse) String() string {
 func (*PublishProductionScheduleResponse) ProtoMessage() {}
 
 func (x *PublishProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[57]
+	mi := &file_core_core_production_schedule_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5084,7 +5128,7 @@ func (x *PublishProductionScheduleResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use PublishProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*PublishProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{57}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *PublishProductionScheduleResponse) GetSchedule() *ProductionScheduleInfo {
@@ -5109,7 +5153,7 @@ type ReleaseProductionScheduleWeekRequest struct {
 
 func (x *ReleaseProductionScheduleWeekRequest) Reset() {
 	*x = ReleaseProductionScheduleWeekRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[58]
+	mi := &file_core_core_production_schedule_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5121,7 +5165,7 @@ func (x *ReleaseProductionScheduleWeekRequest) String() string {
 func (*ReleaseProductionScheduleWeekRequest) ProtoMessage() {}
 
 func (x *ReleaseProductionScheduleWeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[58]
+	mi := &file_core_core_production_schedule_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5134,7 +5178,7 @@ func (x *ReleaseProductionScheduleWeekRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ReleaseProductionScheduleWeekRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseProductionScheduleWeekRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{58}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ReleaseProductionScheduleWeekRequest) GetId() string {
@@ -5188,7 +5232,7 @@ type ReleaseScheduleLineBatchInfo struct {
 
 func (x *ReleaseScheduleLineBatchInfo) Reset() {
 	*x = ReleaseScheduleLineBatchInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[59]
+	mi := &file_core_core_production_schedule_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5200,7 +5244,7 @@ func (x *ReleaseScheduleLineBatchInfo) String() string {
 func (*ReleaseScheduleLineBatchInfo) ProtoMessage() {}
 
 func (x *ReleaseScheduleLineBatchInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[59]
+	mi := &file_core_core_production_schedule_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5213,7 +5257,7 @@ func (x *ReleaseScheduleLineBatchInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseScheduleLineBatchInfo.ProtoReflect.Descriptor instead.
 func (*ReleaseScheduleLineBatchInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{59}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ReleaseScheduleLineBatchInfo) GetItemId() string {
@@ -5271,7 +5315,7 @@ type ReleasedScheduleLineInfo struct {
 
 func (x *ReleasedScheduleLineInfo) Reset() {
 	*x = ReleasedScheduleLineInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[60]
+	mi := &file_core_core_production_schedule_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5283,7 +5327,7 @@ func (x *ReleasedScheduleLineInfo) String() string {
 func (*ReleasedScheduleLineInfo) ProtoMessage() {}
 
 func (x *ReleasedScheduleLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[60]
+	mi := &file_core_core_production_schedule_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5296,7 +5340,7 @@ func (x *ReleasedScheduleLineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleasedScheduleLineInfo.ProtoReflect.Descriptor instead.
 func (*ReleasedScheduleLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{60}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ReleasedScheduleLineInfo) GetProductionScheduleLineId() string {
@@ -5392,7 +5436,7 @@ type ReleaseProductionScheduleWeekResponse struct {
 
 func (x *ReleaseProductionScheduleWeekResponse) Reset() {
 	*x = ReleaseProductionScheduleWeekResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[61]
+	mi := &file_core_core_production_schedule_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5404,7 +5448,7 @@ func (x *ReleaseProductionScheduleWeekResponse) String() string {
 func (*ReleaseProductionScheduleWeekResponse) ProtoMessage() {}
 
 func (x *ReleaseProductionScheduleWeekResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[61]
+	mi := &file_core_core_production_schedule_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5417,7 +5461,7 @@ func (x *ReleaseProductionScheduleWeekResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ReleaseProductionScheduleWeekResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseProductionScheduleWeekResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{61}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ReleaseProductionScheduleWeekResponse) GetProductionRun() *ProductionRunInfo {
@@ -5487,7 +5531,7 @@ type PreviewReleaseProductionScheduleWeekRequest struct {
 
 func (x *PreviewReleaseProductionScheduleWeekRequest) Reset() {
 	*x = PreviewReleaseProductionScheduleWeekRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[62]
+	mi := &file_core_core_production_schedule_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5499,7 +5543,7 @@ func (x *PreviewReleaseProductionScheduleWeekRequest) String() string {
 func (*PreviewReleaseProductionScheduleWeekRequest) ProtoMessage() {}
 
 func (x *PreviewReleaseProductionScheduleWeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[62]
+	mi := &file_core_core_production_schedule_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5512,7 +5556,7 @@ func (x *PreviewReleaseProductionScheduleWeekRequest) ProtoReflect() protoreflec
 
 // Deprecated: Use PreviewReleaseProductionScheduleWeekRequest.ProtoReflect.Descriptor instead.
 func (*PreviewReleaseProductionScheduleWeekRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{62}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *PreviewReleaseProductionScheduleWeekRequest) GetId() string {
@@ -5556,7 +5600,7 @@ type ReleaseProductionScheduleWeekPreviewResponse struct {
 
 func (x *ReleaseProductionScheduleWeekPreviewResponse) Reset() {
 	*x = ReleaseProductionScheduleWeekPreviewResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[63]
+	mi := &file_core_core_production_schedule_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5568,7 +5612,7 @@ func (x *ReleaseProductionScheduleWeekPreviewResponse) String() string {
 func (*ReleaseProductionScheduleWeekPreviewResponse) ProtoMessage() {}
 
 func (x *ReleaseProductionScheduleWeekPreviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[63]
+	mi := &file_core_core_production_schedule_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5581,7 +5625,7 @@ func (x *ReleaseProductionScheduleWeekPreviewResponse) ProtoReflect() protorefle
 
 // Deprecated: Use ReleaseProductionScheduleWeekPreviewResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseProductionScheduleWeekPreviewResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{63}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ReleaseProductionScheduleWeekPreviewResponse) GetWeekIndex() int32 {
@@ -5663,7 +5707,7 @@ type ArchiveProductionScheduleRequest struct {
 
 func (x *ArchiveProductionScheduleRequest) Reset() {
 	*x = ArchiveProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[64]
+	mi := &file_core_core_production_schedule_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5675,7 +5719,7 @@ func (x *ArchiveProductionScheduleRequest) String() string {
 func (*ArchiveProductionScheduleRequest) ProtoMessage() {}
 
 func (x *ArchiveProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[64]
+	mi := &file_core_core_production_schedule_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5688,7 +5732,7 @@ func (x *ArchiveProductionScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{64}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ArchiveProductionScheduleRequest) GetId() string {
@@ -5707,7 +5751,7 @@ type ArchiveProductionScheduleResponse struct {
 
 func (x *ArchiveProductionScheduleResponse) Reset() {
 	*x = ArchiveProductionScheduleResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[65]
+	mi := &file_core_core_production_schedule_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5719,7 +5763,7 @@ func (x *ArchiveProductionScheduleResponse) String() string {
 func (*ArchiveProductionScheduleResponse) ProtoMessage() {}
 
 func (x *ArchiveProductionScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[65]
+	mi := &file_core_core_production_schedule_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5732,7 +5776,7 @@ func (x *ArchiveProductionScheduleResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ArchiveProductionScheduleResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveProductionScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{65}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ArchiveProductionScheduleResponse) GetSchedule() *ProductionScheduleInfo {
@@ -5751,7 +5795,7 @@ type DeleteProductionScheduleRequest struct {
 
 func (x *DeleteProductionScheduleRequest) Reset() {
 	*x = DeleteProductionScheduleRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[66]
+	mi := &file_core_core_production_schedule_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5763,7 +5807,7 @@ func (x *DeleteProductionScheduleRequest) String() string {
 func (*DeleteProductionScheduleRequest) ProtoMessage() {}
 
 func (x *DeleteProductionScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[66]
+	mi := &file_core_core_production_schedule_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5776,7 +5820,7 @@ func (x *DeleteProductionScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductionScheduleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{66}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *DeleteProductionScheduleRequest) GetId() string {
@@ -5810,7 +5854,7 @@ type ProductionScheduleDerivedLineInfo struct {
 
 func (x *ProductionScheduleDerivedLineInfo) Reset() {
 	*x = ProductionScheduleDerivedLineInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[67]
+	mi := &file_core_core_production_schedule_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5822,7 +5866,7 @@ func (x *ProductionScheduleDerivedLineInfo) String() string {
 func (*ProductionScheduleDerivedLineInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleDerivedLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[67]
+	mi := &file_core_core_production_schedule_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5835,7 +5879,7 @@ func (x *ProductionScheduleDerivedLineInfo) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProductionScheduleDerivedLineInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleDerivedLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{67}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ProductionScheduleDerivedLineInfo) GetId() string {
@@ -5954,7 +5998,7 @@ type ListProductionScheduleDerivedLinesRequest struct {
 
 func (x *ListProductionScheduleDerivedLinesRequest) Reset() {
 	*x = ListProductionScheduleDerivedLinesRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[68]
+	mi := &file_core_core_production_schedule_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5966,7 +6010,7 @@ func (x *ListProductionScheduleDerivedLinesRequest) String() string {
 func (*ListProductionScheduleDerivedLinesRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleDerivedLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[68]
+	mi := &file_core_core_production_schedule_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5979,7 +6023,7 @@ func (x *ListProductionScheduleDerivedLinesRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListProductionScheduleDerivedLinesRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleDerivedLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{68}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListProductionScheduleDerivedLinesRequest) GetScheduleId() string {
@@ -6012,7 +6056,7 @@ type ListProductionScheduleDerivedLinesResponse struct {
 
 func (x *ListProductionScheduleDerivedLinesResponse) Reset() {
 	*x = ListProductionScheduleDerivedLinesResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[69]
+	mi := &file_core_core_production_schedule_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6024,7 +6068,7 @@ func (x *ListProductionScheduleDerivedLinesResponse) String() string {
 func (*ListProductionScheduleDerivedLinesResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleDerivedLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[69]
+	mi := &file_core_core_production_schedule_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6037,7 +6081,7 @@ func (x *ListProductionScheduleDerivedLinesResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use ListProductionScheduleDerivedLinesResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleDerivedLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{69}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ListProductionScheduleDerivedLinesResponse) GetLines() []*ProductionScheduleDerivedLineInfo {
@@ -6097,7 +6141,7 @@ type ProductionScheduleSettingsInfo struct {
 
 func (x *ProductionScheduleSettingsInfo) Reset() {
 	*x = ProductionScheduleSettingsInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[70]
+	mi := &file_core_core_production_schedule_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6109,7 +6153,7 @@ func (x *ProductionScheduleSettingsInfo) String() string {
 func (*ProductionScheduleSettingsInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleSettingsInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[70]
+	mi := &file_core_core_production_schedule_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6122,7 +6166,7 @@ func (x *ProductionScheduleSettingsInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionScheduleSettingsInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleSettingsInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{70}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ProductionScheduleSettingsInfo) GetConstraintDepartmentId() string {
@@ -6401,7 +6445,7 @@ type ProductionScheduleItemSettingInfo struct {
 
 func (x *ProductionScheduleItemSettingInfo) Reset() {
 	*x = ProductionScheduleItemSettingInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[71]
+	mi := &file_core_core_production_schedule_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6413,7 +6457,7 @@ func (x *ProductionScheduleItemSettingInfo) String() string {
 func (*ProductionScheduleItemSettingInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleItemSettingInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[71]
+	mi := &file_core_core_production_schedule_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6426,7 +6470,7 @@ func (x *ProductionScheduleItemSettingInfo) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProductionScheduleItemSettingInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleItemSettingInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{71}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ProductionScheduleItemSettingInfo) GetId() string {
@@ -6512,7 +6556,7 @@ type FulfillmentRecommendationInfo struct {
 
 func (x *FulfillmentRecommendationInfo) Reset() {
 	*x = FulfillmentRecommendationInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[72]
+	mi := &file_core_core_production_schedule_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6524,7 +6568,7 @@ func (x *FulfillmentRecommendationInfo) String() string {
 func (*FulfillmentRecommendationInfo) ProtoMessage() {}
 
 func (x *FulfillmentRecommendationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[72]
+	mi := &file_core_core_production_schedule_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6537,7 +6581,7 @@ func (x *FulfillmentRecommendationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FulfillmentRecommendationInfo.ProtoReflect.Descriptor instead.
 func (*FulfillmentRecommendationInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{72}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *FulfillmentRecommendationInfo) GetItemId() string {
@@ -6660,7 +6704,7 @@ type ListFulfillmentRecommendationsRequest struct {
 
 func (x *ListFulfillmentRecommendationsRequest) Reset() {
 	*x = ListFulfillmentRecommendationsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[73]
+	mi := &file_core_core_production_schedule_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6672,7 +6716,7 @@ func (x *ListFulfillmentRecommendationsRequest) String() string {
 func (*ListFulfillmentRecommendationsRequest) ProtoMessage() {}
 
 func (x *ListFulfillmentRecommendationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[73]
+	mi := &file_core_core_production_schedule_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6685,7 +6729,7 @@ func (x *ListFulfillmentRecommendationsRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ListFulfillmentRecommendationsRequest.ProtoReflect.Descriptor instead.
 func (*ListFulfillmentRecommendationsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{73}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{74}
 }
 
 type ListFulfillmentRecommendationsResponse struct {
@@ -6697,7 +6741,7 @@ type ListFulfillmentRecommendationsResponse struct {
 
 func (x *ListFulfillmentRecommendationsResponse) Reset() {
 	*x = ListFulfillmentRecommendationsResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[74]
+	mi := &file_core_core_production_schedule_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6709,7 +6753,7 @@ func (x *ListFulfillmentRecommendationsResponse) String() string {
 func (*ListFulfillmentRecommendationsResponse) ProtoMessage() {}
 
 func (x *ListFulfillmentRecommendationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[74]
+	mi := &file_core_core_production_schedule_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6722,7 +6766,7 @@ func (x *ListFulfillmentRecommendationsResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListFulfillmentRecommendationsResponse.ProtoReflect.Descriptor instead.
 func (*ListFulfillmentRecommendationsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{74}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ListFulfillmentRecommendationsResponse) GetRecommendations() []*FulfillmentRecommendationInfo {
@@ -6741,7 +6785,7 @@ type ApplyFulfillmentRecommendationsRequest struct {
 
 func (x *ApplyFulfillmentRecommendationsRequest) Reset() {
 	*x = ApplyFulfillmentRecommendationsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[75]
+	mi := &file_core_core_production_schedule_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6753,7 +6797,7 @@ func (x *ApplyFulfillmentRecommendationsRequest) String() string {
 func (*ApplyFulfillmentRecommendationsRequest) ProtoMessage() {}
 
 func (x *ApplyFulfillmentRecommendationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[75]
+	mi := &file_core_core_production_schedule_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6766,7 +6810,7 @@ func (x *ApplyFulfillmentRecommendationsRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ApplyFulfillmentRecommendationsRequest.ProtoReflect.Descriptor instead.
 func (*ApplyFulfillmentRecommendationsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{75}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ApplyFulfillmentRecommendationsRequest) GetItemIds() []string {
@@ -6785,7 +6829,7 @@ type ListProductionScheduleAtRiskOrdersRequest struct {
 
 func (x *ListProductionScheduleAtRiskOrdersRequest) Reset() {
 	*x = ListProductionScheduleAtRiskOrdersRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[76]
+	mi := &file_core_core_production_schedule_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6797,7 +6841,7 @@ func (x *ListProductionScheduleAtRiskOrdersRequest) String() string {
 func (*ListProductionScheduleAtRiskOrdersRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleAtRiskOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[76]
+	mi := &file_core_core_production_schedule_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6810,7 +6854,7 @@ func (x *ListProductionScheduleAtRiskOrdersRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListProductionScheduleAtRiskOrdersRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleAtRiskOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{76}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ListProductionScheduleAtRiskOrdersRequest) GetProductionScheduleId() string {
@@ -6839,7 +6883,7 @@ type ScheduleOrderCoverageProto struct {
 
 func (x *ScheduleOrderCoverageProto) Reset() {
 	*x = ScheduleOrderCoverageProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[77]
+	mi := &file_core_core_production_schedule_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6851,7 +6895,7 @@ func (x *ScheduleOrderCoverageProto) String() string {
 func (*ScheduleOrderCoverageProto) ProtoMessage() {}
 
 func (x *ScheduleOrderCoverageProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[77]
+	mi := &file_core_core_production_schedule_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6864,7 +6908,7 @@ func (x *ScheduleOrderCoverageProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleOrderCoverageProto.ProtoReflect.Descriptor instead.
 func (*ScheduleOrderCoverageProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{77}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *ScheduleOrderCoverageProto) GetSalesOrderId() string {
@@ -6942,7 +6986,7 @@ type ScheduleOrderCoverageLineProto struct {
 
 func (x *ScheduleOrderCoverageLineProto) Reset() {
 	*x = ScheduleOrderCoverageLineProto{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[78]
+	mi := &file_core_core_production_schedule_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6954,7 +6998,7 @@ func (x *ScheduleOrderCoverageLineProto) String() string {
 func (*ScheduleOrderCoverageLineProto) ProtoMessage() {}
 
 func (x *ScheduleOrderCoverageLineProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[78]
+	mi := &file_core_core_production_schedule_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6967,7 +7011,7 @@ func (x *ScheduleOrderCoverageLineProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleOrderCoverageLineProto.ProtoReflect.Descriptor instead.
 func (*ScheduleOrderCoverageLineProto) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{78}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ScheduleOrderCoverageLineProto) GetProductionScheduleLineId() string {
@@ -7007,7 +7051,7 @@ type ListProductionScheduleAtRiskOrdersResponse struct {
 
 func (x *ListProductionScheduleAtRiskOrdersResponse) Reset() {
 	*x = ListProductionScheduleAtRiskOrdersResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[79]
+	mi := &file_core_core_production_schedule_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7019,7 +7063,7 @@ func (x *ListProductionScheduleAtRiskOrdersResponse) String() string {
 func (*ListProductionScheduleAtRiskOrdersResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleAtRiskOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[79]
+	mi := &file_core_core_production_schedule_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7032,7 +7076,7 @@ func (x *ListProductionScheduleAtRiskOrdersResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use ListProductionScheduleAtRiskOrdersResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleAtRiskOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{79}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ListProductionScheduleAtRiskOrdersResponse) GetOrders() []*ScheduleOrderCoverageProto {
@@ -7050,7 +7094,7 @@ type ListProductionScheduleItemSettingsRequest struct {
 
 func (x *ListProductionScheduleItemSettingsRequest) Reset() {
 	*x = ListProductionScheduleItemSettingsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[80]
+	mi := &file_core_core_production_schedule_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7062,7 +7106,7 @@ func (x *ListProductionScheduleItemSettingsRequest) String() string {
 func (*ListProductionScheduleItemSettingsRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleItemSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[80]
+	mi := &file_core_core_production_schedule_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7075,7 +7119,7 @@ func (x *ListProductionScheduleItemSettingsRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListProductionScheduleItemSettingsRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleItemSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{80}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{81}
 }
 
 type ListProductionScheduleItemSettingsResponse struct {
@@ -7087,7 +7131,7 @@ type ListProductionScheduleItemSettingsResponse struct {
 
 func (x *ListProductionScheduleItemSettingsResponse) Reset() {
 	*x = ListProductionScheduleItemSettingsResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[81]
+	mi := &file_core_core_production_schedule_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7099,7 +7143,7 @@ func (x *ListProductionScheduleItemSettingsResponse) String() string {
 func (*ListProductionScheduleItemSettingsResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleItemSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[81]
+	mi := &file_core_core_production_schedule_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7112,7 +7156,7 @@ func (x *ListProductionScheduleItemSettingsResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use ListProductionScheduleItemSettingsResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleItemSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{81}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ListProductionScheduleItemSettingsResponse) GetSettings() []*ProductionScheduleItemSettingInfo {
@@ -7131,7 +7175,7 @@ type GetProductionScheduleItemSettingRequest struct {
 
 func (x *GetProductionScheduleItemSettingRequest) Reset() {
 	*x = GetProductionScheduleItemSettingRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[82]
+	mi := &file_core_core_production_schedule_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7143,7 +7187,7 @@ func (x *GetProductionScheduleItemSettingRequest) String() string {
 func (*GetProductionScheduleItemSettingRequest) ProtoMessage() {}
 
 func (x *GetProductionScheduleItemSettingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[82]
+	mi := &file_core_core_production_schedule_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7156,7 +7200,7 @@ func (x *GetProductionScheduleItemSettingRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetProductionScheduleItemSettingRequest.ProtoReflect.Descriptor instead.
 func (*GetProductionScheduleItemSettingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{82}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *GetProductionScheduleItemSettingRequest) GetItemId() string {
@@ -7178,7 +7222,7 @@ type UpsertProductionScheduleItemSettingRequest struct {
 
 func (x *UpsertProductionScheduleItemSettingRequest) Reset() {
 	*x = UpsertProductionScheduleItemSettingRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[83]
+	mi := &file_core_core_production_schedule_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7190,7 +7234,7 @@ func (x *UpsertProductionScheduleItemSettingRequest) String() string {
 func (*UpsertProductionScheduleItemSettingRequest) ProtoMessage() {}
 
 func (x *UpsertProductionScheduleItemSettingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[83]
+	mi := &file_core_core_production_schedule_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7203,7 +7247,7 @@ func (x *UpsertProductionScheduleItemSettingRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use UpsertProductionScheduleItemSettingRequest.ProtoReflect.Descriptor instead.
 func (*UpsertProductionScheduleItemSettingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{83}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *UpsertProductionScheduleItemSettingRequest) GetItemId() string {
@@ -7243,7 +7287,7 @@ type ProductionScheduleItemSettingResponse struct {
 
 func (x *ProductionScheduleItemSettingResponse) Reset() {
 	*x = ProductionScheduleItemSettingResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[84]
+	mi := &file_core_core_production_schedule_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7255,7 +7299,7 @@ func (x *ProductionScheduleItemSettingResponse) String() string {
 func (*ProductionScheduleItemSettingResponse) ProtoMessage() {}
 
 func (x *ProductionScheduleItemSettingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[84]
+	mi := &file_core_core_production_schedule_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7268,7 +7312,7 @@ func (x *ProductionScheduleItemSettingResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ProductionScheduleItemSettingResponse.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleItemSettingResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{84}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ProductionScheduleItemSettingResponse) GetSetting() *ProductionScheduleItemSettingInfo {
@@ -7287,7 +7331,7 @@ type DeleteProductionScheduleItemSettingRequest struct {
 
 func (x *DeleteProductionScheduleItemSettingRequest) Reset() {
 	*x = DeleteProductionScheduleItemSettingRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[85]
+	mi := &file_core_core_production_schedule_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7299,7 +7343,7 @@ func (x *DeleteProductionScheduleItemSettingRequest) String() string {
 func (*DeleteProductionScheduleItemSettingRequest) ProtoMessage() {}
 
 func (x *DeleteProductionScheduleItemSettingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[85]
+	mi := &file_core_core_production_schedule_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7312,7 +7356,7 @@ func (x *DeleteProductionScheduleItemSettingRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use DeleteProductionScheduleItemSettingRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionScheduleItemSettingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{85}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *DeleteProductionScheduleItemSettingRequest) GetItemId() string {
@@ -7330,7 +7374,7 @@ type GetProductionScheduleSettingsRequest struct {
 
 func (x *GetProductionScheduleSettingsRequest) Reset() {
 	*x = GetProductionScheduleSettingsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[86]
+	mi := &file_core_core_production_schedule_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7342,7 +7386,7 @@ func (x *GetProductionScheduleSettingsRequest) String() string {
 func (*GetProductionScheduleSettingsRequest) ProtoMessage() {}
 
 func (x *GetProductionScheduleSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[86]
+	mi := &file_core_core_production_schedule_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7355,7 +7399,7 @@ func (x *GetProductionScheduleSettingsRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetProductionScheduleSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetProductionScheduleSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{86}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{87}
 }
 
 type GetProductionScheduleSettingsResponse struct {
@@ -7367,7 +7411,7 @@ type GetProductionScheduleSettingsResponse struct {
 
 func (x *GetProductionScheduleSettingsResponse) Reset() {
 	*x = GetProductionScheduleSettingsResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[87]
+	mi := &file_core_core_production_schedule_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7379,7 +7423,7 @@ func (x *GetProductionScheduleSettingsResponse) String() string {
 func (*GetProductionScheduleSettingsResponse) ProtoMessage() {}
 
 func (x *GetProductionScheduleSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[87]
+	mi := &file_core_core_production_schedule_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7392,7 +7436,7 @@ func (x *GetProductionScheduleSettingsResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetProductionScheduleSettingsResponse.ProtoReflect.Descriptor instead.
 func (*GetProductionScheduleSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{87}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *GetProductionScheduleSettingsResponse) GetSettings() *ProductionScheduleSettingsInfo {
@@ -7411,7 +7455,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 
 func (x *UpdateProductionScheduleSettingsRequest) Reset() {
 	*x = UpdateProductionScheduleSettingsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[88]
+	mi := &file_core_core_production_schedule_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7423,7 +7467,7 @@ func (x *UpdateProductionScheduleSettingsRequest) String() string {
 func (*UpdateProductionScheduleSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateProductionScheduleSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[88]
+	mi := &file_core_core_production_schedule_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7436,7 +7480,7 @@ func (x *UpdateProductionScheduleSettingsRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use UpdateProductionScheduleSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductionScheduleSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{88}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *UpdateProductionScheduleSettingsRequest) GetSettings() *ProductionScheduleSettingsInfo {
@@ -7460,7 +7504,7 @@ type ProductionScheduleResourceSettingInfo struct {
 
 func (x *ProductionScheduleResourceSettingInfo) Reset() {
 	*x = ProductionScheduleResourceSettingInfo{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[89]
+	mi := &file_core_core_production_schedule_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7472,7 +7516,7 @@ func (x *ProductionScheduleResourceSettingInfo) String() string {
 func (*ProductionScheduleResourceSettingInfo) ProtoMessage() {}
 
 func (x *ProductionScheduleResourceSettingInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[89]
+	mi := &file_core_core_production_schedule_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7485,7 +7529,7 @@ func (x *ProductionScheduleResourceSettingInfo) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ProductionScheduleResourceSettingInfo.ProtoReflect.Descriptor instead.
 func (*ProductionScheduleResourceSettingInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{89}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ProductionScheduleResourceSettingInfo) GetId() string {
@@ -7538,7 +7582,7 @@ type ListProductionScheduleResourceSettingsRequest struct {
 
 func (x *ListProductionScheduleResourceSettingsRequest) Reset() {
 	*x = ListProductionScheduleResourceSettingsRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[90]
+	mi := &file_core_core_production_schedule_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7550,7 +7594,7 @@ func (x *ListProductionScheduleResourceSettingsRequest) String() string {
 func (*ListProductionScheduleResourceSettingsRequest) ProtoMessage() {}
 
 func (x *ListProductionScheduleResourceSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[90]
+	mi := &file_core_core_production_schedule_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7563,7 +7607,7 @@ func (x *ListProductionScheduleResourceSettingsRequest) ProtoReflect() protorefl
 
 // Deprecated: Use ListProductionScheduleResourceSettingsRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleResourceSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{90}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{91}
 }
 
 type ListProductionScheduleResourceSettingsResponse struct {
@@ -7575,7 +7619,7 @@ type ListProductionScheduleResourceSettingsResponse struct {
 
 func (x *ListProductionScheduleResourceSettingsResponse) Reset() {
 	*x = ListProductionScheduleResourceSettingsResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[91]
+	mi := &file_core_core_production_schedule_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7587,7 +7631,7 @@ func (x *ListProductionScheduleResourceSettingsResponse) String() string {
 func (*ListProductionScheduleResourceSettingsResponse) ProtoMessage() {}
 
 func (x *ListProductionScheduleResourceSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[91]
+	mi := &file_core_core_production_schedule_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7600,7 +7644,7 @@ func (x *ListProductionScheduleResourceSettingsResponse) ProtoReflect() protoref
 
 // Deprecated: Use ListProductionScheduleResourceSettingsResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionScheduleResourceSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{91}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ListProductionScheduleResourceSettingsResponse) GetSettings() []*ProductionScheduleResourceSettingInfo {
@@ -7623,7 +7667,7 @@ type UpsertProductionScheduleResourceSettingRequest struct {
 
 func (x *UpsertProductionScheduleResourceSettingRequest) Reset() {
 	*x = UpsertProductionScheduleResourceSettingRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[92]
+	mi := &file_core_core_production_schedule_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7635,7 +7679,7 @@ func (x *UpsertProductionScheduleResourceSettingRequest) String() string {
 func (*UpsertProductionScheduleResourceSettingRequest) ProtoMessage() {}
 
 func (x *UpsertProductionScheduleResourceSettingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[92]
+	mi := &file_core_core_production_schedule_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7648,7 +7692,7 @@ func (x *UpsertProductionScheduleResourceSettingRequest) ProtoReflect() protoref
 
 // Deprecated: Use UpsertProductionScheduleResourceSettingRequest.ProtoReflect.Descriptor instead.
 func (*UpsertProductionScheduleResourceSettingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{92}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *UpsertProductionScheduleResourceSettingRequest) GetScopeCode() string {
@@ -7695,7 +7739,7 @@ type UpsertProductionScheduleResourceSettingResponse struct {
 
 func (x *UpsertProductionScheduleResourceSettingResponse) Reset() {
 	*x = UpsertProductionScheduleResourceSettingResponse{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[93]
+	mi := &file_core_core_production_schedule_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7707,7 +7751,7 @@ func (x *UpsertProductionScheduleResourceSettingResponse) String() string {
 func (*UpsertProductionScheduleResourceSettingResponse) ProtoMessage() {}
 
 func (x *UpsertProductionScheduleResourceSettingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[93]
+	mi := &file_core_core_production_schedule_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7720,7 +7764,7 @@ func (x *UpsertProductionScheduleResourceSettingResponse) ProtoReflect() protore
 
 // Deprecated: Use UpsertProductionScheduleResourceSettingResponse.ProtoReflect.Descriptor instead.
 func (*UpsertProductionScheduleResourceSettingResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{93}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *UpsertProductionScheduleResourceSettingResponse) GetSetting() *ProductionScheduleResourceSettingInfo {
@@ -7739,7 +7783,7 @@ type DeleteProductionScheduleResourceSettingRequest struct {
 
 func (x *DeleteProductionScheduleResourceSettingRequest) Reset() {
 	*x = DeleteProductionScheduleResourceSettingRequest{}
-	mi := &file_core_core_production_schedule_proto_msgTypes[94]
+	mi := &file_core_core_production_schedule_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7751,7 +7795,7 @@ func (x *DeleteProductionScheduleResourceSettingRequest) String() string {
 func (*DeleteProductionScheduleResourceSettingRequest) ProtoMessage() {}
 
 func (x *DeleteProductionScheduleResourceSettingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_schedule_proto_msgTypes[94]
+	mi := &file_core_core_production_schedule_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7764,7 +7808,7 @@ func (x *DeleteProductionScheduleResourceSettingRequest) ProtoReflect() protoref
 
 // Deprecated: Use DeleteProductionScheduleResourceSettingRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionScheduleResourceSettingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{94}
+	return file_core_core_production_schedule_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *DeleteProductionScheduleResourceSettingRequest) GetId() string {
@@ -7816,7 +7860,9 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x1eListOperatingCalendarsResponse\x129\n" +
 	"\tcalendars\x18\x01 \x03(\v2\x1b.core.OperatingCalendarInfoR\tcalendars\"-\n" +
 	"\x1bGetOperatingCalendarRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x84\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\":\n" +
+	"&BatchGetOperatingCalendarsByIDsRequest\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x84\x02\n" +
 	"\x1eCreateOperatingCalendarRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
@@ -8645,7 +8691,7 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"/UpsertProductionScheduleResourceSettingResponse\x12E\n" +
 	"\asetting\x18\x01 \x01(\v2+.core.ProductionScheduleResourceSettingInfoR\asetting\"@\n" +
 	".DeleteProductionScheduleResourceSettingRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xba'\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id2\xb1(\n" +
 	"\x1dCoreProductionScheduleService\x12l\n" +
 	"\x19PreviewProductionSchedule\x12&.core.PreviewProductionScheduleRequest\x1a'.core.PreviewProductionScheduleResponse\x12o\n" +
 	"\x1aGenerateProductionSchedule\x12'.core.GenerateProductionScheduleRequest\x1a(.core.GenerateProductionScheduleResponse\x12\x83\x01\n" +
@@ -8682,7 +8728,8 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x19ArchiveProductionSchedule\x12&.core.ArchiveProductionScheduleRequest\x1a'.core.ArchiveProductionScheduleResponse\x12Y\n" +
 	"\x18DeleteProductionSchedule\x12%.core.DeleteProductionScheduleRequest\x1a\x16.google.protobuf.Empty\x12c\n" +
 	"\x16ListOperatingCalendars\x12#.core.ListOperatingCalendarsRequest\x1a$.core.ListOperatingCalendarsResponse\x12V\n" +
-	"\x14GetOperatingCalendar\x12!.core.GetOperatingCalendarRequest\x1a\x1b.core.OperatingCalendarInfo\x12\\\n" +
+	"\x14GetOperatingCalendar\x12!.core.GetOperatingCalendarRequest\x1a\x1b.core.OperatingCalendarInfo\x12u\n" +
+	"\x1fBatchGetOperatingCalendarsByIDs\x12,.core.BatchGetOperatingCalendarsByIDsRequest\x1a$.core.ListOperatingCalendarsResponse\x12\\\n" +
 	"\x17CreateOperatingCalendar\x12$.core.CreateOperatingCalendarRequest\x1a\x1b.core.OperatingCalendarInfo\x12\\\n" +
 	"\x17UpdateOperatingCalendar\x12$.core.UpdateOperatingCalendarRequest\x1a\x1b.core.OperatingCalendarInfo\x12W\n" +
 	"\x17DeleteOperatingCalendar\x12$.core.DeleteOperatingCalendarRequest\x1a\x16.google.protobuf.Empty\x12x\n" +
@@ -8702,284 +8749,287 @@ func file_core_core_production_schedule_proto_rawDescGZIP() []byte {
 	return file_core_core_production_schedule_proto_rawDescData
 }
 
-var file_core_core_production_schedule_proto_msgTypes = make([]protoimpl.MessageInfo, 95)
+var file_core_core_production_schedule_proto_msgTypes = make([]protoimpl.MessageInfo, 96)
 var file_core_core_production_schedule_proto_goTypes = []any{
 	(*OperatingCalendarInfo)(nil),                           // 0: core.OperatingCalendarInfo
 	(*OperatingCalendarClosureInfo)(nil),                    // 1: core.OperatingCalendarClosureInfo
 	(*ListOperatingCalendarsRequest)(nil),                   // 2: core.ListOperatingCalendarsRequest
 	(*ListOperatingCalendarsResponse)(nil),                  // 3: core.ListOperatingCalendarsResponse
 	(*GetOperatingCalendarRequest)(nil),                     // 4: core.GetOperatingCalendarRequest
-	(*CreateOperatingCalendarRequest)(nil),                  // 5: core.CreateOperatingCalendarRequest
-	(*UpdateOperatingCalendarRequest)(nil),                  // 6: core.UpdateOperatingCalendarRequest
-	(*DeleteOperatingCalendarRequest)(nil),                  // 7: core.DeleteOperatingCalendarRequest
-	(*ListOperatingCalendarClosuresRequest)(nil),            // 8: core.ListOperatingCalendarClosuresRequest
-	(*ListOperatingCalendarClosuresResponse)(nil),           // 9: core.ListOperatingCalendarClosuresResponse
-	(*CreateOperatingCalendarClosureRequest)(nil),           // 10: core.CreateOperatingCalendarClosureRequest
-	(*DeleteOperatingCalendarClosureRequest)(nil),           // 11: core.DeleteOperatingCalendarClosureRequest
-	(*ProductionScheduleInfo)(nil),                          // 12: core.ProductionScheduleInfo
-	(*ProductionScheduleLineInfo)(nil),                      // 13: core.ProductionScheduleLineInfo
-	(*ProductionScheduleItemPolicyInfo)(nil),                // 14: core.ProductionScheduleItemPolicyInfo
-	(*ProductionScheduleFinishedPolicyInfo)(nil),            // 15: core.ProductionScheduleFinishedPolicyInfo
-	(*ProductionScheduleFinishingLineInfo)(nil),             // 16: core.ProductionScheduleFinishingLineInfo
-	(*ListProductionScheduleFinishingLinesRequest)(nil),     // 17: core.ListProductionScheduleFinishingLinesRequest
-	(*ListProductionScheduleFinishingLinesResponse)(nil),    // 18: core.ListProductionScheduleFinishingLinesResponse
-	(*ListProductionScheduleFinishedPoliciesRequest)(nil),   // 19: core.ListProductionScheduleFinishedPoliciesRequest
-	(*ListProductionScheduleFinishedPoliciesResponse)(nil),  // 20: core.ListProductionScheduleFinishedPoliciesResponse
-	(*GenerateProductionScheduleRequest)(nil),               // 21: core.GenerateProductionScheduleRequest
-	(*GenerateProductionScheduleResponse)(nil),              // 22: core.GenerateProductionScheduleResponse
-	(*RegenerateProductionScheduleRequest)(nil),             // 23: core.RegenerateProductionScheduleRequest
-	(*ScheduleDiffLineProto)(nil),                           // 24: core.ScheduleDiffLineProto
-	(*PreviewRegenerateProductionScheduleResponse)(nil),     // 25: core.PreviewRegenerateProductionScheduleResponse
-	(*RegenerateProductionScheduleResponse)(nil),            // 26: core.RegenerateProductionScheduleResponse
-	(*GetProductionScheduleRequest)(nil),                    // 27: core.GetProductionScheduleRequest
-	(*GetCurrentProductionScheduleRequest)(nil),             // 28: core.GetCurrentProductionScheduleRequest
-	(*GetProductionScheduleResponse)(nil),                   // 29: core.GetProductionScheduleResponse
-	(*ListProductionSchedulesRequest)(nil),                  // 30: core.ListProductionSchedulesRequest
-	(*ListProductionSchedulesResponse)(nil),                 // 31: core.ListProductionSchedulesResponse
-	(*ListProductionScheduleLinesRequest)(nil),              // 32: core.ListProductionScheduleLinesRequest
-	(*ListProductionScheduleLinesResponse)(nil),             // 33: core.ListProductionScheduleLinesResponse
-	(*ListProductionScheduleItemPoliciesRequest)(nil),       // 34: core.ListProductionScheduleItemPoliciesRequest
-	(*ListProductionScheduleItemPoliciesResponse)(nil),      // 35: core.ListProductionScheduleItemPoliciesResponse
-	(*PreviewProductionScheduleRequest)(nil),                // 36: core.PreviewProductionScheduleRequest
-	(*SchedulePolicyProto)(nil),                             // 37: core.SchedulePolicyProto
-	(*ScheduleCampaignProto)(nil),                           // 38: core.ScheduleCampaignProto
-	(*ScheduleProjectionProto)(nil),                         // 39: core.ScheduleProjectionProto
-	(*ScheduleAppliedOverrideProto)(nil),                    // 40: core.ScheduleAppliedOverrideProto
-	(*ScheduleDiagnosticsProto)(nil),                        // 41: core.ScheduleDiagnosticsProto
-	(*ScheduleFinishingDiagnosticsProto)(nil),               // 42: core.ScheduleFinishingDiagnosticsProto
-	(*ScheduleAtRiskOrderProto)(nil),                        // 43: core.ScheduleAtRiskOrderProto
-	(*PreviewProductionScheduleResponse)(nil),               // 44: core.PreviewProductionScheduleResponse
-	(*ScheduleDeviationTypeInfo)(nil),                       // 45: core.ScheduleDeviationTypeInfo
-	(*ProductionScheduleDeviationInfo)(nil),                 // 46: core.ProductionScheduleDeviationInfo
-	(*ListScheduleDeviationTypesRequest)(nil),               // 47: core.ListScheduleDeviationTypesRequest
-	(*ListScheduleDeviationTypesResponse)(nil),              // 48: core.ListScheduleDeviationTypesResponse
-	(*ListProductionScheduleDeviationsRequest)(nil),         // 49: core.ListProductionScheduleDeviationsRequest
-	(*ListProductionScheduleDeviationsResponse)(nil),        // 50: core.ListProductionScheduleDeviationsResponse
-	(*CreateProductionScheduleLineRequest)(nil),             // 51: core.CreateProductionScheduleLineRequest
-	(*CreateProductionScheduleLineResponse)(nil),            // 52: core.CreateProductionScheduleLineResponse
-	(*UpdateProductionScheduleLineRequest)(nil),             // 53: core.UpdateProductionScheduleLineRequest
-	(*UpdateProductionScheduleLineResponse)(nil),            // 54: core.UpdateProductionScheduleLineResponse
-	(*DeleteProductionScheduleLineRequest)(nil),             // 55: core.DeleteProductionScheduleLineRequest
-	(*PublishProductionScheduleRequest)(nil),                // 56: core.PublishProductionScheduleRequest
-	(*PublishProductionScheduleResponse)(nil),               // 57: core.PublishProductionScheduleResponse
-	(*ReleaseProductionScheduleWeekRequest)(nil),            // 58: core.ReleaseProductionScheduleWeekRequest
-	(*ReleaseScheduleLineBatchInfo)(nil),                    // 59: core.ReleaseScheduleLineBatchInfo
-	(*ReleasedScheduleLineInfo)(nil),                        // 60: core.ReleasedScheduleLineInfo
-	(*ReleaseProductionScheduleWeekResponse)(nil),           // 61: core.ReleaseProductionScheduleWeekResponse
-	(*PreviewReleaseProductionScheduleWeekRequest)(nil),     // 62: core.PreviewReleaseProductionScheduleWeekRequest
-	(*ReleaseProductionScheduleWeekPreviewResponse)(nil),    // 63: core.ReleaseProductionScheduleWeekPreviewResponse
-	(*ArchiveProductionScheduleRequest)(nil),                // 64: core.ArchiveProductionScheduleRequest
-	(*ArchiveProductionScheduleResponse)(nil),               // 65: core.ArchiveProductionScheduleResponse
-	(*DeleteProductionScheduleRequest)(nil),                 // 66: core.DeleteProductionScheduleRequest
-	(*ProductionScheduleDerivedLineInfo)(nil),               // 67: core.ProductionScheduleDerivedLineInfo
-	(*ListProductionScheduleDerivedLinesRequest)(nil),       // 68: core.ListProductionScheduleDerivedLinesRequest
-	(*ListProductionScheduleDerivedLinesResponse)(nil),      // 69: core.ListProductionScheduleDerivedLinesResponse
-	(*ProductionScheduleSettingsInfo)(nil),                  // 70: core.ProductionScheduleSettingsInfo
-	(*ProductionScheduleItemSettingInfo)(nil),               // 71: core.ProductionScheduleItemSettingInfo
-	(*FulfillmentRecommendationInfo)(nil),                   // 72: core.FulfillmentRecommendationInfo
-	(*ListFulfillmentRecommendationsRequest)(nil),           // 73: core.ListFulfillmentRecommendationsRequest
-	(*ListFulfillmentRecommendationsResponse)(nil),          // 74: core.ListFulfillmentRecommendationsResponse
-	(*ApplyFulfillmentRecommendationsRequest)(nil),          // 75: core.ApplyFulfillmentRecommendationsRequest
-	(*ListProductionScheduleAtRiskOrdersRequest)(nil),       // 76: core.ListProductionScheduleAtRiskOrdersRequest
-	(*ScheduleOrderCoverageProto)(nil),                      // 77: core.ScheduleOrderCoverageProto
-	(*ScheduleOrderCoverageLineProto)(nil),                  // 78: core.ScheduleOrderCoverageLineProto
-	(*ListProductionScheduleAtRiskOrdersResponse)(nil),      // 79: core.ListProductionScheduleAtRiskOrdersResponse
-	(*ListProductionScheduleItemSettingsRequest)(nil),       // 80: core.ListProductionScheduleItemSettingsRequest
-	(*ListProductionScheduleItemSettingsResponse)(nil),      // 81: core.ListProductionScheduleItemSettingsResponse
-	(*GetProductionScheduleItemSettingRequest)(nil),         // 82: core.GetProductionScheduleItemSettingRequest
-	(*UpsertProductionScheduleItemSettingRequest)(nil),      // 83: core.UpsertProductionScheduleItemSettingRequest
-	(*ProductionScheduleItemSettingResponse)(nil),           // 84: core.ProductionScheduleItemSettingResponse
-	(*DeleteProductionScheduleItemSettingRequest)(nil),      // 85: core.DeleteProductionScheduleItemSettingRequest
-	(*GetProductionScheduleSettingsRequest)(nil),            // 86: core.GetProductionScheduleSettingsRequest
-	(*GetProductionScheduleSettingsResponse)(nil),           // 87: core.GetProductionScheduleSettingsResponse
-	(*UpdateProductionScheduleSettingsRequest)(nil),         // 88: core.UpdateProductionScheduleSettingsRequest
-	(*ProductionScheduleResourceSettingInfo)(nil),           // 89: core.ProductionScheduleResourceSettingInfo
-	(*ListProductionScheduleResourceSettingsRequest)(nil),   // 90: core.ListProductionScheduleResourceSettingsRequest
-	(*ListProductionScheduleResourceSettingsResponse)(nil),  // 91: core.ListProductionScheduleResourceSettingsResponse
-	(*UpsertProductionScheduleResourceSettingRequest)(nil),  // 92: core.UpsertProductionScheduleResourceSettingRequest
-	(*UpsertProductionScheduleResourceSettingResponse)(nil), // 93: core.UpsertProductionScheduleResourceSettingResponse
-	(*DeleteProductionScheduleResourceSettingRequest)(nil),  // 94: core.DeleteProductionScheduleResourceSettingRequest
-	(*timestamppb.Timestamp)(nil),                           // 95: google.protobuf.Timestamp
-	(*StringPatch)(nil),                                     // 96: core.StringPatch
-	(*PageInfo)(nil),                                        // 97: core.PageInfo
-	(*ProductionRunInfo)(nil),                               // 98: core.ProductionRunInfo
-	(*emptypb.Empty)(nil),                                   // 99: google.protobuf.Empty
+	(*BatchGetOperatingCalendarsByIDsRequest)(nil),          // 5: core.BatchGetOperatingCalendarsByIDsRequest
+	(*CreateOperatingCalendarRequest)(nil),                  // 6: core.CreateOperatingCalendarRequest
+	(*UpdateOperatingCalendarRequest)(nil),                  // 7: core.UpdateOperatingCalendarRequest
+	(*DeleteOperatingCalendarRequest)(nil),                  // 8: core.DeleteOperatingCalendarRequest
+	(*ListOperatingCalendarClosuresRequest)(nil),            // 9: core.ListOperatingCalendarClosuresRequest
+	(*ListOperatingCalendarClosuresResponse)(nil),           // 10: core.ListOperatingCalendarClosuresResponse
+	(*CreateOperatingCalendarClosureRequest)(nil),           // 11: core.CreateOperatingCalendarClosureRequest
+	(*DeleteOperatingCalendarClosureRequest)(nil),           // 12: core.DeleteOperatingCalendarClosureRequest
+	(*ProductionScheduleInfo)(nil),                          // 13: core.ProductionScheduleInfo
+	(*ProductionScheduleLineInfo)(nil),                      // 14: core.ProductionScheduleLineInfo
+	(*ProductionScheduleItemPolicyInfo)(nil),                // 15: core.ProductionScheduleItemPolicyInfo
+	(*ProductionScheduleFinishedPolicyInfo)(nil),            // 16: core.ProductionScheduleFinishedPolicyInfo
+	(*ProductionScheduleFinishingLineInfo)(nil),             // 17: core.ProductionScheduleFinishingLineInfo
+	(*ListProductionScheduleFinishingLinesRequest)(nil),     // 18: core.ListProductionScheduleFinishingLinesRequest
+	(*ListProductionScheduleFinishingLinesResponse)(nil),    // 19: core.ListProductionScheduleFinishingLinesResponse
+	(*ListProductionScheduleFinishedPoliciesRequest)(nil),   // 20: core.ListProductionScheduleFinishedPoliciesRequest
+	(*ListProductionScheduleFinishedPoliciesResponse)(nil),  // 21: core.ListProductionScheduleFinishedPoliciesResponse
+	(*GenerateProductionScheduleRequest)(nil),               // 22: core.GenerateProductionScheduleRequest
+	(*GenerateProductionScheduleResponse)(nil),              // 23: core.GenerateProductionScheduleResponse
+	(*RegenerateProductionScheduleRequest)(nil),             // 24: core.RegenerateProductionScheduleRequest
+	(*ScheduleDiffLineProto)(nil),                           // 25: core.ScheduleDiffLineProto
+	(*PreviewRegenerateProductionScheduleResponse)(nil),     // 26: core.PreviewRegenerateProductionScheduleResponse
+	(*RegenerateProductionScheduleResponse)(nil),            // 27: core.RegenerateProductionScheduleResponse
+	(*GetProductionScheduleRequest)(nil),                    // 28: core.GetProductionScheduleRequest
+	(*GetCurrentProductionScheduleRequest)(nil),             // 29: core.GetCurrentProductionScheduleRequest
+	(*GetProductionScheduleResponse)(nil),                   // 30: core.GetProductionScheduleResponse
+	(*ListProductionSchedulesRequest)(nil),                  // 31: core.ListProductionSchedulesRequest
+	(*ListProductionSchedulesResponse)(nil),                 // 32: core.ListProductionSchedulesResponse
+	(*ListProductionScheduleLinesRequest)(nil),              // 33: core.ListProductionScheduleLinesRequest
+	(*ListProductionScheduleLinesResponse)(nil),             // 34: core.ListProductionScheduleLinesResponse
+	(*ListProductionScheduleItemPoliciesRequest)(nil),       // 35: core.ListProductionScheduleItemPoliciesRequest
+	(*ListProductionScheduleItemPoliciesResponse)(nil),      // 36: core.ListProductionScheduleItemPoliciesResponse
+	(*PreviewProductionScheduleRequest)(nil),                // 37: core.PreviewProductionScheduleRequest
+	(*SchedulePolicyProto)(nil),                             // 38: core.SchedulePolicyProto
+	(*ScheduleCampaignProto)(nil),                           // 39: core.ScheduleCampaignProto
+	(*ScheduleProjectionProto)(nil),                         // 40: core.ScheduleProjectionProto
+	(*ScheduleAppliedOverrideProto)(nil),                    // 41: core.ScheduleAppliedOverrideProto
+	(*ScheduleDiagnosticsProto)(nil),                        // 42: core.ScheduleDiagnosticsProto
+	(*ScheduleFinishingDiagnosticsProto)(nil),               // 43: core.ScheduleFinishingDiagnosticsProto
+	(*ScheduleAtRiskOrderProto)(nil),                        // 44: core.ScheduleAtRiskOrderProto
+	(*PreviewProductionScheduleResponse)(nil),               // 45: core.PreviewProductionScheduleResponse
+	(*ScheduleDeviationTypeInfo)(nil),                       // 46: core.ScheduleDeviationTypeInfo
+	(*ProductionScheduleDeviationInfo)(nil),                 // 47: core.ProductionScheduleDeviationInfo
+	(*ListScheduleDeviationTypesRequest)(nil),               // 48: core.ListScheduleDeviationTypesRequest
+	(*ListScheduleDeviationTypesResponse)(nil),              // 49: core.ListScheduleDeviationTypesResponse
+	(*ListProductionScheduleDeviationsRequest)(nil),         // 50: core.ListProductionScheduleDeviationsRequest
+	(*ListProductionScheduleDeviationsResponse)(nil),        // 51: core.ListProductionScheduleDeviationsResponse
+	(*CreateProductionScheduleLineRequest)(nil),             // 52: core.CreateProductionScheduleLineRequest
+	(*CreateProductionScheduleLineResponse)(nil),            // 53: core.CreateProductionScheduleLineResponse
+	(*UpdateProductionScheduleLineRequest)(nil),             // 54: core.UpdateProductionScheduleLineRequest
+	(*UpdateProductionScheduleLineResponse)(nil),            // 55: core.UpdateProductionScheduleLineResponse
+	(*DeleteProductionScheduleLineRequest)(nil),             // 56: core.DeleteProductionScheduleLineRequest
+	(*PublishProductionScheduleRequest)(nil),                // 57: core.PublishProductionScheduleRequest
+	(*PublishProductionScheduleResponse)(nil),               // 58: core.PublishProductionScheduleResponse
+	(*ReleaseProductionScheduleWeekRequest)(nil),            // 59: core.ReleaseProductionScheduleWeekRequest
+	(*ReleaseScheduleLineBatchInfo)(nil),                    // 60: core.ReleaseScheduleLineBatchInfo
+	(*ReleasedScheduleLineInfo)(nil),                        // 61: core.ReleasedScheduleLineInfo
+	(*ReleaseProductionScheduleWeekResponse)(nil),           // 62: core.ReleaseProductionScheduleWeekResponse
+	(*PreviewReleaseProductionScheduleWeekRequest)(nil),     // 63: core.PreviewReleaseProductionScheduleWeekRequest
+	(*ReleaseProductionScheduleWeekPreviewResponse)(nil),    // 64: core.ReleaseProductionScheduleWeekPreviewResponse
+	(*ArchiveProductionScheduleRequest)(nil),                // 65: core.ArchiveProductionScheduleRequest
+	(*ArchiveProductionScheduleResponse)(nil),               // 66: core.ArchiveProductionScheduleResponse
+	(*DeleteProductionScheduleRequest)(nil),                 // 67: core.DeleteProductionScheduleRequest
+	(*ProductionScheduleDerivedLineInfo)(nil),               // 68: core.ProductionScheduleDerivedLineInfo
+	(*ListProductionScheduleDerivedLinesRequest)(nil),       // 69: core.ListProductionScheduleDerivedLinesRequest
+	(*ListProductionScheduleDerivedLinesResponse)(nil),      // 70: core.ListProductionScheduleDerivedLinesResponse
+	(*ProductionScheduleSettingsInfo)(nil),                  // 71: core.ProductionScheduleSettingsInfo
+	(*ProductionScheduleItemSettingInfo)(nil),               // 72: core.ProductionScheduleItemSettingInfo
+	(*FulfillmentRecommendationInfo)(nil),                   // 73: core.FulfillmentRecommendationInfo
+	(*ListFulfillmentRecommendationsRequest)(nil),           // 74: core.ListFulfillmentRecommendationsRequest
+	(*ListFulfillmentRecommendationsResponse)(nil),          // 75: core.ListFulfillmentRecommendationsResponse
+	(*ApplyFulfillmentRecommendationsRequest)(nil),          // 76: core.ApplyFulfillmentRecommendationsRequest
+	(*ListProductionScheduleAtRiskOrdersRequest)(nil),       // 77: core.ListProductionScheduleAtRiskOrdersRequest
+	(*ScheduleOrderCoverageProto)(nil),                      // 78: core.ScheduleOrderCoverageProto
+	(*ScheduleOrderCoverageLineProto)(nil),                  // 79: core.ScheduleOrderCoverageLineProto
+	(*ListProductionScheduleAtRiskOrdersResponse)(nil),      // 80: core.ListProductionScheduleAtRiskOrdersResponse
+	(*ListProductionScheduleItemSettingsRequest)(nil),       // 81: core.ListProductionScheduleItemSettingsRequest
+	(*ListProductionScheduleItemSettingsResponse)(nil),      // 82: core.ListProductionScheduleItemSettingsResponse
+	(*GetProductionScheduleItemSettingRequest)(nil),         // 83: core.GetProductionScheduleItemSettingRequest
+	(*UpsertProductionScheduleItemSettingRequest)(nil),      // 84: core.UpsertProductionScheduleItemSettingRequest
+	(*ProductionScheduleItemSettingResponse)(nil),           // 85: core.ProductionScheduleItemSettingResponse
+	(*DeleteProductionScheduleItemSettingRequest)(nil),      // 86: core.DeleteProductionScheduleItemSettingRequest
+	(*GetProductionScheduleSettingsRequest)(nil),            // 87: core.GetProductionScheduleSettingsRequest
+	(*GetProductionScheduleSettingsResponse)(nil),           // 88: core.GetProductionScheduleSettingsResponse
+	(*UpdateProductionScheduleSettingsRequest)(nil),         // 89: core.UpdateProductionScheduleSettingsRequest
+	(*ProductionScheduleResourceSettingInfo)(nil),           // 90: core.ProductionScheduleResourceSettingInfo
+	(*ListProductionScheduleResourceSettingsRequest)(nil),   // 91: core.ListProductionScheduleResourceSettingsRequest
+	(*ListProductionScheduleResourceSettingsResponse)(nil),  // 92: core.ListProductionScheduleResourceSettingsResponse
+	(*UpsertProductionScheduleResourceSettingRequest)(nil),  // 93: core.UpsertProductionScheduleResourceSettingRequest
+	(*UpsertProductionScheduleResourceSettingResponse)(nil), // 94: core.UpsertProductionScheduleResourceSettingResponse
+	(*DeleteProductionScheduleResourceSettingRequest)(nil),  // 95: core.DeleteProductionScheduleResourceSettingRequest
+	(*timestamppb.Timestamp)(nil),                           // 96: google.protobuf.Timestamp
+	(*StringPatch)(nil),                                     // 97: core.StringPatch
+	(*PageInfo)(nil),                                        // 98: core.PageInfo
+	(*ProductionRunInfo)(nil),                               // 99: core.ProductionRunInfo
+	(*emptypb.Empty)(nil),                                   // 100: google.protobuf.Empty
 }
 var file_core_core_production_schedule_proto_depIdxs = []int32{
-	95,  // 0: core.OperatingCalendarInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 1: core.OperatingCalendarInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 2: core.OperatingCalendarClosureInfo.closed_on:type_name -> google.protobuf.Timestamp
-	95,  // 3: core.OperatingCalendarClosureInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 4: core.OperatingCalendarClosureInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 0: core.OperatingCalendarInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 1: core.OperatingCalendarInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 2: core.OperatingCalendarClosureInfo.closed_on:type_name -> google.protobuf.Timestamp
+	96,  // 3: core.OperatingCalendarClosureInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 4: core.OperatingCalendarClosureInfo.updated_at:type_name -> google.protobuf.Timestamp
 	0,   // 5: core.ListOperatingCalendarsResponse.calendars:type_name -> core.OperatingCalendarInfo
-	96,  // 6: core.UpdateOperatingCalendarRequest.cutoff_at:type_name -> core.StringPatch
-	96,  // 7: core.UpdateOperatingCalendarRequest.timezone:type_name -> core.StringPatch
-	95,  // 8: core.ListOperatingCalendarClosuresRequest.from_date:type_name -> google.protobuf.Timestamp
-	95,  // 9: core.ListOperatingCalendarClosuresRequest.to_date:type_name -> google.protobuf.Timestamp
+	97,  // 6: core.UpdateOperatingCalendarRequest.cutoff_at:type_name -> core.StringPatch
+	97,  // 7: core.UpdateOperatingCalendarRequest.timezone:type_name -> core.StringPatch
+	96,  // 8: core.ListOperatingCalendarClosuresRequest.from_date:type_name -> google.protobuf.Timestamp
+	96,  // 9: core.ListOperatingCalendarClosuresRequest.to_date:type_name -> google.protobuf.Timestamp
 	1,   // 10: core.ListOperatingCalendarClosuresResponse.closures:type_name -> core.OperatingCalendarClosureInfo
-	95,  // 11: core.CreateOperatingCalendarClosureRequest.closed_on:type_name -> google.protobuf.Timestamp
-	95,  // 12: core.ProductionScheduleInfo.planning_as_of:type_name -> google.protobuf.Timestamp
-	95,  // 13: core.ProductionScheduleInfo.horizon_start_date:type_name -> google.protobuf.Timestamp
-	95,  // 14: core.ProductionScheduleInfo.horizon_end_date:type_name -> google.protobuf.Timestamp
-	95,  // 15: core.ProductionScheduleInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
-	95,  // 16: core.ProductionScheduleInfo.published_at:type_name -> google.protobuf.Timestamp
-	95,  // 17: core.ProductionScheduleInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 18: core.ProductionScheduleInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 19: core.ProductionScheduleLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	95,  // 20: core.ProductionScheduleLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 21: core.ProductionScheduleLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 22: core.ProductionScheduleItemPolicyInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 23: core.ProductionScheduleItemPolicyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 24: core.ProductionScheduleFinishedPolicyInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 25: core.ProductionScheduleFinishedPolicyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 26: core.ProductionScheduleFinishingLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	95,  // 27: core.ProductionScheduleFinishingLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 28: core.ProductionScheduleFinishingLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16,  // 29: core.ListProductionScheduleFinishingLinesResponse.lines:type_name -> core.ProductionScheduleFinishingLineInfo
-	15,  // 30: core.ListProductionScheduleFinishedPoliciesResponse.policies:type_name -> core.ProductionScheduleFinishedPolicyInfo
-	95,  // 31: core.GenerateProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
-	12,  // 32: core.GenerateProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
-	95,  // 33: core.RegenerateProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
-	95,  // 34: core.PreviewRegenerateProductionScheduleResponse.planning_as_of:type_name -> google.protobuf.Timestamp
-	24,  // 35: core.PreviewRegenerateProductionScheduleResponse.lines:type_name -> core.ScheduleDiffLineProto
-	12,  // 36: core.RegenerateProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
-	12,  // 37: core.GetProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
-	12,  // 38: core.ListProductionSchedulesResponse.schedules:type_name -> core.ProductionScheduleInfo
-	97,  // 39: core.ListProductionSchedulesResponse.page_info:type_name -> core.PageInfo
-	13,  // 40: core.ListProductionScheduleLinesResponse.lines:type_name -> core.ProductionScheduleLineInfo
-	14,  // 41: core.ListProductionScheduleItemPoliciesResponse.policies:type_name -> core.ProductionScheduleItemPolicyInfo
-	95,  // 42: core.PreviewProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
-	95,  // 43: core.ScheduleAppliedOverrideProto.month_start:type_name -> google.protobuf.Timestamp
-	40,  // 44: core.ScheduleDiagnosticsProto.applied_overrides:type_name -> core.ScheduleAppliedOverrideProto
-	43,  // 45: core.ScheduleDiagnosticsProto.at_risk_orders:type_name -> core.ScheduleAtRiskOrderProto
-	42,  // 46: core.ScheduleDiagnosticsProto.finishing:type_name -> core.ScheduleFinishingDiagnosticsProto
-	95,  // 47: core.PreviewProductionScheduleResponse.planning_as_of:type_name -> google.protobuf.Timestamp
-	37,  // 48: core.PreviewProductionScheduleResponse.policies:type_name -> core.SchedulePolicyProto
-	38,  // 49: core.PreviewProductionScheduleResponse.campaigns:type_name -> core.ScheduleCampaignProto
-	39,  // 50: core.PreviewProductionScheduleResponse.projections:type_name -> core.ScheduleProjectionProto
-	41,  // 51: core.PreviewProductionScheduleResponse.diagnostics:type_name -> core.ScheduleDiagnosticsProto
-	95,  // 52: core.ScheduleDeviationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 53: core.ScheduleDeviationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 54: core.ProductionScheduleDeviationInfo.created_at:type_name -> google.protobuf.Timestamp
-	45,  // 55: core.ListScheduleDeviationTypesResponse.types:type_name -> core.ScheduleDeviationTypeInfo
-	46,  // 56: core.ListProductionScheduleDeviationsResponse.deviations:type_name -> core.ProductionScheduleDeviationInfo
-	97,  // 57: core.ListProductionScheduleDeviationsResponse.page_info:type_name -> core.PageInfo
-	13,  // 58: core.CreateProductionScheduleLineResponse.line:type_name -> core.ProductionScheduleLineInfo
-	96,  // 59: core.UpdateProductionScheduleLineRequest.reason_code:type_name -> core.StringPatch
-	13,  // 60: core.UpdateProductionScheduleLineResponse.line:type_name -> core.ProductionScheduleLineInfo
-	12,  // 61: core.PublishProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
-	59,  // 62: core.ReleasedScheduleLineInfo.batches:type_name -> core.ReleaseScheduleLineBatchInfo
-	98,  // 63: core.ReleaseProductionScheduleWeekResponse.production_run:type_name -> core.ProductionRunInfo
-	95,  // 64: core.ReleaseProductionScheduleWeekResponse.week_start_date:type_name -> google.protobuf.Timestamp
-	60,  // 65: core.ReleaseProductionScheduleWeekResponse.lines:type_name -> core.ReleasedScheduleLineInfo
-	95,  // 66: core.ReleaseProductionScheduleWeekPreviewResponse.week_start_date:type_name -> google.protobuf.Timestamp
-	60,  // 67: core.ReleaseProductionScheduleWeekPreviewResponse.lines:type_name -> core.ReleasedScheduleLineInfo
-	12,  // 68: core.ArchiveProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
-	95,  // 69: core.ProductionScheduleDerivedLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	95,  // 70: core.ProductionScheduleDerivedLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 71: core.ProductionScheduleDerivedLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	67,  // 72: core.ListProductionScheduleDerivedLinesResponse.lines:type_name -> core.ProductionScheduleDerivedLineInfo
-	95,  // 73: core.ProductionScheduleSettingsInfo.last_generated_at:type_name -> google.protobuf.Timestamp
-	95,  // 74: core.ProductionScheduleSettingsInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 75: core.ProductionScheduleSettingsInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 76: core.ProductionScheduleItemSettingInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 77: core.ProductionScheduleItemSettingInfo.updated_at:type_name -> google.protobuf.Timestamp
-	72,  // 78: core.ListFulfillmentRecommendationsResponse.recommendations:type_name -> core.FulfillmentRecommendationInfo
-	95,  // 79: core.ScheduleOrderCoverageProto.ship_by_date:type_name -> google.protobuf.Timestamp
-	78,  // 80: core.ScheduleOrderCoverageProto.covering_lines:type_name -> core.ScheduleOrderCoverageLineProto
-	77,  // 81: core.ListProductionScheduleAtRiskOrdersResponse.orders:type_name -> core.ScheduleOrderCoverageProto
-	71,  // 82: core.ListProductionScheduleItemSettingsResponse.settings:type_name -> core.ProductionScheduleItemSettingInfo
-	71,  // 83: core.ProductionScheduleItemSettingResponse.setting:type_name -> core.ProductionScheduleItemSettingInfo
-	70,  // 84: core.GetProductionScheduleSettingsResponse.settings:type_name -> core.ProductionScheduleSettingsInfo
-	70,  // 85: core.UpdateProductionScheduleSettingsRequest.settings:type_name -> core.ProductionScheduleSettingsInfo
-	89,  // 86: core.ListProductionScheduleResourceSettingsResponse.settings:type_name -> core.ProductionScheduleResourceSettingInfo
-	89,  // 87: core.UpsertProductionScheduleResourceSettingResponse.setting:type_name -> core.ProductionScheduleResourceSettingInfo
-	36,  // 88: core.CoreProductionScheduleService.PreviewProductionSchedule:input_type -> core.PreviewProductionScheduleRequest
-	21,  // 89: core.CoreProductionScheduleService.GenerateProductionSchedule:input_type -> core.GenerateProductionScheduleRequest
-	23,  // 90: core.CoreProductionScheduleService.PreviewRegenerateProductionSchedule:input_type -> core.RegenerateProductionScheduleRequest
-	23,  // 91: core.CoreProductionScheduleService.RegenerateProductionSchedule:input_type -> core.RegenerateProductionScheduleRequest
-	27,  // 92: core.CoreProductionScheduleService.GetProductionSchedule:input_type -> core.GetProductionScheduleRequest
-	28,  // 93: core.CoreProductionScheduleService.GetCurrentProductionSchedule:input_type -> core.GetCurrentProductionScheduleRequest
-	30,  // 94: core.CoreProductionScheduleService.ListProductionSchedules:input_type -> core.ListProductionSchedulesRequest
-	32,  // 95: core.CoreProductionScheduleService.ListProductionScheduleLines:input_type -> core.ListProductionScheduleLinesRequest
-	34,  // 96: core.CoreProductionScheduleService.ListProductionScheduleItemPolicies:input_type -> core.ListProductionScheduleItemPoliciesRequest
-	19,  // 97: core.CoreProductionScheduleService.ListProductionScheduleFinishedPolicies:input_type -> core.ListProductionScheduleFinishedPoliciesRequest
-	17,  // 98: core.CoreProductionScheduleService.ListProductionScheduleFinishingLines:input_type -> core.ListProductionScheduleFinishingLinesRequest
-	86,  // 99: core.CoreProductionScheduleService.GetProductionScheduleSettings:input_type -> core.GetProductionScheduleSettingsRequest
-	88,  // 100: core.CoreProductionScheduleService.UpdateProductionScheduleSettings:input_type -> core.UpdateProductionScheduleSettingsRequest
-	90,  // 101: core.CoreProductionScheduleService.ListProductionScheduleResourceSettings:input_type -> core.ListProductionScheduleResourceSettingsRequest
-	92,  // 102: core.CoreProductionScheduleService.UpsertProductionScheduleResourceSetting:input_type -> core.UpsertProductionScheduleResourceSettingRequest
-	94,  // 103: core.CoreProductionScheduleService.DeleteProductionScheduleResourceSetting:input_type -> core.DeleteProductionScheduleResourceSettingRequest
-	73,  // 104: core.CoreProductionScheduleService.ListFulfillmentRecommendations:input_type -> core.ListFulfillmentRecommendationsRequest
-	75,  // 105: core.CoreProductionScheduleService.ApplyFulfillmentRecommendations:input_type -> core.ApplyFulfillmentRecommendationsRequest
-	80,  // 106: core.CoreProductionScheduleService.ListProductionScheduleItemSettings:input_type -> core.ListProductionScheduleItemSettingsRequest
-	82,  // 107: core.CoreProductionScheduleService.GetProductionScheduleItemSetting:input_type -> core.GetProductionScheduleItemSettingRequest
-	83,  // 108: core.CoreProductionScheduleService.UpsertProductionScheduleItemSetting:input_type -> core.UpsertProductionScheduleItemSettingRequest
-	85,  // 109: core.CoreProductionScheduleService.DeleteProductionScheduleItemSetting:input_type -> core.DeleteProductionScheduleItemSettingRequest
-	76,  // 110: core.CoreProductionScheduleService.ListProductionScheduleAtRiskOrders:input_type -> core.ListProductionScheduleAtRiskOrdersRequest
-	68,  // 111: core.CoreProductionScheduleService.ListProductionScheduleDerivedLines:input_type -> core.ListProductionScheduleDerivedLinesRequest
-	47,  // 112: core.CoreProductionScheduleService.ListScheduleDeviationTypes:input_type -> core.ListScheduleDeviationTypesRequest
-	49,  // 113: core.CoreProductionScheduleService.ListProductionScheduleDeviations:input_type -> core.ListProductionScheduleDeviationsRequest
-	51,  // 114: core.CoreProductionScheduleService.CreateProductionScheduleLine:input_type -> core.CreateProductionScheduleLineRequest
-	53,  // 115: core.CoreProductionScheduleService.UpdateProductionScheduleLine:input_type -> core.UpdateProductionScheduleLineRequest
-	55,  // 116: core.CoreProductionScheduleService.DeleteProductionScheduleLine:input_type -> core.DeleteProductionScheduleLineRequest
-	56,  // 117: core.CoreProductionScheduleService.PublishProductionSchedule:input_type -> core.PublishProductionScheduleRequest
-	58,  // 118: core.CoreProductionScheduleService.ReleaseProductionScheduleWeek:input_type -> core.ReleaseProductionScheduleWeekRequest
-	62,  // 119: core.CoreProductionScheduleService.PreviewReleaseProductionScheduleWeek:input_type -> core.PreviewReleaseProductionScheduleWeekRequest
-	64,  // 120: core.CoreProductionScheduleService.ArchiveProductionSchedule:input_type -> core.ArchiveProductionScheduleRequest
-	66,  // 121: core.CoreProductionScheduleService.DeleteProductionSchedule:input_type -> core.DeleteProductionScheduleRequest
+	96,  // 11: core.CreateOperatingCalendarClosureRequest.closed_on:type_name -> google.protobuf.Timestamp
+	96,  // 12: core.ProductionScheduleInfo.planning_as_of:type_name -> google.protobuf.Timestamp
+	96,  // 13: core.ProductionScheduleInfo.horizon_start_date:type_name -> google.protobuf.Timestamp
+	96,  // 14: core.ProductionScheduleInfo.horizon_end_date:type_name -> google.protobuf.Timestamp
+	96,  // 15: core.ProductionScheduleInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
+	96,  // 16: core.ProductionScheduleInfo.published_at:type_name -> google.protobuf.Timestamp
+	96,  // 17: core.ProductionScheduleInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 18: core.ProductionScheduleInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 19: core.ProductionScheduleLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	96,  // 20: core.ProductionScheduleLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 21: core.ProductionScheduleLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 22: core.ProductionScheduleItemPolicyInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 23: core.ProductionScheduleItemPolicyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 24: core.ProductionScheduleFinishedPolicyInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 25: core.ProductionScheduleFinishedPolicyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 26: core.ProductionScheduleFinishingLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	96,  // 27: core.ProductionScheduleFinishingLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 28: core.ProductionScheduleFinishingLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17,  // 29: core.ListProductionScheduleFinishingLinesResponse.lines:type_name -> core.ProductionScheduleFinishingLineInfo
+	16,  // 30: core.ListProductionScheduleFinishedPoliciesResponse.policies:type_name -> core.ProductionScheduleFinishedPolicyInfo
+	96,  // 31: core.GenerateProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
+	13,  // 32: core.GenerateProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
+	96,  // 33: core.RegenerateProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
+	96,  // 34: core.PreviewRegenerateProductionScheduleResponse.planning_as_of:type_name -> google.protobuf.Timestamp
+	25,  // 35: core.PreviewRegenerateProductionScheduleResponse.lines:type_name -> core.ScheduleDiffLineProto
+	13,  // 36: core.RegenerateProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
+	13,  // 37: core.GetProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
+	13,  // 38: core.ListProductionSchedulesResponse.schedules:type_name -> core.ProductionScheduleInfo
+	98,  // 39: core.ListProductionSchedulesResponse.page_info:type_name -> core.PageInfo
+	14,  // 40: core.ListProductionScheduleLinesResponse.lines:type_name -> core.ProductionScheduleLineInfo
+	15,  // 41: core.ListProductionScheduleItemPoliciesResponse.policies:type_name -> core.ProductionScheduleItemPolicyInfo
+	96,  // 42: core.PreviewProductionScheduleRequest.planning_as_of:type_name -> google.protobuf.Timestamp
+	96,  // 43: core.ScheduleAppliedOverrideProto.month_start:type_name -> google.protobuf.Timestamp
+	41,  // 44: core.ScheduleDiagnosticsProto.applied_overrides:type_name -> core.ScheduleAppliedOverrideProto
+	44,  // 45: core.ScheduleDiagnosticsProto.at_risk_orders:type_name -> core.ScheduleAtRiskOrderProto
+	43,  // 46: core.ScheduleDiagnosticsProto.finishing:type_name -> core.ScheduleFinishingDiagnosticsProto
+	96,  // 47: core.PreviewProductionScheduleResponse.planning_as_of:type_name -> google.protobuf.Timestamp
+	38,  // 48: core.PreviewProductionScheduleResponse.policies:type_name -> core.SchedulePolicyProto
+	39,  // 49: core.PreviewProductionScheduleResponse.campaigns:type_name -> core.ScheduleCampaignProto
+	40,  // 50: core.PreviewProductionScheduleResponse.projections:type_name -> core.ScheduleProjectionProto
+	42,  // 51: core.PreviewProductionScheduleResponse.diagnostics:type_name -> core.ScheduleDiagnosticsProto
+	96,  // 52: core.ScheduleDeviationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 53: core.ScheduleDeviationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 54: core.ProductionScheduleDeviationInfo.created_at:type_name -> google.protobuf.Timestamp
+	46,  // 55: core.ListScheduleDeviationTypesResponse.types:type_name -> core.ScheduleDeviationTypeInfo
+	47,  // 56: core.ListProductionScheduleDeviationsResponse.deviations:type_name -> core.ProductionScheduleDeviationInfo
+	98,  // 57: core.ListProductionScheduleDeviationsResponse.page_info:type_name -> core.PageInfo
+	14,  // 58: core.CreateProductionScheduleLineResponse.line:type_name -> core.ProductionScheduleLineInfo
+	97,  // 59: core.UpdateProductionScheduleLineRequest.reason_code:type_name -> core.StringPatch
+	14,  // 60: core.UpdateProductionScheduleLineResponse.line:type_name -> core.ProductionScheduleLineInfo
+	13,  // 61: core.PublishProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
+	60,  // 62: core.ReleasedScheduleLineInfo.batches:type_name -> core.ReleaseScheduleLineBatchInfo
+	99,  // 63: core.ReleaseProductionScheduleWeekResponse.production_run:type_name -> core.ProductionRunInfo
+	96,  // 64: core.ReleaseProductionScheduleWeekResponse.week_start_date:type_name -> google.protobuf.Timestamp
+	61,  // 65: core.ReleaseProductionScheduleWeekResponse.lines:type_name -> core.ReleasedScheduleLineInfo
+	96,  // 66: core.ReleaseProductionScheduleWeekPreviewResponse.week_start_date:type_name -> google.protobuf.Timestamp
+	61,  // 67: core.ReleaseProductionScheduleWeekPreviewResponse.lines:type_name -> core.ReleasedScheduleLineInfo
+	13,  // 68: core.ArchiveProductionScheduleResponse.schedule:type_name -> core.ProductionScheduleInfo
+	96,  // 69: core.ProductionScheduleDerivedLineInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	96,  // 70: core.ProductionScheduleDerivedLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 71: core.ProductionScheduleDerivedLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	68,  // 72: core.ListProductionScheduleDerivedLinesResponse.lines:type_name -> core.ProductionScheduleDerivedLineInfo
+	96,  // 73: core.ProductionScheduleSettingsInfo.last_generated_at:type_name -> google.protobuf.Timestamp
+	96,  // 74: core.ProductionScheduleSettingsInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 75: core.ProductionScheduleSettingsInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 76: core.ProductionScheduleItemSettingInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 77: core.ProductionScheduleItemSettingInfo.updated_at:type_name -> google.protobuf.Timestamp
+	73,  // 78: core.ListFulfillmentRecommendationsResponse.recommendations:type_name -> core.FulfillmentRecommendationInfo
+	96,  // 79: core.ScheduleOrderCoverageProto.ship_by_date:type_name -> google.protobuf.Timestamp
+	79,  // 80: core.ScheduleOrderCoverageProto.covering_lines:type_name -> core.ScheduleOrderCoverageLineProto
+	78,  // 81: core.ListProductionScheduleAtRiskOrdersResponse.orders:type_name -> core.ScheduleOrderCoverageProto
+	72,  // 82: core.ListProductionScheduleItemSettingsResponse.settings:type_name -> core.ProductionScheduleItemSettingInfo
+	72,  // 83: core.ProductionScheduleItemSettingResponse.setting:type_name -> core.ProductionScheduleItemSettingInfo
+	71,  // 84: core.GetProductionScheduleSettingsResponse.settings:type_name -> core.ProductionScheduleSettingsInfo
+	71,  // 85: core.UpdateProductionScheduleSettingsRequest.settings:type_name -> core.ProductionScheduleSettingsInfo
+	90,  // 86: core.ListProductionScheduleResourceSettingsResponse.settings:type_name -> core.ProductionScheduleResourceSettingInfo
+	90,  // 87: core.UpsertProductionScheduleResourceSettingResponse.setting:type_name -> core.ProductionScheduleResourceSettingInfo
+	37,  // 88: core.CoreProductionScheduleService.PreviewProductionSchedule:input_type -> core.PreviewProductionScheduleRequest
+	22,  // 89: core.CoreProductionScheduleService.GenerateProductionSchedule:input_type -> core.GenerateProductionScheduleRequest
+	24,  // 90: core.CoreProductionScheduleService.PreviewRegenerateProductionSchedule:input_type -> core.RegenerateProductionScheduleRequest
+	24,  // 91: core.CoreProductionScheduleService.RegenerateProductionSchedule:input_type -> core.RegenerateProductionScheduleRequest
+	28,  // 92: core.CoreProductionScheduleService.GetProductionSchedule:input_type -> core.GetProductionScheduleRequest
+	29,  // 93: core.CoreProductionScheduleService.GetCurrentProductionSchedule:input_type -> core.GetCurrentProductionScheduleRequest
+	31,  // 94: core.CoreProductionScheduleService.ListProductionSchedules:input_type -> core.ListProductionSchedulesRequest
+	33,  // 95: core.CoreProductionScheduleService.ListProductionScheduleLines:input_type -> core.ListProductionScheduleLinesRequest
+	35,  // 96: core.CoreProductionScheduleService.ListProductionScheduleItemPolicies:input_type -> core.ListProductionScheduleItemPoliciesRequest
+	20,  // 97: core.CoreProductionScheduleService.ListProductionScheduleFinishedPolicies:input_type -> core.ListProductionScheduleFinishedPoliciesRequest
+	18,  // 98: core.CoreProductionScheduleService.ListProductionScheduleFinishingLines:input_type -> core.ListProductionScheduleFinishingLinesRequest
+	87,  // 99: core.CoreProductionScheduleService.GetProductionScheduleSettings:input_type -> core.GetProductionScheduleSettingsRequest
+	89,  // 100: core.CoreProductionScheduleService.UpdateProductionScheduleSettings:input_type -> core.UpdateProductionScheduleSettingsRequest
+	91,  // 101: core.CoreProductionScheduleService.ListProductionScheduleResourceSettings:input_type -> core.ListProductionScheduleResourceSettingsRequest
+	93,  // 102: core.CoreProductionScheduleService.UpsertProductionScheduleResourceSetting:input_type -> core.UpsertProductionScheduleResourceSettingRequest
+	95,  // 103: core.CoreProductionScheduleService.DeleteProductionScheduleResourceSetting:input_type -> core.DeleteProductionScheduleResourceSettingRequest
+	74,  // 104: core.CoreProductionScheduleService.ListFulfillmentRecommendations:input_type -> core.ListFulfillmentRecommendationsRequest
+	76,  // 105: core.CoreProductionScheduleService.ApplyFulfillmentRecommendations:input_type -> core.ApplyFulfillmentRecommendationsRequest
+	81,  // 106: core.CoreProductionScheduleService.ListProductionScheduleItemSettings:input_type -> core.ListProductionScheduleItemSettingsRequest
+	83,  // 107: core.CoreProductionScheduleService.GetProductionScheduleItemSetting:input_type -> core.GetProductionScheduleItemSettingRequest
+	84,  // 108: core.CoreProductionScheduleService.UpsertProductionScheduleItemSetting:input_type -> core.UpsertProductionScheduleItemSettingRequest
+	86,  // 109: core.CoreProductionScheduleService.DeleteProductionScheduleItemSetting:input_type -> core.DeleteProductionScheduleItemSettingRequest
+	77,  // 110: core.CoreProductionScheduleService.ListProductionScheduleAtRiskOrders:input_type -> core.ListProductionScheduleAtRiskOrdersRequest
+	69,  // 111: core.CoreProductionScheduleService.ListProductionScheduleDerivedLines:input_type -> core.ListProductionScheduleDerivedLinesRequest
+	48,  // 112: core.CoreProductionScheduleService.ListScheduleDeviationTypes:input_type -> core.ListScheduleDeviationTypesRequest
+	50,  // 113: core.CoreProductionScheduleService.ListProductionScheduleDeviations:input_type -> core.ListProductionScheduleDeviationsRequest
+	52,  // 114: core.CoreProductionScheduleService.CreateProductionScheduleLine:input_type -> core.CreateProductionScheduleLineRequest
+	54,  // 115: core.CoreProductionScheduleService.UpdateProductionScheduleLine:input_type -> core.UpdateProductionScheduleLineRequest
+	56,  // 116: core.CoreProductionScheduleService.DeleteProductionScheduleLine:input_type -> core.DeleteProductionScheduleLineRequest
+	57,  // 117: core.CoreProductionScheduleService.PublishProductionSchedule:input_type -> core.PublishProductionScheduleRequest
+	59,  // 118: core.CoreProductionScheduleService.ReleaseProductionScheduleWeek:input_type -> core.ReleaseProductionScheduleWeekRequest
+	63,  // 119: core.CoreProductionScheduleService.PreviewReleaseProductionScheduleWeek:input_type -> core.PreviewReleaseProductionScheduleWeekRequest
+	65,  // 120: core.CoreProductionScheduleService.ArchiveProductionSchedule:input_type -> core.ArchiveProductionScheduleRequest
+	67,  // 121: core.CoreProductionScheduleService.DeleteProductionSchedule:input_type -> core.DeleteProductionScheduleRequest
 	2,   // 122: core.CoreProductionScheduleService.ListOperatingCalendars:input_type -> core.ListOperatingCalendarsRequest
 	4,   // 123: core.CoreProductionScheduleService.GetOperatingCalendar:input_type -> core.GetOperatingCalendarRequest
-	5,   // 124: core.CoreProductionScheduleService.CreateOperatingCalendar:input_type -> core.CreateOperatingCalendarRequest
-	6,   // 125: core.CoreProductionScheduleService.UpdateOperatingCalendar:input_type -> core.UpdateOperatingCalendarRequest
-	7,   // 126: core.CoreProductionScheduleService.DeleteOperatingCalendar:input_type -> core.DeleteOperatingCalendarRequest
-	8,   // 127: core.CoreProductionScheduleService.ListOperatingCalendarClosures:input_type -> core.ListOperatingCalendarClosuresRequest
-	10,  // 128: core.CoreProductionScheduleService.CreateOperatingCalendarClosure:input_type -> core.CreateOperatingCalendarClosureRequest
-	11,  // 129: core.CoreProductionScheduleService.DeleteOperatingCalendarClosure:input_type -> core.DeleteOperatingCalendarClosureRequest
-	44,  // 130: core.CoreProductionScheduleService.PreviewProductionSchedule:output_type -> core.PreviewProductionScheduleResponse
-	22,  // 131: core.CoreProductionScheduleService.GenerateProductionSchedule:output_type -> core.GenerateProductionScheduleResponse
-	25,  // 132: core.CoreProductionScheduleService.PreviewRegenerateProductionSchedule:output_type -> core.PreviewRegenerateProductionScheduleResponse
-	26,  // 133: core.CoreProductionScheduleService.RegenerateProductionSchedule:output_type -> core.RegenerateProductionScheduleResponse
-	29,  // 134: core.CoreProductionScheduleService.GetProductionSchedule:output_type -> core.GetProductionScheduleResponse
-	29,  // 135: core.CoreProductionScheduleService.GetCurrentProductionSchedule:output_type -> core.GetProductionScheduleResponse
-	31,  // 136: core.CoreProductionScheduleService.ListProductionSchedules:output_type -> core.ListProductionSchedulesResponse
-	33,  // 137: core.CoreProductionScheduleService.ListProductionScheduleLines:output_type -> core.ListProductionScheduleLinesResponse
-	35,  // 138: core.CoreProductionScheduleService.ListProductionScheduleItemPolicies:output_type -> core.ListProductionScheduleItemPoliciesResponse
-	20,  // 139: core.CoreProductionScheduleService.ListProductionScheduleFinishedPolicies:output_type -> core.ListProductionScheduleFinishedPoliciesResponse
-	18,  // 140: core.CoreProductionScheduleService.ListProductionScheduleFinishingLines:output_type -> core.ListProductionScheduleFinishingLinesResponse
-	87,  // 141: core.CoreProductionScheduleService.GetProductionScheduleSettings:output_type -> core.GetProductionScheduleSettingsResponse
-	87,  // 142: core.CoreProductionScheduleService.UpdateProductionScheduleSettings:output_type -> core.GetProductionScheduleSettingsResponse
-	91,  // 143: core.CoreProductionScheduleService.ListProductionScheduleResourceSettings:output_type -> core.ListProductionScheduleResourceSettingsResponse
-	93,  // 144: core.CoreProductionScheduleService.UpsertProductionScheduleResourceSetting:output_type -> core.UpsertProductionScheduleResourceSettingResponse
-	99,  // 145: core.CoreProductionScheduleService.DeleteProductionScheduleResourceSetting:output_type -> google.protobuf.Empty
-	74,  // 146: core.CoreProductionScheduleService.ListFulfillmentRecommendations:output_type -> core.ListFulfillmentRecommendationsResponse
-	74,  // 147: core.CoreProductionScheduleService.ApplyFulfillmentRecommendations:output_type -> core.ListFulfillmentRecommendationsResponse
-	81,  // 148: core.CoreProductionScheduleService.ListProductionScheduleItemSettings:output_type -> core.ListProductionScheduleItemSettingsResponse
-	84,  // 149: core.CoreProductionScheduleService.GetProductionScheduleItemSetting:output_type -> core.ProductionScheduleItemSettingResponse
-	84,  // 150: core.CoreProductionScheduleService.UpsertProductionScheduleItemSetting:output_type -> core.ProductionScheduleItemSettingResponse
-	99,  // 151: core.CoreProductionScheduleService.DeleteProductionScheduleItemSetting:output_type -> google.protobuf.Empty
-	79,  // 152: core.CoreProductionScheduleService.ListProductionScheduleAtRiskOrders:output_type -> core.ListProductionScheduleAtRiskOrdersResponse
-	69,  // 153: core.CoreProductionScheduleService.ListProductionScheduleDerivedLines:output_type -> core.ListProductionScheduleDerivedLinesResponse
-	48,  // 154: core.CoreProductionScheduleService.ListScheduleDeviationTypes:output_type -> core.ListScheduleDeviationTypesResponse
-	50,  // 155: core.CoreProductionScheduleService.ListProductionScheduleDeviations:output_type -> core.ListProductionScheduleDeviationsResponse
-	52,  // 156: core.CoreProductionScheduleService.CreateProductionScheduleLine:output_type -> core.CreateProductionScheduleLineResponse
-	54,  // 157: core.CoreProductionScheduleService.UpdateProductionScheduleLine:output_type -> core.UpdateProductionScheduleLineResponse
-	99,  // 158: core.CoreProductionScheduleService.DeleteProductionScheduleLine:output_type -> google.protobuf.Empty
-	57,  // 159: core.CoreProductionScheduleService.PublishProductionSchedule:output_type -> core.PublishProductionScheduleResponse
-	61,  // 160: core.CoreProductionScheduleService.ReleaseProductionScheduleWeek:output_type -> core.ReleaseProductionScheduleWeekResponse
-	63,  // 161: core.CoreProductionScheduleService.PreviewReleaseProductionScheduleWeek:output_type -> core.ReleaseProductionScheduleWeekPreviewResponse
-	65,  // 162: core.CoreProductionScheduleService.ArchiveProductionSchedule:output_type -> core.ArchiveProductionScheduleResponse
-	99,  // 163: core.CoreProductionScheduleService.DeleteProductionSchedule:output_type -> google.protobuf.Empty
-	3,   // 164: core.CoreProductionScheduleService.ListOperatingCalendars:output_type -> core.ListOperatingCalendarsResponse
-	0,   // 165: core.CoreProductionScheduleService.GetOperatingCalendar:output_type -> core.OperatingCalendarInfo
-	0,   // 166: core.CoreProductionScheduleService.CreateOperatingCalendar:output_type -> core.OperatingCalendarInfo
-	0,   // 167: core.CoreProductionScheduleService.UpdateOperatingCalendar:output_type -> core.OperatingCalendarInfo
-	99,  // 168: core.CoreProductionScheduleService.DeleteOperatingCalendar:output_type -> google.protobuf.Empty
-	9,   // 169: core.CoreProductionScheduleService.ListOperatingCalendarClosures:output_type -> core.ListOperatingCalendarClosuresResponse
-	1,   // 170: core.CoreProductionScheduleService.CreateOperatingCalendarClosure:output_type -> core.OperatingCalendarClosureInfo
-	99,  // 171: core.CoreProductionScheduleService.DeleteOperatingCalendarClosure:output_type -> google.protobuf.Empty
-	130, // [130:172] is the sub-list for method output_type
-	88,  // [88:130] is the sub-list for method input_type
+	5,   // 124: core.CoreProductionScheduleService.BatchGetOperatingCalendarsByIDs:input_type -> core.BatchGetOperatingCalendarsByIDsRequest
+	6,   // 125: core.CoreProductionScheduleService.CreateOperatingCalendar:input_type -> core.CreateOperatingCalendarRequest
+	7,   // 126: core.CoreProductionScheduleService.UpdateOperatingCalendar:input_type -> core.UpdateOperatingCalendarRequest
+	8,   // 127: core.CoreProductionScheduleService.DeleteOperatingCalendar:input_type -> core.DeleteOperatingCalendarRequest
+	9,   // 128: core.CoreProductionScheduleService.ListOperatingCalendarClosures:input_type -> core.ListOperatingCalendarClosuresRequest
+	11,  // 129: core.CoreProductionScheduleService.CreateOperatingCalendarClosure:input_type -> core.CreateOperatingCalendarClosureRequest
+	12,  // 130: core.CoreProductionScheduleService.DeleteOperatingCalendarClosure:input_type -> core.DeleteOperatingCalendarClosureRequest
+	45,  // 131: core.CoreProductionScheduleService.PreviewProductionSchedule:output_type -> core.PreviewProductionScheduleResponse
+	23,  // 132: core.CoreProductionScheduleService.GenerateProductionSchedule:output_type -> core.GenerateProductionScheduleResponse
+	26,  // 133: core.CoreProductionScheduleService.PreviewRegenerateProductionSchedule:output_type -> core.PreviewRegenerateProductionScheduleResponse
+	27,  // 134: core.CoreProductionScheduleService.RegenerateProductionSchedule:output_type -> core.RegenerateProductionScheduleResponse
+	30,  // 135: core.CoreProductionScheduleService.GetProductionSchedule:output_type -> core.GetProductionScheduleResponse
+	30,  // 136: core.CoreProductionScheduleService.GetCurrentProductionSchedule:output_type -> core.GetProductionScheduleResponse
+	32,  // 137: core.CoreProductionScheduleService.ListProductionSchedules:output_type -> core.ListProductionSchedulesResponse
+	34,  // 138: core.CoreProductionScheduleService.ListProductionScheduleLines:output_type -> core.ListProductionScheduleLinesResponse
+	36,  // 139: core.CoreProductionScheduleService.ListProductionScheduleItemPolicies:output_type -> core.ListProductionScheduleItemPoliciesResponse
+	21,  // 140: core.CoreProductionScheduleService.ListProductionScheduleFinishedPolicies:output_type -> core.ListProductionScheduleFinishedPoliciesResponse
+	19,  // 141: core.CoreProductionScheduleService.ListProductionScheduleFinishingLines:output_type -> core.ListProductionScheduleFinishingLinesResponse
+	88,  // 142: core.CoreProductionScheduleService.GetProductionScheduleSettings:output_type -> core.GetProductionScheduleSettingsResponse
+	88,  // 143: core.CoreProductionScheduleService.UpdateProductionScheduleSettings:output_type -> core.GetProductionScheduleSettingsResponse
+	92,  // 144: core.CoreProductionScheduleService.ListProductionScheduleResourceSettings:output_type -> core.ListProductionScheduleResourceSettingsResponse
+	94,  // 145: core.CoreProductionScheduleService.UpsertProductionScheduleResourceSetting:output_type -> core.UpsertProductionScheduleResourceSettingResponse
+	100, // 146: core.CoreProductionScheduleService.DeleteProductionScheduleResourceSetting:output_type -> google.protobuf.Empty
+	75,  // 147: core.CoreProductionScheduleService.ListFulfillmentRecommendations:output_type -> core.ListFulfillmentRecommendationsResponse
+	75,  // 148: core.CoreProductionScheduleService.ApplyFulfillmentRecommendations:output_type -> core.ListFulfillmentRecommendationsResponse
+	82,  // 149: core.CoreProductionScheduleService.ListProductionScheduleItemSettings:output_type -> core.ListProductionScheduleItemSettingsResponse
+	85,  // 150: core.CoreProductionScheduleService.GetProductionScheduleItemSetting:output_type -> core.ProductionScheduleItemSettingResponse
+	85,  // 151: core.CoreProductionScheduleService.UpsertProductionScheduleItemSetting:output_type -> core.ProductionScheduleItemSettingResponse
+	100, // 152: core.CoreProductionScheduleService.DeleteProductionScheduleItemSetting:output_type -> google.protobuf.Empty
+	80,  // 153: core.CoreProductionScheduleService.ListProductionScheduleAtRiskOrders:output_type -> core.ListProductionScheduleAtRiskOrdersResponse
+	70,  // 154: core.CoreProductionScheduleService.ListProductionScheduleDerivedLines:output_type -> core.ListProductionScheduleDerivedLinesResponse
+	49,  // 155: core.CoreProductionScheduleService.ListScheduleDeviationTypes:output_type -> core.ListScheduleDeviationTypesResponse
+	51,  // 156: core.CoreProductionScheduleService.ListProductionScheduleDeviations:output_type -> core.ListProductionScheduleDeviationsResponse
+	53,  // 157: core.CoreProductionScheduleService.CreateProductionScheduleLine:output_type -> core.CreateProductionScheduleLineResponse
+	55,  // 158: core.CoreProductionScheduleService.UpdateProductionScheduleLine:output_type -> core.UpdateProductionScheduleLineResponse
+	100, // 159: core.CoreProductionScheduleService.DeleteProductionScheduleLine:output_type -> google.protobuf.Empty
+	58,  // 160: core.CoreProductionScheduleService.PublishProductionSchedule:output_type -> core.PublishProductionScheduleResponse
+	62,  // 161: core.CoreProductionScheduleService.ReleaseProductionScheduleWeek:output_type -> core.ReleaseProductionScheduleWeekResponse
+	64,  // 162: core.CoreProductionScheduleService.PreviewReleaseProductionScheduleWeek:output_type -> core.ReleaseProductionScheduleWeekPreviewResponse
+	66,  // 163: core.CoreProductionScheduleService.ArchiveProductionSchedule:output_type -> core.ArchiveProductionScheduleResponse
+	100, // 164: core.CoreProductionScheduleService.DeleteProductionSchedule:output_type -> google.protobuf.Empty
+	3,   // 165: core.CoreProductionScheduleService.ListOperatingCalendars:output_type -> core.ListOperatingCalendarsResponse
+	0,   // 166: core.CoreProductionScheduleService.GetOperatingCalendar:output_type -> core.OperatingCalendarInfo
+	3,   // 167: core.CoreProductionScheduleService.BatchGetOperatingCalendarsByIDs:output_type -> core.ListOperatingCalendarsResponse
+	0,   // 168: core.CoreProductionScheduleService.CreateOperatingCalendar:output_type -> core.OperatingCalendarInfo
+	0,   // 169: core.CoreProductionScheduleService.UpdateOperatingCalendar:output_type -> core.OperatingCalendarInfo
+	100, // 170: core.CoreProductionScheduleService.DeleteOperatingCalendar:output_type -> google.protobuf.Empty
+	10,  // 171: core.CoreProductionScheduleService.ListOperatingCalendarClosures:output_type -> core.ListOperatingCalendarClosuresResponse
+	1,   // 172: core.CoreProductionScheduleService.CreateOperatingCalendarClosure:output_type -> core.OperatingCalendarClosureInfo
+	100, // 173: core.CoreProductionScheduleService.DeleteOperatingCalendarClosure:output_type -> google.protobuf.Empty
+	131, // [131:174] is the sub-list for method output_type
+	88,  // [88:131] is the sub-list for method input_type
 	88,  // [88:88] is the sub-list for extension type_name
 	88,  // [88:88] is the sub-list for extension extendee
 	0,   // [0:88] is the sub-list for field type_name
@@ -8995,46 +9045,46 @@ func file_core_core_production_schedule_proto_init() {
 	file_core_core_production_run_proto_init()
 	file_core_core_production_schedule_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[2].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[6].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[8].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[9].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[13].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[14].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[15].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[16].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[17].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[21].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[23].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[29].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[18].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[22].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[24].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[30].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[32].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[36].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[46].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[49].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[51].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[53].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[55].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[58].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[31].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[33].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[37].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[47].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[50].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[52].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[54].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[56].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[59].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[60].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[63].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[67].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[61].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[64].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[68].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[70].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[69].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[71].OneofWrappers = []any{}
 	file_core_core_production_schedule_proto_msgTypes[72].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[77].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[83].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[89].OneofWrappers = []any{}
-	file_core_core_production_schedule_proto_msgTypes[92].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[73].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[78].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[84].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[90].OneofWrappers = []any{}
+	file_core_core_production_schedule_proto_msgTypes[93].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_production_schedule_proto_rawDesc), len(file_core_core_production_schedule_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   95,
+			NumMessages:   96,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

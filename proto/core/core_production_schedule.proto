@@ -124,6 +124,9 @@ service CoreProductionScheduleService {
   // account settings that select them are the same settings the solver is configured with.
   rpc ListOperatingCalendars(ListOperatingCalendarsRequest) returns (ListOperatingCalendarsResponse);
   rpc GetOperatingCalendar(GetOperatingCalendarRequest) returns (OperatingCalendarInfo);
+  // BatchGetOperatingCalendarsByIDs resolves the calendars records reference (an address's receive calendar), among the
+  // caller's own and the target account's. IDs it can't see are left out.
+  rpc BatchGetOperatingCalendarsByIDs(BatchGetOperatingCalendarsByIDsRequest) returns (ListOperatingCalendarsResponse);
   rpc CreateOperatingCalendar(CreateOperatingCalendarRequest) returns (OperatingCalendarInfo);
   rpc UpdateOperatingCalendar(UpdateOperatingCalendarRequest) returns (OperatingCalendarInfo);
   rpc DeleteOperatingCalendar(DeleteOperatingCalendarRequest) returns (google.protobuf.Empty);
@@ -165,6 +168,10 @@ message ListOperatingCalendarsResponse {
 
 message GetOperatingCalendarRequest {
   string id = 1;
+}
+
+message BatchGetOperatingCalendarsByIDsRequest {
+  repeated string ids = 1;
 }
 
 message CreateOperatingCalendarRequest {

@@ -136,6 +136,40 @@ func (s *operatingCalendarSvcImpl) GetOperatingCalendar(ctx context.Context, cal
 	return calendar, nil
 }
 
+// BatchGetOperatingCalendarsByIDs loads the calendars records reference. A calendar is the seller's configuration, so
+// one referenced by a customer's address lives in the caller's own account rather than the target's. Reading it
+// through the record that references it needs no calendar permission of its own.
+func (s *operatingCalendarSvcImpl) BatchGetOperatingCalendarsByIDs(ctx context.Context, ids []string) ([]domain.OperatingCalendar, *apierror.APIError) {
+	ctx, span := operatingCalendarSvcTracer.Start(ctx, "service.operating_calendar.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if !identity.IsInternalActor() || len(ids) == 0 {
+		return nil, nil
+	}
+	if !identity.IsIncludeRead() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionSchedules, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	var accountIDs []string
+	if identity.IsTargetAccountSet() {
+		accountIDs = append(accountIDs, identity.Target.AccountID)
+	}
+	if own := identity.ActorAccountID(); own != nil && (len(accountIDs) == 0 || *own != accountIDs[0]) {
+		accountIDs = append(accountIDs, *own)
+	}
+	calendars, apiErr := s.repos.NewOperatingCalendarRepo().GetByIDs(ctx, accountIDs, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return calendars, nil
+}
+
 func (s *operatingCalendarSvcImpl) CreateOperatingCalendar(ctx context.Context, params domain.CreateOperatingCalendarParams) (*domain.OperatingCalendar, *apierror.APIError) {
 	ctx, span := operatingCalendarSvcTracer.Start(ctx, "service.operating_calendar.create")
 	defer span.End()

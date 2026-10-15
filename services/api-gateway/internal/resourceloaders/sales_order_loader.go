@@ -129,18 +129,18 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 	}
 
 	if info.BillingAddressId != "" {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "bill_to_address", nestedOrderAddress(
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "bill_to_address", OrderAddress(
 			info.BillingAddressId, info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
 			info.BillToLocality, info.BillToState, info.BillToPostalCode, info.BillToCountry,
-			info.BillToPhone, info.BillToEmail, info.BillToIsDropShip, info.BillToGeolocationId,
+			info.BillToPhone, info.BillToEmail, info.BillToIsDropShip,
 			grpcutil.TimestampToTime(info.BillToCreatedAt), grpcutil.TimestampToTime(info.BillToUpdatedAt),
 		))
 	}
 	if info.ShippingAddressId != "" {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "ship_to_address", nestedOrderAddress(
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "ship_to_address", OrderAddress(
 			info.ShippingAddressId, info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
 			info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
-			info.ShipToPhone, info.ShipToEmail, info.ShipToIsDropShip, info.ShipToGeolocationId,
+			info.ShipToPhone, info.ShipToEmail, info.ShipToIsDropShip,
 			grpcutil.TimestampToTime(info.ShipToCreatedAt), grpcutil.TimestampToTime(info.ShipToUpdatedAt),
 		))
 	}
@@ -228,41 +228,29 @@ func portalVisibility(enabled *bool) constants.CustomerPortalVisibility {
 	return constants.CustomerPortalVisibilityHidden
 }
 
-func nestedOrderAddress(
+// OrderAddress is an order's address as the order query joins it.
+func OrderAddress(
 	id string, name, line1, line2, locality, state, postalCode, country, phone, email *string,
-	isDropShip *bool, geolocationID *string, createdAt, updatedAt time.Time,
+	isDropShip *bool, createdAt, updatedAt time.Time,
 ) *apiresource.Address {
-	addr := &apiresource.Address{
-		ID:        id,
-		Object:    constants.ObjectTypeAddress,
-		Phone:     phone,
-		Email:     email,
-		Type:      constants.AddressTypeStandard,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+	parts := AddressParts{
+		ID:         id,
+		IsDropShip: isDropShip != nil && *isDropShip,
+		Line1:      line1,
+		Line2:      line2,
+		City:       locality,
+		State:      state,
+		PostalCode: postalCode,
+		Phone:      phone,
+		Email:      email,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 	if name != nil {
-		addr.Name = *name
+		parts.Name = *name
 	}
-	if isDropShip != nil && *isDropShip {
-		addr.Type = constants.AddressTypeDropShip
-	}
-	countryStr := ""
 	if country != nil {
-		countryStr = *country
+		parts.Country = *country
 	}
-	geo := &apiresource.Geolocation{
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: line1,
-		StreetLine2: line2,
-		Locality:    locality,
-		State:       state,
-		PostalCode:  postalCode,
-		Country:     countryStr,
-	}
-	if geolocationID != nil {
-		geo.ID = *geolocationID
-	}
-	addr.Geolocation = geo
-	return addr
+	return NewAddress(parts)
 }

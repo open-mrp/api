@@ -194,7 +194,7 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_Customers
 }
 
 // Deleting an address that a non-active account still defaults to is allowed:
-// CheckAddressNotInUse only blocks active-account defaults, and the delete flow must
+// AddressReferences only blocks active-account defaults, and the delete flow must
 // null the stale account-default pointer (SwitchAccountDefaultAddressToRelation) before removing
 // the row so no account is left referencing a deleted address.
 func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ClearsStaleAccountDefault() {
@@ -204,9 +204,12 @@ func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ClearsStaleAccountDefau
 	deletedRecordRepo := repositorymock.NewMockDeletedRecordRepo(suite.ctrl)
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(deletedRecordRepo).AnyTimes()
 
+	referenceRepo := repositorymock.NewMockReferenceRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(referenceRepo).AnyTimes()
+
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), accountID, addressID).Return(true, nil)
 	// A non-active account's default does not block deletion.
-	suite.addressRepo.EXPECT().CheckAddressNotInUse(gomock.Any(), addressID).Return(nil)
+	referenceRepo.EXPECT().InUseBy(gomock.Any(), addressID, domain.AddressReferences.Probes).Return(nil, nil)
 	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{ID: addressID, Name: "Ship To"}, nil)
 	deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), addressID, accountID, gomock.Any()).Return(nil)
 
@@ -222,17 +225,21 @@ func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ClearsStaleAccountDefau
 	suite.Require().Nil(apiErr)
 }
 
-// An address that an ACTIVE account defaults to is still protected: CheckAddressNotInUse
-// returns the guard error and the delete short-circuits before touching any rows.
+// An address that an ACTIVE account defaults to is still protected: the reference probes report it and the delete
+// is a 409 resource_in_use before any row changes.
 func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ActiveAccountDefault_Blocked() {
 	const accountID = "acct_internal"
 	const addressID = "addr_active_default"
 
+	deletedRecordRepo := repositorymock.NewMockDeletedRecordRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(deletedRecordRepo).AnyTimes()
+	referenceRepo := repositorymock.NewMockReferenceRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(referenceRepo).AnyTimes()
+
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), accountID, addressID).Return(true, nil)
-	suite.addressRepo.EXPECT().
-		CheckAddressNotInUse(gomock.Any(), addressID).
-		Return(apierror.NewValidationError("Cannot delete address that is used as a default billing or shipping address in an account: Acme"))
-	// No mutation must occur when the guard fires.
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{ID: addressID, Name: "Ship To"}, nil)
+	referenceRepo.EXPECT().InUseBy(gomock.Any(), addressID, domain.AddressReferences.Probes).Return([]string{"account defaults"}, nil)
+	deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	suite.addressRepo.EXPECT().SwitchAccountDefaultAddressToRelation(gomock.Any(), gomock.Any()).Times(0)
 	suite.addressRepo.EXPECT().Delete(gomock.Any(), gomock.Any()).Times(0)
 
@@ -240,6 +247,8 @@ func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ActiveAccountDefault_Bl
 	apiErr := suite.svc.DeleteAddress(ctx, domain.DeleteAddressParams{AddressID: addressID})
 
 	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.CodeResourceInUse, apiErr.Code)
+	suite.Contains(apiErr.PublicMessage, "account defaults")
 }
 
 // A roled internal actor holding none of the declared write permissions is still

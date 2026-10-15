@@ -35,6 +35,26 @@ func SnapshotAddress(a *Address) *AddressSnapshot {
 	return s
 }
 
+// Clone is a copy of s sharing nothing with it, for a document that takes another's snapshot (a shipment copying its
+// order's ship_to). nil stays nil.
+func (s *AddressSnapshot) Clone() *AddressSnapshot {
+	if s == nil {
+		return nil
+	}
+	return &AddressSnapshot{
+		AddressID:  copyString(s.AddressID),
+		Name:       s.Name,
+		Line1:      copyString(s.Line1),
+		Line2:      copyString(s.Line2),
+		City:       copyString(s.City),
+		State:      copyString(s.State),
+		PostalCode: copyString(s.PostalCode),
+		Country:    s.Country,
+		Phone:      copyString(s.Phone),
+		Email:      copyString(s.Email),
+	}
+}
+
 func copyString(s *string) *string {
 	if s == nil {
 		return nil

@@ -1890,7 +1890,7 @@ INSERT IGNORE INTO job (
 -- ============================================================
 -- OPERATING CALENDARS (fixtures for the generic contract suites)
 -- ============================================================
--- Deliberately not defaults and deliberately unlinked, so nothing resolves against them.
+-- Deliberately not defaults, and linked to nothing a commitment reads, so nothing resolves against them.
 -- A default calendar here would put its closures into every ship-by date in the suite and
 -- make the commitment tests depend on which holidays happen to fall near the run date.
 INSERT IGNORE INTO operating_calendar (
@@ -1907,6 +1907,17 @@ INSERT IGNORE INTO operating_calendar_closure (
     id, account_id, operating_calendar_id, closed_on, name, created_at, updated_at
 ) VALUES
     ('occdcn_01e2eclosure000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'occd_01e2eshipcal00000', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'E2E fixture closure', NOW(3), NOW(3));
+
+-- A saved dock that names the receiving calendar, so an address's receive_calendar include resolves a real
+-- calendar. No order, customer or setting uses this address, so nothing resolves a ship-by date through it.
+INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES
+    ('gl_01seedrecvdock00000', '77 Receiving Way', 'Columbus', 'OH', '43204', 'US', NOW(), NOW());
+
+INSERT IGNORE INTO address (id, name, geolocation_id, receive_calendar_id, created_at, updated_at) VALUES
+    ('ad_01seedrecvdock00000', 'E2E receiving dock', 'gl_01seedrecvdock00000', 'occd_01e2erecvcal00000', NOW(), NOW());
+
+INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, updated_at) VALUES
+    ('acad_01seedrecvdock0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ad_01seedrecvdock00000', NOW(), NOW());
 
 
 -- ============================================================

@@ -3,7 +3,6 @@ package salesorderep
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/open-mrp/apikit/include"
 
@@ -899,11 +898,11 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	// Bill-to address
 	if info.BillingAddressId != "" {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "bill_to_address",
-			buildSOAddressFromProto(
+			resourceloaders.OrderAddress(
 				info.BillingAddressId, info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
 				info.BillToLocality, info.BillToState, info.BillToPostalCode, info.BillToCountry,
 				info.BillToPhone, info.BillToEmail,
-				info.BillToIsDropShip, info.BillToGeolocationId,
+				info.BillToIsDropShip,
 				grpcutil.TimestampToTime(info.BillToCreatedAt), grpcutil.TimestampToTime(info.BillToUpdatedAt),
 			))
 	}
@@ -911,11 +910,11 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	// Ship-to address
 	if info.ShippingAddressId != "" {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "ship_to_address",
-			buildSOAddressFromProto(
+			resourceloaders.OrderAddress(
 				info.ShippingAddressId, info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
 				info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
 				info.ShipToPhone, info.ShipToEmail,
-				info.ShipToIsDropShip, info.ShipToGeolocationId,
+				info.ShipToIsDropShip,
 				grpcutil.TimestampToTime(info.ShipToCreatedAt), grpcutil.TimestampToTime(info.ShipToUpdatedAt),
 			))
 	}
@@ -1188,51 +1187,6 @@ func stashSalesOrderLineMeta(meta *include.LoadMeta, info *pb.SalesOrderLineInfo
 	if totals := buildLineTotals(info); totals != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", totals)
 	}
-}
-
-func buildSOAddressFromProto(
-	id string, name, line1, line2, locality, state, postalCode, country, phone, email *string,
-	isDropShip *bool, geolocationID *string,
-	createdAt time.Time, updatedAt time.Time,
-) *apiresource.Address {
-	addr := &apiresource.Address{
-		ID:        id,
-		Object:    constants.ObjectTypeAddress,
-		Phone:     phone,
-		Email:     email,
-		Type:      constants.AddressTypeStandard,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	}
-
-	if name != nil {
-		addr.Name = *name
-	}
-
-	if isDropShip != nil && *isDropShip {
-		addr.Type = constants.AddressTypeDropShip
-	}
-
-	countryStr := ""
-	if country != nil {
-		countryStr = *country
-	}
-
-	geo := &apiresource.Geolocation{
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: line1,
-		StreetLine2: line2,
-		Locality:    locality,
-		State:       state,
-		PostalCode:  postalCode,
-		Country:     countryStr,
-	}
-	if geolocationID != nil {
-		geo.ID = *geolocationID
-	}
-	addr.Geolocation = geo
-
-	return addr
 }
 
 // stepDetailOrNil keeps a rule that takes no parameter distinguishable from one whose parameter happens to be empty.

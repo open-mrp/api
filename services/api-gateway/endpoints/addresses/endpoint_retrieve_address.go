@@ -12,29 +12,32 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Request to get an address.
+// Request to retrieve an address.
 type RetrieveAddressRequest struct {
 	// Address ID.
 	AddressID string `path:"id" validate:"required"`
 }
 
-// Retrieves an address by ID.
+// Retrieves an address.
 type RetrieveAddressEndpoint struct{}
 
 func (e *RetrieveAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address]{
 		Title:             "Retrieve Address",
 		Method:            http.MethodGet,
-		Route:             "/v1/sales/addresses/{id}",
+		Route:             addressRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).GetAddress
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAddress,
+			Fields:     []string{"receive_calendar"},
+		}),
 	})
 }

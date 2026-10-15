@@ -276,33 +276,6 @@ SELECT EXISTS(
     AND address_id = sqlc.arg('address_id')
 ) AS `exists`;
 
--- name: CheckAddressUsedInSalesOrder :one
-SELECT so.number FROM sales_order so
-WHERE so.billing_address_id = sqlc.arg('address_id')
-   OR so.shipping_address_id = sqlc.arg('address_id')
-LIMIT 1;
-
--- name: CheckAddressUsedInInvoice :one
-SELECT i.number FROM invoice i
-WHERE i.billing_address_id = sqlc.arg('address_id')
-LIMIT 1;
-
--- name: CheckAddressUsedInShipment :one
-SELECT s.number FROM shipment s
-WHERE s.shipping_address_id = sqlc.arg('address_id')
-LIMIT 1;
-
--- name: CheckAddressUsedAsAccountDefault :one
--- Only an active account's default billing/shipping address blocks deletion. A
--- non-active (e.g. unclaimed, vendor-managed) account's default does not: the address
--- can be deleted and its account defaults are switched over to the account-relation
--- defaults by SwitchAccountDefaultAddressToRelation.
-SELECT a.name FROM account a
-WHERE (a.default_billing_address_id = sqlc.arg('address_id')
-    OR a.default_shipping_address_id = sqlc.arg('address_id'))
-  AND a.onboarding_status_code = 'active'
-LIMIT 1;
-
 -- name: SwitchAccountDefaultAddressToRelation :exec
 -- When a non-active account's default billing/shipping address is deleted, realign each
 -- affected default to the account-relation default (owner→this account), so the account

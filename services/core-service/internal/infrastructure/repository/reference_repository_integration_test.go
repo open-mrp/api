@@ -51,8 +51,8 @@ func TestReferenceRepo_InUseBy(t *testing.T) {
 	assert.NotNil(t, apiErr, "a probe must name plain identifiers")
 }
 
-// explainProbe is the access type and index MySQL plans for one probe.
-func explainProbe(t *testing.T, pool *sql.DB, p domain.ReferenceProbe) (accessType string, key sql.NullString) {
+// explainProbe is the access type, index and Extra note MySQL plans for one probe.
+func explainProbe(t *testing.T, pool *sql.DB, p domain.ReferenceProbe) (accessType string, key, extra sql.NullString) {
 	t.Helper()
 	q, err := probeSQL(p)
 	require.NoError(t, err)
@@ -74,14 +74,20 @@ func explainProbe(t *testing.T, pool *sql.DB, p domain.ReferenceProbe) (accessTy
 			accessType = vals[i].String
 		case "key":
 			key = vals[i]
+		case "Extra":
+			extra = vals[i]
 		}
 	}
-	return accessType, key
+	return accessType, key, extra
 }
 
 // probeIsIndexed reports whether a probe is an index lookup rather than a scan.
 func probeIsIndexed(t *testing.T, pool *sql.DB, p domain.ReferenceProbe) bool {
-	accessType, key := explainProbe(t, pool, p)
+	accessType, key, extra := explainProbe(t, pool, p)
+	// A probe on a unique key is looked up while planning; when no row matches, the plan has no access type left.
+	if extra.String == "no matching row in const table" {
+		return true
+	}
 	switch accessType {
 	case "const", "eq_ref", "ref", "ref_or_null", "range", "index_merge":
 		return key.Valid

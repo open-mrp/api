@@ -102,6 +102,13 @@ func SetCoreReceivingClient(c pb.CoreReceivingServiceClient) {
 }
 
 // coreProductionRunClient is the CoreProductionRunService client used by LoadProductionRuns (the sales order's related.production_run reference). Set at startup.
+// productionScheduleClient is the CoreProductionScheduleService client, which carries the operating calendar RPCs.
+var productionScheduleClient pb.CoreProductionScheduleServiceClient
+
+func SetProductionScheduleClient(c pb.CoreProductionScheduleServiceClient) {
+	productionScheduleClient = c
+}
+
 var coreProductionRunClient pb.CoreProductionRunServiceClient
 
 // SetCoreProductionRunClient is called once at startup with the CoreProductionRunService client.

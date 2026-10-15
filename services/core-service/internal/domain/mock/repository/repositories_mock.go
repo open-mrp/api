@@ -4041,20 +4041,6 @@ func (m *MockAddressRepo) EXPECT() *MockAddressRepoMockRecorder {
 	return m.recorder
 }
 
-// CheckAddressNotInUse mocks base method.
-func (m *MockAddressRepo) CheckAddressNotInUse(ctx context.Context, addressID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckAddressNotInUse", ctx, addressID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// CheckAddressNotInUse indicates an expected call of CheckAddressNotInUse.
-func (mr *MockAddressRepoMockRecorder) CheckAddressNotInUse(ctx, addressID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAddressNotInUse", reflect.TypeOf((*MockAddressRepo)(nil).CheckAddressNotInUse), ctx, addressID)
-}
-
 // Create mocks base method.
 func (m *MockAddressRepo) Create(ctx context.Context, addressID, geolocationID, accountAddressID string, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5919,6 +5905,21 @@ func (m *MockOperatingCalendarRepo) GetByCode(ctx context.Context, accountID, co
 func (mr *MockOperatingCalendarRepoMockRecorder) GetByCode(ctx, accountID, code any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByCode", reflect.TypeOf((*MockOperatingCalendarRepo)(nil).GetByCode), ctx, accountID, code)
+}
+
+// GetByIDs mocks base method.
+func (m *MockOperatingCalendarRepo) GetByIDs(ctx context.Context, accountIDs, ids []string) ([]domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountIDs, ids)
+	ret0, _ := ret[0].([]domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockOperatingCalendarRepoMockRecorder) GetByIDs(ctx, accountIDs, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockOperatingCalendarRepo)(nil).GetByIDs), ctx, accountIDs, ids)
 }
 
 // GetClosure mocks base method.

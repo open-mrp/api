@@ -92,12 +92,18 @@ func (r *emailDomainRepoImpl) GetByDomain(ctx context.Context, dom string) (*dom
 func (r *emailDomainRepoImpl) ListPage(ctx context.Context, accountID string, page domain.KeysetPage) ([]*domain.EmailDomain, *apierror.APIError) {
 	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.list_page")
 	defer span.End()
-	rows, err := r.db.ListEmailDomainsPage(ctx, sqlc.ListEmailDomainsPageParams{
-		AccountID:       accountID,
-		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
-		CursorID:        db.NullStringPtr(page.CursorID),
-		Limit:           page.Limit,
-	})
+	var rows []sqlc.EmailDomain
+	var err error
+	if page.CursorAt != nil {
+		rows, err = r.db.ListEmailDomainsPageAfter(ctx, sqlc.ListEmailDomainsPageAfterParams{
+			AccountID:       accountID,
+			CursorCreatedAt: *page.CursorAt,
+			CursorID:        db.NullStringPtr(page.CursorID),
+			Limit:           page.Limit,
+		})
+	} else {
+		rows, err = r.db.ListEmailDomainsPage(ctx, sqlc.ListEmailDomainsPageParams{AccountID: accountID, Limit: page.Limit})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -339,12 +345,18 @@ func (r *emailInboxRepoImpl) GetByIDSystem(ctx context.Context, id string) (*dom
 func (r *emailInboxRepoImpl) ListPage(ctx context.Context, accountID string, page domain.KeysetPage) ([]*domain.EmailInbox, *apierror.APIError) {
 	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.list_page")
 	defer span.End()
-	rows, err := r.db.ListEmailInboxesPage(ctx, sqlc.ListEmailInboxesPageParams{
-		AccountID:       accountID,
-		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
-		CursorID:        db.NullStringPtr(page.CursorID),
-		Limit:           page.Limit,
-	})
+	var rows []sqlc.EmailInbox
+	var err error
+	if page.CursorAt != nil {
+		rows, err = r.db.ListEmailInboxesPageAfter(ctx, sqlc.ListEmailInboxesPageAfterParams{
+			AccountID:       accountID,
+			CursorCreatedAt: *page.CursorAt,
+			CursorID:        db.NullStringPtr(page.CursorID),
+			Limit:           page.Limit,
+		})
+	} else {
+		rows, err = r.db.ListEmailInboxesPage(ctx, sqlc.ListEmailInboxesPageParams{AccountID: accountID, Limit: page.Limit})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

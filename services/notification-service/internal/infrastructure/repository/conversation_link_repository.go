@@ -62,13 +62,23 @@ func (r *conversationLinkRepoImpl) ListPage(ctx context.Context, conversationID,
 	ctx, span := conversationLinkRepoTracer.Start(ctx, "repository.conversation_link.list_page")
 	defer span.End()
 
-	rows, err := r.db.ListConversationLinksPage(ctx, sqlc.ListConversationLinksPageParams{
-		ConversationID:  conversationID,
-		AccountID:       accountID,
-		CursorCreatedAt: db.NullTimePtr(page.CursorAt),
-		CursorID:        db.NullStringPtr(page.CursorID),
-		Limit:           page.Limit,
-	})
+	var rows []sqlc.ConversationLink
+	var err error
+	if page.CursorAt != nil {
+		rows, err = r.db.ListConversationLinksPageAfter(ctx, sqlc.ListConversationLinksPageAfterParams{
+			ConversationID:  conversationID,
+			AccountID:       accountID,
+			CursorCreatedAt: *page.CursorAt,
+			CursorID:        db.NullStringPtr(page.CursorID),
+			Limit:           page.Limit,
+		})
+	} else {
+		rows, err = r.db.ListConversationLinksPage(ctx, sqlc.ListConversationLinksPageParams{
+			ConversationID: conversationID,
+			AccountID:      accountID,
+			Limit:          page.Limit,
+		})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

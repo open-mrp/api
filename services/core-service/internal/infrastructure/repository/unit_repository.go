@@ -44,27 +44,6 @@ func buildUnitSearch(q *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*q) + "%", Valid: true}
 }
 
-func mapForwardRow(row sqlc.ListUnitsForwardRow) *domain.Unit {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	return &domain.Unit{
-		ID:                row.ID,
-		Name:              row.Name,
-		Abbreviation:      row.Abbreviation,
-		UnitDimensionCode: row.UnitDimensionCode,
-		RatioNumerator:    row.RatioNumerator,
-		RatioDenominator:  row.RatioDenominator,
-		OffsetNumerator:   row.OffsetNumerator,
-		OffsetDenominator: row.OffsetDenominator,
-		IsBaseUnit:        row.IsBaseUnit,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}
-}
-
 func mapGetUnitRow(row sqlc.GetUnitRow) *domain.Unit {
 	var accountID *string
 	if row.AccountID.Valid {
@@ -91,27 +70,6 @@ func toNullString(s *string) gosql.NullString {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: *s, Valid: true}
-}
-
-func mapBackwardRow(row sqlc.ListUnitsBackwardRow) *domain.Unit {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	return &domain.Unit{
-		ID:                row.ID,
-		Name:              row.Name,
-		Abbreviation:      row.Abbreviation,
-		UnitDimensionCode: row.UnitDimensionCode,
-		RatioNumerator:    row.RatioNumerator,
-		RatioDenominator:  row.RatioDenominator,
-		OffsetNumerator:   row.OffsetNumerator,
-		OffsetDenominator: row.OffsetDenominator,
-		IsBaseUnit:        row.IsBaseUnit,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}
 }
 
 func (r *unitRepoImpl) Export(ctx context.Context, params domain.ExportUnitsParams) ([]*domain.Unit, *apierror.APIError) {
@@ -155,99 +113,47 @@ func (r *unitRepoImpl) Export(ctx context.Context, params domain.ExportUnitsPara
 	return units, nil
 }
 
+const unitListSelect = `SELECT unit.id, unit.name, unit.abbreviation, unit.unit_dimension_code, unit.ratio_numerator,` +
+	` unit.ratio_denominator, unit.offset_numerator, unit.offset_denominator, unit.is_base_unit, unit.account_id,` +
+	` unit.created_at, unit.updated_at FROM unit`
+
+func scanUnitListRow(rows *gosql.Rows) (*domain.Unit, error) {
+	var row sqlc.GetUnitRow
+	err := rows.Scan(&row.ID, &row.Name, &row.Abbreviation, &row.UnitDimensionCode, &row.RatioNumerator,
+		&row.RatioDenominator, &row.OffsetNumerator, &row.OffsetDenominator, &row.IsBaseUnit, &row.AccountID,
+		&row.CreatedAt, &row.UpdatedAt)
+	return mapGetUnitRow(row), err
+}
+
 func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) (*domain.ListUnitsResult, *apierror.APIError) {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.list")
 	defer span.End()
 
-	likeQuery := buildUnitSearch(params.Query)
-	includeDimensionFilter := len(params.Dimensions) > 0
-	dimensions := params.Dimensions
-	if dimensions == nil {
-		dimensions = []string{}
+	cur, apiErr := decodeLookupCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, apiErr
 	}
-	includeGroupFilter := len(params.UnitGroupIDs) > 0
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-
-	// Ensure unitGroupIDs is never nil for the slice param
-	unitGroupIDs := params.UnitGroupIDs
-	if unitGroupIDs == nil {
-		unitGroupIDs = []string{}
+	q := lookupListQuery{selectFrom: unitListSelect, alias: "unit"}
+	q.and("(unit.account_id = ? OR unit.account_id IS NULL)", params.AccountID)
+	q.and("unit.unit_dimension_code <> 'currency'")
+	if len(params.Dimensions) > 0 {
+		q.and("unit.unit_dimension_code IN ("+placeholders(len(params.Dimensions))+")", stringArgs(params.Dimensions)...)
 	}
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListUnitsBackward(ctx, sqlc.ListUnitsBackwardParams{
-				AccountID:              accountID,
-				IncludeDimensionFilter: includeDimensionFilter,
-				UnitDimensionCodes:     dimensions,
-				IncludeUnitGroupFilter: includeGroupFilter,
-				UnitGroupIds:           unitGroupIDs,
-				LikeQuery:              likeQuery,
-				CursorCreatedAt:        cur.OccurredAt,
-				CursorID:               cur.ID,
-				Limit:                  params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			units := make([]*domain.Unit, len(rows))
-			for i, row := range rows {
-				units[i] = mapBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(units, params.Limit, cursorDir, unitCreatedAt, unitID)
-			return &domain.ListUnitsResult{Units: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward
-		rows, err := r.queries.ListUnitsForward(ctx, sqlc.ListUnitsForwardParams{
-			AccountID:              accountID,
-			IncludeDimensionFilter: includeDimensionFilter,
-			UnitDimensionCodes:     dimensions,
-			IncludeUnitGroupFilter: includeGroupFilter,
-			UnitGroupIds:           unitGroupIDs,
-			LikeQuery:              likeQuery,
-			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                  params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		units := make([]*domain.Unit, len(rows))
-		for i, row := range rows {
-			units[i] = mapForwardRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(units, params.Limit, cursorDir, unitCreatedAt, unitID)
-		return &domain.ListUnitsResult{Units: result, PageInfo: pageInfo}, nil
+	if len(params.UnitGroupIDs) > 0 {
+		args := append(stringArgs(params.UnitGroupIDs), params.AccountID)
+		q.and("EXISTS (SELECT 1 FROM unit_group_unit JOIN unit_group ON unit_group_unit.unit_group_id = unit_group.id"+
+			" WHERE unit_group_unit.unit_id = unit.id AND unit_group_unit.unit_group_id IN ("+placeholders(len(params.UnitGroupIDs))+")"+
+			" AND (unit_group.account_id = ? OR unit_group.account_id IS NULL))", args...)
 	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListUnitsForward(ctx, sqlc.ListUnitsForwardParams{
-		AccountID:              accountID,
-		IncludeDimensionFilter: includeDimensionFilter,
-		UnitDimensionCodes:     dimensions,
-		IncludeUnitGroupFilter: includeGroupFilter,
-		UnitGroupIds:           unitGroupIDs,
-		LikeQuery:              likeQuery,
-		Limit:                  params.Limit + 1,
-	})
+	if search := buildUnitSearch(params.Query); search.Valid {
+		q.and("(unit.name LIKE ? OR unit.abbreviation LIKE ?)", search.String, search.String)
+	}
+	query, args := q.sql(cur, params.Limit+1)
+	units, err := queryLookupRows(ctx, r.queries.DB(), query, args, scanUnitListRow)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	units := make([]*domain.Unit, len(rows))
-	for i, row := range rows {
-		units[i] = mapForwardRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(units, params.Limit, cursorDir, unitCreatedAt, unitID)
+	result, pageInfo := pagination.BuildPageString(units, params.Limit, cursorDirection(cur), unitCreatedAt, unitID)
 	return &domain.ListUnitsResult{Units: result, PageInfo: pageInfo}, nil
 }
 

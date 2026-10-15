@@ -145,27 +145,71 @@ func (q *Queries) ListEmailDomainsByAccount(ctx context.Context, accountID strin
 const listEmailDomainsPage = `-- name: ListEmailDomainsPage :many
 SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
 WHERE account_id = ?
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListEmailDomainsPageParams struct {
+	AccountID string
+	Limit     int32
+}
+
+// One keyset page of an account's domains, newest first.
+func (q *Queries) ListEmailDomainsPage(ctx context.Context, arg ListEmailDomainsPageParams) ([]EmailDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailDomainsPage, arg.AccountID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailDomain
+	for rows.Next() {
+		var i EmailDomain
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Domain,
+			&i.Status,
+			&i.DkimTokens,
+			&i.VerifiedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MailFromDomain,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEmailDomainsPageAfter = `-- name: ListEmailDomainsPageAfter :many
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
+WHERE account_id = ?
   AND (
-    ? IS NULL
-    OR created_at < ?
+    created_at < ?
     OR (created_at = ? AND id < ?)
   )
 ORDER BY created_at DESC, id DESC
 LIMIT ?
 `
 
-type ListEmailDomainsPageParams struct {
+type ListEmailDomainsPageAfterParams struct {
 	AccountID       string
-	CursorCreatedAt sql.NullTime
+	CursorCreatedAt time.Time
 	CursorID        sql.NullString
 	Limit           int32
 }
 
-// One keyset page of an account's domains, newest first.
-func (q *Queries) ListEmailDomainsPage(ctx context.Context, arg ListEmailDomainsPageParams) ([]EmailDomain, error) {
-	rows, err := q.db.QueryContext(ctx, listEmailDomainsPage,
+// The page after a cursor.
+func (q *Queries) ListEmailDomainsPageAfter(ctx context.Context, arg ListEmailDomainsPageAfterParams) ([]EmailDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailDomainsPageAfter,
 		arg.AccountID,
-		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,

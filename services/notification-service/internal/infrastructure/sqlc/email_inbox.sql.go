@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/open-mrp/apikit/db"
 )
@@ -209,27 +210,74 @@ func (q *Queries) ListEmailInboxesByAccount(ctx context.Context, accountID strin
 const listEmailInboxesPage = `-- name: ListEmailInboxesPage :many
 SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
 WHERE account_id = ?
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListEmailInboxesPageParams struct {
+	AccountID string
+	Limit     int32
+}
+
+// One keyset page of an account's inboxes, newest first.
+func (q *Queries) ListEmailInboxesPage(ctx context.Context, arg ListEmailInboxesPageParams) ([]EmailInbox, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailInboxesPage, arg.AccountID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailInbox
+	for rows.Next() {
+		var i EmailInbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.EmailDomainID,
+			&i.Address,
+			&i.FromName,
+			&i.Status,
+			&i.AgentConfigID,
+			&i.AgentTriggerPolicy,
+			&i.AgentTriggerKeywords,
+			&i.GroupID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEmailInboxesPageAfter = `-- name: ListEmailInboxesPageAfter :many
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
+WHERE account_id = ?
   AND (
-    ? IS NULL
-    OR created_at < ?
+    created_at < ?
     OR (created_at = ? AND id < ?)
   )
 ORDER BY created_at DESC, id DESC
 LIMIT ?
 `
 
-type ListEmailInboxesPageParams struct {
+type ListEmailInboxesPageAfterParams struct {
 	AccountID       string
-	CursorCreatedAt sql.NullTime
+	CursorCreatedAt time.Time
 	CursorID        sql.NullString
 	Limit           int32
 }
 
-// One keyset page of an account's inboxes, newest first.
-func (q *Queries) ListEmailInboxesPage(ctx context.Context, arg ListEmailInboxesPageParams) ([]EmailInbox, error) {
-	rows, err := q.db.QueryContext(ctx, listEmailInboxesPage,
+// The page after a cursor.
+func (q *Queries) ListEmailInboxesPageAfter(ctx context.Context, arg ListEmailInboxesPageAfterParams) ([]EmailInbox, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailInboxesPageAfter,
 		arg.AccountID,
-		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,

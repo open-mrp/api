@@ -147,8 +147,12 @@ AND attribute.account_id = sqlc.arg('account_id');
 -- name: CountAttributesByTextInProperty :one
 -- Matching is case-insensitive via the column collation.
 SELECT COUNT(*) FROM attribute
-WHERE property_id = sqlc.arg('property_id') AND text = sqlc.arg('text')
-AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
+WHERE property_id = sqlc.arg('property_id') AND text = sqlc.arg('text');
+
+-- name: CountOtherAttributesByTextInProperty :one
+-- CountAttributesByTextInProperty, skipping the attribute being updated.
+SELECT COUNT(*) FROM attribute
+WHERE property_id = sqlc.arg('property_id') AND text = sqlc.arg('text') AND id != sqlc.arg('exclude_id');
 
 -- name: CountAttributesByProperty :one
 SELECT COUNT(*) FROM attribute

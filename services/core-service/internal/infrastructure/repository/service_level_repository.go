@@ -44,80 +44,41 @@ func mapServiceLevelRow(row sqlc.GetCarrierOptionRow) *domain.ServiceLevel {
 	}
 }
 
+const serviceLevelListSelect = `SELECT carrier_option.id, carrier_option.name, carrier_option.code,` +
+	` carrier_option.service_level_token, carrier_option.is_portal_enabled, carrier_option.is_active,` +
+	` carrier_option.default_transit_days, carrier_option.carrier_id, carrier_option.account_id,` +
+	` carrier_option.created_at, carrier_option.updated_at FROM carrier_option`
+
+func scanServiceLevelListRow(rows *gosql.Rows) (*domain.ServiceLevel, error) {
+	var row sqlc.GetCarrierOptionRow
+	err := rows.Scan(&row.ID, &row.Name, &row.Code, &row.ServiceLevelToken, &row.IsPortalEnabled, &row.IsActive,
+		&row.DefaultTransitDays, &row.CarrierID, &row.AccountID, &row.CreatedAt, &row.UpdatedAt)
+	return mapServiceLevelRow(row), err
+}
+
 func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServiceLevelsParams) (*domain.ListServiceLevelsResult, *apierror.APIError) {
 	ctx, span := serviceLevelRepoTracer.Start(ctx, "repository.service_level.list")
 	defer span.End()
 
-	searchQuery := buildCarrierSearchParam(params.Query)
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-	isActive := toNullBool(params.IsActive)
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListCarrierOptionsBackward(ctx, sqlc.ListCarrierOptionsBackwardParams{
-				CarrierID:       params.CarrierID,
-				AccountID:       accountID,
-				SearchQuery:     searchQuery,
-				IsActive:        isActive,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			serviceLevels := make([]*domain.ServiceLevel, len(rows))
-			for i, row := range rows {
-				serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
-			}
-			result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
-			return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListCarrierOptionsForward(ctx, sqlc.ListCarrierOptionsForwardParams{
-			CarrierID:       params.CarrierID,
-			AccountID:       accountID,
-			SearchQuery:     searchQuery,
-			IsActive:        isActive,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		serviceLevels := make([]*domain.ServiceLevel, len(rows))
-		for i, row := range rows {
-			serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
-		}
-		result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
-		return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
+	cur, apiErr := decodeLookupCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, apiErr
 	}
-
-	rows, err := r.queries.ListCarrierOptionsForward(ctx, sqlc.ListCarrierOptionsForwardParams{
-		CarrierID:   params.CarrierID,
-		AccountID:   accountID,
-		SearchQuery: searchQuery,
-		IsActive:    isActive,
-		Limit:       params.Limit + 1,
-	})
+	q := lookupListQuery{selectFrom: serviceLevelListSelect, alias: "carrier_option"}
+	q.and("carrier_option.carrier_id = ?", params.CarrierID)
+	q.and("(carrier_option.account_id = ? OR carrier_option.account_id IS NULL)", params.AccountID)
+	if search := buildCarrierSearchParam(params.Query); search.Valid {
+		q.and("carrier_option.name LIKE ?", search.String)
+	}
+	if params.IsActive != nil {
+		q.and("carrier_option.is_active = ?", *params.IsActive)
+	}
+	query, args := q.sql(cur, params.Limit+1)
+	serviceLevels, err := queryLookupRows(ctx, r.queries.DB(), query, args, scanServiceLevelListRow)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	serviceLevels := make([]*domain.ServiceLevel, len(rows))
-	for i, row := range rows {
-		serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
-	}
-	result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
+	result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDirection(cur), serviceLevelCreatedAt, serviceLevelID)
 	return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
 }
 

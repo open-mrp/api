@@ -52,77 +52,40 @@ func buildCarrierSearchParam(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
+const carrierListSelect = `SELECT carrier.id, carrier.name, carrier.code, carrier.scac, carrier.shippo_carrier_account_id,` +
+	` carrier.account_number, carrier.is_portal_enabled, carrier.is_active, carrier.default_carrier_option_id,` +
+	` carrier.account_id, carrier.created_at, carrier.updated_at FROM carrier`
+
+func scanCarrierListRow(rows *gosql.Rows) (*domain.Carrier, error) {
+	var row sqlc.GetCarrierRow
+	err := rows.Scan(&row.ID, &row.Name, &row.Code, &row.Scac, &row.ShippoCarrierAccountID, &row.AccountNumber,
+		&row.IsPortalEnabled, &row.IsActive, &row.DefaultCarrierOptionID, &row.AccountID, &row.CreatedAt, &row.UpdatedAt)
+	return mapCarrierRow(row), err
+}
+
 func (r *carrierRepoImpl) List(ctx context.Context, params domain.ListCarriersParams) (*domain.ListCarriersResult, *apierror.APIError) {
 	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.list")
 	defer span.End()
 
-	searchQuery := buildCarrierSearchParam(params.Query)
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-	isActive := toNullBool(params.IsActive)
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListCarriersBackward(ctx, sqlc.ListCarriersBackwardParams{
-				AccountID:       accountID,
-				SearchQuery:     searchQuery,
-				IsActive:        isActive,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			carriers := make([]*domain.Carrier, len(rows))
-			for i, row := range rows {
-				carriers[i] = mapCarrierRow(sqlc.GetCarrierRow(row))
-			}
-			result, pageInfo := pagination.BuildPageString(carriers, params.Limit, cursorDir, carrierCreatedAt, carrierID)
-			return &domain.ListCarriersResult{Carriers: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListCarriersForward(ctx, sqlc.ListCarriersForwardParams{
-			AccountID:       accountID,
-			SearchQuery:     searchQuery,
-			IsActive:        isActive,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		carriers := make([]*domain.Carrier, len(rows))
-		for i, row := range rows {
-			carriers[i] = mapCarrierRow(sqlc.GetCarrierRow(row))
-		}
-		result, pageInfo := pagination.BuildPageString(carriers, params.Limit, cursorDir, carrierCreatedAt, carrierID)
-		return &domain.ListCarriersResult{Carriers: result, PageInfo: pageInfo}, nil
+	cur, apiErr := decodeLookupCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, apiErr
 	}
-
-	rows, err := r.queries.ListCarriersForward(ctx, sqlc.ListCarriersForwardParams{
-		AccountID:   accountID,
-		SearchQuery: searchQuery,
-		IsActive:    isActive,
-		Limit:       params.Limit + 1,
-	})
+	q := lookupListQuery{selectFrom: carrierListSelect, alias: "carrier"}
+	q.and("(carrier.account_id = ? OR carrier.account_id IS NULL)", params.AccountID)
+	q.and("carrier.deleted_at IS NULL")
+	if search := buildCarrierSearchParam(params.Query); search.Valid {
+		q.and("carrier.name LIKE ?", search.String)
+	}
+	if params.IsActive != nil {
+		q.and("carrier.is_active = ?", *params.IsActive)
+	}
+	query, args := q.sql(cur, params.Limit+1)
+	carriers, err := queryLookupRows(ctx, r.queries.DB(), query, args, scanCarrierListRow)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	carriers := make([]*domain.Carrier, len(rows))
-	for i, row := range rows {
-		carriers[i] = mapCarrierRow(sqlc.GetCarrierRow(row))
-	}
-	result, pageInfo := pagination.BuildPageString(carriers, params.Limit, cursorDir, carrierCreatedAt, carrierID)
+	result, pageInfo := pagination.BuildPageString(carriers, params.Limit, cursorDirection(cur), carrierCreatedAt, carrierID)
 	return &domain.ListCarriersResult{Carriers: result, PageInfo: pageInfo}, nil
 }
 

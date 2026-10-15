@@ -18,10 +18,16 @@ ORDER BY created_at ASC, id ASC;
 -- One keyset page of a conversation's links, oldest first.
 SELECT * FROM conversation_link
 WHERE conversation_id = sqlc.arg('conversation_id') AND account_id = sqlc.arg('account_id')
+ORDER BY created_at ASC, id ASC
+LIMIT ?;
+
+-- name: ListConversationLinksPageAfter :many
+-- The page after a cursor.
+SELECT * FROM conversation_link
+WHERE conversation_id = sqlc.arg('conversation_id') AND account_id = sqlc.arg('account_id')
   AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR created_at > sqlc.narg('cursor_created_at')
-    OR (created_at = sqlc.narg('cursor_created_at') AND id > sqlc.narg('cursor_id'))
+    created_at > sqlc.arg('cursor_created_at')
+    OR (created_at = sqlc.arg('cursor_created_at') AND id > sqlc.narg('cursor_id'))
   )
 ORDER BY created_at ASC, id ASC
 LIMIT ?;

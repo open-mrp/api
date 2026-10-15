@@ -335,11 +335,20 @@ func (r *attributeRepoImpl) ExistsByValueInProperty(ctx context.Context, propert
 	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.exists_by_value_in_property")
 	defer span.End()
 
-	count, err := r.queries.CountAttributesByTextInProperty(ctx, sqlc.CountAttributesByTextInPropertyParams{
-		PropertyID: propertyID,
-		Text:       value,
-		ExcludeID:  toNullString(excludeID),
-	})
+	var count int64
+	var err error
+	if exclude := toNullString(excludeID); exclude.Valid {
+		count, err = r.queries.CountOtherAttributesByTextInProperty(ctx, sqlc.CountOtherAttributesByTextInPropertyParams{
+			PropertyID: propertyID,
+			Text:       value,
+			ExcludeID:  exclude.String,
+		})
+	} else {
+		count, err = r.queries.CountAttributesByTextInProperty(ctx, sqlc.CountAttributesByTextInPropertyParams{
+			PropertyID: propertyID,
+			Text:       value,
+		})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)
 	}

@@ -51,12 +51,18 @@ func (r *messagingGroupRepoImpl) Get(ctx context.Context, id, accountID string) 
 func (r *messagingGroupRepoImpl) ListPage(ctx context.Context, accountID string, page domain.KeysetPage) ([]*domain.MessagingGroup, *apierror.APIError) {
 	ctx, span := messagingGroupRepoTracer.Start(ctx, "repository.messaging_group.list_page")
 	defer span.End()
-	rows, err := r.db.ListMessagingGroupsPage(ctx, sqlc.ListMessagingGroupsPageParams{
-		AccountID:       accountID,
-		CursorUpdatedAt: db.NullTimePtr(page.CursorAt),
-		CursorID:        db.NullStringPtr(page.CursorID),
-		Limit:           page.Limit,
-	})
+	var rows []sqlc.MessagingGroup
+	var err error
+	if page.CursorAt != nil {
+		rows, err = r.db.ListMessagingGroupsPageAfter(ctx, sqlc.ListMessagingGroupsPageAfterParams{
+			AccountID:       accountID,
+			CursorUpdatedAt: *page.CursorAt,
+			CursorID:        db.NullStringPtr(page.CursorID),
+			Limit:           page.Limit,
+		})
+	} else {
+		rows, err = r.db.ListMessagingGroupsPage(ctx, sqlc.ListMessagingGroupsPageParams{AccountID: accountID, Limit: page.Limit})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

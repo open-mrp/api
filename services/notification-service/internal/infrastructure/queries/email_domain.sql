@@ -20,10 +20,16 @@ ORDER BY created_at DESC, id DESC;
 -- One keyset page of an account's domains, newest first.
 SELECT * FROM email_domain
 WHERE account_id = sqlc.arg('account_id')
+ORDER BY created_at DESC, id DESC
+LIMIT ?;
+
+-- name: ListEmailDomainsPageAfter :many
+-- The page after a cursor.
+SELECT * FROM email_domain
+WHERE account_id = sqlc.arg('account_id')
   AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR created_at < sqlc.narg('cursor_created_at')
-    OR (created_at = sqlc.narg('cursor_created_at') AND id < sqlc.narg('cursor_id'))
+    created_at < sqlc.arg('cursor_created_at')
+    OR (created_at = sqlc.arg('cursor_created_at') AND id < sqlc.narg('cursor_id'))
   )
 ORDER BY created_at DESC, id DESC
 LIMIT ?;

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const blockExistsBetween = `-- name: BlockExistsBetween :one
@@ -136,27 +137,67 @@ func (q *Queries) ListBlocks(ctx context.Context, blockerAccountUserID string) (
 const listBlocksPage = `-- name: ListBlocksPage :many
 SELECT id, account_id, blocker_account_user_id, blocked_account_user_id, created_at FROM messaging_block
 WHERE blocker_account_user_id = ?
-  AND (
-    ? IS NULL
-    OR created_at < ?
-    OR (created_at = ? AND id < ?)
-  )
 ORDER BY created_at DESC, id DESC
 LIMIT ?
 `
 
 type ListBlocksPageParams struct {
 	BlockerAccountUserID string
-	CursorCreatedAt      sql.NullTime
-	CursorID             sql.NullString
 	Limit                int32
 }
 
 // One keyset page of the caller's blocks, newest first.
 func (q *Queries) ListBlocksPage(ctx context.Context, arg ListBlocksPageParams) ([]MessagingBlock, error) {
-	rows, err := q.db.QueryContext(ctx, listBlocksPage,
+	rows, err := q.db.QueryContext(ctx, listBlocksPage, arg.BlockerAccountUserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MessagingBlock
+	for rows.Next() {
+		var i MessagingBlock
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.BlockerAccountUserID,
+			&i.BlockedAccountUserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBlocksPageAfter = `-- name: ListBlocksPageAfter :many
+SELECT id, account_id, blocker_account_user_id, blocked_account_user_id, created_at FROM messaging_block
+WHERE blocker_account_user_id = ?
+  AND (
+    created_at < ?
+    OR (created_at = ? AND id < ?)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListBlocksPageAfterParams struct {
+	BlockerAccountUserID string
+	CursorCreatedAt      time.Time
+	CursorID             sql.NullString
+	Limit                int32
+}
+
+// The page after a cursor.
+func (q *Queries) ListBlocksPageAfter(ctx context.Context, arg ListBlocksPageAfterParams) ([]MessagingBlock, error) {
+	rows, err := q.db.QueryContext(ctx, listBlocksPageAfter,
 		arg.BlockerAccountUserID,
-		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,

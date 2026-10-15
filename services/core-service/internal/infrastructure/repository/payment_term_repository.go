@@ -49,79 +49,37 @@ func mapPaymentTermRow(row sqlc.PaymentTerm) *domain.PaymentTerm {
 	}
 }
 
+const paymentTermListSelect = `SELECT payment_term.id, payment_term.is_active, payment_term.name, payment_term.account_id,` +
+	` payment_term.created_at, payment_term.updated_at FROM payment_term`
+
+func scanPaymentTermListRow(rows *gosql.Rows) (*domain.PaymentTerm, error) {
+	var row sqlc.PaymentTerm
+	err := rows.Scan(&row.ID, &row.IsActive, &row.Name, &row.AccountID, &row.CreatedAt, &row.UpdatedAt)
+	return mapPaymentTermRow(row), err
+}
+
 func (r *paymentTermRepoImpl) List(ctx context.Context, params domain.ListPaymentTermsParams) (*domain.ListPaymentTermsResult, *apierror.APIError) {
 	ctx, span := paymentTermRepoTracer.Start(ctx, "repository.payment_term.list")
 	defer span.End()
 
-	searchQuery := buildPaymentTermSearchParams(params.Query)
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-	isActive := toNullBool(params.IsActive)
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListPaymentTermsBackward(ctx, sqlc.ListPaymentTermsBackwardParams{
-				AccountID:       accountID,
-				SearchQuery:     searchQuery,
-				IsActive:        isActive,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			paymentTerms := make([]*domain.PaymentTerm, len(rows))
-			for i, row := range rows {
-				paymentTerms[i] = mapPaymentTermRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(paymentTerms, params.Limit, cursorDir, paymentTermCreatedAt, paymentTermID)
-			return &domain.ListPaymentTermsResult{PaymentTerms: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward
-		rows, err := r.queries.ListPaymentTermsForward(ctx, sqlc.ListPaymentTermsForwardParams{
-			AccountID:       accountID,
-			SearchQuery:     searchQuery,
-			IsActive:        isActive,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		paymentTerms := make([]*domain.PaymentTerm, len(rows))
-		for i, row := range rows {
-			paymentTerms[i] = mapPaymentTermRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(paymentTerms, params.Limit, cursorDir, paymentTermCreatedAt, paymentTermID)
-		return &domain.ListPaymentTermsResult{PaymentTerms: result, PageInfo: pageInfo}, nil
+	cur, apiErr := decodeLookupCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, apiErr
 	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListPaymentTermsForward(ctx, sqlc.ListPaymentTermsForwardParams{
-		AccountID:   accountID,
-		SearchQuery: searchQuery,
-		IsActive:    isActive,
-		Limit:       params.Limit + 1,
-	})
+	q := lookupListQuery{selectFrom: paymentTermListSelect, alias: "payment_term"}
+	q.and("(payment_term.account_id = ? OR payment_term.account_id IS NULL)", params.AccountID)
+	if search := buildPaymentTermSearchParams(params.Query); search.Valid {
+		q.and("payment_term.name LIKE ?", search.String)
+	}
+	if params.IsActive != nil {
+		q.and("payment_term.is_active = ?", *params.IsActive)
+	}
+	query, args := q.sql(cur, params.Limit+1)
+	paymentTerms, err := queryLookupRows(ctx, r.queries.DB(), query, args, scanPaymentTermListRow)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	paymentTerms := make([]*domain.PaymentTerm, len(rows))
-	for i, row := range rows {
-		paymentTerms[i] = mapPaymentTermRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(paymentTerms, params.Limit, cursorDir, paymentTermCreatedAt, paymentTermID)
+	result, pageInfo := pagination.BuildPageString(paymentTerms, params.Limit, cursorDirection(cur), paymentTermCreatedAt, paymentTermID)
 	return &domain.ListPaymentTermsResult{PaymentTerms: result, PageInfo: pageInfo}, nil
 }
 

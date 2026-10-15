@@ -61,23 +61,35 @@ func (q *Queries) CountAttributesByProperty(ctx context.Context, arg CountAttrib
 const countAttributesByTextInProperty = `-- name: CountAttributesByTextInProperty :one
 SELECT COUNT(*) FROM attribute
 WHERE property_id = ? AND text = ?
-AND (? IS NULL OR id != ?)
 `
 
 type CountAttributesByTextInPropertyParams struct {
 	PropertyID string
 	Text       string
-	ExcludeID  sql.NullString
 }
 
 // Matching is case-insensitive via the column collation.
 func (q *Queries) CountAttributesByTextInProperty(ctx context.Context, arg CountAttributesByTextInPropertyParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAttributesByTextInProperty,
-		arg.PropertyID,
-		arg.Text,
-		arg.ExcludeID,
-		arg.ExcludeID,
-	)
+	row := q.db.QueryRowContext(ctx, countAttributesByTextInProperty, arg.PropertyID, arg.Text)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countOtherAttributesByTextInProperty = `-- name: CountOtherAttributesByTextInProperty :one
+SELECT COUNT(*) FROM attribute
+WHERE property_id = ? AND text = ? AND id != ?
+`
+
+type CountOtherAttributesByTextInPropertyParams struct {
+	PropertyID string
+	Text       string
+	ExcludeID  string
+}
+
+// CountAttributesByTextInProperty, skipping the attribute being updated.
+func (q *Queries) CountOtherAttributesByTextInProperty(ctx context.Context, arg CountOtherAttributesByTextInPropertyParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOtherAttributesByTextInProperty, arg.PropertyID, arg.Text, arg.ExcludeID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

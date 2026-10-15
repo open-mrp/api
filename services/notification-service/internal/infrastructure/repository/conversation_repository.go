@@ -67,18 +67,7 @@ func (r *conversationRepoImpl) ListForUser(ctx context.Context, filter domain.Co
 	ctx, span := conversationRepoTracer.Start(ctx, "repository.conversation.list_for_user")
 	defer span.End()
 
-	rows, err := r.db.ListConversationsForUser(ctx, sqlc.ListConversationsForUserParams{
-		AccountUserID:             db.NullStringPtr(&filter.AccountUserID),
-		AccountID:                 filter.AccountID,
-		Type:                      db.NullStringPtr(filter.Type),
-		Status:                    sql.NullString{String: filter.Status, Valid: filter.Status != ""},
-		IncludeParticipantFilter:  len(filter.ParticipantAccountUserIDs) > 0,
-		ParticipantAccountUserIds: nullStrings(filter.ParticipantAccountUserIDs),
-		CursorLastMessageAt:       db.NullTimePtr(filter.CursorLastMessageAt),
-		CursorID:                  db.NullStringPtr(filter.CursorID),
-		CursorInNullTail:          filter.CursorInNullTail,
-		Limit:                     filter.Limit,
-	})
+	rows, err := listConversationRows(ctx, r.db, filter)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -735,15 +724,6 @@ func (r *conversationRepoImpl) Delete(ctx context.Context, conversationID, accou
 		return apierror.NewNotFoundError("Conversation not found.")
 	}
 	return nil
-}
-
-// nullStrings is ids as the nullable strings a sqlc.slice of a nullable column takes.
-func nullStrings(ids []string) []sql.NullString {
-	out := make([]sql.NullString, 0, len(ids))
-	for _, id := range ids {
-		out = append(out, sql.NullString{String: id, Valid: true})
-	}
-	return out
 }
 
 func conversationFromRow(row sqlc.Conversation) *domain.Conversation {

@@ -39,7 +39,7 @@ These came out of a single resource review but apply everywhere. Implement once 
 - [ ] **Defaults are a field on the parent** (`default_service_level`, `default_order_unit`), never an `is_default` flag on children. (Carriers review.)
 - [ ] **Created-date filters are `created_after` / `created_before`** on every list (replacing `starts_at`/`ends_at` where they mean "created between"). `starts_at`/`ends_at` stay only for analytics/reporting periods. (Items review.)
 - [ ] **Request mirrors response.** Same field names and nesting in both directions; a related object is written as `<field>_id` where the response returns the object; PATCH merges section fields individually. (Customers review.)
-- [ ] **Inherited defaults live in a `defaults` section** at every level of an inheritance chain (customer, account group, account), with the same field names, so the chain reads the same everywhere. (Account groups review.)
+- [ ] **Inherited defaults live in a `defaults` section** at every level of an inheritance chain (customer, account group, account), with the same field names, so the chain reads the same everywhere. (Account groups review.) *(CUS: done for customers and account groups; the account level comes with account settings.)*
 - [ ] **Fixed platform enums are fields, not resources.** No list endpoint, ID or `owner` for a value set the platform defines; reference by code. If one later becomes a resource, it keeps `code` as its stable identifier, so existing fields still hold the string. (Account groups review.)
 - [ ] **Every endpoint is namespaced** (`/v1/{namespace}/{resource}`); the only exception is `/healthz`. All `/v1` routes already comply. (Addresses review.)
 - [ ] **Documents snapshot the master data they print.** Orders, invoices and shipments copy addresses (and similar printed values) at creation; editing the source affects only future documents. (Addresses review.)
@@ -504,30 +504,30 @@ Docstrings
 Endpoints: list, create, retrieve, update, delete, merge, lead-time. Internal (out of scope): bulk-delete, export, frequently-ordered-products. Notification recipients: see Messaging M2.
 
 Shape (request mirrors response — C1)
-- [ ] Response: `status` (active | archived), `standing`, `name`, `number`, `relationship_type` (read-only), `instructions` (internal), `commission_policy` (internal), `freight_policy`, `credit_limit` (Money), `contact { email, phone, url }`, `carrier_billing { type: sender | third_party, account_number }`, `defaults { carrier, service_level, payment_term, shipping_term, sales_rep, bill_to_address, ship_to_address, receive_calendar, lead_time_days, fulfillment_policy (internal) }`, `group`, `price_lists`, `parent_customer`, `child_customers`, timestamps.
-- [ ] Sections (`contact`, `carrier_billing`, `defaults`) are always populated, with no `object`; related objects inside them stay expandable.
-- [ ] Request uses the same names: `defaults.carrier_id`, `group_id`, `price_list_ids`, etc. PATCH merges section fields individually. Create alone takes inline `bill_to_address` / `ship_to_address` (they become `defaults.*_address`).
+- [x] Response: `status` (active | archived), `standing`, `name`, `number`, `relationship_type` (read-only), `instructions` (internal), `commission_policy` (internal), `freight_policy`, `credit_limit` (Money), `contact { email, phone, url }`, `carrier_billing { type: sender | third_party, account_number }`, `defaults { carrier, service_level, payment_term, shipping_term, sales_rep, bill_to_address, ship_to_address, receive_calendar, lead_time_days, fulfillment_policy (internal) }`, `group`, `price_lists`, `parent_customer`, `child_customers`, timestamps. *(CUS: `group`, `price_lists` → `price_groups` stays as an internal field until PRC adds price lists; `defaults.lead_time` and `defaults.supply` replace `lead_time_days` and `fulfillment_policy`; `notification_recipients` (M2) and `metadata`-less.)*
+- [x] Sections (`contact`, `carrier_billing`, `defaults`) are always populated, with no `object`; related objects inside them stay expandable.
+- [x] Request uses the same names: `defaults.carrier_id`, `group_id`, `price_list_ids`, etc. PATCH merges section fields individually. Create alone takes inline `bill_to_address` / `ship_to_address` (they become `defaults.*_address`). *(CUS: `price_list_ids` is PRC's; the internal `price_group_ids` stands in until then. `parent_customer_id` (I7) and `notification_recipients` (M2) are writable too.)*
 
 Field changes
-- [ ] `status` (`normal | preferred | hold_shipment | hold_all`) → `standing: normal | hold_shipment | hold_all` (drop `preferred`: 0 rows; prod: normal 3,464, hold_all 131, hold_shipment 1). Holds stay advisory.
-- [ ] New lifecycle `status: active | archived`; archived customers can't receive new orders.
-- [ ] `type` (an AccountGroup) → `group`; `customer_type_group_id` → `group_id`; `price_groups` / `customer_price_group_ids` → `price_lists` / `price_list_ids` (price lists review).
-- [ ] `freight_preferences.status` → top-level `freight_policy` (`billed | free`); `freight_preferences.carrier` / `.service_level` → `defaults.carrier` / `.service_level`; `billing_type` / `billing_account` → `carrier_billing { type, account_number }`; drop the `freight_preferences` section.
-- [ ] `contact_info` → `contact`; `parent_account` / `child_accounts` → `parent_customer` / `child_customers`; `bill_to_address` / `ship_to_address` → `defaults.*`; `defaults.receive_calendar_id` → `defaults.receive_calendar` (expandable).
-- [ ] `default_priority` removed (see "Priority removed" under Fixed lookups). Urgency is `defaults.lead_time`.
-- [ ] `credit_limit`: Quantity → Money, not expandable.
-- [ ] `note` → `instructions` (notes decision).
-- [ ] Remove `notification_preferences` (single derived boolean; replaced by `notification_recipients`, Messaging M2).
+- [x] `status` (`normal | preferred | hold_shipment | hold_all`) → `standing: normal | hold_shipment | hold_all` (drop `preferred`: 0 rows; prod: normal 3,464, hold_all 131, hold_shipment 1). Holds stay advisory.
+- [x] New lifecycle `status: active | archived`; archived customers can't receive new orders.
+- [x] `type` (an AccountGroup) → `group`; `customer_type_group_id` → `group_id`; `price_groups` / `customer_price_group_ids` → `price_lists` / `price_list_ids` (price lists review). *(CUS: `price_lists` / `price_list_ids` are left to PRC; `price_groups` / `price_group_ids` are internal until then.)*
+- [x] `freight_preferences.status` → top-level `freight_policy` (`billed | free`); `freight_preferences.carrier` / `.service_level` → `defaults.carrier` / `.service_level`; `billing_type` / `billing_account` → `carrier_billing { type, account_number }`; drop the `freight_preferences` section.
+- [x] `contact_info` → `contact`; `parent_account` / `child_accounts` → `parent_customer` / `child_customers`; `bill_to_address` / `ship_to_address` → `defaults.*`; `defaults.receive_calendar_id` → `defaults.receive_calendar` (expandable).
+- [x] `default_priority` removed (see "Priority removed" under Fixed lookups). Urgency is `defaults.lead_time`.
+- [x] `credit_limit`: Quantity → Money, not expandable.
+- [x] `note` → `instructions` (notes decision).
+- [x] Remove `notification_preferences` (single derived boolean; replaced by `notification_recipients`, Messaging M2).
 
 List
-- [ ] `q`: substring on the displayed name (`alias`, falling back to the account name) or `number`. Remove `ar.notes` and the per-row `account_branding.support_email` subquery from the search.
-- [ ] `status_codes` → `standings[]`; new `statuses[]`; `customer_group_ids` → `group_ids[]`; `pricing_group_ids` → `price_list_ids[]`; `commission_status_codes` → `commission_policies[]`; `freight_status_codes` → `freight_policies[]`; `parent_account_status` → `relationship_types[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. Keep `sales_rep_ids`, `shipping_term_ids`, `payment_term_ids`, `carrier_ids`, `service_level_ids`, `city`, `state`, `postal_code` (document: match any of the customer's addresses).
+- [x] `q`: substring on the displayed name (`alias`, falling back to the account name) or `number`. Remove `ar.notes` and the per-row `account_branding.support_email` subquery from the search.
+- [x] `status_codes` → `standings[]`; new `statuses[]`; `customer_group_ids` → `group_ids[]`; `pricing_group_ids` → `price_list_ids[]`; `commission_status_codes` → `commission_policies[]`; `freight_status_codes` → `freight_policies[]`; `parent_account_status` → `relationship_types[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. Keep `sales_rep_ids`, `shipping_term_ids`, `payment_term_ids`, `carrier_ids`, `service_level_ids`, `city`, `state`, `postal_code` (document: match any of the customer's addresses). *(CUS: `price_list_ids[]` is PRC's; `pricing_group_ids` stays as an internal filter until then.)*
 
 Merge
-- [ ] Returns 202 + async job (today sync 200); the target customer is in the async job result.
+- [x] Returns 202 + async job (today sync 200); the target customer is in the async job result.
 
 Delete
-- [ ] 409 `resource_in_use` (today `resource_conflict`) when sales orders, invoices, shipments or child customers reference it (the customer's own price list is deleted with it); returns the stub.
+- [x] 409 `resource_in_use` (today `resource_conflict`) when sales orders, invoices, shipments or child customers reference it (the customer's own price list is deleted with it); returns the stub.
 
 Docstrings
 
@@ -554,13 +554,13 @@ Docstrings
 
 Endpoints: list, create, retrieve, update, delete. Product-line access for groups is internal (out of scope).
 
-- [ ] ~~`type` → `classification | pricing`~~ **superseded by price lists**: pricing groups are removed, so account groups are classification-only and the `type` field (and `types[]` filter) is removed.
-- [ ] Add `price_lists` (expandable List; request `price_list_ids`), applying to every customer in the group.
-- [ ] `default_lead_time_days` → `defaults.lead_time` (mirrors `customer.defaults.lead_time_days`).
-- [ ] Drop group-level receive calendar and fulfillment policy from the inheritance chains (columns `receive_calendar_id`, `fulfillment_policy_code` are unexposed and unused: 0 rows). Customer chains become: customer → account default. Update the customer docstrings to drop the group step for those two fields.
+- [ ] ~~`type` → `classification | pricing`~~ **superseded by price lists**: pricing groups are removed, so account groups are classification-only and the `type` field (and `types[]` filter) is removed. *(CUS: `type` and the `type` filter are `visibility:"internal"` (a group created without one is a `type_group`); PRC removes pricing groups and the field.)*
+- [ ] Add `price_lists` (expandable List; request `price_list_ids`), applying to every customer in the group. *(Left to PRC.)*
+- [x] `default_lead_time_days` → `defaults.lead_time` (mirrors `customer.defaults.lead_time_days`).
+- [x] Drop group-level receive calendar and fulfillment policy from the inheritance chains (columns `receive_calendar_id`, `fulfillment_policy_code` are unexposed and unused: 0 rows). Customer chains become: customer → account default. Update the customer docstrings to drop the group step for those two fields.
 - [x] Policies take the L1 values (`applied | exempt`, `billed | free`).
-- [ ] Delete: 409 `resource_in_use` (today a validation error) while the group is any customer's `group`, or backs product-line access or a registration flow. Price list assignments are removed with the group. Returns the stub. No `status`.
-- [ ] `q`: substring on `name` or `description` (documented).
+- [x] Delete: 409 `resource_in_use` (today a validation error) while the group is any customer's `group`, or backs product-line access or a registration flow. Price list assignments are removed with the group. Returns the stub. No `status`.
+- [x] `q`: substring on `name` or `description` (documented).
 
 Docstrings
 
@@ -579,7 +579,7 @@ Docstrings
 ## Fixed lookups (E1) ✅ decided
 
 - [x] Remove `GET /v1/sales/account-statuses[/{id}]` (replaced by the customer `standing` enum) and `GET /v1/sales/priorities[/{id}]`.
-- [ ] **Priority removed (decided 2026-10-08).** `priority` is dropped from customers (`defaults.priority`), sales orders and purchase orders, with no enum replacement. It only labeled records (shown on picks, shipments, invoices, the acknowledgment PDF and the customer export); nothing scheduled or sorted by it. "Ship this customer's orders in 1 day" is the customer's `defaults.lead_time`, and an order's urgency is its `commitment` (`promised_at`, `lead_time_override`, `ship_by_override_date`, giving a ship-by date). Documents and lists show the ship-by date where they showed priority. The `priority` table and columns are dropped after the migration.
+- [ ] **Priority removed (decided 2026-10-08).** `priority` is dropped from customers (`defaults.priority`), sales orders and purchase orders, with no enum replacement. It only labeled records (shown on picks, shipments, invoices, the acknowledgment PDF and the customer export); nothing scheduled or sorted by it. "Ship this customer's orders in 1 day" is the customer's `defaults.lead_time`, and an order's urgency is its `commitment` (`promised_at`, `lead_time_override`, `ship_by_override_date`, giving a ship-by date). Documents and lists show the ship-by date where they showed priority. The `priority` table and columns are dropped after the migration. *(CUS: dropped from customers (API, export); the column stays NOT NULL with `normal` until the priority table drop. SO/PO are SO1/PO.)*
 - [ ] Revisit in their domain reviews: `/v1/sales/sales-order-statuses`, `/v1/finance/adjustment-types`, `/v1/finance/transaction-methods`, `/v1/finance/transaction-types`, `/v1/operations/demand-override-types`, `/v1/operations/machine-downtime-reasons`, `/v1/operations/schedule-deviation-types`, `/v1/operations/location-types[/{id}]`, `/v1/operations/machine-status`. Remove each unless accounts can add values.
 
 ## Addresses & contacts ✅ finalized
@@ -1062,7 +1062,7 @@ Other
 - [ ] **I4** `GET /identity/permission-groups` → `GET /v1/identity/permissions` catalog `{ code, name, description, group }` (no id/owner/timestamps); roles reference codes. (Permission model: see below.)
 - [ ] **I5** API keys: add read-only `status: active | expired | revoked`; create/rotate response `created_api_key { api_key_secret, api_key_info }` → `{ secret, api_key }` (secret shown once); `DELETE /api-keys/{id}` (which already revokes and keeps the record) → `POST /api-keys/{id}/actions/revoke`; rotate keeps `revoke_at`.
 - [ ] **I6** `PUT /identity/accounts/{id}/favicon` becomes internal (account settings all internal at forge.1; a public `GET /identity/account` is additive later).
-- [ ] **I7** Customer hierarchy: `parent_customer_id` writable on customer create/update (clearable); remove internal `/identity/child-accounts/*`. Product-line access grants stay internal.
+- [x] **I7** Customer hierarchy: `parent_customer_id` writable on customer create/update (clearable); remove internal `/identity/child-accounts/*`. Product-line access grants stay internal. *(CUS: the internal `/identity/child-accounts/*` routes stay for 1.0.forge-preview.9 callers only; CLEAN removes them.)*
 
 ## Authentication & permissions redesign ✅ decided
 
@@ -1127,7 +1127,7 @@ Carried-over conventions
 
 Decisions
 - [x] **M1** Email domains use the portal-domain shape: `{ domain, status, dns_records: [{ type, name, value }], verified_at }` replaces `dkim_tokens` and the `mail_from_*` strings. Pending domains are re-checked in the background; `actions/verify` is "check now".
-- [ ] **M2** Customer document recipients go public as a customer field: `notification_recipients: [{ account_user (expandable), documents: ["invoice", "acknowledgment", "statement", "shipment"] }]` (null unless included), written by customer PATCH, which replaces the list. The internal `/notification-recipients` routes are removed. New orders copy the `acknowledgment`, `invoice` and `shipment` recipients into `email_recipients` (statements are account-level, not per order). Invoices derive whether anyone receives them from this (replaces `accepts_invoice_emails` and the customer's `notification_preferences`). Personal `/messaging/preferences` is separate.
+- [x] **M2** Customer document recipients go public as a customer field: `notification_recipients: [{ account_user (expandable), documents: ["invoice", "acknowledgment", "statement", "shipment"] }]` (null unless included), written by customer PATCH, which replaces the list. The internal `/notification-recipients` routes are removed. New orders copy the `acknowledgment`, `invoice` and `shipment` recipients into `email_recipients` (statements are account-level, not per order). Invoices derive whether anyone receives them from this (replaces `accepts_invoice_emails` and the customer's `notification_preferences`). Personal `/messaging/preferences` is separate. *(CUS: the internal `/notification-recipients` routes stay for preview.9 only; copying recipients onto new orders is SO1's, `accepts_invoice_emails` on invoices AR1's.)*
 - [x] **M3** Deleted messages are visible tombstones: `status` gains `deleted`, `body` and `attachments` become `null`, `deleted_at` stays. `actions/redact` does the same to another person's message and records the actor.
 - [x] **M4** Per-person conversation state stays as paired actions (`archive`/`unarchive`, `hide`/`unhide`, `mute`/`unmute`, `read`, `leave`); the caller's state is shown through their participant (`membership`, `notifications`, `read_cursor`). `set-status` and `assign` stay.
 - [ ] **M5** Internal: `typing`, `/messaging/support`, `support-availability`. Agent participants, inbox `agent_config` / `agent_trigger_*` and message agent fields move to the AI review. Notification `change_count` → `occurrences`.
@@ -1226,7 +1226,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
 
 - [ ] **X1 Lot size vs lot.** The size concept is `lot_size` everywhere: product line `default_lot` → `default_lot_size`, lot defaults → lot-size defaults (`/lot-defaults` → `/lot-size-defaults`, field `lot_size`), planning `lot` → `lot_size`. `lot` means only a traceability lot. On inventory movements it's an expandable reference (`lot`, `null` unless included) to a `lot` resource `{ id, object: "lot", item, number, expires_on, status }`, which replaces the `lot` / `lot_number` strings. Item tracking modes and serials are additive later.
 - [ ] **X2 Movement `type` is the business event:** `receipt | shipment | consumption | output | transfer | adjustment | reconciliation | return` (replaces `scan | operation | correction | automatic`). How it was recorded is `actor` (a scan is `actor.type: device`). Movements stay one signed row per location. A transfer is two `transfer` rows linked in `related`.
-- [ ] **X3 One lead-time shape, in business days.** Every lead time is a time `Quantity` in days, counted in **business days on the account's working calendar** (the same rule as carrier transit days):
+- [ ] **X3 One lead-time shape, in business days.** Every lead time is a time `Quantity` in days, counted in **business days on the account's working calendar** (the same rule as carrier transit days): *(CUS: customer and group `defaults.lead_time` are day Quantities (the `day` unit only, whole days). Counting them in business days on the working calendar is not done: ship-by commitments still add calendar days, and stored values were entered as calendar days. Left with SO1 alongside `lead_time_override` — see open question.)*
   - Customer and group `defaults.lead_time_days` → `defaults.lead_time`.
   - Order `commitment.lead_time_override_days` → `lead_time_override`.
   - `material.lead_time` and planning `quoted_lead_time` already use this shape.
@@ -1276,7 +1276,7 @@ Additive roadmap (not forge.1): outbound webhooks, taxes, multi-currency, serial
 forge.1 stays make-to-stock first, but these shapes keep make to order additive. They supersede earlier sections where they conflict.
 
 - [ ] **O1 Production work pegs to order lines, with quantities.** An order can have many runs (`sales_order.related.production_runs`, plural). Pegging is `demand: [{ sales_order_line (expandable), quantity }]`; work not pegged to an order line is for stock. `POST /v1/sales/sales-orders/{id}/actions/create-production-run` → `create-production-runs { lines?: [{ line_id, quantity }] }`, which returns a List. Where `demand` lives (run vs run line) is settled in O2.
-- [ ] **O3 One sourcing word: `supply: stock | make | buy`.**
+- [ ] **O3 One sourcing word: `supply: stock | make | buy`.** *(CUS: customer `defaults.supply` done; it still feeds the planner as make_to_stock/make_to_order (buy → none).)*
   - Item `supply` is public and nullable, inherited item → product line → account default.
   - Customers override it in `defaults.supply` (some customers are made to order, others pull from the stock buffer).
   - Sales order lines get read-only `supply`, resolved when the line is added: customer default, then the item chain.
@@ -1394,7 +1394,7 @@ Goal: an agent goes from nothing to a working, safe API key in one call, and a h
 
 Staff guidance (for example "follow the packing SOP" or "send invoices to accounts payable") read by customer service, fulfillment and billing. Internal only; customers never see it. Attributed notes are the separate `note` resource (AI review, A6).
 
-- [ ] **Customer, supplier:** `note` → `instructions` (internal: always `null` for portal users). Default guidance for that account's orders. Migrate `account_relation.notes` (647 rows).
+- [x] **Customer, supplier:** `note` → `instructions` (internal: always `null` for portal users). Default guidance for that account's orders. Migrate `account_relation.notes` (647 rows). *(CUS: customers only; data migration copies `account_relation.notes` into `instructions` for every relation. SUP switches suppliers to read it.)*
 - [ ] **Sales order, purchase order:** `note` → `instructions`, **internal** (today the sales order `note` is *not* internal, so portal customers can read it, including customer notes folded in; this fixes that leak). On create: if the request omits `instructions`, copy the customer's (or supplier's) value once as a snapshot; if it sends a value (including `null`), use it exactly. Remove today's silent concatenation (`sales_order_service.go:434`). Editing the customer later never changes existing orders. Migrate `sales_order.note` as-is (12,870 rows; already contains the folded-in customer notes).
 - [ ] **Shipment, invoice, pick, receiving order:** remove `note`; add read-only `order_instructions` (internal), read from the order's `instructions` at read time. No stored copy, so no drift. Zero query cost: shipment and invoice queries already `JOIN sales_order` (`shipment.sql:87,191`, `invoice.sql:68,147`); picks and receiving already read `so.note`. Remove the note from shipment/invoice update requests.
 - [ ] Before dropping `shipment.note` / `invoice.note`: review the ~90 + ~90 rows that differ from their order's note; if they're real per-document notes, they migrate into notes (AI A6) with `actor: system`; then drop the columns.
@@ -1509,10 +1509,18 @@ Customers
 - `credit_limit` is Money.
 - **`notification_preferences` removed.** `src/app/_lib/api/client/customer.api.ts:293,356,406` maps `notification_preferences.accepts_invoice_emails` → `acceptsInvoiceEmails` (and requests the include). Replace with the customer's `notification_recipients` (Messaging M2). Invoices also drop `accepts_invoice_emails`, used to disable "send invoice email" (`InvoiceTableRow.tsx:129`, `invoice.api.ts:172,219`); the button checks the customer's invoice recipients instead so it keeps working.
 - Merge returns an async job: poll it, then read the target customer.
+- Merge is a 202 job on preview.9 too (a merge can't be waited for in a version transform): poll `/v1/core/async-jobs/{id}`; an empty `source_customer_ids` is now refused (422).
+- Sections are always present: `contact`, `carrier_billing` and `defaults` (and preview.9's `contact_info`, `freight_preferences`, `defaults`) no longer need an include, and `credit_limit` is not expandable.
+- `defaults.lead_time` is a day Quantity (`{value, unit_id: "day"}`, whole days); `defaults.supply` (`stock | make | buy`) replaces `fulfillment_policy`; `defaults.priority` is always null on preview.9 and writes of it are ignored.
+- Error params name the forge fields on both versions (`defaults.carrier_id`, `group_id`, `price_group_ids`, `contact.email`…), and a recipient or default address of another account is 404 on the field.
+- Deleting a customer is refused (409 `resource_in_use`) while shipments or child customers use it, not only orders.
+- Customer `/notification-recipients` and `/identity/child-accounts/*` remain for preview.9 only; on forge, PATCH the customer's `notification_recipients` / `parent_customer_id`.
+- The customer list's `q` no longer matches notes or the support email.
 - List filter renames: `standings[]`, `statuses[]`, `group_ids[]`, `price_list_ids[]`, `commission_policies[]`, `freight_policies[]`, `relationship_types[]`, `created_after`/`created_before`. `q` no longer matches notes or support email.
 
 Account groups & lookups
 - Account group `type` removed (classification only); `default_lead_time_days` → `defaults.lead_time`; new `price_lists`.
+- Deleting an account group in use is 409 `resource_in_use` (was 422 `validation_failed`); a group created without `type` is a `type_group`.
 - Account statuses and priorities endpoints removed: use the `standing` enum with a dashboard label map. Priority is gone everywhere (customers, orders, POs): show the ship-by date / lead time instead (picks, shipments, invoices, acknowledgment PDF, customer export).
 
 Addresses

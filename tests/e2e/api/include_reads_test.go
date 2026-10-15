@@ -385,7 +385,11 @@ func TestIncludeReads_PortalBuyerStillCannotRequestWhatIsNotItsOwn(t *testing.T)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, status, "the seller's own order is not the buyer's: %s", string(body))
 
-	requireRefusedRead(t, portal, itemsPath+"/"+SeedItemID)
+	// A buyer may read the catalog item it orders, but never the seller's cost behind it.
+	item := parseJSON(mustGetAs(t, portal, itemsPath+"/"+SeedItemID, nil))
+	assertNilField(t, item, "unit_cost")
+	assertNilField(t, item, "burn_rate")
+
 	requireRefusedRead(t, portal, invoicesPath+"/"+SeedInvoiceID)
 	requireRefusedRead(t, portal, picksPath+"/"+SeedPickID)
 }

@@ -43,7 +43,7 @@ func TestVersionCompatValueShapes_CreditLimitIsAQuantityOnPreview9(t *testing.T)
 }
 
 // A preview.9 caller prices a material with a currency numerator and reads the item's unit value back as a rate with a
-// denominator unit; forge reads the same price as a UnitPrice.
+// denominator unit; forge reads the same price as the UnitPrice sales.unit_price.
 func TestVersionCompatValueShapes_UnitValueIsARateOnPreview9(t *testing.T) {
 	t.Parallel()
 
@@ -72,15 +72,13 @@ func TestVersionCompatValueShapes_UnitValueIsARateOnPreview9(t *testing.T) {
 	assert.True(t, strings.HasPrefix(jsonField(value, "display_value"), "$12.50 / "), "display_value = %v", value["display_value"])
 	assert.Equal(t, "8.25", jsonObject(item, "unit_cost")["value"])
 
-	status, raw, err = apiClient.GetListRaw(itemsPath+"/"+itemID, url.Values{"include": {"unit_value"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, raw)
-	forge := jsonObject(parseJSON(raw), "unit_value")
-	assert.Equal(t, "12.50", forge["amount"])
-	assert.Equal(t, "usd", forge["currency"])
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(forge, "per_unit"), "id"))
-	assert.NotContains(t, forge, "object")
+	forgeItem := getItem(t, itemID)
+	assert.NotContains(t, forgeItem, "unit_value", "forge holds the selling price in sales.unit_price")
+	forge := jsonObject(jsonObject(forgeItem, "sales"), "unit_price")
+	require.NotNil(t, forge, "a priced material has a sales section on forge: %v", forgeItem)
+	assertItemPrice(t, forge, "12.50", nonCurrencyUnitID, "sales.unit_price")
 	assert.NotContains(t, forge, "display_value")
+	assertItemPrice(t, jsonObject(forgeItem, "unit_cost"), "8.25", nonCurrencyUnitID, "unit_cost")
 }
 
 // Include keys that reached into a value's units are cut back for preview.9 rather than refused, and a value that is no

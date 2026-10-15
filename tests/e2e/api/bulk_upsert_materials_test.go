@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// The materials bulk upsert answers preview.9 callers only; forge upserts every item type through
+// /v1/catalog/items/actions/bulk-upsert (bulk_upsert_items_test.go).
 const materialsBulkUpsertPath = materialsPath + "/actions/bulk-upsert"
 
 func bulkUpsertMaterials(t *testing.T, materials ...map[string]any) (int, []byte) {
@@ -20,7 +22,7 @@ func bulkUpsertMaterials(t *testing.T, materials ...map[string]any) (int, []byte
 	for i, m := range materials {
 		rows[i] = m
 	}
-	status, body, err := apiClient.Post(materialsBulkUpsertPath, map[string]any{"materials": rows}, newIdempotencyKey())
+	status, body, err := materialsP9().Post(materialsBulkUpsertPath, map[string]any{"materials": rows}, newIdempotencyKey())
 	require.NoError(t, err)
 	return status, body
 }
@@ -33,7 +35,7 @@ func bulkQuantity(value string) map[string]any {
 func cleanupMaterialIDs(ids []string) {
 	for _, materialID := range ids {
 		if materialID != "" {
-			apiClient.Delete(materialsPath + "/" + materialID)
+			materialsP9().Delete(materialsPath + "/" + materialID)
 		}
 	}
 }
@@ -45,7 +47,7 @@ func bulkUpsertMaterialsJob(t *testing.T, materials ...map[string]any) map[strin
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
+	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the job, under its preview.9 name")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -62,26 +64,9 @@ func bulkUpsertMaterialIDs(t *testing.T, materials ...map[string]any) (createdID
 	return jobResultIDs(job)
 }
 
-// --- create paths ---
+// --- writes ---
 
-func TestMaterials_BulkUpsert_AllCreates(t *testing.T) {
-	t.Parallel()
-
-	created, updated := bulkUpsertMaterialIDs(t,
-		map[string]any{"sku": uniqueName("e2e-bup-mat-a"), "category": map[string]any{"id": SeedMaterialCategoryID}},
-		map[string]any{"sku": uniqueName("e2e-bup-mat-b"), "category": map[string]any{"id": SeedMaterialCategoryID}},
-	)
-	defer cleanupMaterialIDs(created)
-
-	require.Len(t, created, 2)
-	for _, createdID := range created {
-		assertIDFormat(t, createdID, id.MaterialIDPrefix)
-	}
-	assert.Empty(t, updated)
-}
-
-// TestMaterials_BulkUpsert_CreateWithAllFields exercises the full create branch:
-// description, notes, order_point, lead_time, unit_price, unit_cost, and properties.
+// Every field a create row carries lands; notes are accepted but no longer stored.
 func TestMaterials_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	t.Parallel()
 
@@ -89,11 +74,11 @@ func TestMaterials_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	propName := uniqueName("e2e-bup-mat-prop")
 	// Attribute values are unique per account, so use a per-run value.
 	propValue := uniqueName("a36")
-	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
+	created, updated := bulkUpsertMaterialIDs(t, map[string]any{
 		"sku":         sku,
 		"category":    map[string]any{"id": SeedMaterialCategoryID},
 		"description": "full material description",
-		"notes":       "full material notes",
+		"notes":       "not stored",
 		"order_point": bulkQuantity("10"),
 		"lead_time":   bulkQuantity("5"),
 		"unit_price":  bulkCurrencyRate("1.50"),
@@ -102,175 +87,33 @@ func TestMaterials_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	})
 	defer cleanupMaterialIDs(created)
 	require.Len(t, created, 1)
-	id := created[0]
+	assert.Empty(t, updated)
+	assertIDFormat(t, created[0], id.MaterialIDPrefix)
 
-	// Top-level material quantities.
-	getStatus, getBody, err := apiClient.GetListRaw(materialsPath+"/"+id, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
-	assert.Equal(t, "10", jsonField(jsonObject(got, "order_point"), "value"))
-	assert.Equal(t, "5", jsonField(jsonObject(got, "lead_time"), "value"))
+	got := getMaterialP9(t, created[0], "item")
+	assertMaterialP9Envelope(t, got)
+	assertMaterialP9Quantity(t, jsonObject(got, "order_point"), "10", SeedUnitID, "order_point")
+	assertMaterialP9Quantity(t, jsonObject(got, "lead_time"), "5", SeedUnitID, "lead_time")
 
-	// Item fields + rates + attributes.
-	item := catalogItem(t, materialsPath, id)
+	item := jsonObject(got, "item")
+	require.NotNil(t, item)
+	assertPreview9ItemShape(t, item)
+	assert.Equal(t, sku, jsonField(item, "sku"))
 	assert.Equal(t, "full material description", jsonField(item, "description"))
-	assert.Equal(t, "full material notes", jsonField(item, "notes"))
-	assert.Equal(t, "1.50", bulkCatalogPriceAmount(t, materialsPath, id, "item.unit_value"))
-	assert.Equal(t, "0.75", bulkCatalogPriceAmount(t, materialsPath, id, "item.unit_cost"))
+	assertMaterialP9Rate(t, jsonObject(item, "unit_value"), "1.50", "", nonCurrencyUnitID, "item.unit_value")
+	assertMaterialP9Rate(t, jsonObject(item, "unit_cost"), "0.75", "", nonCurrencyUnitID, "item.unit_cost")
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 
-// checks the rate-unit rule, which the write applies: the job completes and the row lands
-// in `errors` rather than failing the request
-func TestMaterials_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
-	t.Parallel()
-
-	job := bulkUpsertMaterialsJob(t, map[string]any{
-		"sku":      uniqueName("e2e-bup-mat-badrate"),
-		"category": map[string]any{"id": SeedMaterialCategoryID},
-		"unit_price": map[string]any{
-			"amount":      "1.00",
-			"currency":    "usd",
-			"per_unit_id": e2eCurrencyUnitID, // must not be currency
-		},
-	})
-	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
-	require.Len(t, jobErrors(job), 1, "the rejected row is recorded in errors")
-}
-
-func TestMaterials_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-mat-dup")
-	status, body := bulkUpsertMaterials(t,
-		map[string]any{"sku": sku, "category": map[string]any{"id": SeedMaterialCategoryID}},
-		map[string]any{"sku": sku, "category": map[string]any{"id": SeedMaterialCategoryID}},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "materials[1].sku")
-	assert.Contains(t, errorMessages(errObj), "duplicate SKU")
-}
-
-// TestMaterials_BulkUpsert_RejectsCrossTypeSKUConflict: a SKU already used by a product
-// fails the whole material batch.
-func TestMaterials_BulkUpsert_RejectsCrossTypeSKUConflict(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-mat-xtype")
-
-	resp, err := apiClient.PostFull(productsPath, map[string]any{
-		"sku": sku, "type": "sale", "category_id": SeedItemCategoryID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-	productID := jsonField(parseJSON(resp.Body), "id")
-	require.NotEmpty(t, productID)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + productID) })
-
-	job := bulkUpsertMaterialsJob(t, map[string]any{"sku": sku, "category": map[string]any{"id": SeedMaterialCategoryID}})
-	assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
-	require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
-}
-
-func TestMaterials_BulkUpsert_EmptyRejected(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(materialsBulkUpsertPath, map[string]any{"materials": []any{}}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-}
-
-// TestMaterials_BulkUpsert_ResolvesCategoryByName: the category is a fuzzy reference —
-// it resolves by name, not only by id.
-func TestMaterials_BulkUpsert_ResolvesCategoryByName(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-mat-catname")
-	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
-		"sku":      sku,
-		"category": map[string]any{"name": "yarn"}, // by name, case-insensitive
-	})
-	defer cleanupMaterialIDs(created)
-	require.Len(t, created, 1)
-
-	getStatus, getBody, err := apiClient.GetListRaw(materialsPath+"/"+created[0], url.Values{"include": {"item.category"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	item := jsonObject(parseJSON(getBody), "item")
-	require.NotNil(t, item)
-	cat := jsonObject(item, "category")
-	require.NotNil(t, cat, "category should be populated with ?include=item.category")
-	assert.Equal(t, SeedMaterialCategoryID, jsonField(cat, "id"))
-}
-
-// TestMaterials_BulkUpsert_RejectsUnknownCategory: a create row whose category does not
-// resolve (missing, or — same path — a real category whose unit group has no base unit)
-// fails as a clear validation error naming the offending row, not an opaque 404.
-func TestMaterials_BulkUpsert_RejectsUnknownCategory(t *testing.T) {
-	t.Parallel()
-
-	status, body := bulkUpsertMaterials(t,
-		map[string]any{"sku": uniqueName("e2e-bup-mat-ok"), "category": map[string]any{"id": SeedMaterialCategoryID}},
-		map[string]any{"sku": uniqueName("e2e-bup-mat-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "materials[1].category")
-}
-
-// TestMaterials_BulkUpsert_RejectsWrongCategoryType: materials may only be created in
-// material categories; a product category fails as a row-indexed validation error.
-func TestMaterials_BulkUpsert_RejectsWrongCategoryType(t *testing.T) {
-	t.Parallel()
-
-	status, body := bulkUpsertMaterials(t,
-		map[string]any{"sku": uniqueName("e2e-bup-mat-wrongcat"), "category": map[string]any{"id": SeedItemCategoryID}},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "materials[0].category")
-}
-
-// TestMaterials_BulkUpsert_SameAttributeValueUnderTwoProperties: attribute values are unique within their property,
-// so one value under two properties resolves to two attributes, one per property.
-func TestMaterials_BulkUpsert_SameAttributeValueUnderTwoProperties(t *testing.T) {
-	t.Parallel()
-
-	value := uniqueName("e2e-bup-mat-dupval")
-	propA := uniqueName("e2e-bup-mat-dv-a")
-	propB := uniqueName("e2e-bup-mat-dv-b")
-	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
-		"sku":        uniqueName("e2e-bup-mat-dupattr"),
-		"category":   map[string]any{"id": SeedMaterialCategoryID},
-		"properties": []any{bulkProperty(propA, value), bulkProperty(propB, value)},
-	})
-	defer cleanupMaterialIDs(created)
-	require.Len(t, created, 1)
-
-	for _, prop := range []string{propA, propB} {
-		attrs := propertyAttributes(t, prop)
-		require.Len(t, attrs, 1, "property %s has its own attribute", prop)
-		assert.Equal(t, value, jsonField(attrs[0], "value"))
-	}
-}
-
-// --- update paths: every updatable portion ---
-
-// TestMaterials_BulkUpsert_UpdatesEveryField creates a material, then upserts the same
-// SKU changing every field the update path supports: description, notes, order_point,
-// lead_time, unit_price, unit_cost, and properties.
+// A row whose SKU exists updates every field it carries; a new SKU in the same batch is created.
 func TestMaterials_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	t.Parallel()
 
 	sku := uniqueName("e2e-bup-mat-upd")
-
 	createdIDs, _ := bulkUpsertMaterialIDs(t, map[string]any{
 		"sku":         sku,
 		"category":    map[string]any{"id": SeedMaterialCategoryID},
 		"description": "original description",
-		"notes":       "original notes",
 		"order_point": bulkQuantity("10"),
 		"lead_time":   bulkQuantity("5"),
 		"unit_price":  bulkCurrencyRate("1.50"),
@@ -282,55 +125,106 @@ func TestMaterials_BulkUpsert_UpdatesEveryField(t *testing.T) {
 
 	propName := uniqueName("e2e-bup-mat-upd-prop")
 	propValue := uniqueName("316l")
-	created, updated := bulkUpsertMaterialIDs(t, map[string]any{
-		"sku":         sku,
-		"category":    map[string]any{"id": SeedMaterialCategoryID},
-		"description": "updated description",
-		"notes":       "updated notes",
-		"order_point": bulkQuantity("20"),
-		"lead_time":   bulkQuantity("8"),
-		"unit_price":  bulkCurrencyRate("2.22"),
-		"unit_cost":   bulkCurrencyRate("1.11"),
-		"properties":  []any{bulkProperty(propName, propValue)},
-	})
+	created, updated := bulkUpsertMaterialIDs(t,
+		map[string]any{
+			"sku":         sku,
+			"category":    map[string]any{"id": SeedMaterialCategoryID},
+			"description": "updated description",
+			"order_point": bulkQuantity("20"),
+			"lead_time":   bulkQuantity("8"),
+			"unit_price":  bulkCurrencyRate("2.22"),
+			"unit_cost":   bulkCurrencyRate("1.11"),
+			"properties":  []any{bulkProperty(propName, propValue)},
+		},
+		map[string]any{"sku": uniqueName("e2e-bup-mat-upd-new"), "category": map[string]any{"id": SeedMaterialCategoryID}},
+	)
+	defer cleanupMaterialIDs(created)
+	assert.Len(t, created, 1, "the new SKU is created")
+	assert.Equal(t, []string{materialID}, updated, "the existing SKU is updated, not created")
 
-	assert.Empty(t, created, "existing SKU must update, not create")
-	require.Len(t, updated, 1)
-	assert.Equal(t, materialID, updated[0])
-
-	// Verify every field changed.
-	getStatus, getBody, err := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
-	assert.Equal(t, "20", jsonField(jsonObject(got, "order_point"), "value"))
-	assert.Equal(t, "8", jsonField(jsonObject(got, "lead_time"), "value"))
-
-	item := catalogItem(t, materialsPath, materialID)
+	got := getMaterialP9(t, materialID, "item")
+	assertMaterialP9Quantity(t, jsonObject(got, "order_point"), "20", SeedUnitID, "order_point")
+	assertMaterialP9Quantity(t, jsonObject(got, "lead_time"), "8", SeedUnitID, "lead_time")
+	item := jsonObject(got, "item")
+	require.NotNil(t, item)
+	assert.Equal(t, sku, jsonField(item, "sku"), "a case-insensitive match keeps the stored SKU")
 	assert.Equal(t, "updated description", jsonField(item, "description"))
-	assert.Equal(t, "updated notes", jsonField(item, "notes"))
-	assert.Equal(t, "2.22", bulkCatalogPriceAmount(t, materialsPath, materialID, "item.unit_value"))
-	assert.Equal(t, "1.11", bulkCatalogPriceAmount(t, materialsPath, materialID, "item.unit_cost"))
+	assertMaterialP9Rate(t, jsonObject(item, "unit_value"), "2.22", "", nonCurrencyUnitID, "item.unit_value")
+	assertMaterialP9Rate(t, jsonObject(item, "unit_cost"), "1.11", "", nonCurrencyUnitID, "item.unit_cost")
 	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
 }
 
-func TestMaterials_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
+// The category is a fuzzy reference: it resolves by name, not only by id.
+func TestMaterials_BulkUpsert_ResolvesCategoryByName(t *testing.T) {
 	t.Parallel()
 
-	existingSKU := uniqueName("e2e-bup-mat-mix-exist")
-	newSKU := uniqueName("e2e-bup-mat-mix-new")
-
-	seeded, _ := bulkUpsertMaterialIDs(t, map[string]any{"sku": existingSKU, "category": map[string]any{"id": SeedMaterialCategoryID}})
-	defer cleanupMaterialIDs(seeded)
-
-	created, updated := bulkUpsertMaterialIDs(t,
-		map[string]any{"sku": existingSKU, "category": map[string]any{"id": SeedMaterialCategoryID}, "notes": "touched"},
-		map[string]any{"sku": newSKU, "category": map[string]any{"id": SeedMaterialCategoryID}},
-	)
+	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
+		"sku":      uniqueName("e2e-bup-mat-catname"),
+		"category": map[string]any{"name": "yarn"}, // by name, case-insensitive
+	})
 	defer cleanupMaterialIDs(created)
+	require.Len(t, created, 1)
 
-	assert.Len(t, created, 1)
-	assert.Len(t, updated, 1)
+	item := jsonObject(getMaterialP9(t, created[0], "item.category"), "item")
+	require.NotNil(t, item)
+	assert.Equal(t, SeedMaterialCategoryID, jsonField(jsonObject(item, "category"), "id"))
+}
+
+// --- rejections ---
+
+// Rules the write applies fail their row: the job completes and the row lands in errors.
+func TestMaterials_BulkUpsert_RowRejections(t *testing.T) {
+	t.Parallel()
+
+	t.Run("price per a currency", func(t *testing.T) {
+		job := bulkUpsertMaterialsJob(t, map[string]any{
+			"sku":        uniqueName("e2e-bup-mat-badrate"),
+			"category":   map[string]any{"id": SeedMaterialCategoryID},
+			"unit_price": map[string]any{"amount": "1.00", "currency": "usd", "per_unit_id": e2eCurrencyUnitID},
+		})
+		assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
+		require.Len(t, jobErrors(job), 1, "the rejected row is recorded in errors")
+	})
+
+	t.Run("sku of another item type", func(t *testing.T) {
+		sku := uniqueName("e2e-bup-mat-xtype")
+		createForgeItem(t, itemsPath, forgeItemBody("product", sku))
+		job := bulkUpsertMaterialsJob(t, map[string]any{"sku": sku, "category": map[string]any{"id": SeedMaterialCategoryID}})
+		assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
+		require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
+	})
+}
+
+// A malformed batch is refused whole, with the preview.9 error naming the offending row.
+func TestMaterials_BulkUpsert_RejectedAtAccept(t *testing.T) {
+	t.Parallel()
+
+	dupSKU := uniqueName("e2e-bup-mat-dup")
+	cases := []struct {
+		name  string
+		rows  []map[string]any
+		param string
+	}{
+		{"no rows", nil, "materials"},
+		{"duplicate sku", []map[string]any{
+			{"sku": dupSKU, "category": map[string]any{"id": SeedMaterialCategoryID}},
+			{"sku": dupSKU, "category": map[string]any{"id": SeedMaterialCategoryID}},
+		}, "materials[1].sku"},
+		{"unknown category", []map[string]any{
+			{"sku": uniqueName("e2e-bup-mat-ok"), "category": map[string]any{"id": SeedMaterialCategoryID}},
+			{"sku": uniqueName("e2e-bup-mat-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}},
+		}, "materials[1].category"},
+		{"product category", []map[string]any{
+			{"sku": uniqueName("e2e-bup-mat-wrongcat"), "category": map[string]any{"id": SeedItemCategoryID}},
+		}, "materials[0].category"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body := bulkUpsertMaterials(t, tc.rows...)
+			requireStatus(t, 400, status, body)
+			assertErrorParam(t, requirePreview9Error(t, body, "invalid_format"), tc.param)
+		})
+	}
 }
 
 // --- property / attribute edge cases (shared resolver; pinned here once) ---
@@ -354,9 +248,39 @@ func propertyAttributes(t *testing.T, propertyName string) []map[string]any {
 	return out
 }
 
-// TestMaterials_BulkUpsert_ReusesPropertyAndAttributeAcrossCasingAndWhitespace: a
-// second import whose property name and value differ only by casing and surrounding
-// whitespace must reuse the existing property and attribute — no duplicates.
+// materialItemAttributeValues reads the attribute values on a material's item.
+func materialItemAttributeValues(t *testing.T, materialID string) []string {
+	t.Helper()
+	item := jsonObject(getMaterialP9(t, materialID, "item"), "item")
+	require.NotNil(t, item)
+	return catalogItemAttributeValues(t, jsonField(item, "id"))
+}
+
+// Attribute values are unique within their property, so one value under two properties resolves to two attributes,
+// one per property.
+func TestMaterials_BulkUpsert_SameAttributeValueUnderTwoProperties(t *testing.T) {
+	t.Parallel()
+
+	value := uniqueName("e2e-bup-mat-dupval")
+	propA := uniqueName("e2e-bup-mat-dv-a")
+	propB := uniqueName("e2e-bup-mat-dv-b")
+	created, _ := bulkUpsertMaterialIDs(t, map[string]any{
+		"sku":        uniqueName("e2e-bup-mat-dupattr"),
+		"category":   map[string]any{"id": SeedMaterialCategoryID},
+		"properties": []any{bulkProperty(propA, value), bulkProperty(propB, value)},
+	})
+	defer cleanupMaterialIDs(created)
+	require.Len(t, created, 1)
+
+	for _, prop := range []string{propA, propB} {
+		attrs := propertyAttributes(t, prop)
+		require.Len(t, attrs, 1, "property %s has its own attribute", prop)
+		assert.Equal(t, value, jsonField(attrs[0], "value"))
+	}
+}
+
+// A second import whose property name and value differ only by casing and surrounding whitespace reuses the existing
+// property and attribute — no duplicates.
 func TestMaterials_BulkUpsert_ReusesPropertyAndAttributeAcrossCasingAndWhitespace(t *testing.T) {
 	t.Parallel()
 
@@ -379,8 +303,7 @@ func TestMaterials_BulkUpsert_ReusesPropertyAndAttributeAcrossCasingAndWhitespac
 
 	// The second item carries the ORIGINAL attribute (original casing), proving reuse.
 	require.Len(t, second, 1)
-	item := catalogItem(t, materialsPath, second[0])
-	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
+	assert.Contains(t, materialItemAttributeValues(t, second[0]), propValue)
 
 	// Exactly one property with this name, keeping the first-seen casing.
 	list, _, err := apiClient.GetList(propertiesPath, url.Values{"q": {propName}})
@@ -404,42 +327,34 @@ func TestMaterials_BulkUpsert_ReusesPropertyAndAttributeAcrossCasingAndWhitespac
 	assert.GreaterOrEqual(t, order, float64(1))
 }
 
-// TestMaterials_BulkUpsert_SharedValueAcrossRowsAndReimport: the same (property, value)
-// pair on multiple rows in one batch resolves to a single attribute attached to every
-// row, and re-importing the batch creates nothing new.
+// The same (property, value) pair on multiple rows in one batch resolves to a single attribute attached to every row,
+// and re-importing the batch creates nothing new.
 func TestMaterials_BulkUpsert_SharedValueAcrossRowsAndReimport(t *testing.T) {
 	t.Parallel()
 
 	propName := uniqueName("e2e-bup-mat-shared")
 	propValue := uniqueName("sharedval")
-	skuA := uniqueName("e2e-bup-mat-shared-a")
-	skuB := uniqueName("e2e-bup-mat-shared-b")
 	rows := []map[string]any{
-		{"sku": skuA, "category": map[string]any{"id": SeedMaterialCategoryID}, "properties": []any{bulkProperty(propName, propValue)}},
-		{"sku": skuB, "category": map[string]any{"id": SeedMaterialCategoryID}, "properties": []any{bulkProperty(propName, propValue)}},
+		{"sku": uniqueName("e2e-bup-mat-shared-a"), "category": map[string]any{"id": SeedMaterialCategoryID}, "properties": []any{bulkProperty(propName, propValue)}},
+		{"sku": uniqueName("e2e-bup-mat-shared-b"), "category": map[string]any{"id": SeedMaterialCategoryID}, "properties": []any{bulkProperty(propName, propValue)}},
 	}
 
 	created, _ := bulkUpsertMaterialIDs(t, rows...)
 	defer cleanupMaterialIDs(created)
 	require.Len(t, created, 2)
 
-	// Both items carry the value; the property holds exactly one attribute.
 	for _, materialID := range created {
-		item := catalogItem(t, materialsPath, materialID)
-		assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
+		assert.Contains(t, materialItemAttributeValues(t, materialID), propValue)
 	}
 	require.Len(t, propertyAttributes(t, propName), 1)
 
-	// Re-import the identical batch: pure updates, still exactly one attribute.
 	reCreated, reUpdated := bulkUpsertMaterialIDs(t, rows...)
 	assert.Empty(t, reCreated)
 	assert.Len(t, reUpdated, 2)
 	assert.Len(t, propertyAttributes(t, propName), 1)
 }
 
-// TestMaterials_BulkUpsert_SkipsBlankProperties: property pairs whose name or value is
-// blank after trimming are skipped rather than creating junk rows — the current
-// contract for spreadsheet imports with stray whitespace cells.
+// Property pairs whose name or value is blank after trimming are skipped rather than creating junk rows.
 func TestMaterials_BulkUpsert_SkipsBlankProperties(t *testing.T) {
 	t.Parallel()
 
@@ -453,6 +368,5 @@ func TestMaterials_BulkUpsert_SkipsBlankProperties(t *testing.T) {
 	})
 	defer cleanupMaterialIDs(created)
 	require.Len(t, created, 1)
-	item := catalogItem(t, materialsPath, created[0])
-	assert.Empty(t, catalogItemAttributeValues(t, jsonField(item, "id")))
+	assert.Empty(t, materialItemAttributeValues(t, created[0]))
 }

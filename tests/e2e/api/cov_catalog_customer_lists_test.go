@@ -73,7 +73,7 @@ func TestItemsList_CustomerAndProductLineBothApply(t *testing.T) {
 
 func TestItemsList_SupplierAndAttributeWithNoMatches(t *testing.T) {
 	t.Parallel()
-	rows, _ := listPayments(t, itemsPath, url.Values{"supplier_id": {"ac_00000000000000000000000000"}})
+	rows, _ := listPayments(t, itemsPath, url.Values{"supplier_ids": {"ac_00000000000000000000000000"}})
 	assert.Empty(t, rows, "an unknown supplier supplies nothing")
 	rows, _ = listPayments(t, itemsPath, url.Values{"attribute_ids": {"attr_00000000000000000000000000"}})
 	assert.Empty(t, rows, "an unknown attribute is on nothing")

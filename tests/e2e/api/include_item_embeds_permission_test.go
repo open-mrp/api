@@ -14,10 +14,11 @@ import (
 // dashboardItemIncludes is what the dashboard's item list and category change ask for.
 var dashboardItemIncludes = []string{
 	"category", "category.unit_group", "category.unit_group.base_unit", "category.unit_group.associated_units",
-	"category.unit_group.associated_units.unit", "category.properties", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property",
+	"category.unit_group.associated_units.unit", "category.properties", "attributes", "attributes.property",
 }
 
-// itemWithAttribute creates a sock in the seeded socks category carrying the seeded attribute, and returns its SKU and item.
+// itemWithAttribute creates a sock in the seeded socks category carrying the seeded attribute, and returns its SKU and
+// item. The sock is made through the preview.9 products route so it can also be read embedded in a product.
 func itemWithAttribute(t *testing.T) (sku, itemID string) {
 	t.Helper()
 	sku = uniqueName("e2e-embed-sku")
@@ -25,9 +26,7 @@ func itemWithAttribute(t *testing.T) (sku, itemID string) {
 	productID := jsonField(created, "id")
 	itemID = jsonField(jsonObject(parseJSON(mustGetAs(t, apiClient, productsPath+"/"+productID, url.Values{"include": {"item"}})), "item"), "id")
 	require.NotEmpty(t, itemID)
-	status, body, err := apiClient.Put(itemsPath+"/"+itemID+"/attributes/"+SeedAttributeID, nil)
-	require.NoError(t, err)
-	requireStatus(t, http.StatusOK, status, body)
+	patchItem(t, itemID, map[string]any{"attribute_ids": []string{SeedAttributeID}})
 	return sku, itemID
 }
 
@@ -93,19 +92,22 @@ func TestIncludes_ItemCategoryAndAttributesShownToAnItemsReader(t *testing.T) {
 	assert.NotEmpty(t, jsonField(property, "name"))
 }
 
-// The category comes with the item wherever the item is embedded, here a product's.
+// The category comes with the item wherever the item is embedded, here a preview.9 product's.
 func TestIncludes_EmbeddedItemCarriesItsCategoryForAnItemsReader(t *testing.T) {
 	t.Parallel()
-	reader := customRoleClient(t, "items:read")
+	owner := apiClient.WithAPIVersion(preview9Version)
+	reader := customRoleClient(t, "items:read").WithAPIVersion(preview9Version)
 	sku, itemID := itemWithAttribute(t)
-	list, _, err := apiClient.GetList(productsPath, url.Values{"q": {sku}})
+	list, _, err := owner.GetList(productsPath, url.Values{"q": {sku}})
 	require.NoError(t, err)
 	require.Len(t, list.Data, 1)
 	path := productsPath + "/" + DataItemField(list.Data[0], "id")
 
 	params := url.Values{"include": {"item", "item.category", "item.category.properties", "item.category.unit_group", "item.attributes"}}
 	got := parseJSON(mustGetAs(t, reader, path, params))
-	assert.Equal(t, parseJSON(mustGetAs(t, apiClient, path, params)), got, "the role reads the product exactly as an admin does")
+	want := parseJSON(mustGetAs(t, owner, path, params))
+	jsonObject(want, "item")["unit_cost"] = nil // the one field the role doesn't share: it needs costs:read
+	assert.Equal(t, want, got, "the role reads the product as an admin does, less its item's cost")
 	item := jsonObject(got, "item")
 	require.NotNil(t, item)
 	assert.Equal(t, itemID, jsonField(item, "id"))

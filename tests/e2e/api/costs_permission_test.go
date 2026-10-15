@@ -106,20 +106,13 @@ func getAs(t *testing.T, client *Client, path string, includes ...string) (int, 
 	return status, body
 }
 
-// costProduct creates a sale product whose item costs costValue per pair, returning the product and its item.
-func costProduct(t *testing.T, costValue string) (productID, itemID string) {
+// costProduct creates a sold product item that costs costValue per pair and sells for 9.50, returning its id.
+func costProduct(t *testing.T, costValue string) string {
 	t.Helper()
-	sku := uniqueName("e2e-costs-sku")
-	created := createAndCleanup(t, productsPath, map[string]any{
-		"sku":         sku,
-		"type":        "sale",
-		"category_id": SeedItemCategoryID,
-		"unit_cost":   map[string]any{"amount": costValue, "currency": "usd", "per_unit_id": SeedUnitID},
-	})
-	productID = jsonField(created, "id")
-	itemID = jsonField(jsonObject(parseJSON(mustGetAs(t, apiClient, productsPath+"/"+productID, url.Values{"include": {"item"}})), "item"), "id")
-	require.NotEmpty(t, itemID)
-	return productID, itemID
+	body := forgeItemBody("product", uniqueName("e2e-costs-sku"))
+	body["unit_cost"] = priceInputPer(costValue, SeedUnitID)
+	body["sales"] = map[string]any{"unit_price": priceInputPer("9.50", SeedUnitID)}
+	return jsonField(createForgeItem(t, itemsPath, body), "id")
 }
 
 // rateValue reads the figure of a price (its amount) or a rate (its value).
@@ -137,39 +130,30 @@ func rateValue(t *testing.T, m map[string]any, key string) string {
 
 func TestCosts_ItemUnitCostNeedsCostsRead(t *testing.T) {
 	t.Parallel()
-	productID, itemID := costProduct(t, "3.25")
+	itemID := costProduct(t, "3.25")
 	sku := jsonField(parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, nil)), "sku")
 
 	itemsOnly := customRoleClient(t, "items:read")
 	withCosts := customRoleClient(t, "items:read", costsRead)
-	include := url.Values{"include": {"unit_cost", "unit_value"}}
 
-	adminItem := parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, include))
+	adminItem := parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, nil))
 	adminCost := rateValue(t, adminItem, "unit_cost")
 	require.True(t, strings.HasPrefix(adminCost, "3.25"), "the admin reads the item's cost: %s", adminCost)
 
-	got := parseJSON(mustGetAs(t, itemsOnly, itemsPath+"/"+itemID, include))
+	got := parseJSON(mustGetAs(t, itemsOnly, itemsPath+"/"+itemID, nil))
 	assertNilField(t, got, "unit_cost")
-	assert.NotNil(t, jsonObject(got, "unit_value"), "the selling value is not cost data")
+	assert.NotNil(t, jsonObject(jsonObject(got, "sales"), "unit_price"), "the selling price is not cost data")
 	assert.Equal(t, itemID, jsonField(got, "id"), "the item still loads")
 
-	list := parseJSON(mustGetAs(t, itemsOnly, itemsPath, url.Values{"q": {sku}, "include": include["include"]}))
+	list := parseJSON(mustGetAs(t, itemsOnly, itemsPath, url.Values{"q": {sku}}))
 	rows := listRows(t, list)
 	require.Len(t, rows, 1)
 	assertNilField(t, rows[0], "unit_cost")
 
-	assert.Equal(t, adminCost, rateValue(t, parseJSON(mustGetAs(t, withCosts, itemsPath+"/"+itemID, include)), "unit_cost"))
-	withCostsRows := listRows(t, parseJSON(mustGetAs(t, withCosts, itemsPath, url.Values{"q": {sku}, "include": include["include"]})))
+	assert.Equal(t, adminCost, rateValue(t, parseJSON(mustGetAs(t, withCosts, itemsPath+"/"+itemID, nil)), "unit_cost"))
+	withCostsRows := listRows(t, parseJSON(mustGetAs(t, withCosts, itemsPath, url.Values{"q": {sku}})))
 	require.Len(t, withCostsRows, 1)
 	assert.Equal(t, adminCost, rateValue(t, withCostsRows[0], "unit_cost"))
-
-	// The same item embedded in a product follows the same rule.
-	productInclude := url.Values{"include": {"item", "item.unit_cost"}}
-	embedded := jsonObject(parseJSON(mustGetAs(t, itemsOnly, productsPath+"/"+productID, productInclude)), "item")
-	require.NotNil(t, embedded)
-	assertNilField(t, embedded, "unit_cost")
-	embedded = jsonObject(parseJSON(mustGetAs(t, withCosts, productsPath+"/"+productID, productInclude)), "item")
-	assert.Equal(t, adminCost, rateValue(t, embedded, "unit_cost"))
 }
 
 func TestCosts_SalesOrderLineUnitCostNeedsCostsRead(t *testing.T) {
@@ -467,6 +451,17 @@ func TestCosts_RequestLogsKeepCostOut(t *testing.T) {
 	assert.Equal(t, "****", jsonField(jsonObject(jsonObject(got, "response_body"), "item"), "unit_cost"), "the cost the response carried")
 }
 
+// completedPreview9ExportJobAs starts an export that answers preview.9 callers only and waits for its job.
+func completedPreview9ExportJobAs(t *testing.T, client *Client, path string) map[string]any {
+	t.Helper()
+	status, body, err := client.WithAPIVersion(preview9Version).Post(path, map[string]any{}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, http.StatusAccepted, status, body)
+	jobID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, jobID, "202 must name the job to poll")
+	return awaitExportJob(t, client, jobID)
+}
+
 // The file itself is out of reach in e2e (the test object store discards it); this proves an export without cost columns still renders. The columns left out are asserted in core-service's export tests.
 func TestCosts_ExportsRenderWithoutCostColumns(t *testing.T) {
 	t.Parallel()
@@ -477,15 +472,19 @@ func TestCosts_ExportsRenderWithoutCostColumns(t *testing.T) {
 		{productsPath, []string{"items:read", "jobs:read"}},
 		{materialsPath, []string{"materials:read", "jobs:read"}},
 		{partsPath, []string{"parts:read", "jobs:read"}},
-		{productionStepsPath, []string{"production_steps:read", "jobs:read"}},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			t.Parallel()
-			job := completedExportJobAs(t, customRoleClient(t, tc.perms...), tc.path+"/actions/export", nil)
+			job := completedPreview9ExportJobAs(t, customRoleClient(t, tc.perms...), tc.path+"/actions/export")
 			assert.NotNil(t, job["export"])
 		})
 	}
-	job := completedExportJobAs(t, getCustomerPortalClient(), productsPath+"/actions/export", nil)
+	t.Run(productionStepsPath, func(t *testing.T) {
+		t.Parallel()
+		job := completedExportJobAs(t, customRoleClient(t, "production_steps:read", "jobs:read"), productionStepsPath+"/actions/export", nil)
+		assert.NotNil(t, job["export"])
+	})
+	job := completedPreview9ExportJobAs(t, getCustomerPortalClient(), productsPath+"/actions/export")
 	assert.NotNil(t, job["export"], "a customer's product export renders, without the seller's unit cost")
 }
 

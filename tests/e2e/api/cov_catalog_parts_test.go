@@ -3,440 +3,109 @@
 package api_test
 
 import (
-	"net/url"
 	"testing"
 
+	"github.com/open-mrp/api/shared/id"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// This file closes gaps identified in the catalog_parts e2e coverage review:
-// duplicate-SKU conflicts (create + update), nonexistent category_id/unit_id
-// references, nonexistent attribute_ids, DELETE-already-deleted semantics
-// (410, not 200/404), PATCH/DELETE on a never-existed id, the create/update
-// include asymmetry (item.category.properties valid on GET but not on
-// create/update), the SKU max-length boundary, blanking SKU via PATCH, and a
-// concrete-value round trip for item.unit_value (previously only unit_cost's
-// value was checked).
-
-// ──────────────────────────────────────────────
-// Part — Duplicate SKU conflicts (409)
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateDuplicateSKUConflict(t *testing.T) {
+// Duplicate SKUs conflict on preview.9 whichever write brings them in.
+func TestCovCatalogParts_Preview9DuplicateSKUConflicts(t *testing.T) {
 	t.Parallel()
-
 	sku := uniqueName("e2e-cov-part-dupsku")
-	original := createAndCleanup(t, partsPath, validPartBody(sku))
-	require.NotEmpty(t, jsonField(original, "id"))
+	createPreview9Part(t, partsPath, validPartBody(sku))
 
-	status, body, err := apiClient.Post(partsPath, validPartBody(sku), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 409, status, body)
+	t.Run("create", func(t *testing.T) {
+		status, body := preview9PartPost(t, partsPath, validPartBody(sku))
+		requireStatus(t, 409, status, body)
+		assert.Equal(t, "sku", requirePreview9Error(t, body, "resource_conflict")["param"])
+	})
 
-	errObj := requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
+	t.Run("update", func(t *testing.T) {
+		otherID := jsonField(createPreview9Part(t, partsPath, validPartBody(uniqueName("e2e-cov-part-dupsku-other"))), "id")
+		status, body := preview9PartPatch(t, partsPath+"/"+otherID, map[string]any{"sku": sku})
+		requireStatus(t, 409, status, body)
+		assert.Equal(t, "sku", requirePreview9Error(t, body, "resource_conflict")["param"])
+	})
 }
 
-func TestCovCatalogParts_UpdateDuplicateSKUConflict(t *testing.T) {
+func TestCovCatalogParts_Preview9UpdateRejections(t *testing.T) {
 	t.Parallel()
+	partID := jsonField(createPreview9Part(t, partsPath, validPartBody(uniqueName("e2e-cov-part-upd-rej"))), "id")
 
-	sku := uniqueName("e2e-cov-part-dupsku-upd")
-	holder := createAndCleanup(t, partsPath, validPartBody(sku))
-	require.NotEmpty(t, jsonField(holder, "id"))
+	t.Run("blank sku", func(t *testing.T) {
+		status, body := preview9PartPatch(t, partsPath+"/"+partID, map[string]any{"sku": ""})
+		requireStatus(t, 400, status, body)
+		assert.Equal(t, "sku", requirePreview9Error(t, body, "invalid_format")["param"])
+	})
 
-	other := createAndCleanup(t, partsPath, validPartBody(uniqueName("e2e-cov-part-dupsku-other")))
-	otherID := jsonField(other, "id")
-	require.NotEmpty(t, otherID)
-
-	status, body, err := apiClient.Patch(partsPath+"/"+otherID, map[string]any{"sku": sku}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 409, status, body)
-
-	errObj := requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
+	t.Run("include offered only on reads", func(t *testing.T) {
+		status, body := preview9PartPatch(t, partsPath+"/"+partID+"?include=item.category.properties", map[string]any{"description": "x"})
+		requireStatus(t, 400, status, body)
+		assert.Equal(t, "include[]", requirePreview9Error(t, body, "parameter_invalid")["param"])
+	})
 }
 
-// ──────────────────────────────────────────────
-// Part — SKU max-length boundary and blank-via-PATCH
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateSKUTooLong(t *testing.T) {
+// A part id that never existed is a plain 404 on every preview.9 route.
+func TestCovCatalogParts_Preview9NeverExistedIDReturns404(t *testing.T) {
 	t.Parallel()
+	preview := apiClient.WithAPIVersion(preview9Version)
+	ghost := partsPath + "/pt_covneverexisted0001"
 
-	longSKU := make([]byte, 256)
-	for i := range longSKU {
-		longSKU[i] = 'a'
-	}
+	status, body := preview9PartPatch(t, ghost, map[string]any{"sku": uniqueName("e2e-cov-part-ghost")})
+	requireStatus(t, 404, status, body)
+	requirePreview9Error(t, body, "resource_not_found")
 
-	status, body, err := apiClient.Post(partsPath, map[string]any{
-		"sku":         string(longSKU),
-		"category_id": SeedItemCategoryID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
-}
-
-func TestCovCatalogParts_UpdateSKUEmptyStringRejected(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, partsPath, validPartBody(uniqueName("e2e-cov-part-blanksku")))
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-
-	// UpdatePartRequest.SKU is field.Optional[string] with validate:"omitempty,max=255",
-	// which could in principle exempt an explicit "" from length validation. The live
-	// stack in fact rejects it (400 invalid_format, "must not be blank"), confirming the
-	// SKU-blanking concern flagged in the coverage review is not a real gap. Assert the
-	// documented/correct behavior so a future regression to a silent 200 is caught.
-	status, body, err := apiClient.Patch(partsPath+"/"+id, map[string]any{"sku": ""}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
-}
-
-// ──────────────────────────────────────────────
-// Part — Nonexistent FK references
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateNonexistentCategoryID(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(partsPath, map[string]any{
-		"sku":         uniqueName("e2e-cov-part-badcat"),
-		"category_id": "itcg_nonexistent0000000",
-	}, newIdempotencyKey())
+	status, body, err := preview.Delete(ghost)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requirePreview9Error(t, body, "resource_not_found")
 }
 
-func TestCovCatalogParts_CreateNonexistentUnitPriceUnit(t *testing.T) {
+// forge refuses the part pricing and attribute inputs the part routes refused, now on the item.
+func TestCovCatalogParts_ForgePartRejections(t *testing.T) {
 	t.Parallel()
 
-	body := validPartBody(uniqueName("e2e-cov-part-badunit-price"))
-	body["unit_price"] = map[string]any{
-		"amount":      "5.00",
-		"currency":    "usd",
-		"per_unit_id": "nonexistent_unit_id",
-	}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.per_unit_id")
-}
-
-func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-cov-part-badunit-cost"))
-	body["unit_cost"] = map[string]any{
-		"amount":      "2.50",
-		"currency":    "usd",
-		"per_unit_id": "nonexistent_unit_id",
-	}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.per_unit_id")
-}
-
-// Only dollars are accepted; the currency takes the place of the old numerator unit.
-func TestCovCatalogParts_CreateUnsupportedUnitCostCurrency(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-cov-part-badcurrency-cost"))
-	body["unit_cost"] = map[string]any{
-		"amount":      "2.50",
-		"currency":    "eur",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.currency")
-}
-
-// ──────────────────────────────────────────────
-// Part — Nonexistent attribute_ids
-// ──────────────────────────────────────────────
-
-// TestCovCatalogParts_CreateWithNonexistentAttributeIDRejected covers the create-side attribute check. The _item_attributes join table has no FK constraint on either column, so an unchecked id would be accepted as a silent orphan join row instead of a clean client error.
-func TestCovCatalogParts_CreateWithNonexistentAttributeIDRejected(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-cov-part-badattr"))
-	body["attribute_ids"] = []string{"at_nonexistent00000000"}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 404, status, respBody)
-	requireErrorResponse(t, respBody, "resource_not_found", "invalid_request_error")
-}
-
-// ──────────────────────────────────────────────
-// Part — DELETE-already-deleted (410 Gone, not 200/404/500)
-// ──────────────────────────────────────────────
-
-// TestCovCatalogParts_DeleteAlreadyDeletedReturns410 asserts the documented,
-// parts-specific contract: unlike most resources in this codebase (which
-// tolerate a repeat DELETE as an idempotent 200/404), DeletePartEndpoint's doc
-// comment states re-deleting an already-deleted part is an error — the service
-// returns apierror.NewAlreadyDeletedError, which maps to 410 Gone with code
-// "resource_gone". Do NOT loosen this to also accept 200/404 like the generic
-// double-delete pattern used elsewhere; that would mask a real regression.
-func TestCovCatalogParts_DeleteAlreadyDeletedReturns410(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, partsPath, validPartBody(uniqueName("e2e-cov-part-deldel")))
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-
-	delStatus, delBody, err := apiClient.Delete(partsPath + "/" + id)
-	require.NoError(t, err)
-	requireStatus(t, 200, delStatus, delBody)
-
-	status2, body2, err := apiClient.Delete(partsPath + "/" + id)
-	require.NoError(t, err)
-	requireStatus(t, 410, status2, body2)
-
-	errObj := requireErrorResponse(t, body2, "resource_gone", "invalid_request_error")
-	assert.Nil(t, errObj["param"])
-}
-
-// ──────────────────────────────────────────────
-// Part — PATCH/DELETE on a fabricated, never-existed id (404, not the
-// delete-then-verify-404 shortcut already covered elsewhere)
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_PatchNeverExistedIDReturns404(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Patch(
-		partsPath+"/pt_covneverexisted0001",
-		map[string]any{"sku": uniqueName("e2e-cov-part-ghost")},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
-}
-
-func TestCovCatalogParts_DeleteNeverExistedIDReturns404(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Delete(partsPath + "/pt_covneverexisted0002")
-	require.NoError(t, err)
-	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
-}
-
-// ──────────────────────────────────────────────
-// Part — Create/update include asymmetry: item.category.properties is valid
-// on GET/LIST but not on create/update.
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateRejectsGetOnlyIncludeKey(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(
-		partsPath+"?include=item.category.properties",
-		validPartBody(uniqueName("e2e-cov-part-badinc-create")),
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "include[]")
-}
-
-func TestCovCatalogParts_UpdateRejectsGetOnlyIncludeKey(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, partsPath, validPartBody(uniqueName("e2e-cov-part-badinc-update")))
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-
-	status, body, err := apiClient.Patch(
-		partsPath+"/"+id+"?include=item.category.properties",
-		map[string]any{"sku": uniqueName("e2e-cov-part-badinc-update-sku")},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "include[]")
-}
-
-// ──────────────────────────────────────────────
-// Part — item.unit_value.amount concrete round trip (previously only
-// item.unit_cost was asserted to a specific number).
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateWithValidRates_UnitValueRoundTrip(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-cov-part-unitvalue"))
-	body["unit_price"] = map[string]any{
-		"amount":      "5.00",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	status, respBody, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.unit_value"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, respBody)
-
-	uv := jsonObject(jsonObject(parseJSON(respBody), "item"), "unit_value")
-	require.NotNil(t, uv, "item.unit_value should be populated with ?include=item.unit_value")
-	assertCatalogPartPrice(t, uv, "5.00", "item.unit_value")
-}
-
-// assertCatalogPartPrice checks a unit price fully: amount, dollars, and the per-each unit it was set in.
-func assertCatalogPartPrice(t *testing.T, price map[string]any, amount, field string) {
-	t.Helper()
-	require.NotNil(t, price, "%s", field)
-	assert.Equal(t, amount, jsonField(price, "amount"), "%s.amount", field)
-	assert.Equal(t, "usd", jsonField(price, "currency"), "%s.currency", field)
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(price, "per_unit"), "id"), "%s.per_unit", field)
-	assert.NotContains(t, price, "id", "%s is a value, not a stored row", field)
-}
-
-// ──────────────────────────────────────────────
-// Part — allFields: every Part + Item field with concrete expected values for
-// both item.unit_value.amount and item.unit_cost.amount in a single response.
-// ──────────────────────────────────────────────
-
-func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-cov-part-allf2")
-	desc := "All-fields concrete-rates description"
-	notes := "All-fields concrete-rates notes"
-	body := validPartBody(sku)
-	body["description"] = desc
-	body["notes"] = notes
-	body["unit_price"] = map[string]any{
-		"amount":      "5.00",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-	body["unit_cost"] = map[string]any{
-		"amount":      "2.50",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-	body["attribute_ids"] = []string{SeedAttributeID}
-
-	resp, err := apiClient.PostFull(
-		partsPath+"?include=item,item.category,item.unit_value,item.unit_cost,item.burn_rate,item.attributes",
-		body, newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	// Part-level fields.
-	assertIDFormat(t, id, "pt")
-	assertObjectField(t, got, "part")
-	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-
-	item := jsonObject(got, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-	assert.Equal(t, sku, jsonField(item, "sku"))
-	assert.Equal(t, desc, jsonField(item, "description"))
-	assert.Equal(t, notes, jsonField(item, "notes"))
-	assert.Equal(t, "part", jsonField(item, "type"))
-	assertValidTimestamp(t, jsonField(item, "created_at"), "item.created_at")
-	assertValidTimestamp(t, jsonField(item, "updated_at"), "item.updated_at")
-
-	cat := jsonObject(item, "category")
-	require.NotNil(t, cat)
-	assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"))
-
-	assertCatalogPartPrice(t, jsonObject(item, "unit_value"), "5.00", "item.unit_value")
-	assertCatalogPartPrice(t, jsonObject(item, "unit_cost"), "2.50", "item.unit_cost")
-
-	br := jsonObject(item, "burn_rate")
-	require.NotNil(t, br)
-	assertDecimalEqual(t, "0", jsonField(br, "value"), "burn_rate is always initialized to 0 per day at part creation")
-	assert.Equal(t, "unit", jsonField(jsonObject(br, "unit"), "object"), "burn_rate.unit")
-	assert.Equal(t, "unit", jsonField(jsonObject(br, "per_unit"), "object"), "burn_rate.per_unit")
-
-	attrs := jsonObject(item, "attributes")
-	require.NotNil(t, attrs)
-	assert.Equal(t, "list", jsonField(attrs, "object"))
-	attrData := jsonArray(attrs, "data")
-	require.NotEmpty(t, attrData)
-	found := false
-	for _, raw := range attrData {
-		obj, ok := raw.(map[string]any)
-		require.True(t, ok)
-		if jsonField(obj, "id") == SeedAttributeID {
-			found = true
+	with := func(set map[string]any) map[string]any {
+		body := forgeItemBody("part", uniqueName("e2e-cov-part-forge"))
+		for k, v := range set {
+			body[k] = v
 		}
+		return body
 	}
-	assert.True(t, found, "expected linked attribute %s in item.attributes", SeedAttributeID)
+	price := func(amount, currency, perUnitID string) map[string]any {
+		return map[string]any{"amount": amount, "currency": currency, "per_unit_id": perUnitID}
+	}
 
-	// Update the sku and description, re-fetch with the same includes, and
-	// confirm every field (including the two rate values) is preserved or
-	// updated as expected — closing the gap where only unit_cost was
-	// checked against a concrete number.
-	newSKU := uniqueName("e2e-cov-part-allf2-upd")
-	patchStatus, patchBody, err := apiClient.Patch(
-		partsPath+"/"+id+"?include=item,item.category,item.unit_value,item.unit_cost,item.burn_rate,item.attributes",
-		map[string]any{"sku": newSKU},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
+	cases := []struct {
+		name  string
+		body  map[string]any
+		code  string
+		param string
+	}{
+		{"cost in an unsupported currency", with(map[string]any{"unit_cost": price("2.50", "eur", nonCurrencyUnitID)}), "currency_not_supported", "unit_cost.currency"},
+		{"cost per an unknown unit", with(map[string]any{"unit_cost": price("2.50", "usd", "nonexistent_unit_id")}), "invalid_format", "unit_cost.per_unit_id"},
+		{"price per a currency", with(map[string]any{"sales": map[string]any{"unit_price": price("5.00", "usd", currencyUnitID)}}), "invalid_format", "sales.unit_price.per_unit_id"},
+		{"price per an unknown unit", with(map[string]any{"sales": map[string]any{"unit_price": price("5.00", "usd", "nonexistent_unit_id")}}), "invalid_format", "sales.unit_price.per_unit_id"},
+		{"unknown attribute", with(map[string]any{"attribute_ids": []string{mustGenID(t, id.AttributeIDPrefix)}}), "invalid_format", "attribute_ids"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body, err := apiClient.Post(itemsPath, tc.body, newIdempotencyKey())
+			require.NoError(t, err)
+			requireStatus(t, 422, status, body)
+			assertErrorParam(t, requireErrorResponse(t, body, tc.code, "invalid_request_error"), tc.param)
+		})
+	}
 
-	updated := parseJSON(patchBody)
-	assert.Equal(t, id, jsonField(updated, "id"))
-	assertObjectField(t, updated, "part")
-	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-
-	itemU := jsonObject(updated, "item")
-	require.NotNil(t, itemU)
-	assert.Equal(t, newSKU, jsonField(itemU, "sku"))
-	assert.Equal(t, desc, jsonField(itemU, "description"), "description should be preserved across the sku-only patch")
-	assert.Equal(t, notes, jsonField(itemU, "notes"), "notes should be preserved across the sku-only patch")
-
-	// unit_value and unit_cost are unaffected by an sku-only patch.
-	assertCatalogPartPrice(t, jsonObject(itemU, "unit_value"), "5.00", "item.unit_value")
-	assertCatalogPartPrice(t, jsonObject(itemU, "unit_cost"), "2.50", "item.unit_cost")
+	t.Run("update to a taken sku", func(t *testing.T) {
+		taken := uniqueName("e2e-cov-part-forge-taken")
+		createForgeItem(t, itemsPath, forgeItemBody("part", taken))
+		otherID := jsonField(createForgeItem(t, itemsPath, with(nil)), "id")
+		status, body, err := apiClient.Patch(itemsPath+"/"+otherID, map[string]any{"sku": taken}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 409, status, body)
+		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "sku")
+	})
 }

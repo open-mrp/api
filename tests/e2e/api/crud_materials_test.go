@@ -5,30 +5,18 @@ package api_test
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/open-mrp/api/shared/id"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// The materials routes answer 1.0.forge-preview.9 callers only; forge manages materials as items of type material
+// (crud_items_test.go). These tests pin the preview.9 contract: the material object, its preview.9 item and value
+// shapes, and its errors.
 const materialsPath = "/v1/catalog/materials"
-
-// materialFullCreateBody returns a create payload with all optional fields set (no attribute_ids).
-func materialFullCreateBody(sku string) map[string]any {
-	body := validMaterialBody(sku)
-	body["description"] = "All-fields material description"
-	body["notes"] = "All-fields material notes"
-	body["order_point"] = map[string]any{"value": "10", "unit_id": SeedUnitID}
-	body["lead_time"] = map[string]any{"value": "5", "unit_id": SeedUnitID}
-	body["unit_price"] = priceInputPer("4.00", nonCurrencyUnitID)
-	body["unit_cost"] = priceInputPer("2.50", nonCurrencyUnitID)
-	return body
-}
-
-func assertMaterialQuantityInfo(t *testing.T, doc map[string]any, field string, unitID string) {
-	t.Helper()
-	assertQuantityIn(t, jsonObject(doc, field), "", unitID, field)
-}
 
 // priceInputPer is a UnitPriceInput in dollars per perUnitID.
 func priceInputPer(amount, perUnitID string) map[string]any {
@@ -116,877 +104,384 @@ func assertRateShape(t *testing.T, r map[string]any, value, unitID, perUnitID, l
 	assertNoValueIdentity(t, r, label)
 }
 
-// ──────────────────────────────────────────────
-// --- CRUD ---
-// ──────────────────────────────────────────────
+// --- preview.9 helpers ---
 
-func TestMaterials_CRUD(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-crud")
-	body := validMaterialBody(sku)
-	body["order_point"] = map[string]any{"value": "3", "unit_id": SeedUnitID}
-	body["lead_time"] = map[string]any{"value": "2", "unit_id": SeedUnitID}
+// materialP9Fields are the keys of a preview.9 material, and nothing more.
+var materialP9Fields = []string{"id", "object", "item", "order_point", "lead_time", "created_at", "updated_at"}
 
-	createStatus, createBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
+// materialsP9 is a client pinned to preview.9, the only version the materials routes answer.
+func materialsP9() *Client { return apiClient.WithAPIVersion(preview9Version) }
+
+// createMaterialP9 creates a material on preview.9 (path may carry a query) and deletes it after the test.
+func createMaterialP9(t *testing.T, path string, body map[string]any) map[string]any {
+	t.Helper()
+	resp, err := materialsP9().PostFull(path, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-
-	created := parseJSON(createBody)
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-	assert.Equal(t, "material", jsonField(created, "object"))
-	assertMaterialQuantityInfo(t, created, "order_point", SeedUnitID)
-	assertMaterialQuantityInfo(t, created, "lead_time", SeedUnitID)
-
-	getStatus, getBody, err := apiClient.GetListRaw(materialsPath+"/"+id, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
-	assert.Equal(t, id, jsonField(got, "id"))
-
-	newSKU := uniqueName("e2e-mat-crud-upd")
-	patchStatus, patchBody, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{"sku": newSKU}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	st, itemBody, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, st, itemBody)
-	item := jsonObject(parseJSON(itemBody), "item")
-	require.NotNil(t, item)
-	assert.Equal(t, newSKU, jsonField(item, "sku"))
-
-	delStatus, delBody, err := apiClient.Delete(materialsPath + "/" + id)
-	require.NoError(t, err)
-	requireStatus(t, 200, delStatus, delBody)
-
-	getStatus2, _, err := apiClient.GetListRaw(materialsPath+"/"+id, nil)
-	require.NoError(t, err)
-	assert.Equal(t, 404, getStatus2)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	created := parseJSON(resp.Body)
+	materialID := jsonField(created, "id")
+	require.NotEmpty(t, materialID)
+	assertCreatedLocation(t, resp.Header, materialID)
+	t.Cleanup(func() { materialsP9().Delete(materialsPath + "/" + materialID) })
+	return created
 }
 
-// ──────────────────────────────────────────────
-// --- Create and Update All Fields ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_CreateAndUpdateAllFields(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-allf")
-	body := materialFullCreateBody(sku)
-
-	createStatus, createBody, err := apiClient.Post(materialsPath+"?include=item", body, newIdempotencyKey())
+// getMaterialP9 reads a material on preview.9 with the given includes.
+func getMaterialP9(t *testing.T, materialID string, includes ...string) map[string]any {
+	t.Helper()
+	var params url.Values
+	if len(includes) > 0 {
+		params = url.Values{"include": {strings.Join(includes, ",")}}
+	}
+	status, body, err := materialsP9().GetListRaw(materialsPath+"/"+materialID, params)
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 200, status, body)
+	return parseJSON(body)
+}
 
-	got := parseJSON(createBody)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(materialsPath + "/" + id)
-
+// assertMaterialP9Envelope checks a preview.9 material carries exactly its preview.9 fields.
+func assertMaterialP9Envelope(t *testing.T, got map[string]any) {
+	t.Helper()
+	assertIDFormat(t, jsonField(got, "id"), id.MaterialIDPrefix)
 	assertObjectField(t, got, "material")
-	assertMaterialQuantityInfo(t, got, "order_point", SeedUnitID)
-	assertMaterialQuantityInfo(t, got, "lead_time", SeedUnitID)
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+	keys := make([]string, 0, len(got))
+	for k := range got {
+		keys = append(keys, k)
+	}
+	assert.ElementsMatch(t, materialP9Fields, keys, "a preview.9 material has exactly its preview.9 fields")
+}
 
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item must be present with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
+// assertMaterialP9Quantity checks a preview.9 quantity: an object with a value, its unit and a display_value.
+func assertMaterialP9Quantity(t *testing.T, q map[string]any, value, unitID, label string) {
+	t.Helper()
+	require.NotNil(t, q, "%s should be set", label)
+	assert.Equal(t, "quantity", jsonField(q, "object"), label)
+	assertDecimalEqual(t, value, jsonField(q, "value"), label)
+	assert.Equal(t, unitID, jsonField(jsonObject(q, "unit"), "id"), label+".unit")
+	assert.NotEmpty(t, jsonField(q, "display_value"), label)
+}
+
+// assertMaterialP9Rate checks a preview.9 rate. An empty numeratorUnitID is a dollar price, whose currency unit is
+// null on preview.9.
+func assertMaterialP9Rate(t *testing.T, r map[string]any, value, numeratorUnitID, denominatorUnitID, label string) {
+	t.Helper()
+	require.NotNil(t, r, "%s should be set", label)
+	assert.Equal(t, "rate", jsonField(r, "object"), label)
+	assertDecimalEqual(t, value, jsonField(r, "value"), label)
+	if numeratorUnitID == "" {
+		assert.Nil(t, r["numerator_unit"], "%s: a price's currency unit is null on preview.9", label)
+	} else {
+		assert.Equal(t, numeratorUnitID, jsonField(jsonObject(r, "numerator_unit"), "id"), label+".numerator_unit")
+	}
+	assert.Equal(t, denominatorUnitID, jsonField(jsonObject(r, "denominator_unit"), "id"), label+".denominator_unit")
+	assert.NotEmpty(t, jsonField(r, "display_value"), label)
+	for _, forgeKey := range []string{"unit", "per_unit", "amount", "currency"} {
+		assert.NotContains(t, r, forgeKey, "%s: preview.9 rates have no %s", label, forgeKey)
+	}
+}
+
+// --- lifecycle ---
+
+// Create with every field, read with every include, update, list by filter, delete, and replay the delete. Notes
+// are accepted but no longer stored.
+func TestMaterials_Preview9Lifecycle(t *testing.T) {
+	t.Parallel()
+	p9 := materialsP9()
+	attrID := newColorAttribute(t, "active")
+	sku := uniqueName("e2e-mat-p9")
+
+	created := createMaterialP9(t, materialsPath+"?include=item", map[string]any{
+		"sku":           sku,
+		"category_id":   SeedMaterialCategoryID,
+		"description":   "Merino yarn, 2/28",
+		"notes":         "not stored",
+		"order_point":   map[string]any{"value": "10", "unit_id": SeedMaterialUnitID},
+		"lead_time":     map[string]any{"value": "5", "unit_id": dayUnitID},
+		"unit_price":    priceInputPer("4.00", SeedMaterialUnitID),
+		"unit_cost":     priceInputPer("2.50", SeedMaterialUnitID),
+		"attribute_ids": []string{attrID},
+	})
+	materialID := jsonField(created, "id")
+	assertMaterialP9Envelope(t, created)
+	assertMaterialP9Quantity(t, jsonObject(created, "order_point"), "10", SeedMaterialUnitID, "order_point")
+	assertMaterialP9Quantity(t, jsonObject(created, "lead_time"), "5", dayUnitID, "lead_time")
+
+	item := jsonObject(created, "item")
+	require.NotNil(t, item, "item is expanded with ?include=item")
+	assertPreview9ItemShape(t, item)
+	itemID := jsonField(item, "id")
+	assertIDFormat(t, itemID, id.ItemIDPrefix)
+	assert.Equal(t, "material", jsonField(item, "type"))
 	assert.Equal(t, sku, jsonField(item, "sku"))
-	assert.Equal(t, "All-fields material description", jsonField(item, "description"))
-	assert.Equal(t, "All-fields material notes", jsonField(item, "notes"))
+	assert.Equal(t, "Merino yarn, 2/28", jsonField(item, "description"))
+	assertMaterialP9Rate(t, jsonObject(item, "unit_value"), "4.00", "", SeedMaterialUnitID, "item.unit_value")
+	assertMaterialP9Rate(t, jsonObject(item, "unit_cost"), "2.50", "", SeedMaterialUnitID, "item.unit_cost")
+	assertMaterialP9Rate(t, jsonObject(item, "burn_rate"), "0", SeedMaterialUnitID, dayUnitID, "item.burn_rate")
+	assertNilField(t, item, "category")
+	assertNilField(t, item, "attributes")
 
-	origCreatedAt := jsonField(got, "created_at")
+	t.Run("retrieve with every include", func(t *testing.T) {
+		got := getMaterialP9(t, materialID, "item", "item.category", "item.attributes")
+		assertMaterialP9Envelope(t, got)
+		gotItem := jsonObject(got, "item")
+		require.NotNil(t, gotItem)
+		assert.Equal(t, SeedMaterialCategoryID, jsonField(jsonObject(gotItem, "category"), "id"))
+		assert.Equal(t, []string{attrID}, attributeIDsOf(gotItem))
 
-	newSKU := uniqueName("e2e-mat-allf-u")
-	patchStatus, patchBody, err := apiClient.Patch(materialsPath+"/"+id+"?include=item", map[string]any{
-		"sku":         newSKU,
-		"description": "Updated all-fields description",
-		"notes":       "Updated all-fields notes",
-		"order_point": map[string]any{"value": "20", "unit_id": SeedUnitID},
-		"lead_time":   map[string]any{"value": "8", "unit_id": SeedUnitID},
-		"unit_cost":   priceInputPer("3.00", nonCurrencyUnitID),
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	updated := parseJSON(patchBody)
-	assert.Equal(t, id, jsonField(updated, "id"))
-	assert.Equal(t, origCreatedAt, jsonField(updated, "created_at"), "created_at must not change")
-	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-
-	assertMaterialQuantityInfo(t, updated, "order_point", SeedUnitID)
-	assertMaterialQuantityInfo(t, updated, "lead_time", SeedUnitID)
-
-	upItem := jsonObject(updated, "item")
-	require.NotNil(t, upItem)
-	assert.Equal(t, newSKU, jsonField(upItem, "sku"))
-	assert.Equal(t, "Updated all-fields description", jsonField(upItem, "description"))
-	assert.Equal(t, "Updated all-fields notes", jsonField(upItem, "notes"))
-}
-
-// ──────────────────────────────────────────────
-// --- Omitted Fields ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_OmittedFields(t *testing.T) {
-	t.Parallel()
-
-	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
-		sku := uniqueName("e2e-mat-omit")
-		status, body, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, status, body)
-
-		got := parseJSON(body)
-		id := jsonField(got, "id")
-		require.NotEmpty(t, id)
-		defer apiClient.Delete(materialsPath + "/" + id)
-
-		assertObjectField(t, got, "material")
-		assertNilField(t, got, "order_point")
-		assertNilField(t, got, "lead_time")
-		assertNilField(t, got, "item")
-		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+		assertNilField(t, getMaterialP9(t, materialID), "item")
 	})
 
-	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
-		status, body, err := apiClient.Post(materialsPath, map[string]any{
-			"category_id": SeedMaterialCategoryID,
+	t.Run("forge reads the item it made", func(t *testing.T) {
+		forgeItem := getItem(t, itemID)
+		assertItemEnvelope(t, forgeItem, "material", sku)
+		material := jsonObject(forgeItem, "material")
+		require.NotNil(t, material)
+		assertQuantityIn(t, jsonObject(material, "order_point"), "10", SeedMaterialUnitID, "material.order_point")
+		assertItemPrice(t, jsonObject(forgeItem, "unit_cost"), "2.50", SeedMaterialUnitID, "unit_cost")
+	})
+
+	t.Run("update", func(t *testing.T) {
+		newSKU := uniqueName("e2e-mat-p9-upd")
+		status, body, err := p9.Patch(materialsPath+"/"+materialID+"?include=item", map[string]any{
+			"sku":         newSKU,
+			"description": "Merino yarn, 2/32",
+			"notes":       "still not stored",
+			"order_point": map[string]any{"value": "20", "unit_id": SeedMaterialUnitID},
+			"lead_time":   map[string]any{"value": "8", "unit_id": dayUnitID},
+			"unit_cost":   priceInputPer("3.00", SeedMaterialUnitID),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
-			"missing sku should return 400 or 422, got %d: %s", status, string(body))
+		requireStatus(t, 200, status, body)
+		updated := parseJSON(body)
+		assertMaterialP9Envelope(t, updated)
+		assert.Equal(t, materialID, jsonField(updated, "id"))
+		assert.Equal(t, jsonField(created, "created_at"), jsonField(updated, "created_at"), "created_at never changes")
+		assertMaterialP9Quantity(t, jsonObject(updated, "order_point"), "20", SeedMaterialUnitID, "order_point")
+		assertMaterialP9Quantity(t, jsonObject(updated, "lead_time"), "8", dayUnitID, "lead_time")
 
-		status2, body2, err := apiClient.Post(materialsPath, map[string]any{
-			"sku": uniqueName("e2e-mat-miss-cat"),
-		}, newIdempotencyKey())
+		upItem := jsonObject(updated, "item")
+		require.NotNil(t, upItem)
+		assertPreview9ItemShape(t, upItem)
+		assert.Equal(t, newSKU, jsonField(upItem, "sku"))
+		assert.Equal(t, "Merino yarn, 2/32", jsonField(upItem, "description"))
+		assertMaterialP9Rate(t, jsonObject(upItem, "unit_cost"), "3.00", "", SeedMaterialUnitID, "item.unit_cost")
+		assertMaterialP9Rate(t, jsonObject(upItem, "unit_value"), "4.00", "", SeedMaterialUnitID, "an omitted unit_price is kept")
+		assert.Equal(t, []string{attrID}, attributeIDsOf(jsonObject(getMaterialP9(t, materialID, "item.attributes"), "item")),
+			"an update leaves the attributes alone")
+
+		list, status, err := p9.GetList(materialsPath, url.Values{
+			"q":             {newSKU},
+			"category_ids":  {SeedMaterialCategoryID},
+			"attribute_ids": {attrID},
+			"starts_at":     {"2020-01-01T00:00:00Z"},
+			"include":       {"item"},
+		})
 		require.NoError(t, err)
-		assert.True(t, status2 == 400 || status2 == 422,
-			"missing category_id should return 400 or 422, got %d: %s", status2, string(body2))
+		require.Equal(t, 200, status)
+		require.Len(t, list.Data, 1, "the filters select the material")
+		row := parseJSON(list.Data[0])
+		assert.Equal(t, materialID, jsonField(row, "id"))
+		assert.Equal(t, newSKU, jsonField(jsonObject(row, "item"), "sku"))
+
+		for name, params := range map[string]url.Values{
+			"starts_at after it":  {"q": {newSKU}, "starts_at": {"2099-01-01T00:00:00Z"}},
+			"ends_at before it":   {"q": {newSKU}, "ends_at": {"2020-01-01T00:00:00Z"}},
+			"another attribute":   {"q": {newSKU}, "attribute_ids": {"at_" + strings.ReplaceAll(newIdempotencyKey(), "-", "")}},
+			"an unknown category": {"q": {newSKU}, "category_ids": {"itcg_00000000000000000"}},
+		} {
+			list, status, err := p9.GetList(materialsPath, params)
+			require.NoError(t, err)
+			require.Equal(t, 200, status, name)
+			assertEmptyListData(t, list.Data, name)
+		}
 	})
 
-	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
-		sku := uniqueName("e2e-mat-pres")
-		createStatus, createBody, err := apiClient.Post(materialsPath+"?include=item", materialFullCreateBody(sku), newIdempotencyKey())
+	t.Run("delete", func(t *testing.T) {
+		status, body, err := p9.Delete(materialsPath + "/" + materialID)
 		require.NoError(t, err)
-		requireStatus(t, 201, createStatus, createBody)
+		requireStatus(t, 200, status, body)
+		assert.Equal(t, map[string]any{}, parseJSON(body), "a preview.9 delete answers an empty object")
 
-		created := parseJSON(createBody)
-		id := jsonField(created, "id")
-		require.NotEmpty(t, id)
-		defer apiClient.Delete(materialsPath + "/" + id)
-
-		origOPVal := jsonField(jsonObject(created, "order_point"), "value")
-		origLTVal := jsonField(jsonObject(created, "lead_time"), "value")
-		item0 := jsonObject(created, "item")
-		require.NotNil(t, item0)
-		origDesc := jsonField(item0, "description")
-
-		newSKU := uniqueName("e2e-mat-pres-u")
-		patchStatus, patchBody, err := apiClient.Patch(materialsPath+"/"+id, map[string]any{"sku": newSKU}, newIdempotencyKey())
+		status, body, err = p9.Delete(materialsPath + "/" + materialID)
 		require.NoError(t, err)
-		requireStatus(t, 200, patchStatus, patchBody)
+		requireStatus(t, 410, status, body)
 
-		patched := parseJSON(patchBody)
-		assert.Equal(t, origOPVal, jsonField(jsonObject(patched, "order_point"), "value"), "order_point should be preserved")
-		assert.Equal(t, origLTVal, jsonField(jsonObject(patched, "lead_time"), "value"), "lead_time should be preserved")
-
-		st, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item"}})
+		status, _, err = p9.GetListRaw(materialsPath+"/"+materialID, nil)
 		require.NoError(t, err)
-		requireStatus(t, 200, st, body)
-		item := jsonObject(parseJSON(body), "item")
-		require.NotNil(t, item)
-		assert.Equal(t, origDesc, jsonField(item, "description"), "description should be preserved")
-		assert.Equal(t, newSKU, jsonField(item, "sku"), "sku should reflect PATCH")
+		assert.Equal(t, 404, status)
+		status, _, err = apiClient.GetListRaw(itemsPath+"/"+itemID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 404, status, "deleting a material deletes its item")
 	})
 }
 
-// ──────────────────────────────────────────────
-// --- Response Shape ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_CreateResponseShape(t *testing.T) {
+// Omitted optional fields read back as null; a zero order point or lead time is no threshold, so it reads as null too.
+func TestMaterials_Preview9OmittedFields(t *testing.T) {
 	t.Parallel()
-	sku := uniqueName("e2e-mat-shape")
-	status, body, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
 
-	got := parseJSON(body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(materialsPath + "/" + id)
+	created := createMaterialP9(t, materialsPath+"?include=item", validMaterialBody(uniqueName("e2e-mat-p9-omit")))
+	assertMaterialP9Envelope(t, created)
+	assertNilField(t, created, "order_point")
+	assertNilField(t, created, "lead_time")
+	item := jsonObject(created, "item")
+	require.NotNil(t, item)
+	assertPreview9ItemShape(t, item)
+	assertNilField(t, item, "description")
+	assertNilField(t, item, "unit_value")
+	assertMaterialP9Rate(t, jsonObject(item, "burn_rate"), "0", SeedMaterialUnitID, dayUnitID, "item.burn_rate")
 
-	assertIDFormat(t, id, "ml")
-	assertObjectField(t, got, "material")
-	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+	body := validMaterialBody(uniqueName("e2e-mat-p9-zero"))
+	body["order_point"] = map[string]any{"value": "0", "unit_id": SeedMaterialUnitID}
+	body["lead_time"] = map[string]any{"value": "0", "unit_id": dayUnitID}
+	zero := createMaterialP9(t, materialsPath, body)
+	assertNilField(t, zero, "order_point")
+	assertNilField(t, zero, "lead_time")
 }
 
-// ──────────────────────────────────────────────
-// --- List ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_List(t *testing.T) {
+func TestMaterials_Preview9ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(materialsPath, nil)
-	require.NoError(t, err)
-	assert.Equal(t, "list", list.Object)
-	assert.GreaterOrEqual(t, len(list.Data), 1, "should have at least one seeded material")
-}
-
-func TestMaterials_ListPagination(t *testing.T) {
-	t.Parallel()
-	// Paginate over rows this test owns, scoped by a unique search term, so
-	// parallel tests creating or deleting materials cannot shift the cursor
-	// window.
 	prefix := uniqueName("e2e-mat-pg")
 	var ids []string
 	for i := 0; i < 2; i++ {
-		sku := fmt.Sprintf("%s-%d", prefix, i)
-		createStatus, createBody, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, createStatus, createBody)
-		id := jsonField(parseJSON(createBody), "id")
-		require.NotEmpty(t, id)
-		defer apiClient.Delete(materialsPath + "/" + id)
-		ids = append(ids, id)
+		ids = append(ids, jsonField(createMaterialP9(t, materialsPath, validMaterialBody(fmt.Sprintf("%s-%d", prefix, i))), "id"))
 	}
-
 	assertScopedCursorPagination(t, materialsPath, url.Values{"q": {prefix}}, ids)
-}
 
-func TestMaterials_ListSearch(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-q")
-	body := validMaterialBody(sku)
-	createStatus, createBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
+	list, _, err := materialsP9().GetList(materialsPath, url.Values{"q": {prefix}})
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-	id := jsonField(parseJSON(createBody), "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(materialsPath + "/" + id)
-
-	list, _, err := apiClient.GetList(materialsPath, url.Values{"q": {sku}})
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(list.Data), 1, "search by SKU should return the created material")
-
-	found := false
+	require.Len(t, list.Data, 2)
 	for _, raw := range list.Data {
-		if DataItemField(raw, "id") == id {
-			found = true
-			break
+		assertNilField(t, parseJSON(raw), "item")
+	}
+}
+
+func TestMaterials_Preview9Idempotent(t *testing.T) {
+	t.Parallel()
+	p9 := materialsP9()
+	body := validMaterialBody(uniqueName("e2e-mat-p9-idem"))
+	key := newIdempotencyKey()
+
+	s1, b1, err := p9.Post(materialsPath, body, key)
+	require.NoError(t, err)
+	requireStatus(t, 201, s1, b1)
+	materialID := jsonField(parseJSON(b1), "id")
+	t.Cleanup(func() { p9.Delete(materialsPath + "/" + materialID) })
+	s2, b2, err := p9.Post(materialsPath, body, key)
+	require.NoError(t, err)
+	requireStatus(t, 201, s2, b2)
+	assert.Equal(t, materialID, jsonField(parseJSON(b2), "id"), "a replayed create answers the first material")
+
+	updateKey := newIdempotencyKey()
+	update := map[string]any{"sku": uniqueName("e2e-mat-p9-idem-upd")}
+	s1, b1, err = p9.Patch(materialsPath+"/"+materialID, update, updateKey)
+	require.NoError(t, err)
+	requireStatus(t, 200, s1, b1)
+	s2, b2, err = p9.Patch(materialsPath+"/"+materialID, update, updateKey)
+	require.NoError(t, err)
+	requireStatus(t, 200, s2, b2)
+	assert.JSONEq(t, string(b1), string(b2), "a replayed update answers the first response")
+}
+
+// --- validation ---
+
+// preview.9 errors keep their preview.9 form: 400 for invalid input, the failing field's own code, no errors list.
+func TestMaterials_Preview9Validation(t *testing.T) {
+	t.Parallel()
+	p9 := materialsP9()
+	existingID := jsonField(createMaterialP9(t, materialsPath, validMaterialBody(uniqueName("e2e-mat-p9-val"))), "id")
+
+	with := func(set map[string]any) map[string]any {
+		body := validMaterialBody(uniqueName("e2e-mat-p9-val"))
+		for k, v := range set {
+			body[k] = v
 		}
+		return body
 	}
-	assert.True(t, found, "created material id %s should appear in search results", id)
-}
-
-func TestMaterials_ListSearchNoResults(t *testing.T) {
-	t.Parallel()
-	list, _, err := apiClient.GetList(materialsPath, url.Values{"q": {"zzzznotamaterial99999"}})
-	require.NoError(t, err)
-	assertEmptyListData(t, list.Data)
-}
-
-// ──────────────────────────────────────────────
-// --- List Filters ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_ListFilterByCategoryID(t *testing.T) {
-	t.Parallel()
-	list, _, err := apiClient.GetList(materialsPath, url.Values{"category_ids": {SeedMaterialCategoryID}})
-	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(list.Data), 1, "filter by seeded material category should return at least one material")
-}
-
-func TestMaterials_ListFilterByAttributeID(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-fattr")
-	body := validMaterialBody(sku)
-	body["attribute_ids"] = []string{SeedAttributeID}
-	createStatus, createBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-	id := jsonField(parseJSON(createBody), "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(materialsPath + "/" + id)
-
-	list, _, err := apiClient.GetList(materialsPath, url.Values{"attribute_ids": {SeedAttributeID}})
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(list.Data), 1)
-
-	found := false
-	for _, raw := range list.Data {
-		if DataItemField(raw, "id") == id {
-			found = true
-			break
-		}
+	longSKU := func() string {
+		prefix := uniqueName("e2e-mat-max")
+		return prefix + strings.Repeat("x", 256-len(prefix))
 	}
-	assert.True(t, found, "material with linked attribute should appear when filtering by attribute_ids")
-}
 
-// ──────────────────────────────────────────────
-// --- Idempotency ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_CreateIdempotent(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-idem-mat")
-	body := validMaterialBody(sku)
-	idemKey := newIdempotencyKey()
-
-	status1, body1, err := apiClient.Post(materialsPath, body, idemKey)
-	require.NoError(t, err)
-	requireStatus(t, 201, status1, body1)
-	id1 := jsonField(parseJSON(body1), "id")
-
-	status2, body2, err := apiClient.Post(materialsPath, body, idemKey)
-	require.NoError(t, err)
-	requireStatus(t, 201, status2, body2)
-	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
-
-	apiClient.Delete(materialsPath + "/" + id1)
-}
-
-func TestMaterials_UpdateIdempotent(t *testing.T) {
-	t.Parallel()
-	created := createAndCleanup(t, materialsPath, validMaterialBody(uniqueName("e2e-idem-mat-upd")))
-	id := jsonField(created, "id")
-
-	idemKey := newIdempotencyKey()
-	newSKU := uniqueName("e2e-idem-mat-upd2")
-	payload := map[string]any{"sku": newSKU}
-
-	status1, body1, err := apiClient.Patch(materialsPath+"/"+id, payload, idemKey)
-	require.NoError(t, err)
-	requireStatus(t, 200, status1, body1)
-
-	status2, body2, err := apiClient.Patch(materialsPath+"/"+id, payload, idemKey)
-	require.NoError(t, err)
-	requireStatus(t, 200, status2, body2)
-
-	assert.JSONEq(t, string(body1), string(body2))
-}
-
-// ──────────────────────────────────────────────
-// --- Material Create — Include Tests ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_Create_IncludeItem(t *testing.T) {
-	t.Parallel()
-
-	resp, err := apiClient.PostFull(materialsPath+"?include=item", validMaterialBody(uniqueName("e2e-mat-inc-item")), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + id) })
-
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be expanded in create response with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-}
-
-func TestMaterials_Create_IncludeItemCategory(t *testing.T) {
-	t.Parallel()
-
-	resp, err := apiClient.PostFull(materialsPath+"?include=item.category", validMaterialBody(uniqueName("e2e-mat-inc-cat")), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + id) })
-
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.category")
-	cat := jsonObject(item, "category")
-	require.NotNil(t, cat, "item.category should be expanded in create response")
-	assert.Equal(t, "item_category", jsonField(cat, "object"))
-	assert.NotEmpty(t, jsonField(cat, "id"))
-}
-
-func TestMaterials_Create_IncludeItemAttributes(t *testing.T) {
-	t.Parallel()
-
-	body := validMaterialBody(uniqueName("e2e-mat-inc-attrs-create"))
-	body["attribute_ids"] = []string{SeedAttributeID}
-
-	resp, err := apiClient.PostFull(materialsPath+"?include=item.attributes", body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + id) })
-
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.attributes")
-	attrs, ok := item["attributes"]
-	assert.True(t, ok, "item.attributes key should be present in create response")
-	if ok && attrs != nil {
-		attrsObj, isObj := attrs.(map[string]any)
-		require.True(t, isObj, "item.attributes should be a list object")
-		assert.Equal(t, "list", jsonField(attrsObj, "object"))
-		data := jsonArray(attrsObj, "data")
-		require.NotEmpty(t, data, "linked attribute should appear in item.attributes")
-		found := false
-		for _, raw := range data {
-			attr, ok := raw.(map[string]any)
-			require.True(t, ok)
-			if jsonField(attr, "id") == SeedAttributeID {
-				found = true
-			}
-		}
-		assert.True(t, found, "SeedAttributeID %s should appear in item.attributes", SeedAttributeID)
+	creates := []struct {
+		name   string
+		body   map[string]any
+		status int
+		code   string
+		param  string
+	}{
+		{"cost in another currency", with(map[string]any{"unit_cost": map[string]any{"amount": "0.50", "currency": "eur", "per_unit_id": nonCurrencyUnitID}}), 400, "currency_not_supported", "unit_cost.currency"},
+		{"price per a currency", with(map[string]any{"unit_price": priceInputPer("1.00", currencyUnitID)}), 400, "invalid_format", "unit_price.per_unit_id"},
+		{"product category", with(map[string]any{"category_id": SeedItemCategoryID}), 400, "invalid_format", "category_id"},
+		{"unknown category", with(map[string]any{"category_id": "itcg_00000000000000000"}), 400, "invalid_format", "category_id"},
+		{"sku over 255", with(map[string]any{"sku": longSKU()}), 400, "invalid_format", "sku"},
+		{"missing sku", map[string]any{"category_id": SeedMaterialCategoryID}, 400, "missing_field", "sku"},
+		{"sku taken", with(map[string]any{"sku": covCatalogMaterialsSeedYarnSKU}), 409, "resource_conflict", "sku"},
 	}
-}
-
-// ──────────────────────────────────────────────
-// --- Material Update — Include Tests ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_Update_IncludeItem(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, materialsPath, validMaterialBody(uniqueName("e2e-mat-upd-inc")))
-	id := jsonField(created, "id")
-
-	newSKU := uniqueName("e2e-mat-upd-sku")
-	patchStatus, patchBody, err := apiClient.Patch(
-		materialsPath+"/"+id+"?include=item",
-		map[string]any{"sku": newSKU},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	got := parseJSON(patchBody)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be expanded in update response with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-	assert.Equal(t, newSKU, jsonField(item, "sku"))
-}
-
-func TestMaterials_Update_IncludeItemCategory(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, materialsPath, validMaterialBody(uniqueName("e2e-mat-upd-cat")))
-	id := jsonField(created, "id")
-
-	patchStatus, patchBody, err := apiClient.Patch(
-		materialsPath+"/"+id+"?include=item.category",
-		map[string]any{"sku": uniqueName("e2e-mat-upd-cat-sku")},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	got := parseJSON(patchBody)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.category")
-	cat := jsonObject(item, "category")
-	require.NotNil(t, cat, "item.category should be expanded in update response")
-	assert.Equal(t, "item_category", jsonField(cat, "object"))
-}
-
-func TestMaterials_Update_IncludeItemAttributes(t *testing.T) {
-	t.Parallel()
-
-	body := validMaterialBody(uniqueName("e2e-mat-upd-attrs"))
-	body["attribute_ids"] = []string{SeedAttributeID}
-	created := createAndCleanup(t, materialsPath, body)
-	id := jsonField(created, "id")
-
-	patchStatus, patchBody, err := apiClient.Patch(
-		materialsPath+"/"+id+"?include=item.attributes",
-		map[string]any{"sku": uniqueName("e2e-mat-upd-attrs-sku")},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	got := parseJSON(patchBody)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.attributes")
-	attrs, ok := item["attributes"]
-	assert.True(t, ok, "item.attributes key should be present in update response")
-	if ok && attrs != nil {
-		attrsObj, isObj := attrs.(map[string]any)
-		require.True(t, isObj, "item.attributes should be a list object")
-		assert.Equal(t, "list", jsonField(attrsObj, "object"))
+	for _, tc := range creates {
+		t.Run("create/"+tc.name, func(t *testing.T) {
+			status, body, err := p9.Post(materialsPath, tc.body, newIdempotencyKey())
+			require.NoError(t, err)
+			requireStatus(t, tc.status, status, body)
+			assertErrorParam(t, requirePreview9Error(t, body, tc.code), tc.param)
+		})
 	}
-}
 
-// ──────────────────────────────────────────────
-// --- Item.Attributes include (retrieve) ---
-// ──────────────────────────────────────────────
-
-func TestMaterials_IncludeItemAttributes(t *testing.T) {
-	t.Parallel()
-	id := SeedMaterialID
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item.attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.attributes")
-	attrs, ok := item["attributes"]
-	assert.True(t, ok, "item.attributes key should be present with ?include=item.attributes")
-	if ok && attrs != nil {
-		attrsObj, isObj := attrs.(map[string]any)
-		require.True(t, isObj, "item.attributes should be a list object")
-		assert.Equal(t, "list", jsonField(attrsObj, "object"))
-		data := jsonArray(attrsObj, "data")
-		for _, raw := range data {
-			attr, ok := raw.(map[string]any)
-			require.True(t, ok, "each attribute should be an object")
-			assert.Equal(t, "attribute", jsonField(attr, "object"))
-			assert.NotEmpty(t, jsonField(attr, "id"))
-		}
-	}
-}
-
-// ──────────────────────────────────────────────
-// Material — Include Tests
-// ──────────────────────────────────────────────
-
-func TestMaterials_ExpandableFieldsNullWithoutInclude(t *testing.T) {
-	t.Parallel()
-	id := SeedMaterialID
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	assert.Nil(t, got["item"], "item should be null without ?include=item")
-
-	list, _, err := apiClient.GetList(materialsPath, nil)
-	require.NoError(t, err)
-	for _, m := range list.Data {
-		mm := parseJSON(m)
-		assert.Nil(t, mm["item"], "item should be null on list items without ?include=item")
-	}
-}
-
-func TestMaterials_IncludeItem(t *testing.T) {
-	t.Parallel()
-	id := SeedMaterialID
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-
-	// Nested expandable fields on item should remain null when only ?include=item is used.
-	assertNilField(t, item, "category")
-	assertNilField(t, item, "unit_value")
-	assertNilField(t, item, "unit_cost")
-	assertNilField(t, item, "burn_rate")
-	assertNilField(t, item, "attributes")
-}
-
-// materialWithRatesID creates a material with unit_price and unit_cost set, registers
-// cleanup, and returns its ID. Used by include tests that need rate data.
-func materialWithRatesID(t *testing.T) string {
-	t.Helper()
-	body := validMaterialBody(uniqueName("e2e-mat-inc"))
-	body["unit_price"] = priceInputPer("2.00", nonCurrencyUnitID)
-	body["unit_cost"] = priceInputPer("1.00", nonCurrencyUnitID)
-	created := createAndCleanup(t, materialsPath, body)
-	return jsonField(created, "id")
-}
-
-// ──────────────────────────────────────────────
-// Material — Nested Include Tests (single endpoint)
-// ──────────────────────────────────────────────
-
-func TestMaterials_IncludeItemCategory(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+SeedMaterialID, url.Values{"include": {"item.category"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present when include=item.category is requested")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-
-	category := jsonObject(item, "category")
-	require.NotNil(t, category, "item.category should be present with include=item.category")
-	assert.Equal(t, "item_category", jsonField(category, "object"))
-	assert.NotEmpty(t, jsonField(category, "id"))
-	assert.NotEmpty(t, jsonField(category, "name"))
-
-	// Non-requested nested expandable fields should remain null.
-	assertNilField(t, item, "unit_value")
-	assertNilField(t, item, "unit_cost")
-	assertNilField(t, item, "burn_rate")
-	assertNilField(t, item, "attributes")
-}
-
-func TestMaterials_IncludeItemUnitValue(t *testing.T) {
-	t.Parallel()
-	id := materialWithRatesID(t)
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item.unit_value"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present when include=item.unit_value is requested")
-
-	unitValue := jsonObject(item, "unit_value")
-	require.NotNil(t, unitValue, "item.unit_value should be present with include=item.unit_value")
-	assertPricePer(t, unitValue, "2.00", nonCurrencyUnitID, "item.unit_value")
-
-	assertNilField(t, item, "category")
-	assertNilField(t, item, "unit_cost")
-	assertNilField(t, item, "burn_rate")
-	assertNilField(t, item, "attributes")
-}
-
-func TestMaterials_IncludeItemUnitCost(t *testing.T) {
-	t.Parallel()
-	id := materialWithRatesID(t)
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item.unit_cost"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present when include=item.unit_cost is requested")
-
-	unitCost := jsonObject(item, "unit_cost")
-	require.NotNil(t, unitCost, "item.unit_cost should be present with include=item.unit_cost")
-	assertPricePer(t, unitCost, "1.00", nonCurrencyUnitID, "item.unit_cost")
-
-	assertNilField(t, item, "category")
-	assertNilField(t, item, "unit_value")
-	assertNilField(t, item, "burn_rate")
-	assertNilField(t, item, "attributes")
-}
-
-func TestMaterials_IncludeItemBurnRate(t *testing.T) {
-	t.Parallel()
-	id := materialWithRatesID(t)
-
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item.burn_rate"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present when include=item.burn_rate is requested")
-
-	burnRate := jsonObject(item, "burn_rate")
-	require.NotNil(t, burnRate, "item.burn_rate should be present with include=item.burn_rate")
-	assertRateShape(t, burnRate, "", "", "", "item.burn_rate")
-
-	assertNilField(t, item, "category")
-	assertNilField(t, item, "unit_value")
-	assertNilField(t, item, "unit_cost")
-	assertNilField(t, item, "attributes")
-}
-
-func TestMaterials_IncludeAllFields(t *testing.T) {
-	t.Parallel()
-	id := materialWithRatesID(t)
-
-	params := url.Values{"include": {"item,item.category,item.unit_value,item.unit_cost,item.burn_rate"}}
-	status, body, err := apiClient.GetListRaw(materialsPath+"/"+id, params)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-
-	category := jsonObject(item, "category")
-	require.NotNil(t, category, "item.category should be present")
-	assert.Equal(t, "item_category", jsonField(category, "object"))
-	assert.NotEmpty(t, jsonField(category, "id"))
-
-	unitValue := jsonObject(item, "unit_value")
-	assertPricePer(t, unitValue, "2.00", nonCurrencyUnitID, "item.unit_value")
-
-	assertPricePer(t, jsonObject(item, "unit_cost"), "1.00", nonCurrencyUnitID, "item.unit_cost")
-
-	assertRateShape(t, jsonObject(item, "burn_rate"), "", "", "", "item.burn_rate")
-}
-
-// ──────────────────────────────────────────────
-// Material List — Include Tests
-// ──────────────────────────────────────────────
-
-func TestMaterials_List_IncludeItem(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(materialsPath, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 1, "at least one material must be seeded")
-
-	verified := 0
-	for _, raw := range list.Data {
-		m := parseJSON(raw)
-		item := jsonObject(m, "item")
-		if item == nil {
-			continue
-		}
-		assert.Equal(t, "item", jsonField(item, "object"))
-		assert.NotEmpty(t, jsonField(item, "id"))
-		assertNilField(t, item, "category")
-		assertNilField(t, item, "unit_value")
-		assertNilField(t, item, "unit_cost")
-		assertNilField(t, item, "burn_rate")
-		verified++
-	}
-	assert.GreaterOrEqual(t, verified, 1, "at least one material should have item expanded")
-}
-
-func TestMaterials_List_IncludeItemCategory(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(materialsPath, url.Values{"include": {"item.category"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 1, "at least one material must be seeded")
-
-	verified := 0
-	for _, raw := range list.Data {
-		m := parseJSON(raw)
-		item := jsonObject(m, "item")
-		if item == nil {
-			continue
-		}
-		category := jsonObject(item, "category")
-		if category == nil {
-			continue
-		}
-		assert.Equal(t, "item_category", jsonField(category, "object"))
-		assert.NotEmpty(t, jsonField(category, "id"))
-		verified++
-	}
-	assert.GreaterOrEqual(t, verified, 1, "at least one material should have item.category expanded")
-}
-
-func TestMaterials_List_IncludeItemUnitValue(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-luv")
-	body := validMaterialBody(sku)
-	body["unit_price"] = priceInputPer("3.00", nonCurrencyUnitID)
-	created := createAndCleanup(t, materialsPath, body)
-	createdID := jsonField(created, "id")
-
-	list, status, err := apiClient.GetList(materialsPath, url.Values{
-		"include": {"item.unit_value"},
-		"q":       {sku},
+	t.Run("create/unknown attribute", func(t *testing.T) {
+		status, body, err := p9.Post(materialsPath, with(map[string]any{"attribute_ids": []string{"at_00000000000000000"}}), newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 404, status, body)
+		requirePreview9Error(t, body, "resource_not_found")
 	})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 1, "search by SKU should return the created material")
 
-	var found map[string]any
-	for _, raw := range list.Data {
-		m := parseJSON(raw)
-		if jsonField(m, "id") == createdID {
-			found = m
-			break
-		}
+	updates := []struct {
+		name   string
+		body   map[string]any
+		status int
+		code   string
+		param  string
+	}{
+		{"null sku", map[string]any{"sku": nil}, 400, "invalid_format", "sku"},
+		{"null description", map[string]any{"description": nil}, 400, "invalid_format", "description"},
+		{"cost in another currency", map[string]any{"unit_cost": map[string]any{"amount": "0.50", "currency": "eur", "per_unit_id": nonCurrencyUnitID}}, 400, "currency_not_supported", "unit_cost.currency"},
+		{"sku taken", map[string]any{"sku": covCatalogMaterialsSeedYarnSKU}, 409, "resource_conflict", "sku"},
 	}
-	require.NotNil(t, found, "created material should appear in list results")
+	for _, tc := range updates {
+		t.Run("update/"+tc.name, func(t *testing.T) {
+			status, body, err := p9.Patch(materialsPath+"/"+existingID, tc.body, newIdempotencyKey())
+			require.NoError(t, err)
+			requireStatus(t, tc.status, status, body)
+			assertErrorParam(t, requirePreview9Error(t, body, tc.code), tc.param)
+		})
+	}
 
-	item := jsonObject(found, "item")
-	require.NotNil(t, item, "item should be present with include=item.unit_value")
-	unitValue := jsonObject(item, "unit_value")
-	require.NotNil(t, unitValue, "item.unit_value should be present with include=item.unit_value")
-	assertPricePer(t, unitValue, "3.00", nonCurrencyUnitID, "item.unit_value")
-}
+	queries := []struct {
+		name   string
+		path   string
+		params url.Values
+		param  string
+	}{
+		{"unknown include", materialsPath + "/" + SeedMaterialID, url.Values{"include": {"bogus_field"}}, "include[]"},
+		{"malformed starts_at", materialsPath, url.Values{"starts_at": {"not-a-date"}}, "starts_at"},
+		{"malformed ends_at", materialsPath, url.Values{"ends_at": {"not-a-date"}}, "ends_at"},
+	}
+	for _, tc := range queries {
+		t.Run("query/"+tc.name, func(t *testing.T) {
+			status, body, err := p9.GetListRaw(tc.path, tc.params)
+			require.NoError(t, err)
+			requireStatus(t, 400, status, body)
+			assertErrorParam(t, requirePreview9Error(t, body, "parameter_invalid"), tc.param)
+		})
+	}
 
-func TestMaterials_List_IncludeItemUnitCost(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-luc")
-	body := validMaterialBody(sku)
-	body["unit_cost"] = priceInputPer("1.50", nonCurrencyUnitID)
-	created := createAndCleanup(t, materialsPath, body)
-	createdID := jsonField(created, "id")
-
-	list, status, err := apiClient.GetList(materialsPath, url.Values{
-		"include": {"item.unit_cost"},
-		"q":       {sku},
+	t.Run("delete/unknown material", func(t *testing.T) {
+		status, body, err := p9.Delete(materialsPath + "/" + mustGenID(t, id.MaterialIDPrefix))
+		require.NoError(t, err)
+		requireStatus(t, 404, status, body)
 	})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 1, "search by SKU should return the created material")
-
-	var found map[string]any
-	for _, raw := range list.Data {
-		m := parseJSON(raw)
-		if jsonField(m, "id") == createdID {
-			found = m
-			break
-		}
-	}
-	require.NotNil(t, found, "created material should appear in list results")
-
-	item := jsonObject(found, "item")
-	require.NotNil(t, item, "item should be present with include=item.unit_cost")
-	unitCost := jsonObject(item, "unit_cost")
-	require.NotNil(t, unitCost, "item.unit_cost should be present with include=item.unit_cost")
-	assertPricePer(t, unitCost, "1.50", nonCurrencyUnitID, "item.unit_cost")
 }
 
-func TestMaterials_List_IncludeItemBurnRate(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-mat-lbr")
-	body := validMaterialBody(sku)
-	created := createAndCleanup(t, materialsPath, body)
-	createdID := jsonField(created, "id")
-
-	list, status, err := apiClient.GetList(materialsPath, url.Values{
-		"include": {"item.burn_rate"},
-		"q":       {sku},
-	})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	require.GreaterOrEqual(t, len(list.Data), 1, "search by SKU should return the created material")
-
-	var found map[string]any
-	for _, raw := range list.Data {
-		m := parseJSON(raw)
-		if jsonField(m, "id") == createdID {
-			found = m
-			break
-		}
-	}
-	require.NotNil(t, found, "created material should appear in list results")
-
-	item := jsonObject(found, "item")
-	require.NotNil(t, item, "item should be present with include=item.burn_rate")
-	burnRate := jsonObject(item, "burn_rate")
-	assertRateShape(t, burnRate, "", "", "", "item.burn_rate")
-}
+// covCatalogMaterialsSeedYarnSKU is the SKU of SeedMaterialID's underlying item, used as a stable conflict target for
+// duplicate-SKU tests.
+const covCatalogMaterialsSeedYarnSKU = "YRN-001"

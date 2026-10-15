@@ -86,8 +86,25 @@ func (c *Client) applyAuth(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
 	req.Header.Set("OpenMRP-Account", c.accountID)
-	req.Header.Set("OpenMRP-Version", c.apiVersion)
+	req.Header.Set("OpenMRP-Version", requestVersion(c.apiVersion, req.URL.Path))
 	req.Header.Set("Accept", "application/json")
+}
+
+// preview9OnlyPrefixes are the routes 1.0.forge removed but 1.0.forge-preview.9 callers still reach. Sales order lines
+// still name products, so fixtures create them here until orders take items.
+var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts", "/v1/catalog/products"}
+
+// requestVersion pins a default-version request to a preview.9-only route to preview.9, the only version it answers.
+func requestVersion(version, path string) string {
+	if version != defaultAPIVersion {
+		return version
+	}
+	for _, prefix := range preview9OnlyPrefixes {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return preview9Version
+		}
+	}
+	return version
 }
 
 // WithBearerToken returns a new Client that authenticates with the given bearer

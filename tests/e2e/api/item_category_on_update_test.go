@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Saving an item with a new category is one request: PATCH on a part, material or product takes category_id and moves the item as Change Item Category does, under that endpoint's own permission.
-
-var movedItemIncludes = url.Values{"include": {"category,unit_value,unit_cost"}}
+// Saving an item with a new category is one request. On forge, PATCH /v1/catalog/items/{id} takes category_id under
+// items:update and changes only the category. preview.9's PATCH on a part, material or product still takes category_id
+// under that route's own permission and moves the item's prices onto the new category's base unit.
 
 // productCategoryInEaches creates a product category whose unit group counts in eaches.
 func productCategoryInEaches(t *testing.T) string {
@@ -26,7 +26,8 @@ func productCategoryInEaches(t *testing.T) string {
 	})
 }
 
-// partInSocks creates a part in the seeded socks category and returns the part and the item behind it.
+// partInSocks creates a part in the seeded socks category through the preview.9 parts route and returns the part and
+// the item behind it.
 func partInSocks(t *testing.T) (partID, itemID string) {
 	t.Helper()
 	sku := uniqueName("e2e-moveitem-part")
@@ -34,21 +35,9 @@ func partInSocks(t *testing.T) (partID, itemID string) {
 	return partID, dashItemsItemBySKU(t, sku)
 }
 
-func readMovedItem(t *testing.T, itemID string) map[string]any {
-	t.Helper()
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID, movedItemIncludes)
-	require.NoError(t, err)
-	requireStatus(t, http.StatusOK, status, body)
-	return parseJSON(body)
-}
-
-// pricePerUnit is the unit an item price is per; the price itself is always in dollars.
-func pricePerUnit(item map[string]any, price string) string {
-	return jsonField(jsonObject(jsonObject(item, price), "per_unit"), "id")
-}
-
-func priceAmount(item map[string]any, price string) string {
-	return jsonField(jsonObject(item, price), "amount")
+// unitCostPerUnit is the unit a forge item's cost is per; the cost itself is always in dollars.
+func unitCostPerUnit(item map[string]any) string {
+	return jsonField(jsonObject(jsonObject(item, "unit_cost"), "per_unit"), "id")
 }
 
 // requireItemCategoryMoveAudited waits for the item's own update event and checks it records the move to categoryID.
@@ -60,33 +49,60 @@ func requireItemCategoryMoveAudited(t *testing.T, itemID, categoryID string) {
 	assert.Equal(t, categoryID, jsonField(change, "new_value"))
 }
 
-func TestPartUpdate_MovesTheCategoryUnderPartsUpdateAlone(t *testing.T) {
+// requirePreview9Refused checks a preview.9 refusal: its status, and for a 400 the field it names.
+func requirePreview9Refused(t *testing.T, status int, body []byte, wantStatus int, code, param string) {
+	t.Helper()
+	requireStatus(t, wantStatus, status, body)
+	errObj := requirePreview9Error(t, body, code)
+	if param != "" {
+		assert.Equal(t, param, errObj["param"], "error.param (body: %s)", body)
+	}
+}
+
+func TestItemUpdate_MovesTheCategoryUnderItemsUpdateAlone(t *testing.T) {
+	t.Parallel()
+	categoryID := productCategoryInEaches(t)
+	body := forgeItemBody("part", uniqueName("e2e-moveitem-forge"))
+	body["unit_cost"] = priceInputPer("2.00", SeedUnitID)
+	itemID := jsonField(createForgeItem(t, itemsPath, body), "id")
+
+	status, resp, err := customRoleClient(t, "items:update").Patch(withQuery(itemsPath+"/"+itemID, url.Values{"include": {"category"}}),
+		map[string]any{"category_id": categoryID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, http.StatusOK, status, resp)
+	assert.Equal(t, categoryID, jsonField(jsonObject(parseJSON(resp), "category"), "id"))
+
+	after := getItem(t, itemID, "category")
+	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
+	assertItemPrice(t, jsonObject(after, "unit_cost"), "2.00", SeedUnitID, "unit_cost stays as it was")
+
+	requireItemCategoryMoveAudited(t, itemID, categoryID)
+}
+
+func TestPartUpdatePreview9_MovesTheCategoryUnderPartsUpdateAlone(t *testing.T) {
 	t.Parallel()
 	categoryID := productCategoryInEaches(t)
 	partID, itemID := partInSocks(t)
-	before := readMovedItem(t, itemID)
-	require.NotEqual(t, "each", pricePerUnit(before, "unit_value"), "the socks category does not count in eaches")
+	before := getItem(t, itemID)
+	require.NotEqual(t, "each", unitCostPerUnit(before), "the socks category does not count in eaches")
 
-	writer := customRoleClient(t, "parts:update")
-	notes := uniqueName("moved with its notes")
+	writer := customRoleClient(t, "parts:update").WithAPIVersion(preview9Version)
 	status, body, err := writer.Patch(withQuery(partsPath+"/"+partID, url.Values{"include": {"item,item.category"}}), map[string]any{
 		"category_id": categoryID,
-		"notes":       notes,
+		"notes":       uniqueName("notes are no longer stored"),
+		"description": uniqueName("moved with its category"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 	item := jsonObject(parseJSON(body), "item")
 	require.NotNil(t, item)
 	assert.Equal(t, categoryID, jsonField(jsonObject(item, "category"), "id"))
-	assert.Equal(t, notes, jsonField(item, "notes"))
+	assertNilField(t, item, "notes")
 
-	after := readMovedItem(t, itemID)
+	after := getItem(t, itemID, "category")
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	for _, rate := range []string{"unit_value", "unit_cost"} {
-		assert.Equal(t, "each", pricePerUnit(after, rate), "%s moves onto the new base unit", rate)
-		assertDecimalEqual(t, priceAmount(before, rate), priceAmount(after, rate), "%s keeps its figure", rate)
-		assert.Equal(t, "usd", jsonField(jsonObject(after, rate), "currency"), rate)
-	}
+	assert.Equal(t, "each", unitCostPerUnit(after), "unit_cost moves onto the new base unit")
+	assertDecimalEqual(t, jsonField(jsonObject(before, "unit_cost"), "amount"), jsonField(jsonObject(after, "unit_cost"), "amount"), "unit_cost keeps its figure")
 
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
 	partEvent := expectAuditEventWithChanges(t, partID, "part", "update")
@@ -94,15 +110,15 @@ func TestPartUpdate_MovesTheCategoryUnderPartsUpdateAlone(t *testing.T) {
 	assert.False(t, movedOnPart, "the move is recorded on the item, the rest of the save on the part")
 }
 
-// The dashboard sends the cost in the new base unit alongside the move; it is written after the move, so it stays as sent.
-func TestMaterialUpdate_MovesTheCategoryUnderMaterialsUpdateAlone(t *testing.T) {
+// The dashboard sent the cost in the new base unit alongside the move; it is written after the move, so it stays as sent.
+func TestMaterialUpdatePreview9_MovesTheCategoryUnderMaterialsUpdateAlone(t *testing.T) {
 	t.Parallel()
 	categoryID := dashItemsMaterialCategory(t, apiClient)
 	sku := uniqueName("e2e-moveitem-mat")
 	materialID := dashItemsCreateAs(t, apiClient, materialsPath, validMaterialBody(sku))
 	itemID := dashItemsItemBySKU(t, sku)
 
-	writer := customRoleClient(t, "materials:update")
+	writer := customRoleClient(t, "materials:update").WithAPIVersion(preview9Version)
 	status, body, err := writer.Patch(materialsPath+"/"+materialID, map[string]any{
 		"category_id": categoryID,
 		"unit_cost":   map[string]any{"amount": "0.40", "currency": "usd", "per_unit_id": "each"},
@@ -110,23 +126,21 @@ func TestMaterialUpdate_MovesTheCategoryUnderMaterialsUpdateAlone(t *testing.T) 
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 
-	after := readMovedItem(t, itemID)
+	after := getItem(t, itemID, "category")
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	assertDecimalEqual(t, "0.40", priceAmount(after, "unit_cost"), "the cost sent with the move")
-	assert.Equal(t, "each", pricePerUnit(after, "unit_cost"))
-	assert.Equal(t, "each", pricePerUnit(after, "unit_value"), "the price the request left alone moves onto the new base unit")
+	assertItemPrice(t, jsonObject(after, "unit_cost"), "0.40", "each", "the cost sent with the move")
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {categoryID}}))
 
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
 	expectAuditEvent(t, materialID, "material", "update")
 }
 
-func TestProductUpdate_MovesTheCategoryUnderItemsUpdate(t *testing.T) {
+func TestProductUpdatePreview9_MovesTheCategoryUnderItemsUpdate(t *testing.T) {
 	t.Parallel()
 	categoryID := productCategoryInEaches(t)
 	productID, itemID := parityProduct(t, "")
 
-	writer := customRoleClient(t, "items:update")
+	writer := customRoleClient(t, "items:update").WithAPIVersion(preview9Version)
 	status, body, err := writer.Patch(productsPath+"/"+productID, map[string]any{
 		"category_id": categoryID,
 		"unit_price":  map[string]any{"amount": "3.25", "currency": "usd", "per_unit_id": "each"},
@@ -134,89 +148,76 @@ func TestProductUpdate_MovesTheCategoryUnderItemsUpdate(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 
-	after := readMovedItem(t, itemID)
+	after := getItem(t, itemID, "category")
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	assertDecimalEqual(t, "3.25", priceAmount(after, "unit_value"), "the price sent with the move")
-	assert.Equal(t, "each", pricePerUnit(after, "unit_value"))
-	assert.Equal(t, "each", pricePerUnit(after, "unit_cost"))
+	sales := jsonObject(after, "sales")
+	require.NotNil(t, sales, "a product is sold")
+	assertItemPrice(t, jsonObject(sales, "unit_price"), "3.25", "each", "the price sent with the move")
+	assert.Equal(t, "each", unitCostPerUnit(after), "unit_cost moves onto the new base unit")
 
-	// A product's price is its item's value, so the move and the price are both audited on the item; a product update event is published only when a product field changes.
+	// A product's price is its item's, so the move and the price are both audited on the item; a product update event
+	// is published only when a product field changes.
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
 }
 
-// A refused save moves nothing and writes none of the fields sent with the move.
-func TestItemUpdates_CategoryMoveRefusals(t *testing.T) {
+// A refused preview.9 save moves nothing and writes none of the fields sent with the move.
+func TestItemUpdatesPreview9_CategoryMoveRefusals(t *testing.T) {
 	t.Parallel()
 	partID, partItemID := partInSocks(t)
 	sku := uniqueName("e2e-moveitem-matref")
 	materialID := dashItemsCreateAs(t, apiClient, materialsPath, validMaterialBody(sku))
 	materialItemID := dashItemsItemBySKU(t, sku)
 	attributeID := dashItemsColorAttribute(t)
-	status, body, err := apiClient.Put(itemsPath+"/"+materialItemID+"/attributes/"+attributeID, nil)
-	require.NoError(t, err)
-	requireStatus(t, http.StatusOK, status, body)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemsPath + "/" + materialItemID + "/attributes/" + attributeID) })
+	patchItem(t, materialItemID, map[string]any{"attribute_ids": []string{attributeID}})
 
 	ownMaterialCategory := dashItemsMaterialCategory(t, apiClient)
 	foreignMaterialCategory := dashItemsTenantBRefs(t).categoryID
-	itemsWriter := customRoleClient(t, "items:update")
-	notes := uniqueName("never written")
+	preview := apiClient.WithAPIVersion(preview9Version)
+	itemsWriter := customRoleClient(t, "items:update").WithAPIVersion(preview9Version)
+	description := uniqueName("never written")
 
 	cases := []struct {
-		name   string
-		client *Client
-		path   string
-		body   map[string]any
-		check  func(t *testing.T, status int, body []byte)
+		name       string
+		client     *Client
+		path       string
+		body       map[string]any
+		wantStatus int
+		code       string
+		param      string
 	}{
 		{"a part saved under items:update alone", itemsWriter, partsPath + "/" + partID,
-			map[string]any{"category_id": ownMaterialCategory, "notes": notes},
-			func(t *testing.T, status int, body []byte) { requirePermissionRefused(t, status, body, "parts:update") }},
+			map[string]any{"category_id": ownMaterialCategory, "description": description}, http.StatusForbidden, "insufficient_permissions", ""},
 		{"a material saved under items:update alone", itemsWriter, materialsPath + "/" + materialID,
-			map[string]any{"category_id": ownMaterialCategory, "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requirePermissionRefused(t, status, body, "materials:update")
-			}},
-		{"a part moved to a material category", apiClient, partsPath + "/" + partID,
-			map[string]any{"category_id": SeedMaterialCategoryID, "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
-				assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "category_id")
-			}},
-		{"a material moved to a category that does not carry its attribute", apiClient, materialsPath + "/" + materialID,
-			map[string]any{"category_id": ownMaterialCategory, "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
-				assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "category_id")
-			}},
-		{"a material moved to another tenant's category", apiClient, materialsPath + "/" + materialID,
-			map[string]any{"category_id": foreignMaterialCategory, "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusNotFound, status, body)
-				requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
-			}},
-		{"a blank category", apiClient, partsPath + "/" + partID,
-			map[string]any{"category_id": "", "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
-				assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "category_id")
-			}},
-		{"a null category", apiClient, materialsPath + "/" + materialID,
-			map[string]any{"category_id": nil, "notes": notes},
-			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
-				assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "category_id")
-			}},
+			map[string]any{"category_id": ownMaterialCategory, "description": description}, http.StatusForbidden, "insufficient_permissions", ""},
+		{"a part moved to a material category", preview, partsPath + "/" + partID,
+			map[string]any{"category_id": SeedMaterialCategoryID, "description": description}, http.StatusBadRequest, "", "category_id"},
+		{"a material moved to a category that does not carry its attribute", preview, materialsPath + "/" + materialID,
+			map[string]any{"category_id": ownMaterialCategory, "description": description}, http.StatusBadRequest, "", "category_id"},
+		{"a material moved to another tenant's category", preview, materialsPath + "/" + materialID,
+			map[string]any{"category_id": foreignMaterialCategory, "description": description}, http.StatusNotFound, "resource_not_found", ""},
+		{"a blank category", preview, partsPath + "/" + partID,
+			map[string]any{"category_id": "", "description": description}, http.StatusBadRequest, "invalid_format", "category_id"},
+		{"a null category", preview, materialsPath + "/" + materialID,
+			map[string]any{"category_id": nil, "description": description}, http.StatusBadRequest, "invalid_format", "category_id"},
 	}
 	for _, tc := range cases {
 		status, body, err := tc.client.Patch(tc.path, tc.body, newIdempotencyKey())
 		require.NoError(t, err)
-		t.Run(tc.name, func(t *testing.T) { tc.check(t, status, body) })
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.code == "" {
+				requireStatus(t, tc.wantStatus, status, body)
+				errObj, _ := parseJSON(body)["error"].(map[string]any)
+				require.NotNil(t, errObj, "%s", body)
+				assert.Equal(t, tc.param, errObj["param"], "error.param (body: %s)", body)
+				return
+			}
+			requirePreview9Refused(t, status, body, tc.wantStatus, tc.code, tc.param)
+		})
 	}
 
 	for itemID, categoryID := range map[string]string{partItemID: SeedItemCategoryID, materialItemID: SeedMaterialCategoryID} {
-		item := readMovedItem(t, itemID)
+		item := getItem(t, itemID, "category")
 		assert.Equal(t, categoryID, jsonField(jsonObject(item, "category"), "id"), "the item stays where it was")
-		assert.NotEqual(t, notes, jsonField(item, "notes"), "nothing sent with a refused move is written")
+		assert.NotEqual(t, description, jsonField(item, "description"), "nothing sent with a refused move is written")
 	}
 }

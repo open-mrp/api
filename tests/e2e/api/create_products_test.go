@@ -3,14 +3,14 @@
 package api_test
 
 import (
-	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// validProductBody returns a minimal valid CreateProductRequest body. Note the
+// validProductBody returns a minimal valid preview.9 CreateProductRequest body. Note the
 // JSON field for product type code is `type`, not `product_type_code`.
 func validProductBody(sku string) map[string]any {
 	return map[string]any{
@@ -20,140 +20,112 @@ func validProductBody(sku string) map[string]any {
 	}
 }
 
-// TestProducts_Create_RejectsWrongCategoryType: products may only be created in
-// product categories; a material category is rejected.
-func TestProducts_Create_RejectsWrongCategoryType(t *testing.T) {
+// The preview.9 create product route still validates its body; its refusals keep preview.9's 400 and error codes.
+func TestProductsPreview9_CreateValidation(t *testing.T) {
 	t.Parallel()
+	preview := apiClient.WithAPIVersion(preview9Version)
 
-	body := validProductBody(uniqueName("e2e-prod-wrongcat"))
-	body["category_id"] = SeedMaterialCategoryID // Yarn — a material category
-
-	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "category_id")
-}
-
-func TestProducts_Create_Basic_DefaultsRates(t *testing.T) {
-	t.Parallel()
-
-	resp, err := apiClient.PostFull(productsPath, validProductBody(uniqueName("e2e-prod")), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-
-	assert.Equal(t, "product", jsonField(got, "object"))
-}
-
-func TestProducts_Create_WithValidRates(t *testing.T) {
-	t.Parallel()
-
-	body := validProductBody(uniqueName("e2e-prod-rates"))
-	body["unit_price"] = map[string]any{
-		"amount":      "9.99",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-	body["unit_cost"] = map[string]any{
-		"amount":      "4.50",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	resp, err := apiClient.PostFull(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-}
-
-// Money is dollars only, so a cost in any other currency is refused.
-func TestProducts_Create_RejectsAnUnsupportedCurrencyOnUnitCost(t *testing.T) {
-	t.Parallel()
-
-	body := validProductBody(uniqueName("e2e-prod-bad-num"))
-	body["unit_cost"] = map[string]any{
-		"amount":      "1.00",
-		"currency":    "eur",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.currency")
-}
-
-func TestProducts_Create_RejectsACurrencyPerUnitOnUnitPrice(t *testing.T) {
-	t.Parallel()
-
-	body := validProductBody(uniqueName("e2e-prod-bad-den"))
-	body["unit_price"] = map[string]any{
-		"amount":      "1.00",
-		"currency":    "usd",
-		"per_unit_id": currencyUnitID,
-	}
-
-	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.per_unit_id")
-}
-
-func TestProducts_Create_LinksAttributes(t *testing.T) {
-	t.Parallel()
-
-	body := validProductBody(uniqueName("e2e-prod-attrs"))
-	body["attribute_ids"] = []string{SeedAttributeID}
-
-	resp, err := apiClient.PostFull(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-
-	productStatus, productBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, productStatus, productBody)
-	itemID := jsonField(jsonObject(parseJSON(productBody), "item"), "id")
-	require.NotEmpty(t, itemID)
-
-	itemStatus, itemBody, err := apiClient.GetListRaw(
-		"/v1/catalog/items/"+itemID,
-		url.Values{"include": {"attributes"}},
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, itemStatus, itemBody)
-
-	attrs := jsonListData(parseJSON(itemBody), "attributes")
-	require.NotEmpty(t, attrs)
-
-	found := false
-	for _, raw := range attrs {
-		obj, ok := raw.(map[string]any)
-		if !ok {
-			continue
+	with := func(set map[string]any) map[string]any {
+		body := validProductBody(uniqueName("e2e-p9-prod-val"))
+		for k, v := range set {
+			body[k] = v
 		}
-		if jsonField(obj, "id") == SeedAttributeID {
-			found = true
-			break
-		}
+		return body
 	}
-	assert.True(t, found, "expected linked attribute %s in item.attributes", SeedAttributeID)
+
+	cases := []struct {
+		name   string
+		body   map[string]any
+		status int
+		code   string
+		param  string
+	}{
+		{"material category", with(map[string]any{"category_id": SeedMaterialCategoryID}), 400, "invalid_format", "category_id"},
+		{"unsupported currency on unit_cost", with(map[string]any{
+			"unit_cost": map[string]any{"amount": "1.00", "currency": "eur", "per_unit_id": nonCurrencyUnitID},
+		}), 400, "currency_not_supported", "unit_cost.currency"},
+		{"currency per unit on unit_price", with(map[string]any{
+			"unit_price": map[string]any{"amount": "1.00", "currency": "usd", "per_unit_id": currencyUnitID},
+		}), 400, "invalid_format", "unit_price.per_unit_id"},
+		{"unknown type", with(map[string]any{"type": "bogus_type"}), 400, "parameter_invalid", "type"},
+		{"unknown portal visibility", with(map[string]any{"portal_visibility": "public"}), 400, "parameter_invalid", "portal_visibility"},
+		{"sku over max length", with(map[string]any{"sku": strings.Repeat("a", 256)}), 400, "invalid_format", "sku"},
+		{"missing sku", map[string]any{"type": "sale", "category_id": SeedItemCategoryID}, 400, "missing_field", "sku"},
+		{"attribute outside the category", with(map[string]any{
+			"category_id": SeedPropertylessItemCategoryID, "attribute_ids": []string{SeedAttributeID},
+		}), 400, "invalid_format", "attribute_ids"},
+		{"unknown category", with(map[string]any{"category_id": "itcg_00000000000000000000000000"}), 404, "resource_not_found", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body, err := preview.Post(productsPath, tc.body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				productID := jsonField(parseJSON(body), "id")
+				t.Cleanup(func() { preview.Delete(productsPath + "/" + productID) })
+			}
+			requireStatus(t, tc.status, status, body)
+			errObj := requirePreview9Error(t, body, tc.code)
+			if tc.param != "" {
+				assertErrorParam(t, errObj, tc.param)
+			}
+			assert.NotContains(t, errObj, "errors", "preview.9 errors carry no errors list")
+		})
+	}
+
+	// Unknown references are refused rather than stored as orphan joins.
+	refs := map[string]map[string]any{
+		"unknown product line": with(map[string]any{"product_line_id": "pdln_00000000000000000000000000"}),
+		"unknown attribute":    with(map[string]any{"attribute_ids": []string{"at_00000000000000000000000000"}}),
+	}
+	for name, body := range refs {
+		t.Run(name, func(t *testing.T) {
+			status, respBody, err := preview.Post(productsPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				productID := jsonField(parseJSON(respBody), "id")
+				t.Cleanup(func() { preview.Delete(productsPath + "/" + productID) })
+			}
+			assert.Contains(t, []int{400, 404}, status, "%s should be refused: %s", name, respBody)
+		})
+	}
+}
+
+// Products are items on forge, and these refusals have no forge test of their own elsewhere.
+func TestItems_CreateProductRejectsUnknownReferencesAndCurrencies(t *testing.T) {
+	t.Parallel()
+
+	with := func(set map[string]any) map[string]any {
+		body := forgeItemBody("product", uniqueName("e2e-item-prod-ref"))
+		for k, v := range set {
+			body[k] = v
+		}
+		return body
+	}
+	cases := []struct {
+		name string
+		body map[string]any
+	}{
+		{"unknown product line", with(map[string]any{"sales": map[string]any{"product_line_id": "pdln_00000000000000000000000000"}})},
+		{"unknown attribute", with(map[string]any{"attribute_ids": []string{"at_00000000000000000000000000"}})},
+		{"unsupported currency on unit_cost", with(map[string]any{
+			"unit_cost": map[string]any{"amount": "1.00", "currency": "eur", "per_unit_id": nonCurrencyUnitID},
+		})},
+		{"currency per unit on sales.unit_price", with(map[string]any{
+			"sales": map[string]any{"unit_price": map[string]any{"amount": "1.00", "currency": "usd", "per_unit_id": currencyUnitID}},
+		})},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body, err := apiClient.Post(itemsPath, tc.body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				itemID := jsonField(parseJSON(body), "id")
+				t.Cleanup(func() { apiClient.Delete(itemsPath + "/" + itemID) })
+			}
+			assert.Contains(t, []int{400, 404, 422}, status, "%s should be refused: %s", tc.name, body)
+			requireErrorResponse(t, body, "", "invalid_request_error")
+			assert.Empty(t, listItemIDs(t, map[string][]string{"skus": {jsonField(tc.body, "sku")}}), "a refused create writes nothing")
+		})
+	}
 }

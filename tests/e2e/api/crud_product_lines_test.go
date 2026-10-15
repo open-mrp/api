@@ -1005,13 +1005,13 @@ func TestProductLines_ArchivedCannotBeNewlyAssigned(t *testing.T) {
 	setStatus(fx.lineA, "archived")
 
 	t.Run("new product", func(t *testing.T) {
-		body := validProductBody(uniqueName("e2e-pdln-arch-new"))
-		body["product_line_id"] = fx.lineA
-		status, resp, err := apiClient.Post(productsPath, body, newIdempotencyKey())
+		body := forgeItemBody("product", uniqueName("e2e-pdln-arch-new"))
+		body["sales"] = map[string]any{"product_line_id": fx.lineA}
+		status, resp, err := apiClient.Post(itemsPath, body, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 422, status, resp)
 		errObj := requireErrorResponse(t, resp, "resource_archived", "invalid_request_error")
-		assertErrorParam(t, errObj, "product_line_id")
+		assertErrorParam(t, errObj, "sales.product_line_id")
 	})
 
 	t.Run("customer grant", func(t *testing.T) {

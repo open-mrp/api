@@ -3,14 +3,14 @@
 package api_test
 
 import (
-	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/shared/id"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// The products bulk upsert answers only preview.9 callers; forge upserts items (bulk_upsert_items_test.go).
 
 const productsBulkUpsertPath = productsPath + "/actions/bulk-upsert"
 
@@ -20,15 +20,16 @@ func bulkUpsertProducts(t *testing.T, products ...map[string]any) (int, []byte) 
 	for i, p := range products {
 		rows[i] = p
 	}
-	status, body, err := apiClient.Post(productsBulkUpsertPath, map[string]any{"products": rows}, newIdempotencyKey())
+	status, body, err := apiClient.WithAPIVersion(preview9Version).Post(productsBulkUpsertPath, map[string]any{"products": rows}, newIdempotencyKey())
 	require.NoError(t, err)
 	return status, body
 }
 
 func cleanupProductIDs(ids []string) {
+	preview := apiClient.WithAPIVersion(preview9Version)
 	for _, productID := range ids {
 		if productID != "" {
-			apiClient.Delete(productsPath + "/" + productID)
+			preview.Delete(productsPath + "/" + productID)
 		}
 	}
 }
@@ -40,7 +41,7 @@ func bulkUpsertProductsJob(t *testing.T, products ...map[string]any) map[string]
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
+	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the job, under its preview.9 object name")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
@@ -57,287 +58,154 @@ func bulkUpsertProductIDs(t *testing.T, products ...map[string]any) (createdIDs,
 	return jobResultIDs(job)
 }
 
-// --- create paths ---
-
-// TestProducts_BulkUpsert_AllCreates also covers the type default ("sale" when omitted).
-func TestProducts_BulkUpsert_AllCreates(t *testing.T) {
+// Creates with every field, then updates the same SKU by every field alongside a new row. Notes are accepted but not
+// stored.
+func TestProductsPreview9_BulkUpsert_CreatesAndUpdates(t *testing.T) {
 	t.Parallel()
 
+	sku := uniqueName("e2e-bup-p9-prod")
+	createValue := uniqueName("green")
 	created, updated := bulkUpsertProductIDs(t,
-		map[string]any{"sku": uniqueName("e2e-bup-prod-a"), "category": map[string]any{"id": SeedItemCategoryID}},
-		map[string]any{"sku": uniqueName("e2e-bup-prod-b"), "category": map[string]any{"id": SeedItemCategoryID}},
+		map[string]any{
+			"sku":               sku,
+			"type":              "sale",
+			"category":          map[string]any{"id": SeedItemCategoryID},
+			"product_line":      map[string]any{"id": SeedProductLineID},
+			"portal_visibility": "visible",
+			"description":       "full product description",
+			"notes":             "full product notes",
+			"unit_price":        bulkCurrencyRate("9.99"),
+			"unit_cost":         bulkCurrencyRate("4.50"),
+			"properties":        []any{bulkProperty(uniqueName("e2e-bup-p9-prop"), createValue)},
+		},
+		// The type defaults to sale.
+		map[string]any{"sku": uniqueName("e2e-bup-p9-prod-min"), "category": map[string]any{"id": SeedItemCategoryID}},
 	)
 	defer cleanupProductIDs(created)
-
 	require.Len(t, created, 2)
+	assert.Empty(t, updated)
 	for _, createdID := range created {
 		assertIDFormat(t, createdID, id.ProductIDPrefix)
 	}
-	assert.Empty(t, updated)
-}
+	productID := created[0]
 
-// TestProducts_BulkUpsert_CreateWithAllFields exercises the full create branch:
-// type, product_line, portal visibility, description, notes, rates, and properties.
-func TestProducts_BulkUpsert_CreateWithAllFields(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-prod-full")
-	propName := uniqueName("e2e-bup-prod-prop")
-	// Attribute values are unique per account, so use a per-run value.
-	propValue := uniqueName("green")
-	created, _ := bulkUpsertProductIDs(t, map[string]any{
-		"sku":               sku,
-		"type":              "sale",
-		"category":          map[string]any{"id": SeedItemCategoryID},
-		"product_line":      map[string]any{"id": SeedProductLineID},
-		"portal_visibility": "visible",
-		"description":       "full product description",
-		"notes":             "full product notes",
-		"unit_price":        bulkCurrencyRate("9.99"),
-		"unit_cost":         bulkCurrencyRate("4.50"),
-		"properties":        []any{bulkProperty(propName, propValue)},
-	})
-	defer cleanupProductIDs(created)
-	require.Len(t, created, 1)
-	id := created[0]
-
-	// Top-level product fields.
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"product_line"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
+	got := getPreview9Product(t, productID, "product_line", "item")
 	assert.Equal(t, "visible", jsonField(got, "portal_visibility"))
 	assert.Equal(t, SeedProductLineID, jsonField(jsonObject(got, "product_line"), "id"))
-
-	// Item fields + rates + attributes.
-	item := catalogItem(t, productsPath, id)
+	item := jsonObject(got, "item")
+	assertPreview9ItemShape(t, item)
 	assert.Equal(t, "full product description", jsonField(item, "description"))
-	assert.Equal(t, "full product notes", jsonField(item, "notes"))
-	assert.Equal(t, "9.99", catalogPriceAmount(t, productsPath, id, "item.unit_value"))
-	assert.Equal(t, "4.50", catalogPriceAmount(t, productsPath, id, "item.unit_cost"))
-	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
-}
+	assertProductsPreview9Price(t, jsonObject(item, "unit_value"), "9.99", nonCurrencyUnitID, "item.unit_value")
+	assertProductsPreview9Price(t, jsonObject(item, "unit_cost"), "4.50", nonCurrencyUnitID, "item.unit_cost")
+	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), createValue)
+	assert.Equal(t, "sale", jsonField(getPreview9Product(t, created[1]), "type"))
 
-// checks the rate-unit rule, which the write applies: the job completes and the row lands
-// in `errors` rather than failing the request
-func TestProducts_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
-	t.Parallel()
-
-	job := bulkUpsertProductsJob(t, map[string]any{
-		"sku":      uniqueName("e2e-bup-prod-badrate"),
-		"category": map[string]any{"id": SeedItemCategoryID},
-		"unit_price": map[string]any{
-			"amount":      "1.00",
-			"currency":    "usd",
-			"per_unit_id": currencyUnitID, // must not be currency
+	updateValue := uniqueName("yellow")
+	newSKU := uniqueName("e2e-bup-p9-prod-new")
+	created2, updated2 := bulkUpsertProductIDs(t,
+		map[string]any{
+			"sku":               sku,
+			"category":          map[string]any{"id": SeedItemCategoryID},
+			"portal_visibility": "hidden",
+			"description":       "updated description",
+			"notes":             "updated notes",
+			"unit_price":        bulkCurrencyRate("12.34"),
+			"unit_cost":         bulkCurrencyRate("6.66"),
+			"properties":        []any{bulkProperty(uniqueName("e2e-bup-p9-prop-upd"), updateValue)},
 		},
-	})
-	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
-	require.Len(t, jobErrors(job), 1, "the rejected row is recorded in errors")
-}
-
-func TestProducts_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-prod-dup")
-	status, body := bulkUpsertProducts(t,
-		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
-		map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}},
+		map[string]any{"sku": newSKU, "category": map[string]any{"id": SeedItemCategoryID}},
 	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "products[1].sku")
-	assert.Contains(t, errorMessages(errObj), "duplicate SKU")
+	defer cleanupProductIDs(created2)
+	require.Len(t, created2, 1, "the new SKU creates")
+	require.Len(t, updated2, 1, "the existing SKU updates")
+	assert.Equal(t, productID, updated2[0])
+
+	got = getPreview9Product(t, productID, "item")
+	assert.Equal(t, "hidden", jsonField(got, "portal_visibility"))
+	item = jsonObject(got, "item")
+	assert.Equal(t, "updated description", jsonField(item, "description"))
+	assertNilField(t, item, "notes")
+	assertProductsPreview9Price(t, jsonObject(item, "unit_value"), "12.34", nonCurrencyUnitID, "item.unit_value")
+	assertProductsPreview9Price(t, jsonObject(item, "unit_cost"), "6.66", nonCurrencyUnitID, "item.unit_cost")
+	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), updateValue)
 }
 
-// TestProducts_BulkUpsert_RejectsCrossTypeSKUConflict: a SKU already used by a part
-// fails the whole product batch.
-func TestProducts_BulkUpsert_RejectsCrossTypeSKUConflict(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-prod-xtype")
-
-	resp, err := apiClient.PostFull(partsPath, map[string]any{
-		"sku": sku, "category_id": SeedItemCategoryID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-	partID := jsonField(parseJSON(resp.Body), "id")
-	require.NotEmpty(t, partID)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + partID) })
-
-	job := bulkUpsertProductsJob(t, map[string]any{"sku": sku, "type": "sale", "category": map[string]any{"id": SeedItemCategoryID}})
-	assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
-	require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
-}
-
-func TestProducts_BulkUpsert_EmptyRejected(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(productsBulkUpsertPath, map[string]any{"products": []any{}}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-}
-
-// TestProducts_BulkUpsert_RejectsUnknownCategory: a create row whose category does not
-// resolve fails as a clear validation error naming the offending row, not an opaque
-// 404, and the whole batch is atomic.
-func TestProducts_BulkUpsert_RejectsUnknownCategory(t *testing.T) {
-	t.Parallel()
-
-	status, body := bulkUpsertProducts(t,
-		map[string]any{"sku": uniqueName("e2e-bup-prod-ok"), "category": map[string]any{"id": SeedItemCategoryID}},
-		map[string]any{"sku": uniqueName("e2e-bup-prod-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "products[1].category")
-}
-
-// TestProducts_BulkUpsert_RejectsWrongCategoryType: products may only be created in
-// product categories; a material category fails as a row-indexed validation error.
-func TestProducts_BulkUpsert_RejectsWrongCategoryType(t *testing.T) {
-	t.Parallel()
-
-	status, body := bulkUpsertProducts(t,
-		map[string]any{"sku": uniqueName("e2e-bup-prod-wrongcat"), "category": map[string]any{"id": SeedMaterialCategoryID}},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "products[0].category")
-}
-
-// TestProducts_BulkUpsert_ResolvesRefsByName: category and product_line are both fuzzy
-// references — they resolve by name, not only by id.
-func TestProducts_BulkUpsert_ResolvesRefsByName(t *testing.T) {
+// category and product_line are fuzzy references: they resolve by name, case-insensitively, as well as by id.
+func TestProductsPreview9_BulkUpsert_ResolvesRefsByName(t *testing.T) {
 	t.Parallel()
 
 	created, _ := bulkUpsertProductIDs(t, map[string]any{
-		"sku":          uniqueName("e2e-bup-prod-refname"),
-		"category":     map[string]any{"name": "socks"}, // by name, case-insensitive
+		"sku":          uniqueName("e2e-bup-p9-prod-refname"),
+		"category":     map[string]any{"name": "socks"},
 		"product_line": map[string]any{"name": "socks"},
 	})
 	defer cleanupProductIDs(created)
 	require.Len(t, created, 1)
-	id := created[0]
 
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"product_line", "item.category"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
+	got := getPreview9Product(t, created[0], "product_line", "item.category")
 	assert.Equal(t, SeedProductLineID, jsonField(jsonObject(got, "product_line"), "id"))
-	item := jsonObject(got, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, SeedItemCategoryID, jsonField(jsonObject(item, "category"), "id"))
+	assert.Equal(t, SeedItemCategoryID, jsonField(jsonObject(jsonObject(got, "item"), "category"), "id"))
 }
 
-// TestProducts_BulkUpsert_RejectsUnknownProductLine: a create row whose product line does
-// not resolve fails as a row-indexed validation error rather than a foreign-key failure,
-// and the whole batch is atomic.
-func TestProducts_BulkUpsert_RejectsUnknownProductLine(t *testing.T) {
+// Rules the write applies fail the row, not the request: the job completes with the row among its errors.
+func TestProductsPreview9_BulkUpsert_RowFailures(t *testing.T) {
 	t.Parallel()
 
-	status, body := bulkUpsertProducts(t,
-		map[string]any{
-			"sku":      uniqueName("e2e-bup-prod-plok"),
-			"category": map[string]any{"id": SeedItemCategoryID},
-		},
-		map[string]any{
-			"sku":          uniqueName("e2e-bup-prod-plbad"),
-			"category":     map[string]any{"id": SeedItemCategoryID},
+	t.Run("currency per unit", func(t *testing.T) {
+		job := bulkUpsertProductsJob(t, map[string]any{
+			"sku":        uniqueName("e2e-bup-p9-prod-badrate"),
+			"category":   map[string]any{"id": SeedItemCategoryID},
+			"unit_price": map[string]any{"amount": "1.00", "currency": "usd", "per_unit_id": currencyUnitID},
+		})
+		assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
+		require.Len(t, jobErrors(job), 1, "the rejected row is recorded in errors")
+	})
+
+	t.Run("sku of another item type", func(t *testing.T) {
+		part := createForgeItem(t, itemsPath, forgeItemBody("part", uniqueName("e2e-bup-p9-prod-xtype")))
+		job := bulkUpsertProductsJob(t, map[string]any{"sku": jsonField(part, "sku"), "type": "sale", "category": map[string]any{"id": SeedItemCategoryID}})
+		assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
+		require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
+		assert.Equal(t, "part", jsonField(getItem(t, jsonField(part, "id")), "type"))
+	})
+}
+
+// Rows that can't resolve are refused at accept with a preview.9 400 naming the row, and nothing is written.
+func TestProductsPreview9_BulkUpsert_RejectedAtAccept(t *testing.T) {
+	t.Parallel()
+	good := func() map[string]any {
+		return map[string]any{"sku": uniqueName("e2e-bup-p9-prod-ok"), "category": map[string]any{"id": SeedItemCategoryID}}
+	}
+	dupSKU := uniqueName("e2e-bup-p9-prod-dup")
+
+	cases := []struct {
+		name  string
+		rows  []map[string]any
+		param string
+	}{
+		{"duplicate sku", []map[string]any{
+			{"sku": dupSKU, "category": map[string]any{"id": SeedItemCategoryID}},
+			{"sku": dupSKU, "category": map[string]any{"id": SeedItemCategoryID}},
+		}, "products[1].sku"},
+		{"unknown category", []map[string]any{good(), {"sku": uniqueName("e2e-bup-p9-prod-badcat"), "category": map[string]any{"id": "ic_does_not_exist_000000000"}}}, "products[1].category"},
+		{"material category", []map[string]any{{"sku": uniqueName("e2e-bup-p9-prod-wrongcat"), "category": map[string]any{"id": SeedMaterialCategoryID}}}, "products[0].category"},
+		{"unknown product line", []map[string]any{good(), {
+			"sku": uniqueName("e2e-bup-p9-prod-plbad"), "category": map[string]any{"id": SeedItemCategoryID},
 			"product_line": map[string]any{"id": "pdln_does_not_exist_00000"},
-		},
-	)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "products[1].product_line")
-}
+		}}, "products[1].product_line"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body := bulkUpsertProducts(t, tc.rows...)
+			requireStatus(t, 400, status, body)
+			assertErrorParam(t, requirePreview9Error(t, body, "invalid_format"), tc.param)
+			assert.Empty(t, listItemIDs(t, map[string][]string{"skus": {jsonField(tc.rows[0], "sku")}}), "a refused batch writes nothing")
+		})
+	}
 
-// --- update paths: every updatable portion ---
-
-// TestProducts_BulkUpsert_UpdatesEveryField creates a product, then upserts the same
-// SKU changing every field the update path supports: description, notes,
-// portal_visibility, unit_price, unit_cost, and properties.
-func TestProducts_BulkUpsert_UpdatesEveryField(t *testing.T) {
-	t.Parallel()
-
-	sku := uniqueName("e2e-bup-prod-upd")
-
-	createdIDs, _ := bulkUpsertProductIDs(t, map[string]any{
-		"sku":               sku,
-		"type":              "sale",
-		"category":          map[string]any{"id": SeedItemCategoryID},
-		"portal_visibility": "hidden",
-		"description":       "original description",
-		"notes":             "original notes",
-		"unit_price":        bulkCurrencyRate("9.99"),
-		"unit_cost":         bulkCurrencyRate("4.50"),
+	t.Run("no rows", func(t *testing.T) {
+		status, body := bulkUpsertProducts(t)
+		requireStatus(t, 400, status, body)
+		assertErrorParam(t, requirePreview9Error(t, body, "invalid_format"), "products")
 	})
-	defer cleanupProductIDs(createdIDs)
-	require.Len(t, createdIDs, 1)
-	productID := createdIDs[0]
-
-	propName := uniqueName("e2e-bup-prod-upd-prop")
-	propValue := uniqueName("yellow")
-	created, updated := bulkUpsertProductIDs(t, map[string]any{
-		"sku":               sku,
-		"category":          map[string]any{"id": SeedItemCategoryID},
-		"portal_visibility": "visible",
-		"description":       "updated description",
-		"notes":             "updated notes",
-		"unit_price":        bulkCurrencyRate("12.34"),
-		"unit_cost":         bulkCurrencyRate("6.66"),
-		"properties":        []any{bulkProperty(propName, propValue)},
-	})
-
-	assert.Empty(t, created, "existing SKU must update, not create")
-	require.Len(t, updated, 1)
-	assert.Equal(t, productID, updated[0])
-
-	// Verify every field changed.
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+productID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assert.Equal(t, "visible", jsonField(parseJSON(getBody), "portal_visibility"))
-
-	item := catalogItem(t, productsPath, productID)
-	assert.Equal(t, "updated description", jsonField(item, "description"))
-	assert.Equal(t, "updated notes", jsonField(item, "notes"))
-	assert.Equal(t, "12.34", catalogPriceAmount(t, productsPath, productID, "item.unit_value"))
-	assert.Equal(t, "6.66", catalogPriceAmount(t, productsPath, productID, "item.unit_cost"))
-	assert.Contains(t, catalogItemAttributeValues(t, jsonField(item, "id")), propValue)
-}
-
-func TestProducts_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
-	t.Parallel()
-
-	existingSKU := uniqueName("e2e-bup-prod-mix-exist")
-	newSKU := uniqueName("e2e-bup-prod-mix-new")
-
-	seeded, _ := bulkUpsertProductIDs(t, map[string]any{"sku": existingSKU, "category": map[string]any{"id": SeedItemCategoryID}})
-	defer cleanupProductIDs(seeded)
-
-	created, updated := bulkUpsertProductIDs(t,
-		map[string]any{"sku": existingSKU, "category": map[string]any{"id": SeedItemCategoryID}, "notes": "touched"},
-		map[string]any{"sku": newSKU, "category": map[string]any{"id": SeedItemCategoryID}},
-	)
-	defer cleanupProductIDs(created)
-
-	assert.Len(t, created, 1)
-	assert.Len(t, updated, 1)
-}
-
-// catalogPriceAmount reads a product's item price (item.unit_value or item.unit_cost) and returns its amount,
-// asserting it is in dollars per the unit bulkCurrencyRate prices in.
-func catalogPriceAmount(t *testing.T, basePath, id, priceInclude string) string {
-	t.Helper()
-	status, body, err := apiClient.GetListRaw(basePath+"/"+id, url.Values{"include": {priceInclude}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	key := strings.TrimPrefix(priceInclude, "item.")
-	price := jsonObject(jsonObject(parseJSON(body), "item"), key)
-	require.NotNil(t, price, "%s should be populated with ?include=%s", key, priceInclude)
-	assert.Equal(t, "usd", jsonField(price, "currency"), key)
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(price, "per_unit"), "id"), key)
-	return jsonField(price, "amount")
 }

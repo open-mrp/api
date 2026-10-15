@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,18 +41,14 @@ func TestListItems_SearchBySKU(t *testing.T) {
 func TestListItems_SearchByDescription(t *testing.T) {
 	t.Parallel()
 	word := searchToken("e2edesc")
-	body := validPartBody(uniqueName("e2e-desc-search"))
+	body := forgeItemBody("part", uniqueName("e2e-desc-search"))
 	body["description"] = "Ribbed " + word + " cuff"
-	status, respBody, err := apiClient.Post(partsPath+"?include=item", body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, respBody)
-	part := parseJSON(respBody)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(partsPath + "/" + jsonField(part, "id")) })
+	itemID := jsonField(createForgeItem(t, itemsPath, body), "id")
 
 	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {word}})
 	require.NoError(t, err)
 	require.Len(t, list.Data, 1, "searching a word only the item's description holds")
-	assert.Equal(t, jsonField(jsonObject(part, "item"), "id"), DataItemField(list.Data[0], "id"))
+	assert.Equal(t, itemID, DataItemField(list.Data[0], "id"))
 	assert.True(t, strings.Contains(DataItemField(list.Data[0], "description"), word))
 }
 
@@ -284,4 +281,154 @@ func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testi
 		assert.Contains(t, allSKUs, sku, "initial_only result SKU %q must exist in unfiltered part list", sku)
 	}
 	assert.Less(t, len(initialSKUs), len(allSKUs), "initial_only must return strictly fewer parts than subassembly_filter=all when downstream parts exist")
+}
+
+// --- Forge filters ---
+
+// listItemIDs lists items with params, scoped by the caller, and returns their ids.
+func listItemIDs(t *testing.T, params url.Values) []string {
+	t.Helper()
+	list, _, err := apiClient.GetList(itemsPath, params)
+	require.NoError(t, err)
+	ids := make([]string, 0, len(list.Data))
+	for _, raw := range list.Data {
+		ids = append(ids, DataItemField(raw, "id"))
+	}
+	return ids
+}
+
+// skus matches whole SKUs regardless of case, never a substring.
+func TestListItems_FilterBySKUs(t *testing.T) {
+	t.Parallel()
+	sku := uniqueName("e2e-item-skus")
+	itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("part", sku)), "id")
+	otherID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("part", sku+"-x")), "id")
+
+	assert.Equal(t, []string{itemID}, listItemIDs(t, url.Values{"skus": {strings.ToUpper(sku)}}))
+	assert.ElementsMatch(t, []string{itemID, otherID}, listItemIDs(t, url.Values{"skus": {sku, sku + "-x"}}))
+	assert.Empty(t, listItemIDs(t, url.Values{"skus": {sku[:len(sku)-2]}}), "no substring match")
+}
+
+func TestListItems_FilterBySKUs_RejectsMoreThan100(t *testing.T) {
+	t.Parallel()
+	skus := make([]string, 101)
+	for i := range skus {
+		skus[i] = fmt.Sprintf("e2e-many-%d", i)
+	}
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"skus": skus})
+	require.NoError(t, err)
+	requireClientRejection(t, status, body)
+}
+
+// Archived items are listed by default; statuses narrows to one.
+func TestListItems_FilterByStatuses(t *testing.T) {
+	t.Parallel()
+	prefix := uniqueName("e2e-item-status")
+	activeID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("part", prefix+"-a")), "id")
+	archived := forgeItemBody("part", prefix+"-b")
+	archived["status"] = "archived"
+	archivedID := jsonField(createForgeItem(t, itemsPath, archived), "id")
+
+	assert.ElementsMatch(t, []string{activeID, archivedID}, listItemIDs(t, url.Values{"q": {prefix}}))
+	assert.Equal(t, []string{archivedID}, listItemIDs(t, url.Values{"q": {prefix}, "statuses": {"archived"}}))
+	assert.Equal(t, []string{activeID}, listItemIDs(t, url.Values{"q": {prefix}, "statuses": {"active"}}))
+	assert.ElementsMatch(t, []string{activeID, archivedID}, listItemIDs(t, url.Values{"q": {prefix}, "statuses": {"active", "archived"}}))
+
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"statuses": {"deleted"}})
+	require.NoError(t, err)
+	requireClientRejection(t, status, body)
+}
+
+func TestListItems_FilterByTypes(t *testing.T) {
+	t.Parallel()
+	prefix := uniqueName("e2e-item-types")
+	ids := map[string]string{}
+	for _, itemType := range []string{"material", "part", "product", "service"} {
+		ids[itemType] = jsonField(createForgeItem(t, itemsPath, forgeItemBody(itemType, prefix+"-"+itemType)), "id")
+	}
+
+	for itemType, itemID := range ids {
+		assert.Equal(t, []string{itemID}, listItemIDs(t, url.Values{"q": {prefix}, "types": {itemType}}), itemType)
+	}
+	assert.ElementsMatch(t, []string{ids["product"], ids["service"]},
+		listItemIDs(t, url.Values{"q": {prefix}, "types": {"product", "service"}}))
+}
+
+func TestListItems_FilterByPortalVisibilities(t *testing.T) {
+	t.Parallel()
+	prefix := uniqueName("e2e-item-vis")
+	visible := forgeItemBody("product", prefix+"-v")
+	visible["sales"] = map[string]any{"portal_visibility": "visible"}
+	visibleID := jsonField(createForgeItem(t, itemsPath, visible), "id")
+	hiddenID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("product", prefix+"-h")), "id")
+	// A part that isn't sold has no visibility, so neither value matches it.
+	createForgeItem(t, itemsPath, forgeItemBody("part", prefix+"-p"))
+
+	assert.Equal(t, []string{visibleID}, listItemIDs(t, url.Values{"q": {prefix}, "portal_visibilities": {"visible"}}))
+	assert.Equal(t, []string{hiddenID}, listItemIDs(t, url.Values{"q": {prefix}, "portal_visibilities": {"hidden"}}))
+}
+
+func TestListItems_FilterByAttributeIDs(t *testing.T) {
+	t.Parallel()
+	attrID := newColorAttribute(t, "active")
+	prefix := uniqueName("e2e-item-attrf")
+	tagged := forgeItemBody("part", prefix+"-t")
+	tagged["attribute_ids"] = []string{attrID}
+	taggedID := jsonField(createForgeItem(t, itemsPath, tagged), "id")
+	createForgeItem(t, itemsPath, forgeItemBody("part", prefix+"-u"))
+
+	assert.Equal(t, []string{taggedID}, listItemIDs(t, url.Values{"q": {prefix}, "attribute_ids": {attrID}}))
+}
+
+// The seeded supplier supplies the seeded yarn.
+func TestListItems_FilterBySupplierIDs(t *testing.T) {
+	t.Parallel()
+	assertListContainsID(t, itemsPath, url.Values{"supplier_ids": {SeedSupplierAccountID}}, SeedMaterialItemID)
+	assert.Empty(t, listItemIDs(t, url.Values{"supplier_ids": {"ac_00000000000000000000000000"}}),
+		"an unknown supplier supplies nothing")
+}
+
+func TestListItems_FilterByCreatedRange(t *testing.T) {
+	t.Parallel()
+	prefix := uniqueName("e2e-item-created")
+	created := createForgeItem(t, itemsPath, forgeItemBody("part", prefix))
+	itemID := jsonField(created, "id")
+	createdAt, err := time.Parse(time.RFC3339Nano, jsonField(created, "created_at"))
+	require.NoError(t, err)
+	at := func(d time.Duration) string { return createdAt.Add(d).UTC().Format(time.RFC3339) }
+
+	assert.Equal(t, []string{itemID}, listItemIDs(t, url.Values{"q": {prefix}, "created_after": {at(-time.Minute)}, "created_before": {at(time.Minute)}}))
+	assert.Empty(t, listItemIDs(t, url.Values{"q": {prefix}, "created_after": {at(time.Hour)}}))
+	assert.Empty(t, listItemIDs(t, url.Values{"q": {prefix}, "created_before": {at(-time.Hour)}}))
+
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"created_after": {at(time.Hour)}, "created_before": {at(-time.Hour)}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error"), "created_before")
+}
+
+func TestListItems_LimitMax100(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"limit": {"100"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.GetListRaw(itemsPath, url.Values{"limit": {"101"}})
+	require.NoError(t, err)
+	requireClientRejection(t, status, body)
+}
+
+// starts_at, ends_at and supplier_id are preview.9's names; forge callers use created_after, created_before and supplier_ids.
+func TestListItems_Preview9FiltersRejected(t *testing.T) {
+	t.Parallel()
+	for param, value := range map[string]string{
+		"starts_at":   "2024-01-01T00:00:00Z",
+		"ends_at":     "2024-01-01T00:00:00Z",
+		"supplier_id": SeedSupplierAccountID,
+	} {
+		status, body, err := apiClient.GetListRaw(itemsPath, url.Values{param: {value}})
+		require.NoError(t, err)
+		requireStatus(t, 400, status, body)
+		assertErrorParam(t, requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error"), param)
+	}
 }

@@ -12,233 +12,131 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ──────────────────────────────────────────────
-// Product — Include Tests
-// ──────────────────────────────────────────────
+// The /v1/catalog/products routes answer only 1.0.forge-preview.9 callers; on forge a product is an item with a sales
+// section (crud_items_test.go). These tests pin what preview.9 callers still get from them.
 
-func TestProducts_ExpandableFieldsNullWithoutInclude(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, nil)
+// createPreview9Product creates a product through the preview.9 route (path may carry a query) and deletes it after the
+// test.
+func createPreview9Product(t *testing.T, path string, body map[string]any) map[string]any {
+	t.Helper()
+	preview := apiClient.WithAPIVersion(preview9Version)
+	status, respBody, err := preview.Post(path, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	created := parseJSON(respBody)
+	productID := jsonField(created, "id")
+	require.NotEmpty(t, productID)
+	t.Cleanup(func() { preview.Delete(productsPath + "/" + productID) })
+	return created
+}
+
+func getPreview9Product(t *testing.T, productID string, includes ...string) map[string]any {
+	t.Helper()
+	var params url.Values
+	if len(includes) > 0 {
+		params = url.Values{"include": includes}
+	}
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(productsPath+"/"+productID, params)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	return parseJSON(body)
+}
 
-	got := parseJSON(body)
-	assert.Nil(t, got["product_line"], "product_line should be null without ?include=product_line")
-	assert.Nil(t, got["item"], "item should be null without ?include=item")
-
-	list, _, err := apiClient.GetList(productsPath, nil)
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(list.Data), 1)
-
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		assert.Nil(t, m["product_line"], "product_line should be null on list items without ?include=product_line")
-		assert.Nil(t, m["item"], "item should be null on list items without ?include=item")
+// assertProductsPreview9Price checks a price as preview.9 presents it: a rate in an unincluded currency per a unit.
+func assertProductsPreview9Price(t *testing.T, rate map[string]any, value, perUnitID, label string) {
+	t.Helper()
+	require.NotNil(t, rate, "%s is present", label)
+	assert.Equal(t, "rate", jsonField(rate, "object"), label)
+	assertDecimalEqual(t, value, jsonField(rate, "value"), label+".value")
+	assert.Nil(t, rate["numerator_unit"], "%s: the currency unit is not included", label)
+	assert.Equal(t, perUnitID, jsonField(jsonObject(rate, "denominator_unit"), "id"), label+".denominator_unit")
+	assert.NotEmpty(t, jsonField(rate, "display_value"), label+".display_value")
+	for _, forgeKey := range []string{"amount", "currency", "per_unit"} {
+		assert.NotContains(t, rate, forgeKey, "%s is a preview.9 rate", label)
 	}
 }
 
-func TestProducts_IncludeProductLine(t *testing.T) {
+// ──────────────────────────────────────────────
+// Includes
+// ──────────────────────────────────────────────
+
+func TestProductsPreview9_Includes(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"product_line"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	preview := apiClient.WithAPIVersion(preview9Version)
 
-	got := parseJSON(body)
-	pl := jsonObject(got, "product_line")
-	require.NotNil(t, pl, "product_line should be present with ?include=product_line")
-	assert.Equal(t, "product_line", jsonField(pl, "object"))
-}
+	t.Run("expandables null without include", func(t *testing.T) {
+		got := getPreview9Product(t, SeedProductID)
+		assertNilField(t, got, "product_line")
+		assertNilField(t, got, "item")
 
-func TestProducts_IncludeItem(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-}
-
-func TestProducts_ListIncludeProductLine(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath, url.Values{
-		"include":          {"product_line"},
-		"product_line_ids": {SeedProductLineID},
+		list, _, err := preview.GetList(productsPath, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, list.Data)
+		for _, raw := range list.Data {
+			m := parseJSON(raw)
+			assertNilField(t, m, "product_line")
+			assertNilField(t, m, "item")
+		}
 	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	data, ok := got["data"].([]any)
-	require.True(t, ok)
-	require.NotEmpty(t, data)
+	t.Run("retrieve", func(t *testing.T) {
+		got := getPreview9Product(t, SeedProductID, "product_line.unit_group", "item.category", "item.attributes")
+		assertObjectField(t, got, "product")
 
-	first, ok := data[0].(map[string]any)
-	require.True(t, ok)
-	pl := jsonObject(first, "product_line")
-	require.NotNil(t, pl, "product_line should be present on list items with ?include=product_line")
-	assert.Equal(t, "product_line", jsonField(pl, "object"))
-}
+		pl := jsonObject(got, "product_line")
+		require.NotNil(t, pl)
+		assertObjectField(t, pl, "product_line")
+		ug := jsonObject(pl, "unit_group")
+		require.NotNil(t, ug, "product_line.unit_group")
+		assertObjectField(t, ug, "unit_group")
 
-func TestProducts_IncludeProductLineUnitGroup(t *testing.T) {
-	t.Parallel()
+		item := jsonObject(got, "item")
+		require.NotNil(t, item, "item.category reaches through item")
+		assertPreview9ItemShape(t, item)
+		assertObjectField(t, jsonObject(item, "category"), "item_category")
+		assert.NotEmpty(t, jsonListData(item, "attributes"), "the seeded item has attributes")
 
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"product_line.unit_group"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	pl := jsonObject(got, "product_line")
-	require.NotNil(t, pl, "product_line should be present with ?include=product_line.unit_group")
-	assert.Equal(t, "product_line", jsonField(pl, "object"))
-
-	ug := jsonObject(pl, "unit_group")
-	require.NotNil(t, ug, "unit_group should be present inside product_line with ?include=product_line.unit_group")
-	assert.Equal(t, "unit_group", jsonField(ug, "object"))
-	assert.NotEmpty(t, jsonField(ug, "id"))
-}
-
-func TestProducts_IncludeItemCategory(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item.category"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.category")
-	assert.Equal(t, "item", jsonField(item, "object"))
-
-	cat := jsonObject(item, "category")
-	require.NotNil(t, cat, "category should be present inside item with ?include=item.category")
-	assert.Equal(t, "item_category", jsonField(cat, "object"))
-	assert.NotEmpty(t, jsonField(cat, "id"))
-}
-
-func TestProducts_IncludeItemUnitValue(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item.unit_value"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	AssertResponseBodyValid(t, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.unit_value")
-
-	_, ok := item["unit_value"]
-	assert.True(t, ok, "unit_value key should be present on item with ?include=item.unit_value")
-	if uv := jsonObject(item, "unit_value"); uv != nil {
-		assertItemUnitPriceShape(t, uv)
-	}
-}
-
-func TestProducts_IncludeItemUnitCost(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item.unit_cost"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	AssertResponseBodyValid(t, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.unit_cost")
-
-	_, ok := item["unit_cost"]
-	assert.True(t, ok, "unit_cost key should be present on item with ?include=item.unit_cost")
-	if uc := jsonObject(item, "unit_cost"); uc != nil {
-		assertItemUnitPriceShape(t, uc)
-	}
-}
-
-func TestProducts_IncludeItemBurnRate(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item.burn_rate"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	AssertResponseBodyValid(t, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.burn_rate")
-
-	_, ok := item["burn_rate"]
-	assert.True(t, ok, "burn_rate key should be present on item with ?include=item.burn_rate")
-	if br := jsonObject(item, "burn_rate"); br != nil {
-		assertItemRateShape(t, br)
-	}
-}
-
-func TestProducts_IncludeItemAttributes(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, url.Values{"include": {"item.attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	item := jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with ?include=item.attributes")
-
-	attrs := jsonObject(item, "attributes")
-	require.NotNil(t, attrs, "attributes should be present inside item with ?include=item.attributes")
-	assert.Equal(t, "list", jsonField(attrs, "object"))
-	data, _ := attrs["data"].([]any)
-	assert.GreaterOrEqual(t, len(data), 1, "seeded item should have at least one attribute")
-}
-
-func TestProducts_ListIncludeItem(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	data, ok := got["data"].([]any)
-	require.True(t, ok)
-	require.NotEmpty(t, data)
-
-	first, ok := data[0].(map[string]any)
-	require.True(t, ok)
-	item := jsonObject(first, "item")
-	require.NotNil(t, item, "item should be present on list items with ?include=item")
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-}
-
-func TestProducts_ListIncludeProductLineUnitGroup(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(productsPath, url.Values{
-		"include":          {"product_line.unit_group"},
-		"product_line_ids": {SeedProductLineID},
+		// An item's prices and burn rate are always present, as preview.9 rates.
+		for _, key := range []string{"unit_cost", "burn_rate"} {
+			rate := jsonObject(item, key)
+			require.NotNil(t, rate, key)
+			assert.Equal(t, "rate", jsonField(rate, "object"), key)
+			assert.NotEmpty(t, jsonField(rate, "value"), key)
+			assert.NotNil(t, jsonObject(rate, "denominator_unit"), key)
+		}
+		assert.NotNil(t, jsonObject(jsonObject(item, "burn_rate"), "numerator_unit"), "a burn rate counts its item units")
+		assert.Equal(t, "rate", jsonField(jsonObject(item, "unit_value"), "object"), "a product is sold, so it has a unit_value")
 	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	data, ok := got["data"].([]any)
-	require.True(t, ok)
-	require.NotEmpty(t, data)
+	t.Run("list", func(t *testing.T) {
+		status, body, err := preview.GetListRaw(productsPath, url.Values{
+			"include": {"item", "product_line.unit_group"},
+			"limit":   {"5"},
+		})
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+		data := jsonListData(parseJSON(body), "data")
+		require.NotEmpty(t, data)
+		for _, raw := range data {
+			row := raw.(map[string]any)
+			assertPreview9ItemShape(t, jsonObject(row, "item"))
+			pl := jsonObject(row, "product_line")
+			require.NotNil(t, pl)
+			assert.Equal(t, SeedProductLineID, jsonField(pl, "id"))
+			assertObjectField(t, jsonObject(pl, "unit_group"), "unit_group")
+		}
+	})
 
-	first, ok := data[0].(map[string]any)
-	require.True(t, ok)
-	pl := jsonObject(first, "product_line")
-	require.NotNil(t, pl, "product_line should be present on list items with ?include=product_line.unit_group")
-	assert.Equal(t, "product_line", jsonField(pl, "object"))
-	ug := jsonObject(pl, "unit_group")
-	require.NotNil(t, ug, "unit_group should be present inside product_line on list items with ?include=product_line.unit_group")
-	assert.Equal(t, "unit_group", jsonField(ug, "object"))
+	// The item's value fields are no longer includes of their own; asking for them leaves the item unexpanded rather
+	// than failing the request.
+	t.Run("value includes are accepted", func(t *testing.T) {
+		got := getPreview9Product(t, SeedProductID, "item.unit_value", "item.unit_cost", "item.burn_rate")
+		assert.Equal(t, SeedProductID, jsonField(got, "id"))
+	})
 }
 
 // ──────────────────────────────────────────────
-// Product — Validate (bulk SKU resolution)
+// Validate (bulk SKU resolution)
 // ──────────────────────────────────────────────
 
 const productsValidatePath = "/v1/catalog/products/actions/validate"
@@ -255,9 +153,6 @@ var productValidateIncludes = []string{
 	"item.category.unit_group.base_unit",
 	"item.category.unit_group.associated_units",
 	"item.category.unit_group.associated_units.unit",
-	"item.unit_value",
-	"item.unit_cost",
-	"item.burn_rate",
 	"item.attributes",
 }
 
@@ -274,14 +169,7 @@ func validatedProduct(m map[string]any, rowKey string) map[string]any {
 	if !ok {
 		return nil
 	}
-	raw, ok := products[rowKey]
-	if !ok {
-		return nil
-	}
-	p, ok := raw.(map[string]any)
-	if !ok {
-		return nil
-	}
+	p, _ := products[rowKey].(map[string]any)
 	return p
 }
 
@@ -307,493 +195,282 @@ func associatedUnitFingerprintsFromUnitGroup(ug map[string]any) []string {
 		if ut := jsonObject(row, "unit"); ut != nil {
 			unitID = jsonField(ut, "id")
 		}
-		fp := fmt.Sprintf("%s|%s|%s|%s",
+		out = append(out, fmt.Sprintf("%s|%s|%s|%s",
 			jsonField(row, "id"),
 			jsonField(row, "discount_percentage"),
 			jsonField(row, "discount_fixed"),
 			unitID,
-		)
-		out = append(out, fp)
+		))
 	}
 	sort.Strings(out)
 	return out
 }
 
 func categoryAssociatedUnitFingerprints(product map[string]any) []string {
-	item := jsonObject(product, "item")
-	cat := jsonObject(item, "category")
+	cat := jsonObject(jsonObject(product, "item"), "category")
 	return associatedUnitFingerprintsFromUnitGroup(jsonObject(cat, "unit_group"))
 }
 
 func productLineAssociatedUnitFingerprints(product map[string]any) []string {
-	pl := jsonObject(product, "product_line")
-	return associatedUnitFingerprintsFromUnitGroup(jsonObject(pl, "unit_group"))
+	return associatedUnitFingerprintsFromUnitGroup(jsonObject(jsonObject(product, "product_line"), "unit_group"))
 }
 
-func TestProducts_ValidateProducts_KnownSKU(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.PutRaw(productsValidatePath, url.Values{"include": {"item"}}, map[string]any{
-		"products_map": map[string]string{"0": "SCK-001"},
-	})
+func validatePreview9Products(t *testing.T, params url.Values, skus map[string]string) map[string]any {
+	t.Helper()
+	status, body, err := apiClient.WithAPIVersion(preview9Version).PutRaw(productsValidatePath, params, map[string]any{"products_map": skus})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-
 	got := parseJSON(body)
 	require.Equal(t, "map", jsonField(got, "object"))
-	p := validatedProduct(got, "0")
+	return got
+}
+
+func TestProductsPreview9_Validate_KnownSKU(t *testing.T) {
+	t.Parallel()
+	p := validatedProduct(validatePreview9Products(t, url.Values{"include": {"item"}}, map[string]string{"0": "SCK-001"}), "0")
 	require.NotNil(t, p, "products[0] should be present")
-	assert.Equal(t, "product", jsonField(p, "object"))
+	assertObjectField(t, p, "product")
 	item := jsonObject(p, "item")
-	require.NotNil(t, item)
+	assertPreview9ItemShape(t, item)
 	assert.Equal(t, "SCK-001", jsonField(item, "sku"))
 }
 
-func TestProducts_ValidateProducts_IncludeCategoryUnitGroupAssociatedUnits(t *testing.T) {
+func TestProductsPreview9_Validate_IncludesUnitGroupAssociatedUnits(t *testing.T) {
 	t.Parallel()
-
-	status, body, err := apiClient.PutRaw(
-		productsValidatePath,
-		productValidateIncludeQueryValues(),
-		map[string]any{"products_map": map[string]string{"0": "SCK-001"}},
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	p := validatedProduct(got, "0")
+	p := validatedProduct(validatePreview9Products(t, productValidateIncludeQueryValues(), map[string]string{"0": "SCK-001"}), "0")
 	require.NotNil(t, p)
 	assertIncludePopulated(t, p, "item.category.unit_group.associated_units")
-}
 
-func TestProducts_ValidateProducts_IncludeProductLineUnitGroupAssociatedUnits(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.PutRaw(
-		productsValidatePath,
-		productValidateIncludeQueryValues(),
-		map[string]any{"products_map": map[string]string{"0": "SCK-001"}},
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	p := validatedProduct(got, "0")
-	require.NotNil(t, p)
-	pl := jsonObject(p, "product_line")
-	require.NotNil(t, pl, "product_line should be populated with portal includes")
-
-	ug := jsonObject(pl, "unit_group")
+	ug := jsonObject(jsonObject(p, "product_line"), "unit_group")
 	require.NotNil(t, ug, "product_line.unit_group should be present")
-	assert.NotEmpty(t, jsonField(ug, "id"))
-
 	assoc := jsonObject(ug, "associated_units")
 	require.NotNil(t, assoc, "associated_units should be present")
 	assert.Equal(t, "list", jsonField(assoc, "object"))
-	data, ok := assoc["data"].([]any)
-	require.True(t, ok)
-	assert.GreaterOrEqual(t, len(data), 1, "seed Socks product line unit group should have conversions")
+	assert.NotEmpty(t, jsonListData(ug, "associated_units"), "seed Socks product line unit group should have conversions")
 }
 
-func TestProducts_ValidateProducts_ParityWithGet(t *testing.T) {
+func TestProductsPreview9_Validate_ParityWithGet(t *testing.T) {
 	t.Parallel()
-
 	q := productValidateIncludeQueryValues()
-	refStatus, refBody, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, q)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(productsPath+"/"+SeedProductID, q)
 	require.NoError(t, err)
-	requireStatus(t, 200, refStatus, refBody)
-
-	reference := parseJSON(refBody)
-	require.NotNil(t, reference)
-
-	itemRef := jsonObject(reference, "item")
-	require.NotNil(t, itemRef)
-	sku := jsonField(itemRef, "sku")
+	requireStatus(t, 200, status, body)
+	reference := parseJSON(body)
+	sku := jsonField(jsonObject(reference, "item"), "sku")
 	require.NotEmpty(t, sku)
 
-	valStatus, valBody, err := apiClient.PutRaw(
-		productsValidatePath,
-		q,
-		map[string]any{"products_map": map[string]string{"0": sku}},
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, valStatus, valBody)
-
-	validated := parseJSON(valBody)
-	p := validatedProduct(validated, "0")
+	p := validatedProduct(validatePreview9Products(t, q, map[string]string{"0": sku}), "0")
 	require.NotNil(t, p)
-
-	assert.Equal(t,
-		categoryAssociatedUnitFingerprints(reference),
-		categoryAssociatedUnitFingerprints(p),
+	assert.Equal(t, categoryAssociatedUnitFingerprints(reference), categoryAssociatedUnitFingerprints(p),
 		"category unit_group associated_units should match GET for the same SKU and includes")
-
 	if jsonObject(reference, "product_line") != nil {
-		assert.Equal(t,
-			productLineAssociatedUnitFingerprints(reference),
-			productLineAssociatedUnitFingerprints(p),
+		assert.Equal(t, productLineAssociatedUnitFingerprints(reference), productLineAssociatedUnitFingerprints(p),
 			"product_line unit_group associated_units should match GET for the same SKU and includes")
 	}
 }
 
 // ──────────────────────────────────────────────
-// Product — CRUD & lifecycle
+// CRUD & lifecycle
 // ──────────────────────────────────────────────
 
-func TestProducts_CRUD(t *testing.T) {
+// Create with every field → retrieve → update → list → delete → replayed delete, all as a preview.9 caller. Notes are
+// accepted but no longer stored, so they read back null.
+func TestProductsPreview9_Lifecycle(t *testing.T) {
 	t.Parallel()
-	sku := uniqueName("e2e-prod-crud")
-	createStatus, createBody, err := apiClient.Post(productsPath, validProductBody(sku), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	preview := apiClient.WithAPIVersion(preview9Version)
 
-	created := parseJSON(createBody)
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-	assertIDFormat(t, id, "pd")
-	assertObjectField(t, created, "product")
-
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
-	assert.Equal(t, id, jsonField(got, "id"))
-	item := jsonObject(got, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, sku, jsonField(item, "sku"))
-
-	desc := "e2e prod crud description"
-	notes := "e2e prod crud notes"
-	newSKU := uniqueName("e2e-prod-crud-upd")
-	patchStatus, patchBody, err := apiClient.Patch(productsPath+"/"+id+"?include=item", map[string]any{
-		"sku":               newSKU,
-		"description":       desc,
-		"notes":             notes,
-		"portal_visibility": "visible",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-	updated := parseJSON(patchBody)
-	assert.Equal(t, id, jsonField(updated, "id"))
-	assert.Equal(t, "visible", jsonField(updated, "portal_visibility"))
-	item = jsonObject(updated, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, newSKU, jsonField(item, "sku"))
-	assert.Equal(t, desc, jsonField(item, "description"))
-	assert.Equal(t, notes, jsonField(item, "notes"))
-
-	delStatus, delBody, err := apiClient.Delete(productsPath + "/" + id)
-	require.NoError(t, err)
-	requireStatus(t, 200, delStatus, delBody)
-
-	getAfterStatus, _, err := apiClient.GetListRaw(productsPath+"/"+id, nil)
-	require.NoError(t, err)
-	assert.Equal(t, 404, getAfterStatus, "GET after delete should return 404")
-}
-
-func TestProducts_CreateAndUpdateAllFields(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-prod-allf")
-	desc := "All-fields create description"
-	notes := "All-fields create notes"
-	body := map[string]any{
+	sku := uniqueName("e2e-p9-prod-life")
+	created := createPreview9Product(t, productsPath, map[string]any{
 		"sku":               sku,
 		"type":              "sale",
 		"category_id":       SeedItemCategoryID,
 		"product_line_id":   SeedProductLineID,
 		"portal_visibility": "visible",
-		"description":       desc,
-		"notes":             notes,
-		"unit_price": map[string]any{
-			"amount":      "12.34",
-			"currency":    "usd",
-			"per_unit_id": nonCurrencyUnitID,
-		},
-	}
-
-	createStatus, createBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-
-	created := parseJSON(createBody)
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-
-	assertIDFormat(t, id, "pd")
+		"description":       "lifecycle description",
+		"notes":             "lifecycle notes",
+		"attribute_ids":     []string{SeedAttributeID},
+		"unit_price":        priceInputPer("12.34", nonCurrencyUnitID),
+		"unit_cost":         priceInputPer("4.50", nonCurrencyUnitID),
+	})
+	productID := jsonField(created, "id")
+	assertIDFormat(t, productID, "pd")
 	assertObjectField(t, created, "product")
 	assert.Equal(t, "sale", jsonField(created, "type"))
 	assert.Equal(t, "visible", jsonField(created, "portal_visibility"))
+	assertNilField(t, created, "item")
+	assertNilField(t, created, "product_line")
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
-	origCreatedAt := jsonField(created, "created_at")
+	createdAt := jsonField(created, "created_at")
 
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{
-		"include": {"product_line", "item", "item.unit_value"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	got := parseJSON(getBody)
-
-	pl := jsonObject(got, "product_line")
-	require.NotNil(t, pl)
-	assert.Equal(t, "product_line", jsonField(pl, "object"))
-	assert.Equal(t, SeedProductLineID, jsonField(pl, "id"))
-
+	got := getPreview9Product(t, productID, "item", "item.attributes", "product_line")
+	assert.Equal(t, SeedProductLineID, jsonField(jsonObject(got, "product_line"), "id"))
 	item := jsonObject(got, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, "item", jsonField(item, "object"))
-	assert.NotEmpty(t, jsonField(item, "id"))
+	assertPreview9ItemShape(t, item)
+	itemID := jsonField(item, "id")
 	assert.Equal(t, sku, jsonField(item, "sku"))
-	assert.Equal(t, desc, jsonField(item, "description"))
-	assert.Equal(t, notes, jsonField(item, "notes"))
-	uv := jsonObject(item, "unit_value")
-	require.NotNil(t, uv)
-	assertItemUnitPriceShape(t, uv)
-	assertDecimalEqual(t, "12.34", jsonField(uv, "amount"), "unit_value.amount")
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uv, "per_unit"), "id"))
+	assert.Equal(t, "product", jsonField(item, "type"))
+	assert.Equal(t, "lifecycle description", jsonField(item, "description"))
+	assert.Equal(t, []string{SeedAttributeID}, attributeIDsOf(item))
+	assertProductsPreview9Price(t, jsonObject(item, "unit_value"), "12.34", nonCurrencyUnitID, "item.unit_value")
+	assertProductsPreview9Price(t, jsonObject(item, "unit_cost"), "4.50", nonCurrencyUnitID, "item.unit_cost")
 
-	newSKU := uniqueName("e2e-prod-allf-u")
-	newDesc := "All-fields updated description"
-	newNotes := "All-fields updated notes"
-	patchQ := url.Values{"include": {"product_line", "item", "item.unit_value"}}
-	patchStatus, patchBody, err := apiClient.Patch(productsPath+"/"+id+"?"+patchQ.Encode(), map[string]any{
+	// forge reads the same item, with the price in its sales section.
+	forgeItem := getItem(t, itemID, "sales.product_line")
+	assertItemEnvelope(t, forgeItem, "product", sku)
+	sales := jsonObject(forgeItem, "sales")
+	assertItemPrice(t, jsonObject(sales, "unit_price"), "12.34", nonCurrencyUnitID, "sales.unit_price")
+	assert.Equal(t, "visible", jsonField(sales, "portal_visibility"))
+	assert.Equal(t, SeedProductLineID, jsonField(jsonObject(sales, "product_line"), "id"))
+
+	newSKU := uniqueName("e2e-p9-prod-life-u")
+	status, body, err := preview.Patch(productsPath+"/"+productID+"?include=item", map[string]any{
 		"sku":               newSKU,
-		"description":       newDesc,
-		"notes":             newNotes,
+		"description":       "updated description",
+		"notes":             "updated notes",
 		"portal_visibility": "hidden",
-		"unit_price": map[string]any{
-			"amount":      "99.01",
-			"currency":    "usd",
-			"per_unit_id": nonCurrencyUnitID,
-		},
+		"unit_price":        priceInputPer("99.01", nonCurrencyUnitID),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
+	requireStatus(t, 200, status, body)
+	updated := parseJSON(body)
+	assert.Equal(t, productID, jsonField(updated, "id"))
+	assert.Equal(t, "hidden", jsonField(updated, "portal_visibility"))
+	assert.Equal(t, createdAt, jsonField(updated, "created_at"), "created_at must not change")
+	item = jsonObject(updated, "item")
+	assertPreview9ItemShape(t, item)
+	assert.Equal(t, newSKU, jsonField(item, "sku"))
+	assert.Equal(t, "updated description", jsonField(item, "description"))
+	assertProductsPreview9Price(t, jsonObject(item, "unit_value"), "99.01", nonCurrencyUnitID, "item.unit_value")
 
-	upd := parseJSON(patchBody)
-	assert.Equal(t, id, jsonField(upd, "id"))
-	assert.Equal(t, "sale", jsonField(upd, "type"))
-	assert.Equal(t, "hidden", jsonField(upd, "portal_visibility"))
-	assert.Equal(t, origCreatedAt, jsonField(upd, "created_at"), "created_at must not change")
-	assertValidTimestamp(t, jsonField(upd, "updated_at"), "updated_at")
+	// An update leaves what it omits alone.
+	status, body, err = preview.Patch(productsPath+"/"+productID, map[string]any{"portal_visibility": "visible"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	item = jsonObject(getPreview9Product(t, productID, "item"), "item")
+	assert.Equal(t, newSKU, jsonField(item, "sku"))
+	assert.Equal(t, "updated description", jsonField(item, "description"))
+	assertProductsPreview9Price(t, jsonObject(item, "unit_value"), "99.01", nonCurrencyUnitID, "item.unit_value")
 
-	getUpdStatus, getUpdBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{
-		"include": {"product_line", "item", "item.unit_value"},
+	list, _, err := preview.GetList(productsPath, url.Values{
+		"portal_visibility": {"visible"},
+		"category_ids":      {SeedItemCategoryID},
+		"attribute_ids":     {SeedAttributeID},
+		"limit":             {"100"},
 	})
 	require.NoError(t, err)
-	requireStatus(t, 200, getUpdStatus, getUpdBody)
-	updInc := parseJSON(getUpdBody)
+	assert.True(t, covCatalogProductsListContainsID(list, productID), "the filtered list finds the product")
 
-	pl = jsonObject(updInc, "product_line")
-	require.NotNil(t, pl)
-	assert.Equal(t, SeedProductLineID, jsonField(pl, "id"))
+	status, body, err = preview.Delete(productsPath + "/" + productID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{}, parseJSON(body), "preview.9 answers a delete with an empty object")
 
-	item = jsonObject(updInc, "item")
-	require.NotNil(t, item)
-	assert.Equal(t, newSKU, jsonField(item, "sku"))
-	assert.Equal(t, newDesc, jsonField(item, "description"))
-	assert.Equal(t, newNotes, jsonField(item, "notes"))
-	uv = jsonObject(item, "unit_value")
-	require.NotNil(t, uv)
-	assertItemUnitPriceShape(t, uv)
-	assertDecimalEqual(t, "99.01", jsonField(uv, "amount"), "unit_value.amount")
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uv, "per_unit"), "id"))
+	status, body, err = preview.Delete(productsPath + "/" + productID)
+	require.NoError(t, err)
+	requireStatus(t, 410, status, body)
+
+	status, _, err = preview.GetListRaw(productsPath+"/"+productID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, status, "GET after delete")
+	status, _, err = apiClient.GetListRaw(itemsPath+"/"+itemID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, status, "deleting a product deletes its item")
 }
 
-func TestProducts_OmittedFields(t *testing.T) {
+// A product on a sales order line can't be deleted.
+func TestProductsPreview9_DeleteInUseConflicts(t *testing.T) {
 	t.Parallel()
-
-	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
-		sku := uniqueName("e2e-prod-omit")
-		status, body, err := apiClient.Post(productsPath+"?include=item", validProductBody(sku), newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, status, body)
-
-		got := parseJSON(body)
-		id := jsonField(got, "id")
-		require.NotEmpty(t, id)
-		t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-
-		assertObjectField(t, got, "product")
-		assert.Equal(t, "hidden", jsonField(got, "portal_visibility"))
-		assertNilField(t, got, "product_line")
-
-		item := jsonObject(got, "item")
-		require.NotNil(t, item, "create response embeds item")
-		assert.Equal(t, "item", jsonField(item, "object"))
-		assert.Equal(t, sku, jsonField(item, "sku"))
-	})
-
-	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
-		base := validProductBody(uniqueName("e2e-prod-miss"))
-
-		t.Run("missing_sku", func(t *testing.T) {
-			status, body, err := apiClient.Post(productsPath, map[string]any{
-				"type":        base["type"],
-				"category_id": base["category_id"],
-			}, newIdempotencyKey())
-			require.NoError(t, err)
-			assert.True(t, status == 400 || status == 422,
-				"missing sku should return 400 or 422, got %d: %s", status, string(body))
-		})
-
-		t.Run("missing_type", func(t *testing.T) {
-			status, body, err := apiClient.Post(productsPath, map[string]any{
-				"sku":         base["sku"],
-				"category_id": base["category_id"],
-			}, newIdempotencyKey())
-			require.NoError(t, err)
-			assert.True(t, status == 400 || status == 422,
-				"missing type should return 400 or 422, got %d: %s", status, string(body))
-		})
-
-		t.Run("missing_category_id", func(t *testing.T) {
-			status, body, err := apiClient.Post(productsPath, map[string]any{
-				"sku":  base["sku"],
-				"type": base["type"],
-			}, newIdempotencyKey())
-			require.NoError(t, err)
-			assert.True(t, status == 400 || status == 422,
-				"missing category_id should return 400 or 422, got %d: %s", status, string(body))
-		})
-	})
-
-	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
-		sku := uniqueName("e2e-prod-pres")
-		createStatus, createBody, err := apiClient.Post(productsPath, map[string]any{
-			"sku":         sku,
-			"type":        "sale",
-			"category_id": SeedItemCategoryID,
-			"description": "Original description",
-			"notes":       "Original notes",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, createStatus, createBody)
-
-		id := jsonField(parseJSON(createBody), "id")
-		require.NotEmpty(t, id)
-		t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
-
-		newSKU := uniqueName("e2e-prod-pres-u")
-		patchStatus, patchBody, err := apiClient.Patch(productsPath+"/"+id, map[string]any{
-			"sku": newSKU,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 200, patchStatus, patchBody)
-
-		getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"item"}})
-		require.NoError(t, err)
-		requireStatus(t, 200, getStatus, getBody)
-		item := jsonObject(parseJSON(getBody), "item")
-		require.NotNil(t, item)
-		assert.Equal(t, newSKU, jsonField(item, "sku"))
-		assert.Equal(t, "Original description", jsonField(item, "description"))
-		assert.Equal(t, "Original notes", jsonField(item, "notes"))
-	})
-}
-
-func TestProducts_CreateResponseShape(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-prod-shape")
-	status, body, err := apiClient.Post(productsPath, validProductBody(sku), newIdempotencyKey())
+	preview := apiClient.WithAPIVersion(preview9Version)
+	productID, itemID := newSellableProductIDs(t, "e2e-p9-prod-inuse")
+	orderID := createLifecycleOrder(t)
+	status, body, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", map[string]any{
+		"product_id":  productID,
+		"product_sku": uniqueName("E2E-LINE-SKU"),
+		"quantity":    map[string]any{"value": "1", "unit_id": SeedUnitID},
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
-	got := parseJSON(body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id) })
+	status, body, err = preview.Delete(productsPath + "/" + productID)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requirePreview9Error(t, body, "resource_conflict")
 
-	assertIDFormat(t, id, "pd")
-	assertObjectField(t, got, "product")
-	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+	assert.Equal(t, productID, jsonField(getPreview9Product(t, productID), "id"), "the product survives a refused delete")
+	assert.Equal(t, itemID, jsonField(getItem(t, itemID), "id"), "so does its item")
 }
 
-func TestProducts_CreateIdempotent(t *testing.T) {
+func TestProductsPreview9_CreateIdempotent(t *testing.T) {
 	t.Parallel()
-	sku := uniqueName("e2e-prod-idem")
-	idemKey := newIdempotencyKey()
+	preview := apiClient.WithAPIVersion(preview9Version)
+	sku := uniqueName("e2e-p9-prod-idem")
+	key := newIdempotencyKey()
 
-	status1, body1, err := apiClient.Post(productsPath, validProductBody(sku), idemKey)
+	status1, body1, err := preview.Post(productsPath, validProductBody(sku), key)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 	require.NotEmpty(t, id1)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + id1) })
+	t.Cleanup(func() { preview.Delete(productsPath + "/" + id1) })
 
-	status2, body2, err := apiClient.Post(productsPath, validProductBody(sku), idemKey)
+	status2, body2, err := preview.Post(productsPath, validProductBody(sku), key)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
 }
 
-func TestProducts_UpdateIdempotent(t *testing.T) {
+func TestProductsPreview9_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, productsPath, validProductBody(uniqueName("e2e-prod-idem-upd")))
-	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-	newSKU := uniqueName("e2e-prod-idem-upd2")
-	idemKey := newIdempotencyKey()
+	preview := apiClient.WithAPIVersion(preview9Version)
+	productID := jsonField(createPreview9Product(t, productsPath, validProductBody(uniqueName("e2e-p9-prod-idem-upd"))), "id")
+	newSKU := uniqueName("e2e-p9-prod-idem-upd2")
+	key := newIdempotencyKey()
+	path := productsPath + "/" + productID + "?include=item"
 
-	inc := url.Values{"include": {"item"}}
-	pathWithInc := productsPath + "/" + id + "?" + inc.Encode()
-
-	status1, body1, err := apiClient.Patch(pathWithInc, map[string]any{"sku": newSKU}, idemKey)
+	status1, body1, err := preview.Patch(path, map[string]any{"sku": newSKU}, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
-
-	status2, body2, err := apiClient.Patch(pathWithInc, map[string]any{"sku": newSKU}, idemKey)
+	status2, body2, err := preview.Patch(path, map[string]any{"sku": newSKU}, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 
-	assert.Equal(t, jsonField(parseJSON(body1), "id"), jsonField(parseJSON(body2), "id"))
-	item1 := jsonObject(parseJSON(body1), "item")
-	item2 := jsonObject(parseJSON(body2), "item")
-	require.NotNil(t, item1)
-	require.NotNil(t, item2)
-	assert.Equal(t, newSKU, jsonField(item1, "sku"))
-	assert.Equal(t, newSKU, jsonField(item2, "sku"))
+	for _, body := range [][]byte{body1, body2} {
+		got := parseJSON(body)
+		assert.Equal(t, productID, jsonField(got, "id"))
+		assert.Equal(t, newSKU, jsonField(jsonObject(got, "item"), "sku"))
+	}
 }
 
-func TestProducts_ChangeProductLine(t *testing.T) {
+// The change-product-line action is preview.9's; forge moves a product with PATCH sales.product_line_id.
+func TestProductsPreview9_ChangeProductLine(t *testing.T) {
 	t.Parallel()
+	preview := apiClient.WithAPIVersion(preview9Version)
 
-	plStatus, plBody, err := apiClient.Post(productLinesPath, map[string]any{
-		"name":              uniqueName("e2e-pdln-for-product"),
-		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "exempt",
-		"freight_policy":    "billed",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, plStatus, plBody)
-	newLineID := jsonField(parseJSON(plBody), "id")
-	require.NotEmpty(t, newLineID)
-	t.Cleanup(func() { apiClient.Delete(productLinesPath + "/" + newLineID) })
+	body := validProductBody(uniqueName("e2e-p9-prod-chgpl"))
+	body["product_line_id"] = SeedProductLineID
+	productID := jsonField(createPreview9Product(t, productsPath, body), "id")
 
-	sku := uniqueName("e2e-prod-chgpl")
-	createBody := map[string]any{
-		"sku":               sku,
-		"type":              "sale",
-		"category_id":       SeedItemCategoryID,
-		"product_line_id":   SeedProductLineID,
-		"portal_visibility": "hidden",
+	// SeedIncludePutProductLineChangeTargetID has a live unit group, so the product_line include resolves.
+	target := SeedIncludePutProductLineChangeTargetID
+	route := productsPath + "/" + productID + "/product-line/" + target
+	for i := 0; i < 2; i++ {
+		status, respBody, err := preview.Put(route, map[string]any{})
+		require.NoError(t, err)
+		requireStatus(t, 200, status, respBody)
 	}
-	createStatus, prodBody, err := apiClient.Post(productsPath, createBody, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, prodBody)
-	productID := jsonField(parseJSON(prodBody), "id")
-	require.NotEmpty(t, productID)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + productID) })
+	assert.Equal(t, target, jsonField(jsonObject(getPreview9Product(t, productID, "product_line"), "product_line"), "id"),
+		"repeat change-product-line calls are idempotent")
 
-	putStatus, putBody, err := apiClient.Put(productsPath+"/"+productID+"/product-line/"+newLineID, map[string]any{})
-	require.NoError(t, err)
-	requireStatus(t, 200, putStatus, putBody)
+	t.Run("unknown product", func(t *testing.T) {
+		status, respBody, err := preview.Put(productsPath+"/"+covCatalogProductsNonexistentID+"/product-line/"+SeedProductLineID, map[string]any{})
+		require.NoError(t, err)
+		requireStatus(t, 404, status, respBody)
+	})
 
-	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+productID, url.Values{"include": {"product_line"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	pl := jsonObject(parseJSON(getBody), "product_line")
-	require.NotNil(t, pl)
-	assert.Equal(t, newLineID, jsonField(pl, "id"))
+	t.Run("unknown product line", func(t *testing.T) {
+		status, respBody, err := preview.Put(productsPath+"/"+productID+"/product-line/pdln_00000000000000000000000000", map[string]any{})
+		require.NoError(t, err)
+		assert.Contains(t, []int{400, 404}, status, "a nonexistent product line is refused: %s", respBody)
+	})
 }

@@ -39,6 +39,10 @@ func TestGetEndpoints_NotFoundErrorShape(t *testing.T) {
 		if strings.Count(prefix, "{") > 0 {
 			continue
 		}
+		// Routes only 1.0.forge-preview.9 answers carry its error shape, not 1.0.forge's.
+		if isExcludedPath(prefix) {
+			continue
+		}
 
 		// Fabricate a non-existent ID: keep the prefix part, zero the rest.
 		parts := strings.SplitN(seedID, "_", 2)

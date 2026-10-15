@@ -22,26 +22,13 @@ func createAttributeForTest(t *testing.T, propertyID string, body map[string]any
 	return created
 }
 
-// productWithAttribute creates a product in the seed category, which carries the seed property, and assigns attributeID.
+// productWithAttribute creates a product in the seed category, which carries the seed property, with attributeID
+// assigned, and deletes it before the attribute when the test ends.
 func productWithAttribute(t *testing.T, attributeID string) string {
 	t.Helper()
-	product := createAndCleanup(t, productsPath, validProductBody(uniqueName("e2e-attr-inuse")))
-	itemID := jsonField(product, "item_id")
-	if itemID == "" {
-		itemID = jsonField(jsonObject(product, "item"), "id")
-	}
-	if itemID == "" {
-		status, body, err := apiClient.GetListRaw(productsPath+"/"+jsonField(product, "id"), url.Values{"include": {"item"}})
-		require.NoError(t, err)
-		requireStatus(t, http.StatusOK, status, body)
-		itemID = jsonField(jsonObject(parseJSON(body), "item"), "id")
-	}
-	require.NotEmpty(t, itemID)
-	status, body, err := apiClient.Put(itemsPath+"/"+itemID+"/attributes/"+attributeID, nil)
-	require.NoError(t, err)
-	requireStatus(t, http.StatusOK, status, body)
-	t.Cleanup(func() { apiClient.Delete(itemsPath + "/" + itemID + "/attributes/" + attributeID) })
-	return itemID
+	body := forgeItemBody("product", uniqueName("e2e-attr-inuse"))
+	body["attribute_ids"] = []string{attributeID}
+	return jsonField(createForgeItem(t, itemsPath, body), "id")
 }
 
 // An attribute an item uses can't be deleted; archived, it stays on the item but can't be assigned again.
@@ -72,18 +59,11 @@ func TestAttributes_InUseAndArchived(t *testing.T) {
 	assert.Equal(t, "archived", jsonField(onItem, "status"))
 	assert.Equal(t, SeedPropertyID, jsonField(jsonObject(onItem, "property"), "id"))
 
-	other := createAndCleanup(t, productsPath, validProductBody(uniqueName("e2e-attr-archived")))
-	otherItemID := jsonField(other, "item_id")
-	if otherItemID == "" {
-		status, body, err := apiClient.GetListRaw(productsPath+"/"+jsonField(other, "id"), url.Values{"include": {"item"}})
-		require.NoError(t, err)
-		requireStatus(t, http.StatusOK, status, body)
-		otherItemID = jsonField(jsonObject(parseJSON(body), "item"), "id")
-	}
-	status, body, err = apiClient.Put(itemsPath+"/"+otherItemID+"/attributes/"+attrID, nil)
+	otherItemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("product", uniqueName("e2e-attr-archived"))), "id")
+	status, body, err = apiClient.Patch(itemsPath+"/"+otherItemID, map[string]any{"attribute_ids": []string{attrID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusUnprocessableEntity, status, body)
-	requireErrorResponse(t, body, "resource_archived", "invalid_request_error")
+	assertErrorParam(t, requireErrorResponse(t, body, "resource_archived", "invalid_request_error"), "attribute_ids")
 
 	list, _, err := apiClient.GetList(attributesPath(SeedPropertyID), url.Values{"statuses[]": {"archived"}, "limit": {"100"}})
 	require.NoError(t, err)

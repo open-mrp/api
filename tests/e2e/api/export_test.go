@@ -118,9 +118,6 @@ func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {
 		{"scanning stations", scanningStationsPath},
 		{"production runs", productionRunsPath},
 		{"production steps", productionStepsPath},
-		{"parts", partsPath},
-		{"products", productsPath},
-		{"materials", materialsPath},
 		{"properties", propertiesPath},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -137,14 +134,7 @@ func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {
 func TestExports_AcceptCarriesFiltersThroughToTheWorker(t *testing.T) {
 	t.Parallel()
 
-	sku := uniqueName("e2e-export-filter")
-	createdIDs, _ := bulkUpsertMaterialIDs(t, map[string]any{
-		"sku":      sku,
-		"category": map[string]any{"id": SeedMaterialCategoryID},
-	})
-	t.Cleanup(func() { cleanupMaterialIDs(createdIDs) })
-
-	job := completedExportJob(t, materialsPath+"/actions/export", map[string]any{"q": sku})
+	job := completedExportJob(t, unitsPath+"/actions/export", map[string]any{"q": "Pair"})
 	export, ok := job["export"].(map[string]any)
 	require.True(t, ok, "a completed export must carry its download: %v", job)
 	assert.NotEmpty(t, export["url"])
@@ -155,7 +145,7 @@ func TestExports_AcceptCarriesFiltersThroughToTheWorker(t *testing.T) {
 func TestExports_ReadingAJobNeverRedirects(t *testing.T) {
 	t.Parallel()
 
-	job := completedExportJob(t, materialsPath+"/actions/export", nil)
+	job := completedExportJob(t, unitsPath+"/actions/export", nil)
 	jobID := jsonField(job, "id")
 
 	code, _, raw, err := apiClient.GetWithoutFollowingRedirects(jobsPath + "/" + jobID)
@@ -168,12 +158,7 @@ func TestExports_ReadingAJobNeverRedirects(t *testing.T) {
 func TestExports_ABulkJobHasNoDownload(t *testing.T) {
 	t.Parallel()
 
-	job := bulkUpsertMaterialsJob(t, map[string]any{
-		"sku":      uniqueName("e2e-export-bulkjob"),
-		"category": map[string]any{"id": SeedMaterialCategoryID},
-	})
-	createdIDs, _ := jobResultIDs(job)
-	t.Cleanup(func() { cleanupMaterialIDs(createdIDs) })
+	job := bulkUpsertItemsJob(t, forgeItemBody("material", uniqueName("e2e-export-bulkjob")))
 
 	assert.Nil(t, job["export"], "only an export job carries a download")
 }

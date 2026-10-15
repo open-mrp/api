@@ -18,6 +18,8 @@ type RetrieveLocationTypeRequest struct {
 }
 
 // Returns a location type by ID or code.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type RetrieveLocationTypeEndpoint struct{}
 
 func (e *RetrieveLocationTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveLocationTypeRequest, *apiresource.LocationType] {
@@ -27,10 +29,8 @@ func (e *RetrieveLocationTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ContentType:       "application/json",
 		Route:             "/v1/operations/location-types/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveLocationTypeRequest) (*apiresource.LocationType, *apierror.APIError) {
 			return svc.(LocationSvc).GetLocationType
 		},

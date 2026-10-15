@@ -50,11 +50,15 @@ func upsertLocationInTx(txCtx context.Context, txRepos domain.RepoFactory, accou
 			AccountID: accountID,
 			Name:      row.Name,
 			TypeCode:  row.TypeCode,
+			Status:    row.Status,
 		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		upsertID = created.ID
+		if apiErr := claimDefaultSite(ctx, txRepos, accountID, created); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 
 		changes := audit.ComputeChanges(nil, created)
 		if apiErr := audit.NewPublisher().Publish(ctx, txRepos.NewOutboxRepo(), audit.EventData{
@@ -69,9 +73,26 @@ func upsertLocationInTx(txCtx context.Context, txRepos domain.RepoFactory, accou
 
 	} else { // update — name + type_code only; preserve existing parent_id
 		// Preserve the existing parent_id here; the caller re-applies incoming links after.
-		parentID := field.Unset[string]()
-		if oldLocation.ParentID != nil {
-			parentID = field.Set(*oldLocation.ParentID)
+		parentID := field.Unset[string]().BackfillUnsetPtr(oldLocation.ParentID)
+		addressID := field.Unset[string]().BackfillUnsetPtr(oldLocation.AddressID)
+
+		wasDefault, apiErr := isDefaultSite(ctx, txRepos, accountID, oldLocation.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		shape := locationShape{
+			id:             oldLocation.ID,
+			typeCode:       row.TypeCode,
+			status:         oldLocation.Status,
+			parentID:       oldLocation.ParentID,
+			addressID:      oldLocation.AddressID,
+			wasDefaultSite: wasDefault,
+		}
+		if row.Status != nil {
+			shape.status = *row.Status
+		}
+		if apiErr := checkLocationShape(ctx, txRepos, accountID, shape); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
 
 		updated, apiErr := txRepo.Update(ctx, domain.UpdateLocationParams{
@@ -79,12 +100,17 @@ func upsertLocationInTx(txCtx context.Context, txRepos domain.RepoFactory, accou
 			LocationID: oldLocation.ID,
 			Name:       &row.Name,
 			TypeCode:   &row.TypeCode,
+			Status:     row.Status,
 			ParentID:   parentID,
+			AddressID:  addressID,
 		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		upsertID = updated.ID
+		if apiErr := claimDefaultSite(ctx, txRepos, accountID, updated); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 
 		changes := audit.ComputeChanges(oldLocation, updated)
 		if apiErr := audit.NewPublisher().Publish(ctx, txRepos.NewOutboxRepo(), audit.EventData{
@@ -110,6 +136,9 @@ func validateBulkUpsertLocationRows(rows []domain.UpsertLocationParams) *apierro
 		lower := strings.ToLower(loc.Name)
 		if _, exists := nameInputSpace[lower]; exists {
 			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", loc.Name))
+		}
+		if loc.TypeCode == string(constants.LocationTypeCodeSite) && loc.Parent != nil {
+			rowErrs.AddField(i, "parent", apierror.CodeInvalidFormat, "a site is a top-level location, so it can't have a parent")
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
@@ -199,6 +228,7 @@ func resolveBulkUpsertLocationRows(ctx context.Context, repos domain.RepoFactory
 		resolved[i] = domain.ResolvedUpsertLocationRow{
 			Name:     loc.Name,
 			TypeCode: loc.TypeCode,
+			Status:   loc.Status,
 			Parent:   parent,
 			Children: children,
 		}
@@ -328,6 +358,20 @@ func linkLocationParentInTx(ctx context.Context, txRepos domain.RepoFactory, acc
 	before, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: accountID, LocationID: childID})
 	if apiErr != nil {
 		return apiErr
+	}
+	if before.IsSite() {
+		return apierror.NewValidationError("A site is a top-level location, so it can't be placed under another location.")
+	}
+	if !equalStringPtr(before.ParentID, &parentID) {
+		if apiErr := checkLocationShape(ctx, txRepos, accountID, locationShape{
+			id:        childID,
+			typeCode:  before.TypeCode,
+			status:    before.Status,
+			parentID:  &parentID,
+			newParent: true,
+		}); apiErr != nil {
+			return apiErr
+		}
 	}
 	if apiErr := repo.LinkParent(ctx, accountID, childID, parentID); apiErr != nil {
 		return apiErr

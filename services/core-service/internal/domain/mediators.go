@@ -193,3 +193,32 @@ type ProductionRunActivityMed interface {
 	//  3. Enqueue a standalone bell alert with no link.
 	NotifyRunDeleted(ctx context.Context, identity *types.Identity, run *ProductionRun) *apierror.APIError
 }
+
+// SiteMed answers which site a record belongs to, for the documents that carry a `site` (sales orders, purchase
+// orders, receiving, picks, shipments, jobs, work orders) and for filtering stock by site. It checks no permission:
+// the caller's own read or write authorizes it.
+type SiteMed interface {
+	// DefaultSiteID is the account's default site, nil while it has none.
+	DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError)
+
+	// Resolve is the site a document is assigned: siteID when the caller names one, else the account's default site.
+	//
+	//  1. With a siteID, return a validation error on param unless it is one of the account's locations and a site.
+	//  2. Return a 422 resource_archived on param when that site is archived.
+	//  3. Without one, return the account's default site (nil while it has none).
+	Resolve(ctx context.Context, accountID string, siteID *string, param string) (*string, *apierror.APIError)
+
+	// CreateDefaultSite gives a newly created account its default site. Call it right after the account (and its
+	// business address, if any) is written.
+	//
+	//  1. No-op when the account already has a default site.
+	//  2. Create an active `site` location named after the account, at its shipping address when it has one.
+	//  3. Make it the account's default site. Like the account's other starting records (portal, branding, calendars), it is not audited: the caller's identity targets another account, or none.
+	CreateDefaultSite(ctx context.Context, accountID string) (*Location, *apierror.APIError)
+
+	// LocationIDsInSites is every location of the account that belongs to one of siteIDs, the sites included.
+	//
+	//  1. Load the account's location tree and default site.
+	//  2. Keep each location whose nearest site ancestor is in siteIDs; one under no site belongs to the default site.
+	LocationIDsInSites(ctx context.Context, accountID string, siteIDs []string) ([]string, *apierror.APIError)
+}

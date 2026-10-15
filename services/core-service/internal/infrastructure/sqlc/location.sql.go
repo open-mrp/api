@@ -51,25 +51,6 @@ func (q *Queries) ConnectLocationChildren(ctx context.Context, arg ConnectLocati
 	return err
 }
 
-const countLocationChildren = `-- name: CountLocationChildren :one
-SELECT COUNT(*) AS count
-FROM storage_location
-WHERE parent_id = ?
-AND account_id = ?
-`
-
-type CountLocationChildrenParams struct {
-	ParentID  sql.NullString
-	AccountID string
-}
-
-func (q *Queries) CountLocationChildren(ctx context.Context, arg CountLocationChildrenParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countLocationChildren, arg.ParentID, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const deleteLocation = `-- name: DeleteLocation :exec
 DELETE FROM storage_location
 WHERE id = ?
@@ -185,6 +166,8 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
@@ -205,6 +188,8 @@ type FindLocationsByNamesRow struct {
 	ParentID       sql.NullString
 	ParentName     sql.NullString
 	ParentTypeCode sql.NullString
+	IsActive       bool
+	AddressID      sql.NullString
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -238,6 +223,8 @@ func (q *Queries) FindLocationsByNames(ctx context.Context, arg FindLocationsByN
 			&i.ParentID,
 			&i.ParentName,
 			&i.ParentTypeCode,
+			&i.IsActive,
+			&i.AddressID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -254,6 +241,34 @@ func (q *Queries) FindLocationsByNames(ctx context.Context, arg FindLocationsByN
 	return items, nil
 }
 
+const getAccountDefaultSiteID = `-- name: GetAccountDefaultSiteID :one
+SELECT default_site_id FROM account WHERE id = ?
+`
+
+func (q *Queries) GetAccountDefaultSiteID(ctx context.Context, accountID string) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getAccountDefaultSiteID, accountID)
+	var default_site_id sql.NullString
+	err := row.Scan(&default_site_id)
+	return default_site_id, err
+}
+
+const getAccountSiteSeed = `-- name: GetAccountSiteSeed :one
+SELECT name, default_site_id, default_shipping_address_id FROM account WHERE id = ?
+`
+
+type GetAccountSiteSeedRow struct {
+	Name                     string
+	DefaultSiteID            sql.NullString
+	DefaultShippingAddressID sql.NullString
+}
+
+func (q *Queries) GetAccountSiteSeed(ctx context.Context, accountID string) (GetAccountSiteSeedRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountSiteSeed, accountID)
+	var i GetAccountSiteSeedRow
+	err := row.Scan(&i.Name, &i.DefaultSiteID, &i.DefaultShippingAddressID)
+	return i, err
+}
+
 const getLocation = `-- name: GetLocation :one
 SELECT
     sl.id,
@@ -262,6 +277,8 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
@@ -282,6 +299,8 @@ type GetLocationRow struct {
 	ParentID       sql.NullString
 	ParentName     sql.NullString
 	ParentTypeCode sql.NullString
+	IsActive       bool
+	AddressID      sql.NullString
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -296,6 +315,8 @@ func (q *Queries) GetLocation(ctx context.Context, arg GetLocationParams) (GetLo
 		&i.ParentID,
 		&i.ParentName,
 		&i.ParentTypeCode,
+		&i.IsActive,
+		&i.AddressID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -339,6 +360,8 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
@@ -359,6 +382,8 @@ type GetLocationsByIDsRow struct {
 	ParentID       sql.NullString
 	ParentName     sql.NullString
 	ParentTypeCode sql.NullString
+	IsActive       bool
+	AddressID      sql.NullString
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -390,6 +415,8 @@ func (q *Queries) GetLocationsByIDs(ctx context.Context, arg GetLocationsByIDsPa
 			&i.ParentID,
 			&i.ParentName,
 			&i.ParentTypeCode,
+			&i.IsActive,
+			&i.AddressID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -413,9 +440,13 @@ INSERT INTO storage_location (
     name,
     storage_location_type_code,
     parent_id,
+    address_id,
+    is_active,
     created_at,
     updated_at
 ) VALUES (
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -432,6 +463,8 @@ type InsertLocationParams struct {
 	Name                    string
 	StorageLocationTypeCode string
 	ParentID                sql.NullString
+	AddressID               sql.NullString
+	IsActive                bool
 }
 
 func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) error {
@@ -441,53 +474,10 @@ func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) 
 		arg.Name,
 		arg.StorageLocationTypeCode,
 		arg.ParentID,
+		arg.AddressID,
+		arg.IsActive,
 	)
 	return err
-}
-
-const listLocationChildren = `-- name: ListLocationChildren :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code
-FROM storage_location sl
-WHERE sl.parent_id = ?
-AND sl.account_id = ?
-ORDER BY sl.name ASC
-`
-
-type ListLocationChildrenParams struct {
-	ParentID  sql.NullString
-	AccountID string
-}
-
-type ListLocationChildrenRow struct {
-	ID       string
-	Name     string
-	TypeCode string
-}
-
-func (q *Queries) ListLocationChildren(ctx context.Context, arg ListLocationChildrenParams) ([]ListLocationChildrenRow, error) {
-	rows, err := q.db.QueryContext(ctx, listLocationChildren, arg.ParentID, arg.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListLocationChildrenRow
-	for rows.Next() {
-		var i ListLocationChildrenRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.TypeCode); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listLocationChildrenByParentIDs = `-- name: ListLocationChildrenByParentIDs :many
@@ -495,11 +485,12 @@ SELECT
     sl.id,
     sl.name,
     sl.storage_location_type_code AS type_code,
-    sl.parent_id
+    sl.parent_id,
+    sl.created_at
 FROM storage_location sl
 WHERE sl.parent_id IN (/*SLICE:parent_ids*/?)
 AND sl.account_id = ?
-ORDER BY sl.name ASC
+ORDER BY sl.created_at DESC, sl.id DESC
 `
 
 type ListLocationChildrenByParentIDsParams struct {
@@ -508,10 +499,11 @@ type ListLocationChildrenByParentIDsParams struct {
 }
 
 type ListLocationChildrenByParentIDsRow struct {
-	ID       string
-	Name     string
-	TypeCode string
-	ParentID sql.NullString
+	ID        string
+	Name      string
+	TypeCode  string
+	ParentID  sql.NullString
+	CreatedAt time.Time
 }
 
 func (q *Queries) ListLocationChildrenByParentIDs(ctx context.Context, arg ListLocationChildrenByParentIDsParams) ([]ListLocationChildrenByParentIDsRow, error) {
@@ -539,7 +531,44 @@ func (q *Queries) ListLocationChildrenByParentIDs(ctx context.Context, arg ListL
 			&i.Name,
 			&i.TypeCode,
 			&i.ParentID,
+			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLocationTreeNodes = `-- name: ListLocationTreeNodes :many
+SELECT id, parent_id, storage_location_type_code AS type_code
+FROM storage_location
+WHERE account_id = ?
+`
+
+type ListLocationTreeNodesRow struct {
+	ID       string
+	ParentID sql.NullString
+	TypeCode string
+}
+
+// Every location's place in the tree, for working out which site each belongs to. An account holds a few hundred.
+func (q *Queries) ListLocationTreeNodes(ctx context.Context, accountID string) ([]ListLocationTreeNodesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listLocationTreeNodes, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLocationTreeNodesRow
+	for rows.Next() {
+		var i ListLocationTreeNodesRow
+		if err := rows.Scan(&i.ID, &i.ParentID, &i.TypeCode); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -681,174 +710,18 @@ func (q *Queries) ListLocationTypesForward(ctx context.Context, arg ListLocation
 	return items, nil
 }
 
-const listLocationsBackward = `-- name: ListLocationsBackward :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code,
-    sl.parent_id,
-    p.name AS parent_name,
-    p.storage_location_type_code AS parent_type_code,
-    sl.created_at,
-    sl.updated_at
-FROM storage_location sl
-LEFT JOIN storage_location p ON p.id = sl.parent_id
-WHERE sl.account_id = ?
-AND (
-    ? IS NULL
-    OR sl.name LIKE ?
-)
-AND (
-    sl.created_at > ?
-    OR (sl.created_at = ? AND sl.id > ?)
-)
-ORDER BY sl.created_at ASC, sl.id ASC
-LIMIT ?
+const setAccountDefaultSiteIfUnset = `-- name: SetAccountDefaultSiteIfUnset :execresult
+UPDATE account SET default_site_id = ?, updated_at = NOW(3)
+WHERE id = ? AND default_site_id IS NULL
 `
 
-type ListLocationsBackwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
+type SetAccountDefaultSiteIfUnsetParams struct {
+	SiteID    sql.NullString
+	AccountID string
 }
 
-type ListLocationsBackwardRow struct {
-	ID             string
-	Name           string
-	TypeCode       string
-	ParentID       sql.NullString
-	ParentName     sql.NullString
-	ParentTypeCode sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-func (q *Queries) ListLocationsBackward(ctx context.Context, arg ListLocationsBackwardParams) ([]ListLocationsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listLocationsBackward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListLocationsBackwardRow
-	for rows.Next() {
-		var i ListLocationsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.TypeCode,
-			&i.ParentID,
-			&i.ParentName,
-			&i.ParentTypeCode,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listLocationsForward = `-- name: ListLocationsForward :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code,
-    sl.parent_id,
-    p.name AS parent_name,
-    p.storage_location_type_code AS parent_type_code,
-    sl.created_at,
-    sl.updated_at
-FROM storage_location sl
-LEFT JOIN storage_location p ON p.id = sl.parent_id
-WHERE sl.account_id = ?
-AND (
-    ? IS NULL
-    OR sl.name LIKE ?
-)
-AND (
-    ? IS NULL
-    OR sl.created_at < ?
-    OR (sl.created_at = ? AND sl.id < ?)
-)
-ORDER BY sl.created_at DESC, sl.id DESC
-LIMIT ?
-`
-
-type ListLocationsForwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListLocationsForwardRow struct {
-	ID             string
-	Name           string
-	TypeCode       string
-	ParentID       sql.NullString
-	ParentName     sql.NullString
-	ParentTypeCode sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-func (q *Queries) ListLocationsForward(ctx context.Context, arg ListLocationsForwardParams) ([]ListLocationsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listLocationsForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListLocationsForwardRow
-	for rows.Next() {
-		var i ListLocationsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.TypeCode,
-			&i.ParentID,
-			&i.ParentName,
-			&i.ParentTypeCode,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) SetAccountDefaultSiteIfUnset(ctx context.Context, arg SetAccountDefaultSiteIfUnsetParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, setAccountDefaultSiteIfUnset, arg.SiteID, arg.AccountID)
 }
 
 const updateLocation = `-- name: UpdateLocation :execresult
@@ -856,6 +729,8 @@ UPDATE storage_location SET
     name = COALESCE(?, name),
     storage_location_type_code = COALESCE(?, storage_location_type_code),
     parent_id = ?,
+    address_id = ?,
+    is_active = COALESCE(?, is_active),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -865,6 +740,8 @@ type UpdateLocationParams struct {
 	Name                    sql.NullString
 	StorageLocationTypeCode sql.NullString
 	ParentID                sql.NullString
+	AddressID               sql.NullString
+	IsActive                sql.NullBool
 	ID                      string
 	AccountID               string
 }
@@ -874,6 +751,8 @@ func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) 
 		arg.Name,
 		arg.StorageLocationTypeCode,
 		arg.ParentID,
+		arg.AddressID,
+		arg.IsActive,
 		arg.ID,
 		arg.AccountID,
 	)

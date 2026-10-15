@@ -647,6 +647,11 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			}
 		}
 
+		// 3b. Give the account its default site, at the business address when there is one.
+		if _, apiErr := s.mediatorFactory.Build(f).Site.CreateDefaultSite(txCtx, accountID); apiErr != nil {
+			return apiErr
+		}
+
 		// 4. Create portal for production account
 		if apiErr := txRegRepo.CreateAccountPortal(txCtx, accountID); apiErr != nil {
 			return apiErr

@@ -2,6 +2,8 @@ package resourceloaders
 
 import (
 	"context"
+	"net/url"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -33,11 +35,8 @@ func LoadLocations(ctx context.Context, ids []string) (map[string]any, *apierror
 	for _, loc := range resp.Locations {
 		out[loc.Id] = locationFromProto(loc)
 
-		var parentID string
-		if loc.ParentId != nil {
-			parentID = *loc.ParentId
-		}
-		meta.Set(constants.ObjectTypeLocation, loc.Id, "parent_id", parentID)
+		meta.Set(constants.ObjectTypeLocation, loc.Id, "parent_id", loc.GetParentId())
+		meta.Set(constants.ObjectTypeLocation, loc.Id, "address_id", loc.GetAddressId())
 
 		childIDs := make([]string, len(loc.Children))
 		for i, c := range loc.Children {
@@ -48,13 +47,31 @@ func LoadLocations(ctx context.Context, ids []string) (map[string]any, *apierror
 	return out, nil
 }
 
+// LocationChildrenListPath is the location list narrowed to one location's children, where its embedded children
+// continue.
+func LocationChildrenListPath(locationID string) string {
+	return "/v1/operations/locations?" + url.Values{"parent_ids[]": {locationID}}.Encode()
+}
+
 func locationFromProto(loc *pb.LocationInfo) *apiresource.Location {
 	return &apiresource.Location{
 		ID:        loc.Id,
 		Object:    constants.ObjectTypeLocation,
 		Name:      loc.Name,
 		TypeCode:  constants.LocationTypeCode(loc.TypeCode),
+		Status:    constants.ArchiveStatus(loc.Status),
 		CreatedAt: grpcutil.TimestampToTime(loc.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(loc.UpdatedAt),
 	}
 }
+
+// StashSiteID records a document's site for the `site` include that SiteSub registers on it. Call it from the
+// document's loader for every row; an empty siteID (no site) is skipped.
+func StashSiteID(ctx context.Context, parentType constants.ObjectType, parentID, siteID string) {
+	if siteID != "" {
+		include.GetLoadMeta(ctx).Set(parentType, parentID, SiteMetaKey, siteID)
+	}
+}
+
+// SiteMetaKey is the load-meta key a document's site ID is stashed under.
+const SiteMetaKey = "site_id"

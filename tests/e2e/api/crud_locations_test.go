@@ -20,7 +20,7 @@ const locationTypesPath = "/v1/operations/location-types"
 
 func TestLocationTypes_List(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(locationTypesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(locationTypesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 6, "Should have at least 6 location types (building, section, aisle, rack, shelf, bin)")
@@ -28,7 +28,7 @@ func TestLocationTypes_List(t *testing.T) {
 
 func TestLocationTypes_ListResponseShape(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(locationTypesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(locationTypesPath, nil)
 	require.NoError(t, err)
 
 	for _, item := range list.Data {
@@ -45,7 +45,7 @@ func TestLocationTypes_ListResponseShape(t *testing.T) {
 
 func TestLocationTypes_GetByCode(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(locationTypesPath+"/building", nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(locationTypesPath+"/building", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -58,7 +58,7 @@ func TestLocationTypes_GetByCode(t *testing.T) {
 
 func TestLocationTypes_GetNotFound(t *testing.T) {
 	t.Parallel()
-	status, _, err := apiClient.GetListRaw(locationTypesPath+"/nonexistent_type", nil)
+	status, _, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(locationTypesPath+"/nonexistent_type", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status)
 }
@@ -259,6 +259,10 @@ func TestLocations_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "location", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, "section", jsonField(got, "type"))
+	assert.Equal(t, "active", jsonField(got, "status"))
+	assertNilField(t, got, "address")
+	assertNilField(t, got, "parent")
+	assertNilField(t, got, "children")
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -482,8 +486,7 @@ func TestLocations_DeleteWithChildrenFails(t *testing.T) {
 	// Attempt to delete parent — should fail because it has children
 	delStatus, _, err := apiClient.Delete(locationsPath + "/" + parentID)
 	require.NoError(t, err)
-	assert.True(t, delStatus == 400 || delStatus == 409 || delStatus == 422,
-		"Deleting a location with children should fail, got %d", delStatus)
+	assert.Equal(t, 409, delStatus, "Deleting a location with children is resource_in_use")
 
 	// Cleanup: delete child then parent
 	apiClient.Delete(locationsPath + "/" + childID)
@@ -642,8 +645,9 @@ func TestLocations_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assert.Nil(t, got["parent"], "parent should be null without ?include=parent")
-	assert.Nil(t, got["children"], "children should be null without ?include=children")
+	assertNilField(t, got, "parent")
+	assertNilField(t, got, "children")
+	assertNilField(t, got, "address")
 
 	// Test on List
 	list, _, err := apiClient.GetList(locationsPath, nil)

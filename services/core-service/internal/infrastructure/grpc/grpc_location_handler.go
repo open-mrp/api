@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -32,6 +33,8 @@ func locationToProto(sl *domain.Location) *pb.LocationInfo {
 		ParentId:       sl.ParentID,
 		ParentName:     sl.ParentName,
 		ParentTypeCode: sl.ParentTypeCode,
+		Status:         string(sl.Status),
+		AddressId:      sl.AddressID,
 		CreatedAt:      timestamppb.New(sl.CreatedAt),
 		UpdatedAt:      timestamppb.New(sl.UpdatedAt),
 	}
@@ -44,6 +47,15 @@ func locationToProto(sl *domain.Location) *pb.LocationInfo {
 	}
 
 	return info
+}
+
+// optionalArchiveStatus is a status the caller may have left out.
+func optionalArchiveStatus(v *string) *constants.ArchiveStatus {
+	if v == nil {
+		return nil
+	}
+	s := constants.ArchiveStatus(*v)
+	return &s
 }
 
 func locationTypeToProto(slt *domain.LocationType) *pb.LocationTypeInfo {
@@ -78,10 +90,12 @@ func (h *gRPCHandler) ListLocations(ctx context.Context, req *pb.ListLocationsRe
 	}
 
 	params := domain.ListLocationsParams{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: req.Includes,
+		Cursor:    req.Cursor,
+		Limit:     req.Limit,
+		Query:     req.Query,
+		IsActive:  constants.IsActiveFilter(archiveStatuses(req.Statuses)),
+		ParentIDs: req.ParentIds,
+		Includes:  req.Includes,
 	}
 
 	result, apiErr := h.locationSvc.ListLocations(ctx, params)
@@ -132,11 +146,13 @@ func (h *gRPCHandler) CreateLocation(ctx context.Context, req *pb.CreateLocation
 	defer finalizeIdempotency()
 
 	params := domain.CreateLocationParams{
-		Name:     req.Name,
-		TypeCode: req.TypeCode,
-		ParentID: req.ParentId,
-		ChildIDs: req.ChildIds,
-		Includes: req.Includes,
+		Name:      req.Name,
+		TypeCode:  req.TypeCode,
+		Status:    optionalArchiveStatus(req.Status),
+		ParentID:  req.ParentId,
+		AddressID: req.AddressId,
+		ChildIDs:  req.ChildIds,
+		Includes:  req.Includes,
 	}
 
 	sl, apiErr := h.locationSvc.CreateLocation(ctx, params)
@@ -161,7 +177,9 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 		LocationID: req.Id,
 		Name:       req.Name,
 		TypeCode:   req.TypeCode,
+		Status:     optionalArchiveStatus(req.Status),
 		ParentID:   fieldpb.StringClearableFromProto(req.ParentId),
+		AddressID:  fieldpb.StringClearableFromProto(req.AddressId),
 		ChildIDs:   stringListPatchToSliceField(req.ChildIds),
 		Includes:   req.Includes,
 	}
@@ -230,6 +248,7 @@ func (h *gRPCHandler) BulkUpsertLocations(ctx context.Context, req *pb.BulkUpser
 		locations = append(locations, domain.UpsertLocationParams{
 			Name:     loc.Name,
 			TypeCode: loc.TypeCode,
+			Status:   optionalArchiveStatus(loc.Status),
 			Parent:   objectIdentifierPtrFromProto(loc.Parent),
 			Children: children,
 		})

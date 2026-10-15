@@ -69,8 +69,6 @@ services/core-service/internal/infrastructure/sqlc/job.sql.go:listJobsForward 1
 services/core-service/internal/infrastructure/sqlc/location.sql.go:exportLocations 1
 services/core-service/internal/infrastructure/sqlc/location.sql.go:listLocationTypesBackward 1
 services/core-service/internal/infrastructure/sqlc/location.sql.go:listLocationTypesForward 2
-services/core-service/internal/infrastructure/sqlc/location.sql.go:listLocationsBackward 1
-services/core-service/internal/infrastructure/sqlc/location.sql.go:listLocationsForward 2
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:countMachinesByName 1
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:countMachinesBySerialNumber 1
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:exportMachines 1

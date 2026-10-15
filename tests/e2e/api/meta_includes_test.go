@@ -361,6 +361,12 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{
 	// populate both includes: a location under a head office names its parent, and one
 	// under a head office that set nothing names its group. Both are seeded in
 	// 0014_e2e_extras.sql and are read-only.
+	// Only a site has an address; the seeded building sits in the campus site, which does.
+	"retrieve-location": {
+		pathValuesByInclude: map[string]map[string]string{
+			"address": {"id": SeedLocationParentID},
+		},
+	},
 	"retrieve-customer-lead-time": {
 		pathValuesByInclude: map[string]map[string]string{
 			"parent_customer": {"id": "ac_01e2eltchild000001"},

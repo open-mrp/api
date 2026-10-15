@@ -21,7 +21,7 @@ type DeleteLocationRequest struct {
 
 // Deletes a location.
 //
-// Fails if the location has child locations; remove or reassign the children first.
+// Only while no stock, inventory movement, delivery, work center or batch uses it, it has no child locations, and it isn't your default site. Archive a location instead by setting `status` to `archived`.
 type DeleteLocationEndpoint struct{}
 
 func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteLocationRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteL
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteLocationRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(LocationSvc).DeleteLocation, constants.ObjectTypeLocation, "id")
 		},

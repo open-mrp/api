@@ -16,12 +16,14 @@ import (
 
 // UpsertLocationInput is the input for a single location in a bulk upsert operation.
 type UpsertLocationInput struct {
-	// Display name of the location, used to match existing locations.
+	// Display name of the location, used to match existing locations (case-insensitive).
 	Name string `json:"name" validate:"required,max=255"`
-	// Location type code.
+	// What kind of place this is: `site`, `building`, `section`, `aisle`, `rack`, `shelf` or `bin`. A site is always top-level.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
+	// `active` or `archived`. Omitted, a new location is active and an existing one keeps its status.
+	Status *constants.ArchiveStatus `json:"status,omitempty"`
 	// Parent location, referenced by `id` or `name`, or by name for a location in the same
-	// batch. Omitted, a new location is top-level and an existing one keeps its parent.
+	// batch. Omitted, a new location is top-level and an existing one keeps its parent. A site takes no parent.
 	Parent *apirequest.ObjectIdentifier `json:"parent,omitempty"`
 	// Child locations to re-parent under this one, referenced by `id` or `name`, or by name
 	// for a location in the same batch. Redundant with `parent` on each child.
@@ -47,8 +49,9 @@ func (*BulkUpsertLocationsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertLocationsRequest)
 }
 
-// Creates or updates multiple locations for the account, matched by name
-// (case-insensitive), then writes asynchronously — 202 with a job to poll.
+// Creates or updates many locations at once.
+//
+// Rows are matched to your existing locations by name (case-insensitive). The writes run in the background: the response is a 202 with an async job to poll for each row's result.
 type BulkUpsertLocationsEndpoint struct{}
 
 func (e *BulkUpsertLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertLocationsRequest, *apiresource.AsyncJob] {
@@ -61,7 +64,6 @@ func (e *BulkUpsertLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionCreate}, {Domain: types.PermissionDomainLocations, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

@@ -187,6 +187,11 @@ UPDATE storage_location SET parent_id = 'sglc_01seedsb_building0'
     )
     AND parent_id IS NULL;
 
+UPDATE storage_location SET storage_location_type_code = 'site'
+    WHERE id = 'sglc_01seedsb_building0' AND parent_id IS NULL;
+UPDATE account SET default_site_id = 'sglc_01seedsb_building0'
+    WHERE id = 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb' AND default_site_id IS NULL;
+
 -- Sandbox department location_id updates
 UPDATE department SET location_id = 'sglc_01seedsb_knitting0' WHERE id = 'dp_01seedsb_knitting000' AND location_id IS NULL;
 UPDATE department SET location_id = 'sglc_01seedsb_washing00' WHERE id = 'dp_01seedsb_washing0000' AND location_id IS NULL;

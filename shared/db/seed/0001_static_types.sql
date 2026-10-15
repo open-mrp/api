@@ -114,6 +114,7 @@ INSERT IGNORE INTO sys_property_type (id, code, name, created_at, updated_at) VA
 
 -- storage_location_type
 INSERT IGNORE INTO storage_location_type (id, code, name, created_at, updated_at) VALUES
+    ('sltp_01seedsite00000000', 'site', 'Site', NOW(), NOW()),
     ('sltp_01seedbuilding0000', 'building', 'Building', NOW(), NOW()),
     ('sltp_01seedsection00000', 'section', 'Section', NOW(), NOW()),
     ('sltp_01seedaisle0000000', 'aisle', 'Aisle', NOW(), NOW()),

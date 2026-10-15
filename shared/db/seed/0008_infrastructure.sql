@@ -48,6 +48,12 @@ UPDATE storage_location SET parent_id = 'sglc_01seedbuilding0000'
     )
     AND parent_id IS NULL;
 
+-- The building is the account's site and its default site
+UPDATE storage_location SET storage_location_type_code = 'site'
+    WHERE id = 'sglc_01seedbuilding0000' AND parent_id IS NULL;
+UPDATE account SET default_site_id = 'sglc_01seedbuilding0000'
+    WHERE id = 'ac_01k0a5smf9ekb8rqg12555zjqa' AND default_site_id IS NULL;
+
 -- Set department location_id to corresponding storage location section
 UPDATE department SET location_id = 'sglc_01seedknitting000' WHERE id = 'dp_01k0a5r01yfx3sj1vy9qgv3dc0' AND location_id IS NULL;
 UPDATE department SET location_id = 'sglc_01seedwashing0000' WHERE id = 'dp_01k0a5r01yf5csvz0jqfznf13d' AND location_id IS NULL;

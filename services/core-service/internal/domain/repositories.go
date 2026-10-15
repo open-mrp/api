@@ -1941,7 +1941,14 @@ type LocationRepo interface {
 	ListTypes(ctx context.Context, params ListLocationTypesParams) (*ListLocationTypesResult, *apierror.APIError)
 	GetType(ctx context.Context, idOrCode string) (*LocationType, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
-	CountChildren(ctx context.Context, accountID, parentID string) (int64, *apierror.APIError)
+	// DefaultSiteID is the account's default site, nil while it has none.
+	DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError)
+	// SiteSeed is what an account's first site is made from: its name, default site and shipping address.
+	SiteSeed(ctx context.Context, accountID string) (*AccountSiteSeed, *apierror.APIError)
+	// SetDefaultSiteIfUnset makes siteID the account's default site unless it already has one, reporting whether it did.
+	SetDefaultSiteIfUnset(ctx context.Context, accountID, siteID string) (bool, *apierror.APIError)
+	// ListTreeNodes is every location of the account with its parent and type.
+	ListTreeNodes(ctx context.Context, accountID string) ([]LocationTreeNode, *apierror.APIError)
 }
 
 type StripeEventLogRepo interface {

@@ -978,14 +978,20 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
 -- ============================================================
 -- LOCATION PARENT
 -- ============================================================
--- Seeds a campus that owns SeedLocationID (the Main Building) so
+-- Seeds a campus site that owns SeedLocationID (the Main Building) so
 -- `?include=parent` on the seeded location resolves to a populated stub.
+-- The campus is the account's default site, at its shipping address.
 
 INSERT IGNORE INTO storage_location (id, account_id, storage_location_type_code, name, created_at, updated_at) VALUES
-    ('sglc_01seedcampus00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'building', 'OpenMRP Campus', NOW(), NOW());
+    ('sglc_01seedcampus00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'site', 'OpenMRP Campus', NOW(), NOW());
 
-UPDATE storage_location SET parent_id = 'sglc_01seedcampus00000'
+UPDATE storage_location SET parent_id = 'sglc_01seedcampus00000', storage_location_type_code = 'building'
     WHERE id = 'sglc_01seedbuilding0000' AND parent_id IS NULL;
+UPDATE account SET default_site_id = 'sglc_01seedcampus00000'
+    WHERE id = 'ac_01k0a5smf9ekb8rqg12555zjqa';
+UPDATE storage_location sl JOIN account a ON a.id = sl.account_id
+    SET sl.address_id = a.default_shipping_address_id
+    WHERE sl.id = 'sglc_01seedcampus00000' AND sl.address_id IS NULL;
 
 -- ============================================================
 -- ACCOUNT-OWNED SHIPPING TERM (for list-shipping-terms include coverage)

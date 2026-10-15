@@ -74,5 +74,5 @@ func TestFulfillmentPolicy_CustomerRejectsUnknownValue(t *testing.T) {
 	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a bad policy must be a client error: %s", string(respBody))
-	assert.Equal(t, 400, status, "body: %s", string(respBody))
+	assert.Equal(t, 422, status, "body: %s", string(respBody))
 }

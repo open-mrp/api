@@ -14,7 +14,7 @@ import (
 )
 
 // Changes OpenMRP makes outside any request — here, linking a payment Stripe reported to the
-// order it paid — are audited with no public actor.
+// order it paid — are audited with the system as their actor.
 
 // postCheckoutCompleted delivers a signed checkout.session.completed for orderID to the platform
 // Stripe webhook, as Stripe does when a portal customer pays an order.
@@ -77,7 +77,7 @@ func findPaymentLinkAuditEvent(t *testing.T, since, orderID string) map[string]a
 	return found
 }
 
-func TestSystemActor_StripePaymentLinkIsAuditedWithNoActor(t *testing.T) {
+func TestSystemActor_StripePaymentLinkIsAuditedAsTheSystem(t *testing.T) {
 	t.Parallel()
 	since := time.Now().Add(-5 * time.Second).UTC().Format(time.RFC3339)
 	order := createAndCleanup(t, salesOrdersPath, minimalSalesOrderCreateBody(t, SeedCustomerAccountID))
@@ -87,21 +87,26 @@ func TestSystemActor_StripePaymentLinkIsAuditedWithNoActor(t *testing.T) {
 	postCheckoutCompleted(t, orderID, paymentIntentID)
 
 	event := findPaymentLinkAuditEvent(t, since, orderID)
-	actorValue, present := event["actor"]
-	assert.True(t, present, "actor is always present when included: %v", event)
-	assert.Nil(t, actorValue, "a background change has no public actor")
+	actor := jsonObject(event, "actor")
+	require.NotNil(t, actor, "actor is always present when included: %v", event)
+	assert.Equal(t, "system", jsonField(actor, "type"), "a background change is the system's")
 	assert.Nil(t, event["source_ip"], "no request caused the change")
 	assert.Nil(t, event["idempotency_key"], "no request caused the change")
 
 	change, _ := changeForField(jsonListData(event, "changes"), "payment_intent_ids")
 	assert.Contains(t, fmt.Sprint(change["new_value"]), paymentIntentID)
 
-	// The public actor types are unchanged.
+	// The system is an actor type the list filters by.
 	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 		"resource_ids": {orderID},
 		"actor_types":  {"system"},
 		"starts_at":    {since},
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 200, status, body)
+	var ids []string
+	for _, item := range jsonArray(parseJSON(body), "data") {
+		ids = append(ids, jsonField(item.(map[string]any), "id"))
+	}
+	assert.Contains(t, ids, jsonField(event, "id"))
 }

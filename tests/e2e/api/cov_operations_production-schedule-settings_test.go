@@ -324,7 +324,7 @@ func TestScheduleResourceSettings_UpsertRejectsUnknownScope(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status)
+	assert.Equal(t, 422, status)
 }
 
 // ──────────────────────────────────────────────

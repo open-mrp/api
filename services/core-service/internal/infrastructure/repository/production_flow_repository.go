@@ -256,14 +256,8 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 	}
 	step.MachineIDs = machineIDs
 
-	if row.LaborRateID.Valid {
-		step.LaborRate = &domain.FlowRate{
-			ID:                row.LaborRateID.String,
-			Value:             row.LaborRateValue.String,
-			NumeratorUnitID:   row.LaborRateNumUnitID.String,
-			DenominatorUnitID: row.LaborRateDenUnitID.String,
-			DenominatorRatio:  row.LaborRateDenRatio,
-		}
+	if p := unitPriceFromColumns(row.LaborRateAmount, row.LaborRateCurrency, row.LaborRatePerUnitID, row.LegacyLaborRateValue, row.LaborRatePerUnitID); p != nil {
+		step.LaborRate = &domain.FlowPrice{UnitPrice: *p, PerUnitRatio: row.LaborRateDenRatio}
 	}
 
 	if row.LaborTimeID.Valid {
@@ -278,14 +272,8 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 		}
 	}
 
-	if row.OverheadRateID.Valid {
-		step.OverheadRate = &domain.FlowRate{
-			ID:                row.OverheadRateID.String,
-			Value:             row.OverheadRateValue.String,
-			NumeratorUnitID:   row.OverheadRateNumUnitID.String,
-			DenominatorUnitID: row.OverheadRateDenUnitID.String,
-			DenominatorRatio:  row.OverheadRateDenRatio,
-		}
+	if p := unitPriceFromColumns(row.OverheadRateAmount, row.OverheadRateCurrency, row.OverheadRatePerUnitID, row.LegacyOverheadRateValue, row.OverheadRatePerUnitID); p != nil {
+		step.OverheadRate = &domain.FlowPrice{UnitPrice: *p, PerUnitRatio: row.OverheadRateDenRatio}
 	}
 
 	return step, nil

@@ -820,7 +820,7 @@ func (r *receivingOrderRepoImpl) LockItemForLedger(ctx context.Context, itemID s
 	return nil
 }
 
-func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
+func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, unitCost domain.UnitPrice, storageLocationID, lotID, orderID *string) *apierror.APIError {
 	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
 	if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
 		return apiErr
@@ -842,7 +842,7 @@ func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.C
 		orderNull = gosql.NullString{String: *orderID, Valid: true}
 	}
 
-	err := r.queries.InsertInventoryReceiptForDelivery(ctx, sqlc.InsertInventoryReceiptForDeliveryParams{
+	insert := sqlc.InsertInventoryReceiptForDeliveryParams{
 		ID:                receiptID,
 		AccountID:         accountID,
 		ItemID:            itemID,
@@ -851,7 +851,9 @@ func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.C
 		StorageLocationID: storageLocNull,
 		LotID:             lotNull,
 		OrderID:           orderNull,
-	})
+	}
+	insert.UnitCostAmount, insert.UnitCostCurrency, insert.UnitCostPerUnitID = unitPriceParams(&unitCost)
+	err := r.queries.InsertInventoryReceiptForDelivery(ctx, insert)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

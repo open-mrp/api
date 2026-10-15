@@ -76,7 +76,7 @@ func TestGetFlowStep_ReadsLaborTimeAndProducedUnitRatios(t *testing.T) {
 	require.Equal(t, "quantity", step.LaborTime.DenominatorUnitType)
 
 	require.NotNil(t, step.LaborRate)
-	requireRatio(t, "labor rate denominator ratio", step.LaborRate.DenominatorRatio, "1")
+	requireRatio(t, "labor rate denominator ratio", step.LaborRate.PerUnitRatio, "1")
 }
 
 func requireRatio(t *testing.T, label, got, want string) {

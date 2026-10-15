@@ -73,21 +73,15 @@ func mapListRow(row sqlc.ListProductionStepsByIDsRow) *domain.ProductionStep {
 			CreatedAt:        row.ProductionCreatedAt,
 			UpdatedAt:        row.ProductionUpdatedAt,
 		},
-		LaborRate: mapRateFromRow(
-			row.LaborRateID, row.LaborRateValue,
-			row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
-			row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType,
-		),
+		LaborRate: unitPriceFromColumns(row.LaborRateAmount, row.LaborRateCurrency, row.LaborRatePerUnitID,
+			row.LegacyLaborRateValue, row.LegacyLaborRatePerUnitID),
 		LaborTime: mapRateFromRow(
 			row.LaborTimeID, row.LaborTimeValue,
 			row.LaborTimeNumUnitID, row.LaborTimeNumUnitAbbr, row.LaborTimeNumUnitType,
 			row.LaborTimeDenUnitID, row.LaborTimeDenUnitAbbr, row.LaborTimeDenUnitType,
 		),
-		OverheadRate: mapRateFromRow(
-			row.OverheadRateID, row.OverheadRateValue,
-			row.OverheadRateNumUnitID, row.OverheadRateNumUnitAbbr, row.OverheadRateNumUnitType,
-			row.OverheadRateDenUnitID, row.OverheadRateDenUnitAbbr, row.OverheadRateDenUnitType,
-		),
+		OverheadRate: unitPriceFromColumns(row.OverheadRateAmount, row.OverheadRateCurrency, row.OverheadRatePerUnitID,
+			row.LegacyOverheadRateValue, row.LegacyOverheadRatePerUnitID),
 	}
 
 	if row.ScanningStationID.Valid {
@@ -127,21 +121,15 @@ func mapGetFullRow(row sqlc.GetProductionStepFullRow) *domain.ProductionStep {
 			CreatedAt:        row.ProductionCreatedAt,
 			UpdatedAt:        row.ProductionUpdatedAt,
 		},
-		LaborRate: mapRateFromRow(
-			row.LaborRateID, row.LaborRateValue,
-			row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
-			row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType,
-		),
+		LaborRate: unitPriceFromColumns(row.LaborRateAmount, row.LaborRateCurrency, row.LaborRatePerUnitID,
+			row.LegacyLaborRateValue, row.LegacyLaborRatePerUnitID),
 		LaborTime: mapRateFromRow(
 			row.LaborTimeID, row.LaborTimeValue,
 			row.LaborTimeNumUnitID, row.LaborTimeNumUnitAbbr, row.LaborTimeNumUnitType,
 			row.LaborTimeDenUnitID, row.LaborTimeDenUnitAbbr, row.LaborTimeDenUnitType,
 		),
-		OverheadRate: mapRateFromRow(
-			row.OverheadRateID, row.OverheadRateValue,
-			row.OverheadRateNumUnitID, row.OverheadRateNumUnitAbbr, row.OverheadRateNumUnitType,
-			row.OverheadRateDenUnitID, row.OverheadRateDenUnitAbbr, row.OverheadRateDenUnitType,
-		),
+		OverheadRate: unitPriceFromColumns(row.OverheadRateAmount, row.OverheadRateCurrency, row.OverheadRatePerUnitID,
+			row.LegacyOverheadRateValue, row.LegacyOverheadRatePerUnitID),
 	}
 
 	if row.ScanningStationID.Valid {
@@ -306,11 +294,11 @@ func (r *productionStepRepoImpl) Get(ctx context.Context, accountID, id string) 
 	return step, nil
 }
 
-func (r *productionStepRepoImpl) InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, scanningStationID, departmentID *string, accountID string) *apierror.APIError {
+func (r *productionStepRepoImpl) InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, laborRate, overheadRate domain.UnitPrice, scanningStationID, departmentID *string, accountID string) *apierror.APIError {
 	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.insert_step")
 	defer span.End()
 
-	err := r.queries.InsertProductionStep(ctx, sqlc.InsertProductionStepParams{
+	insert := sqlc.InsertProductionStepParams{
 		ID:                id,
 		Name:              name,
 		Notes:             ptrToNullString(notes),
@@ -322,7 +310,10 @@ func (r *productionStepRepoImpl) InsertStep(ctx context.Context, id, name string
 		ScanningStationID: ptrToNullString(scanningStationID),
 		DepartmentID:      ptrToNullString(departmentID),
 		AccountID:         accountID,
-	})
+	}
+	insert.LaborRateAmount, insert.LaborRateCurrency, insert.LaborRatePerUnitID = unitPriceParams(&laborRate)
+	insert.OverheadRateAmount, insert.OverheadRateCurrency, insert.OverheadRatePerUnitID = unitPriceParams(&overheadRate)
+	err := r.queries.InsertProductionStep(ctx, insert)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -615,7 +606,7 @@ func (r *productionStepRepoImpl) UpdateForBulkUpsert(ctx context.Context, params
 	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.update_for_bulk_upsert")
 	defer span.End()
 
-	err := r.queries.UpdateProductionStepForBulkUpsert(ctx, sqlc.UpdateProductionStepForBulkUpsertParams{
+	update := sqlc.UpdateProductionStepForBulkUpsertParams{
 		ID:                params.ProductionStepID,
 		AccountID:         params.AccountID,
 		Name:              params.Name,
@@ -626,7 +617,10 @@ func (r *productionStepRepoImpl) UpdateForBulkUpsert(ctx context.Context, params
 		LaborRateID:       params.LaborRateID,
 		LaborTimeID:       params.LaborTimeID,
 		OverheadRateID:    params.OverheadRateID,
-	})
+	}
+	update.LaborRateAmount, update.LaborRateCurrency, update.LaborRatePerUnitID = unitPriceParams(&params.LaborRate)
+	update.OverheadRateAmount, update.OverheadRateCurrency, update.OverheadRatePerUnitID = unitPriceParams(&params.OverheadRate)
+	err := r.queries.UpdateProductionStepForBulkUpsert(ctx, update)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

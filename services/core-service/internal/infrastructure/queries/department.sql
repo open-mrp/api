@@ -9,19 +9,15 @@ SELECT
     d.location_id,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.id IN (sqlc.slice('ids'))
 AND d.account_id = sqlc.arg('account_id');
 
@@ -49,20 +45,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -86,20 +78,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -122,20 +110,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.id = sqlc.arg('id')
 AND d.account_id = sqlc.arg('account_id');
 
@@ -146,6 +130,9 @@ INSERT INTO department (
     notes,
     location_id,
     labor_rate_id,
+    labor_rate_amount,
+    labor_rate_currency,
+    labor_rate_per_unit_id,
     account_id,
     created_at,
     updated_at
@@ -155,6 +142,9 @@ INSERT INTO department (
     sqlc.narg('notes'),
     sqlc.narg('location_id'),
     sqlc.narg('labor_rate_id'),
+    sqlc.narg('labor_rate_amount'),
+    sqlc.narg('labor_rate_currency'),
+    sqlc.narg('labor_rate_per_unit_id'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -166,6 +156,9 @@ UPDATE department SET
     notes = sqlc.narg('notes'),
     location_id = COALESCE(sqlc.narg('location_id'), location_id),
     labor_rate_id = COALESCE(sqlc.narg('labor_rate_id'), labor_rate_id),
+    labor_rate_amount = COALESCE(sqlc.narg('labor_rate_amount'), labor_rate_amount),
+    labor_rate_currency = COALESCE(sqlc.narg('labor_rate_currency'), labor_rate_currency),
+    labor_rate_per_unit_id = COALESCE(sqlc.narg('labor_rate_per_unit_id'), labor_rate_per_unit_id),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

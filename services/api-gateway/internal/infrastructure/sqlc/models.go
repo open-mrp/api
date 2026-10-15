@@ -465,6 +465,7 @@ type Attribute struct {
 	ColorCode  string
 	AccountID  string
 	IsPublic   bool
+	IsActive   bool
 }
 
 type AuditEvent struct {
@@ -514,6 +515,17 @@ type Batch struct {
 	ProductionRunID   sql.NullString
 	ScannedAt         sql.NullTime
 	LocationID        sql.NullString
+}
+
+type BatchCountAdjustment struct {
+	ID             string
+	AccountID      string
+	BatchID        string
+	ClosingBatchID string
+	PreviousValue  string
+	CountedValue   string
+	UnitID         string
+	CreatedAt      time.Time
 }
 
 type BatchFlow struct {
@@ -603,28 +615,29 @@ type Consumption struct {
 }
 
 type Conversation struct {
-	ID                     string
-	AccountID              string
-	Type                   string
-	Audience               string
-	Title                  sql.NullString
-	GroupID                sql.NullString
-	TopicResourceType      sql.NullString
-	TopicResourceID        sql.NullString
-	CreatedByParticipantID sql.NullString
-	NextSequence           int64
-	LastMessageID          sql.NullString
-	LastMessageAt          sql.NullTime
-	IsArchived             bool
-	LegalHold              bool
-	WorkflowStatus         sql.NullString
-	AssigneeResourceType   sql.NullString
-	AssigneeResourceID     sql.NullString
-	EmailInboxID           sql.NullString
-	EmailExternalAddress   sql.NullString
-	Metadata               json.RawMessage
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                      string
+	AccountID               string
+	Type                    string
+	Audience                string
+	Title                   sql.NullString
+	GroupID                 sql.NullString
+	TopicResourceType       sql.NullString
+	TopicResourceID         sql.NullString
+	CreatedByParticipantID  sql.NullString
+	NextSequence            int64
+	LastMessageID           sql.NullString
+	LastMessageAt           sql.NullTime
+	IsArchived              bool
+	LegalHold               bool
+	WorkflowStatus          sql.NullString
+	AssigneeResourceType    sql.NullString
+	AssigneeResourceID      sql.NullString
+	EmailInboxID            sql.NullString
+	EmailExternalAddress    sql.NullString
+	Metadata                json.RawMessage
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	ContinuesConversationID sql.NullString
 }
 
 type ConversationDmKey struct {
@@ -699,6 +712,9 @@ type DeliveryLine struct {
 	LotID                sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	UnitCostAmount       sql.NullString
+	UnitCostCurrency     sql.NullString
+	UnitCostPerUnitID    sql.NullString
 }
 
 type DeliveryStatus struct {
@@ -738,14 +754,17 @@ type DemandOverrideType struct {
 }
 
 type Department struct {
-	ID          string
-	Name        string
-	Notes       sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	LocationID  sql.NullString
-	AccountID   string
-	LaborRateID sql.NullString
+	ID                 string
+	Name               string
+	Notes              sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	LocationID         sql.NullString
+	AccountID          string
+	LaborRateID        sql.NullString
+	LaborRateAmount    sql.NullString
+	LaborRateCurrency  sql.NullString
+	LaborRatePerUnitID sql.NullString
 }
 
 type DocApiKey struct {
@@ -985,6 +1004,11 @@ type InventoryAllocation struct {
 	TotalCostID        string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	UnitCostAmount     sql.NullString
+	UnitCostCurrency   sql.NullString
+	UnitCostPerUnitID  sql.NullString
+	TotalCostAmount    sql.NullString
+	TotalCostCurrency  sql.NullString
 }
 
 type InventoryChangeLog struct {
@@ -1052,6 +1076,9 @@ type InventoryReceipt struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	StatusCode        string
+	UnitCostAmount    sql.NullString
+	UnitCostCurrency  sql.NullString
+	UnitCostPerUnitID sql.NullString
 }
 
 type InventoryReceiptStatus struct {
@@ -1185,6 +1212,8 @@ type JournalPosting struct {
 	AmountID             string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	Amount               sql.NullString
+	Currency             sql.NullString
 }
 
 type LabelSize struct {
@@ -1969,19 +1998,25 @@ type ProductionShift struct {
 }
 
 type ProductionStep struct {
-	ID                string
-	Name              string
-	Notes             sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	AccountID         string
-	ScanningStationID sql.NullString
-	Allowances        string
-	LaborRateID       string
-	LaborTimeID       string
-	LevelingFactor    string
-	OverheadRateID    string
-	DepartmentID      sql.NullString
+	ID                    string
+	Name                  string
+	Notes                 sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	AccountID             string
+	ScanningStationID     sql.NullString
+	Allowances            string
+	LaborRateID           string
+	LaborTimeID           string
+	LevelingFactor        string
+	OverheadRateID        string
+	DepartmentID          sql.NullString
+	LaborRateAmount       sql.NullString
+	LaborRateCurrency     sql.NullString
+	LaborRatePerUnitID    sql.NullString
+	OverheadRateAmount    sql.NullString
+	OverheadRateCurrency  sql.NullString
+	OverheadRatePerUnitID sql.NullString
 }
 
 type Property struct {

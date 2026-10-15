@@ -14,9 +14,12 @@ import (
 // inventoryReceiptSummaryQuery groups an account's available receipts by item, location, lot, owner and holder, oldest receipt first.
 //
 // Each receipt counts for what is left of it after its allocations, in the item's base unit and never below zero, at its unit cost per that unit. A receipt without a quantity or a unit cost is left out, as the dashboard left it out. The cost's currency is the oldest receipt's.
+//
+// A receipt written before its money columns reads its unit cost from its legacy rate row; a filled one never looks it up.
 func inventoryReceiptSummaryQuery(params domain.AnalyzeInventoryReceiptsParams) (string, []any) {
 	// Status repeats in each branch so each ranges its own (account, status) key; factored out, the union reads every status.
-	preds := []string{"((ir.owner_account_id = ? AND ir.status_code = 'available') OR (ir.holder_account_id = ? AND ir.status_code = 'available'))"}
+	preds := []string{"((ir.owner_account_id = ? AND ir.status_code = 'available') OR (ir.holder_account_id = ? AND ir.status_code = 'available'))",
+		"(ir.unit_cost_amount IS NOT NULL OR rc.id IS NOT NULL)"}
 	args := []any{params.AccountID, params.AccountID}
 	// The receipts are read through the account's owner and holder keys, or a filter's: left to choose, the planner reads every tenant's available receipts by status.
 	keys := []string{"inventory_receipt_owner_status_idx", "inventory_receipt_holder_status_idx"}
@@ -51,7 +54,7 @@ FROM (
         MIN(r.received_at) AS oldest,
         MAX(r.received_at) AS newest,
         MIN(r.base_unit_id) AS base_unit_id,
-        SUBSTRING_INDEX(GROUP_CONCAT(r.cost_numerator_unit_id ORDER BY r.received_at, r.id SEPARATOR ','), ',', 1) AS cost_numerator_unit_id
+        SUBSTRING_INDEX(GROUP_CONCAT(r.cost_currency ORDER BY r.received_at, r.id SEPARATOR ','), ',', 1) AS cost_currency
     FROM (
         SELECT
             ir.id, ir.item_id, ir.storage_location_id, ir.lot_id, ir.owner_account_id, ir.holder_account_id, ir.received_at,
@@ -67,14 +70,14 @@ FROM (
                 WHERE ia.inventory_receipt_id = ir.id
             ), 0) AS allocated,
             CASE WHEN cd.unit_dimension_code = bu.unit_dimension_code
-                THEN rc.value * (bu.ratio_numerator / bu.ratio_denominator) / (cd.ratio_numerator / cd.ratio_denominator)
-                ELSE rc.value END AS cost,
-            rc.numerator_unit_id AS cost_numerator_unit_id
+                THEN COALESCE(ir.unit_cost_amount, rc.value) * (bu.ratio_numerator / bu.ratio_denominator) / (cd.ratio_numerator / cd.ratio_denominator)
+                ELSE COALESCE(ir.unit_cost_amount, rc.value) END AS cost,
+            COALESCE(ir.unit_cost_currency, 'usd') AS cost_currency
         FROM inventory_receipt ir FORCE INDEX (` + strings.Join(keys, ", ") + `)
         JOIN quantity q ON q.id = ir.quantity_id
         JOIN unit qu ON qu.id = q.unit_id
-        JOIN rate rc ON rc.id = ir.unit_cost_id
-        JOIN unit cd ON cd.id = rc.denominator_unit_id
+        LEFT JOIN rate rc ON rc.id = IF(ir.unit_cost_amount IS NULL, ir.unit_cost_id, NULL)
+        JOIN unit cd ON cd.id = COALESCE(ir.unit_cost_per_unit_id, rc.denominator_unit_id)
         JOIN item it ON it.id = ir.item_id
         JOIN item_category ic ON ic.id = it.item_category_id
         JOIN unit_group ug ON ug.id = ic.unit_group_id
@@ -89,7 +92,9 @@ LEFT JOIN lot l ON l.id = g.lot_id
 JOIN account oa ON oa.id = g.owner_account_id
 JOIN account ha ON ha.id = g.holder_account_id
 LEFT JOIN unit bu ON bu.id = g.base_unit_id
-LEFT JOIN unit cn ON cn.id = g.cost_numerator_unit_id
+-- The cost is labelled with its currency's unit; usd, the only currency, is the base currency unit.
+LEFT JOIN unit cn ON g.cost_currency = 'usd' AND cn.id = (
+    SELECT cu.id FROM unit cu WHERE cu.unit_dimension_code = 'currency' AND cu.is_base_unit = TRUE AND cu.account_id IS NULL LIMIT 1)
 ORDER BY g.oldest ASC, g.item_id ASC, g.storage_location_id ASC, g.lot_id ASC, g.owner_account_id ASC, g.holder_account_id ASC`
 	return query, args
 }

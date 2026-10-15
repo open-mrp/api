@@ -8663,17 +8663,17 @@ func (mr *MockProductionStepRepoMockRecorder) InsertRate(ctx, id, params any) *g
 }
 
 // InsertStep mocks base method.
-func (m *MockProductionStepRepo) InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, scanningStationID, departmentID *string, accountID string) *apierror.APIError {
+func (m *MockProductionStepRepo) InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, laborRate, overheadRate domain.UnitPrice, scanningStationID, departmentID *string, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertStep", ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, scanningStationID, departmentID, accountID)
+	ret := m.ctrl.Call(m, "InsertStep", ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, laborRate, overheadRate, scanningStationID, departmentID, accountID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // InsertStep indicates an expected call of InsertStep.
-func (mr *MockProductionStepRepoMockRecorder) InsertStep(ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, scanningStationID, departmentID, accountID any) *gomock.Call {
+func (mr *MockProductionStepRepoMockRecorder) InsertStep(ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, laborRate, overheadRate, scanningStationID, departmentID, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertStep", reflect.TypeOf((*MockProductionStepRepo)(nil).InsertStep), ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, scanningStationID, departmentID, accountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertStep", reflect.TypeOf((*MockProductionStepRepo)(nil).InsertStep), ctx, id, name, notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, laborRate, overheadRate, scanningStationID, departmentID, accountID)
 }
 
 // List mocks base method.
@@ -13623,17 +13623,17 @@ func (mr *MockDeliveryRepoMockRecorder) CreateDelivery(ctx, id, number, salesOrd
 }
 
 // CreateDeliveryLine mocks base method.
-func (m *MockDeliveryRepo) CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError {
+func (m *MockDeliveryRepo) CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, unitCost domain.UnitPrice, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDeliveryLine", ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, storageLocationID, lotID, acceptedAt, rejectedAt)
+	ret := m.ctrl.Call(m, "CreateDeliveryLine", ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, unitCost, storageLocationID, lotID, acceptedAt, rejectedAt)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // CreateDeliveryLine indicates an expected call of CreateDeliveryLine.
-func (mr *MockDeliveryRepoMockRecorder) CreateDeliveryLine(ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, storageLocationID, lotID, acceptedAt, rejectedAt any) *gomock.Call {
+func (mr *MockDeliveryRepoMockRecorder) CreateDeliveryLine(ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, unitCost, storageLocationID, lotID, acceptedAt, rejectedAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeliveryLine", reflect.TypeOf((*MockDeliveryRepo)(nil).CreateDeliveryLine), ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, storageLocationID, lotID, acceptedAt, rejectedAt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeliveryLine", reflect.TypeOf((*MockDeliveryRepo)(nil).CreateDeliveryLine), ctx, id, deliveryID, receivingOrderLineID, quantityID, unitCostID, unitCost, storageLocationID, lotID, acceptedAt, rejectedAt)
 }
 
 // Get mocks base method.
@@ -16343,17 +16343,17 @@ func (mr *MockReceivingOrderRepoMockRecorder) HasUnstockedLineForOrderLine(ctx, 
 }
 
 // InsertInventoryReceiptForDelivery mocks base method.
-func (m *MockReceivingOrderRepo) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
+func (m *MockReceivingOrderRepo) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, unitCost domain.UnitPrice, storageLocationID, lotID, orderID *string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertInventoryReceiptForDelivery", ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
+	ret := m.ctrl.Call(m, "InsertInventoryReceiptForDelivery", ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, unitCost, storageLocationID, lotID, orderID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // InsertInventoryReceiptForDelivery indicates an expected call of InsertInventoryReceiptForDelivery.
-func (mr *MockReceivingOrderRepoMockRecorder) InsertInventoryReceiptForDelivery(ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID any) *gomock.Call {
+func (mr *MockReceivingOrderRepoMockRecorder) InsertInventoryReceiptForDelivery(ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, unitCost, storageLocationID, lotID, orderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertInventoryReceiptForDelivery", reflect.TypeOf((*MockReceivingOrderRepo)(nil).InsertInventoryReceiptForDelivery), ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertInventoryReceiptForDelivery", reflect.TypeOf((*MockReceivingOrderRepo)(nil).InsertInventoryReceiptForDelivery), ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, unitCost, storageLocationID, lotID, orderID)
 }
 
 // IsInAccount mocks base method.

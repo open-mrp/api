@@ -147,23 +147,15 @@ func deliveryLineToProto(l *domain.DeliveryLine) *pb.DeliveryLineInfo {
 	}
 
 	info := &pb.DeliveryLineInfo{
-		Id:                                  l.ID,
-		QuantityId:                          l.QuantityID,
-		QuantityValue:                       l.QuantityValue,
-		QuantityUnitId:                      l.QuantityUnitID,
-		QuantityUnitAbbreviation:            l.QuantityUnitAbbreviation,
-		OrderLineId:                         l.OrderLineID,
-		UnitCostId:                          l.UnitCostID,
-		UnitCostValue:                       l.UnitCostValue,
-		UnitCostNumeratorUnitId:             l.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId:           l.UnitCostDenominatorUnitID,
-		UnitCostNumeratorUnitAbbreviation:   l.UnitCostNumeratorUnitAbbreviation,
-		UnitCostDenominatorUnitAbbreviation: l.UnitCostDenominatorUnitAbbreviation,
-		UnitCostCreatedAt:                   timestamppb.New(l.UnitCostCreatedAt),
-		UnitCostUpdatedAt:                   timestamppb.New(l.UnitCostUpdatedAt),
-		UnitCost:                            unitPriceToProto(l.UnitCostValue, l.UnitCostDenominatorUnitID),
-		CreatedAt:                           timestamppb.New(l.CreatedAt),
-		UpdatedAt:                           timestamppb.New(l.UpdatedAt),
+		Id:                       l.ID,
+		QuantityId:               l.QuantityID,
+		QuantityValue:            l.QuantityValue,
+		QuantityUnitId:           l.QuantityUnitID,
+		QuantityUnitAbbreviation: l.QuantityUnitAbbreviation,
+		OrderLineId:              l.OrderLineID,
+		UnitCost:                 l.UnitCost.ToProto(),
+		CreatedAt:                timestamppb.New(l.CreatedAt),
+		UpdatedAt:                timestamppb.New(l.UpdatedAt),
 	}
 
 	if l.ItemID != nil {

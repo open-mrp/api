@@ -43,8 +43,8 @@ func laborTimeIn(value string, quantityUnit domain.LightUnit) *domain.FlowRate {
 	}
 }
 
-func perHour(value string) *domain.FlowRate {
-	return &domain.FlowRate{Value: value, DenominatorRatio: ratioHour}
+func perHour(value string) *domain.FlowPrice {
+	return &domain.FlowPrice{UnitPrice: domain.UnitPrice{Amount: value}, PerUnitRatio: ratioHour}
 }
 
 func laborStep(batch string, producedIn domain.LightUnit, laborTime *domain.FlowRate, laborRate, overheadRate string) *domain.ProductionFlowStep {

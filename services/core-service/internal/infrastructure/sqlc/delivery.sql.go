@@ -166,14 +166,11 @@ SELECT
     -- The purchase order line the goods were ordered on, reached through the receiving line this
     -- delivery line was stocked against.
     sol.id AS order_line_id,
-    r.id AS unit_cost_id,
-    r.value AS unit_cost_value,
-    r.numerator_unit_id AS unit_cost_numerator_unit_id,
-    r.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rnu.abbreviation AS unit_cost_numerator_unit_abbreviation,
-    rdu.abbreviation AS unit_cost_denominator_unit_abbreviation,
-    r.created_at AS unit_cost_created_at,
-    r.updated_at AS unit_cost_updated_at,
+    dl.unit_cost_amount,
+    dl.unit_cost_currency,
+    dl.unit_cost_per_unit_id,
+    r.value AS legacy_unit_cost_value,
+    r.denominator_unit_id AS legacy_unit_cost_per_unit_id,
     sol.item_id,
     p.item_id AS product_item_id,
     i.sku AS item_sku,
@@ -185,9 +182,7 @@ SELECT
 FROM delivery_line dl
 JOIN quantity q ON dl.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
-JOIN rate r ON dl.unit_cost_id = r.id
-JOIN unit rnu ON r.numerator_unit_id = rnu.id
-JOIN unit rdu ON r.denominator_unit_id = rdu.id
+LEFT JOIN rate r ON r.id = IF(dl.unit_cost_amount IS NULL, dl.unit_cost_id, NULL)
 JOIN receiving_order_line rol ON dl.receiving_order_line_id = rol.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
 LEFT JOIN product p ON p.id = sol.product_id
@@ -199,34 +194,32 @@ ORDER BY dl.created_at ASC, dl.id ASC
 `
 
 type ListDeliveryLinesRow struct {
-	ID                                  string
-	AcceptedAt                          sql.NullTime
-	RejectedAt                          sql.NullTime
-	CreatedAt                           time.Time
-	UpdatedAt                           time.Time
-	QuantityID                          string
-	QuantityValue                       string
-	QuantityUnitID                      string
-	QuantityUnitAbbreviation            string
-	OrderLineID                         string
-	UnitCostID                          string
-	UnitCostValue                       string
-	UnitCostNumeratorUnitID             string
-	UnitCostDenominatorUnitID           string
-	UnitCostNumeratorUnitAbbreviation   string
-	UnitCostDenominatorUnitAbbreviation string
-	UnitCostCreatedAt                   time.Time
-	UnitCostUpdatedAt                   time.Time
-	ItemID                              sql.NullString
-	ProductItemID                       sql.NullString
-	ItemSku                             sql.NullString
-	ItemDescription                     sql.NullString
-	StorageLocationID                   sql.NullString
-	StorageLocationName                 sql.NullString
-	LotID                               sql.NullString
-	LotNumber                           sql.NullString
+	ID                       string
+	AcceptedAt               sql.NullTime
+	RejectedAt               sql.NullTime
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	QuantityID               string
+	QuantityValue            string
+	QuantityUnitID           string
+	QuantityUnitAbbreviation string
+	OrderLineID              string
+	UnitCostAmount           sql.NullString
+	UnitCostCurrency         sql.NullString
+	UnitCostPerUnitID        sql.NullString
+	LegacyUnitCostValue      sql.NullString
+	LegacyUnitCostPerUnitID  sql.NullString
+	ItemID                   sql.NullString
+	ProductItemID            sql.NullString
+	ItemSku                  sql.NullString
+	ItemDescription          sql.NullString
+	StorageLocationID        sql.NullString
+	StorageLocationName      sql.NullString
+	LotID                    sql.NullString
+	LotNumber                sql.NullString
 }
 
+// A line written before its money columns reads its legacy rate row; a filled one never looks it up.
 func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]ListDeliveryLinesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listDeliveryLines, deliveryID)
 	if err != nil {
@@ -247,14 +240,11 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 			&i.QuantityUnitID,
 			&i.QuantityUnitAbbreviation,
 			&i.OrderLineID,
-			&i.UnitCostID,
-			&i.UnitCostValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
-			&i.UnitCostNumeratorUnitAbbreviation,
-			&i.UnitCostDenominatorUnitAbbreviation,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
+			&i.UnitCostAmount,
+			&i.UnitCostCurrency,
+			&i.UnitCostPerUnitID,
+			&i.LegacyUnitCostValue,
+			&i.LegacyUnitCostPerUnitID,
 			&i.ItemID,
 			&i.ProductItemID,
 			&i.ItemSku,

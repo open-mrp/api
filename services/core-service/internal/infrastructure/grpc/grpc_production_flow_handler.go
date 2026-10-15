@@ -63,13 +63,13 @@ func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFl
 
 	// Rates
 	if step.LaborRate != nil {
-		info.LaborRate = unitPriceToProto(step.LaborRate.Value, step.LaborRate.DenominatorUnitID)
+		info.LaborRate = step.LaborRate.ToProto()
 	}
 	if step.LaborTime != nil {
 		info.LaborTime = flowRateToProto(step.LaborTime)
 	}
 	if step.OverheadRate != nil {
-		info.OverheadRate = unitPriceToProto(step.OverheadRate.Value, step.OverheadRate.DenominatorUnitID)
+		info.OverheadRate = step.OverheadRate.ToProto()
 	}
 
 	return info

@@ -198,11 +198,11 @@ func (r *analyticsRepoImpl) GetProductionCostSteps(ctx context.Context, accountI
 				DenominatorUnitType: s.LaborTimeDenUnitType.String,
 			}
 		}
-		if s.LaborRateValue.Valid {
-			step.LaborRate = &domain.FlowRate{Value: s.LaborRateValue.String, DenominatorRatio: s.LaborRateDenRatio}
+		if amount := moneyAmountOrLegacy(s.LaborRateAmount, s.LegacyLaborRateValue); amount.Valid {
+			step.LaborRate = &domain.FlowPrice{UnitPrice: domain.UnitPrice{Amount: amount.String}, PerUnitRatio: s.LaborRateDenRatio}
 		}
-		if s.OverheadRateValue.Valid {
-			step.OverheadRate = &domain.FlowRate{Value: s.OverheadRateValue.String, DenominatorRatio: s.OverheadRateDenRatio}
+		if amount := moneyAmountOrLegacy(s.OverheadRateAmount, s.LegacyOverheadRateValue); amount.Valid {
+			step.OverheadRate = &domain.FlowPrice{UnitPrice: domain.UnitPrice{Amount: amount.String}, PerUnitRatio: s.OverheadRateDenRatio}
 		}
 		out[s.ID] = domain.ProductionCostStep{Step: step, Consumptions: []domain.CostFlowConsumption{}}
 	}

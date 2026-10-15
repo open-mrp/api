@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/shopspring/decimal"
@@ -197,6 +198,12 @@ type ReceivingOrderLineUnitPrice struct {
 	UnitPriceNumeratorUnitID   string
 	UnitPriceDenominatorUnitID string
 	QuantityUnitID             string
+}
+
+// UnitCost is the price the line's goods were ordered at, which is what they cost once stocked. The order line still
+// stores it as a rate in a currency unit, and every currency unit is a dollar.
+func (p ReceivingOrderLineUnitPrice) UnitCost() UnitPrice {
+	return UnitPrice{Amount: p.UnitPriceValue, Currency: constants.CurrencyUSD, PerUnitID: p.UnitPriceDenominatorUnitID}
 }
 
 // OpenInventoryIssue represents an open inventory issue for FIFO allocation.

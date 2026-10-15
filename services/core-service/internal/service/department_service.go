@@ -183,14 +183,15 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 			}
 
 			if params.LaborRate != nil {
-				if apiErr := ValidateCostRateUnits(txCtx, txSvc.repos.NewUnitRepo(), params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+				legacyRate, apiErr := validatedLegacyCurrencyPrice(txCtx, txSvc.repos.NewUnitRepo(), *params.LaborRate, "labor_rate")
+				if apiErr != nil {
 					return apiErr
 				}
 				rateID, apiErr := id.GenID(id.RateIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
 				}
-				if apiErr := txRepo.InsertLaborRate(txCtx, rateID, *params.LaborRate); apiErr != nil {
+				if apiErr := txRepo.InsertLaborRate(txCtx, rateID, legacyRate); apiErr != nil {
 					return apiErr
 				}
 				params.LaborRateID = &rateID
@@ -308,12 +309,13 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 			params.Notes = params.Notes.BackfillUnsetPtr(old.Notes)
 
 			if params.LaborRate != nil {
-				if apiErr := ValidateCostRateUnits(txCtx, txSvc.repos.NewUnitRepo(), params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+				legacyRate, apiErr := validatedLegacyCurrencyPrice(txCtx, txSvc.repos.NewUnitRepo(), *params.LaborRate, "labor_rate")
+				if apiErr != nil {
 					return apiErr
 				}
-				if old.LaborRate != nil {
+				if old.LaborRateRowID != nil {
 					// The department already owns a rate row; rewrite it in place so everything pointing at it sees the new value.
-					if apiErr := txRepo.UpdateLaborRate(txCtx, old.LaborRate.ID, *params.LaborRate); apiErr != nil {
+					if apiErr := txRepo.UpdateLaborRate(txCtx, *old.LaborRateRowID, legacyRate); apiErr != nil {
 						return apiErr
 					}
 				} else {
@@ -321,7 +323,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 					if apiErr != nil {
 						return apiErr
 					}
-					if apiErr := txRepo.InsertLaborRate(txCtx, rateID, *params.LaborRate); apiErr != nil {
+					if apiErr := txRepo.InsertLaborRate(txCtx, rateID, legacyRate); apiErr != nil {
 						return apiErr
 					}
 					params.LaborRateID = &rateID

@@ -31,7 +31,7 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 		info.LocationTypeCode = d.LocationTypeCode
 	}
 	if d.LaborRate != nil {
-		info.LaborRate = unitPriceToProto(d.LaborRate.Value, d.LaborRate.DenominatorUnit.ID)
+		info.LaborRate = d.LaborRate.ToProto()
 	}
 
 	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
@@ -130,9 +130,8 @@ func (h *gRPCHandler) CreateDepartment(ctx context.Context, req *pb.CreateDepart
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	money := newMoneyRows(ctx)
-	laborRate := money.rate("labor_rate", req.LaborRate)
-	if apiErr := money.err(); apiErr != nil {
+	laborRate, apiErr := domain.UnitPriceFromProto("labor_rate", req.LaborRate)
+	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
@@ -188,9 +187,8 @@ func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepart
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	money := newMoneyRows(ctx)
-	laborRate := money.rate("labor_rate", req.LaborRate)
-	if apiErr := money.err(); apiErr != nil {
+	laborRate, apiErr := domain.UnitPriceFromProto("labor_rate", req.LaborRate)
+	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 

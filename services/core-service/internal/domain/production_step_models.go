@@ -14,9 +14,9 @@ type ProductionStep struct {
 	Notes           *string               `audit:"notes"`
 	LevelingFactor  string                `audit:"leveling_factor"`
 	Allowances      string                `audit:"allowances"`
-	LaborRate       *ProductionStepRate   `audit:"labor_rate"`
+	LaborRate       *UnitPrice            `audit:"labor_rate"`
 	LaborTime       *ProductionStepRate   `audit:"labor_time"`
-	OverheadRate    *ProductionStepRate   `audit:"overhead_rate"`
+	OverheadRate    *UnitPrice            `audit:"overhead_rate"`
 	Production      *Production           `audit:"production"`
 	Consumptions    []Consumption         `audit:"consumptions"`
 	Machines        []LightMachine        `audit:"machines"`
@@ -66,9 +66,9 @@ type CreateProductionStepParams struct {
 	Allowances        string
 	ScanningStationID *string
 	DepartmentID      *string
-	LaborRate         CreateRateParams
+	LaborRate         UnitPrice
 	LaborTime         CreateRateParams
-	OverheadRate      CreateRateParams
+	OverheadRate      UnitPrice
 	Production        CreateProductionParams
 	Consumptions      []CreateStepConsumptionParams
 }
@@ -236,6 +236,8 @@ type UpdateProductionStepForBulkUpsertParams struct {
 	LaborRateID       string
 	LaborTimeID       string
 	OverheadRateID    string
+	LaborRate         UnitPrice
+	OverheadRate      UnitPrice
 }
 
 // UpdateProductionStepParams holds the parameters for updating a production step.

@@ -609,6 +609,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 		receivingOrderLineID string
 		quantityID           string
 		unitCostID           string
+		unitCost             domain.UnitPrice
 		storageLocationID    *string
 		lotID                *string
 		acceptedAt           *time.Time
@@ -621,6 +622,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 		if !ok {
 			continue
 		}
+		unitCost := up.UnitCost()
 
 		// Upsert lot if lot number provided
 		var lotID *string
@@ -670,6 +672,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 				receivingOrderLineID: lineItem.ReceivingOrderLineID,
 				quantityID:           dlQuantityID,
 				unitCostID:           dlRateID,
+				unitCost:             unitCost,
 				storageLocationID:    allocation.LocationID,
 				lotID:                lotID,
 				acceptedAt:           &now,
@@ -697,7 +700,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 				return apiErr
 			}
 
-			if apiErr := txRepo.InsertInventoryReceiptForDelivery(ctx, scope, receiptID, params.AccountID, up.ItemID, rcptQuantityID, rcptRateID, allocation.LocationID, lotID, &purchaseOrderID); apiErr != nil {
+			if apiErr := txRepo.InsertInventoryReceiptForDelivery(ctx, scope, receiptID, params.AccountID, up.ItemID, rcptQuantityID, rcptRateID, unitCost, allocation.LocationID, lotID, &purchaseOrderID); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -732,6 +735,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 				receivingOrderLineID: lineItem.ReceivingOrderLineID,
 				quantityID:           rejQuantityID,
 				unitCostID:           rejRateID,
+				unitCost:             unitCost,
 				lotID:                lotID,
 				rejectedAt:           &now,
 			})
@@ -760,7 +764,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 
 	// Create all delivery lines
 	for _, dl := range deliveryLines {
-		if apiErr := deliveryRepo.CreateDeliveryLine(ctx, dl.lineID, deliveryID, dl.receivingOrderLineID, dl.quantityID, dl.unitCostID, dl.storageLocationID, dl.lotID, dl.acceptedAt, dl.rejectedAt); apiErr != nil {
+		if apiErr := deliveryRepo.CreateDeliveryLine(ctx, dl.lineID, deliveryID, dl.receivingOrderLineID, dl.quantityID, dl.unitCostID, dl.unitCost, dl.storageLocationID, dl.lotID, dl.acceptedAt, dl.rejectedAt); apiErr != nil {
 			return apiErr
 		}
 	}

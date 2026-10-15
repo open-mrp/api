@@ -626,15 +626,15 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	// Labor rate, per base time unit.
 	var laborRateValue decimal.Decimal
 	if step.LaborRate != nil {
-		laborRateValue, _ = decimal.NewFromString(step.LaborRate.Value)
-		laborRateValue = laborRateValue.Div(baseUnitRatio(step.LaborRate.DenominatorRatio))
+		laborRateValue, _ = decimal.NewFromString(step.LaborRate.Amount)
+		laborRateValue = laborRateValue.Div(baseUnitRatio(step.LaborRate.PerUnitRatio))
 	}
 
 	// Overhead rate, per base time unit.
 	var overheadRateValue decimal.Decimal
 	if step.OverheadRate != nil {
-		overheadRateValue, _ = decimal.NewFromString(step.OverheadRate.Value)
-		overheadRateValue = overheadRateValue.Div(baseUnitRatio(step.OverheadRate.DenominatorRatio))
+		overheadRateValue, _ = decimal.NewFromString(step.OverheadRate.Amount)
+		overheadRateValue = overheadRateValue.Div(baseUnitRatio(step.OverheadRate.PerUnitRatio))
 	}
 
 	// Corrective factor: (levelingFactor * allowances) + levelingFactor + allowances + 1

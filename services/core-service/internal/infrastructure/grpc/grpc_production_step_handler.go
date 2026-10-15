@@ -42,12 +42,12 @@ func productionStepRateToProto(r *domain.ProductionStepRate) *pb.ProductionStepR
 	}
 }
 
-// productionStepPriceToProto presents a step's labor or overhead rate, stored as a currency rate, as a price.
-func productionStepPriceToProto(r *domain.ProductionStepRate) *pb.UnitPrice {
-	if r == nil {
+// productionStepPriceToProto presents a step's labor or overhead rate.
+func productionStepPriceToProto(p *domain.UnitPrice) *pb.UnitPrice {
+	if p == nil {
 		return nil
 	}
-	return unitPriceToProto(r.Value, r.DenominatorUnit.ID)
+	return p.ToProto()
 }
 
 func productionToProto(p *domain.Production) *pb.ProductionInfo {
@@ -228,16 +228,16 @@ func (h *productionStepGRPCHandler) CreateProductionStep(ctx context.Context, re
 		}
 	}
 
-	money := newMoneyRows(ctx)
-	var laborRate, overheadRate domain.CreateRateParams
-	if r := money.rate("labor_rate", req.LaborRate); r != nil {
-		laborRate = *r
-	}
-	if r := money.rate("overhead_rate", req.OverheadRate); r != nil {
-		overheadRate = *r
-	}
-	if apiErr := money.err(); apiErr != nil {
+	var laborRate, overheadRate domain.UnitPrice
+	if p, apiErr := domain.UnitPriceFromProto("labor_rate", req.LaborRate); apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	} else if p != nil {
+		laborRate = *p
+	}
+	if p, apiErr := domain.UnitPriceFromProto("overhead_rate", req.OverheadRate); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	} else if p != nil {
+		overheadRate = *p
 	}
 
 	step, apiErr := h.productionStepSvc.CreateProductionStep(ctx, domain.CreateProductionStepParams{

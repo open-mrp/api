@@ -51,6 +51,10 @@ const reportMaxQueryTime = 30 * time.Second
 // backfillRetryInterval is how often a pod tries to take up an unfinished backfill.
 const backfillRetryInterval = 5 * time.Minute
 
+// moneyColumnBackfillDelay is how long a pod waits after starting before it takes up the money-column backfills: long
+// enough for a rollout to retire the previous release's pods, which write only the legacy rows.
+const moneyColumnBackfillDelay = 15 * time.Minute
+
 func Run(
 	ctx context.Context,
 	getenv func(string) string,
@@ -956,6 +960,31 @@ func Run(
 		return err
 	}
 	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+
+	// Operations money moved onto its owning rows (migration 00088), which every write now fills alongside the legacy
+	// quantity and rate rows. These copy the legacy rows into the columns of rows written before, one paced backfill per
+	// table. They wait out the rollout first, so the pass also corrects rows the previous release's pods changed in
+	// place while it ran. MONEY_COLUMN_BACKFILL=off stops them; reads fall back to the legacy rows meanwhile.
+	if getenv("MONEY_COLUMN_BACKFILL") != "off" {
+		for _, table := range repository.MoneyColumnTables {
+			moneyBackfill, err := backfill.New(&backfill.Config{
+				Name:     table.BackfillName(),
+				Batch:    repository.NewMoneyColumnBackfill(sqlc.New(reportDB), queries, table).Batch,
+				Progress: repository.NewBackfillProgressRepo(queries),
+			})
+			if err != nil {
+				return err
+			}
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(moneyColumnBackfillDelay):
+				}
+				moneyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+			}()
+		}
+	}
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventSalesFactQueue,
 		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,

@@ -656,7 +656,7 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 					allowances = *row.Allowances
 				}
 
-				if apiErr := txRepo.InsertStep(txCtx, stepID, row.Name, row.Notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, stationID, row.DepartmentID, accountID); apiErr != nil {
+				if apiErr := txRepo.InsertStep(txCtx, stepID, row.Name, row.Notes, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, currencyRatePrice(row.LaborRate), currencyRatePrice(row.OverheadRate), stationID, row.DepartmentID, accountID); apiErr != nil {
 					return apiErr
 				}
 				if apiErr := insertOutputsAndInputs(stepID, row); apiErr != nil {
@@ -725,6 +725,8 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 				LaborRateID:       laborRateID,
 				LaborTimeID:       laborTimeID,
 				OverheadRateID:    overheadRateID,
+				LaborRate:         currencyRatePrice(row.LaborRate),
+				OverheadRate:      currencyRatePrice(row.OverheadRate),
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -1073,7 +1075,10 @@ func (s *productionStepSvcImpl) bulkCreateNewStep(
 		}
 
 		// Insert the production step.
-		if apiErr := txStepRepo.InsertStep(txCtx, stepID, input.Name, nil, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID, scanningStationID, nil, accountID); apiErr != nil {
+		if apiErr := txStepRepo.InsertStep(txCtx, stepID, input.Name, nil, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID,
+			domain.UnitPrice{Amount: input.LaborRate, Currency: constants.CurrencyUSD, PerUnitID: hrUnitID},
+			domain.UnitPrice{Amount: input.OverheadRate, Currency: constants.CurrencyUSD, PerUnitID: hrUnitID},
+			scanningStationID, nil, accountID); apiErr != nil {
 			return apiErr
 		}
 
@@ -1182,4 +1187,10 @@ func publishImportedStepCostBasis(ctx context.Context, repos domain.RepoFactory,
 		}
 	}
 	return nil
+}
+
+// currencyRatePrice is a resolved labor or overhead rate as the price it is. A bulk row names the rate's currency by a
+// currency unit, and every currency unit is a dollar.
+func currencyRatePrice(r domain.ResolvedUpsertRate) domain.UnitPrice {
+	return domain.UnitPrice{Amount: r.Value, Currency: constants.CurrencyUSD, PerUnitID: r.DenominatorUnitID}
 }

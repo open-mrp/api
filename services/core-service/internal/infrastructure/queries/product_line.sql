@@ -236,132 +236,19 @@ AND (
 ORDER BY pl.created_at DESC, pl.id DESC
 LIMIT ?;
 
-
--- ListProductLineLotDefaults returns every product line in the account that has a lot convention, for resolving what lot an item is made in.
--- name: ListProductLineLotDefaults :many
+-- ListProductLineSupplies returns every product line in the account that sets a default supply.
+-- name: ListProductLineSupplies :many
 SELECT
     pl.id,
-    pl.name,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id
-FROM product_line pl
-JOIN quantity dlq ON dlq.id = pl.default_lot_id
-WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
-
--- ListProductLineFulfillmentPolicies returns every product line in the account that sets a fulfillment policy.
---
--- Separate from ListProductLineLotDefaults, which inner-joins the lot quantity: a line can set a policy without setting a lot convention, and sharing that query would silently drop its policy.
--- name: ListProductLineFulfillmentPolicies :many
-SELECT
-    pl.id,
-    pl.fulfillment_policy_code
+    pl.supply_code
 FROM product_line pl
 WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL)
-  AND pl.fulfillment_policy_code IS NOT NULL
+  AND pl.supply_code IS NOT NULL
 ORDER BY pl.id;
 
--- GetProductLineForItem resolves the product line an item sells under, which is where its lot convention comes from. Intermediate items — greige — have no product row and so return nothing; those inherit from what they become.
--- name: GetProductLineForItem :one
-SELECT
-    pl.id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id
-FROM item i
-JOIN product p ON p.item_id = i.id
-JOIN product_line pl ON pl.id = p.product_line_id
-JOIN quantity dlq ON dlq.id = pl.default_lot_id
-WHERE i.id = sqlc.arg('item_id')
-AND i.account_id = sqlc.arg('account_id');
-
--- ListItemProductLines maps items to the product line they sell under, in one query.
--- name: ListItemProductLines :many
-SELECT
-    i.id AS item_id,
-    p.product_line_id
-FROM item i
-JOIN product p ON p.item_id = i.id
-WHERE i.account_id = sqlc.arg('account_id')
-AND i.id IN (sqlc.slice('item_ids'))
-AND p.product_line_id IS NOT NULL;
-
--- ResolveItemLotFromDownstream finds the lot convention an intermediate item inherits from what it becomes.
---
--- The greige-to-finished decomposition is already recorded per schedule version, so this reads what the plan decided rather than re-walking batch genealogy. The most recently generated version wins, and among its finished goods the one with the highest weekly demand — the same rule the solver applies when a greige feeds several lines.
--- name: ResolveItemLotFromDownstream :many
-SELECT
-    pl.id AS product_line_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
-    SUM(f.weekly_demand) AS weekly_demand
-FROM production_schedule_finished_policy f
-JOIN production_schedule s ON s.id = f.production_schedule_id
-JOIN product p ON p.item_id = f.item_id
-JOIN product_line pl ON pl.id = p.product_line_id
-JOIN quantity dlq ON dlq.id = pl.default_lot_id
-WHERE f.account_id = sqlc.arg('account_id')
-AND f.greige_item_id = sqlc.arg('item_id')
-AND s.id = (
-    SELECT s2.id FROM production_schedule s2
-    WHERE s2.account_id = sqlc.arg('account_id')
-    ORDER BY s2.created_at DESC, s2.id DESC
-    LIMIT 1
-)
-GROUP BY pl.id, dlq.value, dlq.unit_id
-ORDER BY weekly_demand DESC, pl.id ASC;
-
--- GetItemLotOverride reads a per-item lot size set by hand, which outranks any line convention.
+-- GetItemLotOverride reads a per-item lot size set by hand, which outranks the category's lot.
 -- name: GetItemLotOverride :one
 SELECT COALESCE(s.lot_multiple_units, 0) AS lot_multiple_units
 FROM production_schedule_item_setting s
 WHERE s.account_id = sqlc.arg('account_id')
 AND s.item_id = sqlc.arg('item_id');
-
--- The lot is a quantity row like a customer's credit limit, so it has its own lifecycle: inserted when a line first gets a convention, updated in place after that, and deleted when the convention is removed.
-
--- name: InsertProductLineDefaultLotQuantity :exec
-INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));
-
--- name: UpdateProductLineDefaultLotQuantity :exec
-UPDATE quantity SET value = sqlc.arg('value'), unit_id = sqlc.arg('unit_id'), updated_at = NOW(3)
-WHERE id = sqlc.arg('id');
-
--- name: DeleteProductLineDefaultLotQuantity :exec
-DELETE FROM quantity WHERE id = sqlc.arg('id');
-
--- GetProductLineDefaultLotID reads the quantity a line's lot currently points at, so an edit can update that row rather than orphaning it and inserting another.
--- name: GetProductLineDefaultLotID :one
-SELECT pl.default_lot_id FROM product_line pl
-WHERE pl.id = sqlc.arg('id')
-AND pl.account_id = sqlc.arg('account_id');
-
--- ListDownstreamItemsForItems is one step of "what do these items become", read from the production flow rather than from batch history.
---
--- The flow is configuration: it answers the question for an item that has never been made, which is exactly the item a planner is adding the first batch of. Walking it a level at a time keeps the whole traversal to one query per depth no matter how wide the frontier is.
--- name: ListDownstreamItemsForItems :many
-SELECT DISTINCT p.item_id
-FROM consumption c
-JOIN production_step ps ON ps.id = c.production_step_id
-JOIN production p ON p.production_step_id = ps.id
-JOIN item i ON i.id = p.item_id
-WHERE ps.account_id = sqlc.arg('account_id')
-AND c.item_id IN (sqlc.slice('item_ids'))
-AND i.deleted_at IS NULL
-ORDER BY p.item_id;
-
--- ListProductLineLotsForItems reads the lot convention of whatever line each of these items sells under.
---
--- The batch form of GetProductLineForItem, for resolving a whole frontier of downstream items at once. Ordered by line so a tie between two lines resolves the same way on every call — an unstable lot would make the same item batch differently from one page load to the next.
--- name: ListProductLineLotsForItems :many
-SELECT
-    i.id AS item_id,
-    pl.id AS product_line_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id
-FROM item i
-JOIN product p ON p.item_id = i.id
-JOIN product_line pl ON pl.id = p.product_line_id
-JOIN quantity dlq ON dlq.id = pl.default_lot_id
-WHERE i.account_id = sqlc.arg('account_id')
-AND i.id IN (sqlc.slice('item_ids'))
-ORDER BY pl.id, i.id;

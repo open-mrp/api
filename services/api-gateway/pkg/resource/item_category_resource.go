@@ -35,6 +35,10 @@ type ItemCategory struct {
 	//
 	// Also shown in the customer catalog. Returns the first 10. When there are more, `page_info.next_page_url` fetches the rest.
 	Properties *List[Property] `json:"properties" expandable:"true"`
+	// The lot this category's items are made in, such as one doff or one pallet.
+	//
+	// Sizes the lots a production plan proposes, and defaults the quantity of a batch added to a production run. An item's own lot takes precedence. Without one, planning uses the account default. Always `null` for portal users.
+	DefaultLotSize *Quantity `json:"default_lot_size" sensitive:"internal"`
 	// Unit group the category's items are measured in, until items carry their own stocking unit.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true" visibility:"internal"`
 	// Creation timestamp.
@@ -44,15 +48,16 @@ type ItemCategory struct {
 }
 
 var SampleItemCategory = &ItemCategory{
-	ID:         SampleItemCategoryID,
-	Object:     constants.ObjectTypeItemCategory,
-	Name:       SampleItemCategoryName,
-	Type:       constants.ItemCategoryTypeMaterial,
-	Owner:      SampleOwnerSystem,
-	Properties: NewList([]Property{*SampleProperty}, PageInfo{}),
-	UnitGroup:  SampleUnitGroup,
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:             SampleItemCategoryID,
+	Object:         constants.ObjectTypeItemCategory,
+	Name:           SampleItemCategoryName,
+	Type:           constants.ItemCategoryTypeMaterial,
+	Owner:          SampleOwnerSystem,
+	Properties:     NewList([]Property{*SampleProperty}, PageInfo{}),
+	DefaultLotSize: SampleQuantity,
+	UnitGroup:      SampleUnitGroup,
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ItemCategory) SchemaExample() any {

@@ -121,6 +121,9 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 		UnitGroupId: unitGroupID,
 		PropertyIds: req.PropertyIDs,
 	}
+	if lot, ok := req.DefaultLotSize.Value(); ok {
+		pbReq.DefaultLotSize = &pb.QuantityInput{Value: lot.Value, UnitId: lot.UnitID}
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateItemCategoryResponse, error) {
@@ -143,6 +146,7 @@ func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *Updat
 		pbReq.SetPropertyIds = true
 		pbReq.PropertyIds = ids
 	}
+	pbReq.DefaultLotSize = apirequest.QuantityFieldToProto(req.DefaultLotSize)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateItemCategoryResponse, error) {

@@ -11,6 +11,8 @@ import (
 // moved its default_lot to item categories, and removed its notes. preview.9 callers see fulfillment_policy derived
 // from supply (a buy line has none), and default_lot and notes as null wherever a line appears. Their writes have
 // fulfillment_policy turned into supply, and default_lot and notes dropped: neither is stored on a line any more.
+// An item's resolved lot now names the item_category it came from rather than a product_line; preview.9 callers see
+// product_line as null and the item_category source as it is.
 type productLineForgeToPreview9 struct {
 	forgeToPreview9
 	everyObject
@@ -34,6 +36,11 @@ var (
 
 func (productLineForgeToPreview9) Transform(_ object.Type, data map[string]any) map[string]any {
 	walkObjects(data, func(obj map[string]any) {
+		if obj["object"] == "item_lot_default" {
+			delete(obj, "item_category")
+			obj["product_line"] = nil
+			return
+		}
 		if obj["object"] != "product_line" {
 			return
 		}

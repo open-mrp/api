@@ -336,29 +336,28 @@ type ItemLotDefault struct {
 	Quantity float64 `json:"quantity"`
 	// The unit the lot is counted in.
 	//
-	// A lot that came from a product line is counted in that line's unit; otherwise the item's own base unit is used. The unit is returned even when no rule supplies a lot size, so a form can show what is being counted with the quantity left blank.
+	// A lot that came from the item's category is counted in the category's unit; otherwise the item's own base unit is used. The unit is returned even when no rule supplies a lot size, so a form can show what is being counted with the quantity left blank.
 	Unit *Unit `json:"unit" expandable:"true"`
 	// Which rule in the chain produced this lot.
 	//
 	// - `item_override`: a lot size set on the item itself.
-	// - `product_line`: the convention of the line the item sells under.
-	// - `downstream_product_line`: inherited from the finished goods this item becomes, for intermediates that are not themselves sold.
+	// - `item_category`: the lot of the item's category.
 	// - `account_default`: the account-wide fallback.
 	//
 	// Empty when no rule in the chain supplies a lot, which is the same case `quantity` reports as `0`.
 	Source constants.ItemLotSource `json:"source" validate:"required"`
-	// The product line the convention came from.
+	// The item category the lot came from.
 	//
-	// Present only when `source` is `product_line` or `downstream_product_line`; an item override and the account default do not come from a line.
-	ProductLine *Entity `json:"product_line"`
+	// Present only when `source` is `item_category`.
+	ItemCategory *Entity `json:"item_category"`
 }
 
 var SampleItemLotDefault = &ItemLotDefault{
-	Object:      constants.ObjectTypeItemLotDefault,
-	Item:        NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-	Quantity:    60,
-	Source:      constants.ItemLotSourceDownstreamProductLine,
-	ProductLine: NewEntity(SampleProductLineID, constants.ObjectTypeProductLine, nil, nil),
+	Object:       constants.ObjectTypeItemLotDefault,
+	Item:         NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+	Quantity:     60,
+	Source:       constants.ItemLotSourceItemCategory,
+	ItemCategory: NewEntity(SampleItemCategoryID, constants.ObjectTypeItemCategory, nil, nil),
 }
 
 func (*ItemLotDefault) SchemaExample() any {

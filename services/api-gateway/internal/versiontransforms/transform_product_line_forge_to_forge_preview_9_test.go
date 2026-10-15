@@ -49,3 +49,12 @@ func TestPreview9_ProductLineWrites(t *testing.T) {
 	}})
 	assert.Equal(t, map[string]any{"name": "Socks", "commission_policy": "exempt", "freight_policy": "billed"}, bulk["product_lines"].([]any)[0])
 }
+
+func TestPreview9_ItemLotDefaultNamesNoProductLine(t *testing.T) {
+	t.Parallel()
+
+	got := downgrade(t, constants.ObjectTypeItemLotDefault, `{"object":"item_lot_default","item":{"id":"itm_1"},"quantity":60,"source":"item_category","item_category":{"id":"ic_1"}}`)
+	assert.NotContains(t, got, "item_category")
+	assert.Contains(t, got, "product_line")
+	assert.Nil(t, got["product_line"])
+}

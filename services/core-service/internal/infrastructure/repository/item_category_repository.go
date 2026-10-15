@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	idgen "github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
@@ -145,7 +146,72 @@ func (r *itemCategoryRepoImpl) GetByIDs(ctx context.Context, accountID string, i
 	for i, row := range rows {
 		items[i] = mapGetItemCategoriesByIDsRow(row)
 	}
+	if apiErr := r.stitchDefaultLotSizes(ctx, items); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return items, nil
+}
+
+// stitchDefaultLotSizes reads each category's lot, which lives on its own quantity row.
+func (r *itemCategoryRepoImpl) stitchDefaultLotSizes(ctx context.Context, categories []*domain.ItemCategoryFull) *apierror.APIError {
+	if len(categories) == 0 {
+		return nil
+	}
+	ids := make([]string, len(categories))
+	for i, c := range categories {
+		ids[i] = c.ID
+	}
+	rows, err := r.queries.ListItemCategoryDefaultLotSizes(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	byID := make(map[string]sqlc.ListItemCategoryDefaultLotSizesRow, len(rows))
+	for _, row := range rows {
+		byID[row.ItemCategoryID] = row
+	}
+	for _, c := range categories {
+		if row, ok := byID[c.ID]; ok && row.UnitID != "" {
+			value, unitID := row.Value, row.UnitID
+			c.DefaultLotSizeValue, c.DefaultLotSizeUnitID = &value, &unitID
+		}
+	}
+	return nil
+}
+
+func (r *itemCategoryRepoImpl) SetDefaultLotSize(ctx context.Context, accountID, itemCategoryID string, lot *domain.LotQuantityInput) *apierror.APIError {
+	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.set_default_lot_size")
+	defer span.End()
+
+	lotID := gosql.NullString{}
+	if lot != nil {
+		newID, apiErr := idgen.GenID(idgen.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if err := r.queries.InsertDefaultLotSizeQuantity(ctx, sqlc.InsertDefaultLotSizeQuantityParams{
+			ID:     newID,
+			Value:  lot.Value,
+			UnitID: lot.UnitID,
+		}); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+		lotID = gosql.NullString{String: newID, Valid: true}
+	}
+
+	result, err := r.queries.SetItemCategoryDefaultLotSize(ctx, sqlc.SetItemCategoryDefaultLotSizeParams{
+		DefaultLotSizeID: lotID,
+		ID:               itemCategoryID,
+		AccountID:        gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if n, err := result.RowsAffected(); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
+	} else if n == 0 {
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
+	}
+	return nil
 }
 
 func (r *itemCategoryRepoImpl) Export(ctx context.Context, params domain.ExportItemCategoriesParams) ([]*domain.ItemCategoryFull, *apierror.APIError) {
@@ -295,7 +361,11 @@ func (r *itemCategoryRepoImpl) Get(ctx context.Context, params domain.GetItemCat
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetItemCategoryRow(row), nil
+	category := mapGetItemCategoryRow(row)
+	if apiErr := r.stitchDefaultLotSizes(ctx, []*domain.ItemCategoryFull{category}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return category, nil
 }
 
 func (r *itemCategoryRepoImpl) Create(ctx context.Context, id string, params domain.CreateItemCategoryParams) (*domain.ItemCategoryFull, *apierror.APIError) {

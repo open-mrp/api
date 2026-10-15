@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"strconv"
 	"strings"
 	"time"
 
@@ -500,20 +499,6 @@ func unitGroupIncludeCovers(includes []string, subResource string) bool {
 	return false
 }
 
-func (r *productLineRepoImpl) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.is_unit_in_group")
-	defer span.End()
-
-	count, err := r.queries.CountUnitInGroup(ctx, sqlc.CountUnitInGroupParams{
-		UnitID:      unitID,
-		UnitGroupID: unitGroupID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return false, tracing.Trace(span, apiErr)
-	}
-	return count > 0, nil
-}
-
 func (r *productLineRepoImpl) GetItemLotOverride(ctx context.Context, accountID, itemID string) (float64, *apierror.APIError) {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_item_lot_override")
 	defer span.End()
@@ -530,116 +515,4 @@ func (r *productLineRepoImpl) GetItemLotOverride(ctx context.Context, accountID,
 		return 0, tracing.Trace(span, apiErr)
 	}
 	return decimalToFloat64(value), nil
-}
-
-func (r *productLineRepoImpl) GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_lot_for_item")
-	defer span.End()
-
-	row, err := r.queries.GetProductLineForItem(ctx, sqlc.GetProductLineForItemParams{
-		ItemID:    itemID,
-		AccountID: accountID,
-	})
-	if err == gosql.ErrNoRows {
-		// An intermediate item has no product row, so no line of its own.
-		return nil, nil
-	}
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// The query inner-joins the quantity, so a row here always carries a full lot.
-	quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-	if err != nil || quantity <= 0 {
-		return nil, nil
-	}
-	return &domain.ProductLineLotDefault{
-		ProductLineID: row.ID,
-		Quantity:      quantity,
-		UnitID:        row.DefaultLotUnitID,
-	}, nil
-}
-
-func (r *productLineRepoImpl) GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_downstream_lot")
-	defer span.End()
-
-	rows, err := r.queries.ResolveItemLotFromDownstream(ctx, sqlc.ResolveItemLotFromDownstreamParams{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Ordered highest-demand first with the line id breaking ties, so the same item always resolves the same way.
-	for _, row := range rows {
-		quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-		if err != nil || quantity <= 0 {
-			continue
-		}
-		return &domain.ProductLineLotDefault{
-			ProductLineID: row.ProductLineID,
-			Quantity:      quantity,
-			UnitID:        row.DefaultLotUnitID,
-		}, nil
-	}
-	return nil, nil
-}
-
-// GetFlowProductLineLot inherits a lot by walking what an item is configured to become.
-//
-// GetDownstreamProductLineLot answers the same question from the last plan's greige decomposition, which is better — it is demand-weighted — but it only exists once a schedule has been generated and only covers items that plan reached. This is the fallback for everything else: an intermediate item that has never been produced, or an account that has never run the solver. Without it every such item falls through to the account-wide default, which is how a factory that has carefully set 60 pairs on its sock line ends up batching greige in a number nobody chose.
-//
-// Breadth-first, so the nearest thing the item becomes wins over something four steps further on. Within a level the lowest product line id wins, because there is no demand to weigh with and the lot must not be what makes the same item batch differently between two page loads.
-func (r *productLineRepoImpl) GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_flow_lot")
-	defer span.End()
-
-	// A production graph can hold rework loops, so the walk both bounds its depth and refuses to revisit an item.
-	visited := map[string]bool{itemID: true}
-	frontier := []string{itemID}
-
-	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
-		next, err := r.queries.ListDownstreamItemsForItems(ctx, sqlc.ListDownstreamItemsForItemsParams{
-			AccountID: accountID,
-			ItemIds:   frontier,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		frontier = frontier[:0]
-		for _, downstreamID := range next {
-			if visited[downstreamID] {
-				continue
-			}
-			visited[downstreamID] = true
-			frontier = append(frontier, downstreamID)
-		}
-		if len(frontier) == 0 {
-			return nil, nil
-		}
-
-		rows, err := r.queries.ListProductLineLotsForItems(ctx, sqlc.ListProductLineLotsForItemsParams{
-			AccountID: accountID,
-			ItemIds:   frontier,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-			if err != nil || quantity <= 0 {
-				continue
-			}
-			return &domain.ProductLineLotDefault{
-				ProductLineID: row.ProductLineID,
-				Quantity:      quantity,
-				UnitID:        row.DefaultLotUnitID,
-			}, nil
-		}
-	}
-
-	return nil, nil
 }

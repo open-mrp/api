@@ -152,17 +152,10 @@ type ItemLotDefault struct {
 	ItemID   string
 	Quantity float64
 	UnitID   string
-	// Source names the rule that produced this lot: item_override, product_line, downstream_product_line or account_default.
+	// Source names the rule that produced this lot: item_override, item_category or account_default.
 	Source string
-	// ProductLineID is the line the convention came from, empty for the account default.
-	ProductLineID string
-}
-
-// ProductLineLotDefault is one line's configured lot convention.
-type ProductLineLotDefault struct {
-	ProductLineID string
-	Quantity      float64
-	UnitID        string
+	// ItemCategoryID is the category the lot came from, empty for the other sources.
+	ItemCategoryID string
 }
 
 // LotQuantityInput is a lot on its way in: a decimal string and the unit it counts.

@@ -1,8 +1,6 @@
 package scheduling
 
 import (
-	"sort"
-
 	"github.com/open-mrp/api/shared/constants"
 )
 
@@ -12,40 +10,35 @@ import (
 type LotDefault struct {
 	Quantity float64
 	UnitID   string
-	// Source explains which rule produced this lot, so a plan can say why it is knitting in sixties. Values: item_override, product_line, downstream_product_line, account_default.
+	// Source explains which rule produced this lot, so a plan can say why it is knitting in sixties. Values: item_override, item_category, account_default.
 	Source string
-	// ProductLineID is the line the convention came from, empty for the account default.
-	ProductLineID string
+	// ItemCategoryID is the category the lot came from, empty for the other sources.
+	ItemCategoryID string
 }
 
 // Lot sources, aliased from the shared enum so the engine cannot drift from the API contract.
 const (
-	LotSourceItemOverride          = string(constants.ItemLotSourceItemOverride)
-	LotSourceProductLine           = string(constants.ItemLotSourceProductLine)
-	LotSourceDownstreamProductLine = string(constants.ItemLotSourceDownstreamProductLine)
-	LotSourceAccountDefault        = string(constants.ItemLotSourceAccountDefault)
+	LotSourceItemOverride   = string(constants.ItemLotSourceItemOverride)
+	LotSourceItemCategory   = string(constants.ItemLotSourceItemCategory)
+	LotSourceAccountDefault = string(constants.ItemLotSourceAccountDefault)
 )
 
-// ProductLineLot is one line's configured lot convention.
-type ProductLineLot struct {
-	ProductLineID string
-	Quantity      float64
-	UnitID        string
+// CategoryLot is the lot of the category one item is in.
+type CategoryLot struct {
+	ItemCategoryID string
+	Quantity       float64
+	UnitID         string
 }
 
 // LotResolutionInput is everything the chain needs, gathered once.
 type LotResolutionInput struct {
 	// ItemOverrides are per-item lot sizes set by hand. They carry no unit — an override changes how big a lot is, not what it is counted in.
 	ItemOverrides map[string]float64
-	// ProductLineByItem maps an item to the line it sells under. Intermediate items — greige — are absent, which is what makes downstream inheritance necessary.
-	ProductLineByItem map[string]string
-	// LotByProductLine is the configured convention per line.
-	LotByProductLine map[string]ProductLineLot
-	// DownstreamByItem is what each planned item becomes, used to inherit a lot for greige that has no product line of its own.
-	DownstreamByItem map[string][]FinishedGood
+	// CategoryLotByItem is the lot of each item's category, for items whose category has one.
+	CategoryLotByItem map[string]CategoryLot
 	// AccountLotUnits is the account-wide fallback size.
 	AccountLotUnits float64
-	// UnitByItem is each item's own counting unit, used for the account fallback where there is no product line to take a unit from.
+	// UnitByItem is each item's own counting unit, used where the lot does not carry one of its own.
 	UnitByItem map[string]string
 }
 
@@ -54,9 +47,8 @@ type LotResolutionInput struct {
 // The chain, most specific first:
 //
 //  1. A per-item override, which changes the size but keeps the item's own unit.
-//  2. The item's own product line, for anything that is itself sellable.
-//  3. The product lines of what the item becomes. Greige has no product line of its own — it is not sold — so a doff of sock greige takes its lot from the sock line. Where a greige feeds several lines, the one carrying the most demand wins.
-//  4. The account default, counted in the item's own unit.
+//  2. The item's category. Intermediate items such as greige sit in categories of their own, so they carry their own lot rather than borrowing one from what they become.
+//  3. The account default, counted in the item's own unit.
 //
 // Returns false when nothing in the chain yields a usable lot, which means the item is planned unlotted rather than in a lot of some guessed size.
 func ResolveLotDefault(itemID string, in LotResolutionInput) (LotDefault, bool) {
@@ -68,19 +60,13 @@ func ResolveLotDefault(itemID string, in LotResolutionInput) (LotDefault, bool) 
 		}, true
 	}
 
-	if lineID, ok := in.ProductLineByItem[itemID]; ok {
-		if lot, ok := in.LotByProductLine[lineID]; ok && lot.Quantity > 0 {
-			return LotDefault{
-				Quantity:      lot.Quantity,
-				UnitID:        lot.UnitID,
-				Source:        LotSourceProductLine,
-				ProductLineID: lineID,
-			}, true
-		}
-	}
-
-	if lot, ok := inheritedLot(itemID, in); ok {
-		return lot, true
+	if lot, ok := in.CategoryLotByItem[itemID]; ok && lot.Quantity > 0 {
+		return LotDefault{
+			Quantity:       lot.Quantity,
+			UnitID:         lot.UnitID,
+			Source:         LotSourceItemCategory,
+			ItemCategoryID: lot.ItemCategoryID,
+		}, true
 	}
 
 	if in.AccountLotUnits > 0 {
@@ -92,50 +78,4 @@ func ResolveLotDefault(itemID string, in LotResolutionInput) (LotDefault, bool) 
 	}
 
 	return LotDefault{}, false
-}
-
-// inheritedLot takes a greige item's lot from the finished goods it becomes.
-//
-// Demand decides between competing lines rather than, say, count of SKUs: a greige that mostly becomes socks should be knitted in the sock line's doff even if it also feeds one low-volume armsleeve. Ties break on product line id so the same plan resolves the same way every time — the leveling is deterministic and this must not be the thing that makes it wobble.
-func inheritedLot(itemID string, in LotResolutionInput) (LotDefault, bool) {
-	demandByLine := map[string]float64{}
-	for _, finished := range in.DownstreamByItem[itemID] {
-		if finished.ProductLineID == "" {
-			continue
-		}
-		if _, ok := in.LotByProductLine[finished.ProductLineID]; !ok {
-			continue
-		}
-		// Seeded at zero first: a finished good with no demand history still votes, or a brand-new SKU would be invisible to the choice.
-		if _, seen := demandByLine[finished.ProductLineID]; !seen {
-			demandByLine[finished.ProductLineID] = 0
-		}
-		for _, month := range finished.Monthly {
-			demandByLine[finished.ProductLineID] += month.Quantity
-		}
-	}
-	if len(demandByLine) == 0 {
-		return LotDefault{}, false
-	}
-
-	lineIDs := make([]string, 0, len(demandByLine))
-	for lineID := range demandByLine {
-		lineIDs = append(lineIDs, lineID)
-	}
-	sort.Strings(lineIDs)
-
-	best, bestDemand := "", -1.0
-	for _, lineID := range lineIDs {
-		if demandByLine[lineID] > bestDemand {
-			best, bestDemand = lineID, demandByLine[lineID]
-		}
-	}
-
-	lot := in.LotByProductLine[best]
-	return LotDefault{
-		Quantity:      lot.Quantity,
-		UnitID:        lot.UnitID,
-		Source:        LotSourceDownstreamProductLine,
-		ProductLineID: best,
-	}, true
 }

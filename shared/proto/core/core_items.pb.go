@@ -5220,11 +5220,12 @@ type CreateItemCategoryRequest struct {
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Type  string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Empty uses the system each group.
-	UnitGroupId   string   `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
-	Includes      []string `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
-	PropertyIds   []string `protobuf:"bytes,5,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UnitGroupId    string         `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
+	Includes       []string       `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	PropertyIds    []string       `protobuf:"bytes,5,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
+	DefaultLotSize *QuantityInput `protobuf:"bytes,6,opt,name=default_lot_size,json=defaultLotSize,proto3,oneof" json:"default_lot_size,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateItemCategoryRequest) Reset() {
@@ -5292,6 +5293,13 @@ func (x *CreateItemCategoryRequest) GetPropertyIds() []string {
 	return nil
 }
 
+func (x *CreateItemCategoryRequest) GetDefaultLotSize() *QuantityInput {
+	if x != nil {
+		return x.DefaultLotSize
+	}
+	return nil
+}
+
 type CreateItemCategoryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCategory  *ItemCategoryInfo      `protobuf:"bytes,1,opt,name=item_category,json=itemCategory,proto3" json:"item_category,omitempty"`
@@ -5343,8 +5351,9 @@ type UpdateItemCategoryRequest struct {
 	Notes    *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	// When set, property_ids replaces the category's properties.
-	SetPropertyIds bool     `protobuf:"varint,5,opt,name=set_property_ids,json=setPropertyIds,proto3" json:"set_property_ids,omitempty"`
-	PropertyIds    []string `protobuf:"bytes,6,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
+	SetPropertyIds bool           `protobuf:"varint,5,opt,name=set_property_ids,json=setPropertyIds,proto3" json:"set_property_ids,omitempty"`
+	PropertyIds    []string       `protobuf:"bytes,6,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
+	DefaultLotSize *QuantityPatch `protobuf:"bytes,7,opt,name=default_lot_size,json=defaultLotSize,proto3,oneof" json:"default_lot_size,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -5417,6 +5426,13 @@ func (x *UpdateItemCategoryRequest) GetSetPropertyIds() bool {
 func (x *UpdateItemCategoryRequest) GetPropertyIds() []string {
 	if x != nil {
 		return x.PropertyIds
+	}
+	return nil
+}
+
+func (x *UpdateItemCategoryRequest) GetDefaultLotSize() *QuantityPatch {
+	if x != nil {
+		return x.DefaultLotSize
 	}
 	return nil
 }
@@ -6149,7 +6165,7 @@ var File_core_core_items_proto protoreflect.FileDescriptor
 
 const file_core_core_items_proto_rawDesc = "" +
 	"\n" +
-	"\x15core/core_items.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a\x17core/value_shapes.proto\"\xe7\x01\n" +
+	"\x15core/core_items.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a\x17core/value_shapes.proto\x1a\x15core/core_patch.proto\"\xe7\x01\n" +
 	"\x18GetItemInventoryResponse\x12+\n" +
 	"\aon_hand\x18\x01 \x01(\v2\x12.core.QuantityInfoR\x06onHand\x12.\n" +
 	"\breserved\x18\x02 \x01(\v2\x12.core.QuantityInfoR\breserved\x12D\n" +
@@ -6618,24 +6634,28 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"V\n" +
 	"\x17GetItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xa6\x01\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xff\x01\n" +
 	"\x19CreateItemCategoryRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\"\n" +
 	"\runit_group_id\x18\x03 \x01(\tR\vunitGroupId\x12\x1a\n" +
 	"\bincludes\x18\x04 \x03(\tR\bincludes\x12!\n" +
-	"\fproperty_ids\x18\x05 \x03(\tR\vpropertyIds\"Y\n" +
+	"\fproperty_ids\x18\x05 \x03(\tR\vpropertyIds\x12B\n" +
+	"\x10default_lot_size\x18\x06 \x01(\v2\x13.core.QuantityInputH\x00R\x0edefaultLotSize\x88\x01\x01B\x13\n" +
+	"\x11_default_lot_size\"Y\n" +
 	"\x1aCreateItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xdb\x01\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xb4\x02\n" +
 	"\x19UpdateItemCategoryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x04 \x03(\tR\bincludes\x12(\n" +
 	"\x10set_property_ids\x18\x05 \x01(\bR\x0esetPropertyIds\x12!\n" +
-	"\fproperty_ids\x18\x06 \x03(\tR\vpropertyIdsB\a\n" +
+	"\fproperty_ids\x18\x06 \x03(\tR\vpropertyIds\x12B\n" +
+	"\x10default_lot_size\x18\a \x01(\v2\x13.core.QuantityPatchH\x02R\x0edefaultLotSize\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
-	"\x06_notes\"Y\n" +
+	"\x06_notesB\x13\n" +
+	"\x11_default_lot_size\"Y\n" +
 	"\x1aUpdateItemCategoryResponse\x12;\n" +
 	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"+\n" +
 	"\x19DeleteItemCategoryRequest\x12\x0e\n" +
@@ -6815,7 +6835,8 @@ var file_core_core_items_proto_goTypes = []any{
 	(*QuantityInput)(nil),                         // 107: core.QuantityInput
 	(*PageInfo)(nil),                              // 108: core.PageInfo
 	(*ItemCategoryInfo)(nil),                      // 109: core.ItemCategoryInfo
-	(*PropertyInfo)(nil),                          // 110: core.PropertyInfo
+	(*QuantityPatch)(nil),                         // 110: core.QuantityPatch
+	(*PropertyInfo)(nil),                          // 111: core.PropertyInfo
 }
 var file_core_core_items_proto_depIdxs = []int32{
 	101, // 0: core.GetItemInventoryResponse.on_hand:type_name -> core.QuantityInfo
@@ -6907,22 +6928,24 @@ var file_core_core_items_proto_depIdxs = []int32{
 	108, // 86: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
 	106, // 87: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
 	109, // 88: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	109, // 89: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	109, // 90: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	110, // 91: core.CreateItemCategoryPropertyResponse.property:type_name -> core.PropertyInfo
-	104, // 92: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
-	95,  // 93: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
-	106, // 94: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
-	101, // 95: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	101, // 96: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	102, // 97: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	102, // 98: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 99: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	100, // [100:100] is the sub-list for method output_type
-	100, // [100:100] is the sub-list for method input_type
-	100, // [100:100] is the sub-list for extension type_name
-	100, // [100:100] is the sub-list for extension extendee
-	0,   // [0:100] is the sub-list for field type_name
+	107, // 89: core.CreateItemCategoryRequest.default_lot_size:type_name -> core.QuantityInput
+	109, // 90: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	110, // 91: core.UpdateItemCategoryRequest.default_lot_size:type_name -> core.QuantityPatch
+	109, // 92: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	111, // 93: core.CreateItemCategoryPropertyResponse.property:type_name -> core.PropertyInfo
+	104, // 94: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
+	95,  // 95: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
+	106, // 96: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
+	101, // 97: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	101, // 98: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	102, // 99: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	102, // 100: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 101: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	102, // [102:102] is the sub-list for method output_type
+	102, // [102:102] is the sub-list for method input_type
+	102, // [102:102] is the sub-list for extension type_name
+	102, // [102:102] is the sub-list for extension extendee
+	0,   // [0:102] is the sub-list for field type_name
 }
 
 func init() { file_core_core_items_proto_init() }
@@ -6936,6 +6959,7 @@ func file_core_core_items_proto_init() {
 	file_core_core_analytics_proto_init()
 	file_core_core_accounts_carriers_proto_init()
 	file_core_value_shapes_proto_init()
+	file_core_core_patch_proto_init()
 	file_core_core_items_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[9].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[17].OneofWrappers = []any{}
@@ -6956,6 +6980,7 @@ func file_core_core_items_proto_init() {
 	file_core_core_items_proto_msgTypes[72].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[79].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[81].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[85].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[87].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[95].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[98].OneofWrappers = []any{}

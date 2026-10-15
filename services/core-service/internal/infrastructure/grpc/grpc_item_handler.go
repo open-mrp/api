@@ -649,8 +649,8 @@ func (h *gRPCHandler) GetItemLotDefault(ctx context.Context, req *pb.GetItemLotD
 	if lot.UnitID != "" {
 		resp.UnitId = &lot.UnitID
 	}
-	if lot.ProductLineID != "" {
-		resp.ProductLineId = &lot.ProductLineID
+	if lot.ItemCategoryID != "" {
+		resp.ItemCategoryId = &lot.ItemCategoryID
 	}
 	return resp, nil
 }

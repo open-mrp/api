@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -28,6 +29,10 @@ type CreateItemCategoryRequest struct {
 	//
 	// Property names must be unique within the category.
 	PropertyIDs []string `json:"property_ids,omitzero" validate:"max=100"`
+	// The lot this category's items are made in, such as one doff or one pallet.
+	//
+	// The value must be greater than zero, and the unit of the same kind as the category's items. Omit it for no lot convention.
+	DefaultLotSize field.Optional[apirequest.QuantityInput] `json:"default_lot_size,omitzero"`
 	// Unit group the category's items are measured in. Defaults to each.
 	UnitGroupID field.Optional[string] `json:"unit_group_id,omitzero" visibility:"internal"`
 }

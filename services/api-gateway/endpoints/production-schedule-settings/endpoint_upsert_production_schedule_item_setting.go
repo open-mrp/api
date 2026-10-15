@@ -22,7 +22,7 @@ type UpsertItemSettingRequest struct {
 	//
 	// An excluded item is left out of the plan entirely: no campaigns, no policy, no capacity.
 	ParticipationStatus constants.ParticipationStatus `json:"participation_status" validate:"required"`
-	// Units in one production lot for this item, overriding the lot its product line would supply.
+	// Units in one production lot for this item, overriding the lot its category would supply.
 	LotMultipleUnits field.Optional[float64] `json:"lot_multiple_units,omitzero" validate:"omitempty,gt=0"`
 	// How this item is produced.
 	//

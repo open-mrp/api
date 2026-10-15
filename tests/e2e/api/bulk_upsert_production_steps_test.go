@@ -489,11 +489,8 @@ func TestProductionSteps_BulkUpsert_AutoDerivesFlowEdges(t *testing.T) {
 
 	skuA := uniqueName("e2e-bup-step-dag-p1")
 	skuB := uniqueName("e2e-bup-step-dag-p2")
-	partIDs, _ := bulkUpsertPartIDs(t,
-		map[string]any{"sku": skuA, "category": map[string]any{"id": SeedItemCategoryID}},
-		map[string]any{"sku": skuB, "category": map[string]any{"id": SeedItemCategoryID}},
-	)
-	defer cleanupPartIDs(partIDs)
+	// The items are deleted in cleanup, after the deferred step deletes have released them.
+	bulkUpsertItemsJob(t, forgeItemBody("part", skuA), forgeItemBody("part", skuB))
 
 	nameA := uniqueName("e2e-bup-step-dag-a")
 	nameB := uniqueName("e2e-bup-step-dag-b")

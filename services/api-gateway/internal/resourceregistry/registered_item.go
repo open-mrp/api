@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -22,15 +23,6 @@ func init() {
 				ExtractRefs: extractCategoryRefFromItem,
 				Populate:    populateCategoryOnItem,
 			},
-			valueShapeSub(constants.ObjectTypeItem, "unit_value", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
-				p.(*apiresource.Item).UnitValue = v.(*apiresource.UnitPrice)
-			}),
-			valueShapeSub(constants.ObjectTypeItem, "unit_cost", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
-				p.(*apiresource.Item).UnitCost = v.(*apiresource.UnitPrice)
-			}),
-			valueShapeSub(constants.ObjectTypeItem, "burn_rate", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
-				p.(*apiresource.Item).BurnRate = v.(*apiresource.Rate)
-			}),
 			{
 				// Read with the item; the refs let `attributes.property` resolve.
 				Key:         "attributes",
@@ -38,6 +30,15 @@ func init() {
 				ExtractRefs: extractAttributeRefsFromItem,
 				Populate:    populateAttributesOnItem,
 			},
+			{
+				Key:         "sales.product_line",
+				Target:      constants.ObjectTypeProductLine,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  extractSalesProductLineIDFromItem,
+				Populate:    populateSalesProductLineOnItem,
+			},
+			// No item names a manufacturing method yet, so the include always reads null.
+			{Key: "default_manufacturing_method", Populate: func(context.Context, any, map[string]any) {}},
 		},
 	})
 }
@@ -77,4 +78,27 @@ func extractAttributeRefsFromItem(_ context.Context, parent any) []any {
 		refs[i] = &item.Attributes.Data[i]
 	}
 	return refs
+}
+
+func salesProductLineID(ctx context.Context, item *apiresource.Item) string {
+	if item.Sales == nil {
+		return ""
+	}
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeItem, item.ID, resourceloaders.ItemSalesProductLineMetaKey)
+	return id
+}
+
+func extractSalesProductLineIDFromItem(ctx context.Context, parent any) []string {
+	if id := salesProductLineID(ctx, parent.(*apiresource.Item)); id != "" {
+		return []string{id}
+	}
+	return nil
+}
+
+func populateSalesProductLineOnItem(ctx context.Context, parent any, loaded map[string]any) {
+	item := parent.(*apiresource.Item)
+	id := salesProductLineID(ctx, item)
+	if v, ok := loaded[id]; ok && id != "" {
+		item.Sales.ProductLine = v.(*apiresource.ProductLine)
+	}
 }

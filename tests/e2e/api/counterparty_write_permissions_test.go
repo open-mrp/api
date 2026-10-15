@@ -35,16 +35,12 @@ type counterpartyWrite struct {
 
 // Records no account holds, for requests that must be refused before they are looked up.
 const (
-	counterpartyMissingMaterial    = "ml_01cpmissing00000000"
-	counterpartyMissingPart        = "pt_01cpmissing00000000"
 	counterpartyMissingAccountUser = "acus_01cpmissing000000"
 	counterpartyMissingOrder       = "or_01cpmissing00000000"
 	counterpartyMissingLine        = "orln_01cpmissing000000"
 	counterpartyMissingAddress     = "ad_01cpmissing00000000"
 	counterpartyMissingCustomer    = "ac_01cpmissing00000000"
 )
-
-var counterpartyDescription = map[string]any{"description": "e2e-cp-refused"}
 
 func counterpartyPost(t *testing.T, c *Client, path string, body map[string]any) (int, []byte) {
 	t.Helper()
@@ -93,12 +89,6 @@ func counterpartyRefusedCall(t *testing.T, c *Client, w counterpartyWrite) (int,
 		t.Cleanup(func() { _, _, _ = c.Delete(w.refusedPath + "/" + id) })
 	}
 	return status, body
-}
-
-// counterpartyCatalogItem creates a material or part in the seller's own account for a test to write to.
-func counterpartyCatalogItem(t *testing.T, path string, body map[string]any) string {
-	t.Helper()
-	return jsonField(createAndCleanup(t, path, body), "id")
 }
 
 // counterpartyContact adds a user to account, the seller's own team when account is SeedAccountID, and removes it afterwards.
@@ -169,78 +159,6 @@ func counterpartySaleLineBody() map[string]any {
 }
 
 var counterpartyWrites = []counterpartyWrite{
-	{
-		name: "create material", own: "materials:create", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPost, refusedPath: materialsPath, refusedBody: validMaterialBody("e2e-cp-refused"), wantOwn: http.StatusCreated,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			status, body := counterpartyPost(t, c, materialsPath, validMaterialBody(uniqueName("e2e-cp-mat")))
-			if status == http.StatusCreated {
-				id := jsonField(parseJSON(body), "id")
-				t.Cleanup(func() { _, _, _ = apiClient.Delete(materialsPath + "/" + id) })
-			}
-			return status, body
-		},
-	},
-	{
-		name: "update material", own: "materials:update", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPatch, refusedPath: materialsPath + "/" + counterpartyMissingMaterial, refusedBody: counterpartyDescription, wantOwn: http.StatusOK,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			id := counterpartyCatalogItem(t, materialsPath, validMaterialBody(uniqueName("e2e-cp-mat")))
-			return counterpartyPatch(t, c, materialsPath+"/"+id, map[string]any{"description": uniqueName("e2e-cp")})
-		},
-		counterpartyWrite: func(t *testing.T, c *Client, _ string) (int, []byte) {
-			return counterpartyPatch(t, c, materialsPath+"/"+SeedMaterialID, map[string]any{"description": uniqueName("e2e-cp")})
-		},
-		wantCounterparty: http.StatusNotFound,
-	},
-	{
-		name: "delete material", own: "materials:delete", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodDelete, refusedPath: materialsPath + "/" + counterpartyMissingMaterial, wantOwn: http.StatusOK,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			id := counterpartyCatalogItem(t, materialsPath, validMaterialBody(uniqueName("e2e-cp-mat")))
-			return counterpartyDelete(t, c, materialsPath+"/"+id)
-		},
-		counterpartyWrite: func(t *testing.T, c *Client, _ string) (int, []byte) {
-			return counterpartyDelete(t, c, materialsPath+"/"+SeedMaterialID)
-		},
-		wantCounterparty: http.StatusNotFound,
-	},
-	{
-		name: "create part", own: "parts:create", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPost, refusedPath: partsPath, refusedBody: validPartBody("e2e-cp-refused"), wantOwn: http.StatusCreated,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			status, body := counterpartyPost(t, c, partsPath, validPartBody(uniqueName("e2e-cp-part")))
-			if status == http.StatusCreated {
-				id := jsonField(parseJSON(body), "id")
-				t.Cleanup(func() { _, _, _ = apiClient.Delete(partsPath + "/" + id) })
-			}
-			return status, body
-		},
-	},
-	{
-		name: "update part", own: "parts:update", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPatch, refusedPath: partsPath + "/" + counterpartyMissingPart, refusedBody: counterpartyDescription, wantOwn: http.StatusOK,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			id := counterpartyCatalogItem(t, partsPath, validPartBody(uniqueName("e2e-cp-part")))
-			return counterpartyPatch(t, c, partsPath+"/"+id, map[string]any{"description": uniqueName("e2e-cp")})
-		},
-		counterpartyWrite: func(t *testing.T, c *Client, _ string) (int, []byte) {
-			return counterpartyPatch(t, c, partsPath+"/"+SeedPartID, map[string]any{"description": uniqueName("e2e-cp")})
-		},
-		wantCounterparty: http.StatusNotFound,
-	},
-	{
-		name: "delete part", own: "parts:delete", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodDelete, refusedPath: partsPath + "/" + counterpartyMissingPart, wantOwn: http.StatusOK,
-		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			id := counterpartyCatalogItem(t, partsPath, validPartBody(uniqueName("e2e-cp-part")))
-			return counterpartyDelete(t, c, partsPath+"/"+id)
-		},
-		counterpartyWrite: func(t *testing.T, c *Client, _ string) (int, []byte) {
-			return counterpartyDelete(t, c, partsPath+"/"+SeedPartID)
-		},
-		wantCounterparty: http.StatusNotFound,
-	},
 	{
 		name: "create account user", own: "team:create", customer: "customers:create", supplier: "suppliers:create",
 		method: http.MethodPost, refusedPath: accountUsersPath, refusedBody: map[string]any{"name": "e2e-cp-refused", "email": "e2e-cp-refused@e2e-test.openmrp.ai"}, wantOwn: http.StatusCreated,

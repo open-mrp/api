@@ -221,7 +221,7 @@ func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 		"production.produced_item.category.unit_group.base_unit",
 		"production.produced_item.category.unit_group.associated_units.unit",
 		"consumptions",
-		"consumptions.consumed_item.unit_cost",
+		"consumptions.consumed_item",
 		"consumptions.consumed_item.category.unit_group.base_unit",
 		"machines.department",
 	}}

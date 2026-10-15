@@ -46,6 +46,9 @@ func newSupplierTestDeps(t *testing.T) *supplierTestDeps {
 	d.repos.EXPECT().NewSupplierRepo().Return(d.supplierRepo).AnyTimes()
 	d.repos.EXPECT().NewAddressRepo().Return(d.addressRepo).AnyTimes()
 	d.repos.EXPECT().NewMaterialRepo().Return(d.materialRepo).AnyTimes()
+	assignableItems := repositorymock.NewMockItemRepo(ctrl)
+	assignableItems.EXPECT().GetAssignability(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	d.repos.EXPECT().NewItemRepo().Return(assignableItems).AnyTimes()
 	d.repos.EXPECT().NewSupplierMaterialRepo().Return(d.supplierMatRepo).AnyTimes()
 	d.repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 

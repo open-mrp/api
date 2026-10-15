@@ -18,7 +18,7 @@ type RetrieveItemRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Returns a single item by ID.
+// Retrieves an item.
 type RetrieveItemEndpoint struct{}
 
 func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item] {
@@ -26,19 +26,15 @@ func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveI
 		Title:             "Retrieve Item",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/items/{id}",
+		Route:             itemRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
-		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).GetItem
 		},
-		ObjectType: constants.ObjectTypeItem,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
-		}),
+		ObjectType:    constants.ObjectTypeItem,
+		IncludeConfig: itemIncludes(),
 	})
 }

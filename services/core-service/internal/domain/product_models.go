@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )
@@ -87,7 +88,9 @@ type CreateProductParams struct {
 // the service-generated IDs (item id + the three rate ids) alongside the item's
 // caller-provided fields, so the generated IDs stay out of CreateProductParams.
 type InsertProductItemParams struct {
-	ItemID          string
+	ItemID string
+	// ItemTypeCode is product, or service for a service product.
+	ItemTypeCode    constants.ItemTypeCode
 	AccountID       string
 	SKU             string
 	Description     *string

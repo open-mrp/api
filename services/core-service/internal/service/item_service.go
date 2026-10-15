@@ -62,6 +62,7 @@ var itemSvcTracer = tracing.GetTracer("core-service.item_service")
 type itemSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -71,6 +72,9 @@ type ItemSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -82,6 +86,9 @@ func (c *ItemSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("item service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("item service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("item service: tx manager is required")
@@ -97,6 +104,7 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 	return &itemSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -183,14 +191,14 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, s.mediators(), func() *apierror.APIError {
+		return checkItemReadPermission(identity)
+	}); apiErr != nil {
+		return nil, apiErr
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
+	scopeItemListToPortal(identity, &params)
 	params.AccountID = identity.Target.AccountID
+	params.Includes = append(params.Includes, "sections")
 
 	result, apiErr := s.repos.NewItemRepo().List(ctx, params)
 	if apiErr != nil {
@@ -198,6 +206,25 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 	}
 
 	return result, nil
+}
+
+// scopeItemListToPortal narrows a portal user's list: a customer sees the active items it may order and that are
+// visible in the portal; a supplier sees the items it supplies.
+func scopeItemListToPortal(identity *types.Identity, params *domain.ListItemsParams) {
+	actor := identity.ActorAccountID()
+	if actor == nil {
+		return
+	}
+	switch {
+	case identity.IsCustomerUser():
+		visible, active := true, true
+		params.CustomerIDs = []string{*actor}
+		params.IsPortalReady = &visible
+		params.IsActive = &active
+	case identity.IsSupplierUser():
+		params.SupplierID = nil
+		params.SupplierIDs = []string{*actor}
+	}
 }
 
 // GetItem returns a single item by ID within the caller's account.
@@ -210,17 +237,29 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, nil, tracing.Trace(span, apiErr)
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, s.mediators(), func() *apierror.APIError {
+		return checkItemReadPermission(identity)
+	}); apiErr != nil {
+		return nil, nil, apiErr
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
-		return nil, nil, tracing.Trace(span, apiErr)
+	if !identity.IsInternalActor() {
+		// A portal user reads only an item its own list would show.
+		params := domain.ListItemsParams{IDs: []string{itemID}, Limit: 1}
+		scopeItemListToPortal(identity, &params)
+		params.AccountID = identity.Target.AccountID
+		visible, apiErr := s.repos.NewItemRepo().List(ctx, params)
+		if apiErr != nil {
+			return nil, nil, tracing.Trace(span, apiErr)
+		}
+		if len(visible.Items) == 0 {
+			return nil, nil, tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
+		}
 	}
 
 	item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
 		AccountID: identity.Target.AccountID,
 		ItemID:    itemID,
-		Includes:  includes,
+		Includes:  append(append([]string{}, includes...), "sections"),
 	})
 	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return nil, nil, tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
@@ -812,103 +851,6 @@ func itemAuditIncludes(userIncludes []string) []string {
 	return merged
 }
 
-// UpdateItem partially updates an item (sku, description, notes).
-func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemParams) (*domain.Item, *apierror.APIError) {
-	ctx, span := itemSvcTracer.Start(ctx, "service.item.update")
-	defer span.End()
-
-	identity, ok := appctx.Identity[*types.Identity](ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionUpdate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	params.AccountID = identity.Target.AccountID
-
-	meds := s.mediators()
-
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
-	case domain.RecoveryPointFinished:
-		cached, err := idemresponse.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
-		}
-		return cached.Data, cached.Error
-
-	case domain.RecoveryPointStarted:
-		var result *domain.Item
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewItemRepo()
-
-			old, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: params.AccountID,
-				ItemID:    params.ItemID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-
-			// Check SKU uniqueness if being updated
-			if params.SKU != nil {
-				exists, apiErr := txRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, params.ItemID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if exists {
-					return apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("Item sku %s already exists.", *params.SKU))
-				}
-			}
-
-			if apiErr := txRepo.Update(txCtx, params); apiErr != nil {
-				return apiErr
-			}
-
-			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: params.AccountID,
-				ItemID:    params.ItemID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			result = item
-
-			changes := audit.ComputeChanges(old, result)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeItem,
-				ResourceID:   result.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	default:
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
-	}
-}
-
 // AddItemAttribute adds an attribute to an item.
 func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.add_attribute")
@@ -1108,7 +1050,7 @@ func categoryTypeMatchesItem(itemTypeCode, categoryTypeCode string) bool {
 	switch constants.ItemTypeCode(itemTypeCode) {
 	case constants.ItemTypeCodeMaterial:
 		return categoryTypeCode == constants.ItemCategoryTypeMaterial.Code()
-	case constants.ItemTypeCodeProduct, constants.ItemTypeCodePart:
+	case constants.ItemTypeCodeProduct, constants.ItemTypeCodePart, constants.ItemTypeCodeService:
 		return categoryTypeCode == constants.ItemCategoryTypeProduct.Code()
 	default:
 		return false
@@ -1785,13 +1727,11 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 			return apiErr
 		}
 
-		// Description / notes / sku are handled via the generic item update.
-		updateDesc := input.Description != nil
-		if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams{
-			AccountID:         accountID,
-			ItemID:            itemID,
-			Description:       input.Description,
-			UpdateDescription: updateDesc,
+		if apiErr := txItemRepo.SetFields(txCtx, domain.SetItemFieldsParams{
+			AccountID:      accountID,
+			ItemID:         itemID,
+			SetDescription: input.Description != nil,
+			Description:    input.Description,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -2027,6 +1967,7 @@ func (s *itemSvcImpl) bulkCreateProductInTx(txCtx context.Context, accountID, it
 		}
 		if apiErr := txProductRepo.InsertItem(txCtx, domain.InsertProductItemParams{
 			ItemID:          itemID,
+			ItemTypeCode:    constants.ItemTypeCodeProduct,
 			AccountID:       accountID,
 			SKU:             input.SKU,
 			Description:     input.Description,

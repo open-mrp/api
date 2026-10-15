@@ -436,38 +436,38 @@ Docstrings
 
 One public resource, `item`, with one ID (the item ID). Fields are reviewed in part 2.
 
-- [ ] `type: material | part | product | service`, fixed at create. `material`, `part`, `product` are physical: stocked (inventory, `stocking_unit`), picked/packed/shipped, produced or consumed. `service` is never stocked, picked, packed, shipped or produced; it has no `stocking_unit` and its `order_units` follow `default_order_unit`'s dimension.
-- [ ] Sections: `sales: { product_line, portal_visibility } | null` (present on sellable items: `product`, `service`); `material: { order_point, lead_time } | null`. Parts have no section (addable later). Sending a section that doesn't apply to the type → 422.
-- [ ] **`product.type` removed.** Migration: `sale` → item `product`; `service` (1) → item `service`; `shipping` (30 system products, 18,501 order lines) and `credit` (30, 426 lines) → order line types (sales orders review); `tax` (1, unused) and `return` (0) dropped; returns and tax come back as their own flows later.
-- [ ] Pick/pack/ship rule is structural: only `item` lines whose item type is physical are picked and packed. Shipping lines, credit lines and services are skipped.
-- [ ] Routes: `GET/POST /v1/catalog/items`, `GET/PATCH/DELETE /v1/catalog/items/{id}`, `POST /items/actions/bulk-upsert` (typed rows), `POST /items/actions/set-order-units`, `POST /items/{id}/actions/change-stocking-unit`, lot-default sub-resource (part 2). Stock changes are inventory movements (Inventory N1).
-- [ ] Remove `/v1/catalog/materials/*`, `/v1/catalog/parts/*`, `/v1/catalog/products/*`, `PUT /items/{id}/category/{category_id}` (→ PATCH `category_id`), `PUT /products/{id}/product-line/{product_line_id}` (→ PATCH `sales.product_line_id`), `PUT/DELETE /items/{id}/attributes/{attribute_id}` (→ PATCH `attribute_ids`, replaces the list).
-- [ ] Data: `sales_order_line.product_id` dropped (it already has `item_id`); `supplier_material.material_id` → `item_id`; `product` and `material` stay as 1:1 extension tables keyed by `item_id` with their own IDs unexposed; drop the `part` table.
-- [ ] List filters that only apply to sellable items (`product_line_ids`, `portal_visibilities`) match only products and services.
-- [ ] Perf: one `item` row + 1:1 `LEFT JOIN`s on unique `item_id`; type-filtered lists use `item_account_type_created_idx`.
+- [x] `type: material | part | product | service`, fixed at create. `material`, `part`, `product` are physical: stocked (inventory, `stocking_unit`), picked/packed/shipped, produced or consumed. `service` is never stocked, picked, packed, shipped or produced; it has no `stocking_unit` and its `order_units` follow `default_order_unit`'s dimension.
+- [x] Sections: `sales: { product_line, portal_visibility } | null` (present on sellable items: `product`, `service`); `material: { order_point, lead_time } | null`. Parts have no section (addable later). Sending a section that doesn't apply to the type → 422. *(ITM1: per Y5 any type may carry `sales`; a material or part has it once sent, or when it already had a selling price.)*
+- [ ] **`product.type` removed.** Migration: `sale` → item `product`; `service` (1) → item `service`; `shipping` (30 system products, 18,501 order lines) and `credit` (30, 426 lines) → order line types (sales orders review); `tax` (1, unused) and `return` (0) dropped; returns and tax come back as their own flows later. *(ITM1: services are item type `service`, data migration 00019; `product.type` is gone from items. Shipping/credit/tax/return system products and their lines are left to SO2.)*
+- [ ] Pick/pack/ship rule is structural: only `item` lines whose item type is physical are picked and packed. Shipping lines, credit lines and services are skipped. *(ITM1: services keep their non-sale product type, so picks already skip them; the structural rule lands with order line types in SO2/FUL1.)*
+- [ ] Routes: `GET/POST /v1/catalog/items`, `GET/PATCH/DELETE /v1/catalog/items/{id}`, `POST /items/actions/bulk-upsert` (typed rows), `POST /items/actions/set-order-units`, `POST /items/{id}/actions/change-stocking-unit`, lot-default sub-resource (part 2). Stock changes are inventory movements (Inventory N1). *(ITM1: list, create, retrieve, update, delete and typed bulk upsert done; set-order-units and change-stocking-unit are ITM2, the lot-default sub-resource INV1.)*
+- [x] Remove `/v1/catalog/materials/*`, `/v1/catalog/parts/*`, `/v1/catalog/products/*`, `PUT /items/{id}/category/{category_id}` (→ PATCH `category_id`), `PUT /products/{id}/product-line/{product_line_id}` (→ PATCH `sales.product_line_id`), `PUT/DELETE /items/{id}/attributes/{attribute_id}` (→ PATCH `attribute_ids`, replaces the list).
+- [ ] Data: `sales_order_line.product_id` dropped (it already has `item_id`); `supplier_material.material_id` → `item_id`; `product` and `material` stay as 1:1 extension tables keyed by `item_id` with their own IDs unexposed; drop the `part` table. *(ITM1: product and material stay 1:1 extensions with unexposed ids. Not done here: `sales_order_line.product_id` (SO2 moves lines to `item_id`), `supplier_material.material_id` (SUP, with supplier items), dropping `part` (CLEAN, once preview.9 callers no longer reach /parts by part id).)*
+- [x] List filters that only apply to sellable items (`product_line_ids`, `portal_visibilities`) match only products and services.
+- [x] Perf: one `item` row + 1:1 `LEFT JOIN`s on unique `item_id`; type-filtered lists use `item_account_type_created_idx`.
 
 ## Items, part 2 — fields ✅ finalized
 
 Fields
-- [ ] Remove `notes`. `description` clearable on update for every type.
-- [ ] `unit_value` → `sales.unit_price` (`UnitPrice`; base sales-order price before price lists apply). Request and response both say `unit_price`.
-- [ ] `unit_cost` (`UnitPrice`; internal + `costs:read`) and `burn_rate` (`Rate`; internal; read-only, computed) are always populated (value shapes aren't expandable). Every type can set `unit_cost` and `sales.unit_price` on create/update.
-- [ ] `category_id` required on create, updatable; category `type` must match (`material` → materials; `product` → parts, products, services). Changing category no longer restates rates.
-- [ ] `attribute_ids` on create/update (replaces the list); at most one attribute per property (422; prod has 0 violations); archived attributes rejected.
-- [ ] `sales: { unit_price, product_line_id (clearable), portal_visibility (default hidden) }`; `material: { order_point, lead_time }` (each clearable; `lead_time` in a `time` unit).
-- [ ] `status: active | archived`; archived items can't be added to new orders, production or purchasing.
+- [x] Remove `notes`. `description` clearable on update for every type.
+- [x] `unit_value` → `sales.unit_price` (`UnitPrice`; base sales-order price before price lists apply). Request and response both say `unit_price`.
+- [x] `unit_cost` (`UnitPrice`; internal + `costs:read`) and `burn_rate` (`Rate`; internal; read-only, computed) are always populated (value shapes aren't expandable). Every type can set `unit_cost` and `sales.unit_price` on create/update.
+- [x] `category_id` required on create, updatable; category `type` must match (`material` → materials; `product` → parts, products, services). Changing category no longer restates rates.
+- [x] `attribute_ids` on create/update (replaces the list); at most one attribute per property (422; prod has 0 violations); archived attributes rejected.
+- [x] `sales: { unit_price, product_line_id (clearable), portal_visibility (default hidden) }`; `material: { order_point, lead_time }` (each clearable; `lead_time` in a `time` unit).
+- [x] `status: active | archived`; archived items can't be added to new orders, production or purchasing.
 
 Delete (replaces soft delete)
-- [ ] Hard delete only while nothing references the item (order lines, inventory movements, lots, batches, production, planned orders, price-list rules, supplier materials — all indexed `item_id` probes); else 409 `resource_in_use`. Returns the stub.
-- [ ] Migration: the 131 soft-deleted items (`deleted_at` set) become `archived`; then drop `item.deleted_at`.
+- [x] Hard delete only while nothing references the item (order lines, inventory movements, lots, batches, production, planned orders, price-list rules, supplier materials — all indexed `item_id` probes); else 409 `resource_in_use`. Returns the stub. *(ITM1: price-list rule probes come with PRC.)*
+- [ ] Migration: the 131 soft-deleted items (`deleted_at` set) become `archived`; then drop `item.deleted_at`. *(ITM1: an item soft-deleted before this reads as `archived` (is_active = 0 or deleted_at set), and making it active clears deleted_at; nothing writes deleted_at any more. The data move and column drop are left to CLEAN.)*
 
 List
-- [ ] `q`: case-insensitive substring on `sku` or `description`, ranked exact SKU → SKU whole-word → SKU prefix → other, newest first within a rank (documented as contract). Drop FULLTEXT `item_sku_idx`, `item_description_idx`, `item_sku_description_idx`.
-- [ ] New `skus[]` exact filter (case-insensitive, ≤100) on the unique `(account_id, sku)` key.
-- [ ] Keep `types[]`, `category_ids[]`, `attribute_ids[]`, `product_line_ids[]`, `customer_ids[]` (the latter two match sellable items only). `portal_visibility` → `portal_visibilities[]`; `supplier_id` → `supplier_ids[]`; new `statuses[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. `subassembly_filter` kept for now (revisit with production flows).
+- [x] `q`: case-insensitive substring on `sku` or `description`, ranked exact SKU → SKU whole-word → SKU prefix → other, newest first within a rank (documented as contract). Drop FULLTEXT `item_sku_idx`, `item_description_idx`, `item_sku_description_idx`.
+- [x] New `skus[]` exact filter (case-insensitive, ≤100) on the unique `(account_id, sku)` key.
+- [x] Keep `types[]`, `category_ids[]`, `attribute_ids[]`, `product_line_ids[]`, `customer_ids[]` (the latter two match sellable items only). `portal_visibility` → `portal_visibilities[]`; `supplier_id` → `supplier_ids[]`; new `statuses[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. `subassembly_filter` kept for now (revisit with production flows).
 
 Bulk upsert
-- [ ] One `POST /items/actions/bulk-upsert` replaces the three per-type ones: rows carry `type`, matched by `sku`, same fields as create (sections by type); attributes resolve by `(property, value)`. Async 202 + async job.
+- [x] One `POST /items/actions/bulk-upsert` replaces the three per-type ones: rows carry `type`, matched by `sku`, same fields as create (sections by type); attributes resolve by `(property, value)`. Async 202 + async job.
 
 Deferred to the inventory review
 - `GET/PATCH /items/{id}/inventory`, `GET /items/{id}/lot-default`, `POST /items/actions/bulk-reconcile`. Decided now: one vocabulary, `operation: adjust | reconcile` (bulk's `reconcile_type: addition | force` → `operation: adjust | reconcile`).
@@ -1265,7 +1265,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
 - [ ] **Y2** Methods gain `output_quantity` (Quantity, default 1 stocking unit). Material quantities are per that much output.
 - [ ] **Y3** Order and invoice lines gain a nullable `discount` (Discount shape). `amount = quantity × unit_price − discount`.
 - [ ] **Y4** An order unit can carry its own `quantity` of stocking units for this item (e.g. a "Case" of 24 here, 12 elsewhere), overriding the unit's account-wide ratio. Order, PO and invoice lines snapshot `stocking_quantity`, so ratio edits never rewrite history.
-- [ ] **Y5** The `sales` section is allowed on any physical item type (`material`, `part`, `product`) and on `service`. `type` says what the item is; sourcing stays in method `supply` and planning.
+- [x] **Y5** The `sales` section is allowed on any physical item type (`material`, `part`, `product`) and on `service`. `type` says what the item is; sourcing stays in method `supply` and planning.
 - [ ] **Y6** Operation `work_center` stays required; a `process` concept is additive later.
 - [ ] **Y7** Inventory movements record read-only `unit_cost` (UnitPrice) at the time of the movement.
 
@@ -1501,6 +1501,13 @@ Items (structure)
 - Item list: `starts_at`/`ends_at` → `created_after`/`created_before`, `portal_visibility` → `portal_visibilities[]`, `supplier_id` → `supplier_ids[]`; use `skus[]` for exact lookups.
 - Bulk reconcile → `POST /operations/inventory-movements/actions/bulk-create` (Inventory N1), `reconcile_type: addition | force` → `operation: adjust | reconcile`.
 - Change category / product line / attributes via `PATCH /items/{id}` (`category_id`, `sales.product_line_id`, `attribute_ids`) instead of the PUT sub-endpoints.
+- The `/materials`, `/parts` and `/products` routes and the item attribute, category and bulk-create sub-routes answer only preview.9 callers; on 1.0.forge they 404. preview.9 keeps the old item shape (`unit_value`, `notes: null`, a service reads as `product`), and its item list keeps `starts_at`/`ends_at`/`supplier_id` and hides archived items.
+- A material or part has a `sales` section once one is sent for it, or when it already had a selling price; one priced at zero has none, and preview.9 reads its `unit_value` as `null` (was a zero rate).
+- Changing an item's category no longer switches its price, cost and quantity units to the new category's base unit (the preview.9 change-category route and category changes on the preview.9 material/part/product updates still do).
+- Deleting a material, part or product (preview.9 routes included) is a hard delete of its item, refused with 409 `resource_in_use` while orders, inventory movements, lots, batches, production steps, planned orders, downtime events or supplier materials use it; it was a soft delete.
+- Archived items are refused (422 `resource_archived`) on new sales and purchase order lines, production run batches and supplier materials.
+- Portal users list and retrieve items: only active items visible in the portal on lines they may order (customers), or the items they supply (suppliers).
+- `sales.lead_time` (Quantity in a time unit), `supply` and an always-`null` `default_manufacturing_method` are new.
 
 Customers
 - Request bodies change shape to mirror the response: `contact {…}`, `carrier_billing {…}`, `defaults { carrier_id, service_level_id, payment_term_id, shipping_term_id, sales_rep_id, bill_to_address_id, ship_to_address_id, receive_calendar_id, lead_time_days, fulfillment_policy }`, `group_id`, `price_list_ids`, top-level `freight_policy`.

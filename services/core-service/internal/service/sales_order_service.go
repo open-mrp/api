@@ -554,6 +554,13 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
+		lineItemIDs := make([]string, 0, len(resolvedLines))
+		for _, l := range resolvedLines {
+			lineItemIDs = append(lineItemIDs, l.ItemID)
+		}
+		if apiErr := requireItemsAssignable(ctx, s.repos, params.AccountID, lineItemIDs, "lines"); apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
 
 		// Order total (product lines only), computed from the resolved unit prices — used by the shipping-rate minimum-order check and the discount line.
 		resolvedConvs, apiErr := resolvedLineConversions(ctx, s.repos, params.AccountID, resolvedLines)

@@ -46,34 +46,18 @@ func lightAttributePresenter(a *pb.ItemAttributeInfo) *apiresource.Attribute {
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}
-	if a.PropertyId != "" {
-		attr.Property = &apiresource.Property{
-			ID:     a.PropertyId,
-			Object: constants.ObjectTypeProperty,
-		}
-	}
 	return attr
 }
 
+// ItemPresenter presents an item embedded whole in an older-version response, with its category and attributes; an
+// attribute's property is left to its include.
 func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 	if i == nil {
 		return apiresource.Item{}
 	}
 
-	item := apiresource.Item{
-		ID:           i.Id,
-		Object:       constants.ObjectTypeItem,
-		SKU:          i.Sku,
-		Description:  i.Description,
-		Notes:        i.Notes,
-		ItemTypeCode: constants.ItemTypeCode(i.ItemTypeCode),
-		Category:     lightItemCategoryPresenter(i.Category),
-		UnitValue:    resourceloaders.UnitPriceFromProto(i.UnitValue),
-		UnitCost:     resourceloaders.UnitPriceFromProto(i.UnitCost),
-		BurnRate:     resourceloaders.RateFromProto(i.BurnRate),
-		CreatedAt:    grpcutil.TimestampToTime(i.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(i.UpdatedAt),
-	}
+	item := *resourceloaders.ItemFromProto(i)
+	item.Category = lightItemCategoryPresenter(i.Category)
 
 	attrs := make([]apiresource.Attribute, len(i.Attributes))
 	for j, a := range i.Attributes {

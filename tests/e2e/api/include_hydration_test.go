@@ -447,8 +447,15 @@ func assertItemHydrated(t *testing.T, item map[string]any, where string) {
 	assertValidTimestamp(t, jsonField(item, "updated_at"), where+".updated_at")
 
 	// The item's own expandables were not asked for, so they stay null.
-	for _, sub := range []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes"} {
+	for _, sub := range []string{"category", "attributes", "default_manufacturing_method"} {
 		assertNilField(t, item, sub)
+	}
+	if sales := jsonObject(item, "sales"); sales != nil {
+		assertNilField(t, sales, "product_line")
+	}
+	// Cost and burn rate are values, not includes: always present, null only when unknown or withheld.
+	for _, value := range []string{"unit_cost", "burn_rate"} {
+		assert.Contains(t, item, value, "%s.%s", where, value)
 	}
 }
 

@@ -68,12 +68,77 @@ message UpdateItemRequest {
   optional string sku = 2;
   optional string description = 3;
   bool update_description = 4;
-  optional string notes = 5;
-  bool update_notes = 6;
+  reserved 5, 6;
+  reserved "notes", "update_notes";
   repeated string includes = 7;
+  optional string category_id = 8;
+  // Present replaces the item's attributes with value (clear empties them).
+  StringListPatch attribute_ids = 9;
+  // active | archived
+  optional string status = 10;
+  // stock | make | buy
+  StringPatch supply = 11;
+  UnitPrice unit_cost = 12;
+  ItemSalesInput sales = 13;
+  ItemMaterialInput material = 14;
 }
 message UpdateItemResponse {
   ItemInfo item = 1;
+}
+// Selling details on an item write; absent fields keep their values (or defaults on create).
+message ItemSalesInput {
+  UnitPrice unit_price = 1;
+  StringPatch product_line_id = 2;
+  // visible | hidden
+  optional string portal_visibility = 3;
+  QuantityPatch lead_time = 4;
+}
+// A material's purchasing details on an item write.
+message ItemMaterialInput {
+  QuantityPatch order_point = 1;
+  QuantityPatch lead_time = 2;
+}
+message CreateItemRequest {
+  // material | part | product | service
+  string type = 1;
+  string sku = 2;
+  optional string description = 3;
+  string category_id = 4;
+  repeated string attribute_ids = 5;
+  // active | archived; defaults to active.
+  optional string status = 6;
+  // stock | make | buy
+  optional string supply = 7;
+  UnitPrice unit_cost = 8;
+  ItemSalesInput sales = 9;
+  ItemMaterialInput material = 10;
+}
+message CreateItemResponse {
+  ItemInfo item = 1;
+}
+message DeleteItemRequest {
+  string id = 1;
+}
+// One item row of a bulk upsert, matched to an existing item by sku.
+message UpsertItemInput {
+  string type = 1;
+  string sku = 2;
+  optional string description = 3;
+  ObjectIdentifier category = 4;
+  // Attributes by (property name, value), created when missing. Replaces the item's attributes.
+  repeated UpsertItemPropertyInput attributes = 5;
+  bool has_attributes = 6;
+  optional string status = 7;
+  StringPatch supply = 8;
+  UnitPrice unit_cost = 9;
+  ItemSalesInput sales = 10;
+  ItemMaterialInput material = 11;
+}
+message BulkUpsertItemsRequest {
+  repeated UpsertItemInput items = 1;
+}
+message BulkUpsertItemsResponse {
+  JobInfo job = 1;
 }
 message AddItemAttributeRequest {
   string item_id = 1;

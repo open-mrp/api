@@ -677,13 +677,13 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Soft-delete within a transaction.
+	// Hard-delete the item within a transaction, once nothing references it.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *materialSvcImpl) *apierror.APIError {
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, accountID, material); apiErr != nil {
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewMaterialRepo().DeleteByID(txCtx, accountID, materialID); apiErr != nil {
+		if _, apiErr := deleteItemInTx(txCtx, txSvc.repos, accountID, material.ItemID); apiErr != nil {
 			return apiErr
 		}
 

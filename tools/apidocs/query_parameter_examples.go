@@ -20,6 +20,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return apiresource.SampleFilterStartDateRFC3339
 	case "ends_at", "created_before":
 		return apiresource.SampleFilterEndDateRFC3339
+	case "skus":
+		return []any{apiresource.SampleItemSKU}
 	case "ship_by_after", "ship_by_before":
 		return apiresource.SampleFilterDateOnly
 	case "from_date", "to_date":

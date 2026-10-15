@@ -14,12 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The seller's internal operational data reaches only its own people: what a production run holds and who runs it, how fast an item is consumed, how a product line is planned, its team's notes and commission settings, when its users were last active, and which conversations are under legal hold. Customer and supplier portal actors read those fields as null while the record itself still loads; every internal role that may read the record sees them.
+// The seller's internal operational data reaches only its own people: what a production run holds and who runs it, how fast an item is consumed and where it is supplied from, how a product line is planned, its team's notes and commission settings, when its users were last active, and which conversations are under legal hold. Customer and supplier portal actors read those fields as null while the record itself still loads; every internal role that may read the record sees them.
 
 // sellerInternalFields mirrors the fields the gateway tags sensitive:"internal", by the object that carries them.
 var sellerInternalFields = map[string][]string{
 	"production_run":    {"responsible_user", "batch_count", "batch_summaries"},
-	"item":              {"burn_rate", "notes"},
+	"item":              {"burn_rate", "supply", "material", "default_manufacturing_method"},
 	"product_line":      {"supply", "commission_policy"},
 	"customer":          {"note", "commission_policy"},
 	"customer_defaults": {"fulfillment_policy"},
@@ -148,36 +148,30 @@ func TestSellerInternal_ProductLinePlanningIsWithheldFromPortals(t *testing.T) {
 	}
 }
 
-// --- Notes and commission settings ---
+// --- Supply and commission settings ---
 
-func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testing.T) {
+func TestSellerInternal_CatalogSupplyAndCommissionAreWithheldFromPortals(t *testing.T) {
 	t.Parallel()
 	line := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-internal-notes-pdln"),
 		"commission_policy": "applied",
 		"freight_policy":    "billed",
 	})
-	product := createAndCleanup(t, productsPath, map[string]any{
-		"sku":               uniqueName("e2e-internal-notes-pd"),
-		"type":              "sale",
-		"category_id":       SeedItemCategoryID,
+	body := forgeItemBody("product", uniqueName("e2e-internal-supply-pd"))
+	body["supply"] = "make"
+	body["sales"] = map[string]any{
+		"unit_price":        priceInputPer("4.50", SeedUnitID),
 		"product_line_id":   SeedProductLineID,
 		"portal_visibility": "visible",
-		"notes":             "Margin is thin on this one",
-		"unit_price":        map[string]any{"amount": "4.50", "currency": "usd", "per_unit_id": nonCurrencyUnitID},
-	})
-	linePath := productLinesPath + "/" + jsonField(line, "id")
-	productPath := productsPath + "/" + jsonField(product, "id")
-	itemOf := func(client *Client) map[string]any {
-		item := jsonObject(parseJSON(mustGetAs(t, client, productPath, url.Values{"include": {"item"}})), "item")
-		require.NotNil(t, item, "the product's item loads")
-		return item
 	}
+	item := createForgeItem(t, itemsPath, body)
+	linePath := productLinesPath + "/" + jsonField(line, "id")
+	itemPath := itemsPath + "/" + jsonField(item, "id")
 
 	for who, client := range map[string]*Client{"admin": apiClient, "catalog reader": customRoleClient(t, "product_lines:read", "items:read")} {
 		got := parseJSON(mustGetAs(t, client, linePath, nil))
 		assert.Equal(t, "applied", jsonField(got, "commission_policy"), who)
-		assert.Equal(t, "Margin is thin on this one", jsonField(itemOf(client), "notes"), who)
+		assert.Equal(t, "make", jsonField(parseJSON(mustGetAs(t, client, itemPath, nil)), "supply"), who)
 	}
 
 	for who, portal := range portalClients(t) {
@@ -185,9 +179,17 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 		assertNilField(t, got, "commission_policy")
 		assert.Equal(t, jsonField(line, "name"), jsonField(got, "name"), "%s still reads the product line", who)
 
-		item := itemOf(portal)
-		assertNilField(t, item, "notes")
-		assert.NotEmpty(t, jsonField(item, "sku"), "%s still reads the item", who)
+		status, raw := getAs(t, portal, itemPath)
+		if who == "customer portal" {
+			requireStatus(t, http.StatusOK, status, raw)
+		}
+		if status != http.StatusOK {
+			assert.Contains(t, []int{http.StatusForbidden, http.StatusNotFound}, status, "%s: %s", who, string(raw))
+			continue
+		}
+		portalItem := parseJSON(raw)
+		assertNilField(t, portalItem, "supply")
+		assert.NotEmpty(t, jsonField(portalItem, "sku"), "%s still reads the item", who)
 	}
 }
 

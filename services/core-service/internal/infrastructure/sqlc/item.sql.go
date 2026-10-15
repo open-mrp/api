@@ -53,7 +53,6 @@ SELECT EXISTS(
   WHERE sku = ?
   AND account_id = ?
   AND id != ?
-  AND deleted_at IS NULL
 ) AS sku_exists
 `
 
@@ -879,6 +878,8 @@ SELECT
     i.burn_rate_id,
     i.account_id,
     i.is_dirty,
+    i.is_active,
+    i.supply_code,
     i.created_at,
     i.updated_at,
     i.deleted_at,
@@ -891,7 +892,6 @@ FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 WHERE i.id = ?
 AND i.account_id = ?
-AND i.deleted_at IS NULL
 `
 
 type GetItemBaseParams struct {
@@ -911,6 +911,8 @@ type GetItemBaseRow struct {
 	BurnRateID           string
 	AccountID            string
 	IsDirty              bool
+	IsActive             bool
+	SupplyCode           sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	DeletedAt            sql.NullTime
@@ -936,6 +938,8 @@ func (q *Queries) GetItemBase(ctx context.Context, arg GetItemBaseParams) (GetIt
 		&i.BurnRateID,
 		&i.AccountID,
 		&i.IsDirty,
+		&i.IsActive,
+		&i.SupplyCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1197,8 +1201,11 @@ SELECT
     i.burn_rate_id,
     i.account_id,
     i.is_dirty,
+    i.is_active,
+    i.supply_code,
     i.created_at,
     i.updated_at,
+    i.deleted_at,
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
@@ -1208,7 +1215,6 @@ FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 WHERE i.id IN (/*SLICE:ids*/?)
 AND i.account_id = ?
-AND i.deleted_at IS NULL
 `
 
 type GetItemsByIDsParams struct {
@@ -1228,8 +1234,11 @@ type GetItemsByIDsRow struct {
 	BurnRateID           string
 	AccountID            string
 	IsDirty              bool
+	IsActive             bool
+	SupplyCode           sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	DeletedAt            sql.NullTime
 	CategoryName         string
 	ItemCategoryTypeCode string
 	CategoryUnitGroupID  string
@@ -1269,8 +1278,11 @@ func (q *Queries) GetItemsByIDs(ctx context.Context, arg GetItemsByIDsParams) ([
 			&i.BurnRateID,
 			&i.AccountID,
 			&i.IsDirty,
+			&i.IsActive,
+			&i.SupplyCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,

@@ -455,8 +455,13 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 	}
 
 	// Insert item.
+	itemType := constants.ItemTypeCodeProduct
+	if params.ProductTypeCode == string(constants.ItemTypeCodeService) {
+		itemType = constants.ItemTypeCodeService
+	}
 	if apiErr := txProductRepo.InsertItem(txCtx, domain.InsertProductItemParams{
 		ItemID:          itemID,
+		ItemTypeCode:    itemType,
 		AccountID:       params.AccountID,
 		SKU:             params.SKU,
 		Description:     params.Description,
@@ -740,13 +745,13 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Soft-delete within a transaction.
+	// Hard-delete the item within a transaction, once nothing references it.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID, product); apiErr != nil {
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewProductRepo().SoftDelete(txCtx, params); apiErr != nil {
+		if _, apiErr := deleteItemInTx(txCtx, txSvc.repos, params.AccountID, product.ItemID); apiErr != nil {
 			return apiErr
 		}
 

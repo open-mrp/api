@@ -87,15 +87,14 @@ func TestGetItem_ReadsTheRecordTheListReads(t *testing.T) {
 	if item.ID != "itm_1" || item.SKU != "SKU-1" || item.Object != constants.ObjectTypeItem {
 		t.Errorf("item = %+v", item)
 	}
-	if item.UnitCost != nil || item.Category != nil {
+	if item.Category != nil || item.Attributes != nil {
 		t.Errorf("expandable fields must stay null until included: %+v", item)
+	}
+	if item.UnitCost == nil || item.UnitCost.Amount != "2.50" {
+		t.Errorf("unit cost is a value, always present: %+v", item.UnitCost)
 	}
 	if core.request.GetWithCategories() || core.request.GetWithAttributeProperties() {
 		t.Errorf("asked core for the item's category or attribute properties though nothing included them: %v", core.request)
-	}
-	meta := include.GetLoadMeta(ctx)
-	if v, ok := meta.Get(constants.ObjectTypeItem, "itm_1", "unit_cost"); !ok || v == nil {
-		t.Error("unit cost not stashed for ?include=unit_cost")
 	}
 }
 

@@ -22,7 +22,7 @@ const itemListColumns = `
 	i.id, i.sku, i.description, i.notes, i.item_type_code, i.item_category_id,
 	ic.name, ic.item_category_type_code, ic.unit_group_id,
 	i.unit_value_id, i.unit_cost_id, i.burn_rate_id, i.account_id, i.is_dirty,
-	i.created_at, i.updated_at, ic.created_at, ic.updated_at`
+	i.created_at, i.updated_at, ic.created_at, ic.updated_at, i.is_active, i.supply_code, i.deleted_at`
 
 // catalogFilter is a catalog list's WHERE on item i, and the search ranking its page sorts by.
 type catalogFilter struct {
@@ -83,6 +83,8 @@ type itemListQuery struct {
 	categories, types bool
 	// driven reports a filter on another table whose matches the page may be read from instead, by id.
 	driven bool
+	// bySKU reports exact SKUs, read through the account's SKU key.
+	bySKU bool
 }
 
 // catalogSearchTier is the SQL for item i's search rank (0 exact SKU, 1 SKU token, 2 SKU prefix,
@@ -107,18 +109,30 @@ func catalogSearchTier(search catalogsearch.Search) (string, []any) {
 func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemListQuery {
 	q := &itemListQuery{catalogFilter: catalogFilter{search: catalogsearch.New(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
-	q.add("i.deleted_at IS NULL")
 	// The page holds only items the list hydrates, which inner-joins the category: one whose category was
 	// deleted would take a page slot and then be dropped, leaving the page short.
 	q.add("EXISTS (SELECT 1 FROM item_category pic WHERE pic.id = i.item_category_id)")
 	q.in("i.item_type_code", params.Types)
 	q.in("i.item_category_id", params.CategoryIDs)
+	q.in("i.sku", params.SKUs)
+	q.in("i.id", params.IDs)
 	q.types, q.categories = len(params.Types) > 0, len(params.CategoryIDs) > 0
+	// An item soft-deleted before items could be archived reads as archived.
+	if params.IsActive != nil {
+		if *params.IsActive {
+			q.add("i.is_active = 1 AND i.deleted_at IS NULL")
+		} else {
+			q.add("(i.is_active = 0 OR i.deleted_at IS NOT NULL)")
+		}
+	}
+	if params.IsPortalReady != nil {
+		q.add("EXISTS (SELECT 1 FROM product pp WHERE pp.item_id = i.id AND pp.is_portal_ready = ?)", *params.IsPortalReady)
+	}
 	if params.StartDate != nil {
 		q.add("i.created_at >= ?", *params.StartDate)
 	}
 	if params.EndDate != nil {
-		q.add("i.created_at <= ?", *params.EndDate)
+		q.add("i.created_at < ?", *params.EndDate)
 	}
 	// An item whose product is not for sale is not listed. A scalar probe of the unique item key, where
 	// NOT EXISTS would let the planner materialize every product to anti-join against.
@@ -138,11 +152,18 @@ func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemList
 		q.add("i.id IN (SELECT ia.B FROM _item_attributes ia WHERE ia.A IN ("+placeholders(len(params.AttributeIDs))+"))",
 			stringArgs(params.AttributeIDs)...)
 	}
+	suppliers := params.SupplierIDs
 	if params.SupplierID != nil {
+		suppliers = append(append([]string{}, suppliers...), *params.SupplierID)
+	}
+	if len(suppliers) > 0 {
 		q.driven = true
 		q.add(`i.id IN (SELECT m.item_id FROM supplier_material sm JOIN material m ON m.id = sm.material_id
-			WHERE sm.supplier_account_id = ? AND sm.owner_account_id = ?)`, *params.SupplierID, params.AccountID)
+			WHERE sm.supplier_account_id IN (`+placeholders(len(suppliers))+`) AND sm.owner_account_id = ?)`,
+			append(stringArgs(suppliers), params.AccountID)...)
 	}
+	q.bySKU = len(params.SKUs) > 0
+	q.driven = q.driven || len(params.IDs) > 0
 	if lineIDs != nil {
 		q.driven = true
 		// product is not tenant-scoped; read from, it is ranged by line, never scanned.
@@ -175,6 +196,9 @@ func (q *itemListQuery) indexes() []string {
 	if q.driven {
 		keys = append(keys, "PRIMARY")
 	}
+	if q.bySKU {
+		keys = append(keys, "item_account_id_sku_key")
+	}
 	return keys
 }
 
@@ -204,18 +228,21 @@ func (r *itemRepoImpl) list(ctx context.Context, q *itemListQuery, orderBy strin
 			id, sku, itemTypeCode, itemCategoryID, categoryName, categoryTypeCode, categoryUnitGroupID string
 			unitValueID, unitCostID, burnRateID, accountID                                             string
 			description, notes                                                                         gosql.NullString
-			isDirty                                                                                    bool
-			createdAt, updatedAt, categoryCreatedAt, categoryUpdatedAt                                 gosql.NullTime
+			isDirty, isActive                                                                          bool
+			supplyCode                                                                                 gosql.NullString
+			createdAt, updatedAt, categoryCreatedAt, categoryUpdatedAt, deletedAt                      gosql.NullTime
 		)
 		if err := rows.Scan(&id, &sku, &description, &notes, &itemTypeCode, &itemCategoryID,
 			&categoryName, &categoryTypeCode, &categoryUnitGroupID,
 			&unitValueID, &unitCostID, &burnRateID, &accountID, &isDirty,
-			&createdAt, &updatedAt, &categoryCreatedAt, &categoryUpdatedAt); err != nil {
+			&createdAt, &updatedAt, &categoryCreatedAt, &categoryUpdatedAt, &isActive, &supplyCode, &deletedAt); err != nil {
 			return nil, err
 		}
-		items = append(items, mapItemBaseRow(id, sku, description, notes, itemTypeCode, itemCategoryID, categoryName,
+		item := mapItemBaseRow(id, sku, description, notes, itemTypeCode, itemCategoryID, categoryName,
 			categoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID, isDirty,
-			createdAt.Time, updatedAt.Time, categoryCreatedAt.Time, categoryUpdatedAt.Time))
+			createdAt.Time, updatedAt.Time, categoryCreatedAt.Time, categoryUpdatedAt.Time)
+		setItemState(item, isActive, supplyCode, deletedAt)
+		items = append(items, item)
 	}
 	return items, rows.Err()
 }

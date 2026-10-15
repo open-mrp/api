@@ -14,38 +14,34 @@ func TestBulkUpsert_UnitCostChangeRestatesCostBasis(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name     string
-		basePath string
+		itemType string
 		category string
-		upsert   func(t *testing.T, row map[string]any) (created, updated []string)
-		cleanup  func(ids []string)
+		unitID   string
 	}{
-		{"materials", materialsPath, SeedMaterialCategoryID, func(t *testing.T, row map[string]any) ([]string, []string) {
-			return bulkUpsertMaterialIDs(t, row)
-		}, cleanupMaterialIDs},
-		{"parts", partsPath, SeedItemCategoryID, func(t *testing.T, row map[string]any) ([]string, []string) {
-			return bulkUpsertPartIDs(t, row)
-		}, cleanupPartIDs},
+		{"material", SeedMaterialCategoryID, SeedMaterialUnitID},
+		{"part", SeedItemCategoryID, SeedUnitID},
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.itemType, func(t *testing.T) {
 			markOutbox(t)
-			sku := uniqueName("e2e-bup-cost-" + tc.name)
+			sku := uniqueName("e2e-bup-cost-" + tc.itemType)
 			row := func(cost string) map[string]any {
-				return map[string]any{"sku": sku, "category": map[string]any{"id": tc.category}, "unit_cost": bulkCurrencyRate(cost)}
+				return map[string]any{
+					"type": tc.itemType, "sku": sku, "category_id": tc.category,
+					"unit_cost": priceInputPer(cost, tc.unitID),
+				}
 			}
 
-			created, _ := tc.upsert(t, row("0.75"))
+			created, _ := jobResultIDs(bulkUpsertItemsJob(t, row("0.75")))
 			require.Len(t, created, 1)
-			defer tc.cleanup(created)
-			itemID := jsonField(catalogItem(t, tc.basePath, created[0]), "id")
+			itemID := created[0]
 			before := len(costBasisReasons(t, itemID))
 
-			_, updated := tc.upsert(t, row("0.750"))
+			_, updated := jobResultIDs(bulkUpsertItemsJob(t, row("0.750")))
 			require.Equal(t, created, updated)
 			assert.Len(t, costBasisReasons(t, itemID), before, "an unchanged cost restates nothing")
 
-			_, updated = tc.upsert(t, row("1.25"))
+			_, updated = jobResultIDs(bulkUpsertItemsJob(t, row("1.25")))
 			require.Equal(t, created, updated)
 			requireNewCostBasisReason(t, itemID, before, "unit_cost_updated")
 		})

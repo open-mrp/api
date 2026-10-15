@@ -3,11 +3,10 @@
 package api_test
 
 import (
-	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // validPartBody returns a minimal valid CreatePartRequest body.
@@ -18,215 +17,54 @@ func validPartBody(sku string) map[string]any {
 	}
 }
 
-// TestParts_Create_RejectsWrongCategoryType: parts may only be created in product
-// categories; a material category is rejected.
-func TestParts_Create_RejectsWrongCategoryType(t *testing.T) {
+// preview.9 refuses a bad part with a 400 (404 for a missing reference) and the failing field's own code.
+func TestParts_Preview9CreateValidation(t *testing.T) {
 	t.Parallel()
 
-	body := validPartBody(uniqueName("e2e-part-wrongcat"))
-	body["category_id"] = SeedMaterialCategoryID // Yarn — a material category
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "category_id")
-}
-
-func TestParts_Create_Basic_DefaultsRates(t *testing.T) {
-	t.Parallel()
-
-	resp, err := apiClient.PostFull(partsPath, validPartBody(uniqueName("e2e-part")), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	assert.Equal(t, "part", jsonField(got, "object"))
-}
-
-func TestParts_Create_PersistsNotes(t *testing.T) {
-	t.Parallel()
-
-	notes := "deep groove ball bearing, lubricated"
-	body := validPartBody(uniqueName("e2e-part-notes"))
-	body["notes"] = notes
-
-	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	// Notes live on the wrapped item record. Round-trip via GET to confirm.
-	getStatus, getBody, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assert.Equal(t, notes, jsonField(jsonObject(parseJSON(getBody), "item"), "notes"))
-}
-
-func TestParts_Create_WithValidRates(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-part-rates"))
-	body["unit_price"] = map[string]any{
-		"amount":      "5.00",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-	body["unit_cost"] = map[string]any{
-		"amount":      "2.50",
-		"currency":    "usd",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	// Verify unit_cost was persisted as sent by expanding it via ?include=item.unit_cost.
-	rateStatus, rateBody, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.unit_cost"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, rateStatus, rateBody)
-
-	uc := jsonObject(jsonObject(parseJSON(rateBody), "item"), "unit_cost")
-	require.NotNil(t, uc, "item.unit_cost should be populated with ?include=item.unit_cost")
-	assert.Equal(t, "2.50", jsonField(uc, "amount"))
-	assert.Equal(t, "usd", jsonField(uc, "currency"))
-	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(uc, "per_unit"), "id"))
-	assert.NotContains(t, uc, "object", "a unit price is a value shape, not an object")
-}
-
-// Only dollars are accepted; the currency takes the place of the old currency numerator unit.
-func TestParts_Create_RejectsUnsupportedCurrencyOnUnitCost(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-part-bad-num"))
-	body["unit_cost"] = map[string]any{
-		"amount":      "1.00",
-		"currency":    "eur",
-		"per_unit_id": nonCurrencyUnitID,
-	}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.currency")
-}
-
-func TestParts_Create_RejectsCurrencyPerUnitOnUnitPrice(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-part-bad-den"))
-	body["unit_price"] = map[string]any{
-		"amount":      "1.00",
-		"currency":    "usd",
-		"per_unit_id": currencyUnitID,
-	}
-
-	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.per_unit_id")
-}
-
-func TestParts_Create_LinksAttributes(t *testing.T) {
-	t.Parallel()
-
-	body := validPartBody(uniqueName("e2e-part-attrs"))
-	body["attribute_ids"] = []string{SeedAttributeID}
-
-	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	partStatus, partBody, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, partStatus, partBody)
-	itemID := jsonField(jsonObject(parseJSON(partBody), "item"), "id")
-	require.NotEmpty(t, itemID)
-
-	itemStatus, itemBody, err := apiClient.GetListRaw(
-		"/v1/catalog/items/"+itemID,
-		url.Values{"include": {"attributes"}},
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, itemStatus, itemBody)
-
-	attrs := jsonListData(parseJSON(itemBody), "attributes")
-	require.NotEmpty(t, attrs)
-
-	found := false
-	for _, raw := range attrs {
-		obj, ok := raw.(map[string]any)
-		if !ok {
-			continue
+	with := func(set map[string]any) map[string]any {
+		body := validPartBody(uniqueName("e2e-part-val"))
+		for k, v := range set {
+			body[k] = v
 		}
-		if jsonField(obj, "id") == SeedAttributeID {
-			found = true
-			break
-		}
+		return body
 	}
-	assert.True(t, found, "expected linked attribute %s in item.attributes", SeedAttributeID)
-}
+	without := func(field string) map[string]any {
+		body := validPartBody(uniqueName("e2e-part-val"))
+		delete(body, field)
+		return body
+	}
 
-func TestParts_Create_MissingSKU(t *testing.T) {
-	t.Parallel()
+	cases := []struct {
+		name   string
+		body   map[string]any
+		status int
+		code   string
+		param  any
+	}{
+		{"material category", with(map[string]any{"category_id": SeedMaterialCategoryID}), 400, "invalid_format", "category_id"},
+		{"missing sku", without("sku"), 400, "missing_field", "sku"},
+		{"empty sku", with(map[string]any{"sku": ""}), 400, "missing_field", "sku"},
+		{"sku over max length", with(map[string]any{"sku": strings.Repeat("a", 256)}), 400, "invalid_format", "sku"},
+		{"missing category_id", without("category_id"), 400, "missing_field", "category_id"},
+		{"unknown category", with(map[string]any{"category_id": "itcg_nonexistent0000000"}), 404, "resource_not_found", nil},
+		{"unknown attribute", with(map[string]any{"attribute_ids": []string{"at_nonexistent00000000"}}), 404, "resource_not_found", nil},
+		{"price per a currency", with(map[string]any{"unit_price": partPreview9Price("1.00", currencyUnitID)}), 400, "invalid_format", "unit_price.per_unit_id"},
+		{"price per an unknown unit", with(map[string]any{"unit_price": partPreview9Price("1.00", "nonexistent_unit_id")}), 400, "invalid_format", "unit_price.per_unit_id"},
+		{"cost per an unknown unit", with(map[string]any{"unit_cost": partPreview9Price("1.00", "nonexistent_unit_id")}), 400, "invalid_format", "unit_cost.per_unit_id"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body := preview9PartPost(t, partsPath, tc.body)
+			requireStatus(t, tc.status, status, body)
+			errObj := requirePreview9Error(t, body, tc.code)
+			assert.Equal(t, tc.param, errObj["param"], "error.param (body: %s)", body)
+			assert.NotContains(t, errObj, "errors", "preview.9 errors have no errors list")
+		})
+	}
 
-	status, respBody, err := apiClient.Post(partsPath, map[string]any{
-		"category_id": SeedItemCategoryID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
-}
-
-func TestParts_Create_EmptySKU(t *testing.T) {
-	t.Parallel()
-
-	status, respBody, err := apiClient.Post(partsPath, map[string]any{
-		"sku":         "",
-		"category_id": SeedItemCategoryID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "sku")
-}
-
-func TestParts_Create_MissingCategoryID(t *testing.T) {
-	t.Parallel()
-
-	status, respBody, err := apiClient.Post(partsPath, map[string]any{
-		"sku": uniqueName("e2e-part-no-cat"),
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
-
-	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "category_id")
+	t.Run("include offered only on reads", func(t *testing.T) {
+		status, body := preview9PartPost(t, partsPath+"?include=item.category.properties", with(nil))
+		requireStatus(t, 400, status, body)
+		assert.Equal(t, "include[]", requirePreview9Error(t, body, "parameter_invalid")["param"])
+	})
 }

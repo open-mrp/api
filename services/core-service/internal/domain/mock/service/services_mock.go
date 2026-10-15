@@ -2977,6 +2977,21 @@ func (mr *MockItemSvcMockRecorder) BulkReconcileItems(ctx, params any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkReconcileItems", reflect.TypeOf((*MockItemSvc)(nil).BulkReconcileItems), ctx, params)
 }
 
+// BulkUpsertItems mocks base method.
+func (m *MockItemSvc) BulkUpsertItems(ctx context.Context, params domain.BulkUpsertItemsParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BulkUpsertItems", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BulkUpsertItems indicates an expected call of BulkUpsertItems.
+func (mr *MockItemSvcMockRecorder) BulkUpsertItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkUpsertItems", reflect.TypeOf((*MockItemSvc)(nil).BulkUpsertItems), ctx, params)
+}
+
 // ChangeItemCategory mocks base method.
 func (m *MockItemSvc) ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3005,6 +3020,50 @@ func (m *MockItemSvc) ComputeItemCosts(ctx context.Context, accountID, itemID st
 func (mr *MockItemSvcMockRecorder) ComputeItemCosts(ctx, accountID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeItemCosts", reflect.TypeOf((*MockItemSvc)(nil).ComputeItemCosts), ctx, accountID, itemID)
+}
+
+// CreateItem mocks base method.
+func (m *MockItemSvc) CreateItem(ctx context.Context, params domain.CreateItemParams) (*domain.Item, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateItem", ctx, params)
+	ret0, _ := ret[0].(*domain.Item)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateItem indicates an expected call of CreateItem.
+func (mr *MockItemSvcMockRecorder) CreateItem(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateItem", reflect.TypeOf((*MockItemSvc)(nil).CreateItem), ctx, params)
+}
+
+// DeleteItem mocks base method.
+func (m *MockItemSvc) DeleteItem(ctx context.Context, itemID string) (*domain.Item, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteItem", ctx, itemID)
+	ret0, _ := ret[0].(*domain.Item)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeleteItem indicates an expected call of DeleteItem.
+func (mr *MockItemSvcMockRecorder) DeleteItem(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteItem", reflect.TypeOf((*MockItemSvc)(nil).DeleteItem), ctx, itemID)
+}
+
+// ExecuteBulkUpsertItems mocks base method.
+func (m *MockItemSvc) ExecuteBulkUpsertItems(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteBulkUpsertItems", ctx, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteBulkUpsertItems indicates an expected call of ExecuteBulkUpsertItems.
+func (mr *MockItemSvcMockRecorder) ExecuteBulkUpsertItems(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteBulkUpsertItems", reflect.TypeOf((*MockItemSvc)(nil).ExecuteBulkUpsertItems), ctx, event)
 }
 
 // ExportItems mocks base method.

@@ -397,6 +397,7 @@ func Run(
 	itemSvc := service.NewItemSvc(&service.ItemSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -846,6 +847,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertParts, partSvc.ExecuteBulkUpsertParts),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProducts, productSvc.ExecuteBulkUpsertProducts),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMaterials, materialSvc.ExecuteBulkUpsertMaterials),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertItems, itemSvc.ExecuteBulkUpsertItems),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),

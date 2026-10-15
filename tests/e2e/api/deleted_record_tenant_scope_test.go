@@ -88,9 +88,9 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 	t.Parallel()
 	runDeletedScopeCases(t, []deletedScopeCase{
 		{
-			name: "product",
+			name: "product item",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, productsPath, validProductBody(uniqueName("e2e-dscope")))
+				return createdPath(t, itemsPath, forgeItemBody("product", uniqueName("e2e-dscope")))
 			},
 			patch: map[string]any{"description": "x"},
 		},
@@ -107,16 +107,16 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 			patch: map[string]any{"name": uniqueName("e2e-dscope-pl")},
 		},
 		{
-			name: "part",
+			name: "part item",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, partsPath, validPartBody(uniqueName("e2e-dscope")))
+				return createdPath(t, itemsPath, forgeItemBody("part", uniqueName("e2e-dscope")))
 			},
 			patch: map[string]any{"description": "x"},
 		},
 		{
-			name: "material",
+			name: "material item",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, materialsPath, validMaterialBody(uniqueName("e2e-dscope")))
+				return createdPath(t, itemsPath, forgeItemBody("material", uniqueName("e2e-dscope")))
 			},
 			patch: map[string]any{"description": "x"},
 		},

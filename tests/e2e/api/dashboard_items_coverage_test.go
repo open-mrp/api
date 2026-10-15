@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -26,41 +25,30 @@ const dashItemsReceiptsAnalyticsPath = "/v1/core/analytics/inventory-receipts"
 
 var dashItemsDashboardIncludes = []string{
 	"category", "category.unit_group", "category.unit_group.base_unit", "category.unit_group.associated_units",
-	"category.unit_group.associated_units.unit", "category.properties", "unit_value", "unit_cost", "burn_rate",
-	"attributes",
+	"category.unit_group.associated_units.unit", "category.properties", "attributes", "attributes.property",
+	"sales.product_line",
 }
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-// dashItemsMaterial creates a yarn material with this SKU and returns the catalog item behind it.
+// dashItemsMaterial creates a yarn material with this SKU and returns its item id.
 func dashItemsMaterial(t *testing.T, sku string) string {
 	t.Helper()
-	return dashItemsMaterialFrom(t, validMaterialBody(sku))
+	return dashItemsItemFrom(t, forgeItemBody("material", sku))
 }
 
-func dashItemsMaterialFrom(t *testing.T, body map[string]any) string {
+// dashItemsItemFrom creates an item from a full create body and returns its id.
+func dashItemsItemFrom(t *testing.T, body map[string]any) string {
 	t.Helper()
-	status, raw, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, raw)
-	materialID := jsonField(parseJSON(raw), "id")
-	require.NotEmpty(t, materialID)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(materialsPath + "/" + materialID) })
-	return dashItemsItemBySKU(t, body["sku"].(string))
+	return jsonField(createForgeItem(t, itemsPath, body), "id")
 }
 
-// dashItemsPart creates a part in the socks category and returns the catalog item behind it.
+// dashItemsPart creates a part in the socks category and returns its item id.
 func dashItemsPart(t *testing.T, sku string) string {
 	t.Helper()
-	status, body, err := apiClient.Post(partsPath, validPartBody(sku), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	partID := jsonField(parseJSON(body), "id")
-	require.NotEmpty(t, partID)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(partsPath + "/" + partID) })
-	return dashItemsItemBySKU(t, sku)
+	return dashItemsItemFrom(t, forgeItemBody("part", sku))
 }
 
 func dashItemsItemBySKU(t *testing.T, sku string) string {
@@ -214,20 +202,6 @@ func dashItemsInventoryRowItemID(row map[string]any) string {
 	return jsonField(jsonObject(row, "item"), "id")
 }
 
-// dashItemsRequest is a bodiless write sent by a particular caller.
-type dashItemsRequest struct {
-	name         string
-	client       *Client
-	method, path string
-}
-
-func (r dashItemsRequest) do(t *testing.T) (int, []byte) {
-	t.Helper()
-	status, body, err := r.client.Do(r.method, r.path, nil, "")
-	require.NoError(t, err)
-	return status, body
-}
-
 // dashItemsAssertUnchanged asserts an item still reads this level and carries exactly this many corrections.
 func dashItemsAssertUnchanged(t *testing.T, itemID, level string, corrections int) {
 	t.Helper()
@@ -277,9 +251,10 @@ func TestDashItems_DashboardIncludeSetHydratesEveryKey(t *testing.T) {
 			assertUnitHydrated(t, jsonObject(member, "unit"), where+": associated_units[].unit")
 		}
 
-		for _, price := range []string{"unit_value", "unit_cost"} {
-			assertUnitPriceHydrated(t, jsonObject(item, price), where+": "+price)
-		}
+		// unit_cost and burn_rate are always present, with their units in full.
+		assertUnitPriceHydrated(t, jsonObject(item, "unit_cost"), where+": unit_cost")
+		assertNilField(t, item, "sales")
+		require.NotNil(t, jsonObject(item, "material"), "%s: a material has a material section", where)
 		burnRate := jsonObject(item, "burn_rate")
 		require.NotNil(t, burnRate, "%s: burn_rate", where)
 		assertValueShapeBare(t, burnRate, where+": burn_rate")
@@ -290,28 +265,6 @@ func TestDashItems_DashboardIncludeSetHydratesEveryKey(t *testing.T) {
 		require.NotNil(t, attributes, "%s: attributes", where)
 		assert.Empty(t, jsonArray(attributes, "data"), "%s: a new item carries no attributes", where)
 	}
-}
-
-func TestDashItems_ListFiltersByCreatedWindow(t *testing.T) {
-	t.Parallel()
-	sku := uniqueName("e2e-dashitems-win")
-	itemID := dashItemsMaterial(t, sku)
-
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	createdAt, err := time.Parse(time.RFC3339, jsonField(parseJSON(body), "created_at"))
-	require.NoError(t, err)
-
-	window := func(start, end time.Time) []string {
-		return listIDs(t, itemsPath, url.Values{
-			"q": {sku}, "starts_at": {start.Format(time.RFC3339)}, "ends_at": {end.Format(time.RFC3339)},
-		})
-	}
-	assert.Equal(t, []string{itemID}, window(createdAt.Add(-time.Minute), createdAt.Add(time.Minute)),
-		"a window around the creation time holds the item")
-	assert.Empty(t, window(createdAt.Add(-2*time.Hour), createdAt.Add(-time.Hour)), "a window closing before it leaves it out")
-	assert.Empty(t, window(createdAt.Add(time.Hour), createdAt.Add(2*time.Hour)), "a window opening after it leaves it out")
 }
 
 // Values within types are an OR; the filter combines with q as an AND.
@@ -338,7 +291,7 @@ func TestDashItems_ListRejectsAnUnknownType(t *testing.T) {
 
 func TestDashItems_ListRejectsAMalformedDate(t *testing.T) {
 	t.Parallel()
-	for _, param := range []string{"starts_at", "ends_at"} {
+	for _, param := range []string{"created_after", "created_before"} {
 		status, body, err := apiClient.GetListRaw(itemsPath, url.Values{param: {"2026-13-01"}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
@@ -472,15 +425,23 @@ func TestDashItems_TenantBCannotReadOrListTenantAItems(t *testing.T) {
 	}
 }
 
-// The customer portal is refused the seller's item records, stock and inventory log.
+// The customer portal reads only the seller items it is shown, never a material, and is refused the seller's stock
+// and inventory log.
 func TestDashItems_CustomerPortalCannotReadSellerItems(t *testing.T) {
 	t.Parallel()
-	itemID := dashItemsMaterial(t, uniqueName("e2e-dashitems-portal"))
+	sku := uniqueName("e2e-dashitems-portal")
+	itemID := dashItemsMaterial(t, sku)
 	portal := getCustomerPortalClient()
 
+	list, status, err := portal.GetList(itemsPath, url.Values{"q": {sku}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, nil)
+	assert.Empty(t, list.Data, "a material is never shown to the portal")
+	status, body, err := portal.GetListRaw(itemsPath+"/"+itemID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, status, "portal GET of an item it isn't shown: %s", string(body))
+
 	for _, path := range []string{
-		itemsPath,
-		itemsPath + "/" + itemID,
 		itemsPath + "/" + itemID + "/inventory",
 		itemsPath + "/" + itemID + "/trends?trend_type=inventory",
 		itemsPath + "/" + itemID + "/lot-default",
@@ -495,13 +456,20 @@ func TestDashItems_CustomerPortalCannotReadSellerItems(t *testing.T) {
 	}
 }
 
-// A seller targeting a customer account through OpenMRP-Account is not an internal user there.
+// A seller targeting a customer account through OpenMRP-Account is not an internal user there: it reads that
+// account's catalog as a counterparty, which never holds the seller's own items, and is refused its stock.
 func TestDashItems_SellerTargetingACustomerAccountIsRefused(t *testing.T) {
 	t.Parallel()
-	itemID := dashItemsMaterial(t, uniqueName("e2e-dashitems-target"))
+	sku := uniqueName("e2e-dashitems-target")
+	itemID := dashItemsMaterial(t, sku)
 	targeting := apiClient.WithAccountID(SeedCustomerAccountID)
 
-	for _, path := range []string{itemsPath, inventoriesPath, inventoryChangeLogsPath} {
+	list, status, err := targeting.GetList(itemsPath, url.Values{"q": {sku}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, nil)
+	assert.Empty(t, list.Data, "the seller's item is not in the customer's catalog")
+
+	for _, path := range []string{inventoriesPath, inventoryChangeLogsPath} {
 		status, body, err := targeting.GetListRaw(path, nil)
 		require.NoError(t, err)
 		assert.Equal(t, 403, status, "GET %s against a customer account: %s", path, string(body))
@@ -946,88 +914,91 @@ func TestDashItems_BulkReconcileRefusesThePortalAndAnUpdateOnlyRole(t *testing.T
 	assert.Equal(t, "2", dashItemsLevel(t, itemID))
 }
 
-// ---------------------------------------------------------------------------
 // Attributes and category
 // ---------------------------------------------------------------------------
 
+// The dashboard assigns and removes an attribute by sending the item's whole attribute list.
 func TestDashItems_AttributeAssignAndRemoveRoundTrip(t *testing.T) {
 	t.Parallel()
 	attributeID := dashItemsColorAttribute(t)
-	sku := uniqueName("e2e-dashitems-attr")
-	itemID := dashItemsMaterial(t, sku)
-	path := itemsPath + "/" + itemID + "/attributes/" + attributeID
-	withAttributes := url.Values{"include": {"attributes"}}
-	attributeIDs := func(item map[string]any) []string {
-		var ids []string
-		for _, raw := range jsonListData(item, "attributes") {
-			ids = append(ids, jsonField(raw.(map[string]any), "id"))
-		}
-		return ids
-	}
+	itemID := dashItemsMaterial(t, uniqueName("e2e-dashitems-attr"))
+	path := itemsPath + "/" + itemID + "?include=attributes"
 
-	status, body, err := apiClient.PutRaw(path, withAttributes, nil)
+	status, body, err := apiClient.Patch(path, map[string]any{"attribute_ids": []string{attributeID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, []string{attributeID}, attributeIDs(parseJSON(body)))
+	assert.Equal(t, []string{attributeID}, attributeIDsOf(parseJSON(body)))
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{"attribute_ids": {attributeID}}))
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{
 		"attribute_ids": {attributeID}, "category_ids": {SeedMaterialCategoryID}, "types": {"material"},
 	}), "attribute, category and type filters intersect")
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"attribute_ids": {attributeID}, "types": {"part"}}))
 
-	resp, err := apiClient.DoFull("DELETE", path+"?include=attributes", nil, "")
+	status, body, err = apiClient.Patch(path, map[string]any{"attribute_ids": []string{}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	assert.Empty(t, attributeIDs(parseJSON(resp.Body)))
+	requireStatus(t, 200, status, body)
+	assert.Empty(t, attributeIDsOf(parseJSON(body)))
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"attribute_ids": {attributeID}}))
-
-	status, body, err = apiClient.Delete(path)
-	require.NoError(t, err)
-	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 }
 
-// Moving yarn into a category counted in eaches moves its rates onto eaches and keeps their figures.
-func TestDashItems_ChangeCategoryMovesTheRatesOntoTheNewBaseUnit(t *testing.T) {
+// dashItemsPricedYarn creates yarn priced and costed per pound.
+func dashItemsPricedYarn(t *testing.T, sku string) string {
+	t.Helper()
+	body := forgeItemBody("material", sku)
+	body["unit_cost"] = priceInputPer("0.75", poundUnitID)
+	body["sales"] = map[string]any{"unit_price": priceInputPer("1.50", poundUnitID)}
+	return dashItemsItemFrom(t, body)
+}
+
+// Moving yarn into a category counted in eaches changes only its category: its prices keep their figures and units.
+func TestDashItems_ChangeCategoryKeepsTheItemsPrices(t *testing.T) {
 	t.Parallel()
 	categoryID := dashItemsMaterialCategory(t, apiClient)
 	sku := uniqueName("e2e-dashitems-move")
-	material := validMaterialBody(sku)
-	material["unit_price"] = map[string]any{"amount": "1.50", "currency": "usd", "per_unit_id": poundUnitID}
-	material["unit_cost"] = map[string]any{"amount": "0.75", "currency": "usd", "per_unit_id": poundUnitID}
-	itemID := dashItemsMaterialFrom(t, material)
-	include := url.Values{"include": {"category,unit_value,unit_cost,burn_rate"}}
+	itemID := dashItemsPricedYarn(t, sku)
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID, include)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	before := parseJSON(body)
-
-	status, body, err = apiClient.PutRaw(itemsPath+"/"+itemID+"/category/"+categoryID, include, nil)
+	status, body, err := apiClient.Patch(itemsPath+"/"+itemID+"?include=category", map[string]any{"category_id": categoryID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	after := parseJSON(body)
-
 	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
-	for price, amount := range map[string]string{"unit_value": "1.5", "unit_cost": "0.75"} {
-		assertDecimalEqual(t, amount, jsonField(jsonObject(before, price), "amount"), "%s before the move", price)
-		assertDecimalEqual(t, amount, jsonField(jsonObject(after, price), "amount"), "%s keeps its figure", price)
-		assert.Equal(t, poundUnitID, jsonField(jsonObject(jsonObject(before, price), "per_unit"), "id"), "%s was per pound", price)
-		assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, price), "per_unit"), "id"), "%s is now per each", price)
-		assert.Equal(t, "usd", jsonField(jsonObject(after, price), "currency"), "%s stays in dollars", price)
-	}
-	assert.Equal(t, "each", jsonField(jsonObject(jsonObject(after, "burn_rate"), "unit"), "id"), "burn rate counts eaches")
+	assertItemPrice(t, jsonObject(after, "unit_cost"), "0.75", poundUnitID, "unit_cost")
+	assertItemPrice(t, jsonObject(jsonObject(after, "sales"), "unit_price"), "1.50", poundUnitID, "sales.unit_price")
 
 	assert.Equal(t, []string{itemID}, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {categoryID}}))
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"q": {sku}, "category_ids": {SeedMaterialCategoryID}}))
 
-	// Re-assigning the current category succeeds and leaves the item where it is.
-	status, body, err = apiClient.PutRaw(itemsPath+"/"+itemID+"/category/"+categoryID, include, nil)
+	// Re-sending the current category succeeds and leaves the item where it is.
+	again := patchItem(t, itemID, map[string]any{"category_id": categoryID})
+	assertItemPrice(t, jsonObject(again, "unit_cost"), "0.75", poundUnitID, "unit_cost after a repeat")
+	assert.Equal(t, categoryID, jsonField(jsonObject(getItem(t, itemID, "category"), "category"), "id"))
+}
+
+// preview.9's change-category route still moves the item's prices onto the new category's base unit, keeping their
+// figures.
+func TestDashItems_Preview9ChangeCategoryMovesTheRatesOntoTheNewBaseUnit(t *testing.T) {
+	t.Parallel()
+	categoryID := dashItemsMaterialCategory(t, apiClient)
+	itemID := dashItemsPricedYarn(t, uniqueName("e2e-dashitems-move9"))
+	preview := apiClient.WithAPIVersion(preview9Version)
+
+	status, body, err := preview.Put(itemsPath+"/"+itemID+"/category/"+categoryID+"?include=category", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	again := parseJSON(body)
-	assert.Equal(t, categoryID, jsonField(jsonObject(again, "category"), "id"))
-	assert.Equal(t, jsonField(jsonObject(after, "unit_cost"), "amount"), jsonField(jsonObject(again, "unit_cost"), "amount"))
+	after := parseJSON(body)
+	assertPreview9ItemShape(t, after)
+	assert.Equal(t, categoryID, jsonField(jsonObject(after, "category"), "id"))
+	for field, value := range map[string]string{"unit_value": "1.5", "unit_cost": "0.75"} {
+		rate := jsonObject(after, field)
+		require.NotNil(t, rate, field)
+		assert.Equal(t, "rate", jsonField(rate, "object"), field)
+		assertDecimalEqual(t, value, jsonField(rate, "value"), "%s keeps its figure", field)
+		assert.Equal(t, "each", jsonField(jsonObject(rate, "denominator_unit"), "id"), "%s is now per each", field)
+	}
+
+	forge := getItem(t, itemID)
+	assertItemPrice(t, jsonObject(forge, "unit_cost"), "0.75", "each", "unit_cost read on forge")
+	assertItemPrice(t, jsonObject(jsonObject(forge, "sales"), "unit_price"), "1.50", "each", "sales.unit_price read on forge")
 }
 
 func TestDashItems_AttributeAndCategoryWritesStayInTheirTenant(t *testing.T) {
@@ -1038,26 +1009,32 @@ func TestDashItems_AttributeAndCategoryWritesStayInTheirTenant(t *testing.T) {
 	tenantB := getTenantBClient()
 	item := itemsPath + "/" + itemID
 
-	for _, req := range []dashItemsRequest{
-		{"tenant B assigns our attribute", tenantB, "PUT", item + "/attributes/" + attributeID},
-		{"tenant B removes an attribute", tenantB, "DELETE", item + "/attributes/" + attributeID},
-		{"tenant B moves our item", tenantB, "PUT", item + "/category/" + SeedMaterialCategoryID},
-		{"we assign tenant B's attribute", apiClient, "PUT", item + "/attributes/" + refs.attributeID},
-		{"we remove tenant B's attribute", apiClient, "DELETE", item + "/attributes/" + refs.attributeID},
-		{"we move into tenant B's category", apiClient, "PUT", item + "/category/" + refs.categoryID},
+	for name, body := range map[string]map[string]any{
+		"tenant B assigns our attribute": {"attribute_ids": []string{attributeID}},
+		"tenant B moves our item":        {"category_id": SeedMaterialCategoryID},
 	} {
-		status, body := req.do(t)
-		assert.Equal(t, 404, status, "%s: %s", req.name, string(body))
+		status, resp, err := tenantB.Patch(item, body, newIdempotencyKey())
+		require.NoError(t, err)
+		assert.Equal(t, 404, status, "%s: %s", name, string(resp))
+	}
+	for name, tc := range map[string]struct {
+		body  map[string]any
+		param string
+	}{
+		"we assign tenant B's attribute":   {map[string]any{"attribute_ids": []string{refs.attributeID}}, "attribute_ids"},
+		"we move into tenant B's category": {map[string]any{"category_id": refs.categoryID}, "category_id"},
+	} {
+		status, resp, err := apiClient.Patch(item, tc.body, newIdempotencyKey())
+		require.NoError(t, err)
+		require.Equal(t, 422, status, "%s: %s", name, string(resp))
+		assertErrorParam(t, requireErrorResponse(t, resp, "invalid_format", "invalid_request_error"), tc.param)
 	}
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"category_ids": {refs.categoryID}}))
 	assert.Empty(t, listIDs(t, itemsPath, url.Values{"attribute_ids": {refs.attributeID}}))
 
-	status, body, err := apiClient.GetListRaw(item, url.Values{"include": {"category,attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	got := parseJSON(body)
+	got := getItem(t, itemID, "category", "attributes")
 	assert.Equal(t, SeedMaterialCategoryID, jsonField(jsonObject(got, "category"), "id"), "the item stays where it was")
-	assert.Empty(t, jsonListData(got, "attributes"), "and carries no attribute")
+	assert.Empty(t, attributeIDsOf(got), "and carries no attribute")
 }
 
 func TestDashItems_AttributeAndCategoryWritesRefuseReadersAndThePortal(t *testing.T) {
@@ -1068,28 +1045,21 @@ func TestDashItems_AttributeAndCategoryWritesRefuseReadersAndThePortal(t *testin
 	item := itemsPath + "/" + itemID
 
 	// Assigned up front so removing it is a request that would succeed with permission.
-	status, body, err := apiClient.Put(item+"/attributes/"+attributeID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(item + "/attributes/" + attributeID) })
+	patchItem(t, itemID, map[string]any{"attribute_ids": []string{attributeID}})
 
 	for who, client := range map[string]*Client{"items:read role": customRoleClient(t, "items:read"), "customer portal": getCustomerPortalClient()} {
-		for _, req := range []dashItemsRequest{
-			{"assign an attribute", client, "PUT", item + "/attributes/" + attributeID},
-			{"remove an attribute", client, "DELETE", item + "/attributes/" + attributeID},
-			{"change the category", client, "PUT", item + "/category/" + categoryID},
+		for what, body := range map[string]map[string]any{
+			"set the attributes":  {"attribute_ids": []string{attributeID}},
+			"remove an attribute": {"attribute_ids": []string{}},
+			"change the category": {"category_id": categoryID},
 		} {
-			status, body := req.do(t)
-			assert.Equal(t, 403, status, "%s may not %s: %s", who, req.name, string(body))
+			status, resp, err := client.Patch(item, body, newIdempotencyKey())
+			require.NoError(t, err)
+			assert.Equal(t, 403, status, "%s may not %s: %s", who, what, string(resp))
 		}
 	}
 
-	status, body, err = apiClient.GetListRaw(item, url.Values{"include": {"category,attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	got := parseJSON(body)
+	got := getItem(t, itemID, "category", "attributes")
 	assert.Equal(t, SeedMaterialCategoryID, jsonField(jsonObject(got, "category"), "id"))
-	attributes := jsonListData(got, "attributes")
-	require.Len(t, attributes, 1)
-	assert.Equal(t, attributeID, jsonField(attributes[0].(map[string]any), "id"))
+	assert.Equal(t, []string{attributeID}, attributeIDsOf(got))
 }

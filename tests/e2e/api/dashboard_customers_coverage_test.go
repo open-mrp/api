@@ -736,7 +736,17 @@ func TestDashCustomers_FrequentlyOrderedProductsNeedItemsReadOnTheOwnAccount(t *
 	want := parseJSON(mustGetAs(t, apiClient, path, nil))
 	require.NotEmpty(t, jsonArray(want, "data"), "the customer has ordered")
 
-	assert.Equal(t, want, parseJSON(mustGetAs(t, customRoleClient(t, "items:read"), path, nil)), "an items reader sees what the admin sees")
+	assert.Equal(t, want, parseJSON(mustGetAs(t, customRoleClient(t, "items:read", costsRead), path, nil)), "an items and costs reader sees what the admin sees")
+
+	// Without costs:read the item's cost is withheld, and nothing else changes.
+	itemsOnly := parseJSON(mustGetAs(t, customRoleClient(t, "items:read"), path, nil))
+	for _, raw := range jsonArray(itemsOnly, "data") {
+		assertNilField(t, jsonObject(raw.(map[string]any), "item"), "unit_cost")
+	}
+	for _, raw := range jsonArray(want, "data") {
+		jsonObject(raw.(map[string]any), "item")["unit_cost"] = nil
+	}
+	assert.Equal(t, want, itemsOnly, "an items reader sees what the admin sees but the cost")
 
 	for _, perms := range [][]string{{"customers:read"}, {"customers:read", "sales_orders:create"}} {
 		status, body, err := customRoleClient(t, perms...).GetListRaw(path, nil)

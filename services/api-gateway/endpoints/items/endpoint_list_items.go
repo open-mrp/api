@@ -4,12 +4,12 @@ import (
 	"context"
 	"maps"
 	"net/http"
-	"time"
 
 	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,38 +17,52 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
+const (
+	itemsRoute = "/v1/catalog/items"
+	itemRoute  = "/v1/catalog/items/{id}"
+)
+
+// ItemIncludeKeys are the include keys every item endpoint offers.
+var ItemIncludeKeys = []string{
+	"category", "category.properties", "category.unit_group", "category.unit_group.base_unit",
+	"category.unit_group.associated_units", "category.unit_group.associated_units.unit",
+	"attributes", "attributes.property", "sales.product_line", "default_manufacturing_method",
+}
+
+func itemIncludes() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{ObjectType: constants.ObjectTypeItem, Fields: ItemIncludeKeys})
+}
+
 // Request to list items.
 type ListItemsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
+	apirequest.CreatedRange
+	// Case-insensitive substring match on `sku` or `description`.
 	//
-	// Which fields are matched against the term varies by endpoint.
+	// Ranked: exact SKU first, then a SKU containing the term as a whole word, then a SKU starting with it, then all other matches. Newest first within each rank.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter to items of these types (`product`, `material`, `part`).
+	// Only return items with exactly these SKUs (case-insensitive). At most 100.
+	SKUs []string `query:"skus" validate:"max=100"`
+	// Only return items of these types.
 	Types []constants.ItemTypeCode `query:"types"`
-	// Filter to items in any of these categories.
+	// Only return items with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
+	// Only return items in one of these categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter to items carrying any of these attributes.
+	// Only return items carrying at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Filter to materials this supplier account supplies to you.
-	//
-	// Only materials can have suppliers, so combining this with a `types` filter that excludes `material` returns nothing.
-	SupplierID *string `query:"supplier_id"`
-	// Filter to items created on or after this date.
-	StartDate *time.Time `query:"starts_at"`
-	// Filter to items created on or before this date.
-	EndDate *time.Time `query:"ends_at"`
-	// Restricts results based on where the item is produced in its production flow.
-	//
-	// - `all`: no restriction.
-	// - `initial_only`: only items produced by an initial production step, i.e. a step with no upstream steps feeding into it.
-	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
-	// Filter to items whose product belongs to any of these product lines.
+	// Only return materials one of these suppliers supplies to you.
+	SupplierIDs []string `query:"supplier_ids"`
+	// Only return sold items whose product line is one of these.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter to items any of these customers are allowed to order.
-	//
-	// A customer qualifies when its relationship, its account group, or its price group grants access to the product line the item's product sits in. Items with no product line, including materials and parts, never match.
+	// Only return sellable items at least one of these customers may order, through access to the item's product line.
 	CustomerIDs []string `query:"customer_ids"`
+	// Only return sold items with one of these portal visibilities.
+	PortalVisibilities []constants.CustomerPortalVisibility `query:"portal_visibilities"`
+	// Restricts results by where the item is produced.
+	//
+	// `all`: no restriction. `initial_only`: only items produced by an operation nothing upstream feeds into.
+	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
 }
 
 var _ apiexample.Documented = (*ListItemsRequest)(nil)
@@ -58,12 +72,13 @@ func (*ListItemsRequest) SchemaExample() any {
 	base := apiresource.ListRequestSchemaExample()
 	out := maps.Clone(base)
 	out["types"] = []any{string(constants.ItemTypeCodeProduct)}
+	out["skus"] = []any{apiresource.SampleItemSKU}
 	return out
 }
 
-// Returns a paginated list of items, newest first.
+// Returns a list of items.
 //
-// Items backed by a non-sale product — the service, shipping, tax, credit, and return products that carry charges on orders — are left out, so this reflects the catalog you sell and stock rather than every item row. `q` matches against SKU and description, with closer SKU matches ranked first.
+// Sorted by creation date, newest first, or by search rank when `q` is set.
 type ListItemsEndpoint struct{}
 
 func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]] {
@@ -71,19 +86,15 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 		Title:             "List Items",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/items",
+		Route:             itemsRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
-		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
 			return svc.(ItemSvc).ListItems
 		},
-		ObjectType: constants.ObjectTypeItem,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
-		}),
+		ObjectType:    constants.ObjectTypeItem,
+		IncludeConfig: itemIncludes(),
 	})
 }

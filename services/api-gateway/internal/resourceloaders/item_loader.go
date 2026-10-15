@@ -53,7 +53,7 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 	}
 
 	for _, item := range items {
-		out[item.Id] = itemFromProto(item)
+		out[item.Id] = ItemFromProto(item)
 
 		if item.Category != nil {
 			if c, ok := categoryMap[item.Category.Id]; ok {
@@ -61,14 +61,8 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 			}
 		}
 
-		if item.UnitValue != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "unit_value", UnitPriceFromProto(item.UnitValue))
-		}
-		if item.UnitCost != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "unit_cost", UnitPriceFromProto(item.UnitCost))
-		}
-		if item.BurnRate != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "burn_rate", RateFromProto(item.BurnRate))
+		if item.Sales != nil && item.Sales.ProductLineId != nil {
+			meta.Set(constants.ObjectTypeItem, item.Id, ItemSalesProductLineMetaKey, *item.Sales.ProductLineId)
 		}
 
 		attrs := make([]apiresource.Attribute, 0, len(item.Attributes))
@@ -110,16 +104,50 @@ func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties b
 	return categories, attributeProperties
 }
 
-func itemFromProto(i *pb.ItemInfo) *apiresource.Item {
-	return &apiresource.Item{
-		ID:           i.Id,
-		Object:       constants.ObjectTypeItem,
-		SKU:          i.Sku,
-		Description:  i.Description,
-		Notes:        i.Notes,
-		ItemTypeCode: constants.ItemTypeCode(i.ItemTypeCode),
-		CreatedAt:    grpcutil.TimestampToTime(i.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(i.UpdatedAt),
+// ItemSalesProductLineMetaKey stashes the product line an item's sales section names, for `sales.product_line`.
+const ItemSalesProductLineMetaKey = "sales.product_line_id"
+
+func ItemFromProto(i *pb.ItemInfo) *apiresource.Item {
+	item := &apiresource.Item{
+		ID:          i.Id,
+		Object:      constants.ObjectTypeItem,
+		Type:        constants.ItemTypeCode(i.ItemTypeCode),
+		Status:      constants.ArchiveStatus(i.Status),
+		SKU:         i.Sku,
+		Description: i.Description,
+		UnitCost:    UnitPriceFromProto(i.UnitCost),
+		BurnRate:    RateFromProto(i.BurnRate),
+		CreatedAt:   grpcutil.TimestampToTime(i.CreatedAt),
+		UpdatedAt:   grpcutil.TimestampToTime(i.UpdatedAt),
 	}
+	if item.Status == "" {
+		item.Status = constants.ArchiveStatusActive
+	}
+	if i.Supply != nil {
+		supply := constants.Supply(*i.Supply)
+		item.Supply = &supply
+	}
+	if s := i.Sales; s != nil {
+		item.Sales = &apiresource.ItemSales{
+			UnitPrice:        UnitPriceFromProto(s.UnitPrice),
+			PortalVisibility: constants.CustomerPortalVisibility(s.PortalVisibility),
+			LeadTime:         quantityValueFromProto(s.LeadTime),
+		}
+	}
+	if m := i.Material; m != nil {
+		item.Material = &apiresource.ItemMaterial{
+			OrderPoint: quantityValueFromProto(m.OrderPoint),
+			LeadTime:   quantityValueFromProto(m.LeadTime),
+		}
+	}
+	return item
+}
+
+// quantityValueFromProto presents a section's quantity, or nil when absent. Its unit loads before the response is written.
+func quantityValueFromProto(q *pb.QuantityValue) *apiresource.Quantity {
+	if q == nil {
+		return nil
+	}
+	return apiresource.NewQuantity(apiresource.NormalizeQuantityValue(q.Value, q.UnitType), q.UnitId)
 }
 

@@ -6053,21 +6053,29 @@ func (x *ItemAttributeInfo) GetStatus() string {
 }
 
 type ItemInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Sku           string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes         *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	ItemTypeCode  string                 `protobuf:"bytes,5,opt,name=item_type_code,json=itemTypeCode,proto3" json:"item_type_code,omitempty"`
-	Category      *ItemCategoryInfo      `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
-	UnitValue     *UnitPrice             `protobuf:"bytes,15,opt,name=unit_value,json=unitValue,proto3" json:"unit_value,omitempty"`
-	UnitCost      *UnitPrice             `protobuf:"bytes,16,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
-	BurnRate      *RateInfo              `protobuf:"bytes,9,opt,name=burn_rate,json=burnRate,proto3" json:"burn_rate,omitempty"`
-	AccountId     string                 `protobuf:"bytes,10,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	IsDirty       bool                   `protobuf:"varint,11,opt,name=is_dirty,json=isDirty,proto3" json:"is_dirty,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Attributes    []*ItemAttributeInfo   `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Sku          string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description  *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes        *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	ItemTypeCode string                 `protobuf:"bytes,5,opt,name=item_type_code,json=itemTypeCode,proto3" json:"item_type_code,omitempty"`
+	Category     *ItemCategoryInfo      `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
+	UnitValue    *UnitPrice             `protobuf:"bytes,15,opt,name=unit_value,json=unitValue,proto3" json:"unit_value,omitempty"`
+	UnitCost     *UnitPrice             `protobuf:"bytes,16,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	BurnRate     *RateInfo              `protobuf:"bytes,9,opt,name=burn_rate,json=burnRate,proto3" json:"burn_rate,omitempty"`
+	AccountId    string                 `protobuf:"bytes,10,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	IsDirty      bool                   `protobuf:"varint,11,opt,name=is_dirty,json=isDirty,proto3" json:"is_dirty,omitempty"`
+	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Attributes   []*ItemAttributeInfo   `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty"`
+	// active | archived
+	Status string `protobuf:"bytes,17,opt,name=status,proto3" json:"status,omitempty"`
+	// stock | make | buy; absent inherits.
+	Supply *string `protobuf:"bytes,18,opt,name=supply,proto3,oneof" json:"supply,omitempty"`
+	// Absent when the item isn't sold.
+	Sales *ItemSalesInfo `protobuf:"bytes,19,opt,name=sales,proto3" json:"sales,omitempty"`
+	// Set for materials only.
+	Material      *ItemMaterialInfo `protobuf:"bytes,20,opt,name=material,proto3" json:"material,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6200,6 +6208,157 @@ func (x *ItemInfo) GetAttributes() []*ItemAttributeInfo {
 	return nil
 }
 
+func (x *ItemInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetSupply() string {
+	if x != nil && x.Supply != nil {
+		return *x.Supply
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetSales() *ItemSalesInfo {
+	if x != nil {
+		return x.Sales
+	}
+	return nil
+}
+
+func (x *ItemInfo) GetMaterial() *ItemMaterialInfo {
+	if x != nil {
+		return x.Material
+	}
+	return nil
+}
+
+// An item's selling details. unit_price is the item's unit_value.
+type ItemSalesInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UnitPrice     *UnitPrice             `protobuf:"bytes,1,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	ProductLineId *string                `protobuf:"bytes,2,opt,name=product_line_id,json=productLineId,proto3,oneof" json:"product_line_id,omitempty"`
+	// visible | hidden
+	PortalVisibility string         `protobuf:"bytes,3,opt,name=portal_visibility,json=portalVisibility,proto3" json:"portal_visibility,omitempty"`
+	LeadTime         *QuantityValue `protobuf:"bytes,4,opt,name=lead_time,json=leadTime,proto3" json:"lead_time,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ItemSalesInfo) Reset() {
+	*x = ItemSalesInfo{}
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[97]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemSalesInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemSalesInfo) ProtoMessage() {}
+
+func (x *ItemSalesInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[97]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemSalesInfo.ProtoReflect.Descriptor instead.
+func (*ItemSalesInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{97}
+}
+
+func (x *ItemSalesInfo) GetUnitPrice() *UnitPrice {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return nil
+}
+
+func (x *ItemSalesInfo) GetProductLineId() string {
+	if x != nil && x.ProductLineId != nil {
+		return *x.ProductLineId
+	}
+	return ""
+}
+
+func (x *ItemSalesInfo) GetPortalVisibility() string {
+	if x != nil {
+		return x.PortalVisibility
+	}
+	return ""
+}
+
+func (x *ItemSalesInfo) GetLeadTime() *QuantityValue {
+	if x != nil {
+		return x.LeadTime
+	}
+	return nil
+}
+
+// A material's order point and lead time; each absent when unset.
+type ItemMaterialInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderPoint    *QuantityValue         `protobuf:"bytes,1,opt,name=order_point,json=orderPoint,proto3" json:"order_point,omitempty"`
+	LeadTime      *QuantityValue         `protobuf:"bytes,2,opt,name=lead_time,json=leadTime,proto3" json:"lead_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ItemMaterialInfo) Reset() {
+	*x = ItemMaterialInfo{}
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemMaterialInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemMaterialInfo) ProtoMessage() {}
+
+func (x *ItemMaterialInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemMaterialInfo.ProtoReflect.Descriptor instead.
+func (*ItemMaterialInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *ItemMaterialInfo) GetOrderPoint() *QuantityValue {
+	if x != nil {
+		return x.OrderPoint
+	}
+	return nil
+}
+
+func (x *ItemMaterialInfo) GetLeadTime() *QuantityValue {
+	if x != nil {
+		return x.LeadTime
+	}
+	return nil
+}
+
 type ListItemsRequest struct {
 	state                    protoimpl.MessageState `protogen:"open.v1"`
 	Cursor                   *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -6216,13 +6375,20 @@ type ListItemsRequest struct {
 	Includes                 []string               `protobuf:"bytes,12,rep,name=includes,proto3" json:"includes,omitempty"`
 	ProductLineIds           []string               `protobuf:"bytes,13,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
 	CustomerIds              []string               `protobuf:"bytes,14,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Exact SKUs, matched case-insensitively.
+	Skus []string `protobuf:"bytes,15,rep,name=skus,proto3" json:"skus,omitempty"`
+	// active | archived
+	Statuses []string `protobuf:"bytes,16,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	// visible | hidden; matches sold items only.
+	PortalVisibilities []string `protobuf:"bytes,17,rep,name=portal_visibilities,json=portalVisibilities,proto3" json:"portal_visibilities,omitempty"`
+	SupplierIds        []string `protobuf:"bytes,18,rep,name=supplier_ids,json=supplierIds,proto3" json:"supplier_ids,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListItemsRequest) Reset() {
 	*x = ListItemsRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[97]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6234,7 +6400,7 @@ func (x *ListItemsRequest) String() string {
 func (*ListItemsRequest) ProtoMessage() {}
 
 func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[97]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6247,7 +6413,7 @@ func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListItemsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{97}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ListItemsRequest) GetCursor() string {
@@ -6348,6 +6514,34 @@ func (x *ListItemsRequest) GetCustomerIds() []string {
 	return nil
 }
 
+func (x *ListItemsRequest) GetSkus() []string {
+	if x != nil {
+		return x.Skus
+	}
+	return nil
+}
+
+func (x *ListItemsRequest) GetStatuses() []string {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
+}
+
+func (x *ListItemsRequest) GetPortalVisibilities() []string {
+	if x != nil {
+		return x.PortalVisibilities
+	}
+	return nil
+}
+
+func (x *ListItemsRequest) GetSupplierIds() []string {
+	if x != nil {
+		return x.SupplierIds
+	}
+	return nil
+}
+
 type ListItemsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*ItemInfo            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -6358,7 +6552,7 @@ type ListItemsResponse struct {
 
 func (x *ListItemsResponse) Reset() {
 	*x = ListItemsResponse{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[98]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6370,7 +6564,7 @@ func (x *ListItemsResponse) String() string {
 func (*ListItemsResponse) ProtoMessage() {}
 
 func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[98]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6383,7 +6577,7 @@ func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListItemsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{98}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *ListItemsResponse) GetItems() []*ItemInfo {
@@ -6413,7 +6607,7 @@ type GetItemRequest struct {
 
 func (x *GetItemRequest) Reset() {
 	*x = GetItemRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[99]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6425,7 +6619,7 @@ func (x *GetItemRequest) String() string {
 func (*GetItemRequest) ProtoMessage() {}
 
 func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[99]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6438,7 +6632,7 @@ func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemRequest.ProtoReflect.Descriptor instead.
 func (*GetItemRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{99}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *GetItemRequest) GetId() string {
@@ -6480,7 +6674,7 @@ type GetItemResponse struct {
 
 func (x *GetItemResponse) Reset() {
 	*x = GetItemResponse{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[100]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6492,7 +6686,7 @@ func (x *GetItemResponse) String() string {
 func (*GetItemResponse) ProtoMessage() {}
 
 func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[100]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6505,7 +6699,7 @@ func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemResponse.ProtoReflect.Descriptor instead.
 func (*GetItemResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{100}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *GetItemResponse) GetItem() *ItemInfo {
@@ -6538,7 +6732,7 @@ type GetItemLotDefaultRequest struct {
 
 func (x *GetItemLotDefaultRequest) Reset() {
 	*x = GetItemLotDefaultRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[101]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6550,7 +6744,7 @@ func (x *GetItemLotDefaultRequest) String() string {
 func (*GetItemLotDefaultRequest) ProtoMessage() {}
 
 func (x *GetItemLotDefaultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[101]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6563,7 +6757,7 @@ func (x *GetItemLotDefaultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemLotDefaultRequest.ProtoReflect.Descriptor instead.
 func (*GetItemLotDefaultRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{101}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *GetItemLotDefaultRequest) GetItemId() string {
@@ -6588,7 +6782,7 @@ type GetItemLotDefaultResponse struct {
 
 func (x *GetItemLotDefaultResponse) Reset() {
 	*x = GetItemLotDefaultResponse{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[102]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6600,7 +6794,7 @@ func (x *GetItemLotDefaultResponse) String() string {
 func (*GetItemLotDefaultResponse) ProtoMessage() {}
 
 func (x *GetItemLotDefaultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[102]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6613,7 +6807,7 @@ func (x *GetItemLotDefaultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemLotDefaultResponse.ProtoReflect.Descriptor instead.
 func (*GetItemLotDefaultResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{102}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *GetItemLotDefaultResponse) GetItemId() string {
@@ -6660,7 +6854,7 @@ type GetItemInventoryRequest struct {
 
 func (x *GetItemInventoryRequest) Reset() {
 	*x = GetItemInventoryRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[103]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6672,7 +6866,7 @@ func (x *GetItemInventoryRequest) String() string {
 func (*GetItemInventoryRequest) ProtoMessage() {}
 
 func (x *GetItemInventoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[103]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6685,7 +6879,7 @@ func (x *GetItemInventoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemInventoryRequest.ProtoReflect.Descriptor instead.
 func (*GetItemInventoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{103}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *GetItemInventoryRequest) GetId() string {
@@ -7283,7 +7477,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
 	"\x06status\x18\b \x01(\tR\x06statusB\r\n" +
-	"\v_color_code\"\xe2\x04\n" +
+	"\v_color_code\"\x81\x06\n" +
 	"\bItemInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
@@ -7305,9 +7499,25 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x127\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2\x17.core.ItemAttributeInfoR\n" +
-	"attributesB\x0e\n" +
+	"attributes\x12\x16\n" +
+	"\x06status\x18\x11 \x01(\tR\x06status\x12\x1b\n" +
+	"\x06supply\x18\x12 \x01(\tH\x02R\x06supply\x88\x01\x01\x12)\n" +
+	"\x05sales\x18\x13 \x01(\v2\x13.core.ItemSalesInfoR\x05sales\x122\n" +
+	"\bmaterial\x18\x14 \x01(\v2\x16.core.ItemMaterialInfoR\bmaterialB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notesJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xee\x04\n" +
+	"\x06_notesB\t\n" +
+	"\a_supplyJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xdf\x01\n" +
+	"\rItemSalesInfo\x12.\n" +
+	"\n" +
+	"unit_price\x18\x01 \x01(\v2\x0f.core.UnitPriceR\tunitPrice\x12+\n" +
+	"\x0fproduct_line_id\x18\x02 \x01(\tH\x00R\rproductLineId\x88\x01\x01\x12+\n" +
+	"\x11portal_visibility\x18\x03 \x01(\tR\x10portalVisibility\x120\n" +
+	"\tlead_time\x18\x04 \x01(\v2\x13.core.QuantityValueR\bleadTimeB\x12\n" +
+	"\x10_product_line_id\"z\n" +
+	"\x10ItemMaterialInfo\x124\n" +
+	"\vorder_point\x18\x01 \x01(\v2\x13.core.QuantityValueR\n" +
+	"orderPoint\x120\n" +
+	"\tlead_time\x18\x02 \x01(\v2\x13.core.QuantityValueR\bleadTime\"\xf2\x05\n" +
 	"\x10ListItemsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -7325,7 +7535,11 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x1aonly_initial_subassemblies\x18\v \x01(\bR\x18onlyInitialSubassemblies\x12\x1a\n" +
 	"\bincludes\x18\f \x03(\tR\bincludes\x12(\n" +
 	"\x10product_line_ids\x18\r \x03(\tR\x0eproductLineIds\x12!\n" +
-	"\fcustomer_ids\x18\x0e \x03(\tR\vcustomerIdsB\t\n" +
+	"\fcustomer_ids\x18\x0e \x03(\tR\vcustomerIds\x12\x12\n" +
+	"\x04skus\x18\x0f \x03(\tR\x04skus\x12\x1a\n" +
+	"\bstatuses\x18\x10 \x03(\tR\bstatuses\x12/\n" +
+	"\x13portal_visibilities\x18\x11 \x03(\tR\x12portalVisibilities\x12!\n" +
+	"\fsupplier_ids\x18\x12 \x03(\tR\vsupplierIdsB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x0e\n" +
 	"\f_supplier_idB\r\n" +
@@ -7371,7 +7585,7 @@ func file_core_core_accounts_carriers_proto_rawDescGZIP() []byte {
 	return file_core_core_accounts_carriers_proto_rawDescData
 }
 
-var file_core_core_accounts_carriers_proto_msgTypes = make([]protoimpl.MessageInfo, 104)
+var file_core_core_accounts_carriers_proto_msgTypes = make([]protoimpl.MessageInfo, 106)
 var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*GetStripeStatusResponse)(nil),              // 0: core.GetStripeStatusResponse
 	(*AdjustmentTypeInfo)(nil),                   // 1: core.AdjustmentTypeInfo
@@ -7470,57 +7684,60 @@ var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*ItemCategoryUnitGroupUnitInfo)(nil),        // 94: core.ItemCategoryUnitGroupUnitInfo
 	(*ItemAttributeInfo)(nil),                    // 95: core.ItemAttributeInfo
 	(*ItemInfo)(nil),                             // 96: core.ItemInfo
-	(*ListItemsRequest)(nil),                     // 97: core.ListItemsRequest
-	(*ListItemsResponse)(nil),                    // 98: core.ListItemsResponse
-	(*GetItemRequest)(nil),                       // 99: core.GetItemRequest
-	(*GetItemResponse)(nil),                      // 100: core.GetItemResponse
-	(*GetItemLotDefaultRequest)(nil),             // 101: core.GetItemLotDefaultRequest
-	(*GetItemLotDefaultResponse)(nil),            // 102: core.GetItemLotDefaultResponse
-	(*GetItemInventoryRequest)(nil),              // 103: core.GetItemInventoryRequest
-	(*timestamppb.Timestamp)(nil),                // 104: google.protobuf.Timestamp
-	(*PageInfo)(nil),                             // 105: core.PageInfo
-	(*InlineAddressInput)(nil),                   // 106: core.InlineAddressInput
-	(*JobInfo)(nil),                              // 107: core.JobInfo
-	(*StringPatch)(nil),                          // 108: core.StringPatch
-	(*Int32Patch)(nil),                           // 109: core.Int32Patch
-	(*UnitInfo)(nil),                             // 110: core.UnitInfo
-	(*UnitPrice)(nil),                            // 111: core.UnitPrice
+	(*ItemSalesInfo)(nil),                        // 97: core.ItemSalesInfo
+	(*ItemMaterialInfo)(nil),                     // 98: core.ItemMaterialInfo
+	(*ListItemsRequest)(nil),                     // 99: core.ListItemsRequest
+	(*ListItemsResponse)(nil),                    // 100: core.ListItemsResponse
+	(*GetItemRequest)(nil),                       // 101: core.GetItemRequest
+	(*GetItemResponse)(nil),                      // 102: core.GetItemResponse
+	(*GetItemLotDefaultRequest)(nil),             // 103: core.GetItemLotDefaultRequest
+	(*GetItemLotDefaultResponse)(nil),            // 104: core.GetItemLotDefaultResponse
+	(*GetItemInventoryRequest)(nil),              // 105: core.GetItemInventoryRequest
+	(*timestamppb.Timestamp)(nil),                // 106: google.protobuf.Timestamp
+	(*PageInfo)(nil),                             // 107: core.PageInfo
+	(*InlineAddressInput)(nil),                   // 108: core.InlineAddressInput
+	(*JobInfo)(nil),                              // 109: core.JobInfo
+	(*StringPatch)(nil),                          // 110: core.StringPatch
+	(*Int32Patch)(nil),                           // 111: core.Int32Patch
+	(*UnitInfo)(nil),                             // 112: core.UnitInfo
+	(*UnitPrice)(nil),                            // 113: core.UnitPrice
+	(*QuantityValue)(nil),                        // 114: core.QuantityValue
 }
 var file_core_core_accounts_carriers_proto_depIdxs = []int32{
-	104, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 1: core.AdjustmentTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 1: core.AdjustmentTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,   // 2: core.ListAdjustmentTypesResponse.adjustment_types:type_name -> core.AdjustmentTypeInfo
-	105, // 3: core.ListAdjustmentTypesResponse.page_info:type_name -> core.PageInfo
+	107, // 3: core.ListAdjustmentTypesResponse.page_info:type_name -> core.PageInfo
 	1,   // 4: core.BatchGetAdjustmentTypesByIDsResponse.adjustment_types:type_name -> core.AdjustmentTypeInfo
 	7,   // 5: core.AccountInfo.branding:type_name -> core.AccountBrandingInfo
 	8,   // 6: core.AccountInfo.portal:type_name -> core.AccountPortalInfo
-	104, // 7: core.AccountInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 8: core.AccountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 9: core.AccountBrandingInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 10: core.AccountBrandingInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 11: core.AccountPortalInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 12: core.AccountPortalInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 7: core.AccountInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 8: core.AccountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 9: core.AccountBrandingInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 10: core.AccountBrandingInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 11: core.AccountPortalInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 12: core.AccountPortalInfo.updated_at:type_name -> google.protobuf.Timestamp
 	6,   // 13: core.GetAccountResponse.account:type_name -> core.AccountInfo
 	9,   // 14: core.GetAccountBySlugResponse.account:type_name -> core.PublicAccountInfo
-	106, // 15: core.UpdateAccountRequest.default_billing_address:type_name -> core.InlineAddressInput
-	106, // 16: core.UpdateAccountRequest.default_shipping_address:type_name -> core.InlineAddressInput
+	108, // 15: core.UpdateAccountRequest.default_billing_address:type_name -> core.InlineAddressInput
+	108, // 16: core.UpdateAccountRequest.default_shipping_address:type_name -> core.InlineAddressInput
 	6,   // 17: core.UpdateAccountResponse.account:type_name -> core.AccountInfo
-	104, // 18: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 19: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 18: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 19: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
 	25,  // 20: core.PropertyInfo.attributes:type_name -> core.AttributeInfo
-	104, // 21: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 22: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 21: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 22: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	24,  // 23: core.ListPropertiesResponse.properties:type_name -> core.PropertyInfo
-	105, // 24: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
+	107, // 24: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
 	24,  // 25: core.GetPropertyResponse.property:type_name -> core.PropertyInfo
 	24,  // 26: core.CreatePropertyResponse.property:type_name -> core.PropertyInfo
 	24,  // 27: core.UpdatePropertyResponse.property:type_name -> core.PropertyInfo
 	35,  // 28: core.BulkUpsertPropertyInput.attributes:type_name -> core.BulkUpsertPropertyAttributeInput
 	36,  // 29: core.BulkUpsertPropertiesRequest.properties:type_name -> core.BulkUpsertPropertyInput
-	107, // 30: core.BulkUpsertPropertiesResponse.job:type_name -> core.JobInfo
-	107, // 31: core.ExportPropertiesResponse.job:type_name -> core.JobInfo
+	109, // 30: core.BulkUpsertPropertiesResponse.job:type_name -> core.JobInfo
+	109, // 31: core.ExportPropertiesResponse.job:type_name -> core.JobInfo
 	25,  // 32: core.ListAttributesResponse.attributes:type_name -> core.AttributeInfo
-	105, // 33: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
+	107, // 33: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
 	25,  // 34: core.GetAttributeResponse.attribute:type_name -> core.AttributeInfo
 	25,  // 35: core.CreateAttributeResponse.attribute:type_name -> core.AttributeInfo
 	25,  // 36: core.UpdateAttributeResponse.attribute:type_name -> core.AttributeInfo
@@ -7530,68 +7747,74 @@ var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	96,  // 40: core.BatchGetItemsByIDsResponse.items:type_name -> core.ItemInfo
 	91,  // 41: core.BatchGetItemsByIDsResponse.categories:type_name -> core.ItemCategoryInfo
 	24,  // 42: core.BatchGetItemsByIDsResponse.attribute_properties:type_name -> core.PropertyInfo
-	104, // 43: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 44: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 43: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 44: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
 	59,  // 45: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
-	104, // 46: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 47: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 46: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 47: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
 	58,  // 48: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
-	105, // 49: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
+	107, // 49: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
 	58,  // 50: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
 	58,  // 51: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
 	59,  // 52: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
 	6,   // 53: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
 	58,  // 54: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	108, // 55: core.UpdateCarrierRequest.scac:type_name -> core.StringPatch
-	108, // 56: core.UpdateCarrierRequest.default_service_level_id:type_name -> core.StringPatch
+	110, // 55: core.UpdateCarrierRequest.scac:type_name -> core.StringPatch
+	110, // 56: core.UpdateCarrierRequest.default_service_level_id:type_name -> core.StringPatch
 	58,  // 57: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
 	58,  // 58: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
 	59,  // 59: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	105, // 60: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
+	107, // 60: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
 	59,  // 61: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
 	59,  // 62: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	109, // 63: core.UpdateServiceLevelRequest.estimated_transit_days:type_name -> core.Int32Patch
+	111, // 63: core.UpdateServiceLevelRequest.estimated_transit_days:type_name -> core.Int32Patch
 	59,  // 64: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	104, // 65: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 66: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 67: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 68: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 69: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 70: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 71: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 72: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 65: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 66: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 67: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
+	106, // 68: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	106, // 69: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
+	106, // 70: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	106, // 71: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 72: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	92,  // 73: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
 	93,  // 74: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	104, // 75: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 76: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 77: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 78: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	110, // 79: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	106, // 75: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 76: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 77: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 78: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	112, // 79: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
 	94,  // 80: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
-	104, // 81: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 82: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	110, // 83: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
-	104, // 84: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 85: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 81: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 82: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	112, // 83: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	106, // 84: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 85: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	91,  // 86: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	111, // 87: core.ItemInfo.unit_value:type_name -> core.UnitPrice
-	111, // 88: core.ItemInfo.unit_cost:type_name -> core.UnitPrice
+	113, // 87: core.ItemInfo.unit_value:type_name -> core.UnitPrice
+	113, // 88: core.ItemInfo.unit_cost:type_name -> core.UnitPrice
 	90,  // 89: core.ItemInfo.burn_rate:type_name -> core.RateInfo
-	104, // 90: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 91: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	106, // 90: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	106, // 91: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
 	95,  // 92: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
-	104, // 93: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
-	104, // 94: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
-	96,  // 95: core.ListItemsResponse.items:type_name -> core.ItemInfo
-	105, // 96: core.ListItemsResponse.page_info:type_name -> core.PageInfo
-	96,  // 97: core.GetItemResponse.item:type_name -> core.ItemInfo
-	91,  // 98: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
-	24,  // 99: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
-	100, // [100:100] is the sub-list for method output_type
-	100, // [100:100] is the sub-list for method input_type
-	100, // [100:100] is the sub-list for extension type_name
-	100, // [100:100] is the sub-list for extension extendee
-	0,   // [0:100] is the sub-list for field type_name
+	97,  // 93: core.ItemInfo.sales:type_name -> core.ItemSalesInfo
+	98,  // 94: core.ItemInfo.material:type_name -> core.ItemMaterialInfo
+	113, // 95: core.ItemSalesInfo.unit_price:type_name -> core.UnitPrice
+	114, // 96: core.ItemSalesInfo.lead_time:type_name -> core.QuantityValue
+	114, // 97: core.ItemMaterialInfo.order_point:type_name -> core.QuantityValue
+	114, // 98: core.ItemMaterialInfo.lead_time:type_name -> core.QuantityValue
+	106, // 99: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
+	106, // 100: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
+	96,  // 101: core.ListItemsResponse.items:type_name -> core.ItemInfo
+	107, // 102: core.ListItemsResponse.page_info:type_name -> core.PageInfo
+	96,  // 103: core.GetItemResponse.item:type_name -> core.ItemInfo
+	91,  // 104: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 105: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
+	106, // [106:106] is the sub-list for method output_type
+	106, // [106:106] is the sub-list for method input_type
+	106, // [106:106] is the sub-list for extension type_name
+	106, // [106:106] is the sub-list for extension extendee
+	0,   // [0:106] is the sub-list for field type_name
 }
 
 func init() { file_core_core_accounts_carriers_proto_init() }
@@ -7632,14 +7855,15 @@ func file_core_core_accounts_carriers_proto_init() {
 	file_core_core_accounts_carriers_proto_msgTypes[95].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[96].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[97].OneofWrappers = []any{}
-	file_core_core_accounts_carriers_proto_msgTypes[102].OneofWrappers = []any{}
+	file_core_core_accounts_carriers_proto_msgTypes[99].OneofWrappers = []any{}
+	file_core_core_accounts_carriers_proto_msgTypes[104].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_accounts_carriers_proto_rawDesc), len(file_core_core_accounts_carriers_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   104,
+			NumMessages:   106,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

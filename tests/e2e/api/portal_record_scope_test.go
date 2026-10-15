@@ -204,7 +204,14 @@ func TestPortalRecordScope_PortalsReadOnlyTheJobsTheyStarted(t *testing.T) {
 		got := parseJSON(requireStatusAs(t, http.StatusNotFound, who, portal, jobsPath+"/"+staffJobID, nil))
 		assert.Equal(t, jsonField(jsonObject(missing, "error"), "message"), jsonField(jsonObject(got, "error"), "message"), "%s cannot tell the job exists", who)
 
-		own := completedExportJobAs(t, portal, productsPath+"/actions/export", nil)
+		// Only the preview.9 catalog exports admit portals, and they answer with the preview.9 job, so the accept is
+		// read by id alone.
+		status, body, err := portal.Post(productsPath+"/actions/export", map[string]any{}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, http.StatusAccepted, status, body)
+		ownJobID := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, ownJobID)
+		own := awaitExportJob(t, portal, ownJobID)
 		assert.Equal(t, "completed", jsonField(own, "status"), "%s follows its own export to completion", who)
 	}
 }

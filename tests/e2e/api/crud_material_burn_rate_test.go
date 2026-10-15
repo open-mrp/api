@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"net/url"
 	"strconv"
 	"testing"
 	"time"
@@ -21,9 +20,7 @@ import (
 // and skew the rate for thirty days. Both the mediator gate and the SQL that computes the rate
 // exclude it; see ListConsumptionChangeLogsForBurnRate.
 //
-// This test used to drive consumption through this endpoint and assert the rate moved, which is the
-// behaviour that was removed. The rate rising here again would mean corrections had leaked back into
-// the demand signal.
+// The rate rising here again would mean corrections had leaked back into the demand signal.
 //
 // The path that does move the rate — scan consumption — is covered in units rather than here:
 // BurnRateMedTestSuite.TestRecalculate_ComputesAndWritesRate for the arithmetic,
@@ -34,25 +31,7 @@ import (
 func TestMaterials_BurnRate_IgnoresManualInventoryCorrections(t *testing.T) {
 	t.Parallel()
 
-	sku := uniqueName("e2e-mat-burn")
-	body := validMaterialBody(sku)
-	createStatus, createBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-
-	created := parseJSON(createBody)
-	materialID := jsonField(created, "id")
-	require.NotEmpty(t, materialID)
-	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + materialID) })
-
-	getStatus, getBody, err := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{"include": {"item"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-
-	item := jsonObject(parseJSON(getBody), "item")
-	require.NotNil(t, item, "item should be present with ?include=item")
-	itemID := jsonField(item, "id")
-	require.NotEmpty(t, itemID)
+	itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("material", uniqueName("e2e-mat-burn"))), "id")
 
 	adjust := func(delta string) {
 		t.Helper()
@@ -73,12 +52,10 @@ func TestMaterials_BurnRate_IgnoresManualInventoryCorrections(t *testing.T) {
 	// Held for longer than a recompute needs to land, rather than read once: a recompute runs off the
 	// consumption transaction via the outbox, so reading immediately would report zero because nothing
 	// had run yet, and the test would pass whether or not corrections were excluded.
-	burnRate := requireBurnRateStaysZero(t, materialID, burnRateSettleWindow)
+	burnRate := requireBurnRateStaysZero(t, itemID, burnRateSettleWindow)
 
-	perUnit := jsonObject(burnRate, "per_unit")
-	require.NotNil(t, perUnit, "burn rate per_unit should be present")
-	assert.Equal(t, "day", jsonField(perUnit, "id"))
-	assert.NotEmpty(t, jsonField(jsonObject(burnRate, "unit"), "id"), "burn rate unit should be present")
+	assert.Equal(t, dayUnitID, jsonField(jsonObject(burnRate, "per_unit"), "id"), "burn rate is counted per day")
+	assert.Equal(t, SeedMaterialUnitID, jsonField(jsonObject(burnRate, "unit"), "id"), "burn rate is in the category's base unit")
 }
 
 // burnRateSettleWindow is how long the rate is watched for a recompute that must never arrive. It is
@@ -86,24 +63,16 @@ func TestMaterials_BurnRate_IgnoresManualInventoryCorrections(t *testing.T) {
 // move has had every chance to.
 const burnRateSettleWindow = 5 * time.Second
 
-// requireBurnRateStaysZero polls the material's burn rate for the whole window and fails the moment it
-// moves off zero, returning the last rate read.
-func requireBurnRateStaysZero(t *testing.T, materialID string, window time.Duration) map[string]any {
+// requireBurnRateStaysZero polls the item's burn rate, which every item carries, for the whole window and fails the
+// moment it moves off zero, returning the last rate read.
+func requireBurnRateStaysZero(t *testing.T, itemID string, window time.Duration) map[string]any {
 	t.Helper()
 
 	var burnRate map[string]any
 	deadline := time.Now().Add(window)
 	for {
-		status, body, getErr := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{
-			"include": {"item.burn_rate"},
-		})
-		require.NoError(t, getErr)
-		requireStatus(t, 200, status, body)
-
-		gotItem := jsonObject(parseJSON(body), "item")
-		require.NotNil(t, gotItem, "item should be present with include=item.burn_rate: %s", body)
-		burnRate = jsonObject(gotItem, "burn_rate")
-		require.NotNil(t, burnRate, "item.burn_rate should be present: %s", body)
+		burnRate = jsonObject(getItem(t, itemID), "burn_rate")
+		require.NotNil(t, burnRate, "burn_rate is always present")
 
 		measure, parseErr := strconv.ParseFloat(jsonField(burnRate, "value"), 64)
 		require.NoError(t, parseErr, "burn rate value must be a decimal")

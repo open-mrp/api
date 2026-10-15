@@ -120,48 +120,64 @@ func TestAuditCoverage_MaterialCostOnlyPatch(t *testing.T) {
 
 // --- Bulk upsert update rows ---
 
-// The update branch writes rates and attributes after the row's own fields; the event has to include them.
-func TestAuditCoverage_BulkUpsertUpdateIncludesRatesAndAttributes(t *testing.T) {
+// bulkUpsertedColorValue upserts one row carrying a new Color value and returns the item and the attribute the value
+// made. The attribute is detached and deleted after the test, before the item goes.
+func bulkUpsertedColorValue(t *testing.T, row map[string]any) (itemID, attributeID string) {
+	t.Helper()
+	value := uniqueName("e2e-audit-color")
+	row["attributes"] = []any{map[string]any{"property": SeedPropertyName, "value": value}}
+	created, updated := jobResultIDs(bulkUpsertItemsJob(t, row))
+	written := append(created, updated...)
+	require.Len(t, written, 1)
+	itemID = written[0]
+	for _, raw := range jsonListData(getItem(t, itemID, "attributes"), "attributes") {
+		if attr, ok := raw.(map[string]any); ok && jsonField(attr, "value") == value {
+			attributeID = jsonField(attr, "id")
+		}
+	}
+	require.NotEmpty(t, attributeID, "the new attribute is attached to the item")
+	t.Cleanup(func() {
+		apiClient.Patch(itemsPath+"/"+itemID, map[string]any{"attribute_ids": []string{}}, newIdempotencyKey())
+		apiClient.Delete(attributePath(SeedPropertyID, attributeID))
+	})
+	return itemID, attributeID
+}
+
+// The update branch writes attributes after the row's own fields; the event has to include them.
+func TestAuditCoverage_BulkUpsertUpdateIncludesAttributes(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name         string
-		resourceType string
-		path         string
-		categoryID   string
-		upsert       func(t *testing.T, rows ...map[string]any) ([]string, []string)
+		itemType   string
+		categoryID string
+		unitID     string
 	}{
-		{"product", "product", productsPath, SeedItemCategoryID, bulkUpsertProductIDs},
-		{"material", "material", materialsPath, SeedMaterialCategoryID, bulkUpsertMaterialIDs},
-		{"part", "part", partsPath, SeedItemCategoryID, bulkUpsertPartIDs},
+		{"product", SeedItemCategoryID, SeedUnitID},
+		{"material", SeedMaterialCategoryID, SeedMaterialUnitID},
+		{"part", SeedItemCategoryID, SeedUnitID},
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.itemType, func(t *testing.T) {
 			t.Parallel()
 
-			sku := uniqueName("e2e-audit-bup-" + tc.name)
-			created, _ := tc.upsert(t, map[string]any{"sku": sku, "category": map[string]any{"id": tc.categoryID}})
+			sku := uniqueName("e2e-audit-bup-" + tc.itemType)
+			created, _ := jobResultIDs(bulkUpsertItemsJob(t, map[string]any{"type": tc.itemType, "sku": sku, "category_id": tc.categoryID}))
 			require.Len(t, created, 1)
-			resourceID := created[0]
-			defer apiClient.Delete(tc.path + "/" + resourceID)
+			itemID := created[0]
 
-			_, updated := tc.upsert(t, map[string]any{
-				"sku":        sku,
-				"category":   map[string]any{"id": tc.categoryID},
-				"unit_price": bulkCurrencyRate("7.75"),
-				"unit_cost":  bulkCurrencyRate("2.50"),
-				"properties": []any{bulkProperty(uniqueName("e2e-audit-prop"), uniqueName("v"))},
+			description := uniqueName("e2e-audit-bup-desc")
+			updatedID, _ := bulkUpsertedColorValue(t, map[string]any{
+				"type": tc.itemType, "sku": sku, "category_id": tc.categoryID,
+				"description": description,
+				"unit_cost":   priceInputPer("2.50", tc.unitID),
 			})
-			require.Equal(t, []string{resourceID}, updated)
+			require.Equal(t, itemID, updatedID)
 
-			event := expectAuditEventWithChanges(t, resourceID, tc.resourceType, "update")
+			event := expectAuditEventWithChanges(t, itemID, "item", "update")
 			changes := jsonListData(event, "changes")
-			price, ok := changeForField(changes, "unit_price")
-			require.True(t, ok, "unit_price change missing: %v", changes)
-			requireRateChange(t, price, "7.75")
-			cost, ok := changeForField(changes, "unit_cost")
-			require.True(t, ok, "unit_cost change missing: %v", changes)
-			requireRateChange(t, cost, "2.50")
+			desc, ok := changeForField(changes, "description")
+			require.True(t, ok, "description change missing: %v", changes)
+			assert.Equal(t, description, desc["new_value"])
 			_, ok = changeForField(changes, "attributes")
 			assert.True(t, ok, "attributes change missing: %v", changes)
 		})
@@ -172,27 +188,7 @@ func TestAuditCoverage_BulkUpsertUpdateIncludesRatesAndAttributes(t *testing.T) 
 func TestAuditCoverage_BulkUpsertCreatesAuditedAttribute(t *testing.T) {
 	t.Parallel()
 
-	value := uniqueName("e2e-audit-attr")
-	created, _ := bulkUpsertProductIDs(t, map[string]any{
-		"sku":        uniqueName("e2e-audit-attr-prod"),
-		"category":   map[string]any{"id": SeedItemCategoryID},
-		"properties": []any{bulkProperty(uniqueName("e2e-audit-attr-prop"), value)},
-	})
-	require.Len(t, created, 1)
-	defer cleanupProductIDs(created)
-
-	itemID := jsonField(catalogItem(t, productsPath, created[0]), "id")
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID, url.Values{"include": {"attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	var attributeID string
-	for _, raw := range jsonListData(parseJSON(body), "attributes") {
-		if attr, ok := raw.(map[string]any); ok && jsonField(attr, "value") == value {
-			attributeID = jsonField(attr, "id")
-		}
-	}
-	require.NotEmpty(t, attributeID, "the new attribute is attached to the item")
-
+	_, attributeID := bulkUpsertedColorValue(t, forgeItemBody("product", uniqueName("e2e-audit-attr-prod")))
 	expectAuditEvent(t, attributeID, "attribute", "create")
 }
 
@@ -210,7 +206,8 @@ func TestAuditCoverage_BulkCreateItemsExistingSKU(t *testing.T) {
 	itemID := jsonField(catalogItem(t, productsPath, productID), "id")
 
 	description := uniqueName("e2e-audit-bci-desc")
-	status, body, err = apiClient.Post(itemsPath+"/actions/bulk-create", map[string]any{
+	// Bulk create answers preview.9 callers only.
+	status, body, err = apiClient.WithAPIVersion(preview9Version).Post(itemsPath+"/actions/bulk-create", map[string]any{
 		"type": "product",
 		"items": []any{map[string]any{
 			"sku":              sku,

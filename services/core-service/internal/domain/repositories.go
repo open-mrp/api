@@ -190,7 +190,28 @@ type ItemRepo interface {
 	// GetProductLineIDs maps each of the given items that sells under a product line to that line.
 	GetProductLineIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError)
 	ExportWithInventory(ctx context.Context, accountID string) (*ExportItemsResult, *apierror.APIError)
-	Update(ctx context.Context, params UpdateItemParams) *apierror.APIError
+	// SetFields writes the item row's own columns.
+	SetFields(ctx context.Context, params SetItemFieldsParams) *apierror.APIError
+	// Insert writes a new item row of any type and copies its money.
+	Insert(ctx context.Context, params InsertItemParams) *apierror.APIError
+	// InsertRate writes a rate row for an item about to be inserted.
+	InsertRate(ctx context.Context, id string, rate CreateRateParams) *apierror.APIError
+	// InsertQuantity writes a quantity row; UpdateQuantity rewrites one in place.
+	InsertQuantity(ctx context.Context, id string, q QuantityInput) *apierror.APIError
+	UpdateQuantity(ctx context.Context, id string, q QuantityInput) *apierror.APIError
+	DeleteQuantities(ctx context.Context, ids []string) *apierror.APIError
+	// ReplaceAttributes sets the item's attributes to exactly attributeIDs.
+	ReplaceAttributes(ctx context.Context, itemID string, attributeIDs []string) *apierror.APIError
+	// InsertProduct writes the product row that holds an item's selling details; SetProduct changes it.
+	InsertProduct(ctx context.Context, row ItemProductRow) *apierror.APIError
+	SetProduct(ctx context.Context, params SetItemProductParams) *apierror.APIError
+	// InsertPart writes the part row a part item keeps for older API versions.
+	InsertPart(ctx context.Context, partID, itemID string) *apierror.APIError
+	// HardDelete removes the item, its extension rows, values and the bookkeeping that never moved stock. The caller
+	// has already found nothing referencing it.
+	HardDelete(ctx context.Context, item *Item) *apierror.APIError
+	// GetAssignability reports, for each of the account's items among ids, whether it may be newly assigned.
+	GetAssignability(ctx context.Context, accountID string, ids []string) ([]ItemAssignability, *apierror.APIError)
 	CheckSKUExists(ctx context.Context, accountID, sku, excludeID string) (bool, *apierror.APIError)
 	AddAttribute(ctx context.Context, params AddItemAttributeParams) *apierror.APIError
 	RemoveAttribute(ctx context.Context, params RemoveItemAttributeParams) *apierror.APIError

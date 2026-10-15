@@ -582,6 +582,27 @@ message ItemInfo {
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
   repeated ItemAttributeInfo attributes = 14;
+  // active | archived
+  string status = 17;
+  // stock | make | buy; absent inherits.
+  optional string supply = 18;
+  // Absent when the item isn't sold.
+  ItemSalesInfo sales = 19;
+  // Set for materials only.
+  ItemMaterialInfo material = 20;
+}
+// An item's selling details. unit_price is the item's unit_value.
+message ItemSalesInfo {
+  UnitPrice unit_price = 1;
+  optional string product_line_id = 2;
+  // visible | hidden
+  string portal_visibility = 3;
+  QuantityValue lead_time = 4;
+}
+// A material's order point and lead time; each absent when unset.
+message ItemMaterialInfo {
+  QuantityValue order_point = 1;
+  QuantityValue lead_time = 2;
 }
 message ListItemsRequest {
   optional string cursor = 1;
@@ -598,6 +619,13 @@ message ListItemsRequest {
   repeated string includes = 12;
   repeated string product_line_ids = 13;
   repeated string customer_ids = 14;
+  // Exact SKUs, matched case-insensitively.
+  repeated string skus = 15;
+  // active | archived
+  repeated string statuses = 16;
+  // visible | hidden; matches sold items only.
+  repeated string portal_visibilities = 17;
+  repeated string supplier_ids = 18;
 }
 message ListItemsResponse {
   repeated ItemInfo items = 1;

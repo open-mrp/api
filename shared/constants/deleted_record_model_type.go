@@ -38,6 +38,8 @@ const (
 	DeletedRecordResourceTypeCustomerProductLineAccess DeletedRecordResourceType = "customer_product_line_access"
 	// DeletedRecordResourceTypeDepartment identifies deleted department records.
 	DeletedRecordResourceTypeDepartment DeletedRecordResourceType = "department"
+	// DeletedRecordResourceTypeItem identifies deleted item records.
+	DeletedRecordResourceTypeItem DeletedRecordResourceType = "item"
 	// DeletedRecordResourceTypeItemCategory identifies deleted item_category records.
 	DeletedRecordResourceTypeItemCategory DeletedRecordResourceType = "item_category"
 	// DeletedRecordResourceTypeMachine identifies deleted machine records.
@@ -129,6 +131,7 @@ func (m DeletedRecordResourceType) IsValid() bool {
 		DeletedRecordResourceTypeCustomer,
 		DeletedRecordResourceTypeCustomerProductLineAccess,
 		DeletedRecordResourceTypeDepartment,
+		DeletedRecordResourceTypeItem,
 		DeletedRecordResourceTypeItemCategory,
 		DeletedRecordResourceTypeMachine,
 		DeletedRecordResourceTypeMaterial,
@@ -189,6 +192,7 @@ func (m DeletedRecordResourceType) EnumValues() []string {
 		string(DeletedRecordResourceTypeCustomer),
 		string(DeletedRecordResourceTypeCustomerProductLineAccess),
 		string(DeletedRecordResourceTypeDepartment),
+		string(DeletedRecordResourceTypeItem),
 		string(DeletedRecordResourceTypeItemCategory),
 		string(DeletedRecordResourceTypeMachine),
 		string(DeletedRecordResourceTypeMaterial),

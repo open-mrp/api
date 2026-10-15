@@ -1155,6 +1155,8 @@ type Item struct {
 	UnitCostAmount          sql.NullString
 	UnitCostCurrency        sql.NullString
 	UnitCostPerUnitID       sql.NullString
+	IsActive                bool
+	SupplyCode              sql.NullString
 }
 
 type ItemAttribute struct {
@@ -1682,6 +1684,7 @@ type Product struct {
 	ProductTypeCode string
 	ProductLineID   sql.NullString
 	IsPortalReady   bool
+	LeadTimeID      sql.NullString
 }
 
 type ProductLine struct {

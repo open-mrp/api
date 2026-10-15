@@ -25,19 +25,18 @@ func TestAnalyticsParityWeeksOfSales_StockAndSalesInTheLinesBaseUnit(t *testing.
 	line := parityProductLine(t)
 	sold1, _ := parityProduct(t, line)
 	sold2, _ := parityProduct(t, line)
-	stocked, stockedItem := parityProduct(t, line)
+	_, stockedItem := parityProduct(t, line)
 	customer := parityCustomer(t, "", line)
 
 	// Sold this week: 4 pr and 1 dz (6 pr) = 10 pr.
 	issueParityOrder(t, customer, "",
 		parityLine(sold1, "4", SeedUnitID, "1.00"),
 		parityLine(sold2, "1", seedDozenUnitID, "1.00"))
-	// On hand: 3 pr and 2 dz (12 pr) = 15 pr, on an item since deleted, whose stock is still on the shelf.
+	// On hand: 3 pr and 2 dz (12 pr) = 15 pr, on an item since archived, whose stock is still on the shelf. An item
+	// with inventory movements can't be deleted, only archived.
 	mustUpdateInventory(t, stockedItem, "3", SeedUnitID, "adjust")
 	mustUpdateInventory(t, stockedItem, "2", seedDozenUnitID, "adjust")
-	deleteStatus, deleteBody, err := apiClient.Delete(productsPath + "/" + stocked)
-	require.NoError(t, err)
-	requireStatus(t, 200, deleteStatus, deleteBody)
+	patchItem(t, stockedItem, map[string]any{"status": "archived"})
 
 	// A period of its own keeps this run off a report another cached; 10 pr spread over it divides exactly.
 	periods := []int{5, 8, 10, 16, 20, 25, 40, 50, 80, 100, 125, 160, 200, 250, 400, 500}

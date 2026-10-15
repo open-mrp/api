@@ -360,7 +360,7 @@ func TestItemParity_JSONBodyOverTheCapIs413(t *testing.T) {
 		body       []byte
 		limit      string
 	}{
-		{"default cap", materialsPath, padded(`{"sku":"e2e-too-large","category_id":"`+SeedMaterialCategoryID+`"`, (1<<20)+16), "1 MB"},
+		{"default cap", itemsPath, padded(`{"type":"material","sku":"e2e-too-large","category_id":"`+SeedMaterialCategoryID+`"`, (1<<20)+16), "1 MB"},
 		{"bulk cap", bulkReconcilePath, padded(`{"reconcile_type":"force","data":[]`, (8<<20)+16), "8 MB"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -374,35 +374,35 @@ func TestItemParity_JSONBodyOverTheCapIs413(t *testing.T) {
 	}
 }
 
-// The product, material and part imports carry descriptions and properties, and take the bulk cap.
+// The item import carries descriptions and attributes, and takes the bulk cap.
 func TestItemParity_BulkUpsertOverOneMegabyteIsAccepted(t *testing.T) {
 	t.Parallel()
 
 	sku := uniqueName("e2e-parity-big-upsert")
 	var b bytes.Buffer
-	b.WriteString(`{"materials":[{"sku":"` + sku + `","category":{"id":"` + SeedMaterialCategoryID + `"}}]`)
+	b.WriteString(`{"items":[{"type":"material","sku":"` + sku + `","category_id":"` + SeedMaterialCategoryID + `"}]`)
 	b.Write(bytes.Repeat([]byte(" "), (1<<20)+64))
 	b.WriteString("}")
 
 	require.Greater(t, b.Len(), 1<<20)
 
-	status, body := postRawJSON(t, materialsBulkUpsertPath, b.Bytes())
+	status, body := postRawJSON(t, itemsBulkUpsertPath, b.Bytes())
 	require.Less(t, status, 500, "%.500s", string(body))
 	requireStatus(t, http.StatusAccepted, status, body)
 
-	var materialID string
+	var itemID string
 	eventually(t, 30*time.Second, 500*time.Millisecond, func() error {
-		list, _, err := apiClient.GetList(materialsPath, url.Values{"q": {sku}})
+		list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {sku}})
 		if err != nil {
 			return err
 		}
 		if len(list.Data) != 1 {
-			return fmt.Errorf("material %s not written yet", sku)
+			return fmt.Errorf("item %s not written yet", sku)
 		}
-		materialID = DataItemField(list.Data[0], "id")
+		itemID = DataItemField(list.Data[0], "id")
 		return nil
 	})
-	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + materialID) })
+	t.Cleanup(func() { apiClient.Delete(itemsPath + "/" + itemID) })
 }
 
 // --- Trends ---

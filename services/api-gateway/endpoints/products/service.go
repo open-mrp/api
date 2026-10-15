@@ -3,8 +3,10 @@ package productep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -20,7 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var validateProductIncludes = []string{"product_line", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"}
+var validateProductIncludes = []string{"product_line", "item", "item.category", "item.attributes"}
 
 func rateInputToProto(r *apirequest.UnitPriceInput) *pb.UnitPrice {
 	if r == nil {
@@ -78,6 +80,9 @@ func NewProductSvc(config *ProductSvcConfig) ProductSvc {
 }
 
 func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListProductsFullRequest{
 		Cursor:         req.Cursor,
 		Limit:          req.Limit,
@@ -113,10 +118,16 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 }
 
 func (m *productSvcImpl) GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	return loadProductByID(ctx, req.ProductID)
 }
 
 func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	isPortalReady := false
 	if v, ok := req.PortalVisibility.Value(); ok {
 		isPortalReady = v == constants.CustomerPortalVisibilityVisible
@@ -125,7 +136,6 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 	pbReq := &pb.CreateProductRequest{
 		Sku:             req.SKU,
 		Description:     req.Description.Ptr(),
-		Notes:           req.Notes.Ptr(),
 		ProductTypeCode: string(req.ProductTypeCode),
 		ProductLineId:   req.ProductLineID.Ptr(),
 		CategoryId:      req.CategoryID,
@@ -147,6 +157,9 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 }
 
 func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbProducts := make([]*pb.UpsertProductInput, len(req.Products))
 	for i, p := range req.Products {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
@@ -169,7 +182,6 @@ func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsert
 			Sku:           p.SKU,
 			Type:          typePtr,
 			Description:   p.Description.Ptr(),
-			Notes:         p.Notes.Ptr(),
 			Category:      apirequest.ObjectIdentifierToProto(p.Category),
 			ProductLine:   apirequest.OptionalObjectIdentifierToProto(p.ProductLine),
 			IsPortalReady: isPortalReady,
@@ -193,6 +205,9 @@ func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsert
 }
 
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	var isPortalReady *bool
 	if pv, ok := req.PortalVisibility.Value(); ok {
 		v := pv == constants.CustomerPortalVisibilityVisible
@@ -203,7 +218,6 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		Id:            req.ProductID,
 		Sku:           req.SKU.Ptr(),
 		Description:   fieldpb.StringClearableToProto(req.Description),
-		Notes:         fieldpb.StringClearableToProto(req.Notes),
 		IsPortalReady: isPortalReady,
 		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
 		CategoryId:    req.CategoryID.Ptr(),
@@ -224,6 +238,9 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 }
 
 func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteProductRequest{
 		Id: req.ProductID,
 	}
@@ -244,6 +261,9 @@ func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRe
 }
 
 func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ChangeProductProductLineRequest{
 		Id:            req.ProductID,
 		ProductLineId: req.ProductLineID,
@@ -261,6 +281,9 @@ func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *Chan
 }
 
 func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ValidateProductsRequest{
 		ProductsMap: req.ProductsMap,
 		Includes:    include.FilterIncludes(ctx, validateProductIncludes...),
@@ -292,6 +315,9 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 }
 
 func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, productsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ExportProductsRequest{
 		Query:          req.Query,
 		CustomerIds:    req.CustomerIDs,

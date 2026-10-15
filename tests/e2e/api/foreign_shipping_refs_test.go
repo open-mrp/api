@@ -35,7 +35,7 @@ func createTenantBShippingRefs(t *testing.T) tenantBShippingRefs {
 	}
 
 	var refs tenantBShippingRefs
-	refs.carrierID = create(carriersPath, map[string]any{"name": uniqueName("e2e-foreign-carrier"), "code": "will_call"})
+	refs.carrierID = create(carriersPath, map[string]any{"name": uniqueName("e2e-foreign-carrier"), "type": "will_call"})
 	t.Cleanup(func() { _, _, _ = tenantB.Delete(carriersPath + "/" + refs.carrierID) })
 	refs.serviceLevelID = create(serviceLevelsPath(refs.carrierID), map[string]any{
 		"name": uniqueName("e2e-foreign-sl"), "code": uniqueName("e2e-foreign-sl-code"),

@@ -42,9 +42,9 @@ func TestCovOperationsCarriers_ServiceLevel_CRUD(t *testing.T) {
 	// here intentionally omits the Location header. Only the carrier create
 	// endpoint sets one. Do NOT assert a Location header on this route.
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, code, jsonField(created, "service_level_token"))
-	assert.Equal(t, "visible", jsonField(created, "customer_portal_visibility"))
-	assert.Equal(t, "false", jsonField(created, "is_default"))
+	assert.Equal(t, code, jsonField(created, "code"))
+	assert.Equal(t, "visible", jsonField(created, "portal_visibility"))
+	assert.Equal(t, "active", jsonField(created, "status"))
 
 	// GET
 	getStatus, getBody, err := apiClient.GetListRaw(basePath+"/"+id, nil)
@@ -55,14 +55,14 @@ func TestCovOperationsCarriers_ServiceLevel_CRUD(t *testing.T) {
 	// UPDATE
 	newName := uniqueName("e2e-cov-sl-crud-upd")
 	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{
-		"name":                       newName,
-		"customer_portal_visibility": "hidden",
+		"name":              newName,
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
-	assert.Equal(t, "hidden", jsonField(updated, "customer_portal_visibility"))
+	assert.Equal(t, "hidden", jsonField(updated, "portal_visibility"))
 
 	// DELETE
 	delStatus, delBody, err := apiClient.Delete(basePath + "/" + id)
@@ -76,24 +76,21 @@ func TestCovOperationsCarriers_ServiceLevel_CRUD(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Service Levels: allFields (create + update), explicitly asserting
-// service_level_token, customer_portal_visibility, and is_default.
+// Service Levels: allFields (create + update).
 // ──────────────────────────────────────────────
 
 func TestCovOperationsCarriers_ServiceLevel_CreateAndUpdateAllFields(t *testing.T) {
 	t.Parallel()
-	// Uses its own throwaway carrier (not SeedCarrierID) because this test
-	// exercises is_default=true, and ClearDefaultsForCarrier clears defaults
-	// account+carrier-wide with no per-test scoping.
 	_, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
 
 	name := uniqueName("e2e-cov-sl-allf")
 	code := uniqueName("e2e-cov-sl-allf-code")
 	createResp, err := apiClient.PostFull(basePath, map[string]any{
-		"name":                       name,
-		"code":                       code,
-		"customer_portal_visibility": "hidden",
-		"is_default":                 false,
+		"name":                   name,
+		"code":                   code,
+		"portal_visibility":      "hidden",
+		"status":                 "archived",
+		"estimated_transit_days": 4,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -101,27 +98,27 @@ func TestCovOperationsCarriers_ServiceLevel_CreateAndUpdateAllFields(t *testing.
 	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
-	// Service-level create declares no LocationFunc, so no Location header is
-	// emitted on 201 (see CRUD test note). Don't assert one.
 	defer apiClient.Delete(basePath + "/" + id)
 
 	assert.Equal(t, "service_level", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, code, jsonField(got, "service_level_token"))
-	assert.Equal(t, "hidden", jsonField(got, "customer_portal_visibility"))
-	assert.Equal(t, "false", jsonField(got, "is_default"))
+	assert.Equal(t, code, jsonField(got, "code"))
+	assert.Equal(t, "hidden", jsonField(got, "portal_visibility"))
+	assert.Equal(t, "archived", jsonField(got, "status"))
+	assert.Equal(t, "4", jsonField(got, "estimated_transit_days"))
 	assertNilField(t, got, "owner")
+	assertNilField(t, got, "carrier")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	// UPDATE with different values, including is_default=true.
 	updatedName := uniqueName("e2e-cov-sl-allf-u")
 	updatedCode := uniqueName("e2e-cov-sl-allf-u-code")
 	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{
-		"name":                       updatedName,
-		"code":                       updatedCode,
-		"customer_portal_visibility": "visible",
-		"is_default":                 true,
+		"name":                   updatedName,
+		"code":                   updatedCode,
+		"portal_visibility":      "visible",
+		"status":                 "active",
+		"estimated_transit_days": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -129,15 +126,12 @@ func TestCovOperationsCarriers_ServiceLevel_CreateAndUpdateAllFields(t *testing.
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, updatedCode, jsonField(updated, "service_level_token"))
-	assert.Equal(t, "visible", jsonField(updated, "customer_portal_visibility"))
-	assert.Equal(t, "true", jsonField(updated, "is_default"))
+	assert.Equal(t, updatedCode, jsonField(updated, "code"))
+	assert.Equal(t, "visible", jsonField(updated, "portal_visibility"))
+	assert.Equal(t, "active", jsonField(updated, "status"))
+	assertNilField(t, updated, "estimated_transit_days")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-
-	// Clear is_default so the deferred Delete above doesn't hit the
-	// default-service-levels-cannot-be-deleted guard.
-	_, _, _ = apiClient.Patch(basePath+"/"+id, map[string]any{"is_default": false}, newIdempotencyKey())
 }
 
 // ──────────────────────────────────────────────
@@ -165,9 +159,11 @@ func TestCovOperationsCarriers_ServiceLevel_OmittedFields(t *testing.T) {
 
 		assertObjectField(t, got, "service_level")
 		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, code, jsonField(got, "service_level_token"), "service_level_token should default to the request's code")
-		assert.Equal(t, "visible", jsonField(got, "customer_portal_visibility"), "customer_portal_visibility should default to visible")
-		assert.Equal(t, "false", jsonField(got, "is_default"), "is_default should default to false")
+		assert.Equal(t, code, jsonField(got, "code"), "code is the request's code")
+		assert.Equal(t, "visible", jsonField(got, "portal_visibility"), "portal_visibility should default to visible")
+		assert.Equal(t, "active", jsonField(got, "status"), "status should default to active")
+		assertNilField(t, got, "estimated_transit_days")
+		assertNilField(t, got, "carrier")
 		assertNilField(t, got, "owner")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -177,9 +173,9 @@ func TestCovOperationsCarriers_ServiceLevel_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-cov-sl-pres")
 		code := uniqueName("e2e-cov-sl-pres-code")
 		createStatus, createBody, err := apiClient.Post(basePath, map[string]any{
-			"name":                       name,
-			"code":                       code,
-			"customer_portal_visibility": "hidden",
+			"name":              name,
+			"code":              code,
+			"portal_visibility": "hidden",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -200,9 +196,9 @@ func TestCovOperationsCarriers_ServiceLevel_OmittedFields(t *testing.T) {
 
 		got := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(got, "name"))
-		assert.Equal(t, code, jsonField(got, "service_level_token"), "service_level_token should be preserved")
-		assert.Equal(t, "hidden", jsonField(got, "customer_portal_visibility"), "customer_portal_visibility should be preserved")
-		assert.Equal(t, "false", jsonField(got, "is_default"), "is_default should be preserved")
+		assert.Equal(t, code, jsonField(got, "code"), "code should be preserved")
+		assert.Equal(t, "hidden", jsonField(got, "portal_visibility"), "portal_visibility should be preserved")
+		assert.Equal(t, "active", jsonField(got, "status"), "status should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -219,9 +215,9 @@ func TestCovOperationsCarriers_ServiceLevel_CreateResponseShape(t *testing.T) {
 	name := uniqueName("e2e-cov-sl-shape")
 	code := uniqueName("e2e-cov-sl-shape-code")
 	createResp, err := apiClient.PostFull(basePath, map[string]any{
-		"name":                       name,
-		"code":                       code,
-		"customer_portal_visibility": "hidden",
+		"name":              name,
+		"code":              code,
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -238,8 +234,8 @@ func TestCovOperationsCarriers_ServiceLevel_CreateResponseShape(t *testing.T) {
 	assertIDFormat(t, id, "silv")
 	assert.Equal(t, "service_level", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, code, jsonField(got, "service_level_token"))
-	assert.Equal(t, "hidden", jsonField(got, "customer_portal_visibility"))
+	assert.Equal(t, code, jsonField(got, "code"))
+	assert.Equal(t, "hidden", jsonField(got, "portal_visibility"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -442,14 +438,14 @@ func TestCovOperationsCarriers_ServiceLevel_CreateValidation_InvalidVisibility(t
 	t.Parallel()
 	basePath := serviceLevelsPath(SeedCarrierID)
 	status, body, err := apiClient.Post(basePath, map[string]any{
-		"name":                       uniqueName("e2e-cov-sl-badvis"),
-		"code":                       uniqueName("e2e-cov-sl-badvis-code"),
-		"customer_portal_visibility": "public",
+		"name":              uniqueName("e2e-cov-sl-badvis"),
+		"code":              uniqueName("e2e-cov-sl-badvis-code"),
+		"portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "customer_portal_visibility")
+	assertErrorParam(t, errObj, "portal_visibility")
 }
 
 func TestCovOperationsCarriers_ServiceLevel_CreateDuplicateCodeFails(t *testing.T) {
@@ -525,12 +521,12 @@ func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_InvalidVisibility(t
 	defer apiClient.Delete(basePath + "/" + id)
 
 	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{
-		"customer_portal_visibility": "public",
+		"portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, patchStatus, patchBody)
 	errObj := requireErrorResponse(t, patchBody, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "customer_portal_visibility")
+	assertErrorParam(t, errObj, "portal_visibility")
 }
 
 func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_DuplicateCode(t *testing.T) {
@@ -562,119 +558,135 @@ func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_DuplicateCode(t *te
 }
 
 // ──────────────────────────────────────────────
-// Service Levels: business rules — default clearing + default delete guard
+// Carriers: default service level + the guards around it
 //
-// is_default is cleared account+carrier-wide (ClearDefaultsForCarrier has no
-// per-test scoping), so these tests each provision their own throwaway
-// carrier rather than sharing SeedCarrierID — otherwise parallel runs of
-// these tests would race on which service level is "the" default. Deleting
-// the throwaway carrier cascades to (hard-deletes) all of its service
-// levels (see carrierSvcImpl.DeleteCarrier → DeleteOptionsByCarrierID), so a
-// single deferred carrier delete is sufficient cleanup even for a default
-// service level that would otherwise refuse direct deletion.
+// Each test provisions its own throwaway carrier, since a carrier has one
+// default. Deleting the carrier deletes its service levels, so its cleanup
+// covers them.
 // ──────────────────────────────────────────────
 
 // covOperationsCarriersCreateThrowawayCarrier creates a fresh account-owned,
-// non-Shippo carrier for tests that need is_default isolation, and returns
+// non-Shippo carrier for tests that need default isolation, and returns
 // its id plus its service-levels base path. Registers cleanup via t.Cleanup.
 func covOperationsCarriersCreateThrowawayCarrier(t *testing.T) (carrierID, basePath string) {
 	t.Helper()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": uniqueName("e2e-cov-carr-throwaway"),
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
 	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(carriersPath + "/" + id) })
+	t.Cleanup(func() {
+		_, _, _ = apiClient.Patch(carriersPath+"/"+id, map[string]any{"default_service_level_id": nil}, newIdempotencyKey())
+		apiClient.Delete(carriersPath + "/" + id)
+	})
 	return id, serviceLevelsPath(id)
 }
 
-func TestCovOperationsCarriers_ServiceLevel_CreateIsDefaultClearsPriorDefault(t *testing.T) {
+func TestCovOperationsCarriers_Carrier_DefaultServiceLevel(t *testing.T) {
 	t.Parallel()
-	_, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
+	carrierID, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
 
-	statusA, bodyA, err := apiClient.Post(basePath, map[string]any{
-		"name":       uniqueName("e2e-cov-sl-clrdef-a"),
-		"code":       uniqueName("e2e-cov-sl-clrdef-a-code"),
-		"is_default": true,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, statusA, bodyA)
-	idA := jsonField(parseJSON(bodyA), "id")
-	assert.Equal(t, "true", jsonField(parseJSON(bodyA), "is_default"))
+	idA := covOperationsCarriersCreateServiceLevel(t, basePath, nil)
+	idB := covOperationsCarriersCreateServiceLevel(t, basePath, nil)
 
-	statusB, bodyB, err := apiClient.Post(basePath, map[string]any{
-		"name":       uniqueName("e2e-cov-sl-clrdef-b"),
-		"code":       uniqueName("e2e-cov-sl-clrdef-b-code"),
-		"is_default": true,
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(carriersPath+"/"+carrierID, map[string]any{"default_service_level_id": idA}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, statusB, bodyB)
-	assert.Equal(t, "true", jsonField(parseJSON(bodyB), "is_default"))
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "default_service_level")
 
-	// Re-fetch A: creating B as the new default must have cleared A's.
-	getStatus, getBody, err := apiClient.GetListRaw(basePath+"/"+idA, nil)
+	status, body, err = apiClient.GetListRaw(carriersPath+"/"+carrierID, url.Values{"include[]": {"default_service_level"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assert.Equal(t, "false", jsonField(parseJSON(getBody), "is_default"),
-		"creating a new default service level should clear the carrier's previous default")
+	requireStatus(t, 200, status, body)
+	def := jsonObject(parseJSON(body), "default_service_level")
+	require.NotNil(t, def)
+	assert.Equal(t, idA, jsonField(def, "id"))
+	assert.Equal(t, "service_level", jsonField(def, "object"))
+
+	// Moving the default to another level replaces it.
+	status, body, err = apiClient.Patch(carriersPath+"/"+carrierID+"?include[]=default_service_level", map[string]any{"default_service_level_id": idB}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, idB, jsonField(jsonObject(parseJSON(body), "default_service_level"), "id"))
+
+	// An update that leaves default_service_level_id out keeps it.
+	status, body, err = apiClient.Patch(carriersPath+"/"+carrierID+"?include[]=default_service_level", map[string]any{"name": uniqueName("e2e-cov-carr-keepdef")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, idB, jsonField(jsonObject(parseJSON(body), "default_service_level"), "id"))
+
+	// null clears it.
+	status, body, err = apiClient.Patch(carriersPath+"/"+carrierID+"?include[]=default_service_level", map[string]any{"default_service_level_id": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "default_service_level")
 }
 
-func TestCovOperationsCarriers_ServiceLevel_UpdateIsDefaultClearsPriorDefault(t *testing.T) {
+func TestCovOperationsCarriers_Carrier_DefaultServiceLevelMustBeOwnAndActive(t *testing.T) {
 	t.Parallel()
-	_, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
+	carrierID, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
 
-	statusA, bodyA, err := apiClient.Post(basePath, map[string]any{
-		"name":       uniqueName("e2e-cov-sl-updclrdef-a"),
-		"code":       uniqueName("e2e-cov-sl-updclrdef-a-code"),
-		"is_default": true,
-	}, newIdempotencyKey())
+	// Another carrier's service level.
+	status, body, err := apiClient.Patch(carriersPath+"/"+carrierID, map[string]any{"default_service_level_id": SeedServiceLevelID}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, statusA, bodyA)
-	idA := jsonField(parseJSON(bodyA), "id")
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "default_service_level_id")
 
-	statusB, bodyB, err := apiClient.Post(basePath, map[string]any{
-		"name": uniqueName("e2e-cov-sl-updclrdef-b"),
-		"code": uniqueName("e2e-cov-sl-updclrdef-b-code"),
-	}, newIdempotencyKey())
+	// An archived one of its own.
+	archivedID := covOperationsCarriersCreateServiceLevel(t, basePath, map[string]any{"status": "archived"})
+	status, body, err = apiClient.Patch(carriersPath+"/"+carrierID, map[string]any{"default_service_level_id": archivedID}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, statusB, bodyB)
-	idB := jsonField(parseJSON(bodyB), "id")
-
-	// Promote B to default via PATCH; this should clear A's default.
-	patchStatus, patchBody, err := apiClient.Patch(basePath+"/"+idB, map[string]any{"is_default": true}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-	assert.Equal(t, "true", jsonField(parseJSON(patchBody), "is_default"))
-
-	getStatus, getBody, err := apiClient.GetListRaw(basePath+"/"+idA, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assert.Equal(t, "false", jsonField(parseJSON(getBody), "is_default"),
-		"promoting a sibling service level to default should clear this one's default")
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "resource_archived", "invalid_request_error"), "default_service_level_id")
 }
 
-func TestCovOperationsCarriers_ServiceLevel_DefaultCannotBeDeleted(t *testing.T) {
+func TestCovOperationsCarriers_ServiceLevel_DefaultCannotBeDeletedOrArchived(t *testing.T) {
 	t.Parallel()
-	_, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
+	carrierID, basePath := covOperationsCarriersCreateThrowawayCarrier(t)
+	id := covOperationsCarriersCreateServiceLevel(t, basePath, nil)
 
-	status, body, err := apiClient.Post(basePath, map[string]any{
-		"name":       uniqueName("e2e-cov-sl-defdel"),
-		"code":       uniqueName("e2e-cov-sl-defdel-code"),
-		"is_default": true,
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(carriersPath+"/"+carrierID, map[string]any{"default_service_level_id": id}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	id := jsonField(parseJSON(body), "id")
+	requireStatus(t, 200, status, body)
 
 	delStatus, delBody, err := apiClient.Delete(basePath + "/" + id)
 	require.NoError(t, err)
-	assert.Equal(t, 422, delStatus, "deleting a default service level should return 400, got %d: %s", delStatus, string(delBody))
-	requireErrorResponse(t, delBody, "validation_failed", "invalid_request_error")
-	// No further cleanup needed: the throwaway carrier's deferred delete
-	// cascades to this (still-default) service level.
+	requireStatus(t, 409, delStatus, delBody)
+	requireErrorResponse(t, delBody, "resource_in_use", "invalid_request_error")
+
+	archStatus, archBody, err := apiClient.Patch(basePath+"/"+id, map[string]any{"status": "archived"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, archStatus, archBody)
+	assertErrorParam(t, requireErrorResponse(t, archBody, "invalid_format", "invalid_request_error"), "status")
+
+	// Once the carrier names no default, the service level can go.
+	status, body, err = apiClient.Patch(carriersPath+"/"+carrierID, map[string]any{"default_service_level_id": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	delStatus, delBody, err = apiClient.Delete(basePath + "/" + id)
+	require.NoError(t, err)
+	requireStatus(t, 200, delStatus, delBody)
+	assertDeletedStub(t, delBody, id, "service_level")
+}
+
+// covOperationsCarriersCreateServiceLevel adds a service level under basePath with the extra fields given and returns its id.
+func covOperationsCarriersCreateServiceLevel(t *testing.T, basePath string, extra map[string]any) string {
+	t.Helper()
+	body := map[string]any{
+		"name": uniqueName("e2e-cov-sl"),
+		"code": uniqueName("e2e-cov-sl-code"),
+	}
+	for k, v := range extra {
+		body[k] = v
+	}
+	status, resp, err := apiClient.Post(basePath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, resp)
+	id := jsonField(parseJSON(resp), "id")
+	require.NotEmpty(t, id)
+	return id
 }
 
 // ──────────────────────────────────────────────
@@ -727,39 +739,40 @@ func TestCovOperationsCarriers_Carrier_CreateValidation_InvalidCodeEnum(t *testi
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": uniqueName("e2e-cov-carr-badcode"),
-		"code": "not_a_carrier",
+		"type": "not_a_carrier",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "code")
+	assertErrorParam(t, errObj, "type")
 }
 
 func TestCovOperationsCarriers_Carrier_CreateValidation_InvalidVisibilityEnum(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
-		"name":                       uniqueName("e2e-cov-carr-badvis"),
-		"customer_portal_visibility": "public",
+		"name":              uniqueName("e2e-cov-carr-badvis"),
+		"type":              "will_call",
+		"portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "customer_portal_visibility")
+	assertErrorParam(t, errObj, "portal_visibility")
 }
 
 // TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber asserts the
 // documented business rule (services/core-service/internal/service/carrier_service.go)
-// that code=ups/usps without account_number returns 400
+// that type=ups/usps without account_number returns 422
 // ("Account number is required for this carrier.").
 func TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": uniqueName("e2e-cov-carr-ups-noacct"),
-		"code": "ups",
+		"type": "ups",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 422, status,
-		"code=ups without account_number should return 400, got %d: %s", status, string(body))
+		"type=ups without account_number should return 422, got %d: %s", status, string(body))
 	if status == 201 {
 		id := jsonField(parseJSON(body), "id")
 		apiClient.Delete(carriersPath + "/" + id)
@@ -771,7 +784,7 @@ func TestCovOperationsCarriers_Carrier_CreateFedexDoesNotError(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": uniqueName("e2e-cov-carr-fedex"),
-		"code": "fedex",
+		"type": "fedex",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.NotEqual(t, 500, status,
@@ -787,7 +800,7 @@ func TestCovOperationsCarriers_Carrier_CreateAlreadyDeleted410(t *testing.T) {
 	name := uniqueName("e2e-cov-carr-gone")
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -803,17 +816,17 @@ func TestCovOperationsCarriers_Carrier_CreateAlreadyDeleted410(t *testing.T) {
 		"deleting an already-deleted carrier should return 410, got %d: %s", redeleteStatus, string(redeleteBody))
 }
 
-// TestCovOperationsCarriers_Carrier_UpdateRejectsUnknownCodeAndAccountNumber
-// asserts the live behavior for PATCH bodies containing `code`/`account_number`:
+// TestCovOperationsCarriers_Carrier_UpdateRejectsTypeAndAccountNumber
+// asserts the live behavior for PATCH bodies containing `type`/`account_number`:
 // these fields aren't part of UpdateCarrierRequest, and the gateway's strict
 // JSON decoding rejects unknown fields with 400 parameter_unknown rather than
 // silently ignoring them.
-func TestCovOperationsCarriers_Carrier_UpdateRejectsUnknownCodeAndAccountNumber(t *testing.T) {
+func TestCovOperationsCarriers_Carrier_UpdateRejectsTypeAndAccountNumber(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-carr-unkfield")
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -821,12 +834,12 @@ func TestCovOperationsCarriers_Carrier_UpdateRejectsUnknownCodeAndAccountNumber(
 	defer apiClient.Delete(carriersPath + "/" + id)
 
 	patchStatus, patchBody, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{
-		"code": "delivery",
+		"type": "local_delivery",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, patchStatus, "PATCH with unknown field code should return 400, got %d: %s", patchStatus, string(patchBody))
+	assert.Equal(t, 400, patchStatus, "PATCH with unknown field type should return 400, got %d: %s", patchStatus, string(patchBody))
 	errObj := requireErrorResponse(t, patchBody, "parameter_unknown", "invalid_request_error")
-	assertErrorParam(t, errObj, "code")
+	assertErrorParam(t, errObj, "type")
 
 	patchStatus2, patchBody2, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{
 		"account_number": "999",

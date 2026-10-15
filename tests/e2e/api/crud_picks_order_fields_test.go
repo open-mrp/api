@@ -141,15 +141,15 @@ func TestPicks_IncludeFreight(t *testing.T) {
 		assert.NotEmpty(t, jsonField(carrier, "name"), "%s: the header prints the carrier's name", label)
 		// A carrier the account never enabled for the portal must read as hidden, not as an
 		// empty string — the field is required and drives a portal-visibility badge.
-		assert.Equal(t, "hidden", jsonField(carrier, "customer_portal_visibility"), "%s", label)
+		assert.Equal(t, "hidden", jsonField(carrier, "portal_visibility"), "%s", label)
 
 		serviceLevel := jsonObject(freight, "service_level")
 		require.NotNil(t, serviceLevel, "%s: the service level rides inside freight", label)
 		assertObjectField(t, serviceLevel, "service_level")
 		assert.Equal(t, SeedServiceLevelID, jsonField(serviceLevel, "id"), "%s", label)
 		assert.NotEmpty(t, jsonField(serviceLevel, "name"), "%s", label)
-		assert.NotEmpty(t, jsonField(serviceLevel, "service_level_token"), "%s", label)
-		assert.Equal(t, "hidden", jsonField(serviceLevel, "customer_portal_visibility"), "%s", label)
+		assert.NotEmpty(t, jsonField(serviceLevel, "code"), "%s", label)
+		assert.Equal(t, "hidden", jsonField(serviceLevel, "portal_visibility"), "%s", label)
 	}
 }
 

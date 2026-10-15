@@ -438,7 +438,7 @@ func TestDashShipments_UpdateRefusesRoutingTheAccountDoesNotOwn(t *testing.T) {
 		requireStatus(t, 201, status, resp)
 		return jsonField(parseJSON(resp), "id")
 	}
-	foreignCarrier := created(carriersPath, map[string]any{"name": uniqueName("e2e-dash-foreign-carrier"), "code": "will_call"})
+	foreignCarrier := created(carriersPath, map[string]any{"name": uniqueName("e2e-dash-foreign-carrier"), "type": "will_call"})
 	t.Cleanup(func() { _, _, _ = tenantB.Delete(carriersPath + "/" + foreignCarrier) })
 	foreignServiceLevel := created(serviceLevelsPath(foreignCarrier), map[string]any{
 		"name": uniqueName("e2e-dash-foreign-sl"), "code": uniqueName("e2e-dash-foreign-sl-code"),
@@ -850,13 +850,13 @@ func TestDashShipments_RateShopValidation(t *testing.T) {
 func dashShipmentsPortalCarrier(t *testing.T, visibility string) (visibleLevelID, hiddenLevelID string) {
 	t.Helper()
 	carrier := createAndCleanup(t, carriersPath, map[string]any{
-		"name": uniqueName("e2e-dash-portal-carrier"), "code": "will_call", "customer_portal_visibility": visibility,
+		"name": uniqueName("e2e-dash-portal-carrier"), "type": "will_call", "portal_visibility": visibility,
 	})
 	level := func(levelVisibility string) string {
 		t.Helper()
 		status, body, err := apiClient.Post(serviceLevelsPath(jsonField(carrier, "id")), map[string]any{
 			"name": uniqueName("e2e-dash-portal-sl"), "code": uniqueName("e2e-dash-portal-sl-code"),
-			"customer_portal_visibility": levelVisibility,
+			"portal_visibility": levelVisibility,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)

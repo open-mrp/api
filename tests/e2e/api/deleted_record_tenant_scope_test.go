@@ -274,7 +274,7 @@ func TestDeletedRecordScope_Shipping(t *testing.T) {
 		{
 			name: "carrier",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, carriersPath, map[string]any{"name": uniqueName("e2e-dscope-carrier"), "code": "will_call"})
+				return createdPath(t, carriersPath, map[string]any{"name": uniqueName("e2e-dscope-carrier"), "type": "will_call"})
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-carrier")},
 		},

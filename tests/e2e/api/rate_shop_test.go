@@ -39,8 +39,8 @@ func rateShopRequestBody() map[string]any {
 
 // TestRateShop_ReturnsFullyHydratedCarrierAndServiceLevel is the regression
 // guard for the bug where the rate-shop response embedded thin carrier and
-// service_level stubs (only id/object/name), leaving service_level_token,
-// customer_portal_visibility, and the timestamps empty. Every option must now
+// service_level stubs (only id/object/name), leaving code,
+// portal_visibility, and the timestamps empty. Every option must now
 // carry a fully-hydrated carrier and service level.
 //
 // Strict assertions are scoped to the two permanent seeded service levels on
@@ -86,15 +86,15 @@ func TestRateShop_ReturnsFullyHydratedCarrierAndServiceLevel(t *testing.T) {
 		assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"), "options[%d].carrier.id", i)
 		assert.Equal(t, "carrier", jsonField(carrier, "object"), "options[%d].carrier.object", i)
 		assert.Equal(t, "Delivery", jsonField(carrier, "name"), "options[%d].carrier.name", i)
-		assert.NotEmpty(t, jsonField(carrier, "customer_portal_visibility"), "options[%d].carrier.customer_portal_visibility must not be empty", i)
+		assert.NotEmpty(t, jsonField(carrier, "portal_visibility"), "options[%d].carrier.portal_visibility must not be empty", i)
 		assertValidTimestamp(t, jsonField(carrier, "created_at"), "carrier.created_at")
 		assertValidTimestamp(t, jsonField(carrier, "updated_at"), "carrier.updated_at")
 
 		// service_level — fully hydrated; this is where the bug surfaced.
 		assert.Equal(t, "service_level", jsonField(serviceLevel, "object"), "options[%d].service_level.object", i)
 		assert.NotEmpty(t, jsonField(serviceLevel, "name"), "options[%d].service_level.name must not be empty", i)
-		assert.Equal(t, wantToken, jsonField(serviceLevel, "service_level_token"), "options[%d].service_level.service_level_token", i)
-		assert.NotEmpty(t, jsonField(serviceLevel, "customer_portal_visibility"), "options[%d].service_level.customer_portal_visibility must not be empty", i)
+		assert.Equal(t, wantToken, jsonField(serviceLevel, "code"), "options[%d].service_level.code", i)
+		assert.NotEmpty(t, jsonField(serviceLevel, "portal_visibility"), "options[%d].service_level.portal_visibility must not be empty", i)
 		assertValidTimestamp(t, jsonField(serviceLevel, "created_at"), "service_level.created_at")
 		assertValidTimestamp(t, jsonField(serviceLevel, "updated_at"), "service_level.updated_at")
 	}
@@ -154,10 +154,10 @@ func TestRateShop_ShowsCarriersToARoleThatMayRateShop(t *testing.T) {
 		require.NotNil(t, carrier)
 		assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
 		assert.Equal(t, "Delivery", jsonField(carrier, "name"))
-		assert.NotEmpty(t, jsonField(carrier, "customer_portal_visibility"))
+		assert.NotEmpty(t, jsonField(carrier, "portal_visibility"))
 		assertValidTimestamp(t, jsonField(carrier, "created_at"), "carrier.created_at")
 		serviceLevel := jsonObject(opt, "service_level")
-		assert.NotEmpty(t, jsonField(serviceLevel, "service_level_token"))
+		assert.NotEmpty(t, jsonField(serviceLevel, "code"))
 		assertValidTimestamp(t, jsonField(serviceLevel, "created_at"), "service_level.created_at")
 	}
 }

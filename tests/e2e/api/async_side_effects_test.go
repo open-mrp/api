@@ -697,7 +697,7 @@ func TestCarriers_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, carriersPath, map[string]any{
 		"name": uniqueName("e2e-carrier-audit"),
-		"code": "will_call",
+		"type": "will_call",
 	})
 	id := jsonField(created, "id")
 
@@ -716,7 +716,7 @@ func TestCarriers_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, carriersPath, map[string]any{
 		"name": uniqueName("e2e-carrier-rlog"),
-		"code": "will_call",
+		"type": "will_call",
 	})
 
 	expectRequestLog(t, "POST", "201", carriersPath)

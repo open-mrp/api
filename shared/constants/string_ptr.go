@@ -39,7 +39,7 @@ func (m *CarrierBillingType) StringPtr() *string {
 	return stringPtrEnum(m)
 }
 func (m *AccountMode) StringPtr() *string { return stringPtrEnum(m) }
-func (m *CarrierCode) StringPtr() *string { return stringPtrEnum(m) }
+func (m *CarrierType) StringPtr() *string { return stringPtrEnum(m) }
 func (m *IntegrationCode) StringPtr() *string {
 	return stringPtrEnum(m)
 }

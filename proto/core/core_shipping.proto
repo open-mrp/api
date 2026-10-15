@@ -192,6 +192,9 @@ message ShippingCaseDetailInfo {
   optional bool carrier_is_portal_enabled = 23;
   optional google.protobuf.Timestamp carrier_created_at = 24;
   optional google.protobuf.Timestamp carrier_updated_at = 25;
+  string carrier_type = 28;
+  // active | archived.
+  string carrier_status = 29;
   Money freight_amount = 26;
 }
 

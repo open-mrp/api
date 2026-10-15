@@ -39,7 +39,7 @@ const salesOrderListColumns = `
     ship_geo.locality, ship_geo.state, ship_geo.postal_code, ship_geo.country, ship_addr.phone, ship_addr.email,
     ship_addr.created_at, ship_addr.updated_at,
     cr.name, cr.is_portal_enabled, cr.created_at, cr.updated_at,
-    co.name, co.is_portal_enabled, co.service_level_token, co.created_at, co.updated_at,
+    co.name, co.is_portal_enabled, co.code, co.created_at, co.updated_at,
     sr_user.name,
     pt.name, pt.is_active, pt.created_at, pt.updated_at,
     st.name, st.is_freight_exempt, st.is_carrier_rate, st.created_at, st.updated_at,

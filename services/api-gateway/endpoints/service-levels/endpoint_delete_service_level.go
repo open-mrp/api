@@ -21,9 +21,9 @@ type DeleteServiceLevelRequest struct {
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
-// Permanently deletes a service level so it can no longer be selected on shipments.
+// Deletes a service level.
 //
-// System-owned service levels and the carrier's default service level cannot be deleted; to remove a default, first clear its `is_default` flag or promote another service level in its place.
+// Only while no order, shipment or shipping term uses it, and it isn't its carrier's default. Archive it instead by setting `status` to `archived`.
 type DeleteServiceLevelEndpoint struct{}
 
 func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *object.Deleted] {
@@ -37,7 +37,6 @@ func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteServiceLevelRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ServiceLevelSvc).DeleteServiceLevel, constants.ObjectTypeServiceLevel, "id")
 		},

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
@@ -96,13 +97,19 @@ func checkCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID 
 	}
 
 	for _, kind := range kinds {
-		found, apiErr := findCustomerRefs(ctx, repos, accountID, kind, idsByKind[kind])
+		found, archived, apiErr := findCustomerRefs(ctx, repos, accountID, kind, idsByKind[kind])
 		if apiErr != nil {
 			return apiErr
 		}
 		for _, ref := range refs {
-			if ref.kind == kind && !found[ref.id] {
+			if ref.kind != kind {
+				continue
+			}
+			if !found[ref.id] {
 				return apierror.NewNotFoundError(fmt.Sprintf("No %s found with the provided ID.", kind)).WithParam(ref.param)
+			}
+			if archived[ref.id] {
+				return domain.RequireAssignable(ref.param, string(kind), constants.ArchiveStatusArchived)
 			}
 		}
 	}
@@ -140,30 +147,34 @@ func checkUpdatedServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFac
 	return checkServiceLevelOnCarrier(ctx, repos, nextCarrierID, nextServiceLevelID, param)
 }
 
-// findCustomerRefs returns which of ids the account may use as a record of kind.
-func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID string, kind customerRefKind, ids []string) (map[string]bool, *apierror.APIError) {
-	found := make(map[string]bool, len(ids))
+// findCustomerRefs returns which of ids the account may use as a record of kind, and which of those are archived
+// and so can't be newly assigned.
+func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID string, kind customerRefKind, ids []string) (found, archived map[string]bool, apiErr *apierror.APIError) {
+	found = make(map[string]bool, len(ids))
+	archived = make(map[string]bool)
 	switch kind {
 	case customerRefCarrier:
 		carriers, apiErr := repos.NewCarrierRepo().GetByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, carrier := range carriers {
 			found[carrier.ID] = true
+			archived[carrier.ID] = !carrier.IsActive
 		}
 	case customerRefServiceLevel:
 		levels, apiErr := repos.NewCarrierRepo().GetOptionsByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, level := range levels {
 			found[level.ID] = true
+			archived[level.ID] = !level.IsActive
 		}
 	case customerRefPaymentTerm:
 		terms, apiErr := repos.NewPaymentTermRepo().GetByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, term := range terms {
 			found[term.ID] = true
@@ -171,7 +182,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 	case customerRefShippingTerm:
 		terms, apiErr := repos.NewShippingTermRepo().GetByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, term := range terms {
 			found[term.ID] = true
@@ -179,7 +190,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 	case customerRefAccountGroup:
 		groups, apiErr := repos.NewAccountGroupRepo().GetByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, group := range groups {
 			found[group.ID] = true
@@ -187,7 +198,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 	case customerRefUnit:
 		units, apiErr := repos.NewUnitRepo().GetByIDs(ctx, accountID, ids)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 		for _, unit := range units {
 			found[unit.ID] = true
@@ -196,7 +207,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 		for _, calendarID := range ids {
 			_, apiErr := repos.NewOperatingCalendarRepo().Get(ctx, accountID, calendarID)
 			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
-				return nil, apiErr
+				return nil, nil, apiErr
 			}
 			found[calendarID] = apiErr == nil
 		}
@@ -204,12 +215,12 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 		for _, accountUserID := range ids {
 			_, apiErr := repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, nil)
 			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
-				return nil, apiErr
+				return nil, nil, apiErr
 			}
 			found[accountUserID] = apiErr == nil
 		}
 	default:
-		return nil, apierror.NewInvariantViolationError(fmt.Sprintf("Unknown customer reference kind %q.", kind))
+		return nil, nil, apierror.NewInvariantViolationError(fmt.Sprintf("Unknown customer reference kind %q.", kind))
 	}
-	return found, nil
+	return found, archived, nil
 }

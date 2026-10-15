@@ -20,7 +20,7 @@ type RetrieveServiceLevelRequest struct {
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
-// Returns a service level by ID.
+// Retrieves a service level.
 type RetrieveServiceLevelEndpoint struct{}
 
 func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveServiceLevelRequest, *apiresource.ServiceLevel] {
@@ -34,14 +34,13 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		AgentTool:         true,
 		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission).
 		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:    true,
 		ObjectType: constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).GetServiceLevel
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeServiceLevel,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"carrier", "owner", "owner.account"},
 		}),
 	})
 }

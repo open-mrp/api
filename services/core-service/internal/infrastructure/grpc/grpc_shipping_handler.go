@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -269,6 +270,8 @@ func shippingCaseDetailToProto(c *domain.ShippingCase) *pb.ShippingCaseDetailInf
 	}
 	portalEnabled := c.CarrierIsPortalEnabled
 	info.CarrierIsPortalEnabled = &portalEnabled
+	info.CarrierType = string(c.CarrierType)
+	info.CarrierStatus = string(constants.ArchiveStatusFromIsActive(c.CarrierIsActive))
 	if !c.CarrierCreatedAt.IsZero() {
 		info.CarrierCreatedAt = timestamppb.New(c.CarrierCreatedAt)
 	}

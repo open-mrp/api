@@ -2,9 +2,10 @@ package resourceloaders
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"strings"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -156,7 +157,7 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 		if info.CarrierName != nil {
 			carrier.Name = *info.CarrierName
 		}
-		carrier.CustomerPortalVisibility = portalVisibility(info.CarrierIsPortalEnabled)
+		carrier.PortalVisibility = portalVisibility(info.CarrierIsPortalEnabled)
 		if info.CarrierCreatedAt != nil {
 			carrier.CreatedAt = info.CarrierCreatedAt.AsTime()
 		}
@@ -170,9 +171,9 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 		if info.ServiceLevelName != nil {
 			sl.Name = *info.ServiceLevelName
 		}
-		sl.CustomerPortalVisibility = portalVisibility(info.ServiceLevelIsPortalEnabled)
+		sl.PortalVisibility = portalVisibility(info.ServiceLevelIsPortalEnabled)
 		if info.ServiceLevelToken != nil {
-			sl.ServiceLevelToken = constants.ServiceLevelCode(*info.ServiceLevelToken)
+			sl.Code = constants.ServiceLevelCode(*info.ServiceLevelToken)
 		}
 		if info.ServiceLevelCreatedAt != nil {
 			sl.CreatedAt = info.ServiceLevelCreatedAt.AsTime()

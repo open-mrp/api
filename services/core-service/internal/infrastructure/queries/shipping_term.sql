@@ -261,13 +261,15 @@ WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
 -- name: ListFreeShippingCarrierOptionsByShippingTermID :many
+-- Selects the service-level columns in GetCarrierOption's order so the rows convert to its row type.
 SELECT
     co.id,
-    co.code,
     co.name,
+    co.code,
     co.service_level_token,
     co.is_portal_enabled,
-    co.is_default,
+    co.is_active,
+    co.default_transit_days,
     co.carrier_id,
     co.account_id,
     co.created_at,

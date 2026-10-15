@@ -2,8 +2,9 @@ package resourceloaders
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -64,7 +65,7 @@ func shipmentRecordMetadata(s *pb.ShipmentInfo) map[string]string {
 	}
 	if s.CarrierCode != nil && *s.CarrierCode != "" {
 		meta["carrier_code"] = *s.CarrierCode
-		if url := constants.TrackingURL(constants.CarrierCode(*s.CarrierCode), tracking); url != "" {
+		if url := constants.TrackingURL(constants.CarrierType(*s.CarrierCode), tracking); url != "" {
 			meta["tracking_url"] = url
 		}
 	}

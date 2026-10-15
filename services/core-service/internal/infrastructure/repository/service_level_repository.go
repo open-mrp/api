@@ -27,75 +27,20 @@ func NewServiceLevelRepo(queries *sqlc.Queries) domain.ServiceLevelRepo {
 func serviceLevelCreatedAt(c *domain.ServiceLevel) time.Time { return c.CreatedAt }
 func serviceLevelID(c *domain.ServiceLevel) string           { return c.ID }
 
-func mapServiceLevelForwardRow(row sqlc.ListCarrierOptionsForwardRow) *domain.ServiceLevel {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var serviceLevelToken *string
-	if row.ServiceLevelToken.Valid {
-		serviceLevelToken = &row.ServiceLevelToken.String
-	}
+// mapServiceLevelRow maps a carrier_option row; every service-level query selects the same columns, so their rows convert to GetCarrierOptionRow. A stored service_level_token marks a level synced from its carrier.
+func mapServiceLevelRow(row sqlc.GetCarrierOptionRow) *domain.ServiceLevel {
 	return &domain.ServiceLevel{
-		ID:                 row.ID,
-		Name:               row.Name,
-		Code:               row.Code,
-		ServiceLevelToken:  serviceLevelToken,
-		IsPortalEnabled:    row.IsPortalEnabled,
-		IsDefault:          row.IsDefault,
-		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
-		CarrierID:          row.CarrierID,
-		AccountID:          accountID,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
-	}
-}
-
-func mapServiceLevelBackwardRow(row sqlc.ListCarrierOptionsBackwardRow) *domain.ServiceLevel {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var serviceLevelToken *string
-	if row.ServiceLevelToken.Valid {
-		serviceLevelToken = &row.ServiceLevelToken.String
-	}
-	return &domain.ServiceLevel{
-		ID:                 row.ID,
-		Name:               row.Name,
-		Code:               row.Code,
-		ServiceLevelToken:  serviceLevelToken,
-		IsPortalEnabled:    row.IsPortalEnabled,
-		IsDefault:          row.IsDefault,
-		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
-		CarrierID:          row.CarrierID,
-		AccountID:          accountID,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
-	}
-}
-
-func mapGetServiceLevelRow(row sqlc.GetCarrierOptionRow) *domain.ServiceLevel {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var serviceLevelToken *string
-	if row.ServiceLevelToken.Valid {
-		serviceLevelToken = &row.ServiceLevelToken.String
-	}
-	return &domain.ServiceLevel{
-		ID:                 row.ID,
-		Name:               row.Name,
-		Code:               row.Code,
-		ServiceLevelToken:  serviceLevelToken,
-		IsPortalEnabled:    row.IsPortalEnabled,
-		IsDefault:          row.IsDefault,
-		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
-		CarrierID:          row.CarrierID,
-		AccountID:          accountID,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
+		ID:                   row.ID,
+		Name:                 row.Name,
+		Code:                 row.Code,
+		Synced:               row.ServiceLevelToken.Valid && row.ServiceLevelToken.String != "",
+		IsPortalEnabled:      row.IsPortalEnabled,
+		IsActive:             row.IsActive,
+		EstimatedTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:            row.CarrierID,
+		AccountID:            nullStringPtr(row.AccountID),
+		CreatedAt:            row.CreatedAt,
+		UpdatedAt:            row.UpdatedAt,
 	}
 }
 
@@ -105,6 +50,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 
 	searchQuery := buildCarrierSearchParam(params.Query)
 	accountID := gosql.NullString{String: params.AccountID, Valid: true}
+	isActive := toNullBool(params.IsActive)
 
 	var cursorDir *pagination.Direction
 
@@ -120,6 +66,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 				CarrierID:       params.CarrierID,
 				AccountID:       accountID,
 				SearchQuery:     searchQuery,
+				IsActive:        isActive,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,
@@ -129,7 +76,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 			}
 			serviceLevels := make([]*domain.ServiceLevel, len(rows))
 			for i, row := range rows {
-				serviceLevels[i] = mapServiceLevelBackwardRow(row)
+				serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
 			}
 			result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
 			return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
@@ -139,6 +86,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 			CarrierID:       params.CarrierID,
 			AccountID:       accountID,
 			SearchQuery:     searchQuery,
+			IsActive:        isActive,
 			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
 			Limit:           params.Limit + 1,
@@ -148,7 +96,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 		}
 		serviceLevels := make([]*domain.ServiceLevel, len(rows))
 		for i, row := range rows {
-			serviceLevels[i] = mapServiceLevelForwardRow(row)
+			serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
 		}
 		result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
 		return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
@@ -158,6 +106,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 		CarrierID:   params.CarrierID,
 		AccountID:   accountID,
 		SearchQuery: searchQuery,
+		IsActive:    isActive,
 		Limit:       params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -166,7 +115,7 @@ func (r *serviceLevelRepoImpl) List(ctx context.Context, params domain.ListServi
 
 	serviceLevels := make([]*domain.ServiceLevel, len(rows))
 	for i, row := range rows {
-		serviceLevels[i] = mapServiceLevelForwardRow(row)
+		serviceLevels[i] = mapServiceLevelRow(sqlc.GetCarrierOptionRow(row))
 	}
 	result, pageInfo := pagination.BuildPageString(serviceLevels, params.Limit, cursorDir, serviceLevelCreatedAt, serviceLevelID)
 	return &domain.ListServiceLevelsResult{ServiceLevels: result, PageInfo: pageInfo}, nil
@@ -184,21 +133,25 @@ func (r *serviceLevelRepoImpl) Get(ctx context.Context, accountID, serviceLevelI
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetServiceLevelRow(row), nil
+	return mapServiceLevelRow(row), nil
 }
 
 func (r *serviceLevelRepoImpl) Create(ctx context.Context, id string, params domain.CreateServiceLevelParams) (*domain.ServiceLevel, *apierror.APIError) {
 	ctx, span := serviceLevelRepoTracer.Start(ctx, "repository.service_level.create")
 	defer span.End()
 
+	var syncedToken gosql.NullString
+	if params.Synced {
+		syncedToken = gosql.NullString{String: params.Code, Valid: true}
+	}
 	err := r.queries.InsertCarrierOption(ctx, sqlc.InsertCarrierOptionParams{
 		ID:                 id,
 		Name:               params.Name,
 		Code:               params.Code,
-		ServiceLevelToken:  toNullString(params.ServiceLevelToken),
+		ServiceLevelToken:  syncedToken,
 		IsPortalEnabled:    params.IsPortalEnabled,
-		IsDefault:          params.IsDefault,
-		DefaultTransitDays: toNullInt32(params.DefaultTransitDays),
+		IsActive:           params.IsActive,
+		DefaultTransitDays: toNullInt32(params.EstimatedTransitDays),
 		CarrierID:          params.CarrierID,
 		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
 	})
@@ -218,20 +171,15 @@ func (r *serviceLevelRepoImpl) Update(ctx context.Context, params domain.UpdateS
 		isPortalEnabled = gosql.NullBool{Bool: *params.IsPortalEnabled, Valid: true}
 	}
 
-	var isDefault gosql.NullBool
-	if params.IsDefault != nil {
-		isDefault = gosql.NullBool{Bool: *params.IsDefault, Valid: true}
-	}
-
 	result, err := r.queries.UpdateCarrierOption(ctx, sqlc.UpdateCarrierOptionParams{
 		ID:              params.ServiceLevelID,
 		AccountID:       gosql.NullString{String: params.AccountID, Valid: true},
 		Name:            toNullString(params.Name),
 		Code:            toNullString(params.Code),
 		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       isDefault,
+		IsActive:        toNullBool(params.IsActive),
 		// Assigned rather than merged so it can be cleared; the service backfills the existing value when the caller omits the field.
-		DefaultTransitDays: field.Int32ToNullInt32(params.DefaultTransitDays),
+		DefaultTransitDays: field.Int32ToNullInt32(params.EstimatedTransitDays),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -285,12 +233,12 @@ func (r *serviceLevelRepoImpl) IsInCarrier(ctx context.Context, serviceLevelID, 
 	return exists, nil
 }
 
-func (r *serviceLevelRepoImpl) ClearDefaultsForCarrier(ctx context.Context, accountID, carrierID string) *apierror.APIError {
-	ctx, span := serviceLevelRepoTracer.Start(ctx, "repository.service_level.clear_defaults_for_carrier")
+func (r *serviceLevelRepoImpl) Archive(ctx context.Context, accountID, serviceLevelID string) *apierror.APIError {
+	ctx, span := serviceLevelRepoTracer.Start(ctx, "repository.service_level.archive")
 	defer span.End()
 
-	err := r.queries.ClearDefaultServiceLevelsForCarrier(ctx, sqlc.ClearDefaultServiceLevelsForCarrierParams{
-		CarrierID: carrierID,
+	err := r.queries.ArchiveCarrierOption(ctx, sqlc.ArchiveCarrierOptionParams{
+		ID:        serviceLevelID,
 		AccountID: gosql.NullString{String: accountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

@@ -192,8 +192,7 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 	case domain.RecoveryPointStarted:
 		var result *domain.ServiceLevel
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {
-			// Validate carrier exists
-			_, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
+			carrier, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -208,10 +207,8 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 				return apierror.NewConflictErrorWithParam("code", "A service level with this code already exists in this carrier.")
 			}
 
-			if params.IsDefault {
-				if apiErr := serviceLevelRepo.ClearDefaultsForCarrier(txCtx, params.AccountID, params.CarrierID); apiErr != nil {
-					return apiErr
-				}
+			if params.MakeDefault && !params.IsActive {
+				return apierror.NewFieldError("status", apierror.CodeInvalidFormat, "An archived service level can't be its carrier's default.")
 			}
 
 			created, apiErr := serviceLevelRepo.Create(txCtx, optionID, params)
@@ -219,6 +216,12 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 			result = created
+
+			if params.MakeDefault {
+				if apiErr := txSvc.setCarrierDefault(txCtx, carrier, &created.ID); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(nil, created)
 
@@ -313,7 +316,24 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 			}
 
 			// The column is assigned rather than merged so an explicit null can clear it, which makes carrying the existing value forward the meaning of leaving the field out.
-			params.DefaultTransitDays = params.DefaultTransitDays.BackfillUnsetPtr(existing.DefaultTransitDays)
+			params.EstimatedTransitDays = params.EstimatedTransitDays.BackfillUnsetPtr(existing.EstimatedTransitDays)
+
+			carrier, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
+			if apiErr != nil {
+				return apiErr
+			}
+			isDefault := carrier.DefaultServiceLevelID != nil && *carrier.DefaultServiceLevelID == existing.ID
+			willBeDefault := isDefault
+			if params.MakeDefault != nil {
+				willBeDefault = *params.MakeDefault
+			}
+			willBeActive := existing.IsActive
+			if params.IsActive != nil {
+				willBeActive = *params.IsActive
+			}
+			if willBeDefault && !willBeActive {
+				return apierror.NewFieldError("status", apierror.CodeInvalidFormat, "This service level is its carrier's default, so it can't be archived. Choose another default service level first.")
+			}
 
 			// Check code uniqueness if code is being changed
 			if params.Code != nil {
@@ -326,17 +346,21 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				}
 			}
 
-			if params.IsDefault != nil && *params.IsDefault {
-				if apiErr := serviceLevelRepo.ClearDefaultsForCarrier(txCtx, params.AccountID, params.CarrierID); apiErr != nil {
-					return apiErr
-				}
-			}
-
 			updated, apiErr := serviceLevelRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = updated
+
+			if willBeDefault != isDefault {
+				var next *string
+				if willBeDefault {
+					next = &existing.ID
+				}
+				if apiErr := txSvc.setCarrierDefault(txCtx, carrier, next); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(existing, updated)
 
@@ -420,11 +444,19 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 	if *existing.AccountID != accountID {
 		return tracing.Trace(span, apierror.NewAuthorizationError("This service level is owned by another account and cannot be deleted."))
 	}
-	if existing.IsDefault {
-		return tracing.Trace(span, apierror.NewValidationError("Default service levels cannot be deleted."))
+	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if carrier.DefaultServiceLevelID != nil && *carrier.DefaultServiceLevelID == existing.ID {
+		return tracing.Trace(span, apierror.NewInUseError("This service level is its carrier's default, so it can't be deleted. Choose another default service level first, or archive it instead by setting `status` to `archived`."))
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {
+		if apiErr := domain.ServiceLevelReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), existing.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeServiceLevel, existing.ID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
@@ -453,4 +485,23 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 	}
 
 	return nil
+}
+
+// setCarrierDefault points the carrier's default service level at serviceLevelID (nil clears it) and records the change on the carrier.
+func (s *serviceLevelSvcImpl) setCarrierDefault(ctx context.Context, carrier *domain.Carrier, serviceLevelID *string) *apierror.APIError {
+	if carrier.AccountID == nil {
+		return apierror.NewAuthorizationError("System-owned carriers cannot be updated.")
+	}
+	if apiErr := s.repos.NewCarrierRepo().SetDefaultServiceLevel(ctx, *carrier.AccountID, carrier.ID, serviceLevelID); apiErr != nil {
+		return apiErr
+	}
+	updated := *carrier
+	updated.DefaultServiceLevelID = serviceLevelID
+	return audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeCarrier,
+		ResourceID:   carrier.ID,
+		Changes:      audit.ComputeChanges(carrier, &updated),
+	})
 }

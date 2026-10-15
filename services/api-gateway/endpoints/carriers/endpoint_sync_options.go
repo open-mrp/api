@@ -20,7 +20,7 @@ type SyncOptionsRequest struct {
 
 // Re-syncs a carrier's service levels from Shippo.
 //
-// Service levels newly offered by the carrier are added (initially hidden from the customer portal) and previously synced ones no longer offered are removed; manually created service levels are untouched. Only available for Shippo-managed carriers; not available in sandbox mode.
+// Service levels newly offered by the carrier are added (initially hidden from the customer portal) and previously synced ones no longer offered are archived; manually created service levels are untouched. Only available for Shippo-managed carriers; not available in sandbox mode.
 type SyncOptionsEndpoint struct{}
 
 func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier] {

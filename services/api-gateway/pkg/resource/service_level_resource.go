@@ -19,26 +19,28 @@ type ServiceLevel struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=service_level"`
-	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
+	// Display name, shown to customers at checkout when the service level is visible.
 	Name string `json:"name" validate:"required"`
-	// Carrier-specific code identifying this service level (e.g. `fedex_ground`, `ups_next_day_air`).
+	// Code identifying the service, such as `fedex_ground`.
 	//
-	// For service levels synced from a connected carrier this is the carrier's own token, which is what rate shopping and label purchase are keyed on; for service levels you create yourself it is the `code` you supplied.
-	ServiceLevelToken constants.ServiceLevelCode `json:"service_level_token" validate:"required"`
-	// Whether customers can see and select this service level at checkout in the customer portal.
-	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
-	// Whether this is the carrier's default service level, pre-selected when the carrier is chosen.
+	// Unique among the carrier's service levels. For connected carriers it's the carrier's own code, used for rates and labels.
+	Code constants.ServiceLevelCode `json:"code" validate:"required"`
+	// Whether customers can see and pick this service level at checkout in the customer portal.
+	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
+	// Whether the service level can be newly assigned.
 	//
-	// Each carrier has at most one default; setting a new default clears the previous one. A default service level cannot be deleted until another service level takes its place or the flag is cleared.
-	IsDefault bool `json:"is_default"`
-	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
+	// `active` service levels can be set on orders and customer defaults. `archived` service levels stay on the records that use them but can't be newly set.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// Business days this service usually takes, used when the carrier can't quote a lane.
 	//
-	// A fallback for lanes the carrier has not quoted. Null means transit is unknown for this service rather than instant, so a ship-by date falls back to the promised delivery date itself.
-	DefaultTransitDays *int32 `json:"default_transit_days"`
+	// Works an order's ship-by date back from its promised date. `null` means unknown.
+	EstimatedTransitDays *int32 `json:"estimated_transit_days"`
 	// Provenance of this service level.
 	//
 	// System-owned service levels are platform-provided defaults that cannot be updated or deleted; account-owned service levels are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
+	// The carrier offering this service level.
+	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -48,16 +50,16 @@ type ServiceLevel struct {
 var sampleServiceLevelTransitDays = int32(3)
 
 var SampleServiceLevel = &ServiceLevel{
-	ID:                       SampleServiceLevelID,
-	Object:                   constants.ObjectTypeServiceLevel,
-	Name:                     SampleServiceLevelName,
-	ServiceLevelToken:        "fedex_ground",
-	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
-	IsDefault:                true,
-	DefaultTransitDays:       &sampleServiceLevelTransitDays,
-	Owner:                    SampleOwnerAccount,
-	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                   SampleServiceLevelID,
+	Object:               constants.ObjectTypeServiceLevel,
+	Name:                 SampleServiceLevelName,
+	Code:                 "fedex_ground",
+	PortalVisibility:     constants.CustomerPortalVisibilityVisible,
+	Status:               constants.ArchiveStatusActive,
+	EstimatedTransitDays: &sampleServiceLevelTransitDays,
+	Owner:                SampleOwnerAccount,
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ServiceLevel) SchemaExample() any {

@@ -16,39 +16,43 @@ import (
 
 // Request to create a carrier.
 type CreateCarrierRequest struct {
-	// Human-readable name for the carrier.
+	// Display name, such as `FedEx`.
 	//
-	// Must not match another carrier already visible to your account, including the system-provided ones.
+	// Unique (case-insensitive) among your account's carriers and the system carriers.
 	Name string `json:"name" validate:"required,max=255"`
-	// Well-known carrier code.
+	// What kind of carrier this is. Fixed after creation.
 	//
-	// Providing a Shippo-supported code (`fedex`, `ups`, `usps`) connects the carrier through Shippo and syncs its service levels; the other codes, such as `will_call` and `delivery`, simply describe a self-managed shipping method. Omit the code entirely when none of them fit. The code cannot be changed after the carrier is created.
-	Code field.Optional[constants.CarrierCode] `json:"code,omitzero"`
-	// Your account number with this carrier.
+	// `fedex`, `ups`, `usps`: connected through Shippo for live rates and labels. `ltl`: less-than-truckload freight. `will_call`: the customer picks up. `local_delivery`: your own vehicles. `other`: any other carrier you manage yourself.
+	Type constants.CarrierType `json:"type" validate:"required"`
+	// Standard Carrier Alpha Code, such as `FDEG`.
 	//
-	// Required when `code` is `ups` or `usps`, whose carrier accounts are connected to Shippo using this number; FedEx authorizes through OAuth instead, so no account number is needed.
+	// The 2–4 uppercase letters that identify the carrier on EDI documents and bills of lading.
+	SCAC field.Optional[string] `json:"scac,omitzero" validate:"omitempty,min=2,max=4,alpha,uppercase"`
+	// Your account number with the carrier. Fixed after creation.
+	//
+	// Required for `ups` and `usps`, which connect using it. FedEx connects through OAuth instead.
 	AccountNumber field.Optional[string] `json:"account_number,omitzero" validate:"omitempty,max=255"`
-	// Whether customers can see and select this carrier at checkout in the customer portal.
-	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
+	// Whether customers can see and pick this carrier at checkout in the customer portal. Defaults to `visible`.
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero" default:"visible"`
+	// `active` or `archived`. Defaults to `active`. Archived carriers can't be newly set on orders or customer defaults.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
-var sampleCreateCarrierCode = constants.CarrierCodeFedEx
-var sampleCreateCarrierAccountNumber = "1234567890"
-var sampleCreateCarrierVisibility = constants.CustomerPortalVisibilityVisible
 var sampleCreateCarrierRequest = &CreateCarrierRequest{
-	Name:                     "FedEx",
-	Code:                     field.Some(sampleCreateCarrierCode),
-	AccountNumber:            field.Some(sampleCreateCarrierAccountNumber),
-	CustomerPortalVisibility: field.Some(sampleCreateCarrierVisibility),
+	Name:             "FedEx",
+	Type:             constants.CarrierTypeFedEx,
+	SCAC:             field.Some("FDEG"),
+	AccountNumber:    field.Some("1234567890"),
+	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 }
 
 func (*CreateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCarrierRequest)
 }
 
-// Creates a shipping carrier your account can ship orders with.
+// Creates a carrier.
 //
-// Supplying a Shippo-supported code (`fedex`, `ups`, `usps`) connects a Shippo carrier account and creates a service level for every service that carrier offers, each hidden from the customer portal until you make it visible. This requires an active Shippo integration on the account and is skipped entirely for sandbox accounts, which get a carrier record with no service levels and no live rating.
+// A `fedex`, `ups` or `usps` carrier is connected through Shippo for live rates and labels, and gets a service level for each service the carrier offers, hidden from the customer portal until you show it. This needs an active Shippo integration and is skipped for sandbox accounts.
 type CreateCarrierEndpoint struct{}
 
 func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier] {
@@ -61,7 +65,6 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).CreateCarrier
@@ -71,7 +74,7 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,
-			Fields:     []string{"owner", "owner.account", "service_levels"},
+			Fields:     []string{"default_service_level", "owner", "owner.account", "service_levels"},
 		}),
 	})
 }

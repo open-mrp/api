@@ -225,7 +225,7 @@ var typeRegistry = map[string]any{
 	"SupplierMaterialStatus":          SupplierMaterialStatus(""),
 	"SysPropertyTypeCode":             SysPropertyTypeCode(""),
 	"UnitType":                        UnitType(""),
-	"CarrierCode":                     CarrierCode(""),
+	"CarrierType":                     CarrierType(""),
 	"ScanningStationType":             ScanningStationType(""),
 	"ScanningStepType":                ScanningStepType(""),
 	"ItemCategoryType":                ItemCategoryType(""),

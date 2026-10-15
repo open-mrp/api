@@ -18,39 +18,38 @@ import (
 type CreateServiceLevelRequest struct {
 	// The carrier that will offer this service level.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
+	// Display name, shown to customers at checkout when the service level is visible.
 	Name string `json:"name" validate:"required,max=255"`
-	// Carrier-specific code identifying this service level (e.g. `fedex_ground`).
+	// Code identifying the service, such as `fedex_ground`.
 	//
-	// Must be unique among the carrier's service levels, and is returned as the service level's `service_level_token`.
+	// Unique among the carrier's service levels. For connected carriers it's the carrier's own code, used for rates and labels.
 	Code string `json:"code" validate:"required,max=255"`
-	// Whether customers can see and select this service level at checkout in the customer portal.
-	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
-	// Whether this becomes the carrier's default service level, pre-selected when the carrier is chosen.
+	// Whether customers can see and pick this service level at checkout in the customer portal. Defaults to `visible`.
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero" default:"visible"`
+	// `active` or `archived`. Defaults to `active`. Archived service levels can't be newly set on orders or customer defaults.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Business days this service usually takes, used when the carrier can't quote a lane.
 	//
-	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
-	IsDefault bool `json:"is_default"`
-	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
-	//
-	// A fallback: when a carrier can rate the lane, the transit it quotes is used instead. Leave unset for carriers that can be rated, and set it for those that cannot (freight, will-call), where it is the only transit the system will have.
-	DefaultTransitDays field.Optional[int32] `json:"default_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
+	// Works an order's ship-by date back from its promised date. Omit when unknown.
+	EstimatedTransitDays field.Optional[int32] `json:"estimated_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
+	// Makes this service level its carrier's default. Kept for 1.0.forge-preview.9 callers; set the carrier's `default_service_level_id` instead.
+	IsDefault field.Optional[bool] `json:"is_default,omitzero" visibility:"internal"`
 }
 
 var sampleCreateServiceLevelRequest = &CreateServiceLevelRequest{
-	Name:                     "Ground Shipping",
-	Code:                     "ground",
-	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
-	IsDefault:                false,
-	DefaultTransitDays:       field.Some(int32(3)),
+	Name:                 "Ground Shipping",
+	Code:                 "ground",
+	PortalVisibility:     field.Some(constants.CustomerPortalVisibilityVisible),
+	EstimatedTransitDays: field.Some(int32(3)),
 }
 
 func (*CreateServiceLevelRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateServiceLevelRequest)
 }
 
-// Adds a shipping service level to a carrier.
+// Adds a service level to a carrier.
 //
-// Use this for self-managed carriers, or to add a service a connected carrier does not publish. Service levels created here are never removed by a later sync of the carrier's services.
+// Use it for carriers you manage yourself, or for a service a connected carrier doesn't publish. Service levels you add are never archived by a sync.
 type CreateServiceLevelEndpoint struct{}
 
 func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel] {
@@ -63,14 +62,13 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).CreateServiceLevel
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeServiceLevel,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"carrier", "owner", "owner.account"},
 		}),
 	})
 }

@@ -512,12 +512,14 @@ type CarrierRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Carrier, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateCarrierParams) (*Carrier, *apierror.APIError)
 	Update(ctx context.Context, params UpdateCarrierParams) (*Carrier, *apierror.APIError)
-	SoftDelete(ctx context.Context, accountID, carrierID string) *apierror.APIError
+	Delete(ctx context.Context, accountID, carrierID string) *apierror.APIError
+	// SetDefaultServiceLevel points the carrier's default at serviceLevelID, or clears it when nil.
+	SetDefaultServiceLevel(ctx context.Context, accountID, carrierID string, serviceLevelID *string) *apierror.APIError
 	DeleteOptionsByCarrierID(ctx context.Context, accountID, carrierID string) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ListOptionsByCarrierID(ctx context.Context, accountID, carrierID string) ([]*ServiceLevel, *apierror.APIError)
 	ListOptionsByCarrierIDs(ctx context.Context, accountID string, carrierIDs []string) (map[string][]*ServiceLevel, *apierror.APIError)
-	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by carrier_id, ordered (carrier_id, created_at ASC, id ASC) — callers truncate to a per-carrier preview limit in Go.
+	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by carrier_id, newest first within each carrier, as the service-level list sorts — callers truncate to a per-carrier preview limit in Go.
 	ListOptionIDsForCarriers(ctx context.Context, accountID string, carrierIDs []string) (map[string][]string, *apierror.APIError)
 	// GetOptionsByIDs returns full ServiceLevel records by id with the same account-scoping rule as ListOptionsByCarrierID (the parent carrier must be the caller's own or a system carrier).
 	GetOptionsByIDs(ctx context.Context, accountID string, ids []string) ([]*ServiceLevel, *apierror.APIError)
@@ -564,7 +566,8 @@ type ServiceLevelRepo interface {
 	Delete(ctx context.Context, accountID, serviceLevelID string) *apierror.APIError
 	IsInCarrier(ctx context.Context, serviceLevelID, carrierID string) (bool, *apierror.APIError)
 	ExistsByCodeInCarrier(ctx context.Context, carrierID, code string, excludeID *string) (bool, *apierror.APIError)
-	ClearDefaultsForCarrier(ctx context.Context, accountID, carrierID string) *apierror.APIError
+	// Archive retires a synced service level its carrier no longer offers.
+	Archive(ctx context.Context, accountID, serviceLevelID string) *apierror.APIError
 }
 
 // BatchRepo handles all batch data access.

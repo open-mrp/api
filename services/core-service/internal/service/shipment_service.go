@@ -1336,9 +1336,7 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		if apiErr != nil {
 			return 0, apiErr
 		}
-		if serviceLevel.ServiceLevelToken != nil {
-			serviceLevelToken = *serviceLevel.ServiceLevelToken
-		}
+		serviceLevelToken = serviceLevel.Code
 	}
 
 	shippoClient, apiErr := accountShippoClient(ctx, repos, shippoFactory, encryptionKey, params.AccountID)
@@ -1524,11 +1522,13 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	isMinimumOrderMet := hasMinimumOrder && params.OrderTotal != nil && *params.OrderTotal > *minimumOrderValue
 	hasFreeShippingRules := len(freeShippingOptionIDs) > 0
 
-	// 4. List all carriers for the account.
+	// 4. List the account's active carriers; archived carriers and service levels can't be chosen for new shipments.
 	carrierRepo := s.repos.NewCarrierRepo()
+	activeOnly := true
 	carriersResult, apiErr := carrierRepo.List(ctx, domain.ListCarriersParams{
 		AccountID: params.AccountID,
 		Limit:     1000,
+		IsActive:  &activeOnly,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1543,7 +1543,11 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	for _, carrier := range carriersResult.Carriers {
-		carrier.ServiceLevels = optionsByCarrier[carrier.ID]
+		for _, level := range optionsByCarrier[carrier.ID] {
+			if level.IsActive {
+				carrier.ServiceLevels = append(carrier.ServiceLevels, level)
+			}
+		}
 	}
 
 	// Filter for portal-enabled carriers/options when called by customer actor.
@@ -1660,7 +1664,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		// Map Shippo rates to carrier options by matching service level token.
 		for _, shippoRate := range shippoRatesByCarrier[i] {
 			for _, opt := range carrier.ServiceLevels {
-				if opt.ServiceLevelToken != nil && *opt.ServiceLevelToken == shippoRate.ServiceLevelToken {
+				if opt.Code == shippoRate.ServiceLevelToken {
 					allOptions = append(allOptions, &domain.RateShopOption{
 						CarrierID:        carrier.ID,
 						CarrierName:      carrier.Name,

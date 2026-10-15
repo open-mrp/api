@@ -37,6 +37,21 @@ func (q *Queries) CountCarriersByName(ctx context.Context, arg CountCarriersByNa
 	return count, err
 }
 
+const deleteCarrier = `-- name: DeleteCarrier :execresult
+DELETE FROM carrier
+WHERE id = ?
+AND account_id = ?
+`
+
+type DeleteCarrierParams struct {
+	ID        string
+	AccountID sql.NullString
+}
+
+func (q *Queries) DeleteCarrier(ctx context.Context, arg DeleteCarrierParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteCarrier, arg.ID, arg.AccountID)
+}
+
 const deleteCarrierOptionsByCarrierID = `-- name: DeleteCarrierOptionsByCarrierID :exec
 DELETE FROM carrier_option
 WHERE carrier_id = ?
@@ -58,11 +73,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -80,11 +97,13 @@ type GetCarrierRow struct {
 	ID                     string
 	Name                   string
 	Code                   sql.NullString
+	Scac                   sql.NullString
 	ShippoCarrierAccountID sql.NullString
 	AccountNumber          sql.NullString
 	IsPortalEnabled        bool
+	IsActive               bool
+	DefaultCarrierOptionID sql.NullString
 	AccountID              sql.NullString
-	DeletedAt              sql.NullTime
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
@@ -96,11 +115,13 @@ func (q *Queries) GetCarrier(ctx context.Context, arg GetCarrierParams) (GetCarr
 		&i.ID,
 		&i.Name,
 		&i.Code,
+		&i.Scac,
 		&i.ShippoCarrierAccountID,
 		&i.AccountNumber,
 		&i.IsPortalEnabled,
+		&i.IsActive,
+		&i.DefaultCarrierOptionID,
 		&i.AccountID,
-		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -112,11 +133,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -134,11 +157,13 @@ type GetCarriersByIDsRow struct {
 	ID                     string
 	Name                   string
 	Code                   sql.NullString
+	Scac                   sql.NullString
 	ShippoCarrierAccountID sql.NullString
 	AccountNumber          sql.NullString
 	IsPortalEnabled        bool
+	IsActive               bool
+	DefaultCarrierOptionID sql.NullString
 	AccountID              sql.NullString
-	DeletedAt              sql.NullTime
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
@@ -170,11 +195,13 @@ func (q *Queries) GetCarriersByIDs(ctx context.Context, arg GetCarriersByIDsPara
 			&i.ID,
 			&i.Name,
 			&i.Code,
+			&i.Scac,
 			&i.ShippoCarrierAccountID,
 			&i.AccountNumber,
 			&i.IsPortalEnabled,
+			&i.IsActive,
+			&i.DefaultCarrierOptionID,
 			&i.AccountID,
-			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -196,13 +223,17 @@ INSERT INTO carrier (
     id,
     name,
     code,
+    scac,
     shippo_carrier_account_id,
     account_number,
     is_portal_enabled,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -219,9 +250,11 @@ type InsertCarrierParams struct {
 	ID                     string
 	Name                   string
 	Code                   sql.NullString
+	Scac                   sql.NullString
 	ShippoCarrierAccountID sql.NullString
 	AccountNumber          sql.NullString
 	IsPortalEnabled        bool
+	IsActive               bool
 	AccountID              sql.NullString
 }
 
@@ -230,9 +263,11 @@ func (q *Queries) InsertCarrier(ctx context.Context, arg InsertCarrierParams) er
 		arg.ID,
 		arg.Name,
 		arg.Code,
+		arg.Scac,
 		arg.ShippoCarrierAccountID,
 		arg.AccountNumber,
 		arg.IsPortalEnabled,
+		arg.IsActive,
 		arg.AccountID,
 	)
 	return err
@@ -243,11 +278,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -257,6 +294,7 @@ AND (
     ? IS NULL
     OR carrier.name LIKE ?
 )
+AND (? IS NULL OR carrier.is_active = ?)
 AND (
     carrier.created_at > ?
     OR (carrier.created_at = ? AND carrier.id > ?)
@@ -268,6 +306,7 @@ LIMIT ?
 type ListCarriersBackwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
@@ -277,11 +316,13 @@ type ListCarriersBackwardRow struct {
 	ID                     string
 	Name                   string
 	Code                   sql.NullString
+	Scac                   sql.NullString
 	ShippoCarrierAccountID sql.NullString
 	AccountNumber          sql.NullString
 	IsPortalEnabled        bool
+	IsActive               bool
+	DefaultCarrierOptionID sql.NullString
 	AccountID              sql.NullString
-	DeletedAt              sql.NullTime
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
@@ -291,6 +332,8 @@ func (q *Queries) ListCarriersBackward(ctx context.Context, arg ListCarriersBack
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -307,11 +350,13 @@ func (q *Queries) ListCarriersBackward(ctx context.Context, arg ListCarriersBack
 			&i.ID,
 			&i.Name,
 			&i.Code,
+			&i.Scac,
 			&i.ShippoCarrierAccountID,
 			&i.AccountNumber,
 			&i.IsPortalEnabled,
+			&i.IsActive,
+			&i.DefaultCarrierOptionID,
 			&i.AccountID,
-			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -329,15 +374,18 @@ func (q *Queries) ListCarriersBackward(ctx context.Context, arg ListCarriersBack
 }
 
 const listCarriersForward = `-- name: ListCarriersForward :many
+
 SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -347,6 +395,7 @@ AND (
     ? IS NULL
     OR carrier.name LIKE ?
 )
+AND (? IS NULL OR carrier.is_active = ?)
 AND (
     ? IS NULL
     OR carrier.created_at < ?
@@ -359,6 +408,7 @@ LIMIT ?
 type ListCarriersForwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullString
 	Limit           int32
@@ -368,20 +418,25 @@ type ListCarriersForwardRow struct {
 	ID                     string
 	Name                   string
 	Code                   sql.NullString
+	Scac                   sql.NullString
 	ShippoCarrierAccountID sql.NullString
 	AccountNumber          sql.NullString
 	IsPortalEnabled        bool
+	IsActive               bool
+	DefaultCarrierOptionID sql.NullString
 	AccountID              sql.NullString
-	DeletedAt              sql.NullTime
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
 
+// The carrier queries below select identical columns, so their rows convert to GetCarrierRow.
 func (q *Queries) ListCarriersForward(ctx context.Context, arg ListCarriersForwardParams) ([]ListCarriersForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCarriersForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -399,11 +454,13 @@ func (q *Queries) ListCarriersForward(ctx context.Context, arg ListCarriersForwa
 			&i.ID,
 			&i.Name,
 			&i.Code,
+			&i.Scac,
 			&i.ShippoCarrierAccountID,
 			&i.AccountNumber,
 			&i.IsPortalEnabled,
+			&i.IsActive,
+			&i.DefaultCarrierOptionID,
 			&i.AccountID,
-			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -420,28 +477,33 @@ func (q *Queries) ListCarriersForward(ctx context.Context, arg ListCarriersForwa
 	return items, nil
 }
 
-const softDeleteCarrier = `-- name: SoftDeleteCarrier :execresult
+const setCarrierDefaultCarrierOption = `-- name: SetCarrierDefaultCarrierOption :exec
 UPDATE carrier SET
-    deleted_at = NOW(3),
+    default_carrier_option_id = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 AND deleted_at IS NULL
 `
 
-type SoftDeleteCarrierParams struct {
-	ID        string
-	AccountID sql.NullString
+type SetCarrierDefaultCarrierOptionParams struct {
+	DefaultCarrierOptionID sql.NullString
+	ID                     string
+	AccountID              sql.NullString
 }
 
-func (q *Queries) SoftDeleteCarrier(ctx context.Context, arg SoftDeleteCarrierParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, softDeleteCarrier, arg.ID, arg.AccountID)
+func (q *Queries) SetCarrierDefaultCarrierOption(ctx context.Context, arg SetCarrierDefaultCarrierOptionParams) error {
+	_, err := q.db.ExecContext(ctx, setCarrierDefaultCarrierOption, arg.DefaultCarrierOptionID, arg.ID, arg.AccountID)
+	return err
 }
 
 const updateCarrier = `-- name: UpdateCarrier :execresult
 UPDATE carrier SET
     name = COALESCE(?, name),
     is_portal_enabled = COALESCE(?, is_portal_enabled),
+    is_active = COALESCE(?, is_active),
+    scac = ?,
+    default_carrier_option_id = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -449,16 +511,24 @@ AND deleted_at IS NULL
 `
 
 type UpdateCarrierParams struct {
-	Name            sql.NullString
-	IsPortalEnabled sql.NullBool
-	ID              string
-	AccountID       sql.NullString
+	Name                   sql.NullString
+	IsPortalEnabled        sql.NullBool
+	IsActive               sql.NullBool
+	Scac                   sql.NullString
+	DefaultCarrierOptionID sql.NullString
+	ID                     string
+	AccountID              sql.NullString
 }
 
+// scac and default_carrier_option_id are assigned rather than merged so they can be cleared; the service carries the
+// existing values forward when the caller leaves them out.
 func (q *Queries) UpdateCarrier(ctx context.Context, arg UpdateCarrierParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateCarrier,
 		arg.Name,
 		arg.IsPortalEnabled,
+		arg.IsActive,
+		arg.Scac,
+		arg.DefaultCarrierOptionID,
 		arg.ID,
 		arg.AccountID,
 	)

@@ -475,11 +475,12 @@ func (q *Queries) InsertShippingTerm(ctx context.Context, arg InsertShippingTerm
 const listFreeShippingCarrierOptionsByShippingTermID = `-- name: ListFreeShippingCarrierOptionsByShippingTermID :many
 SELECT
     co.id,
-    co.code,
     co.name,
+    co.code,
     co.service_level_token,
     co.is_portal_enabled,
-    co.is_default,
+    co.is_active,
+    co.default_transit_days,
     co.carrier_id,
     co.account_id,
     co.created_at,
@@ -491,18 +492,20 @@ ORDER BY co.name ASC
 `
 
 type ListFreeShippingCarrierOptionsByShippingTermIDRow struct {
-	ID                string
-	Code              string
-	Name              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsActive           bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
+// Selects the service-level columns in GetCarrierOption's order so the rows convert to its row type.
 func (q *Queries) ListFreeShippingCarrierOptionsByShippingTermID(ctx context.Context, shippingTermID string) ([]ListFreeShippingCarrierOptionsByShippingTermIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, listFreeShippingCarrierOptionsByShippingTermID, shippingTermID)
 	if err != nil {
@@ -514,11 +517,12 @@ func (q *Queries) ListFreeShippingCarrierOptionsByShippingTermID(ctx context.Con
 		var i ListFreeShippingCarrierOptionsByShippingTermIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Code,
 			&i.Name,
+			&i.Code,
 			&i.ServiceLevelToken,
 			&i.IsPortalEnabled,
-			&i.IsDefault,
+			&i.IsActive,
+			&i.DefaultTransitDays,
 			&i.CarrierID,
 			&i.AccountID,
 			&i.CreatedAt,

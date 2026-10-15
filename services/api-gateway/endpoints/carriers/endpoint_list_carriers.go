@@ -17,15 +17,15 @@ import (
 // Request to list carriers.
 type ListCarriersRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return carriers with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 }
 
-// Returns a paginated list of the carriers available to the current account.
+// Returns a list of carriers.
 //
-// This covers the carriers you have created plus the platform-provided system carriers that every account shares.
+// Includes the carriers your account created and the system carriers every account shares. Carriers are sorted by creation date, newest first.
 type ListCarriersEndpoint struct{}
 
 func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]] {
@@ -38,14 +38,13 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 			return svc.(CarrierSvc).ListCarriers
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,
-			Fields:     []string{"owner", "owner.account", "service_levels"},
+			Fields:     []string{"default_service_level", "owner", "owner.account", "service_levels"},
 		}),
 	})
 }

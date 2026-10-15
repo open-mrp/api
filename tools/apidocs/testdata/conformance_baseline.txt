@@ -74,7 +74,6 @@ public_docstrings DELETE /v1/catalog/product-lines/{id}
 public_docstrings DELETE /v1/catalog/products/{id}
 
 
-public_docstrings DELETE /v1/operations/carriers/{carrier_id}/service-levels/{id}
 public_docstrings DELETE /v1/settings/integrations/{id}
 public_docstrings DELETE /v1/settings/portal-domains/{id}
 public_docstrings GET /v1/operations/fulfillment-recommendations
@@ -176,8 +175,6 @@ search_documented GET /v1/identity/roles
 
 
 search_documented GET /v1/messaging/notifications
-search_documented GET /v1/operations/carriers
-search_documented GET /v1/operations/carriers/{carrier_id}/service-levels
 search_documented GET /v1/operations/deliveries
 search_documented GET /v1/operations/demand-overrides
 search_documented GET /v1/operations/departments

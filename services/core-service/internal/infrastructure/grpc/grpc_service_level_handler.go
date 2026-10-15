@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -16,17 +17,16 @@ func serviceLevelToProto(o *domain.ServiceLevel) *pb.ServiceLevelInfo {
 		return nil
 	}
 	return &pb.ServiceLevelInfo{
-		Id:                 o.ID,
-		Name:               o.Name,
-		Code:               o.Code,
-		ServiceLevelToken:  o.ServiceLevelToken,
-		IsPortalEnabled:    o.IsPortalEnabled,
-		IsDefault:          o.IsDefault,
-		CarrierId:          o.CarrierID,
-		CreatedAt:          timestamppb.New(o.CreatedAt),
-		UpdatedAt:          timestamppb.New(o.UpdatedAt),
-		AccountId:          o.AccountID,
-		DefaultTransitDays: o.DefaultTransitDays,
+		Id:                   o.ID,
+		Name:                 o.Name,
+		Code:                 o.Code,
+		IsPortalEnabled:      o.IsPortalEnabled,
+		Status:               string(constants.ArchiveStatusFromIsActive(o.IsActive)),
+		CarrierId:            o.CarrierID,
+		CreatedAt:            timestamppb.New(o.CreatedAt),
+		UpdatedAt:            timestamppb.New(o.UpdatedAt),
+		AccountId:            o.AccountID,
+		EstimatedTransitDays: o.EstimatedTransitDays,
 	}
 }
 
@@ -40,6 +40,7 @@ func (h *gRPCHandler) ListServiceLevels(ctx context.Context, req *pb.ListService
 		Cursor:    req.Cursor,
 		Limit:     req.Limit,
 		Query:     req.Query,
+		IsActive:  archiveStatusesIsActive(req.Statuses),
 	}
 
 	result, apiErr := h.serviceLevelSvc.ListServiceLevels(ctx, params)
@@ -87,13 +88,13 @@ func (h *gRPCHandler) CreateServiceLevel(ctx context.Context, req *pb.CreateServ
 	defer finalizeIdempotency()
 
 	params := domain.CreateServiceLevelParams{
-		CarrierID:          req.CarrierId,
-		Name:               req.Name,
-		Code:               req.Code,
-		ServiceLevelToken:  req.ServiceLevelToken,
-		IsPortalEnabled:    req.GetIsPortalEnabled(),
-		IsDefault:          req.GetIsDefault(),
-		DefaultTransitDays: req.DefaultTransitDays,
+		CarrierID:            req.CarrierId,
+		Name:                 req.Name,
+		Code:                 req.Code,
+		IsPortalEnabled:      req.GetIsPortalEnabled(),
+		IsActive:             req.Status == nil || constants.ArchiveStatus(*req.Status).IsActive(),
+		EstimatedTransitDays: req.EstimatedTransitDays,
+		MakeDefault:          req.GetMakeDefault(),
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.CreateServiceLevel(ctx, params)
@@ -115,13 +116,14 @@ func (h *gRPCHandler) UpdateServiceLevel(ctx context.Context, req *pb.UpdateServ
 	defer finalizeIdempotency()
 
 	params := domain.UpdateServiceLevelParams{
-		ServiceLevelID:     req.Id,
-		CarrierID:          req.CarrierId,
-		Name:               req.Name,
-		Code:               req.Code,
-		IsPortalEnabled:    req.IsPortalEnabled,
-		IsDefault:          req.IsDefault,
-		DefaultTransitDays: fieldpb.Int32ClearableFromProto(req.DefaultTransitDays),
+		ServiceLevelID:       req.Id,
+		CarrierID:            req.CarrierId,
+		Name:                 req.Name,
+		Code:                 req.Code,
+		IsPortalEnabled:      req.IsPortalEnabled,
+		IsActive:             archiveStatusIsActive(req.Status),
+		EstimatedTransitDays: fieldpb.Int32ClearableFromProto(req.EstimatedTransitDays),
+		MakeDefault:          req.MakeDefault,
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.UpdateServiceLevel(ctx, params)

@@ -37,15 +37,15 @@ INSERT IGNORE INTO portal_domain (id, account_id, domain, status, dns_records, v
 
 -- Carriers (from mockCarriers — delivery and will_call)
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
-    ('delivery', 'delivery', 'Delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('delivery', 'local_delivery', 'Delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('will_call', 'will_call', 'Will Call', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Service levels for the delivery carrier. Base fixture both dev and e2e need: rate-shop and
 -- the sales-order shipping-rate cascade emit one option per service level, so without these the
 -- account returns no shipping options at all. The tokens map to Shippo's service levels for live rating.
 INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, carrier_id, account_id, created_at, updated_at) VALUES
-    ('crop_01seedground000000', 'ground', 'Ground Shipping', 'fedex_ground', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('crop_01seedexpress00000', 'express', 'Express Shipping', 'fedex_express', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('crop_01seedground000000', 'fedex_ground', 'Ground Shipping', 'fedex_ground', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01seedexpress00000', 'fedex_express', 'Express Shipping', 'fedex_express', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Default payment term (system-level, no account)
 INSERT IGNORE INTO payment_term (id, name, account_id, created_at, updated_at) VALUES

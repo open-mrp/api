@@ -65,6 +65,8 @@ func TestShippingCaseDetailPresenter(t *testing.T) {
 		CarrierId:              "cr_01abc",
 		CarrierName:            "FedEx",
 		CarrierIsPortalEnabled: &carrierPortal,
+		CarrierType:            "fedex",
+		CarrierStatus:          "active",
 		CreatedAt:              now,
 		UpdatedAt:              now,
 	}

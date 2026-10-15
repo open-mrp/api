@@ -263,27 +263,8 @@ func minimumOrderColsFromGetRow(row sqlc.GetShippingTermRow) qtyJoinCols {
 	}
 }
 
-// Takes the query's own row type rather than sqlc.CarrierOption: the two coincided only while the projection listed every column, so binding to the model made any new carrier_option column a compile error here.
 func carrierOptionToDomainServiceLevel(co sqlc.ListFreeShippingCarrierOptionsByShippingTermIDRow) *domain.ServiceLevel {
-	sl := &domain.ServiceLevel{
-		ID:              co.ID,
-		Name:            co.Name,
-		Code:            co.Code,
-		IsPortalEnabled: co.IsPortalEnabled,
-		IsDefault:       co.IsDefault,
-		CarrierID:       co.CarrierID,
-		CreatedAt:       co.CreatedAt,
-		UpdatedAt:       co.UpdatedAt,
-	}
-	if co.ServiceLevelToken.Valid {
-		t := co.ServiceLevelToken.String
-		sl.ServiceLevelToken = &t
-	}
-	if co.AccountID.Valid {
-		a := co.AccountID.String
-		sl.AccountID = &a
-	}
-	return sl
+	return mapServiceLevelRow(sqlc.GetCarrierOptionRow(co))
 }
 
 func mapForwardShippingTermRow(row sqlc.ListShippingTermsForwardRow) *domain.ShippingTerm {

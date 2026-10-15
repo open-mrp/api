@@ -15,6 +15,7 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -363,8 +364,7 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		// Check if this is a Shippo-managed carrier
-		isShippo := constants.IsShippoCarrier(params.Code)
+		isShippo := params.Type.IsShippo()
 
 		var shippoAccountID *string
 		var shippoOptions []domain.CreateServiceLevelParams
@@ -377,10 +377,10 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 			}
 
 			if !accountCtx.IsSandbox {
-				code := *params.Code
+				code := string(params.Type)
 
 				// UPS/USPS require an account number. Validate this pure input requirement before acquiring the Shippo client so a missing account number yields a specific 400 regardless of integration state.
-				if code != string(constants.CarrierCodeFedEx) {
+				if params.Type != constants.CarrierTypeFedEx {
 					if params.AccountNumber == nil || *params.AccountNumber == "" {
 						return nil, tracing.Trace(span, apierror.NewValidationError("Account number is required for this carrier."))
 					}
@@ -394,7 +394,7 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 
 				var shippoAccount *domain.ShippoCarrierAccount
 
-				if code == string(constants.CarrierCodeFedEx) {
+				if params.Type == constants.CarrierTypeFedEx {
 					// FedEx uses OAuth — find or register account
 					shippoAccount, apiErr = shippoClient.FindOrRegisterCarrierAccount(ctx, code)
 					if apiErr != nil {
@@ -420,15 +420,14 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 				}
 
 				for _, level := range levels {
-					token := level.Token
 					shippoOptions = append(shippoOptions, domain.CreateServiceLevelParams{
-						AccountID:         params.AccountID,
-						CarrierID:         carrierID,
-						Name:              level.Name,
-						Code:              level.Token,
-						ServiceLevelToken: &token,
-						IsPortalEnabled:   false,
-						IsDefault:         false,
+						AccountID:       params.AccountID,
+						CarrierID:       carrierID,
+						Name:            level.Name,
+						Code:            level.Token,
+						Synced:          true,
+						IsPortalEnabled: false,
+						IsActive:        true,
 					})
 				}
 			}
@@ -547,6 +546,13 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 				return apierror.NewAuthorizationError("This carrier is owned by another account and cannot be updated.")
 			}
 
+			if apiErr := txSvc.checkDefaultServiceLevel(txCtx, old, params.DefaultServiceLevelID); apiErr != nil {
+				return apiErr
+			}
+			// The columns are assigned rather than merged so an explicit null can clear them, which makes carrying the existing values forward the meaning of leaving the fields out.
+			params.SCAC = params.SCAC.BackfillUnsetPtr(old.SCAC)
+			params.DefaultServiceLevelID = params.DefaultServiceLevelID.BackfillUnsetPtr(old.DefaultServiceLevelID)
+
 			if params.Name != nil {
 				exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.CarrierID)
 				if apiErr != nil {
@@ -628,6 +634,11 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 		return tracing.Trace(span, apierror.NewAuthorizationError("This carrier is owned by another account and cannot be deleted."))
 	}
 
+	// Checked before Shippo is told, so a carrier still in use keeps its Shippo account; checked again in the transaction below.
+	if apiErr := domain.CarrierReferences.RequireUnused(ctx, s.repos.NewReferenceRepo(), carrier.ID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	// Deactivate on Shippo if applicable
 	if carrier.ShippoCarrierAccountID != nil {
 		accountCtx, apiErr := s.accountSvc.GetAccountContext(ctx, accountID)
@@ -650,6 +661,24 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *carrierSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewCarrierRepo()
 
+		if apiErr := domain.CarrierReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), carrier.ID); apiErr != nil {
+			return apiErr
+		}
+		// The carrier's own service levels go with it, so their references are probed too.
+		levels, apiErr := txRepo.ListOptionsByCarrierID(txCtx, accountID, carrierID)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, level := range levels {
+			labels, apiErr := txSvc.repos.NewReferenceRepo().InUseBy(txCtx, level.ID, domain.ServiceLevelReferences.Probes)
+			if apiErr != nil {
+				return apiErr
+			}
+			if len(labels) > 0 {
+				return domain.CarrierReferences.InUseError(labels)
+			}
+		}
+
 		if apiErr := txRepo.DeleteOptionsByCarrierID(txCtx, accountID, carrierID); apiErr != nil {
 			return apiErr
 		}
@@ -658,7 +687,7 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 			return apiErr
 		}
 
-		if apiErr := txRepo.SoftDelete(txCtx, accountID, carrierID); apiErr != nil {
+		if apiErr := txRepo.Delete(txCtx, accountID, carrierID); apiErr != nil {
 			return apiErr
 		}
 
@@ -852,71 +881,70 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 			shippoTokens[level.Token] = level
 		}
 
-		// Get existing options for this carrier
 		existingOptions, apiErr := s.repos.NewCarrierRepo().ListOptionsByCarrierID(ctx, accountID, carrierID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Build set of existing tokens
-		existingTokens := make(map[string]*domain.ServiceLevel)
+		// Codes are unique per carrier, so a service the carrier offers is already present when any service level, synced or added by hand, holds its code.
+		existingCodes := make(map[string]*domain.ServiceLevel, len(existingOptions))
 		for _, opt := range existingOptions {
-			if opt.ServiceLevelToken != nil {
-				existingTokens[*opt.ServiceLevelToken] = opt
-			}
+			existingCodes[opt.Code] = opt
 		}
 
 		var result *domain.Carrier
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *carrierSvcImpl) *apierror.APIError {
 			optionRepo := txSvc.repos.NewServiceLevelRepo()
 
-			// Remove options whose tokens no longer exist in Shippo
-			for token, opt := range existingTokens {
-				if _, exists := shippoTokens[token]; !exists {
-					if apiErr := optionRepo.Delete(txCtx, accountID, opt.ID); apiErr != nil {
-						return apiErr
-					}
-					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-						ServiceName:  domain.ServiceName,
-						Action:       constants.AuditActionDelete,
-						ResourceType: constants.ObjectTypeServiceLevel,
-						ResourceID:   opt.ID,
-						Changes:      audit.ComputeChanges(opt, (*domain.ServiceLevel)(nil)),
-					}); apiErr != nil {
-						return apiErr
-					}
+			// Synced service levels the carrier no longer offers are archived, not deleted: orders and shipments may still use them. Ones added by hand are left alone.
+			for _, opt := range existingOptions {
+				if _, offered := shippoTokens[opt.Code]; offered || !opt.Synced || !opt.IsActive {
+					continue
+				}
+				if apiErr := optionRepo.Archive(txCtx, accountID, opt.ID); apiErr != nil {
+					return apiErr
+				}
+				archived := *opt
+				archived.IsActive = false
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionUpdate,
+					ResourceType: constants.ObjectTypeServiceLevel,
+					ResourceID:   opt.ID,
+					Changes:      audit.ComputeChanges(opt, &archived),
+				}); apiErr != nil {
+					return apiErr
 				}
 			}
 
-			// Add new options for tokens that don't exist yet
 			for token, level := range shippoTokens {
-				if _, exists := existingTokens[token]; !exists {
-					optionID, apiErr := id.GenID(id.ServiceLevelIDPrefix, nil)
-					if apiErr != nil {
-						return apiErr
-					}
-					t := token
-					created, apiErr := optionRepo.Create(txCtx, optionID, domain.CreateServiceLevelParams{
-						AccountID:         accountID,
-						CarrierID:         carrierID,
-						Name:              level.Name,
-						Code:              level.Token,
-						ServiceLevelToken: &t,
-						IsPortalEnabled:   false,
-						IsDefault:         false,
-					})
-					if apiErr != nil {
-						return apiErr
-					}
-					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-						ServiceName:  domain.ServiceName,
-						Action:       constants.AuditActionCreate,
-						ResourceType: constants.ObjectTypeServiceLevel,
-						ResourceID:   created.ID,
-						Changes:      audit.ComputeChanges(nil, created),
-					}); apiErr != nil {
-						return apiErr
-					}
+				if _, exists := existingCodes[token]; exists {
+					continue
+				}
+				optionID, apiErr := id.GenID(id.ServiceLevelIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				created, apiErr := optionRepo.Create(txCtx, optionID, domain.CreateServiceLevelParams{
+					AccountID:       accountID,
+					CarrierID:       carrierID,
+					Name:            level.Name,
+					Code:            token,
+					Synced:          true,
+					IsPortalEnabled: false,
+					IsActive:        true,
+				})
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionCreate,
+					ResourceType: constants.ObjectTypeServiceLevel,
+					ResourceID:   created.ID,
+					Changes:      audit.ComputeChanges(nil, created),
+				}); apiErr != nil {
+					return apiErr
 				}
 			}
 
@@ -945,6 +973,28 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// checkDefaultServiceLevel refuses a default service level that isn't one of the carrier's own, or that is archived. One the carrier already has as its default is not checked again.
+func (s *carrierSvcImpl) checkDefaultServiceLevel(ctx context.Context, carrier *domain.Carrier, next field.Clearable[string]) *apierror.APIError {
+	const param = "default_service_level_id"
+	id, ok := next.Value()
+	if !ok || (carrier.DefaultServiceLevelID != nil && *carrier.DefaultServiceLevelID == id) {
+		return nil
+	}
+	repo := s.repos.NewServiceLevelRepo()
+	onCarrier, apiErr := repo.IsInCarrier(ctx, id, carrier.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !onCarrier {
+		return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The default service level must be one of this carrier's service levels.")
+	}
+	level, apiErr := repo.Get(ctx, *carrier.AccountID, id)
+	if apiErr != nil {
+		return apiErr
+	}
+	return domain.RequireAssignable(param, "service level", constants.ArchiveStatusFromIsActive(level.IsActive))
 }
 
 // checkCarrierReadPermission checks the appropriate read permission based on the identity context. Internal actors need carriers:read for their own account, or customers:read / suppliers:read for external accounts.

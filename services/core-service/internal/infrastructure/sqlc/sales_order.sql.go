@@ -881,7 +881,7 @@ SELECT
     cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
-    co.service_level_token AS service_level_token,
+    co.code AS service_level_token,
     co.created_at AS service_level_created_at,
     co.updated_at AS service_level_updated_at,
     -- Sales rep
@@ -1323,7 +1323,7 @@ SELECT
     cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
-    co.service_level_token AS service_level_token,
+    co.code AS service_level_token,
     co.created_at AS service_level_created_at,
     co.updated_at AS service_level_updated_at,
     -- Sales rep
@@ -2594,7 +2594,7 @@ SELECT
     cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
-    co.service_level_token AS service_level_token,
+    co.code AS service_level_token,
     co.created_at AS service_level_created_at,
     co.updated_at AS service_level_updated_at,
     -- Sales rep

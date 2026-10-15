@@ -28,7 +28,7 @@ func TestRateShop_OptionsCarryTheCarriersAndServiceLevelsReadWithTheQuote(t *tes
 	core := &fakeRateShopCore{resp: &pb.RateShopResponse{
 		Options:       []*pb.RateShopOptionInfo{{CarrierId: "cr_truck", CarrierName: "Truck", ServiceLevelId: "crop_ground", ServiceLevelName: "Ground", Rate: 12.5}},
 		Carriers:      []*pb.CarrierInfo{{Id: "cr_truck", Name: "Truck", IsPortalEnabled: true, CreatedAt: now, UpdatedAt: now}},
-		ServiceLevels: []*pb.ServiceLevelInfo{{Id: "crop_ground", Name: "Ground", ServiceLevelToken: &token, CarrierId: "cr_truck", CreatedAt: now, UpdatedAt: now}},
+		ServiceLevels: []*pb.ServiceLevelInfo{{Id: "crop_ground", Name: "Ground", Code: token, CarrierId: "cr_truck", CreatedAt: now, UpdatedAt: now}},
 	}}
 	svc := NewShipmentSvc(&ShipmentSvcConfig{CoreClient: core})
 
@@ -43,10 +43,10 @@ func TestRateShop_OptionsCarryTheCarriersAndServiceLevelsReadWithTheQuote(t *tes
 		t.Fatalf("options = %+v", result.Options.Data)
 	}
 	option := result.Options.Data[0]
-	if option.Carrier == nil || option.Carrier.ID != "cr_truck" || option.Carrier.CustomerPortalVisibility != constants.CustomerPortalVisibilityVisible || option.Carrier.CreatedAt.IsZero() {
+	if option.Carrier == nil || option.Carrier.ID != "cr_truck" || option.Carrier.PortalVisibility != constants.CustomerPortalVisibilityVisible || option.Carrier.CreatedAt.IsZero() {
 		t.Errorf("carrier = %+v, want the one read with the quote", option.Carrier)
 	}
-	if option.ServiceLevel == nil || option.ServiceLevel.ServiceLevelToken != constants.ServiceLevelCode(token) || option.ServiceLevel.CreatedAt.IsZero() {
+	if option.ServiceLevel == nil || option.ServiceLevel.Code != constants.ServiceLevelCode(token) || option.ServiceLevel.CreatedAt.IsZero() {
 		t.Errorf("service level = %+v, want the one read with the quote", option.ServiceLevel)
 	}
 }

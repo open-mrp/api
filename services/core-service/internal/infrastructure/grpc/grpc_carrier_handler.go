@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,17 +19,16 @@ func carrierToProto(c *domain.Carrier) *pb.CarrierInfo {
 	info := &pb.CarrierInfo{
 		Id:                     c.ID,
 		Name:                   c.Name,
-		Code:                   c.Code,
+		Type:                   string(c.Type),
+		Scac:                   c.SCAC,
+		Status:                 string(constants.ArchiveStatusFromIsActive(c.IsActive)),
+		DefaultServiceLevelId:  c.DefaultServiceLevelID,
 		ShippoCarrierAccountId: c.ShippoCarrierAccountID,
 		AccountNumber:          c.AccountNumber,
 		IsPortalEnabled:        c.IsPortalEnabled,
-		IsDefault:              c.AccountID == nil,
 		CreatedAt:              timestamppb.New(c.CreatedAt),
 		UpdatedAt:              timestamppb.New(c.UpdatedAt),
 		AccountId:              c.AccountID,
-	}
-	if c.DeletedAt != nil {
-		info.DeletedAt = timestamppb.New(*c.DeletedAt)
 	}
 	if c.ServiceLevels != nil {
 		info.ServiceLevels = make([]*pb.ServiceLevelInfo, len(c.ServiceLevels))
@@ -47,6 +48,7 @@ func (h *gRPCHandler) ListCarriers(ctx context.Context, req *pb.ListCarriersRequ
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
+		IsActive: archiveStatusesIsActive(req.Statuses),
 		Includes: req.Includes,
 	}
 
@@ -134,9 +136,11 @@ func (h *gRPCHandler) CreateCarrier(ctx context.Context, req *pb.CreateCarrierRe
 
 	params := domain.CreateCarrierParams{
 		Name:            req.Name,
-		Code:            req.Code,
+		Type:            constants.CarrierType(req.Type),
+		SCAC:            req.Scac,
 		AccountNumber:   req.AccountNumber,
 		IsPortalEnabled: req.IsPortalEnabled,
+		IsActive:        req.Status == nil || constants.ArchiveStatus(*req.Status).IsActive(),
 		Includes:        req.Includes,
 	}
 
@@ -159,10 +163,13 @@ func (h *gRPCHandler) UpdateCarrier(ctx context.Context, req *pb.UpdateCarrierRe
 	defer finalizeIdempotency()
 
 	params := domain.UpdateCarrierParams{
-		CarrierID:       req.Id,
-		Name:            req.Name,
-		IsPortalEnabled: req.IsPortalEnabled,
-		Includes:        req.Includes,
+		CarrierID:             req.Id,
+		Name:                  req.Name,
+		IsPortalEnabled:       req.IsPortalEnabled,
+		IsActive:              archiveStatusIsActive(req.Status),
+		SCAC:                  fieldpb.StringClearableFromProto(req.Scac),
+		DefaultServiceLevelID: fieldpb.StringClearableFromProto(req.DefaultServiceLevelId),
+		Includes:              req.Includes,
 	}
 
 	carrier, apiErr := h.carrierSvc.UpdateCarrier(ctx, params)
@@ -237,4 +244,13 @@ func (h *gRPCHandler) SyncServiceLevels(ctx context.Context, req *pb.SyncService
 	return &pb.SyncServiceLevelsResponse{
 		Carrier: carrierToProto(carrier),
 	}, nil
+}
+
+// archiveStatusesIsActive is the is_active a statuses filter selects; nil keeps every status.
+func archiveStatusesIsActive(statuses []string) *bool {
+	typed := make([]constants.ArchiveStatus, len(statuses))
+	for i, st := range statuses {
+		typed[i] = constants.ArchiveStatus(st)
+	}
+	return constants.IsActiveFilter(typed)
 }

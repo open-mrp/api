@@ -550,6 +550,9 @@ type Carrier struct {
 	UpdatedAt              time.Time
 	IsPortalEnabled        bool
 	DeletedAt              sql.NullTime
+	IsActive               bool
+	Scac                   sql.NullString
+	DefaultCarrierOptionID sql.NullString
 }
 
 type CarrierOption struct {
@@ -564,6 +567,7 @@ type CarrierOption struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	DefaultTransitDays sql.NullInt32
+	IsActive           bool
 }
 
 type CarrierTransitEstimate struct {
@@ -615,28 +619,29 @@ type Consumption struct {
 }
 
 type Conversation struct {
-	ID                     string
-	AccountID              string
-	Type                   string
-	Audience               string
-	Title                  sql.NullString
-	GroupID                sql.NullString
-	TopicResourceType      sql.NullString
-	TopicResourceID        sql.NullString
-	CreatedByParticipantID sql.NullString
-	NextSequence           int64
-	LastMessageID          sql.NullString
-	LastMessageAt          sql.NullTime
-	IsArchived             bool
-	LegalHold              bool
-	WorkflowStatus         sql.NullString
-	AssigneeResourceType   sql.NullString
-	AssigneeResourceID     sql.NullString
-	EmailInboxID           sql.NullString
-	EmailExternalAddress   sql.NullString
-	Metadata               json.RawMessage
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                      string
+	AccountID               string
+	Type                    string
+	Audience                string
+	Title                   sql.NullString
+	GroupID                 sql.NullString
+	TopicResourceType       sql.NullString
+	TopicResourceID         sql.NullString
+	CreatedByParticipantID  sql.NullString
+	NextSequence            int64
+	LastMessageID           sql.NullString
+	LastMessageAt           sql.NullTime
+	IsArchived              bool
+	LegalHold               bool
+	WorkflowStatus          sql.NullString
+	AssigneeResourceType    sql.NullString
+	AssigneeResourceID      sql.NullString
+	EmailInboxID            sql.NullString
+	EmailExternalAddress    sql.NullString
+	Metadata                json.RawMessage
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	ContinuesConversationID sql.NullString
 }
 
 type ConversationDmKey struct {

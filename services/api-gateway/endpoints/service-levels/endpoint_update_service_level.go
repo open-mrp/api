@@ -20,38 +20,35 @@ type UpdateServiceLevelRequest struct {
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
-	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
+	// Display name, shown to customers at checkout when the service level is visible.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Carrier-specific code identifying this service level (e.g. `fedex_ground`).
+	// Code identifying the service, such as `fedex_ground`.
 	//
-	// Must be unique among the carrier's service levels. For a service level synced from a connected carrier the `service_level_token` used for rating is fixed by the carrier and a code change does not affect it; for one you created yourself, the token follows the code.
+	// Unique among the carrier's service levels. For connected carriers it's the carrier's own code, used for rates and labels.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
-	// Whether customers can see and select this service level at checkout in the customer portal.
-	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
-	// Whether this is the carrier's default service level, pre-selected when the carrier is chosen.
-	//
-	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
-	IsDefault field.Optional[bool] `json:"is_default,omitzero"`
-	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
-	//
-	// A fallback: when a carrier can rate the lane, the transit it quotes is used instead. Set to null to remove it, which leaves transit unknown for lanes the carrier cannot rate.
-	DefaultTransitDays field.Clearable[int32] `json:"default_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
+	// Whether customers can see and pick this service level at checkout in the customer portal.
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
+	// `active` or `archived`. Archived service levels can't be newly set on orders or customer defaults, and a carrier's default can't be archived.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Business days this service usually takes, used when the carrier can't quote a lane. Send `null` when unknown.
+	EstimatedTransitDays field.Clearable[int32] `json:"estimated_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
+	// `true` makes this service level its carrier's default; `false` stops it being the default. Kept for 1.0.forge-preview.9 callers; set the carrier's `default_service_level_id` instead.
+	IsDefault field.Optional[bool] `json:"is_default,omitzero" visibility:"internal"`
 }
 
-var sampleUpdateServiceLevelName = "Express Shipping"
 var sampleUpdateServiceLevelRequest = &UpdateServiceLevelRequest{
-	Name:                     field.Some(sampleUpdateServiceLevelName),
-	Code:                     field.Some("express"),
-	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
+	Name:             field.Some("Express Shipping"),
+	Code:             field.Some("express"),
+	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 }
 
 func (*UpdateServiceLevelRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateServiceLevelRequest)
 }
 
-// Updates a service level's name, code, customer portal visibility, or default status.
+// Updates a service level.
 //
-// Only the fields you send are changed. System-owned service levels cannot be updated.
+// Only fields you send are changed. System-owned service levels can't be updated.
 type UpdateServiceLevelEndpoint struct{}
 
 func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel] {
@@ -64,14 +61,13 @@ func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).UpdateServiceLevel
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeServiceLevel,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"carrier", "owner", "owner.account"},
 		}),
 	})
 }

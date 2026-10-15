@@ -279,6 +279,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCarrier,
 		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "default_service_level", ObjectType: constants.ObjectTypeServiceLevel},
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "service_levels", ObjectType: constants.ObjectTypeServiceLevel},
 		},
@@ -780,6 +781,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeServiceLevel,
 		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})

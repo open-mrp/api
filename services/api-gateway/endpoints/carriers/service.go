@@ -9,8 +9,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -62,9 +64,10 @@ func NewCarrierSvc(config *CarrierSvcConfig) CarrierSvc {
 // include resolver runs in APIEndpoint.Execute against the resulting list.
 func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 	pbReq := &pb.ListCarriersRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Statuses: archiveStatusStrings(req.Statuses),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.list", domain.ServiceName,
@@ -104,21 +107,17 @@ func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *RetrieveCarrierReq
 
 func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 	isPortalEnabled := true
-	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+	if v, ok := req.PortalVisibility.Value(); ok {
 		isPortalEnabled = v == constants.CustomerPortalVisibilityVisible
-	}
-
-	var code *string
-	if v, ok := req.Code.Value(); ok {
-		s := string(v)
-		code = &s
 	}
 
 	pbReq := &pb.CreateCarrierRequest{
 		Name:            req.Name,
-		Code:            code,
+		Type:            string(req.Type),
+		Scac:            req.SCAC.Ptr(),
 		AccountNumber:   req.AccountNumber.Ptr(),
 		IsPortalEnabled: isPortalEnabled,
+		Status:          archiveStatusPtr(req.Status),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.create", domain.ServiceName,
@@ -135,15 +134,18 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 
 func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 	var isPortalEnabled *bool
-	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+	if v, ok := req.PortalVisibility.Value(); ok {
 		enabled := v == constants.CustomerPortalVisibilityVisible
 		isPortalEnabled = &enabled
 	}
 
 	pbReq := &pb.UpdateCarrierRequest{
-		Id:              req.CarrierID,
-		Name:            req.Name.Ptr(),
-		IsPortalEnabled: isPortalEnabled,
+		Id:                    req.CarrierID,
+		Name:                  req.Name.Ptr(),
+		IsPortalEnabled:       isPortalEnabled,
+		Status:                archiveStatusPtr(req.Status),
+		Scac:                  fieldpb.StringClearableToProto(req.SCAC),
+		DefaultServiceLevelId: fieldpb.StringClearableToProto(req.DefaultServiceLevelID),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.update", domain.ServiceName,
@@ -242,4 +244,23 @@ func (m *carrierSvcImpl) SyncOptions(ctx context.Context, req *SyncOptionsReques
 	}
 
 	return loadCarrierByID(ctx, resp.Carrier.Id)
+}
+
+// archiveStatusPtr is a request's optional status as core takes it.
+func archiveStatusPtr(status field.Optional[constants.ArchiveStatus]) *string {
+	v, ok := status.Value()
+	if !ok {
+		return nil
+	}
+	str := string(v)
+	return &str
+}
+
+// archiveStatusStrings is a statuses filter as core takes it.
+func archiveStatusStrings(statuses []constants.ArchiveStatus) []string {
+	out := make([]string, len(statuses))
+	for i, st := range statuses {
+		out[i] = string(st)
+	}
+	return out
 }

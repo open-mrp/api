@@ -293,16 +293,19 @@ message BatchGetItemsByIDsResponse {
   repeated PropertyInfo attribute_properties = 3;
 }
 message CarrierInfo {
+  reserved 3, 7, 10;
   string id = 1;
   string name = 2;
-  optional string code = 3;
+  string type = 15;
+  optional string scac = 16;
+  // active | archived.
+  string status = 17;
+  optional string default_service_level_id = 18;
   optional string shippo_carrier_account_id = 4;
   optional string account_number = 5;
   bool is_portal_enabled = 6;
-  bool is_default = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
-  optional google.protobuf.Timestamp deleted_at = 10;
   repeated ServiceLevelInfo service_levels = 11;
   // The account ID that owns this carrier. Null for system carriers.
   optional string account_id = 12;
@@ -317,25 +320,28 @@ message CarrierInfo {
   bool service_levels_has_more = 14;
 }
 message ServiceLevelInfo {
+  reserved 4, 6;
   string id = 1;
   string name = 2;
   string code = 3;
-  optional string service_level_token = 4;
   bool is_portal_enabled = 5;
-  bool is_default = 6;
+  // active | archived.
+  string status = 12;
   string carrier_id = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   // The account ID that owns this service level. Null for system options.
   optional string account_id = 10;
-  // Fallback carrier transit for this service, used when no lane estimate has been cached.
-  optional int32 default_transit_days = 11;
+  // Fallback carrier transit for this service in business days, used when no lane estimate has been cached.
+  optional int32 estimated_transit_days = 11;
 }
 message ListCarriersRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  // active | archived; empty returns every status.
+  repeated string statuses = 5;
 }
 message ListCarriersResponse {
   repeated CarrierInfo carriers = 1;
@@ -380,10 +386,14 @@ message BatchGetAccountsByIDsResponse {
   repeated AccountInfo accounts = 1;
 }
 message CreateCarrierRequest {
+  reserved 2;
   string name = 1;
-  optional string code = 2;
+  string type = 6;
+  optional string scac = 7;
   optional string account_number = 3;
   bool is_portal_enabled = 4;
+  // active | archived; unset is active.
+  optional string status = 8;
   repeated string includes = 5;
 }
 message CreateCarrierResponse {
@@ -394,6 +404,9 @@ message UpdateCarrierRequest {
   optional string name = 2;
   optional bool is_portal_enabled = 3;
   repeated string includes = 4;
+  optional string status = 5;
+  optional StringPatch scac = 6;
+  optional StringPatch default_service_level_id = 7;
 }
 message UpdateCarrierResponse {
   CarrierInfo carrier = 1;
@@ -426,6 +439,8 @@ message ListServiceLevelsRequest {
   optional string cursor = 2;
   int32 limit = 3;
   optional string query = 4;
+  // active | archived; empty returns every status.
+  repeated string statuses = 5;
 }
 message ListServiceLevelsResponse {
   repeated ServiceLevelInfo service_levels = 1;
@@ -439,13 +454,16 @@ message GetServiceLevelResponse {
   ServiceLevelInfo service_level = 1;
 }
 message CreateServiceLevelRequest {
+  reserved 4;
   string carrier_id = 1;
   string name = 2;
   string code = 3;
-  optional string service_level_token = 4;
   bool is_portal_enabled = 5;
-  bool is_default = 6;
-  optional int32 default_transit_days = 7;
+  // Makes the new service level its carrier's default.
+  bool make_default = 6;
+  optional int32 estimated_transit_days = 7;
+  // active | archived; unset is active.
+  optional string status = 8;
 }
 message CreateServiceLevelResponse {
   ServiceLevelInfo service_level = 1;
@@ -456,8 +474,10 @@ message UpdateServiceLevelRequest {
   optional string name = 3;
   optional string code = 4;
   optional bool is_portal_enabled = 5;
-  optional bool is_default = 6;
-  optional Int32Patch default_transit_days = 7;
+  // true makes the service level its carrier's default; false stops it being the default.
+  optional bool make_default = 6;
+  optional Int32Patch estimated_transit_days = 7;
+  optional string status = 8;
 }
 message UpdateServiceLevelResponse {
   ServiceLevelInfo service_level = 1;

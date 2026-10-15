@@ -2319,8 +2319,12 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 		return apiErr
 	}
 	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
-		if _, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID); apiErr != nil {
+		level, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID)
+		if apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
+		}
+		if apiErr := domain.RequireAssignable("service_level_id", "service level", constants.ArchiveStatusFromIsActive(level.IsActive)); apiErr != nil {
+			return apiErr
 		}
 	}
 	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {

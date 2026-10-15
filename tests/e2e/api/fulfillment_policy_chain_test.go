@@ -116,7 +116,7 @@ func TestProductLineSupply_RejectsUnknownValues(t *testing.T) {
 
 	t.Run("on create", func(t *testing.T) {
 		status, body, err := apiClient.Post(productLinesPath, map[string]any{
-			"name":               uniqueName("e2e-pdln-badpolicy"),
+			"name":              uniqueName("e2e-pdln-badpolicy"),
 			"commission_policy": "applied",
 			"freight_policy":    "billed",
 			"supply":            "make_to_vibes",

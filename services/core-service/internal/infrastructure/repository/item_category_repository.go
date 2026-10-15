@@ -198,18 +198,13 @@ func (r *itemCategoryRepoImpl) SetDefaultLotSize(ctx context.Context, accountID,
 		lotID = gosql.NullString{String: newID, Valid: true}
 	}
 
-	result, err := r.queries.SetItemCategoryDefaultLotSize(ctx, sqlc.SetItemCategoryDefaultLotSizeParams{
+	// Callers have already found the category; no rows changed only means the lot was already clear.
+	if _, err := r.queries.SetItemCategoryDefaultLotSize(ctx, sqlc.SetItemCategoryDefaultLotSizeParams{
 		DefaultLotSizeID: lotID,
 		ID:               itemCategoryID,
 		AccountID:        gosql.NullString{String: accountID, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if n, err := result.RowsAffected(); err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	} else if n == 0 {
-		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
 }

@@ -560,12 +560,9 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 				}
 			}
 
+			lot := params.DefaultLotSize.ValuePtr()
 			if params.DefaultLotSize.WasProvided() {
-				lot := params.DefaultLotSize.ValuePtr()
 				if apiErr := validateDefaultLotSize(txCtx, txSvc.repos, old.UnitGroupID, lot); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := txRepo.SetDefaultLotSize(txCtx, params.AccountID, params.ItemCategoryID, lot); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -573,6 +570,15 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
+			}
+			// After the update, which reports a missing category: in the same millisecond a second write changes no row.
+			if params.DefaultLotSize.WasProvided() {
+				if apiErr := txRepo.SetDefaultLotSize(txCtx, params.AccountID, params.ItemCategoryID, lot); apiErr != nil {
+					return apiErr
+				}
+				if updated, apiErr = txRepo.Get(txCtx, domain.GetItemCategoryParams{AccountID: params.AccountID, ItemCategoryID: params.ItemCategoryID}); apiErr != nil {
+					return apiErr
+				}
 			}
 			if params.PropertyIDs != nil {
 				if apiErr := txRepo.ReplaceProperties(txCtx, params.ItemCategoryID, *params.PropertyIDs); apiErr != nil {

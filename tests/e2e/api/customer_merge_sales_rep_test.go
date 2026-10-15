@@ -71,13 +71,16 @@ func shipOrderWithRep(t *testing.T, customerID, salesRepID string) string {
 	return orderID
 }
 
+// mergeCustomers merges sourceIDs into targetID and waits for the merge job to complete.
 func mergeCustomers(t *testing.T, targetID string, sourceIDs ...string) {
 	t.Helper()
 	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": sourceIDs,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	requireStatus(t, 202, status, body)
+	job := pollJobUntilTerminal(t, jsonField(parseJSON(body), "id"))
+	require.Equal(t, "completed", jsonField(job, "status"), "the merge job completes: %v", job)
 }
 
 func TestCustomerMerge_OpenOrdersTakeTheTargetsDefaultRep(t *testing.T) {

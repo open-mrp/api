@@ -195,19 +195,19 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 func TestSellerInternal_CustomerPortalReadsItsRecordWithoutNotesCommissionOrActivity(t *testing.T) {
 	t.Parallel()
 	path := customersPath + "/" + SeedCustomerAccountID
-	children := jsonListData(parseJSON(mustGetAs(t, apiClient, path, url.Values{"include": {"child_accounts"}})), "child_accounts")
+	children := jsonListData(parseJSON(mustGetAs(t, apiClient, path, url.Values{"include": {"child_customers"}})), "child_customers")
 	require.NotEmpty(t, children, "the seed customer has child accounts")
 	childID := jsonField(children[0].(map[string]any), "id")
 	childPath := customersPath + "/" + childID
-	status, body, err := apiClient.Patch(childPath, map[string]any{"note": "Call the buyer, not the plant"}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(childPath, map[string]any{"instructions": "Call the buyer, not the plant"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
-	t.Cleanup(func() { _, _, _ = apiClient.Patch(childPath, map[string]any{"note": nil}, newIdempotencyKey()) })
+	t.Cleanup(func() { _, _, _ = apiClient.Patch(childPath, map[string]any{"instructions": nil}, newIdempotencyKey()) })
 
 	// The sales rep signs in, so the seller sees when it last used the account.
 	mustGetAs(t, chatUserClient(t), customersPath+"/"+SeedCustomerAccountID, nil)
 
-	include := url.Values{"include": {"type", "price_groups", "child_accounts", "defaults.sales_rep"}}
+	include := url.Values{"include": {"group", "price_groups", "child_customers", "defaults.sales_rep"}}
 	var staff map[string]any
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		staff = parseJSON(mustGetAs(t, apiClient, path, include))
@@ -217,23 +217,23 @@ func TestSellerInternal_CustomerPortalReadsItsRecordWithoutNotesCommissionOrActi
 		return nil
 	})
 	assert.NotEmpty(t, jsonField(staff, "commission_policy"), "the seller reads the customer's commission policy")
-	assert.NotEmpty(t, jsonField(jsonObject(staff, "type"), "commission_policy"), "the seller reads the group's commission policy")
+	assert.NotEmpty(t, jsonField(jsonObject(staff, "group"), "commission_policy"), "the seller reads the group's commission policy")
 	rep := jsonObject(jsonObject(staff, "defaults"), "sales_rep")
 	require.NotNil(t, rep, "the seed customer has a sales rep")
 	_, isBool := rep["is_commission_eligible"].(bool)
 	assert.True(t, isBool, "the seller reads whether its rep earns commission")
-	assert.Equal(t, "Call the buyer, not the plant", jsonField(childAccount(t, staff, childID), "note"))
+	assert.Equal(t, "Call the buyer, not the plant", jsonField(childAccount(t, staff, childID), "instructions"))
 
 	own := parseJSON(mustGetAs(t, getCustomerPortalClient(), path, include))
 	assert.Equal(t, SeedCustomerAccountID, jsonField(own, "id"))
-	assertNilField(t, own, "note")
+	assertNilField(t, own, "instructions")
 	assertNilField(t, own, "commission_policy")
-	assertNilField(t, jsonObject(own, "type"), "commission_policy")
+	assertNilField(t, jsonObject(own, "group"), "commission_policy")
 	for _, group := range jsonListData(own, "price_groups") {
 		assertNilField(t, group.(map[string]any), "commission_policy")
 	}
 	child := childAccount(t, own, childID)
-	assertNilField(t, child, "note")
+	assertNilField(t, child, "instructions")
 	assertNilField(t, child, "commission_policy")
 	portalRep := jsonObject(jsonObject(own, "defaults"), "sales_rep")
 	require.NotNil(t, portalRep, "the customer still sees who its rep is")
@@ -246,7 +246,7 @@ func TestSellerInternal_CustomerPortalReadsItsRecordWithoutNotesCommissionOrActi
 
 func childAccount(t *testing.T, customer map[string]any, id string) map[string]any {
 	t.Helper()
-	for _, child := range jsonListData(customer, "child_accounts") {
+	for _, child := range jsonListData(customer, "child_customers") {
 		if c := child.(map[string]any); jsonField(c, "id") == id {
 			return c
 		}

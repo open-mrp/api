@@ -217,16 +217,16 @@ var accountIDPattern = regexp.MustCompile(`"(ac_[0-9a-z_]+)"`)
 func portalOwnAccounts(t *testing.T, own string) map[string]bool {
 	t.Helper()
 	accounts := map[string]bool{SeedAccountID: true, own: true}
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+own, url.Values{"include": {"parent_account", "child_accounts"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+own, url.Values{"include": {"parent_customer", "child_customers"}})
 	require.NoError(t, err)
 	if status != http.StatusOK {
 		return accounts
 	}
 	customer := parseJSON(body)
-	if parent := jsonField(jsonObject(customer, "parent_account"), "id"); parent != "" {
+	if parent := jsonField(jsonObject(customer, "parent_customer"), "id"); parent != "" {
 		accounts[parent] = true
 	}
-	for _, child := range jsonListData(customer, "child_accounts") {
+	for _, child := range jsonListData(customer, "child_customers") {
 		accounts[jsonField(child.(map[string]any), "id")] = true
 	}
 	return accounts

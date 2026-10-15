@@ -143,6 +143,7 @@ func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.Vol
 				Name:       attr.Name,
 				ColorCode:  attr.ColorCode,
 				PropertyID: attr.PropertyID,
+				IsActive:   attr.IsActive,
 				CreatedAt:  attr.CreatedAt,
 				UpdatedAt:  attr.UpdatedAt,
 			}
@@ -279,6 +280,7 @@ func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*d
 				Name:       attr.Name,
 				ColorCode:  attr.ColorCode,
 				PropertyID: attr.PropertyID,
+				IsActive:   attr.IsActive,
 				CreatedAt:  attr.CreatedAt,
 				UpdatedAt:  attr.UpdatedAt,
 			})

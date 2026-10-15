@@ -34,7 +34,7 @@ func (*CreateItemCategoryPropertyRequest) SchemaExample() any {
 
 // Creates a property and attaches it to an item category, returning the new property.
 //
-// The property is one of your account's properties like any other, starting with no attributes, and the category carries it from the moment it exists. Both happen in one request that needs only permission to update the category. A name already used by one of your account's properties returns a conflict error naming `name`.
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets `property_ids` on Create or Update Item Category.
 type CreateItemCategoryPropertyEndpoint struct{}
 
 func (e *CreateItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryPropertyRequest, *apiresource.Property] {
@@ -44,10 +44,8 @@ func (e *CreateItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpo
 		Route:             "/v1/catalog/item-categories/{id}/properties",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,

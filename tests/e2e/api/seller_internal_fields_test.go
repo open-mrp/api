@@ -20,7 +20,6 @@ import (
 var sellerInternalFields = map[string][]string{
 	"production_run":    {"responsible_user", "batch_count", "batch_summaries"},
 	"item":              {"burn_rate", "notes"},
-	"item_category":     {"notes"},
 	"product_line":      {"default_lot", "fulfillment_policy", "notes", "commission_policy"},
 	"customer":          {"note", "commission_policy"},
 	"customer_defaults": {"fulfillment_policy"},
@@ -167,15 +166,6 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 	// The API takes no product line notes; the seller's team writes them in the dashboard.
 	_, err := authDB(t).Exec("UPDATE product_line SET notes = ? WHERE id = ?", "Renegotiate with the mill before the spring run", jsonField(line, "id"))
 	require.NoError(t, err)
-	category := createAndCleanup(t, itemCategoriesPath, map[string]any{
-		"name":          uniqueName("e2e-internal-notes-itcg"),
-		"type":          "product_category",
-		"unit_group_id": SeedUnitGroupID,
-	})
-	categoryPath := itemCategoriesPath + "/" + jsonField(category, "id")
-	status, body, err := apiClient.Patch(categoryPath, map[string]any{"notes": "Only the second shift knits these"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, http.StatusOK, status, body)
 	product := createAndCleanup(t, productsPath, map[string]any{
 		"sku":               uniqueName("e2e-internal-notes-pd"),
 		"type":              "sale",
@@ -199,7 +189,6 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"), who)
 		assert.Equal(t, "Margin is thin on this one", jsonField(itemOf(client), "notes"), who)
 	}
-	assert.Equal(t, "Only the second shift knits these", jsonField(parseJSON(mustGetAs(t, apiClient, categoryPath, nil)), "notes"))
 
 	for who, portal := range portalClients(t) {
 		got := parseJSON(mustGetAs(t, portal, linePath, nil))
@@ -210,10 +199,6 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 		item := itemOf(portal)
 		assertNilField(t, item, "notes")
 		assert.NotEmpty(t, jsonField(item, "sku"), "%s still reads the item", who)
-
-		got = parseJSON(mustGetAs(t, portal, categoryPath, nil))
-		assertNilField(t, got, "notes")
-		assert.Equal(t, jsonField(category, "name"), jsonField(got, "name"), "%s still reads the category", who)
 	}
 }
 

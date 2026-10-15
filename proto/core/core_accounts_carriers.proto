@@ -156,12 +156,16 @@ message AttributeInfo {
   bool is_public = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  string property_id = 8;
+  // active | archived
+  string status = 9;
 }
 message ListPropertiesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  repeated string item_category_ids = 5;
 }
 message ListPropertiesResponse {
   repeated PropertyInfo properties = 1;
@@ -217,6 +221,8 @@ message ListAttributesRequest {
   optional string cursor = 2;
   int32 limit = 3;
   optional string query = 4;
+  // Unset returns every status.
+  optional bool is_active = 5;
 }
 message ListAttributesResponse {
   repeated AttributeInfo attributes = 1;
@@ -234,6 +240,8 @@ message CreateAttributeRequest {
   string value = 2;
   string color_code = 3;
   int32 sort_order = 4;
+  // active | archived; unset is active.
+  optional string status = 5;
 }
 message CreateAttributeResponse {
   AttributeInfo attribute = 1;
@@ -244,6 +252,7 @@ message UpdateAttributeRequest {
   optional string value = 3;
   optional string color_code = 4;
   optional int32 sort_order = 5;
+  optional string status = 6;
 }
 message UpdateAttributeResponse {
   AttributeInfo attribute = 1;
@@ -530,6 +539,8 @@ message ItemAttributeInfo {
   string property_id = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // active | archived
+  string status = 8;
 }
 message ItemInfo {
   string id = 1;

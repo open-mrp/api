@@ -17,15 +17,15 @@ import (
 // Request to list properties.
 type ListPropertiesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return properties attached to at least one of these item categories.
+	ItemCategoryIDs []string `query:"item_category_ids" validate:"omitempty,max=100"`
 }
 
-// Returns a paginated list of properties for the target account.
+// Returns a list of properties.
 //
-// Properties come back newest first. The `q` search term is matched against the property name.
+// Properties are sorted by creation date, newest first.
 type ListPropertiesEndpoint struct{}
 
 func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]] {
@@ -38,7 +38,6 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,

@@ -3,6 +3,7 @@ package volumediscountep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -318,7 +319,7 @@ func stashVolumeDiscountMeta(ctx context.Context, meta *include.LoadMeta, d *pb.
 			UpdatedAt: grpcutil.TimestampToTime(cat.UpdatedAt),
 		}
 		if cat.Type != nil {
-			categories[i].Type = constants.ItemCategoryType(*cat.Type)
+			categories[i].Type = constants.ItemCategoryTypeFromCode(*cat.Type)
 		}
 	}
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "categories",
@@ -332,6 +333,7 @@ func stashVolumeDiscountMeta(ctx context.Context, meta *include.LoadMeta, d *pb.
 			ID:        attr.Id,
 			Object:    constants.ObjectTypeAttribute,
 			Value:     attr.Name,
+			Status:    constants.ArchiveStatus(attr.Status),
 			CreatedAt: grpcutil.TimestampToTime(attr.CreatedAt),
 			UpdatedAt: grpcutil.TimestampToTime(attr.UpdatedAt),
 		}

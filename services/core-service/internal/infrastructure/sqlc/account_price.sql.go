@@ -219,6 +219,7 @@ SELECT
     a.id,
     a.text,
     a.color_code,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM account_price_attribute apa
@@ -230,6 +231,7 @@ type GetAccountPriceAttributesRow struct {
 	ID        string
 	Text      string
 	ColorCode string
+	IsActive  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -247,6 +249,7 @@ func (q *Queries) GetAccountPriceAttributes(ctx context.Context, accountPriceID 
 			&i.ID,
 			&i.Text,
 			&i.ColorCode,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

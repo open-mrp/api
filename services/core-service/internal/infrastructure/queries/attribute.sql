@@ -7,6 +7,7 @@ SELECT
     attribute.color_code,
     attribute.`order`,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -16,6 +17,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR attribute.text LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR attribute.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_order') IS NULL
     OR attribute.`order` > sqlc.narg('cursor_order')
@@ -33,6 +35,7 @@ SELECT
     attribute.color_code,
     attribute.`order`,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -42,6 +45,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR attribute.text LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR attribute.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_order') IS NULL
     OR attribute.`order` < sqlc.narg('cursor_order')
@@ -59,6 +63,7 @@ SELECT
     attribute.color_code,
     attribute.`order`,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -74,6 +79,7 @@ INSERT INTO attribute (
     account_id,
     color_code,
     `order`,
+    is_active,
     created_at,
     updated_at
 ) VALUES (
@@ -83,6 +89,7 @@ INSERT INTO attribute (
     sqlc.arg('account_id'),
     sqlc.arg('color_code'),
     sqlc.arg('order'),
+    sqlc.arg('is_active'),
     NOW(3),
     NOW(3)
 );
@@ -92,6 +99,7 @@ UPDATE attribute SET
     text = COALESCE(sqlc.narg('text'), text),
     color_code = COALESCE(sqlc.narg('color_code'), color_code),
     `order` = COALESCE(sqlc.narg('order'), `order`),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND property_id = sqlc.arg('property_id')
@@ -112,6 +120,7 @@ SELECT
     attribute.color_code,
     attribute.`order`,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -128,15 +137,17 @@ SELECT
     attribute.color_code,
     attribute.`order`,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
 WHERE attribute.id IN (sqlc.slice('ids'))
 AND attribute.account_id = sqlc.arg('account_id');
 
--- name: CountAttributesByTextInAccount :one
+-- name: CountAttributesByTextInProperty :one
+-- Matching is case-insensitive via the column collation.
 SELECT COUNT(*) FROM attribute
-WHERE text = sqlc.arg('text') AND account_id = sqlc.arg('account_id')
+WHERE property_id = sqlc.arg('property_id') AND text = sqlc.arg('text')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: CountAttributesByProperty :one
@@ -178,16 +189,18 @@ AND account_id = sqlc.arg('account_id')
 AND `order` > sqlc.arg('after_order')
 AND `order` <= sqlc.arg('up_to_order');
 
--- name: FindAttributesByTextsInAccount :many
--- Used by bulk upsert to enforce the account-wide attribute value uniqueness the
--- manual create path enforces via ExistsByValueInAccount, in one batched lookup.
--- Matching is case-insensitive via the column collation.
-SELECT
-    a.id,
-    a.text,
-    a.property_id,
-    p.name AS property_name
-FROM attribute a
-JOIN property p ON p.id = a.property_id
-WHERE a.account_id = sqlc.arg('account_id')
-AND a.text IN (sqlc.slice('texts'));
+-- name: AttributesOfPropertyInUse :one
+-- Whether any of a property's attributes is assigned to an item or scopes an account price or volume discount.
+SELECT EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN _item_attributes ia ON ia.A = a.id
+    WHERE a.property_id = sqlc.arg('property_id')
+) OR EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN account_price_attribute apa ON apa.attribute_id = a.id
+    WHERE a.property_id = sqlc.arg('property_id')
+) OR EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN _quantity_discounts_attributes qa ON qa.A = a.id
+    WHERE a.property_id = sqlc.arg('property_id')
+) AS in_use;

@@ -282,7 +282,7 @@ func TestAuditCoverage_BulkUpsertLocationParentLink(t *testing.T) {
 func TestAuditCoverage_BulkUpsertCategoryPropertyLinks(t *testing.T) {
 	t.Parallel()
 
-	row := bulkUpsertICInput(uniqueName("e2e-audit-cat"), "product_category", SeedUnitGroupID)
+	row := bulkUpsertICInput(uniqueName("e2e-audit-cat"), "product", SeedUnitGroupID)
 	row["property_names"] = []any{uniqueName("e2e-audit-cat-prop")}
 	created, _ := bulkUpsertItemCategoryIDs(t, row)
 	defer cleanupItemCategoryIDs(created)

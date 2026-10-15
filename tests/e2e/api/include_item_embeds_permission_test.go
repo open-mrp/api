@@ -14,7 +14,7 @@ import (
 // dashboardItemIncludes is what the dashboard's item list and category change ask for.
 var dashboardItemIncludes = []string{
 	"category", "category.unit_group", "category.unit_group.base_unit", "category.unit_group.associated_units",
-	"category.unit_group.associated_units.unit", "category.properties", "unit_value", "unit_cost", "burn_rate", "attributes",
+	"category.unit_group.associated_units.unit", "category.properties", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property",
 }
 
 // itemWithAttribute creates a sock in the seeded socks category carrying the seeded attribute, and returns its SKU and item.

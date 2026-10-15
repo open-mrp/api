@@ -45,7 +45,7 @@ func TestCovCatalogItemCategories_CreateValidation_NonexistentUnitGroupID(t *tes
 	t.Parallel()
 	status, body, err := apiClient.Post(itemCategoriesPath, map[string]any{
 		"name":          uniqueName("e2e-itcg-badug"),
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": "ungp_doesnotexist00",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestCovCatalogItemCategories_CreateResponseShape_IDFormat(t *testing.T) {
 	name := uniqueName("e2e-itcg-idfmt")
 	createResp, err := apiClient.PostFull(itemCategoriesPath, map[string]any{
 		"name":          name,
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -123,34 +123,6 @@ func TestCovCatalogItemCategories_UpdateValidation_NameTooLong(t *testing.T) {
 	assertErrorParam(t, errObj, "name")
 }
 
-func TestCovCatalogItemCategories_UpdateValidation_NullNotes(t *testing.T) {
-	t.Parallel()
-	id := covCatalogItemCategoriesCreate(t, "e2e-itcg-nullnotes")
-	defer apiClient.Delete(itemCategoriesPath + "/" + id)
-
-	status, body, err := apiClient.Patch(itemCategoriesPath+"/"+id, map[string]any{
-		"notes": nil,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	assert.Equal(t, 422, status, "Explicit null notes should return 422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "notes")
-}
-
-func TestCovCatalogItemCategories_UpdateValidation_BlankNotes(t *testing.T) {
-	t.Parallel()
-	id := covCatalogItemCategoriesCreate(t, "e2e-itcg-blanknotes")
-	defer apiClient.Delete(itemCategoriesPath + "/" + id)
-
-	status, body, err := apiClient.Patch(itemCategoriesPath+"/"+id, map[string]any{
-		"notes": "",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	assert.Equal(t, 422, status, "Blank notes should return 422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "notes")
-}
-
 func TestCovCatalogItemCategories_UpdateNotFound(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Patch(itemCategoriesPath+"/itcg_000000000000", map[string]any{
@@ -165,7 +137,7 @@ func TestCovCatalogItemCategories_UpdateNotFound(t *testing.T) {
 
 func TestCovCatalogItemCategories_ListFilterByType_InvalidValue(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(itemCategoriesPath, url.Values{"type": {"bogus_type"}})
+	status, body, err := apiClient.GetListRaw(itemCategoriesPath, url.Values{"types[]": {"bogus_type"}})
 	require.NoError(t, err)
 	require.False(t, status >= 500, "invalid type filter should never 5xx, got %d: %s", status, string(body))
 	assert.Equal(t, 400, status,
@@ -189,10 +161,10 @@ func TestCovCatalogItemCategories_AddPropertyNotFound(t *testing.T) {
 	id := covCatalogItemCategoriesCreate(t, "e2e-itcg-addpropnf")
 	defer apiClient.Delete(itemCategoriesPath + "/" + id)
 
-	status, body, err := apiClient.Put(itemCategoriesPath+"/"+id+"/properties/pp_000000000000", nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/properties/pp_000000000000", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "Adding a nonexistent property should return 404, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requirePreview9Error(t, body, "resource_not_found")
 }
 
 func TestCovCatalogItemCategories_AddPropertyDuplicateConflict(t *testing.T) {
@@ -201,17 +173,17 @@ func TestCovCatalogItemCategories_AddPropertyDuplicateConflict(t *testing.T) {
 	defer apiClient.Delete(itemCategoriesPath + "/" + id)
 
 	// First add succeeds.
-	addStatus, addBody, err := apiClient.Put(itemCategoriesPath+"/"+id+"/properties/"+SeedPropertyID, nil)
+	addStatus, addBody, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/properties/"+SeedPropertyID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, addStatus, addBody)
 
 	// Adding the same property again is a documented conflict (same name already on the category).
-	dupStatus, dupBody, err := apiClient.Put(itemCategoriesPath+"/"+id+"/properties/"+SeedPropertyID, nil)
+	dupStatus, dupBody, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/properties/"+SeedPropertyID, nil)
 	require.NoError(t, err)
 	require.False(t, dupStatus >= 500, "duplicate property add should never 5xx, got %d: %s", dupStatus, string(dupBody))
 	assert.Equal(t, 409, dupStatus,
 		"Adding a duplicate property name should return 409, got %d: %s", dupStatus, string(dupBody))
-	errObj := requireErrorResponse(t, dupBody, "resource_conflict", "invalid_request_error")
+	errObj := requirePreview9Error(t, dupBody, "resource_conflict")
 	assertErrorParam(t, errObj, "property_id")
 }
 
@@ -220,10 +192,10 @@ func TestCovCatalogItemCategories_RemovePropertyNonexistentID(t *testing.T) {
 	id := covCatalogItemCategoriesCreate(t, "e2e-itcg-rmpropnf")
 	defer apiClient.Delete(itemCategoriesPath + "/" + id)
 
-	status, body, err := apiClient.Delete(itemCategoriesPath + "/" + id + "/properties/pp_000000000000")
+	status, body, err := apiClient.WithAPIVersion(preview9Version).Delete(itemCategoriesPath + "/" + id + "/properties/pp_000000000000")
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "Removing a property_id that doesn't exist at all should return 404, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requirePreview9Error(t, body, "resource_not_found")
 }
 
 func TestCovCatalogItemCategories_RemovePropertyNeverAddedIsNoOp(t *testing.T) {
@@ -233,7 +205,7 @@ func TestCovCatalogItemCategories_RemovePropertyNeverAddedIsNoOp(t *testing.T) {
 
 	// covCatalogItemCategoriesRealPropertyID exists as a real property but was never
 	// added to this fresh category — removing it is a no-op, not a 404.
-	status, body, err := apiClient.Delete(itemCategoriesPath + "/" + id + "/properties/" + covCatalogItemCategoriesRealPropertyID)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).Delete(itemCategoriesPath + "/" + id + "/properties/" + covCatalogItemCategoriesRealPropertyID)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status, "Removing a real property never associated with the category should be a 200 no-op, got %d: %s", status, string(body))
 }
@@ -295,7 +267,7 @@ func covCatalogItemCategoriesCreate(t *testing.T, namePrefix string) string {
 	t.Helper()
 	status, body, err := apiClient.Post(itemCategoriesPath, map[string]any{
 		"name":          uniqueName(namePrefix),
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)

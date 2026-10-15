@@ -484,6 +484,8 @@ type PropertyRepo interface {
 	FindByNames(ctx context.Context, accountID string, names []string) ([]*Property, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	DeleteAttributesByPropertyID(ctx context.Context, propertyID, accountID string) *apierror.APIError
+	// AttributesInUse reports whether any of the property's attributes is assigned or scopes a price.
+	AttributesInUse(ctx context.Context, propertyID string) (bool, *apierror.APIError)
 	Export(ctx context.Context, params ExportPropertiesParams) ([]*Property, *apierror.APIError)
 }
 
@@ -495,8 +497,8 @@ type AttributeRepo interface {
 	Create(ctx context.Context, id string, params CreateAttributeParams) (*Attribute, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAttributeParams) (*Attribute, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteAttributeParams) *apierror.APIError
-	ExistsByValueInAccount(ctx context.Context, accountID, value string, excludeID *string) (bool, *apierror.APIError)
-	FindByTextsInAccount(ctx context.Context, accountID string, texts []string) ([]*AttributeTextMatch, *apierror.APIError)
+	// ExistsByValueInProperty matches value case-insensitively among the property's attributes.
+	ExistsByValueInProperty(ctx context.Context, propertyID, value string, excludeID *string) (bool, *apierror.APIError)
 	CountByProperty(ctx context.Context, propertyID, accountID string) (int64, *apierror.APIError)
 	ShiftOrdersUp(ctx context.Context, propertyID, accountID string, fromOrder int32) *apierror.APIError
 	ShiftOrdersDown(ctx context.Context, propertyID, accountID string, afterOrder int32) *apierror.APIError
@@ -738,6 +740,8 @@ type ItemCategoryRepo interface {
 	AddProperty(ctx context.Context, params AddItemCategoryPropertyParams) *apierror.APIError
 	UpsertProperty(ctx context.Context, itemCategoryID, propertyID string) *apierror.APIError
 	RemoveProperty(ctx context.Context, params RemoveItemCategoryPropertyParams) *apierror.APIError
+	// ReplaceProperties sets the category's properties to exactly propertyIDs.
+	ReplaceProperties(ctx context.Context, itemCategoryID string, propertyIDs []string) *apierror.APIError
 	ChangeUnitGroup(ctx context.Context, params ChangeItemCategoryUnitGroupParams) *apierror.APIError
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
 	GetProperties(ctx context.Context, itemCategoryID string) ([]*ItemCategoryProperty, *apierror.APIError)

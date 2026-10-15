@@ -88,7 +88,7 @@ func TestChangeItemCategoryInTx_MovesTheItemAndItsUnits(t *testing.T) {
 	gomock.InOrder(
 		r.items.EXPECT().Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_cat", ItemID: "itm_part", Includes: []string{"attributes"}}).Return(partItem("ic_old", "Old"), nil),
 		r.category.EXPECT().Get(gomock.Any(), domain.GetItemCategoryParams{AccountID: "ac_cat", ItemCategoryID: "ic_new"}).
-			Return(&domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeProduct)}, nil),
+			Return(&domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: constants.ItemCategoryTypeProduct.Code()}, nil),
 		r.items.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "ic_new").Return("un_pair", "", nil),
 		r.items.EXPECT().ChangeCategory(gomock.Any(), domain.ChangeItemCategoryParams{AccountID: "ac_cat", ItemID: "itm_part", CategoryID: "ic_new"}).Return(nil),
 		r.items.EXPECT().UpdateRateUnits(gomock.Any(), "ac_cat", "itm_part", "un_pair").Return(nil),
@@ -109,7 +109,7 @@ func TestChangeItemCategoryInTx_CurrentCategoryPublishesNothing(t *testing.T) {
 	r := newCategoryChangeRepos(t)
 
 	r.items.EXPECT().Get(gomock.Any(), gomock.Any()).Return(partItem("ic_same", "Same"), nil).Times(2)
-	r.category.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ItemCategoryFull{ID: "ic_same", ItemCategoryTypeCode: string(constants.ItemCategoryTypeProduct)}, nil)
+	r.category.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ItemCategoryFull{ID: "ic_same", ItemCategoryTypeCode: constants.ItemCategoryTypeProduct.Code()}, nil)
 	r.items.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "ic_same").Return("un_each", "", nil)
 	r.items.EXPECT().ChangeCategory(gomock.Any(), gomock.Any()).Return(nil)
 	r.items.EXPECT().UpdateRateUnits(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -138,7 +138,7 @@ func TestChangeItemCategoryInTx_RefusesWithoutWriting(t *testing.T) {
 		{
 			name:     "a part to a material category",
 			item:     partItem("ic_old", "Old"),
-			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeMaterial)},
+			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: constants.ItemCategoryTypeMaterial.Code()},
 			wantCode: apierror.CodeValidationFailed,
 			param:    "category_id",
 		},
@@ -146,7 +146,7 @@ func TestChangeItemCategoryInTx_RefusesWithoutWriting(t *testing.T) {
 			name: "a category that strands an attribute",
 			item: &domain.Item{ID: "itm_part", ItemTypeCode: string(constants.ItemTypeCodePart), ItemCategoryID: "ic_old",
 				Attributes: []*domain.ItemAttribute{{ID: "at_red", Value: "Red", PropertyID: "pp_color"}}},
-			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeProduct)},
+			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: constants.ItemCategoryTypeProduct.Code()},
 			props:    []*domain.ItemCategoryProperty{{ID: "pp_size"}},
 			wantCode: apierror.CodeValidationFailed,
 			param:    "category_id",
@@ -203,7 +203,7 @@ func TestUpdatePart_MovesTheCategoryUnderThePartPermission(t *testing.T) {
 	gomock.InOrder(
 		r.parts.EXPECT().Get(gomock.Any(), gomock.Any()).Return(partBefore, nil),
 		r.items.EXPECT().Get(gomock.Any(), gomock.Any()).Return(partItem("ic_old", "Old"), nil),
-		r.category.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeProduct)}, nil),
+		r.category.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: constants.ItemCategoryTypeProduct.Code()}, nil),
 		r.items.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "ic_new").Return("un_pair", "", nil),
 		r.items.EXPECT().ChangeCategory(gomock.Any(), gomock.Any()).Return(nil),
 		r.items.EXPECT().UpdateRateUnits(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),

@@ -223,6 +223,7 @@ SELECT
     a.id,
     a.text,
     a.color_code,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM account_price_attribute apa

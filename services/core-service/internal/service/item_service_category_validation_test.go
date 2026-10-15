@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 
@@ -21,12 +22,12 @@ func TestCategoryTypeMatchesItem(t *testing.T) {
 		categoryType   string
 		wantCompatible bool
 	}{
-		{"material to material category", string(constants.ItemTypeCodeMaterial), string(constants.ItemCategoryTypeMaterial), true},
-		{"material to product category", string(constants.ItemTypeCodeMaterial), string(constants.ItemCategoryTypeProduct), false},
-		{"product to product category", string(constants.ItemTypeCodeProduct), string(constants.ItemCategoryTypeProduct), true},
-		{"product to material category", string(constants.ItemTypeCodeProduct), string(constants.ItemCategoryTypeMaterial), false},
-		{"part to product category", string(constants.ItemTypeCodePart), string(constants.ItemCategoryTypeProduct), true},
-		{"part to material category", string(constants.ItemTypeCodePart), string(constants.ItemCategoryTypeMaterial), false},
+		{"material to material category", string(constants.ItemTypeCodeMaterial), constants.ItemCategoryTypeMaterial.Code(), true},
+		{"material to product category", string(constants.ItemTypeCodeMaterial), constants.ItemCategoryTypeProduct.Code(), false},
+		{"product to product category", string(constants.ItemTypeCodeProduct), constants.ItemCategoryTypeProduct.Code(), true},
+		{"product to material category", string(constants.ItemTypeCodeProduct), constants.ItemCategoryTypeMaterial.Code(), false},
+		{"part to product category", string(constants.ItemTypeCodePart), constants.ItemCategoryTypeProduct.Code(), true},
+		{"part to material category", string(constants.ItemTypeCodePart), constants.ItemCategoryTypeMaterial.Code(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -59,7 +60,8 @@ func attributeValidationRepos(t *testing.T, attributes []*domain.Attribute, prop
 func TestValidateAttributesForCategory(t *testing.T) {
 	t.Parallel()
 
-	red := &domain.Attribute{ID: "at_red", Value: "Red", PropertyID: "pp_color"}
+	red := &domain.Attribute{ID: "at_red", Value: "Red", PropertyID: "pp_color", IsActive: true}
+	archived := &domain.Attribute{ID: "at_old", Value: "Old", PropertyID: "pp_color"}
 	color := &domain.ItemCategoryProperty{ID: "pp_color"}
 	size := &domain.ItemCategoryProperty{ID: "pp_size"}
 
@@ -74,6 +76,7 @@ func TestValidateAttributesForCategory(t *testing.T) {
 		{"property carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{color, size}, []string{"at_red"}, ""},
 		{"property not carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{size}, []string{"at_red"}, apierror.CodeValidationFailed},
 		{"category carries nothing", []*domain.Attribute{red}, nil, []string{"at_red"}, apierror.CodeValidationFailed},
+		{"archived attribute", []*domain.Attribute{archived}, []*domain.ItemCategoryProperty{color}, []string{"at_old"}, apperr.CodeResourceArchived},
 		{"attribute outside the account", nil, []*domain.ItemCategoryProperty{color}, []string{"at_red"}, apierror.CodeResourceNotFound},
 	}
 

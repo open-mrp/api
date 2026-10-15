@@ -296,6 +296,13 @@ func init() {
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeAttribute,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "property", ObjectType: constants.ObjectTypeProperty},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccount,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "default_billing_address", ObjectType: constants.ObjectTypeAddress},

@@ -2,8 +2,6 @@ package propertyep
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -14,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -63,9 +62,10 @@ func NewPropertySvc(config *PropertySvcConfig) PropertySvc {
 
 func (m *propertySvcImpl) ListProperties(ctx context.Context, req *ListPropertiesRequest) (*apiresource.List[apiresource.Property], *apierror.APIError) {
 	pbReq := &pb.ListPropertiesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:          req.Cursor,
+		Limit:           req.Limit,
+		Query:           req.Query,
+		ItemCategoryIds: req.ItemCategoryIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.list", domain.ServiceName,
@@ -200,6 +200,7 @@ func (m *propertySvcImpl) ListAttributes(ctx context.Context, req *ListAttribute
 		Cursor:     req.Cursor,
 		Limit:      req.Limit,
 		Query:      req.Query,
+		IsActive:   constants.IsActiveFilter(req.Statuses),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.list", domain.ServiceName,
@@ -243,11 +244,9 @@ func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttribu
 }
 
 func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
-	var colorCode constants.Color
+	colorCode := constants.ColorDefault
 	if c, ok := req.ColorCode.Value(); ok {
 		colorCode = c
-	} else {
-		colorCode = randomColor()
 	}
 
 	var sortOrder int32 = -1
@@ -263,6 +262,7 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 		Value:      req.Value,
 		ColorCode:  string(colorCode),
 		SortOrder:  sortOrder,
+		Status:     archiveStatusPtr(req.Status),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.create", domain.ServiceName,
@@ -294,6 +294,7 @@ func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttrib
 		Value:      req.Value.Ptr(),
 		ColorCode:  colorCode,
 		SortOrder:  req.SortOrder.Ptr(),
+		Status:     archiveStatusPtr(req.Status),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.update", domain.ServiceName,
@@ -326,23 +327,14 @@ func (m *propertySvcImpl) DeleteAttribute(ctx context.Context, req *DeleteAttrib
 	return &apiresource.EmptyResource{}, nil
 }
 
-var assignableColors = []constants.Color{
-	constants.ColorBlue,
-	constants.ColorBrown,
-	constants.ColorGray,
-	constants.ColorGreen,
-	constants.ColorOrange,
-	constants.ColorPink,
-	constants.ColorPurple,
-	constants.ColorRed,
-	constants.ColorYellow,
-}
-
-func randomColor() constants.Color {
-	var b [8]byte
-	_, _ = rand.Read(b[:])
-	idx := binary.LittleEndian.Uint64(b[:]) % uint64(len(assignableColors))
-	return assignableColors[idx]
+// archiveStatusPtr is a request's optional status as core takes it.
+func archiveStatusPtr(status field.Optional[constants.ArchiveStatus]) *string {
+	v, ok := status.Value()
+	if !ok {
+		return nil
+	}
+	code := string(v)
+	return &code
 }
 
 func loadPropertyByID(ctx context.Context, id string) (*apiresource.Property, *apierror.APIError) {

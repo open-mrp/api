@@ -104,16 +104,25 @@ type CreateItemCategoryParams struct {
 	Name                 string
 	Notes                *string
 	ItemCategoryTypeCode string
-	UnitGroupID          string
-	Includes             []string
+	// UnitGroupID empty uses DefaultItemCategoryUnitGroupID.
+	UnitGroupID string
+	// PropertyIDs are attached to the new category.
+	PropertyIDs []string
+	Includes    []string
 }
+
+// DefaultItemCategoryUnitGroupID is the system group a category gets when none is named: items in it are
+// counted in each.
+const DefaultItemCategoryUnitGroupID = "each_group"
 
 type UpdateItemCategoryParams struct {
 	AccountID      string
 	ItemCategoryID string
 	Name           *string
 	Notes          *string
-	Includes       []string
+	// PropertyIDs, when non-nil, replaces the category's properties.
+	PropertyIDs *[]string
+	Includes    []string
 }
 
 type UpdateItemCategoryWithUnitGroupParams struct {
@@ -181,3 +190,13 @@ type ResolvedUpsertItemCategoryRow struct {
 type BulkUpsertItemCategoriesParams struct {
 	ItemCategories []UpsertItemCategoryParams
 }
+
+// ItemCategoryReferences blocks deleting a category that items or prices still use.
+var ItemCategoryReferences = RegisterReferences(References{
+	Noun: "item category",
+	Probes: []ReferenceProbe{
+		{Label: "items", Table: "item", Column: "item_category_id"},
+		{Label: "account prices", Table: "account_price_item_category", Column: "item_category_id"},
+		{Label: "volume discounts", Table: "_item_categories_quantity_discounts", Column: "A"},
+	},
+})

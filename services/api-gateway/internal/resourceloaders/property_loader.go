@@ -2,6 +2,8 @@ package resourceloaders
 
 import (
 	"context"
+	"net/url"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -43,7 +45,7 @@ func StashPropertyMeta(ctx context.Context, p *pb.PropertyInfo) {
 		attrs[i] = *AttributeFromProto(a)
 	}
 	include.GetLoadMeta(ctx).Set(constants.ObjectTypeProperty, p.Id, "attributes_list",
-		apiresource.NewList(attrs, apiresource.PageInfo{}))
+		apiresource.NewEmbeddedList(attrs, false, PropertyAttributesListPath(p.Id), nil))
 }
 
 func PropertyFromProto(p *pb.PropertyInfo) *apiresource.Property {
@@ -89,4 +91,9 @@ func LoadPropertiesByID(ctx context.Context, ids ...string) (map[string]*apireso
 		}
 	}
 	return out, nil
+}
+
+// PropertyAttributesListPath is the list of a property's attributes, where its embedded attributes continue.
+func PropertyAttributesListPath(propertyID string) string {
+	return "/v1/catalog/properties/" + url.PathEscape(propertyID) + "/attributes"
 }

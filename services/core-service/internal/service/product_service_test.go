@@ -272,7 +272,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Times(1)
 	s.itemRepo.EXPECT().
 		GetCategoryBaseUnitID(gomock.Any(), "cat_123").
-		Return("un_base", string(constants.ItemCategoryTypeProduct), nil).
+		Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).
 		Times(1)
 
 	// unit_price and unit_cost validate their numerator/denominator dimensions.
@@ -317,7 +317,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 	// Both attributes are checked against the account and the category's properties before linking.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red", "attr_large"}).
-		Return([]*domain.Attribute{{ID: "attr_red", PropertyID: "prop_color"}, {ID: "attr_large", PropertyID: "prop_size"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_red", PropertyID: "prop_color", IsActive: true}, {ID: "attr_large", PropertyID: "prop_size", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").
@@ -382,7 +382,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).Times(1)
 
 	// unit_value and unit_cost default to zero; burn_rate defaults to zero per day.
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "un_base").Return(nil).Times(2)
@@ -415,7 +415,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_AttributeOutsideCategoryProperti
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-BAD-ATTR", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).Times(1)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(2)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "day").Return(nil).Times(1)
 	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -429,7 +429,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_AttributeOutsideCategoryProperti
 	// The attribute exists in the account but hangs off a property the category doesn't carry.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red"}).
-		Return([]*domain.Attribute{{ID: "attr_red", Value: "Red", PropertyID: "prop_color"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_red", Value: "Red", PropertyID: "prop_color", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").
@@ -481,7 +481,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-A", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).Times(1)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(2)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "day").Return(nil).Times(1)
 	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -495,7 +495,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 	// Blank ids are dropped before validation; only the non-blank one is validated and then linked.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_only"}).
-		Return([]*domain.Attribute{{ID: "attr_only", PropertyID: "prop_color"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_only", PropertyID: "prop_color", IsActive: true}}, nil).
 		Times(1)
 	s.itemCategoryRepo.EXPECT().
 		GetProperties(gomock.Any(), "cat_123").
@@ -532,7 +532,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsNonCurrencyNumeratorOnUni
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).Times(1)
 
 	// unit_price validates first and passes.
 	s.unitRepo.EXPECT().
@@ -571,7 +571,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnit
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-Y", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", constants.ItemCategoryTypeProduct.Code(), nil).Times(1)
 
 	// unit_price validation: denominator un_usd is currency → reject. No InsertRate called.
 	s.unitRepo.EXPECT().

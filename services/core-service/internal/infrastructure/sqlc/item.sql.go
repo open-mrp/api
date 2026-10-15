@@ -744,6 +744,7 @@ SELECT
     a.color_code,
     a.property_id,
     a.` + "`" + `order` + "`" + `,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM _item_attributes ia
@@ -757,6 +758,7 @@ type GetItemAttributesRow struct {
 	ColorCode  string
 	PropertyID string
 	Order      int32
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -776,6 +778,7 @@ func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetIt
 			&i.ColorCode,
 			&i.PropertyID,
 			&i.Order,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -800,6 +803,7 @@ SELECT
     a.color_code,
     a.property_id,
     a.` + "`" + `order` + "`" + `,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM _item_attributes ia
@@ -814,6 +818,7 @@ type GetItemAttributesByItemIDsRow struct {
 	ColorCode  string
 	PropertyID string
 	Order      int32
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -844,6 +849,7 @@ func (q *Queries) GetItemAttributesByItemIDs(ctx context.Context, itemIds []stri
 			&i.ColorCode,
 			&i.PropertyID,
 			&i.Order,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

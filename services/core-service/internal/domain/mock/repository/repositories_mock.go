@@ -5135,6 +5135,21 @@ func (m *MockPropertyRepo) EXPECT() *MockPropertyRepoMockRecorder {
 	return m.recorder
 }
 
+// AttributesInUse mocks base method.
+func (m *MockPropertyRepo) AttributesInUse(ctx context.Context, propertyID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AttributesInUse", ctx, propertyID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AttributesInUse indicates an expected call of AttributesInUse.
+func (mr *MockPropertyRepoMockRecorder) AttributesInUse(ctx, propertyID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttributesInUse", reflect.TypeOf((*MockPropertyRepo)(nil).AttributesInUse), ctx, propertyID)
+}
+
 // Create mocks base method.
 func (m *MockPropertyRepo) Create(ctx context.Context, id string, params domain.CreatePropertyParams) (*domain.Property, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5366,34 +5381,19 @@ func (mr *MockAttributeRepoMockRecorder) Delete(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAttributeRepo)(nil).Delete), ctx, params)
 }
 
-// ExistsByValueInAccount mocks base method.
-func (m *MockAttributeRepo) ExistsByValueInAccount(ctx context.Context, accountID, value string, excludeID *string) (bool, *apierror.APIError) {
+// ExistsByValueInProperty mocks base method.
+func (m *MockAttributeRepo) ExistsByValueInProperty(ctx context.Context, propertyID, value string, excludeID *string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExistsByValueInAccount", ctx, accountID, value, excludeID)
+	ret := m.ctrl.Call(m, "ExistsByValueInProperty", ctx, propertyID, value, excludeID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// ExistsByValueInAccount indicates an expected call of ExistsByValueInAccount.
-func (mr *MockAttributeRepoMockRecorder) ExistsByValueInAccount(ctx, accountID, value, excludeID any) *gomock.Call {
+// ExistsByValueInProperty indicates an expected call of ExistsByValueInProperty.
+func (mr *MockAttributeRepoMockRecorder) ExistsByValueInProperty(ctx, propertyID, value, excludeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByValueInAccount", reflect.TypeOf((*MockAttributeRepo)(nil).ExistsByValueInAccount), ctx, accountID, value, excludeID)
-}
-
-// FindByTextsInAccount mocks base method.
-func (m *MockAttributeRepo) FindByTextsInAccount(ctx context.Context, accountID string, texts []string) ([]*domain.AttributeTextMatch, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindByTextsInAccount", ctx, accountID, texts)
-	ret0, _ := ret[0].([]*domain.AttributeTextMatch)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// FindByTextsInAccount indicates an expected call of FindByTextsInAccount.
-func (mr *MockAttributeRepoMockRecorder) FindByTextsInAccount(ctx, accountID, texts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByTextsInAccount", reflect.TypeOf((*MockAttributeRepo)(nil).FindByTextsInAccount), ctx, accountID, texts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByValueInProperty", reflect.TypeOf((*MockAttributeRepo)(nil).ExistsByValueInProperty), ctx, propertyID, value, excludeID)
 }
 
 // Get mocks base method.
@@ -8079,6 +8079,20 @@ func (m *MockItemCategoryRepo) RemoveProperty(ctx context.Context, params domain
 func (mr *MockItemCategoryRepoMockRecorder) RemoveProperty(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveProperty", reflect.TypeOf((*MockItemCategoryRepo)(nil).RemoveProperty), ctx, params)
+}
+
+// ReplaceProperties mocks base method.
+func (m *MockItemCategoryRepo) ReplaceProperties(ctx context.Context, itemCategoryID string, propertyIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceProperties", ctx, itemCategoryID, propertyIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReplaceProperties indicates an expected call of ReplaceProperties.
+func (mr *MockItemCategoryRepoMockRecorder) ReplaceProperties(ctx, itemCategoryID, propertyIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceProperties", reflect.TypeOf((*MockItemCategoryRepo)(nil).ReplaceProperties), ctx, itemCategoryID, propertyIDs)
 }
 
 // Update mocks base method.

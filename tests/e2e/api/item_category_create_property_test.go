@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Creating a property from a category is one request under item_categories:update: the new property is created in the account and attached to the category together.
+// Creating a property from a category is one request under item_categories:update: the new property is created in the account and attached to the category together. The route is kept for preview.9 callers only.
 
 func categoryPropertiesPath(categoryID string) string {
 	return itemCategoriesPath + "/" + categoryID + "/properties"
@@ -22,7 +22,7 @@ func categoryPropertiesPath(categoryID string) string {
 func trackCategoryProperty(t *testing.T, categoryID, propertyID string) {
 	t.Helper()
 	t.Cleanup(func() {
-		_, _, _ = apiClient.Delete(categoryPropertiesPath(categoryID) + "/" + propertyID)
+		_, _, _ = apiClient.WithAPIVersion(preview9Version).Delete(categoryPropertiesPath(categoryID) + "/" + propertyID)
 		_, _, _ = apiClient.Delete(propertiesPath + "/" + propertyID)
 	})
 }
@@ -42,7 +42,7 @@ func categoryPropertyIDs(t *testing.T, categoryID string) []string {
 func TestItemCategoryProperties_CreateUnderItemCategoriesUpdateAlone(t *testing.T) {
 	t.Parallel()
 	categoryID := productCategoryInEaches(t)
-	editor := customRoleClient(t, "item_categories:update")
+	editor := customRoleClient(t, "item_categories:update").WithAPIVersion(preview9Version)
 	name := uniqueName("e2e-catprop")
 	key := newIdempotencyKey()
 
@@ -99,36 +99,37 @@ func TestItemCategoryProperties_CreateRefusals(t *testing.T) {
 	}{
 		{"a role holding properties:create alone", customRoleClient(t, "properties:create"), categoryID, map[string]any{"name": uniqueName("e2e-catprop-ref")},
 			func(t *testing.T, status int, body []byte) {
-				requirePermissionRefused(t, status, body, "item_categories:update")
+				requireStatus(t, http.StatusForbidden, status, body)
+				assert.Contains(t, jsonField(requirePreview9Error(t, body, "insufficient_permissions"), "message"), "item_categories:update")
 			}},
 		{"a name the account already uses", apiClient, categoryID, map[string]any{"name": takenName},
 			func(t *testing.T, status int, body []byte) {
 				requireStatus(t, http.StatusConflict, status, body)
-				assertErrorParam(t, requireErrorResponse(t, body, "resource_conflict", "invalid_request_error"), "name")
+				assertErrorParam(t, requirePreview9Error(t, body, "resource_conflict"), "name")
 			}},
 		{"no name", apiClient, categoryID, map[string]any{},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
+				requireStatus(t, http.StatusBadRequest, status, body)
 				assertErrorParam(t, parseJSON(body)["error"].(map[string]any), "name")
 			}},
 		{"a name longer than 255 characters", apiClient, categoryID, map[string]any{"name": strings.Repeat("n", 256)},
 			func(t *testing.T, status int, body []byte) {
-				requireStatus(t, http.StatusUnprocessableEntity, status, body)
+				requireStatus(t, http.StatusBadRequest, status, body)
 				assertErrorParam(t, parseJSON(body)["error"].(map[string]any), "name")
 			}},
 		{"another tenant's category", apiClient, foreignCategoryID, map[string]any{"name": uniqueName("e2e-catprop-ref")},
 			func(t *testing.T, status int, body []byte) {
 				requireStatus(t, http.StatusNotFound, status, body)
-				requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+				requirePreview9Error(t, body, "resource_not_found")
 			}},
 		{"a default category", apiClient, "shipping", map[string]any{"name": uniqueName("e2e-catprop-ref")},
 			func(t *testing.T, status int, body []byte) {
 				requireStatus(t, http.StatusForbidden, status, body)
-				requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+				requirePreview9Error(t, body, "insufficient_permissions")
 			}},
 	}
 	for _, tc := range cases {
-		status, body, err := tc.client.Post(categoryPropertiesPath(tc.categoryID), tc.body, newIdempotencyKey())
+		status, body, err := tc.client.WithAPIVersion(preview9Version).Post(categoryPropertiesPath(tc.categoryID), tc.body, newIdempotencyKey())
 		require.NoError(t, err)
 		if status == http.StatusCreated {
 			trackCategoryProperty(t, tc.categoryID, jsonField(parseJSON(body), "id"))
@@ -137,4 +138,18 @@ func TestItemCategoryProperties_CreateRefusals(t *testing.T) {
 	}
 
 	assert.Empty(t, categoryPropertyIDs(t, categoryID), "no refused request attached a property")
+
+	status, body, err = apiClient.Post(categoryPropertiesPath(categoryID), map[string]any{"name": uniqueName("e2e-catprop-forge")}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, status, "forge has no create-and-attach route: %s", body)
+}
+
+// requirePreview9Error reads a preview.9 error body, which predates forge's errors list, and checks its code.
+func requirePreview9Error(t *testing.T, body []byte, code string) map[string]any {
+	t.Helper()
+	errObj, ok := parseJSON(body)["error"].(map[string]any)
+	require.True(t, ok, "response has an error object: %s", body)
+	assert.Equal(t, code, errObj["code"], "error.code (body: %s)", body)
+	assert.Equal(t, "invalid_request_error", errObj["type"], "error.type (body: %s)", body)
+	return errObj
 }

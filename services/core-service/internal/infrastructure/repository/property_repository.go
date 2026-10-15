@@ -115,11 +115,13 @@ func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertie
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListPropertiesBackward(ctx, sqlc.ListPropertiesBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-				CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-				Limit:           params.Limit + 1,
+				AccountID:                 params.AccountID,
+				SearchQuery:               searchQuery,
+				IncludeItemCategoryFilter: len(params.ItemCategoryIDs) > 0,
+				ItemCategoryIds:           params.ItemCategoryIDs,
+				CursorCreatedAt:           gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+				CursorID:                  gosql.NullString{String: cur.ID, Valid: true},
+				Limit:                     params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -133,11 +135,13 @@ func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertie
 		}
 
 		rows, err := r.queries.ListPropertiesForward(ctx, sqlc.ListPropertiesForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
+			AccountID:                 params.AccountID,
+			SearchQuery:               searchQuery,
+			IncludeItemCategoryFilter: len(params.ItemCategoryIDs) > 0,
+			ItemCategoryIds:           params.ItemCategoryIDs,
+			CursorCreatedAt:           gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:                  gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                     params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -151,9 +155,11 @@ func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertie
 	}
 
 	rows, err := r.queries.ListPropertiesForward(ctx, sqlc.ListPropertiesForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
+		AccountID:                 params.AccountID,
+		SearchQuery:               searchQuery,
+		IncludeItemCategoryFilter: len(params.ItemCategoryIDs) > 0,
+		ItemCategoryIds:           params.ItemCategoryIDs,
+		Limit:                     params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -347,4 +353,15 @@ func (r *propertyRepoImpl) DeleteAttributesByPropertyID(ctx context.Context, pro
 	}
 
 	return nil
+}
+
+func (r *propertyRepoImpl) AttributesInUse(ctx context.Context, propertyID string) (bool, *apierror.APIError) {
+	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.attributes_in_use")
+	defer span.End()
+
+	inUse, err := r.queries.AttributesOfPropertyInUse(ctx, sqlc.AttributesOfPropertyInUseParams{PropertyID: propertyID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return inUse.Valid && inUse.Bool, nil
 }

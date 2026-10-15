@@ -55,7 +55,7 @@ func (e *ReplaceMachineItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "attributes"},
+			Fields:     []string{"category", "unit_value", "attributes", "attributes.property"},
 		}),
 	})
 }

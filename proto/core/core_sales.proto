@@ -864,6 +864,8 @@ message VolumeDiscountAttributeInfo {
   optional google.protobuf.Timestamp created_at = 4;
   optional google.protobuf.Timestamp updated_at = 5;
   string property_id = 6;
+  // active | archived
+  string status = 7;
 }
 
 message VolumeDiscountUnitInfo {

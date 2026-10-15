@@ -83,7 +83,7 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 		ObjectType: constants.ObjectTypeItem,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
+			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
 	})
 }

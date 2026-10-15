@@ -239,7 +239,7 @@ func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 			ID:        c.Id,
 			Object:    constants.ObjectTypeItemCategory,
 			Name:      c.Name,
-			Type:      constants.ItemCategoryType(c.Type),
+			Type:      constants.ItemCategoryTypeFromCode(c.Type),
 			CreatedAt: grpcutil.TimestampToTime(c.CreatedAt),
 			UpdatedAt: grpcutil.TimestampToTime(c.UpdatedAt),
 		}
@@ -253,6 +253,7 @@ func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 			Object:    constants.ObjectTypeAttribute,
 			Value:     a.Value,
 			ColorCode: constants.Color(a.ColorCode),
+			Status:    constants.ArchiveStatus(a.Status),
 			CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 			UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 		}

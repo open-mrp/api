@@ -35,6 +35,7 @@ func mapForwardAttributeRow(row sqlc.ListAttributesForwardRow) *domain.Attribute
 		ColorCode:  row.ColorCode,
 		SortOrder:  row.Order,
 		IsPublic:   row.IsPublic,
+		IsActive:   row.IsActive,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
@@ -49,6 +50,7 @@ func mapBackwardAttributeRow(row sqlc.ListAttributesBackwardRow) *domain.Attribu
 		ColorCode:  row.ColorCode,
 		SortOrder:  row.Order,
 		IsPublic:   row.IsPublic,
+		IsActive:   row.IsActive,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
@@ -63,6 +65,7 @@ func mapGetAttributeRow(row sqlc.GetAttributeRow) *domain.Attribute {
 		ColorCode:  row.ColorCode,
 		SortOrder:  row.Order,
 		IsPublic:   row.IsPublic,
+		IsActive:   row.IsActive,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
@@ -91,6 +94,7 @@ func mapListByPropertyIDsRow(row sqlc.ListAttributesByPropertyIDsRow) *domain.At
 		ColorCode:  row.ColorCode,
 		SortOrder:  row.Order,
 		IsPublic:   row.IsPublic,
+		IsActive:   row.IsActive,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
@@ -105,6 +109,7 @@ func mapGetAttributesByIDsRow(row sqlc.GetAttributesByIDsRow) *domain.Attribute 
 		ColorCode:  row.ColorCode,
 		SortOrder:  row.Order,
 		IsPublic:   row.IsPublic,
+		IsActive:   row.IsActive,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
@@ -176,6 +181,7 @@ func (r *attributeRepoImpl) List(ctx context.Context, params domain.ListAttribut
 				PropertyID:  params.PropertyID,
 				AccountID:   params.AccountID,
 				SearchQuery: searchQuery,
+				IsActive:    toNullBool(params.IsActive),
 				CursorOrder: gosql.NullInt32{Int32: cursorOrder, Valid: true},
 				CursorID:    gosql.NullString{String: cur.ID, Valid: true},
 				Limit:       params.Limit + 1,
@@ -195,6 +201,7 @@ func (r *attributeRepoImpl) List(ctx context.Context, params domain.ListAttribut
 			PropertyID:  params.PropertyID,
 			AccountID:   params.AccountID,
 			SearchQuery: searchQuery,
+			IsActive:    toNullBool(params.IsActive),
 			CursorOrder: gosql.NullInt32{Int32: cursorOrder, Valid: true},
 			CursorID:    gosql.NullString{String: cur.ID, Valid: true},
 			Limit:       params.Limit + 1,
@@ -214,6 +221,7 @@ func (r *attributeRepoImpl) List(ctx context.Context, params domain.ListAttribut
 		PropertyID:  params.PropertyID,
 		AccountID:   params.AccountID,
 		SearchQuery: searchQuery,
+		IsActive:    toNullBool(params.IsActive),
 		Limit:       params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -255,8 +263,9 @@ func (r *attributeRepoImpl) Create(ctx context.Context, id string, params domain
 		AccountID:  params.AccountID,
 		ColorCode:  params.ColorCode,
 		Order:      params.SortOrder,
+		IsActive:   params.IsActive,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, attributeDuplicateKeys); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -271,11 +280,12 @@ func (r *attributeRepoImpl) Update(ctx context.Context, params domain.UpdateAttr
 		Text:       toNullString(params.Value),
 		ColorCode:  toNullString(params.ColorCode),
 		Order:      toNullInt32(params.SortOrder),
+		IsActive:   toNullBool(params.IsActive),
 		ID:         params.AttributeID,
 		PropertyID: params.PropertyID,
 		AccountID:  params.AccountID,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, attributeDuplicateKeys); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -314,48 +324,27 @@ func (r *attributeRepoImpl) Delete(ctx context.Context, params domain.DeleteAttr
 	return nil
 }
 
-func (r *attributeRepoImpl) ExistsByValueInAccount(ctx context.Context, accountID, value string, excludeID *string) (bool, *apierror.APIError) {
-	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.exists_by_value_in_account")
+// attributeDuplicateKeys reports a value that races another write of the same value into the property.
+var attributeDuplicateKeys = db.DuplicateKeyMapping{
+	"attribute_property_id_text_key": func() *apierror.APIError {
+		return apierror.NewConflictErrorWithParam("value", "An attribute with this value already exists in this property.")
+	},
+}
+
+func (r *attributeRepoImpl) ExistsByValueInProperty(ctx context.Context, propertyID, value string, excludeID *string) (bool, *apierror.APIError) {
+	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.exists_by_value_in_property")
 	defer span.End()
 
-	count, err := r.queries.CountAttributesByTextInAccount(ctx, sqlc.CountAttributesByTextInAccountParams{
-		Text:      value,
-		AccountID: accountID,
-		ExcludeID: toNullString(excludeID),
+	count, err := r.queries.CountAttributesByTextInProperty(ctx, sqlc.CountAttributesByTextInPropertyParams{
+		PropertyID: propertyID,
+		Text:       value,
+		ExcludeID:  toNullString(excludeID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)
 	}
 
 	return count > 0, nil
-}
-
-func (r *attributeRepoImpl) FindByTextsInAccount(ctx context.Context, accountID string, texts []string) ([]*domain.AttributeTextMatch, *apierror.APIError) {
-	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.find_by_texts_in_account")
-	defer span.End()
-
-	if len(texts) == 0 {
-		return nil, nil
-	}
-
-	rows, err := r.queries.FindAttributesByTextsInAccount(ctx, sqlc.FindAttributesByTextsInAccountParams{
-		AccountID: accountID,
-		Texts:     texts,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	matches := make([]*domain.AttributeTextMatch, len(rows))
-	for i, row := range rows {
-		matches[i] = &domain.AttributeTextMatch{
-			ID:           row.ID,
-			Text:         row.Text,
-			PropertyID:   row.PropertyID,
-			PropertyName: row.PropertyName,
-		}
-	}
-	return matches, nil
 }
 
 func (r *attributeRepoImpl) CountByProperty(ctx context.Context, propertyID, accountID string) (int64, *apierror.APIError) {

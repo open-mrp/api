@@ -12,22 +12,19 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
 // UpsertItemCategoryInput is the input for a single item category in a bulk upsert operation.
 type UpsertItemCategoryInput struct {
-	// Display name of the item category, used to match existing categories.
+	// Display name, such as `Fasteners`. Matches an existing category by name (case-insensitive).
 	Name string `json:"name" validate:"required,max=255"`
-	// Item category type code. Create-only.
+	// What kind of items the category holds: `material` or `product`. Only used when the row creates a category.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// Unit group to associate with this item category, referenced by `id` or `name`.
-	UnitGroup apirequest.ObjectIdentifier `json:"unit_group" validate:"required"`
-	// Optional list of property names to attach to this category. Properties are matched
-	// by name (case-insensitive) within the account; names not found are created automatically.
-	// Relations are additive — existing relations are not removed.
-	PropertyNames []string `json:"property_names" default:"[]"`
-	// Optional notes.
-	Notes *string `json:"notes" default:"null" nullable:"true"`
+	// Properties to attach, by name. Properties that don't exist are created. Properties already attached are never removed.
+	PropertyNames []string `json:"property_names,omitzero"`
+	// Unit group the category's items are measured in, by `id` or `name`. Defaults to each.
+	UnitGroup field.Optional[apirequest.ObjectIdentifier] `json:"unit_group,omitzero" visibility:"internal"`
 }
 
 // BulkUpsertItemCategoriesRequest is the request to bulk upsert item categories.
@@ -39,9 +36,9 @@ type BulkUpsertItemCategoriesRequest struct {
 var sampleBulkUpsertItemCategoriesRequest = &BulkUpsertItemCategoriesRequest{
 	ItemCategories: []UpsertItemCategoryInput{
 		{
-			Name:      apiresource.SampleItemCategoryName,
-			Type:      constants.ItemCategoryTypeMaterial,
-			UnitGroup: apirequest.ObjectIdentifier{ID: apiresource.SampleUnitGroupID},
+			Name:          apiresource.SampleItemCategoryName,
+			Type:          constants.ItemCategoryTypeMaterial,
+			PropertyNames: []string{apiresource.SamplePropertyName},
 		},
 	},
 }
@@ -50,8 +47,9 @@ func (*BulkUpsertItemCategoriesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertItemCategoriesRequest)
 }
 
-// Creates or updates multiple item categories for the account, matched by name
-// (case-insensitive), then writes asynchronously — 202 with a job to poll.
+// Creates or updates item categories in bulk.
+//
+// Rows are matched to existing categories by `name` (case-insensitive). `property_names` attaches properties by name, creating any that don't exist, and never removes a property already attached. The work runs in the background; the response is an async job to poll.
 type BulkUpsertItemCategoriesEndpoint struct{}
 
 func (e *BulkUpsertItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertItemCategoriesRequest, *apiresource.AsyncJob] {
@@ -64,7 +62,6 @@ func (e *BulkUpsertItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionCreate}, {Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

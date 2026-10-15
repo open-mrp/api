@@ -197,22 +197,14 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_DuplicateNameInReque
 	suite.Equal("properties[1].name", err.Param)
 }
 
-// One value belongs to one property per account, so no job is raised at all
-func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_RejectsValueClaimedByTwoProperties() {
-	ctx := internalPropertyCtx("ac_test123")
-
-	result, err := suite.propertySvc.BulkUpsertProperties(ctx, domain.BulkUpsertPropertiesParams{
-		Properties: []domain.UpsertPropertyParams{
-			{Name: "Color", Attributes: []domain.UpsertPropertyAttributeParams{{Value: "Red"}}},
-			{Name: "Accent", Attributes: []domain.UpsertPropertyAttributeParams{{Value: "red"}}},
-		},
+// A value is unique within its property, so two properties may share one
+func (suite *PropertySvcTestSuite) TestValidateBulkUpsertPropertyRows_AllowsAValueUnderTwoProperties() {
+	err := validateBulkUpsertPropertyRows([]domain.UpsertPropertyParams{
+		{Name: "Color", Attributes: []domain.UpsertPropertyAttributeParams{{Value: "Red"}}},
+		{Name: "Accent", Attributes: []domain.UpsertPropertyAttributeParams{{Value: "red"}}},
 	})
 
-	suite.Nil(result)
-	suite.NotNil(err)
-	suite.Equal(apierror.CodeValidationFailed, err.Code)
-	suite.Contains(err.Errors[0].Message, `already used under property "Color"`)
-	suite.Equal("properties[1].attributes[0].value", err.Param)
+	suite.Nil(err)
 }
 
 func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_RejectsDuplicateValueWithinAProperty() {
@@ -232,7 +224,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_RejectsDuplicateValu
 
 // --- resolveBulkUpsertPropertyRows (the engine's Resolve hook) ---
 
-// An omitted color is derived from the (property, value) pair, so a redelivery re-derives it
+// An omitted color is the neutral default swatch
 func (suite *PropertySvcTestSuite) TestResolveBulkUpsertPropertyRows_SettlesEverySwatch() {
 	explicit := string(constants.ColorBlue)
 
@@ -248,8 +240,7 @@ func (suite *PropertySvcTestSuite) TestResolveBulkUpsertPropertyRows_SettlesEver
 	suite.Equal("Color", rows[0].Name)
 	suite.Require().Len(rows[0].Attributes, 2)
 	suite.Equal("Red", rows[0].Attributes[0].Value)
-	suite.NotEmpty(rows[0].Attributes[0].ColorCode)
-	suite.Equal(attributeColorFor("Color", "Red"), rows[0].Attributes[0].ColorCode)
+	suite.Equal(string(constants.ColorDefault), rows[0].Attributes[0].ColorCode)
 	suite.Equal(explicit, rows[0].Attributes[1].ColorCode)
 }
 
@@ -286,20 +277,17 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_CreateWithAttri
 	suite.propertyRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)
-	suite.attributeRepo.EXPECT().
-		FindByTextsInAccount(gomock.Any(), "ac_test123", gomock.InAnyOrder([]string{"Red", "Blue"})).
-		Return(nil, nil).Times(1)
 	suite.propertyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&domain.Property{ID: "pp_color2", Name: "Color", AccountID: "ac_test123"}, nil).Times(1)
 
 	suite.attributeRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), domain.CreateAttributeParams{
-			Value: "Red", PropertyID: "pp_color2", AccountID: "ac_test123", ColorCode: "red", SortOrder: 1,
+			Value: "Red", PropertyID: "pp_color2", AccountID: "ac_test123", ColorCode: "red", SortOrder: 1, IsActive: true,
 		}).Return(&domain.Attribute{ID: "at_red", Value: "Red", PropertyID: "pp_color2"}, nil).Times(1)
 	suite.attributeRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), domain.CreateAttributeParams{
-			Value: "Blue", PropertyID: "pp_color2", AccountID: "ac_test123", ColorCode: "blue", SortOrder: 2,
+			Value: "Blue", PropertyID: "pp_color2", AccountID: "ac_test123", ColorCode: "blue", SortOrder: 2, IsActive: true,
 		}).Return(&domain.Attribute{ID: "at_blue", Value: "Blue", PropertyID: "pp_color2"}, nil).Times(1)
 
 	created, _, rowErrs, err := suite.writeProperties(
@@ -324,9 +312,6 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_UpdateAddsOnlyM
 	suite.attributeRepo.EXPECT().
 		ListByPropertyIDs(gomock.Any(), "ac_test123", []string{"pp_existing"}).
 		Return([]*domain.Attribute{{ID: "at_red", Value: "Red", PropertyID: "pp_existing", SortOrder: 1}}, nil).Times(1)
-	suite.attributeRepo.EXPECT().
-		FindByTextsInAccount(gomock.Any(), "ac_test123", gomock.Any()).
-		Return([]*domain.AttributeTextMatch{{ID: "at_red", Text: "Red", PropertyID: "pp_existing", PropertyName: "Color"}}, nil).Times(1)
 	suite.propertyRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		Return(&domain.Property{ID: "pp_existing", Name: "COLOR", AccountID: "ac_test123"}, nil).Times(1)
@@ -334,7 +319,7 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_UpdateAddsOnlyM
 	// "Red" is already defined, so only "Blue" is written.
 	suite.attributeRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), domain.CreateAttributeParams{
-			Value: "Blue", PropertyID: "pp_existing", AccountID: "ac_test123", ColorCode: "blue", SortOrder: 2,
+			Value: "Blue", PropertyID: "pp_existing", AccountID: "ac_test123", ColorCode: "blue", SortOrder: 2, IsActive: true,
 		}).Return(&domain.Attribute{ID: "at_blue", Value: "Blue", PropertyID: "pp_existing"}, nil).Times(1)
 
 	created, updated, rowErrs, err := suite.writeProperties(
@@ -348,35 +333,6 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_UpdateAddsOnlyM
 	suite.Empty(rowErrs)
 	suite.Empty(created)
 	suite.Equal([]string{"pp_existing"}, updated)
-}
-
-// A value another property owns fails that row alone; the rest of the batch commits
-func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_ValueOwnedByAnotherPropertyFailsOnlyItsRow() {
-	suite.propertyRepo.EXPECT().
-		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
-		Return(nil, nil).Times(1)
-	suite.attributeRepo.EXPECT().
-		FindByTextsInAccount(gomock.Any(), "ac_test123", gomock.Any()).
-		Return([]*domain.AttributeTextMatch{{ID: "at_red", Text: "Red", PropertyID: "pp_other", PropertyName: "Accent"}}, nil).Times(1)
-	suite.propertyRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.Property{ID: "pp_color3", Name: "Color", AccountID: "ac_test123"}, nil).Times(1)
-	suite.propertyRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.Property{ID: "pp_size3", Name: "Size", AccountID: "ac_test123"}, nil).Times(1)
-
-	created, _, rowErrs, err := suite.writeProperties(
-		domain.ResolvedUpsertPropertyRow{Name: "Color", Attributes: []domain.ResolvedUpsertPropertyAttribute{
-			{Value: "Red", ColorCode: "red"},
-		}},
-		domain.ResolvedUpsertPropertyRow{Name: "Size"},
-	)
-
-	suite.Nil(err)
-	suite.Require().Len(rowErrs, 1)
-	suite.Equal(0, rowErrs[0].Index)
-	suite.Equal("properties[0].attributes[0].value", *rowErrs[0].Error.Param)
-	suite.Equal([]string{"pp_size3"}, created)
 }
 
 // The bulk read is infrastructure, not a row, so its failure sinks the whole batch

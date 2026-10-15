@@ -728,7 +728,7 @@ func TestItemCategories_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, itemCategoriesPath, map[string]any{
 		"name":          uniqueName("e2e-itcg-audit"),
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	})
 	id := jsonField(created, "id")
@@ -748,7 +748,7 @@ func TestItemCategories_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, itemCategoriesPath, map[string]any{
 		"name":          uniqueName("e2e-itcg-rlog"),
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	})
 

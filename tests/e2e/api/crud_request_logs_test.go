@@ -985,7 +985,7 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	path := itemCategoriesPath + "?include=unit_group"
 	createBody := map[string]any{
 		"name":          name,
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	}
 	status, respBody, err := apiClient.Post(path, createBody, idemKey)

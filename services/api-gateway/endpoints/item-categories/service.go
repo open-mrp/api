@@ -10,8 +10,12 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/apiversion"
+	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -76,7 +80,7 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
 		Query:  req.Query,
-		Type:   req.Type.StringPtr(),
+		Type:   typeCodeFilter(req.Types),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.list", domain.ServiceName,
@@ -110,10 +114,12 @@ func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *Retrieve
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
+	unitGroupID, _ := req.UnitGroupID.Value()
 	pbReq := &pb.CreateItemCategoryRequest{
 		Name:        req.Name,
-		Type:        string(req.Type),
-		UnitGroupId: req.UnitGroupID,
+		Type:        req.Type.Code(),
+		UnitGroupId: unitGroupID,
+		PropertyIds: req.PropertyIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.create", domain.ServiceName,
@@ -130,9 +136,12 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 
 func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.UpdateItemCategoryRequest{
-		Id:    req.ItemCategoryID,
-		Name:  req.Name.Ptr(),
-		Notes: req.Notes.Ptr(),
+		Id:   req.ItemCategoryID,
+		Name: req.Name.Ptr(),
+	}
+	if ids, ok := req.PropertyIDs.Value(); ok {
+		pbReq.SetPropertyIds = true
+		pbReq.PropertyIds = ids
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.update", domain.ServiceName,
@@ -165,6 +174,9 @@ func (m *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, req *Delet
 }
 
 func (m *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.AddItemCategoryPropertyRequest{
 		Id:         req.ItemCategoryID,
 		PropertyId: req.PropertyID,
@@ -183,6 +195,9 @@ func (m *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, req *
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, req *CreateItemCategoryPropertyRequest) (*apiresource.Property, *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreateItemCategoryPropertyRequest{
 		Id:   req.ItemCategoryID,
 		Name: req.Name,
@@ -202,6 +217,9 @@ func (m *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, re
 }
 
 func (m *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.RemoveItemCategoryPropertyRequest{
 		Id:         req.ItemCategoryID,
 		PropertyId: req.PropertyID,
@@ -254,10 +272,11 @@ func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req 
 	for i, ic := range req.ItemCategories {
 		inputs[i] = &pb.BulkUpsertItemCategoryInput{
 			Name:          ic.Name,
-			Notes:         ic.Notes,
-			Type:          string(ic.Type),
-			UnitGroup:     apirequest.ObjectIdentifierToProto(ic.UnitGroup),
+			Type:          ic.Type.Code(),
 			PropertyNames: ic.PropertyNames,
+		}
+		if ug, ok := ic.UnitGroup.Value(); ok {
+			inputs[i].UnitGroup = apirequest.ObjectIdentifierToProto(ug)
 		}
 	}
 
@@ -275,4 +294,34 @@ func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req 
 	}
 
 	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
+// typeCodeFilter narrows the list to one stored type code, or nil when types names none or both.
+func typeCodeFilter(types []constants.ItemCategoryType) *string {
+	var only *string
+	for _, t := range types {
+		code := t.Code()
+		if only != nil && *only != code {
+			return nil
+		}
+		only = &code
+	}
+	return only
+}
+
+// itemCategoryIncludes are the include keys every endpoint returning an item category accepts. The unit group keys
+// serve the internal unit_group field until items carry their own stocking unit.
+func itemCategoryIncludes() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+		ObjectType: constants.ObjectTypeItemCategory,
+		Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
+	})
+}
+
+// requirePreview9 answers 404 to anyone but a 1.0.forge-preview.9 caller, for routes 1.0.forge removed.
+func requirePreview9(ctx context.Context) *apierror.APIError {
+	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok && v.Equal(apiversion.V1_0_Forge_Preview9) {
+		return nil
+	}
+	return apierror.NewNotFoundError("This route was removed in 1.0.forge. Send `property_ids` on Create or Update Item Category instead.")
 }

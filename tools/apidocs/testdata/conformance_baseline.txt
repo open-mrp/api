@@ -75,7 +75,6 @@ long_running_returns_async_job POST /v1/finance/accounts/{account_id}/actions/em
 long_running_returns_async_job POST /v1/messaging/conversations/{id}/actions/typing
 long_running_returns_async_job POST /v1/messaging/notifications
 public_docstrings DELETE /v1/ai/memories/{id}
-public_docstrings DELETE /v1/catalog/item-categories/{id}/properties/{property_id}
 public_docstrings DELETE /v1/catalog/product-lines/{id}
 public_docstrings DELETE /v1/catalog/products/{id}
 public_docstrings DELETE /v1/messaging/blocks/{id}
@@ -90,8 +89,6 @@ public_docstrings PATCH /v1/catalog/materials/{id}
 public_docstrings PATCH /v1/catalog/parts/{id}
 public_docstrings PATCH /v1/catalog/product-lines/{id}
 public_docstrings PATCH /v1/catalog/products/{id}
-public_docstrings PATCH /v1/catalog/properties/{id}
-public_docstrings PATCH /v1/catalog/properties/{property_id}/attributes/{id}
 public_docstrings PATCH /v1/catalog/unit-groups/{id}
 public_docstrings PATCH /v1/catalog/unit-groups/{unit_group_id}/units/{id}
 public_docstrings PATCH /v1/catalog/units/{id}
@@ -145,8 +142,6 @@ public_docstrings POST /v1/settings/integrations
 public_docstrings POST /v1/settings/portal-domains
 public_docstrings POST /v1/settings/portal-domains/{id}/actions/verify
 public_docstrings PUT /v1/ai/agents/{id}/status
-public_docstrings PUT /v1/catalog/item-categories/{id}/properties/{property_id}
-public_docstrings PUT /v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}
 public_docstrings PUT /v1/core/addresses/actions/validate
 public_docstrings PUT /v1/identity/account-users/{id}/actions/activate
 public_docstrings PUT /v1/identity/account-users/{id}/actions/disable
@@ -165,15 +160,12 @@ search_documented GET /v1/auth/api-keys
 search_documented GET /v1/billing/plans
 search_documented GET /v1/catalog/catalog/product-lines
 search_documented GET /v1/catalog/catalog/product-lines/{id}/products
-search_documented GET /v1/catalog/item-categories
 search_documented GET /v1/catalog/items
 search_documented GET /v1/catalog/materials
 search_documented GET /v1/catalog/parts
 search_documented GET /v1/catalog/product-lines
 search_documented GET /v1/catalog/product-types
 search_documented GET /v1/catalog/products
-search_documented GET /v1/catalog/properties
-search_documented GET /v1/catalog/properties/{property_id}/attributes
 search_documented GET /v1/catalog/unit-groups
 search_documented GET /v1/catalog/units
 search_documented GET /v1/core/audit-events

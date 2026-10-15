@@ -11,38 +11,40 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
 // Request to create an item category.
 type CreateItemCategoryRequest struct {
-	// Display name of the item category.
+	// Display name, such as `Fasteners`.
+	//
+	// Unique (case-insensitive) among your account's categories.
 	Name string `json:"name" validate:"required,max=255"`
-	// What kind of items this category groups.
+	// What kind of items the category holds.
 	//
-	// - `material_category`: groups raw materials and components (items of type `material`).
-	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
-	//
-	// The type is fixed once the category is created.
+	// `material`: materials. `product`: products and parts. An item can only be in a category of its own kind. Can't change after creation.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// ID of the unit group that determines the units of measure available to items in this category.
+	// Properties the category's items vary by.
 	//
-	// Must be one of your account's unit groups or a platform-provided one. After creation the unit group can only be replaced by another unit group of the same unit type, through the Change Item Category Unit Group endpoint.
-	UnitGroupID string `json:"unit_group_id" validate:"required"`
+	// Property names must be unique within the category.
+	PropertyIDs []string `json:"property_ids,omitzero" validate:"max=100"`
+	// Unit group the category's items are measured in. Defaults to each.
+	UnitGroupID field.Optional[string] `json:"unit_group_id,omitzero" visibility:"internal"`
 }
 
 var sampleCreateItemCategoryRequest = &CreateItemCategoryRequest{
-	Name:        "Electronics",
+	Name:        apiresource.SampleItemCategoryName,
 	Type:        constants.ItemCategoryTypeMaterial,
-	UnitGroupID: apiresource.SampleUnitGroupID,
+	PropertyIDs: []string{apiresource.SamplePropertyID},
 }
 
 func (*CreateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateItemCategoryRequest)
 }
 
-// Creates an item category owned by your account.
+// Creates an item category.
 //
-// The new category starts with no properties; attach them afterwards with the Add Item Category Property endpoint.
+// The new category belongs to your account.
 type CreateItemCategoryEndpoint struct{}
 
 func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory] {
@@ -55,7 +57,6 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).CreateItemCategory
@@ -63,9 +64,6 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		LocationFunc: func(resp *apiresource.ItemCategory) string {
 			return "/v1/catalog/item-categories/" + resp.ID
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
-		}),
+		IncludeConfig: itemCategoryIncludes(),
 	})
 }

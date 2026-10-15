@@ -92,7 +92,7 @@ func TestCovCoreRequestLogs_GetResponseShape_RealID(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	createBody := map[string]any{
 		"name":          name,
-		"type":          "material_category",
+		"type":          "material",
 		"unit_group_id": SeedUnitGroupID,
 	}
 	status, respBody, err := apiClient.Post(itemCategoriesPath, createBody, idemKey)

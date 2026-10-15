@@ -301,6 +301,7 @@ SELECT
     a.color_code,
     a.` + "`" + `order` + "`" + `,
     a.property_id,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM _item_attributes ia
@@ -314,6 +315,7 @@ type GetPartAttributesRow struct {
 	ColorCode  string
 	Order      int32
 	PropertyID string
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -333,6 +335,7 @@ func (q *Queries) GetPartAttributes(ctx context.Context, itemID string) ([]GetPa
 			&i.ColorCode,
 			&i.Order,
 			&i.PropertyID,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

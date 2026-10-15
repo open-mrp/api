@@ -11,21 +11,19 @@ import (
 const SamplePropertyID = "pp_fhnnvtt3q3ov"
 const SamplePropertyName = "Color"
 
-// A named characteristic used to classify items, such as `Color` or `Size`.
-//
-// Each property defines a set of attributes — the selectable values (e.g. `Red`, `Blue`) that can be assigned to items.
+// A way items vary, such as `Size`, with the attributes it can take.
 type Property struct {
 	// Property ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=property"`
-	// Display name of the property, such as `Color` or `Size`.
+	// Display name, such as `Size`.
 	//
-	// Unique within the account.
+	// Unique (case-insensitive) among your account's properties.
 	Name string `json:"name" validate:"required"`
-	// The selectable values defined under this property.
+	// The property's attributes, in `sort_order`.
 	//
-	// Listed in the order the attributes are arranged within the property, first to last.
+	// Returns the first 10. When there are more, `page_info.next_page_url` fetches the rest.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

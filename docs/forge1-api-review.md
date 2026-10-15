@@ -310,27 +310,27 @@ Docstrings
 Endpoints: list, create, retrieve, update, delete, bulk upsert. Removed: `PUT/DELETE /{id}/properties/{property_id}`, `POST /{id}/properties`, `PUT /{id}/unit-groups/{unit_group_id}`. Internal export out of scope.
 
 Resource
-- [ ] `type` values `material_category | product_category` → `material | product` (a `product` category holds products and parts). Fixed after create.
-- [ ] Remove `unit_group` and its include keys (`unit_group`, `unit_group.base_unit`, `unit_group.associated_units`, `unit_group.associated_units.unit`).
-- [ ] No `status` (fails the status test: retire a category by moving its items and deleting it).
-- [ ] `properties` include: first 10 + `next_page_url` → `GET /v1/catalog/properties?item_category_ids[]=…` (properties review adds the filter).
+- [x] `type` values `material_category | product_category` → `material | product` (a `product` category holds products and parts). Fixed after create.
+- [ ] Remove `unit_group` and its include keys (`unit_group`, `unit_group.base_unit`, `unit_group.associated_units`, `unit_group.associated_units.unit`). *(CAT1: internal field until ITM2 retires unit groups; the include keys still list.)*
+- [x] No `status` (fails the status test: retire a category by moving its items and deleting it).
+- [x] `properties` include: first 10 + `next_page_url` → `GET /v1/catalog/properties?item_category_ids[]=…` (properties review adds the filter).
 
 Create / update
-- [ ] `property_ids` on create (optional) and update (`field.Optional`, replaces the list). Duplicate property names in one category → 409.
-- [ ] Remove `notes` (no-notes convention).
-- [ ] Remove `unit_group_id`.
+- [x] `property_ids` on create (optional) and update (`field.Optional`, replaces the list). Duplicate property names in one category → 409.
+- [x] Remove `notes` (no-notes convention).
+- [ ] Remove `unit_group_id`. *(CAT1: internal and optional, defaulting to each, until ITM2.)*
 
 List
-- [ ] `type` → `types[]`. `q`: substring on `name`. (No `statuses[]`.)
+- [x] `type` → `types[]`. `q`: substring on `name`. (No `statuses[]`.)
 
 Delete
-- [ ] 409 `resource_in_use` if referenced by `item.item_category_id` or a price-list rule's category scope (both indexed). Today delete orphans items. Returns the stub.
+- [x] 409 `resource_in_use` if referenced by `item.item_category_id` or a price-list rule's category scope (both indexed). Today delete orphans items. Returns the stub.
 
 Bulk upsert
-- [ ] Remove `unit_group` from rows. `property_names` keeps import semantics (attach by name, create missing, never detach), documented.
+- [ ] Remove `unit_group` from rows. *(CAT1: internal and optional; `property_names` documented.)* `property_names` keeps import semantics (attach by name, create missing, never detach), documented.
 
 Schema
-- [ ] Drop `item_category.unit_group_id` (after the order-units migration) and FULLTEXT `item_category_name_idx`.
+- [ ] Drop `item_category.unit_group_id` (after the order-units migration) and FULLTEXT `item_category_name_idx`. *(CAT1: FULLTEXT dropped; the column waits for ITM2.)*
 
 Docstrings
 
@@ -353,21 +353,21 @@ Docstrings
 Endpoints: properties list/create/retrieve/update/delete/bulk upsert; attributes list/create/retrieve/update/delete under `/properties/{property_id}/attributes`. Internal export out of scope. Account-only (no system rows, no `owner`).
 
 Property
-- [ ] No `status` on properties (fails the status test). Attributes keep it.
-- [ ] `attributes` include: first 10 + `next_page_url` → attributes list.
-- [ ] List: add `item_category_ids[]` (via the category–property link; index the category side). `q`: substring on `name`. (No `statuses[]`.)
-- [ ] Delete: 409 `resource_in_use` if an item category references it or any of its attributes is in use; returns the stub. Today it cascades and strips attributes from items.
+- [x] No `status` on properties (fails the status test). Attributes keep it.
+- [x] `attributes` include: first 10 + `next_page_url` → attributes list.
+- [x] List: add `item_category_ids[]` (via the category–property link; index the category side). `q`: substring on `name`. (No `statuses[]`.)
+- [x] Delete: 409 `resource_in_use` if an item category references it or any of its attributes is in use; returns the stub. Today it cascades and strips attributes from items.
 
 Attribute
-- [ ] `value` unique (case-insensitive) **within its property**, not account-wide. Anything resolving attributes by bare value (imports, bulk upserts of items) resolves by `(property, value)`.
-- [ ] `property` is a normal expandable field everywhere (`include[]=property`; on items `attributes.property`, on price list rules `scope.attributes.property`). Today it's populated only under items and volume discounts.
-- [ ] Omitted `color` defaults to `default` (today: random).
-- [ ] Add `status: active | archived` (create/update, `statuses[]`); archived attributes stay on items but can't be newly assigned.
-- [ ] Delete: 409 `resource_in_use` if referenced by `_item_attributes` or a price-list rule's attribute scope; returns the stub.
-- [ ] `q`: substring on `value` (`attribute.text`).
+- [x] `value` unique (case-insensitive) **within its property**, not account-wide. Anything resolving attributes by bare value (imports, bulk upserts of items) resolves by `(property, value)`.
+- [x] `property` is a normal expandable field everywhere (`include[]=property`; on items `attributes.property`, on price list rules `scope.attributes.property`). Today it's populated only under items and volume discounts.
+- [x] Omitted `color` defaults to `default` (today: random).
+- [x] Add `status: active | archived` (create/update, `statuses[]`); archived attributes stay on items but can't be newly assigned.
+- [x] Delete: 409 `resource_in_use` if referenced by `_item_attributes` or a price-list rule's attribute scope; returns the stub.
+- [x] `q`: substring on `value` (`attribute.text`).
 
 Schema
-- [ ] Drop FULLTEXT `property_name_idx`, `attribute_text_idx`. Replace account-wide attribute-value uniqueness with `(property_id, text)`.
+- [x] Drop FULLTEXT `property_name_idx`, `attribute_text_idx`. Replace account-wide attribute-value uniqueness with `(property_id, text)`.
 
 Docstrings
 
@@ -1483,6 +1483,9 @@ Item categories
 - Property attach/detach/create-and-attach endpoints removed: send `property_ids` on create/update instead; create properties through the Properties API.
 - `notes` removed.
 - Delete blocked while items or price-list rules use the category (409).
+- Embedded `properties` (and a property's embedded `attributes`) return the first 10 with `page_info.next_page_url`; screens showing more must follow it or list with `item_category_ids[]`.
+- An included category with no properties is an empty list, not `null`.
+- `unit_group` / `unit_group_id` stay readable and writable as internal fields until the order-units work retires unit groups; a category created without one counts in each.
 
 Items (structure)
 - `/materials`, `/parts`, `/products` pages and calls move to `/items` with `type` (+ `types[]` filter). Every `product_id`/`material_id`/`part_id` (order lines, supplier materials, price-list rules, URLs, routes) becomes the item ID. `include[]=item` is gone: item fields are top-level; product/material fields move under `sales`/`material`.
@@ -1653,7 +1656,9 @@ Properties & attributes
 - Deleting a property or attribute in use now fails (409) instead of stripping it from items; new `status` on attributes.
 - `attribute.property` is null unless included (`include[]=property`, or `attributes.property` on items).
 - Attribute values may repeat across properties; any lookup by value must include the property.
-- Omitted attribute `color` is `default`, not random (pick a color client-side if wanted).
+- Omitted attribute `color` is `default`, not random (pick a color client-side if wanted). Bulk upserts and item imports create attributes with `default` too.
+- Attributes gain `status` (`active | archived`); archived attributes can't be newly assigned to items (422 `resource_archived`).
+- Property attach/detach and create-and-attach routes on item categories answer only preview.9 callers; on 1.0.forge they 404.
 
 Carriers
 - New optional `scac` field (carrier forms).

@@ -709,3 +709,22 @@ func (r *itemCategoryRepoImpl) IsPropertyInAccount(ctx context.Context, accountI
 	}
 	return count > 0, nil
 }
+
+func (r *itemCategoryRepoImpl) ReplaceProperties(ctx context.Context, itemCategoryID string, propertyIDs []string) *apierror.APIError {
+	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.replace_properties")
+	defer span.End()
+
+	if err := r.queries.DeleteItemCategoryProperties(ctx, itemCategoryID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	for _, propertyID := range propertyIDs {
+		err := r.queries.UpsertItemCategoryProperty(ctx, sqlc.UpsertItemCategoryPropertyParams{
+			ItemCategoryID: itemCategoryID,
+			PropertyID:     propertyID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}

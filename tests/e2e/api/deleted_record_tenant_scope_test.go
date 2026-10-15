@@ -125,7 +125,7 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 			setup: func(t *testing.T) deletedScopeTarget {
 				return createdPath(t, itemCategoriesPath, map[string]any{
 					"name":          uniqueName("e2e-dscope-ic"),
-					"type":          "material_category",
+					"type":          "material",
 					"unit_group_id": SeedUnitGroupID,
 				})
 			},

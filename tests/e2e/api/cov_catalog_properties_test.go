@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -245,12 +246,8 @@ func TestCovCatalogProperties_PropertyListQueryTooLong(t *testing.T) {
 
 // --- Attribute: All Fields (incl. `property`) ---
 
-// TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil creates an
-// attribute under a dedicated (single-attribute) property so sort_order is
-// deterministic, and asserts every json field on Attribute — including
-// `property`, which is never populated by this endpoint group (no
-// `expandable:"true"` tag on the struct field, so AssertExpandablesNil will
-// not catch a regression here; this test is the explicit guard).
+// TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil asserts every field on Attribute: `property` is
+// expandable, null unless included, here and under the property's `attributes` list.
 func TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil(t *testing.T) {
 	t.Parallel()
 	prop := createAndCleanup(t, propertiesPath, map[string]any{"name": uniqueName("e2e-covprop-attrall")})
@@ -258,8 +255,10 @@ func TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil(t *testing.
 
 	value := uniqueName("e2e-covattr-allf")
 	createStatus, createBody, err := apiClient.Post(attributesPath(propID), map[string]any{
-		"value": value,
-		"color": "purple",
+		"value":      value,
+		"color":      "purple",
+		"sort_order": 1,
+		"status":     "archived",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -272,13 +271,12 @@ func TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil(t *testing.
 	assertObjectField(t, got, "attribute")
 	assert.Equal(t, value, jsonField(got, "value"))
 	assert.Equal(t, "purple", jsonField(got, "color"))
-	assert.Equal(t, "1", jsonField(got, "sort_order"), "only attribute under a fresh property should default to sort_order 1")
+	assert.Equal(t, "1", jsonField(got, "sort_order"))
+	assert.Equal(t, "archived", jsonField(got, "status"))
 	assertNilField(t, got, "property")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	// Also assert `property` stays nil when the attribute is nested under the
-	// parent Property's `attributes` list (?include=attributes).
 	propStatus, propBody, err := apiClient.GetListRaw(propertiesPath+"/"+propID, url.Values{"include": {"attributes"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, propStatus, propBody)
@@ -289,6 +287,13 @@ func TestCovCatalogProperties_AttributeCreateAllFieldsAndPropertyNil(t *testing.
 	nested, ok := data[0].(map[string]any)
 	require.True(t, ok)
 	assertNilField(t, nested, "property")
+
+	updStatus, updBody, err := apiClient.Patch(attributePath(propID, id)+"?include=property", map[string]any{"status": "active"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, updStatus, updBody)
+	updated := parseJSON(updBody)
+	assert.Equal(t, "active", jsonField(updated, "status"))
+	assert.Equal(t, propID, jsonField(jsonObject(updated, "property"), "id"))
 }
 
 // --- Attribute: Response Shape ---
@@ -330,9 +335,8 @@ func TestCovCatalogProperties_AttributeOmittedFields(t *testing.T) {
 		require.NotEmpty(t, id)
 		defer apiClient.Delete(attributePath(propID, id))
 
-		color := jsonField(got, "color")
-		assert.True(t, covCatalogPropertiesAssignableColors[color],
-			"omitted color should default to one of the 9 non-default colors, got %q", color)
+		assert.Equal(t, "default", jsonField(got, "color"), "omitted color defaults to the neutral swatch")
+		assert.Equal(t, "active", jsonField(got, "status"), "omitted status defaults to active")
 		assert.Equal(t, "1", jsonField(got, "sort_order"), "omitted sort_order should default to the last position")
 	})
 
@@ -593,19 +597,26 @@ func TestCovCatalogProperties_AttributeValidationDuplicateValue(t *testing.T) {
 		assertErrorParam(t, errObj, "value")
 	})
 
-	t.Run("CreateDuplicateCrossProperty", func(t *testing.T) {
+	t.Run("SameValueUnderAnotherProperty", func(t *testing.T) {
 		created := createAndCleanup(t, attributesPath(SeedPropertyID), map[string]any{"value": uniqueName("e2e-covattr-dupx")})
 		value := jsonField(created, "value")
 
 		otherProp := createAndCleanup(t, propertiesPath, map[string]any{"name": uniqueName("e2e-covprop-dupx")})
 		otherPropID := jsonField(otherProp, "id")
 
-		// Attribute values are unique account-wide, not just within a property.
-		status, body, err := apiClient.Post(attributesPath(otherPropID), map[string]any{"value": value}, newIdempotencyKey())
+		// Values are unique within a property, so another property may use the same one.
+		status, body, err := apiClient.Post(attributesPath(otherPropID), map[string]any{"value": strings.ToUpper(value)}, newIdempotencyKey())
 		require.NoError(t, err)
-		assert.Equal(t, 409, status, "duplicate value across two different properties should return 409, got %d: %s", status, string(body))
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "value")
+		requireStatus(t, 201, status, body)
+		apiClient.Delete(attributePath(otherPropID, jsonField(parseJSON(body), "id")))
+	})
+
+	t.Run("CreateDuplicateDifferentCase", func(t *testing.T) {
+		created := createAndCleanup(t, attributesPath(SeedPropertyID), map[string]any{"value": uniqueName("e2e-covattr-dupcase")})
+		status, body, err := apiClient.Post(attributesPath(SeedPropertyID), map[string]any{"value": strings.ToUpper(jsonField(created, "value"))}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 409, status, body)
+		assertErrorParam(t, requireErrorResponse(t, body, "resource_conflict", "invalid_request_error"), "value")
 	})
 
 	t.Run("UpdateCollidesWithSibling", func(t *testing.T) {
@@ -713,16 +724,22 @@ func TestCovCatalogProperties_AttributeDeleteAlreadyDeletedReturns410(t *testing
 
 // --- Attribute: Include (unsupported) ---
 
-// TestCovCatalogProperties_AttributeIncludeQueryParamUnsupported documents
-// actual (and correct, per spec §3/§9.3) behavior: attribute endpoints have
-// no IncludeConfig at all, so ?include=property is rejected as an unknown
-// query parameter rather than being silently ignored or populating the field.
-func TestCovCatalogProperties_AttributeIncludeQueryParamUnsupported(t *testing.T) {
+// An attribute's property is expandable on every attribute endpoint.
+func TestCovCatalogProperties_AttributeIncludeProperty(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(attributePath(SeedPropertyID, SeedAttributeID), url.Values{"include": {"property"}})
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "?include=property on an attribute endpoint (no IncludeConfig) should be rejected, got %d: %s", status, string(body))
+	requireStatus(t, 200, status, body)
+	property := jsonObject(parseJSON(body), "property")
+	require.NotNil(t, property)
+	assert.Equal(t, SeedPropertyID, jsonField(property, "id"))
+	assert.Equal(t, "property", jsonField(property, "object"))
+	assert.Equal(t, SeedPropertyName, jsonField(property, "name"))
 
-	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
-	assertErrorParam(t, errObj, "include")
+	list, _, err := apiClient.GetList(attributesPath(SeedPropertyID), url.Values{"include": {"property"}})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data)
+	for _, item := range list.Data {
+		assert.Equal(t, SeedPropertyID, jsonField(jsonObject(parseJSON(item), "property"), "id"))
+	}
 }

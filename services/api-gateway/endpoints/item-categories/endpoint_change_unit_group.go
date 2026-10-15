@@ -34,10 +34,8 @@ func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndp
 		SDKMethodKey:      "change_unit_group",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).ChangeItemCategoryUnitGroup
 		},

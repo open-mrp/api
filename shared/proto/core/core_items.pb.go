@@ -5216,11 +5216,13 @@ func (x *GetItemCategoryResponse) GetItemCategory() *ItemCategoryInfo {
 }
 
 type CreateItemCategoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	UnitGroupId   string                 `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Type  string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// Empty uses the system each group.
+	UnitGroupId   string   `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
+	Includes      []string `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	PropertyIds   []string `protobuf:"bytes,5,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5283,6 +5285,13 @@ func (x *CreateItemCategoryRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreateItemCategoryRequest) GetPropertyIds() []string {
+	if x != nil {
+		return x.PropertyIds
+	}
+	return nil
+}
+
 type CreateItemCategoryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCategory  *ItemCategoryInfo      `protobuf:"bytes,1,opt,name=item_category,json=itemCategory,proto3" json:"item_category,omitempty"`
@@ -5328,13 +5337,16 @@ func (x *CreateItemCategoryResponse) GetItemCategory() *ItemCategoryInfo {
 }
 
 type UpdateItemCategoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Notes         *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name     *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Notes    *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	// When set, property_ids replaces the category's properties.
+	SetPropertyIds bool     `protobuf:"varint,5,opt,name=set_property_ids,json=setPropertyIds,proto3" json:"set_property_ids,omitempty"`
+	PropertyIds    []string `protobuf:"bytes,6,rep,name=property_ids,json=propertyIds,proto3" json:"property_ids,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateItemCategoryRequest) Reset() {
@@ -5391,6 +5403,20 @@ func (x *UpdateItemCategoryRequest) GetNotes() string {
 func (x *UpdateItemCategoryRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *UpdateItemCategoryRequest) GetSetPropertyIds() bool {
+	if x != nil {
+		return x.SetPropertyIds
+	}
+	return false
+}
+
+func (x *UpdateItemCategoryRequest) GetPropertyIds() []string {
+	if x != nil {
+		return x.PropertyIds
 	}
 	return nil
 }
@@ -6592,19 +6618,22 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"V\n" +
 	"\x17GetItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\x83\x01\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xa6\x01\n" +
 	"\x19CreateItemCategoryRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\"\n" +
 	"\runit_group_id\x18\x03 \x01(\tR\vunitGroupId\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludes\"Y\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12!\n" +
+	"\fproperty_ids\x18\x05 \x03(\tR\vpropertyIds\"Y\n" +
 	"\x1aCreateItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\x8e\x01\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\xdb\x01\n" +
 	"\x19UpdateItemCategoryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12(\n" +
+	"\x10set_property_ids\x18\x05 \x01(\bR\x0esetPropertyIds\x12!\n" +
+	"\fproperty_ids\x18\x06 \x03(\tR\vpropertyIdsB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notes\"Y\n" +
 	"\x1aUpdateItemCategoryResponse\x12;\n" +

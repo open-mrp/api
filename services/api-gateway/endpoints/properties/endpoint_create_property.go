@@ -15,9 +15,9 @@ import (
 
 // Request to create a property.
 type CreatePropertyRequest struct {
-	// Display name of the property, such as `Color` or `Size`.
+	// Display name, such as `Size`.
 	//
-	// Must be unique within your account.
+	// Unique (case-insensitive) among your account's properties.
 	Name string `json:"name" validate:"required,max=255"`
 }
 
@@ -31,7 +31,7 @@ func (*CreatePropertyRequest) SchemaExample() any {
 
 // Creates a property.
 //
-// The property starts with no attributes; add its selectable values afterwards with the create attribute endpoint. Returns a conflict error if a property with the same name already exists.
+// It starts with no attributes; add them with Create Attribute.
 type CreatePropertyEndpoint struct{}
 
 func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property] {
@@ -44,7 +44,6 @@ func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateP
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,

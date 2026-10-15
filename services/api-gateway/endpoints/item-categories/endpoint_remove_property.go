@@ -23,7 +23,7 @@ type RemoveItemCategoryPropertyRequest struct {
 
 // Detaches a property from an item category.
 //
-// Only the link between the property and the category is removed; the property itself and its attributes are left intact and stay available to other categories. The property must belong to your account.
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets `property_ids` on Create or Update Item Category.
 type RemoveItemCategoryPropertyEndpoint struct{}
 
 func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *object.Deleted] {
@@ -34,10 +34,8 @@ func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeProperty,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ItemCategorySvc).RemoveItemCategoryProperty, constants.ObjectTypeProperty, "property_id")
 		},

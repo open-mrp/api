@@ -12,6 +12,34 @@ import (
 	"time"
 )
 
+const attributesOfPropertyInUse = `-- name: AttributesOfPropertyInUse :one
+SELECT EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN _item_attributes ia ON ia.A = a.id
+    WHERE a.property_id = ?
+) OR EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN account_price_attribute apa ON apa.attribute_id = a.id
+    WHERE a.property_id = ?
+) OR EXISTS(
+    SELECT 1 FROM attribute a
+    JOIN _quantity_discounts_attributes qa ON qa.A = a.id
+    WHERE a.property_id = ?
+) AS in_use
+`
+
+type AttributesOfPropertyInUseParams struct {
+	PropertyID string
+}
+
+// Whether any of a property's attributes is assigned to an item or scopes an account price or volume discount.
+func (q *Queries) AttributesOfPropertyInUse(ctx context.Context, arg AttributesOfPropertyInUseParams) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, attributesOfPropertyInUse, arg.PropertyID, arg.PropertyID, arg.PropertyID)
+	var in_use sql.NullBool
+	err := row.Scan(&in_use)
+	return in_use, err
+}
+
 const countAttributesByProperty = `-- name: CountAttributesByProperty :one
 SELECT COUNT(*) FROM attribute
 WHERE property_id = ?
@@ -30,22 +58,23 @@ func (q *Queries) CountAttributesByProperty(ctx context.Context, arg CountAttrib
 	return count, err
 }
 
-const countAttributesByTextInAccount = `-- name: CountAttributesByTextInAccount :one
+const countAttributesByTextInProperty = `-- name: CountAttributesByTextInProperty :one
 SELECT COUNT(*) FROM attribute
-WHERE text = ? AND account_id = ?
+WHERE property_id = ? AND text = ?
 AND (? IS NULL OR id != ?)
 `
 
-type CountAttributesByTextInAccountParams struct {
-	Text      string
-	AccountID string
-	ExcludeID sql.NullString
+type CountAttributesByTextInPropertyParams struct {
+	PropertyID string
+	Text       string
+	ExcludeID  sql.NullString
 }
 
-func (q *Queries) CountAttributesByTextInAccount(ctx context.Context, arg CountAttributesByTextInAccountParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAttributesByTextInAccount,
+// Matching is case-insensitive via the column collation.
+func (q *Queries) CountAttributesByTextInProperty(ctx context.Context, arg CountAttributesByTextInPropertyParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAttributesByTextInProperty,
+		arg.PropertyID,
 		arg.Text,
-		arg.AccountID,
 		arg.ExcludeID,
 		arg.ExcludeID,
 	)
@@ -71,72 +100,6 @@ func (q *Queries) DeleteAttribute(ctx context.Context, arg DeleteAttributeParams
 	return q.db.ExecContext(ctx, deleteAttribute, arg.ID, arg.PropertyID, arg.AccountID)
 }
 
-const findAttributesByTextsInAccount = `-- name: FindAttributesByTextsInAccount :many
-SELECT
-    a.id,
-    a.text,
-    a.property_id,
-    p.name AS property_name
-FROM attribute a
-JOIN property p ON p.id = a.property_id
-WHERE a.account_id = ?
-AND a.text IN (/*SLICE:texts*/?)
-`
-
-type FindAttributesByTextsInAccountParams struct {
-	AccountID string
-	Texts     []string
-}
-
-type FindAttributesByTextsInAccountRow struct {
-	ID           string
-	Text         string
-	PropertyID   string
-	PropertyName string
-}
-
-// Used by bulk upsert to enforce the account-wide attribute value uniqueness the
-// manual create path enforces via ExistsByValueInAccount, in one batched lookup.
-// Matching is case-insensitive via the column collation.
-func (q *Queries) FindAttributesByTextsInAccount(ctx context.Context, arg FindAttributesByTextsInAccountParams) ([]FindAttributesByTextsInAccountRow, error) {
-	query := findAttributesByTextsInAccount
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	if len(arg.Texts) > 0 {
-		for _, v := range arg.Texts {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:texts*/?", strings.Repeat(",?", len(arg.Texts))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:texts*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FindAttributesByTextsInAccountRow
-	for rows.Next() {
-		var i FindAttributesByTextsInAccountRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Text,
-			&i.PropertyID,
-			&i.PropertyName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getAttribute = `-- name: GetAttribute :one
 SELECT
     attribute.id,
@@ -146,6 +109,7 @@ SELECT
     attribute.color_code,
     attribute.` + "`" + `order` + "`" + `,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -168,6 +132,7 @@ type GetAttributeRow struct {
 	ColorCode  string
 	Order      int32
 	IsPublic   bool
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -183,6 +148,7 @@ func (q *Queries) GetAttribute(ctx context.Context, arg GetAttributeParams) (Get
 		&i.ColorCode,
 		&i.Order,
 		&i.IsPublic,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -198,6 +164,7 @@ SELECT
     attribute.color_code,
     attribute.` + "`" + `order` + "`" + `,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -218,6 +185,7 @@ type GetAttributesByIDsRow struct {
 	ColorCode  string
 	Order      int32
 	IsPublic   bool
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -250,6 +218,7 @@ func (q *Queries) GetAttributesByIDs(ctx context.Context, arg GetAttributesByIDs
 			&i.ColorCode,
 			&i.Order,
 			&i.IsPublic,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -274,9 +243,11 @@ INSERT INTO attribute (
     account_id,
     color_code,
     ` + "`" + `order` + "`" + `,
+    is_active,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -295,6 +266,7 @@ type InsertAttributeParams struct {
 	AccountID  string
 	ColorCode  string
 	Order      int32
+	IsActive   bool
 }
 
 func (q *Queries) InsertAttribute(ctx context.Context, arg InsertAttributeParams) error {
@@ -305,6 +277,7 @@ func (q *Queries) InsertAttribute(ctx context.Context, arg InsertAttributeParams
 		arg.AccountID,
 		arg.ColorCode,
 		arg.Order,
+		arg.IsActive,
 	)
 	return err
 }
@@ -318,6 +291,7 @@ SELECT
     attribute.color_code,
     attribute.` + "`" + `order` + "`" + `,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -327,6 +301,7 @@ AND (
     ? IS NULL
     OR attribute.text LIKE ?
 )
+AND (? IS NULL OR attribute.is_active = ?)
 AND (
     ? IS NULL
     OR attribute.` + "`" + `order` + "`" + ` < ?
@@ -340,6 +315,7 @@ type ListAttributesBackwardParams struct {
 	PropertyID  string
 	AccountID   string
 	SearchQuery sql.NullString
+	IsActive    sql.NullBool
 	CursorOrder sql.NullInt32
 	CursorID    sql.NullString
 	Limit       int32
@@ -353,6 +329,7 @@ type ListAttributesBackwardRow struct {
 	ColorCode  string
 	Order      int32
 	IsPublic   bool
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -363,6 +340,8 @@ func (q *Queries) ListAttributesBackward(ctx context.Context, arg ListAttributes
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorOrder,
 		arg.CursorOrder,
 		arg.CursorOrder,
@@ -384,6 +363,7 @@ func (q *Queries) ListAttributesBackward(ctx context.Context, arg ListAttributes
 			&i.ColorCode,
 			&i.Order,
 			&i.IsPublic,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -409,6 +389,7 @@ SELECT
     attribute.color_code,
     attribute.` + "`" + `order` + "`" + `,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -430,6 +411,7 @@ type ListAttributesByPropertyIDsRow struct {
 	ColorCode  string
 	Order      int32
 	IsPublic   bool
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -462,6 +444,7 @@ func (q *Queries) ListAttributesByPropertyIDs(ctx context.Context, arg ListAttri
 			&i.ColorCode,
 			&i.Order,
 			&i.IsPublic,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -487,6 +470,7 @@ SELECT
     attribute.color_code,
     attribute.` + "`" + `order` + "`" + `,
     attribute.is_public,
+    attribute.is_active,
     attribute.created_at,
     attribute.updated_at
 FROM attribute
@@ -496,6 +480,7 @@ AND (
     ? IS NULL
     OR attribute.text LIKE ?
 )
+AND (? IS NULL OR attribute.is_active = ?)
 AND (
     ? IS NULL
     OR attribute.` + "`" + `order` + "`" + ` > ?
@@ -509,6 +494,7 @@ type ListAttributesForwardParams struct {
 	PropertyID  string
 	AccountID   string
 	SearchQuery sql.NullString
+	IsActive    sql.NullBool
 	CursorOrder sql.NullInt32
 	CursorID    sql.NullString
 	Limit       int32
@@ -522,6 +508,7 @@ type ListAttributesForwardRow struct {
 	ColorCode  string
 	Order      int32
 	IsPublic   bool
+	IsActive   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -532,6 +519,8 @@ func (q *Queries) ListAttributesForward(ctx context.Context, arg ListAttributesF
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorOrder,
 		arg.CursorOrder,
 		arg.CursorOrder,
@@ -553,6 +542,7 @@ func (q *Queries) ListAttributesForward(ctx context.Context, arg ListAttributesF
 			&i.ColorCode,
 			&i.Order,
 			&i.IsPublic,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -668,6 +658,7 @@ UPDATE attribute SET
     text = COALESCE(?, text),
     color_code = COALESCE(?, color_code),
     ` + "`" + `order` + "`" + ` = COALESCE(?, ` + "`" + `order` + "`" + `),
+    is_active = COALESCE(?, is_active),
     updated_at = NOW(3)
 WHERE id = ?
 AND property_id = ?
@@ -678,6 +669,7 @@ type UpdateAttributeParams struct {
 	Text       sql.NullString
 	ColorCode  sql.NullString
 	Order      sql.NullInt32
+	IsActive   sql.NullBool
 	ID         string
 	PropertyID string
 	AccountID  string
@@ -688,6 +680,7 @@ func (q *Queries) UpdateAttribute(ctx context.Context, arg UpdateAttributeParams
 		arg.Text,
 		arg.ColorCode,
 		arg.Order,
+		arg.IsActive,
 		arg.ID,
 		arg.PropertyID,
 		arg.AccountID,

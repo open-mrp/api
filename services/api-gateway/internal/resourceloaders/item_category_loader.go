@@ -2,6 +2,8 @@ package resourceloaders
 
 import (
 	"context"
+	"net/url"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -43,20 +45,18 @@ func ItemCategoriesFromProto(ctx context.Context, categories []*pb.ItemCategoryI
 		}
 		meta.Set(constants.ObjectTypeItemCategory, ic.Id, "owner_account_id", accountID)
 
-		if len(ic.Properties) > 0 {
-			props := make([]apiresource.Property, len(ic.Properties))
-			for i, p := range ic.Properties {
-				props[i] = apiresource.Property{
-					ID:        p.Id,
-					Object:    constants.ObjectTypeProperty,
-					Name:      p.Name,
-					CreatedAt: grpcutil.TimestampToTime(p.CreatedAt),
-					UpdatedAt: grpcutil.TimestampToTime(p.UpdatedAt),
-				}
+		props := make([]apiresource.Property, len(ic.Properties))
+		for i, p := range ic.Properties {
+			props[i] = apiresource.Property{
+				ID:        p.Id,
+				Object:    constants.ObjectTypeProperty,
+				Name:      p.Name,
+				CreatedAt: grpcutil.TimestampToTime(p.CreatedAt),
+				UpdatedAt: grpcutil.TimestampToTime(p.UpdatedAt),
 			}
-			meta.Set(constants.ObjectTypeItemCategory, ic.Id, "properties_list",
-				apiresource.NewList(props, apiresource.PageInfo{}))
 		}
+		meta.Set(constants.ObjectTypeItemCategory, ic.Id, "properties_list",
+			apiresource.NewEmbeddedList(props, false, CategoryPropertiesListPath(ic.Id), nil))
 
 		if ic.UnitGroup != nil {
 			ug := buildUnitGroupFromProto(ic.UnitGroup)
@@ -72,9 +72,14 @@ func itemCategoryFromProto(ic *pb.ItemCategoryInfo) *apiresource.ItemCategory {
 		ID:        ic.Id,
 		Object:    constants.ObjectTypeItemCategory,
 		Name:      ic.Name,
-		Notes:     ic.Notes,
-		Type:      constants.ItemCategoryType(ic.ItemCategoryTypeCode),
+		Type:      constants.ItemCategoryTypeFromCode(ic.ItemCategoryTypeCode),
 		CreatedAt: grpcutil.TimestampToTime(ic.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(ic.UpdatedAt),
 	}
+}
+
+// CategoryPropertiesListPath is the properties list narrowed to one category, where a category's embedded
+// properties continue.
+func CategoryPropertiesListPath(itemCategoryID string) string {
+	return "/v1/catalog/properties?" + url.Values{"item_category_ids[]": {itemCategoryID}}.Encode()
 }

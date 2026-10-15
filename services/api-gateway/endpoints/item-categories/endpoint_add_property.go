@@ -21,7 +21,7 @@ type AddItemCategoryPropertyRequest struct {
 
 // Attaches one of your account's properties to an item category.
 //
-// The property then appears among the category's properties, including in the customer-facing catalog, describing a dimension along which the category's items vary. Each property name can appear only once per category, so attaching a property whose name duplicates one already there returns a conflict error.
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets `property_ids` on Create or Update Item Category.
 type AddItemCategoryPropertyEndpoint struct{}
 
 func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource] {
@@ -31,10 +31,8 @@ func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).AddItemCategoryProperty
 		},

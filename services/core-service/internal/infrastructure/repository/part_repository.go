@@ -131,6 +131,7 @@ func stitchPartAttributes(ctx context.Context, queries *sqlc.Queries, parts []*d
 			ColorCode:  colorCode,
 			Order:      row.Order,
 			PropertyID: row.PropertyID,
+			IsActive:   row.IsActive,
 			CreatedAt:  row.CreatedAt,
 			UpdatedAt:  row.UpdatedAt,
 		})

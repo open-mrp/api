@@ -31,6 +31,7 @@ func accountPriceToProto(ap *domain.AccountPrice) *pb.AccountPriceInfo {
 			ColorCode: a.ColorCode,
 			CreatedAt: timestamppb.New(a.CreatedAt),
 			UpdatedAt: timestamppb.New(a.UpdatedAt),
+			Status:    string(constants.ArchiveStatusFromIsActive(a.IsActive)),
 		}
 	}
 

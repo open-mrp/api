@@ -16,29 +16,23 @@ import (
 
 // carries one attribute under a bulk-upserted property
 type UpsertPropertyAttributeInput struct {
-	// The selectable value this attribute represents, such as `Red`.
-	//
-	// Must be unique across all attributes in the account, not just within the property. Leading and trailing whitespace is trimmed.
+	// The value, such as `Large`. Matched case-insensitively against the property's existing attributes; leading and trailing whitespace is trimmed.
 	Value string `json:"value" validate:"required,max=255"`
-	// Swatch color used to display this attribute in the UI.
-	//
-	// When omitted, one of the nine named colors is assigned. Ignored for a value the property already defines.
+	// Swatch color for a new attribute. Defaults to `default`. Ignored for a value the property already has.
 	ColorCode field.Optional[constants.Color] `json:"color,omitzero"`
 }
 
 // carries one property in a bulk upsert
 type UpsertPropertyInput struct {
-	// Display name of the property, used to match existing properties within the account.
+	// Display name, such as `Size`. Matches an existing property by name (case-insensitive).
 	Name string `json:"name" validate:"required,max=255"`
-	// The selectable values to define under this property, in the order they should be arranged.
-	//
-	// Additive — values the property already defines are left as they stand, and none are removed. New values are appended after the existing ones.
+	// Attributes to add, by value, appended in order. Existing attributes are never changed or removed.
 	Attributes []UpsertPropertyAttributeInput `json:"attributes" default:"[]" validate:"max=1000,dive"`
 }
 
 // carries the properties to bulk upsert
 type BulkUpsertPropertiesRequest struct {
-	// Properties to create or update, matched by name (case-insensitive) within the account.
+	// Properties to create or update.
 	Properties []UpsertPropertyInput `json:"properties" validate:"required,min=1,max=1000,dive"`
 }
 
@@ -57,8 +51,9 @@ func (*BulkUpsertPropertiesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertPropertiesRequest)
 }
 
-// Creates or updates multiple properties and their attributes for the account, matched by
-// name (case-insensitive), then writes asynchronously — 202 with a job to poll.
+// Creates or updates properties and their attributes in bulk.
+//
+// Rows are matched to existing properties by `name` (case-insensitive). Attributes are added by value and appended in order. Existing attributes are never changed or removed. The work runs in the background; the response is an async job to poll.
 type BulkUpsertPropertiesEndpoint struct{}
 
 func (e *BulkUpsertPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertPropertiesRequest, *apiresource.AsyncJob] {
@@ -71,7 +66,6 @@ func (e *BulkUpsertPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*B
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}, {Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

@@ -201,21 +201,28 @@ func TestProperties_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 	assert.Equal(t, "properties[1].name", jsonField(errObj, "param"))
 }
 
-// rejects a value claimed by two properties: one value belongs to one property per
-// account, so no job is raised
-func TestProperties_BulkUpsert_RejectsValueUnderTwoProperties(t *testing.T) {
+// A value is unique within its property, so two properties may each define it; a new attribute's omitted color is
+// the neutral default.
+func TestProperties_BulkUpsert_SameValueUnderTwoProperties(t *testing.T) {
 	t.Parallel()
 
 	value := uniqueName("e2e-bup-prop-shared")
-	status, body := bulkUpsertProperties(t,
+	job := bulkUpsertPropertiesJob(t,
 		map[string]any{"name": uniqueName("e2e-bup-prop-x"), "attributes": []any{map[string]any{"value": value}}},
 		map[string]any{"name": uniqueName("e2e-bup-prop-y"), "attributes": []any{map[string]any{"value": value}}},
 	)
-	requireStatus(t, 422, status, body)
-
-	errObj := jsonObject(parseJSON(body), "error")
-	assert.Equal(t, "invalid_request_error", jsonField(errObj, "type"))
-	assert.Equal(t, "properties[1].attributes[0].value", jsonField(errObj, "param"))
+	created, _ := jobResultIDs(job)
+	require.Len(t, created, 2)
+	for _, id := range created {
+		t.Cleanup(func() { apiClient.Delete(propertiesPath + "/" + id) })
+		list, _, err := apiClient.GetList(attributesPath(id), nil)
+		require.NoError(t, err)
+		require.Len(t, list.Data, 1)
+		attr := parseJSON(list.Data[0])
+		assert.Equal(t, value, jsonField(attr, "value"))
+		assert.Equal(t, "default", jsonField(attr, "color"))
+		assert.Equal(t, "active", jsonField(attr, "status"))
+	}
 }
 
 func TestProperties_BulkUpsert_EmptyRejected(t *testing.T) {

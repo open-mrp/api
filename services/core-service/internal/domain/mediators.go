@@ -208,6 +208,14 @@ type SiteMed interface {
 	//  3. Without one, return the account's default site (nil while it has none).
 	Resolve(ctx context.Context, accountID string, siteID *string, param string) (*string, *apierror.APIError)
 
+	// CreateDefaultSite gives a newly created account its default site. Call it right after the account (and its
+	// business address, if any) is written.
+	//
+	//  1. No-op when the account already has a default site.
+	//  2. Create an active `site` location named after the account, at its shipping address when it has one.
+	//  3. Make it the account's default site. Like the account's other starting records (portal, branding, calendars), it is not audited: the caller's identity targets another account, or none.
+	CreateDefaultSite(ctx context.Context, accountID string) (*Location, *apierror.APIError)
+
 	// LocationIDsInSites is every location of the account that belongs to one of siteIDs, the sites included.
 	//
 	//  1. Load the account's location tree and default site.

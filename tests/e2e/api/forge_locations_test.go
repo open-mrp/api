@@ -3,9 +3,11 @@
 package api_test
 
 import (
+	"database/sql"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,6 +37,73 @@ func createSiteAddress(t *testing.T) string {
 	id := jsonField(parseJSON(resp.Body), "id")
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(addressesPath + "/" + id) })
 	return id
+}
+
+// requireDefaultSite asserts the account was born with its default site: an active, top-level site named wantName,
+// at the account's shipping address (none when the account has none). Returns the site's ID.
+func requireDefaultSite(t *testing.T, accountID, wantName string) string {
+	t.Helper()
+	var siteID, name, typeCode string
+	var isActive, topLevel, atShippingAddress bool
+	var shippingAddressID sql.NullString
+	require.NoError(t, authDB(t).QueryRow(
+		`SELECT sl.id, sl.name, sl.storage_location_type_code, sl.is_active, sl.parent_id IS NULL,
+		        sl.address_id <=> a.default_shipping_address_id, a.default_shipping_address_id
+		   FROM account a JOIN storage_location sl ON sl.id = a.default_site_id AND sl.account_id = a.id
+		  WHERE a.id = ?`, accountID,
+	).Scan(&siteID, &name, &typeCode, &isActive, &topLevel, &atShippingAddress, &shippingAddressID),
+		"account %s has a default site", accountID)
+	assert.Equal(t, wantName, name)
+	assert.Equal(t, "site", typeCode)
+	assert.True(t, isActive)
+	assert.True(t, topLevel)
+	assert.True(t, atShippingAddress, "the site is at the account's shipping address (%v)", shippingAddressID)
+	return siteID
+}
+
+// --- Default site on new accounts ---
+
+func TestForgeLocations_NewSandboxHasADefaultSite(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{"blank", "seeded"} {
+		name := uniqueName("e2e-site-sb-" + mode)
+		status, raw, err := apiClient.Post(sandboxesPath, map[string]any{"name": name, "mode": mode}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, raw)
+		typeID := jsonField(parseJSON(raw), "id")
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(sandboxesPath + "/" + typeID) })
+
+		var accountID string
+		require.NoError(t, authDB(t).QueryRow("SELECT account_id FROM sandbox_account WHERE type_id = ?", typeID).Scan(&accountID))
+		siteID := requireDefaultSite(t, accountID, name)
+
+		if mode == "seeded" {
+			// The seeded building lands inside the default site, which stays the only site.
+			var parentID sql.NullString
+			eventually(t, 60*time.Second, time.Second, func() error {
+				return authDB(t).QueryRow("SELECT parent_id FROM storage_location WHERE account_id = ? AND name = 'Main Building'", accountID).Scan(&parentID)
+			})
+			assert.Equal(t, siteID, parentID.String)
+			var sites int
+			require.NoError(t, authDB(t).QueryRow("SELECT COUNT(*) FROM storage_location WHERE account_id = ? AND storage_location_type_code = 'site'", accountID).Scan(&sites))
+			assert.Equal(t, 1, sites)
+		}
+	}
+}
+
+func TestForgeLocations_NewSupplierAccountHasADefaultSite(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-site-sup")
+	status, raw, err := apiClient.Post(suppliersPath, map[string]any{
+		"name": name, "number": uniqueName("SUP"),
+		"bill_to_address": map[string]any{"name": name, "line_1": "9 Supply Way", "city": "Dalton", "state": "GA", "postal_code": "30720", "country": "US"},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, raw)
+	supplierAccountID := jsonField(parseJSON(raw), "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + supplierAccountID) })
+
+	requireDefaultSite(t, supplierAccountID, name)
 }
 
 // --- Sites ---

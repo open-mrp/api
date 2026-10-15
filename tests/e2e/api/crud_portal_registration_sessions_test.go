@@ -306,6 +306,11 @@ func TestPortalRegistration_CompleteNewCustomerJourney(t *testing.T) {
 	assert.Equal(t, sessionID, jsonField(completed, "id"))
 	assert.NotEmpty(t, jsonField(completed, "completed_at"), "completed_at should be set after completion")
 
+	// The new customer account is born with a default site named after it, at its address.
+	var customerAccountID string
+	require.NoError(t, authDB(t).QueryRow("SELECT id FROM account WHERE name = ?", data["customer_name"]).Scan(&customerAccountID))
+	requireDefaultSite(t, customerAccountID, data["customer_name"].(string))
+
 	// Completion is idempotent — replaying returns the completed session, not an error.
 	status, body, err = buyer.Post(sessionPath+"/actions/complete", nil, newIdempotencyKey())
 	require.NoError(t, err)

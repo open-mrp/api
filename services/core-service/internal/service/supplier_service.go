@@ -264,6 +264,10 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 			}
 			result = created
 
+			if _, apiErr := txSvc.mediators().Site.CreateDefaultSite(txCtx, accountID); apiErr != nil {
+				return apiErr
+			}
+
 			changes := audit.ComputeChanges(nil, created)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{

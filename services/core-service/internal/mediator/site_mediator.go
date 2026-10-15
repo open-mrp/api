@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -74,6 +76,46 @@ func (m *siteMedImpl) Resolve(ctx context.Context, accountID string, siteID *str
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &site.ID, nil
+}
+
+// CreateDefaultSite gives a newly created account its default site. Call it right after the account (and its
+// business address, if any) is written.
+//
+//  1. No-op when the account already has a default site.
+//  2. Create an active `site` location named after the account, at its shipping address when it has one.
+//  3. Make it the account's default site. Like the account's other starting records (portal, branding, calendars), it is not audited: the caller's identity targets another account, or none.
+func (m *siteMedImpl) CreateDefaultSite(ctx context.Context, accountID string) (*domain.Location, *apierror.APIError) {
+	ctx, span := siteMedTracer.Start(ctx, "mediator.site.create_default_site")
+	defer span.End()
+
+	repo := m.repos.NewLocationRepo()
+	seed, apiErr := repo.SiteSeed(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if seed.DefaultSiteID != nil {
+		return nil, nil
+	}
+
+	siteID, apiErr := id.GenID(id.LocationIDPrefix, nil)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	active := constants.ArchiveStatusActive
+	site, apiErr := repo.Create(ctx, siteID, domain.CreateLocationParams{
+		AccountID: accountID,
+		Name:      seed.AccountName,
+		TypeCode:  string(constants.LocationTypeCodeSite),
+		Status:    &active,
+		AddressID: seed.ShippingAddressID,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if _, apiErr := repo.SetDefaultSiteIfUnset(ctx, accountID, site.ID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return site, nil
 }
 
 // LocationIDsInSites is every location of the account that belongs to one of siteIDs, the sites included.

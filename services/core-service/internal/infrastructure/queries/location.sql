@@ -196,6 +196,9 @@ LIMIT ?;
 -- name: GetAccountDefaultSiteID :one
 SELECT default_site_id FROM account WHERE id = sqlc.arg('account_id');
 
+-- name: GetAccountSiteSeed :one
+SELECT name, default_site_id, default_shipping_address_id FROM account WHERE id = sqlc.arg('account_id');
+
 -- name: SetAccountDefaultSiteIfUnset :execresult
 UPDATE account SET default_site_id = sqlc.arg('site_id'), updated_at = NOW(3)
 WHERE id = sqlc.arg('account_id') AND default_site_id IS NULL;

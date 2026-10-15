@@ -252,6 +252,23 @@ func (q *Queries) GetAccountDefaultSiteID(ctx context.Context, accountID string)
 	return default_site_id, err
 }
 
+const getAccountSiteSeed = `-- name: GetAccountSiteSeed :one
+SELECT name, default_site_id, default_shipping_address_id FROM account WHERE id = ?
+`
+
+type GetAccountSiteSeedRow struct {
+	Name                     string
+	DefaultSiteID            sql.NullString
+	DefaultShippingAddressID sql.NullString
+}
+
+func (q *Queries) GetAccountSiteSeed(ctx context.Context, accountID string) (GetAccountSiteSeedRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountSiteSeed, accountID)
+	var i GetAccountSiteSeedRow
+	err := row.Scan(&i.Name, &i.DefaultSiteID, &i.DefaultShippingAddressID)
+	return i, err
+}
+
 const getLocation = `-- name: GetLocation :one
 SELECT
     sl.id,

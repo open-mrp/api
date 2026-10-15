@@ -591,6 +591,21 @@ func (m *MockSiteMed) EXPECT() *MockSiteMedMockRecorder {
 	return m.recorder
 }
 
+// CreateDefaultSite mocks base method.
+func (m *MockSiteMed) CreateDefaultSite(ctx context.Context, accountID string) (*domain.Location, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDefaultSite", ctx, accountID)
+	ret0, _ := ret[0].(*domain.Location)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateDefaultSite indicates an expected call of CreateDefaultSite.
+func (mr *MockSiteMedMockRecorder) CreateDefaultSite(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDefaultSite", reflect.TypeOf((*MockSiteMed)(nil).CreateDefaultSite), ctx, accountID)
+}
+
 // DefaultSiteID mocks base method.
 func (m *MockSiteMed) DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()

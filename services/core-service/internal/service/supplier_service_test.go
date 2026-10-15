@@ -50,7 +50,9 @@ func newSupplierTestDeps(t *testing.T) *supplierTestDeps {
 	d.repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
-	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: d.idempotency}).AnyTimes()
+	site := mediatormock.NewMockSiteMed(ctrl)
+	site.EXPECT().CreateDefaultSite(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: d.idempotency, Site: site}).AnyTimes()
 	d.idempotency.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 		Return(&domain.IdempotencyKey{TypeID: "idk_sup", RecoveryPoint: string(domain.RecoveryPointStarted)}, nil).AnyTimes()
 	d.idempotency.EXPECT().CacheSuccessResponse(gomock.Any(), "idk_sup", gomock.Any()).Return(nil).AnyTimes()

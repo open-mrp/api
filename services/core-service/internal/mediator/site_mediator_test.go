@@ -20,6 +20,7 @@ func newSiteMedFixture(t *testing.T) (domain.SiteMed, *repositorymock.MockLocati
 	locations := repositorymock.NewMockLocationRepo(ctrl)
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewLocationRepo().Return(locations).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(&recordingOutboxRepo{}).AnyTimes()
 	return NewSiteMed(&SiteMedConfig{Repos: factory}), locations
 }
 
@@ -64,6 +65,43 @@ func TestSiteMed_ResolveChecksTheNamedSite(t *testing.T) {
 			assert.Equal(t, "sglc_2", *got)
 		})
 	}
+}
+
+func TestSiteMed_CreateDefaultSiteWithoutAShippingAddress(t *testing.T) {
+	t.Parallel()
+	med, locations := newSiteMedFixture(t)
+	locations.EXPECT().SiteSeed(gomock.Any(), "ac_1").Return(&domain.AccountSiteSeed{AccountName: "Acme Mills"}, nil)
+	locations.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, p domain.CreateLocationParams) (*domain.Location, *apierror.APIError) {
+			assert.Equal(t, domain.CreateLocationParams{
+				AccountID: "ac_1", Name: "Acme Mills", TypeCode: "site", Status: p.Status,
+			}, p)
+			assert.Equal(t, constants.ArchiveStatusActive, *p.Status)
+			return &domain.Location{ID: id, Name: p.Name, TypeCode: p.TypeCode, Status: *p.Status}, nil
+		})
+	var defaulted string
+	locations.EXPECT().SetDefaultSiteIfUnset(gomock.Any(), "ac_1", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, siteID string) (bool, *apierror.APIError) {
+			defaulted = siteID
+			return true, nil
+		})
+
+	site, apiErr := med.CreateDefaultSite(context.Background(), "ac_1")
+	require.Nil(t, apiErr)
+	require.NotNil(t, site)
+	assert.Equal(t, site.ID, defaulted)
+	assert.Nil(t, site.AddressID)
+}
+
+func TestSiteMed_CreateDefaultSiteKeepsAnExistingOne(t *testing.T) {
+	t.Parallel()
+	med, locations := newSiteMedFixture(t)
+	existing := "sglc_main"
+	locations.EXPECT().SiteSeed(gomock.Any(), "ac_1").Return(&domain.AccountSiteSeed{AccountName: "Acme", DefaultSiteID: &existing}, nil)
+
+	site, apiErr := med.CreateDefaultSite(context.Background(), "ac_1")
+	require.Nil(t, apiErr)
+	assert.Nil(t, site)
 }
 
 func TestSiteMed_LocationIDsInSites(t *testing.T) {

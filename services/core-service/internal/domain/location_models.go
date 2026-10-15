@@ -186,6 +186,13 @@ type BulkUpsertLocationsParams struct {
 	Locations []UpsertLocationParams
 }
 
+// AccountSiteSeed is what an account's first site is made from.
+type AccountSiteSeed struct {
+	AccountName       string
+	DefaultSiteID     *string
+	ShippingAddressID *string
+}
+
 // LocationTreeNode is one location's place in its account's tree.
 type LocationTreeNode struct {
 	ID       string

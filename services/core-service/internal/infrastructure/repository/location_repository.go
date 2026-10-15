@@ -407,6 +407,24 @@ func (r *locationRepoImpl) DefaultSiteID(ctx context.Context, accountID string) 
 	return &id.String, nil
 }
 
+func (r *locationRepoImpl) SiteSeed(ctx context.Context, accountID string) (*domain.AccountSiteSeed, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.site_seed")
+	defer span.End()
+
+	row, err := r.queries.GetAccountSiteSeed(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	seed := &domain.AccountSiteSeed{AccountName: row.Name}
+	if row.DefaultSiteID.Valid {
+		seed.DefaultSiteID = &row.DefaultSiteID.String
+	}
+	if row.DefaultShippingAddressID.Valid {
+		seed.ShippingAddressID = &row.DefaultShippingAddressID.String
+	}
+	return seed, nil
+}
+
 func (r *locationRepoImpl) SetDefaultSiteIfUnset(ctx context.Context, accountID, siteID string) (bool, *apierror.APIError) {
 	ctx, span := locationRepoTracer.Start(ctx, "repository.location.set_default_site_if_unset")
 	defer span.End()

@@ -20324,6 +20324,21 @@ func (mr *MockLocationRepoMockRecorder) SetDefaultSiteIfUnset(ctx, accountID, si
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultSiteIfUnset", reflect.TypeOf((*MockLocationRepo)(nil).SetDefaultSiteIfUnset), ctx, accountID, siteID)
 }
 
+// SiteSeed mocks base method.
+func (m *MockLocationRepo) SiteSeed(ctx context.Context, accountID string) (*domain.AccountSiteSeed, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SiteSeed", ctx, accountID)
+	ret0, _ := ret[0].(*domain.AccountSiteSeed)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SiteSeed indicates an expected call of SiteSeed.
+func (mr *MockLocationRepoMockRecorder) SiteSeed(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SiteSeed", reflect.TypeOf((*MockLocationRepo)(nil).SiteSeed), ctx, accountID)
+}
+
 // Update mocks base method.
 func (m *MockLocationRepo) Update(ctx context.Context, params domain.UpdateLocationParams) (*domain.Location, *apierror.APIError) {
 	m.ctrl.T.Helper()

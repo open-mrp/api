@@ -3,8 +3,9 @@ package messageep
 import (
 	"context"
 	"fmt"
+
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/include"
-	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -184,16 +185,14 @@ func (s *messageSvcImpl) SendMessage(ctx context.Context, req *SendMessageReques
 		Body:                  &req.Body,
 		ClientMessageId:       req.ClientMessageID,
 		ReplyToMessageId:      req.ReplyToMessageID.Ptr(),
-		LinkResourceId:        req.LinkResourceID.Ptr(),
+		LinkResourceType:      recordTypePtr(req.Record),
+		LinkResourceId:        recordIDPtr(req.Record),
 		Subject:               req.Subject.Ptr(),
 		Cc:                    req.Cc,
 		Attachments:           attachmentInputsToProto(req.Attachments),
 		MentionAccountUserIds: req.Mentions,
 	}
-	if lt, ok := req.LinkResourceType.Value(); ok {
-		s := string(lt)
-		pbReq.LinkResourceType = &s
-	}
+
 	// audience=customer maps to a customer-visible send; empty/internal leaves the default (internal).
 	if aud, ok := req.Audience.Value(); ok && aud == constants.ConversationAudienceCustomer {
 		v := string(constants.MessageVisibilityExternal)
@@ -296,84 +295,22 @@ func (s *messageSvcImpl) hydrateMessages(ctx context.Context, msgs ...*apiresour
 		}
 	}
 	resourceloaders.HydrateActorNames(ctx, actors)
-
-	if requested["resource"] {
-		var entities []*apiresource.Entity
-		for _, m := range msgs {
-			if v, ok := meta.Get(constants.ObjectTypeChatMessage, m.ID, "resource"); ok {
-				entities = append(entities, v.(*apiresource.Entity))
-			}
-		}
-		hydrateResourceEntityNames(ctx, entities)
-	}
 }
 
-// hydrateResourceEntityNames fills the display name on linked-resource references (sales orders and
-// invoices) by batch-resolving their ids. Other resource types are left as bare id/type references.
-func hydrateResourceEntityNames(ctx context.Context, entities []*apiresource.Entity) {
-	var salesOrderIDs, invoiceIDs []string
-	seen := make(map[string]struct{})
-	collect := func(id string, dst *[]string) {
-		if _, ok := seen[id]; ok {
-			return
-		}
-		seen[id] = struct{}{}
-		*dst = append(*dst, id)
+// recordTypePtr and recordIDPtr split an optional record reference into the type and ID the chat service stores.
+func recordTypePtr(r field.Optional[apiresource.RecordInput]) *string {
+	if v, ok := r.Value(); ok {
+		t := string(v.Type)
+		return &t
 	}
-	for _, e := range entities {
-		if e == nil || e.Name != nil || e.ID == "" {
-			continue
-		}
-		switch e.Type {
-		case constants.ObjectTypeSalesOrder:
-			collect(e.ID, &salesOrderIDs)
-		case constants.ObjectTypeInvoice:
-			collect(e.ID, &invoiceIDs)
-		}
-	}
-
-	names := make(map[string]string)
-	if len(salesOrderIDs) > 0 {
-		if loaded, apiErr := resourceloaders.LoadSalesOrders(ctx, salesOrderIDs); apiErr == nil {
-			for id, ref := range loaded {
-				if so, ok := ref.(*apiresource.SalesOrder); ok && so.Number != "" {
-					names[id] = "Order #" + formatRecordNumber(so.Number)
-				}
-			}
-		}
-	}
-	if len(invoiceIDs) > 0 {
-		if loaded, apiErr := resourceloaders.LoadInvoices(ctx, invoiceIDs); apiErr == nil {
-			for id, ref := range loaded {
-				if inv, ok := ref.(*apiresource.Invoice); ok && inv.Number != "" {
-					names[id] = "Invoice #" + formatRecordNumber(inv.Number)
-				}
-			}
-		}
-	}
-
-	for _, e := range entities {
-		if e == nil || e.Name != nil {
-			continue
-		}
-		if name, ok := names[e.ID]; ok {
-			e.Name = &name
-		}
-	}
+	return nil
 }
 
-func formatRecordNumber(number string) string {
-	parts := strings.Split(number, "-")
-	if len(parts) > 0 && parts[0] != "" {
-		c := parts[0][0]
-		isLetter := (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
-		if !isLetter {
-			for len(parts[0]) < 6 {
-				parts[0] = "0" + parts[0]
-			}
-		}
+func recordIDPtr(r field.Optional[apiresource.RecordInput]) *string {
+	if v, ok := r.Value(); ok {
+		return &v.ID
 	}
-	return strings.Join(parts, "-")
+	return nil
 }
 
 func attachmentInputsToProto(inputs []MessageAttachmentInput) []*pb.AttachmentInput {
@@ -389,8 +326,8 @@ func attachmentInputsToProto(inputs []MessageAttachmentInput) []*pb.AttachmentIn
 			ContentType:  in.ContentType.Ptr(),
 			SizeBytes:    in.SizeBytes.Ptr(),
 			Url:          in.URL.Ptr(),
-			ResourceType: in.ResourceType.Ptr(),
-			ResourceId:   in.ResourceID.Ptr(),
+			ResourceType: recordTypePtr(in.Record),
+			ResourceId:   recordIDPtr(in.Record),
 		})
 	}
 	return out

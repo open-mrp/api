@@ -42,7 +42,7 @@ func (*EmailSendersEndpointGroup) Materialize(config *EmailSendersEndpointGroupC
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		apiendpoint.From(&emailbridgeep.GetEmailSenderEndpoint{}).WithService(inner, emailBridgeSvc),
-		apiendpoint.From(&emailbridgeep.SetEmailSenderEndpoint{}).WithService(inner, emailBridgeSvc),
+		apiendpoint.From(&emailbridgeep.UpdateEmailSenderEndpoint{}).WithService(inner, emailBridgeSvc),
 		apiendpoint.From(&emailbridgeep.DeleteEmailSenderEndpoint{}).WithService(inner, emailBridgeSvc),
 	}
 

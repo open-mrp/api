@@ -50,7 +50,6 @@ func (e *AddMessagingGroupMemberEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Route:             "/v1/messaging/groups/{id}/members",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddMessagingGroupMemberRequest) (*apiresource.MessagingGroup, *apierror.APIError) {

@@ -10,12 +10,15 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to list the account users the caller has blocked.
-type ListBlocksRequest struct{}
+type ListBlocksRequest struct {
+	object.ListRequest
+}
 
-// Lists the users you have blocked, most recently blocked first.
+// Returns a list of the users you have blocked, most recently blocked first.
 //
 // Only blocks you created are returned — you are never told who has blocked you.
 type ListBlocksEndpoint struct{}
@@ -28,7 +31,6 @@ func (e *ListBlocksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBlocksR
 		Route:             "/v1/messaging/blocks",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingBlock,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBlocksRequest) (*apiresource.List[apiresource.MessagingBlock], *apierror.APIError) {

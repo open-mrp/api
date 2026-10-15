@@ -35,7 +35,6 @@ func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeConversationParticipant,
 		Public:            false,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAgentParticipantRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ParticipantSvc).RemoveAgentParticipant, constants.ObjectTypeConversationParticipant, "pid")

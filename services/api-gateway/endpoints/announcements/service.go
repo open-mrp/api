@@ -3,11 +3,14 @@ package announcementep
 import (
 	"context"
 	"fmt"
-	"github.com/open-mrp/apikit/include"
 	"time"
 
+	"github.com/open-mrp/apikit/include"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
@@ -135,11 +138,11 @@ func announcementFromProto(ctx context.Context, a *pb.AnnouncementInfo) apiresou
 		DismissedAt: tsToPtr(a.DismissedAt),
 		CreatedAt:   tsToTime(a.CreatedAt),
 		UpdatedAt:   tsToTime(a.UpdatedAt),
+		Related:     &apiresource.AnnouncementRelated{Object: constants.ObjectTypeAnnouncementRelated},
 	}
-	if a.LinkResourceType != nil && a.LinkResourceId != nil {
-		// resource is expandable: left nil on the base resource, stashed for ?include=resource.
-		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAnnouncement, result.ID, "resource",
-			apiresource.NewEntity(*a.LinkResourceId, constants.ObjectType(*a.LinkResourceType), nil, nil))
+	if a.LinkResourceType != nil && a.LinkResourceId != nil && *a.LinkResourceType != "" && *a.LinkResourceId != "" {
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAnnouncement, result.ID, chatmap.MetaRelatedRecord,
+			recordstub.Ref{Type: constants.RecordType(*a.LinkResourceType), ID: *a.LinkResourceId})
 	}
 	return result
 }

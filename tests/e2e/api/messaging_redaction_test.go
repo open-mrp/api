@@ -51,13 +51,17 @@ func TestRedaction_LegalHoldBlocksThenAllowsRedaction(t *testing.T) {
 	redacted := parseJSON(resp.Body)
 	assert.Equal(t, convID, jsonField(redacted, "id"), "the conversation row survives redaction as an audit shell")
 
-	// Every message body is now cleared, but the message rows remain.
-	msgs, _, err := admin.GetList(conversationsPath+"/"+convID+"/messages", url.Values{"limit": {"50"}})
+	// Every message is now a visible tombstone: deleted, with its content cleared, keeping its place.
+	msgs, _, err := admin.GetList(conversationsPath+"/"+convID+"/messages", url.Values{"limit": {"50"}, "include": {"attachments"}})
 	require.NoError(t, err)
-	require.NotEmpty(t, msgs.Data, "the message rows are kept as an audit shell")
+	require.NotEmpty(t, msgs.Data, "the messages keep their place in the conversation")
 	for _, raw := range msgs.Data {
 		m := parseJSON(raw)
+		assert.Equal(t, "deleted", jsonField(m, "status"))
 		assert.Nil(t, m["body"], "the message body is stripped by redaction")
+		assert.Nil(t, m["attachments"], "a deleted message's attachments are null even when included")
+		assertValidTimestamp(t, jsonField(m, "deleted_at"), "deleted_at")
+		assert.NotEmpty(t, jsonField(m, "sequence"))
 	}
 }
 

@@ -367,6 +367,38 @@ func TestCovMessagingEmailInboxes_ExpandableFieldsNullWithoutInclude(t *testing.
 	got := parseJSON(body)
 	assertNilField(t, got, "email_domain")
 	assertNilField(t, got, "agent_config")
+	assertNilField(t, got, "group")
+	assert.NotContains(t, got, "group_id")
+}
+
+// group is the expandable messaging group whose members join every thread the inbox opens.
+func TestCovMessagingEmailInboxes_IncludeGroup(t *testing.T) {
+	t.Parallel()
+	owner := chatUserClient(t)
+	group := createMessagingGroup(t, owner, uniqueName("e2e-inbox-group"), []string{SeedAccountUser2ID}, nil)
+	groupID := jsonField(group, "id")
+	t.Cleanup(func() { _, _ = owner.DeleteFull(messagingGroupsPath + "/" + groupID) })
+
+	body := covMessagingEmailInboxCreateBody(uniqueName("e2e-eminb-group"))
+	body["group_id"] = groupID
+	status, created, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, created)
+	id := jsonField(parseJSON(created), "id")
+	defer apiClient.Delete(covMessagingEmailInboxesPath + "/" + id)
+	assertNilField(t, parseJSON(created), "group")
+
+	status, got, err := apiClient.GetListRaw(covMessagingEmailInboxesPath+"/"+id, url.Values{"include": {"group"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, got)
+	g := jsonObject(parseJSON(got), "group")
+	require.NotNil(t, g, "group populates with ?include=group")
+	assert.Equal(t, groupID, jsonField(g, "id"))
+	assert.Equal(t, "messaging_group", jsonField(g, "object"))
+	assert.Equal(t, jsonField(group, "name"), jsonField(g, "name"))
+	members, ok := listData(g, "members")
+	require.True(t, ok)
+	assert.Len(t, members, 1)
 }
 
 func TestCovMessagingEmailInboxes_IncludeEmailDomain(t *testing.T) {
@@ -382,7 +414,7 @@ func TestCovMessagingEmailInboxes_IncludeEmailDomain(t *testing.T) {
 	assert.Equal(t, "email_domain", jsonField(domain, "object"))
 	assert.Equal(t, "mail.e2e.openmrp.ai", jsonField(domain, "domain"))
 	assert.Equal(t, "verified", jsonField(domain, "status"))
-	assert.NotEmpty(t, jsonStringSlice(domain, "dkim_tokens"))
+	assertEmailDNSRecords(t, domain, "mail.e2e.openmrp.ai")
 	assertValidTimestamp(t, jsonField(domain, "verified_at"), "verified_at")
 	assertValidTimestamp(t, jsonField(domain, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(domain, "updated_at"), "updated_at")

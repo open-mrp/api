@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/open-mrp/apikit/db"
 )
@@ -140,6 +142,113 @@ func (q *Queries) ListEmailDomainsByAccount(ctx context.Context, accountID strin
 	return items, nil
 }
 
+const listEmailDomainsPage = `-- name: ListEmailDomainsPage :many
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
+WHERE account_id = ?
+  AND (
+    ? IS NULL
+    OR created_at < ?
+    OR (created_at = ? AND id < ?)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListEmailDomainsPageParams struct {
+	AccountID       string
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+// One keyset page of an account's domains, newest first.
+func (q *Queries) ListEmailDomainsPage(ctx context.Context, arg ListEmailDomainsPageParams) ([]EmailDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailDomainsPage,
+		arg.AccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailDomain
+	for rows.Next() {
+		var i EmailDomain
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Domain,
+			&i.Status,
+			&i.DkimTokens,
+			&i.VerifiedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MailFromDomain,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingEmailDomains = `-- name: ListPendingEmailDomains :many
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
+WHERE status = 'pending' AND updated_at < ?
+ORDER BY updated_at ASC, id ASC
+LIMIT ?
+`
+
+type ListPendingEmailDomainsParams struct {
+	CheckedBefore time.Time
+	Limit         int32
+}
+
+// Pending domains across every account not checked since the cutoff, least recently checked first, for the
+// background verifier. Served by email_domain_status_updated_idx.
+func (q *Queries) ListPendingEmailDomains(ctx context.Context, arg ListPendingEmailDomainsParams) ([]EmailDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingEmailDomains, arg.CheckedBefore, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailDomain
+	for rows.Next() {
+		var i EmailDomain
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Domain,
+			&i.Status,
+			&i.DkimTokens,
+			&i.VerifiedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MailFromDomain,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markEmailDomainVerified = `-- name: MarkEmailDomainVerified :exec
 UPDATE email_domain
 SET status = 'verified', verified_at = NOW(3), updated_at = NOW(3)
@@ -153,6 +262,16 @@ type MarkEmailDomainVerifiedParams struct {
 
 func (q *Queries) MarkEmailDomainVerified(ctx context.Context, arg MarkEmailDomainVerifiedParams) error {
 	_, err := q.db.ExecContext(ctx, markEmailDomainVerified, arg.ID, arg.AccountID)
+	return err
+}
+
+const touchEmailDomain = `-- name: TouchEmailDomain :exec
+UPDATE email_domain SET updated_at = NOW(3) WHERE id = ?
+`
+
+// Records that a pending domain was just re-checked, so the verifier rotates through the rest first.
+func (q *Queries) TouchEmailDomain(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, touchEmailDomain, id)
 	return err
 }
 

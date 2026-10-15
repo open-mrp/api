@@ -18,9 +18,7 @@ import (
 type UpdateConversationRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The group conversation's new display title.
-	//
-	// Send `null` to clear the title and leave the conversation unnamed.
+	// The conversation's title. Send `null` to clear it.
 	Title field.Clearable[string] `json:"title,omitzero"`
 }
 
@@ -33,9 +31,9 @@ func (*UpdateConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateConversationRequest)
 }
 
-// Renames a group conversation.
+// Updates a conversation.
 //
-// Only an owner or admin of the conversation can rename it, and direct messages cannot be renamed.
+// Only the fields you send change. Anyone in a direct message can rename it; in a group, only its owners and admins can.
 type UpdateConversationEndpoint struct{}
 
 func (e *UpdateConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConversationRequest, *apiresource.Conversation] {
@@ -47,7 +45,6 @@ func (e *UpdateConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

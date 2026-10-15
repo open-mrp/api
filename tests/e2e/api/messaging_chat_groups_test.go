@@ -16,10 +16,14 @@ const blocksPath = "/v1/messaging/blocks"
 
 func createGroupConversation(t *testing.T, c *Client, title string, memberAccountUserIDs ...string) map[string]any {
 	t.Helper()
+	// The member role makes even a one-member conversation a group rather than a direct message.
+	participants := make([]map[string]any, 0, len(memberAccountUserIDs))
+	for _, id := range memberAccountUserIDs {
+		participants = append(participants, map[string]any{"account_user_id": id, "role": "member"})
+	}
 	resp, err := c.PostFull(withQuery(conversationsPath, conversationIncludeQuery), map[string]any{
-		"type":                         "group",
-		"title":                        title,
-		"participant_account_user_ids": memberAccountUserIDs,
+		"title":        title,
+		"participants": participants,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -172,9 +176,15 @@ func TestChatGroup_DMCannotBeManaged(t *testing.T) {
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
-	patch, err := user.PatchFull(conversationsPath+"/"+convID, map[string]any{"title": "nope"}, newIdempotencyKey())
+	// A direct message can be named, but not archived or given more members.
+	patch, err := user.PatchFull(conversationsPath+"/"+convID, map[string]any{"title": "named"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, patch.StatusCode, patch.Body)
+	requireStatus(t, 200, patch.StatusCode, patch.Body)
+	assert.Equal(t, "named", jsonField(parseJSON(patch.Body), "title"))
+
+	archive, err := user.PostFull(conversationsPath+"/"+convID+"/actions/archive", map[string]any{}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, archive.StatusCode, archive.Body)
 
 	add, err := user.PostFull(conversationsPath+"/"+convID+"/participants",
 		map[string]any{"account_user_id": SeedAccountUserID}, newIdempotencyKey())
@@ -196,7 +206,7 @@ func TestChatGroup_BlockPreventsDM(t *testing.T) {
 
 	// Opening a DM with the blocked user is forbidden.
 	status, body, err := user.Post(conversationsPath,
-		map[string]any{"type": "direct_message", "participant_account_user_ids": []string{SeedAccountUser2ID}}, newIdempotencyKey())
+		map[string]any{"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}}}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 403, status, "blocked users cannot DM: %s", string(body))
 
@@ -216,7 +226,7 @@ func TestChatGroup_BlockPreventsDM(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, unblock.StatusCode, unblock.Body)
 	status2, body2, err := user.Post(conversationsPath,
-		map[string]any{"type": "direct_message", "participant_account_user_ids": []string{SeedAccountUser2ID}}, newIdempotencyKey())
+		map[string]any{"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}}}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Contains(t, []int{200, 201}, status2, "after unblock, DM creation works: %s", string(body2))
 }

@@ -200,6 +200,6 @@ func TestChatBell_MuteSuppressesBellButKeepsUnread(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getResp.StatusCode, getResp.Body)
 	conv := parseJSON(getResp.Body)
-	unread, _ := conv["unread"].(float64)
+	unread, _ := conv["unread_count"].(float64)
 	assert.GreaterOrEqual(t, unread, float64(1), "a muted conversation still tracks unread messages")
 }

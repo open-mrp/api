@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -24,7 +23,7 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	s3 "github.com/open-mrp/apikit/cloud/s3"
-	"github.com/open-mrp/apikit/db"
+
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -120,31 +119,75 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		return nil, tracing.Trace(span, apierror.NewRateLimitedError("You are creating conversations too quickly. Please slow down."))
 	}
 
+	if input.ContinuesConversationID != nil && *input.ContinuesConversationID != "" {
+		if _, apiErr := s.loadConversation(ctx, *input.ContinuesConversationID, callerAcus, accountID); apiErr != nil {
+			if apiErr.Code == apierror.CodeResourceNotFound || apiErr.Code == apierror.CodeInsufficientPermissions {
+				return nil, tracing.Trace(span, apierror.NewInvalidFormatError("continues", "The conversation to continue doesn't exist or you aren't in it."))
+			}
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	if input.Type == "" {
+		input.Type = string(derivedConversationType(input))
+	}
+	var conv *domain.Conversation
 	switch constants.ConversationType(input.Type) {
 	case constants.ConversationTypeDM:
-		// fall through to the DM logic below
+		conv, apiErr = s.createDM(ctx, input, callerAcus, accountID)
 	case constants.ConversationTypeGroup:
-		return s.createGroup(ctx, input, callerAcus, accountID)
+		conv, apiErr = s.createGroup(ctx, input, callerAcus, accountID)
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("type", "Unsupported conversation type."))
 	}
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if input.MessageBody == nil || *input.MessageBody == "" {
+		return conv, nil
+	}
+	// The first message is the creator's own send; one per conversation, so the conversation ID keys its dedupe.
+	if _, apiErr := s.SendMessage(ctx, domain.SendMessageInput{
+		ConversationID:  conv.ID,
+		Body:            input.MessageBody,
+		ClientMessageID: "first:" + conv.ID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return s.loadConversation(ctx, conv.ID, callerAcus, accountID)
+}
+
+// derivedConversationType is the type a new conversation takes from who is in it: a direct message is you and at most one other person, with no roster, record or roles; anything else is a group.
+func derivedConversationType(input domain.CreateConversationInput) constants.ConversationType {
+	hasGroup := input.GroupID != nil && *input.GroupID != ""
+	hasTopic := input.TopicResourceID != nil && *input.TopicResourceID != ""
+	if !hasGroup && !hasTopic && len(input.Participants) == 0 && len(input.ParticipantAccountUserIDs) == 1 {
+		return constants.ConversationTypeDM
+	}
+	return constants.ConversationTypeGroup
+}
+
+// createDM starts a new direct message. Every call creates a new conversation, even with the same person.
+func (s *conversationSvcImpl) createDM(ctx context.Context, input domain.CreateConversationInput, callerAcus, accountID string) (*domain.Conversation, *apierror.APIError) {
+	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.create_dm")
+	defer span.End()
 
 	if len(input.Participants) > 0 {
 		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "A direct message has no roles to assign; name its other participant in participant_account_user_ids."))
 	}
 	if len(input.ParticipantAccountUserIDs) != 1 {
-		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participant_account_user_ids", "A direct message requires exactly one other participant."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "A direct message requires exactly one other participant."))
 	}
 	target := input.ParticipantAccountUserIDs[0]
 	if target == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "The target participant is invalid."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "The target participant is invalid."))
 	}
 	// A self-DM ("note to self") is an explicitly-allowed conversation where the pair is (caller, caller).
 	isSelfDM := target == callerAcus
 	// The target must be a real account_user of this account.
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, target, accountID); apiErr != nil {
 		if apiErr.Code == apierror.CodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "The target participant does not exist."))
+			return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "The target participant does not exist."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -157,15 +200,6 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		}
 	}
 
-	dmKey := buildDMKey(callerAcus, target)
-
-	// Dedup fast path: an existing DM between this pair is returned as-is.
-	if existingID, apiErr := s.repoFactory.NewConversationRepo().GetDMConversationID(ctx, accountID, dmKey); apiErr == nil {
-		return s.loadConversation(ctx, existingID, callerAcus, accountID)
-	} else if apiErr.Code != apierror.CodeResourceNotFound {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	conversationID, apiErr := id.GenID(id.ConversationIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -175,14 +209,6 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		convRepo := f.NewConversationRepo()
 		if createErr := convRepo.Create(txCtx, conversationID, &input, accountID); createErr != nil {
 			return createErr
-		}
-		if dmErr := convRepo.CreateDMKey(txCtx, accountID, dmKey, conversationID); dmErr != nil {
-			if db.IsDuplicateEntry(dmErr) {
-				return apierror.NewConflictError("A direct message with this participant already exists.")
-			}
-			if mapped := db.MapSQLError(dmErr); mapped != nil {
-				return mapped
-			}
 		}
 		partRepo := f.NewParticipantRepo()
 		// A self-DM has a single participant (the pair is the same account_user).
@@ -207,7 +233,6 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 				return pErr
 			}
 		}
-		// A genuinely-new DM was persisted (the dedup + race paths return an existing row before reaching here), so publish the create.
 		created, getErr := convRepo.GetByID(txCtx, conversationID, accountID)
 		if getErr != nil {
 			return getErr
@@ -221,12 +246,6 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		})
 	})
 	if apiErr != nil {
-		// A concurrent create raced us to the DM key; return the winner.
-		if apiErr.Code == apierror.CodeResourceConflict {
-			if existingID, getErr := s.repoFactory.NewConversationRepo().GetDMConversationID(ctx, accountID, dmKey); getErr == nil {
-				return s.loadConversation(ctx, existingID, callerAcus, accountID)
-			}
-		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -303,20 +322,20 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 	if status == "" {
 		status = string(constants.ConversationListStatusActive)
 	}
-	listStatus := constants.ConversationListStatus(status)
-	if !listStatus.IsValid() {
+	if listStatus := constants.ConversationListStatus(status); !listStatus.IsValid() && status != conversationListStatusAll {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "The status is invalid."))
 	}
 
 	rows, apiErr := s.repoFactory.NewConversationRepo().ListForUser(ctx, domain.ConversationListFilter{
-		AccountID:           accountID,
-		AccountUserID:       callerAcus,
-		Type:                input.Type,
-		Status:              status,
-		Limit:               limit + 1,
-		CursorLastMessageAt: cursor.lastMessageAt,
-		CursorID:            cursor.id,
-		CursorInNullTail:    cursor.inNullTail,
+		AccountID:                 accountID,
+		AccountUserID:             callerAcus,
+		Type:                      input.Type,
+		Status:                    status,
+		ParticipantAccountUserIDs: input.ParticipantAccountUserIDs,
+		Limit:                     limit + 1,
+		CursorLastMessageAt:       cursor.lastMessageAt,
+		CursorID:                  cursor.id,
+		CursorInNullTail:          cursor.inNullTail,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -2731,7 +2750,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		group, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, *input.GroupID, accountID)
 		if apiErr != nil {
 			if apiErr.Code == apierror.CodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_id", "The group does not exist."))
+				return nil, tracing.Trace(span, apierror.NewInvalidFormatError("group_id", "The group does not exist."))
 			}
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -2766,7 +2785,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		if _, resolved := roles[m]; !resolved {
 			if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, m, accountID); apiErr != nil {
 				if apiErr.Code == apierror.CodeResourceNotFound {
-					return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A participant does not exist."))
+					return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "A participant does not exist."))
 				}
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -2789,7 +2808,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	// A group normally needs at least one other participant — a human member or an agent — but a record-anchored discussion may start solo: the creator posts and loops in the team afterward (via @mention or by adding participants).
 	hasTopic := input.TopicResourceID != nil && *input.TopicResourceID != ""
 	if len(members) == 0 && len(agents) == 0 && !hasTopic {
-		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participant_account_user_ids", "A group requires at least one other participant."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "A group requires at least one other participant."))
 	}
 
 	conversationID, apiErr := id.GenID(id.ConversationIDPrefix, nil)
@@ -2897,7 +2916,7 @@ func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, par
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, p.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.CodeResourceNotFound {
-				return nil, apierror.NewParameterInvalidError(param+".account_user_id", "The participant does not exist.")
+				return nil, apierror.NewInvalidFormatError(param+".account_user_id", "The participant does not exist.")
 			}
 			return nil, apiErr
 		}
@@ -2929,10 +2948,12 @@ func (s *conversationSvcImpl) UpdateConversation(ctx context.Context, conversati
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	// Anyone in a direct message can name it; only the group's owners and admins can rename or archive a group.
 	if conv.Type == string(constants.ConversationTypeDM) {
-		return nil, tracing.Trace(span, apierror.NewValidationError("A direct message cannot be renamed or archived."))
-	}
-	if !roleAllows(part.Role, constants.ParticipantRoleOwner, constants.ParticipantRoleAdmin) {
+		if isArchived != nil {
+			return nil, tracing.Trace(span, apierror.NewValidationError("A direct message cannot be archived."))
+		}
+	} else if !roleAllows(part.Role, constants.ParticipantRoleOwner, constants.ParticipantRoleAdmin) {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("Only an owner or admin can update this conversation."))
 	}
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
@@ -3629,15 +3650,23 @@ func (s *conversationSvcImpl) Unblock(ctx context.Context, blockedAccountUserID 
 	return nil
 }
 
-func (s *conversationSvcImpl) ListBlocks(ctx context.Context) ([]*domain.MessageBlock, *apierror.APIError) {
+func (s *conversationSvcImpl) ListBlocks(ctx context.Context, req domain.PageRequest) (domain.Page[*domain.MessageBlock], *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.list_blocks")
 	defer span.End()
 
 	_, callerAcus, _, apiErr := s.caller(ctx)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewBlockRepo().List(ctx, callerAcus)
+	keyset, limit, apiErr := keysetPage(req)
+	if apiErr != nil {
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
+	}
+	blocks, apiErr := s.repoFactory.NewBlockRepo().ListPage(ctx, callerAcus, keyset)
+	if apiErr != nil {
+		return domain.Page[*domain.MessageBlock]{}, tracing.Trace(span, apiErr)
+	}
+	return finishPage(blocks, limit, func(b *domain.MessageBlock) (time.Time, string) { return b.CreatedAt, b.ID }), nil
 }
 
 // ListContacts returns the caller's messaging directory. A customer relation actor never sees the individual staff of the vendor account — they get a single "support" contact. Internal actors get the active account_users in their account (including themselves, since a self-DM is allowed), filtered by a case-insensitive name substring.
@@ -3725,6 +3754,66 @@ func (s *conversationSvcImpl) ReportConversation(ctx context.Context, conversati
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idemKey.RecoveryPoint))
 	}
+}
+
+// DeleteConversation hard-deletes a conversation whose only person is the caller, such as a chat with agents. A conversation with other people, on legal hold, or designated for support can only be archived or left.
+func (s *conversationSvcImpl) DeleteConversation(ctx context.Context, conversationID string) *apierror.APIError {
+	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.delete")
+	defer span.End()
+
+	callerAcus, accountID, _, apiErr := s.requireParticipant(ctx, conversationID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	repo := s.repoFactory.NewConversationRepo()
+	conv, apiErr := repo.GetByID(ctx, conversationID, accountID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if conv.LegalHold {
+		return tracing.Trace(span, apierror.NewInUseError("This conversation is on legal hold. Archive it instead."))
+	}
+	others, apiErr := repo.CountOtherPeople(ctx, conversationID, callerAcus)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if others > 0 {
+		return tracing.Trace(span, apierror.NewInUseError("Other people are in this conversation. Archive or leave it instead."))
+	}
+	if routed, apiErr := repo.IsSupportRoute(ctx, accountID, conversationID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	} else if routed {
+		return tracing.Trace(span, apierror.NewInUseError("This conversation handles support. Clear its support route or archive it instead."))
+	}
+
+	// Stored objects go first, so a failure part way retries the object delete instead of orphaning it.
+	attachments, apiErr := s.repoFactory.NewMessageAttachmentRepo().ListByConversation(ctx, conversationID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	for _, a := range attachments {
+		if a.S3Key != nil && *a.S3Key != "" && s.objectStore != nil {
+			if apiErr := s.objectStore.Delete(ctx, s.chatBucket, *a.S3Key); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+	}
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewConversationRepo().Delete(txCtx, conversationID, accountID, callerAcus); apiErr != nil {
+			return apiErr
+		}
+		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeConversation,
+			ResourceID:   conversationID,
+			Changes:      audit.ComputeChanges(conv, (*domain.Conversation)(nil)),
+		})
+	})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 // requireParticipant resolves the caller and loads their participant row for a conversation, returning a not-found (existence not leaked) when they are not a member.
@@ -3944,12 +4033,8 @@ func canManageAgentsInConversation(conv *domain.Conversation, part *domain.Conve
 
 // ── helpers ─────────────────────────────────────────────────────────
 
-// buildDMKey produces the order-independent dedupe key for a DM participant pair.
-func buildDMKey(a, b string) string {
-	pair := []string{a, b}
-	sort.Strings(pair)
-	return pair[0] + ":" + pair[1]
-}
+// conversationListStatusAll lists the caller's conversations whether or not they hid them.
+const conversationListStatusAll = "all"
 
 func unreadFrom(nextSequence, lastReadSequence int64) int64 {
 	if maxSeq := nextSequence - 1; maxSeq > lastReadSequence {

@@ -61,7 +61,7 @@ func (*CreateEmailInboxRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateEmailInboxRequest)
 }
 
-// Provisions a routable inbox address on a verified domain.
+// Creates an inbox address on a verified email domain.
 //
 // Once created, mail arriving at the address opens a customer case conversation and seats the bound agent and the group's members on it; a reply in a thread that already opened one joins that conversation instead.
 type CreateEmailInboxEndpoint struct{}
@@ -75,7 +75,6 @@ func (e *CreateEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailInbox,
 		IncludeConfig:     emailInboxIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},

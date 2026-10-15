@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	notifpb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/include"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
@@ -50,18 +51,64 @@ func LoadEmailDomains(ctx context.Context, ids []string) (map[string]any, *apier
 // here because that package would otherwise form an import cycle with resourceloaders.
 func emailDomainBaseFromProto(d *notifpb.EmailDomainInfo) *apiresource.EmailDomain {
 	return &apiresource.EmailDomain{
-		ID:                d.Id,
-		Object:            constants.ObjectTypeEmailDomain,
-		Domain:            d.Domain,
-		Status:            constants.EmailDomainStatus(d.Status),
-		DkimTokens:        orEmptyStrSlice(d.DkimTokens),
-		MailFromDomain:    d.MailFromDomain,
-		MailFromMxRecord:  d.MailFromMxRecord,
-		MailFromSpfRecord: d.MailFromSpfRecord,
-		VerifiedAt:        grpcutil.TimestampToTimePtr(d.VerifiedAt),
-		CreatedAt:         grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:         grpcutil.TimestampToTime(d.UpdatedAt),
+		ID:         d.Id,
+		Object:     constants.ObjectTypeEmailDomain,
+		Domain:     d.Domain,
+		Status:     constants.EmailDomainStatus(d.Status),
+		DNSRecords: EmailDNSRecordsFromProto(d.DnsRecords),
+		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
+		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),
 	}
+}
+
+// EmailDNSRecordsFromProto maps an email domain's DNS records; none is an empty list, never null.
+func EmailDNSRecordsFromProto(records []*notifpb.EmailDnsRecord) []apiresource.EmailDNSRecord {
+	out := make([]apiresource.EmailDNSRecord, 0, len(records))
+	for _, r := range records {
+		out = append(out, apiresource.EmailDNSRecord{Type: constants.EmailDNSRecordType(r.Type), Name: r.Name, Value: r.Value})
+	}
+	return out
+}
+
+// EmailSenderFromProto maps the account's email sender, stashing its domain's ID for ?include=email_domain.
+func EmailSenderFromProto(ctx context.Context, sender *notifpb.EmailSenderInfo) *apiresource.EmailSender {
+	out := &apiresource.EmailSender{
+		ID:        sender.Id,
+		Object:    constants.ObjectTypeEmailSender,
+		LocalPart: sender.LocalPart,
+		Address:   sender.Address,
+		FromName:  sender.FromName,
+		ReplyTo:   sender.ReplyTo,
+		CreatedAt: grpcutil.TimestampToTime(sender.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(sender.UpdatedAt),
+	}
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeEmailSender, out.ID, "email_domain_id", sender.EmailDomainId)
+	return out
+}
+
+// LoadEmailSenders loads the caller's account email sender, the only one it can see, when its ID is asked for.
+func LoadEmailSenders(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	resp, apiErr := grpcutil.CallRPC(ctx, emailDomainLoaderTracer, "loader.email_senders.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*notifpb.EmailSenderInfo, error) {
+			return emailBridgeClient.GetEmailSender(ctx, &notifpb.GetEmailSenderRequest{}, opts...)
+		})
+	if apiErr != nil {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, nil
+		}
+		return nil, apiErr
+	}
+	out := map[string]any{}
+	for _, id := range ids {
+		if id == resp.Id {
+			out[id] = EmailSenderFromProto(ctx, resp)
+		}
+	}
+	return out, nil
 }
 
 // LoadEmailInboxes exists only to satisfy the resourcekit registration for

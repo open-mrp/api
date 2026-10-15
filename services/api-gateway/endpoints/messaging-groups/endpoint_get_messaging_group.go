@@ -28,7 +28,6 @@ func (e *GetMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetM
 		Route:             "/v1/messaging/groups/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetMessagingGroupRequest) (*apiresource.MessagingGroup, *apierror.APIError) {

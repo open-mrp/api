@@ -2,9 +2,11 @@ package chatmap
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"testing"
 
+	"github.com/open-mrp/apikit/include"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
@@ -19,11 +21,9 @@ func strptr(s string) *string { return &s }
 func metaCtx() context.Context { return include.WithLoadMeta(context.Background()) }
 
 func TestConversationStatusFromProto(t *testing.T) {
-	assert.Equal(t, constants.ConversationStatusActive, ConversationStatusFromProto("", false), "empty defaults to active")
-	assert.Equal(t, constants.ConversationStatusActive, ConversationStatusFromProto("active", false))
-	assert.Equal(t, constants.ConversationStatusArchived, ConversationStatusFromProto("archived", false))
-	assert.Equal(t, constants.ConversationStatusHidden, ConversationStatusFromProto("active", true), "hidden takes precedence")
-	assert.Equal(t, constants.ConversationStatusHidden, ConversationStatusFromProto("archived", true), "hidden overrides archived")
+	assert.Equal(t, constants.ConversationStatusActive, ConversationStatusFromProto(""), "empty defaults to active")
+	assert.Equal(t, constants.ConversationStatusActive, ConversationStatusFromProto("active"))
+	assert.Equal(t, constants.ConversationStatusArchived, ConversationStatusFromProto("archived"))
 }
 
 func TestConversationFromProto_BaseLeavesExpandablesNil(t *testing.T) {
@@ -43,11 +43,13 @@ func TestConversationFromProto_BaseLeavesExpandablesNil(t *testing.T) {
 	assert.Equal(t, constants.ObjectTypeConversation, c.Object)
 	assert.Equal(t, constants.ConversationTypeGroup, c.Type)
 	assert.Equal(t, constants.ConversationStatusArchived, c.Status)
-	assert.Equal(t, int64(4), c.Unread)
+	assert.Equal(t, int64(4), c.UnreadCount)
 	require.NotNil(t, c.LastMessageAt, "last_message_at is inline, not expandable")
 	assert.Nil(t, c.Assignee, "assignee is expandable — nil until stashed+resolved")
 	assert.Nil(t, c.Group, "group is expandable — nil until stashed+resolved")
-	assert.Nil(t, c.Topic, "topic is expandable — nil until stashed+resolved")
+	require.NotNil(t, c.Related, "related is a section, always present")
+	assert.Nil(t, c.Related.Record, "related.record is expandable — nil until stashed+resolved")
+	assert.Nil(t, c.Related.Continues)
 	assert.Nil(t, c.Participants, "participants are expandable — nil until stashed+resolved")
 	assert.Nil(t, c.LastMessage, "last_message is expandable — nil until stashed+resolved")
 }
@@ -92,9 +94,9 @@ func TestStashConversationMeta(t *testing.T) {
 	assert.Equal(t, "acus_1", p.Actor.ID)
 	assert.Equal(t, constants.ActorTypeUser, p.Actor.Type)
 
-	tv, ok := meta.Get(constants.ObjectTypeConversation, "cv_1", "topic")
+	tv, ok := meta.Get(constants.ObjectTypeConversation, "cv_1", MetaRelatedRecord)
 	require.True(t, ok)
-	assert.Equal(t, "so_9", tv.(*apiresource.Entity).ID)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeSalesOrder, ID: "so_9"}, tv)
 
 	lv, ok := meta.Get(constants.ObjectTypeConversation, "cv_1", "last_message")
 	require.True(t, ok)
@@ -122,7 +124,8 @@ func TestMessageFromProto_BaseLeavesExpandablesNil(t *testing.T) {
 	assert.Nil(t, m.Conversation, "conversation is expandable — nil until resolved")
 	assert.Nil(t, m.Sender, "sender is expandable — nil until resolved")
 	assert.Nil(t, m.Author, "author is expandable — nil until resolved")
-	assert.Nil(t, m.Resource, "resource is expandable — nil until resolved")
+	require.NotNil(t, m.Related)
+	assert.Nil(t, m.Related.Record, "related.record is expandable — nil until resolved")
 	assert.Nil(t, m.ReplyTo, "reply_to is expandable — nil until resolved")
 	assert.Nil(t, m.Attachments, "attachments are expandable — nil until resolved")
 }
@@ -153,9 +156,9 @@ func TestStashMessageMeta_FullMapping(t *testing.T) {
 	assert.Equal(t, "acus_1", av.(*apiresource.Actor).ID)
 	assert.Equal(t, constants.ActorTypeUser, av.(*apiresource.Actor).Type)
 
-	rv, ok := meta.Get(ot, "mg_1", "resource")
+	rv, ok := meta.Get(ot, "mg_1", MetaRelatedRecord)
 	require.True(t, ok)
-	assert.Equal(t, "so_1", rv.(*apiresource.Entity).ID)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeSalesOrder, ID: "so_1"}, rv)
 
 	cid, ok := meta.GetString(ot, "mg_1", "conversation_id")
 	require.True(t, ok)
@@ -230,13 +233,13 @@ func TestStashMessageMeta_Attachments(t *testing.T) {
 	img := list.Data[0]
 	assert.Equal(t, constants.MessageAttachmentKind("image"), img.Kind)
 	require.NotNil(t, img.URL)
-	assert.Nil(t, img.Resource)
+	assert.Nil(t, img.Record)
 	res := list.Data[1]
-	// resource is expandable: nil on the base attachment, stashed for ?include=attachments.resource.
-	assert.Nil(t, res.Resource)
-	rv, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeMessageAttachment, "mgah_2", "resource")
+	// record is expandable: nil on the base attachment, stashed for ?include=attachments.record.
+	assert.Nil(t, res.Record)
+	rv, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeMessageAttachment, "mgah_2", MetaRecord)
 	require.True(t, ok)
-	assert.Equal(t, "so_1", rv.(*apiresource.Entity).ID)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeSalesOrder, ID: "so_1"}, rv)
 	assert.Nil(t, res.URL)
 }
 
@@ -276,4 +279,36 @@ func TestMessageFromProto_Nil(t *testing.T) {
 
 func TestConversationFromProto_Nil(t *testing.T) {
 	assert.Equal(t, apiresource.Conversation{}, ConversationFromProto(nil))
+}
+
+func TestMessageFromProto_DeletedIsATombstone(t *testing.T) {
+	now := timestamppb.Now()
+	m := MessageFromProto(&pb.MessageInfo{Id: "mg_d", Status: "sent", Body: strptr("secret"), DeletedAt: now, CreatedAt: now, UpdatedAt: now,
+		Attachments: []*pb.AttachmentInfo{{Id: "mgah_9", Kind: "file", CreatedAt: now}}})
+	assert.Equal(t, constants.MessageStatusDeleted, m.Status)
+	assert.Nil(t, m.Body)
+	require.NotNil(t, m.DeletedAt)
+
+	ctx := metaCtx()
+	StashMessageMeta(ctx, &pb.MessageInfo{Id: "mg_d", DeletedAt: now, Attachments: []*pb.AttachmentInfo{{Id: "mgah_9", Kind: "file", CreatedAt: now}}}, &m)
+	_, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, "mg_d", "attachments")
+	assert.False(t, ok, "a deleted message's attachments stay null even when included")
+}
+
+func TestMessageFromProto_FailedAgentReply(t *testing.T) {
+	now := timestamppb.Now()
+	m := MessageFromProto(&pb.MessageInfo{Id: "mg_f", Status: "sent", Body: strptr("I couldn't finish."), AgentRunFailed: true,
+		AgentErrorCode: strptr("agent_spending_cap_reached"), CreatedAt: now, UpdatedAt: now})
+	assert.Equal(t, constants.MessageStatusFailed, m.Status)
+	require.NotNil(t, m.Error)
+	assert.Equal(t, "agent_spending_cap_reached", string(m.Error.Code))
+	assert.Equal(t, "I couldn't finish.", m.Error.Message)
+
+	plain := MessageFromProto(&pb.MessageInfo{Id: "mg_g", Status: "sent", AgentRunFailed: true, CreatedAt: now, UpdatedAt: now})
+	require.NotNil(t, plain.Error)
+	assert.Equal(t, "internal_error", string(plain.Error.Code))
+
+	ok := MessageFromProto(&pb.MessageInfo{Id: "mg_h", Status: "sent", CreatedAt: now, UpdatedAt: now})
+	assert.Nil(t, ok.Error)
+	assert.Equal(t, constants.MessageStatusSent, ok.Status)
 }

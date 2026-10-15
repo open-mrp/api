@@ -38,7 +38,7 @@ func (*UpdateParticipantRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateParticipantRoleRequest)
 }
 
-// Changes a participant's role in a conversation and returns the updated conversation.
+// Sets a participant's role in a conversation and returns the updated conversation.
 //
 // Only the conversation's owner can change roles, and agent and system participants are rejected — they hold no role that can be changed. This is also the only way to grant `owner`: the promoted member gains full control while the caller keeps their own owner role, so a conversation can have more than one owner.
 //
@@ -53,7 +53,6 @@ func (e *UpdateParticipantRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Route:             "/v1/messaging/conversations/{id}/participants/{pid}/actions/set-role",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

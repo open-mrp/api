@@ -105,18 +105,3 @@ func (r *messagingReaperRepoImpl) DeleteMessageAttachmentByID(ctx context.Contex
 	}
 	return nil
 }
-
-func (r *messagingReaperRepoImpl) PurgeTombstonedMessages(ctx context.Context, retentionHours int, limit int32) (int64, error) {
-	ctx, span := messagingReaperRepoTracer.Start(ctx, "repository.messaging_reaper.purge_tombstoned_messages")
-	defer span.End()
-
-	count, err := r.queries.PurgeTombstonedMessages(ctx, sqlc.PurgeTombstonedMessagesParams{
-		Column1: retentionHours,
-		Limit:   limit,
-	})
-	if err != nil {
-		span.RecordError(err)
-		return 0, err
-	}
-	return count, nil
-}

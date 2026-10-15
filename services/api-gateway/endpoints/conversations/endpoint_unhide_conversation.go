@@ -30,7 +30,6 @@ func (e *UnhideConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Unh
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

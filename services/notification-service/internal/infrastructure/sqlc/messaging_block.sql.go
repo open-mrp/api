@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const blockExistsBetween = `-- name: BlockExistsBetween :one
@@ -105,6 +106,62 @@ ORDER BY created_at DESC
 
 func (q *Queries) ListBlocks(ctx context.Context, blockerAccountUserID string) ([]MessagingBlock, error) {
 	rows, err := q.db.QueryContext(ctx, listBlocks, blockerAccountUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MessagingBlock
+	for rows.Next() {
+		var i MessagingBlock
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.BlockerAccountUserID,
+			&i.BlockedAccountUserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBlocksPage = `-- name: ListBlocksPage :many
+SELECT id, account_id, blocker_account_user_id, blocked_account_user_id, created_at FROM messaging_block
+WHERE blocker_account_user_id = ?
+  AND (
+    ? IS NULL
+    OR created_at < ?
+    OR (created_at = ? AND id < ?)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListBlocksPageParams struct {
+	BlockerAccountUserID string
+	CursorCreatedAt      sql.NullTime
+	CursorID             sql.NullString
+	Limit                int32
+}
+
+// One keyset page of the caller's blocks, newest first.
+func (q *Queries) ListBlocksPage(ctx context.Context, arg ListBlocksPageParams) ([]MessagingBlock, error) {
+	rows, err := q.db.QueryContext(ctx, listBlocksPage,
+		arg.BlockerAccountUserID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

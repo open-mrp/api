@@ -19,7 +19,7 @@ type DeleteEmailDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Deregisters a domain from the email bridge and removes its sending identity from the mail provider.
+// Deletes an email domain and removes its sending identity from the mail provider.
 //
 // Delete the domain's inboxes first: while any inbox still exists on it, this returns a conflict error.
 type DeleteEmailDomainEndpoint struct{}
@@ -33,7 +33,6 @@ func (e *DeleteEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteEmailDomainRequest) (*object.Deleted, *apierror.APIError) {

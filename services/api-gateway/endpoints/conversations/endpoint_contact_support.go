@@ -30,7 +30,6 @@ func (e *ContactSupportEndpoint) Materialize() *apiendpoint.APIEndpoint[*Contact
 		Route:             "/v1/messaging/support",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},

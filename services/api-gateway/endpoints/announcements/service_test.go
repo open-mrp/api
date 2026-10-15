@@ -2,9 +2,12 @@ package announcementep
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"testing"
 
+	"github.com/open-mrp/apikit/include"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
@@ -32,11 +35,12 @@ func TestAnnouncementFromProto(t *testing.T) {
 	assert.Equal(t, constants.AnnouncementScopeAccount, a.Scope)
 	assert.Equal(t, constants.NotificationStatusSeen, a.Status)
 	assert.Equal(t, constants.NotificationPriority("high"), a.Priority)
-	// resource is expandable: nil on the base resource, stashed for ?include=resource.
-	assert.Nil(t, a.Resource)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAnnouncement, "an_1", "resource")
+	// related.record is expandable: nil on the base resource, stashed for ?include=related.record.
+	require.NotNil(t, a.Related)
+	assert.Nil(t, a.Related.Record)
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAnnouncement, "an_1", chatmap.MetaRelatedRecord)
 	require.True(t, ok)
-	assert.Equal(t, "so_1", v.(*apiresource.Entity).ID)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeSalesOrder, ID: "so_1"}, v)
 	require.NotNil(t, a.SeenAt)
 	assert.Nil(t, a.ReadAt)
 }

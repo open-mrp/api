@@ -17,23 +17,20 @@ import (
 type AddConversationLinkRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The kind of business record to link.
-	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`
-	// The id of the business record to link.
-	ResourceID string `json:"resource_id" validate:"required"`
+	// The record to link.
+	Record apiresource.RecordInput `json:"record" validate:"required"`
 }
 
 var sampleAddConversationLinkRequest = &AddConversationLinkRequest{
 	ConversationID: apiresource.SampleConversationID,
-	ResourceType:   constants.ObjectTypeSalesOrder,
-	ResourceID:     apiresource.SampleSalesOrderID,
+	Record:         *apiresource.SampleRecordInput,
 }
 
 func (*AddConversationLinkRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAddConversationLinkRequest)
 }
 
-// Links a business record to a conversation, in addition to whatever topic the conversation is anchored to.
+// Links a record to a conversation, in addition to the record the conversation is about.
 //
 // A conversation can link any number of records, and each linked record surfaces the conversation when conversations are listed for that record.
 type AddConversationLinkEndpoint struct{}
@@ -47,7 +44,6 @@ func (e *AddConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ad
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversationLink,
 		IncludeConfig:     conversationLinkIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

@@ -5,11 +5,10 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// emailInboxIncludeFields is the whitelist of ?include= keys exposed by the email
-// inbox endpoints. Each references another resource by id (the bound domain and
-// agent definition), fetched via that resource's batch loader when requested.
+// emailInboxIncludeFields is the whitelist of ?include= keys exposed by the email inbox endpoints. Each references another resource by id, fetched via that resource's loader when requested.
 var emailInboxIncludeFields = []string{
 	"email_domain",
+	"group",
 	"agent_config",
 }
 
@@ -17,5 +16,12 @@ func emailInboxIncludeConfig() *apiendpoint.IncludeConfig {
 	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 		ObjectType: constants.ObjectTypeEmailInbox,
 		Fields:     emailInboxIncludeFields,
+	})
+}
+
+func emailSenderIncludeConfig() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+		ObjectType: constants.ObjectTypeEmailSender,
+		Fields:     []string{"email_domain"},
 	})
 }

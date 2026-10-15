@@ -3,16 +3,21 @@ package service
 import (
 	"testing"
 
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildDMKey_OrderIndependent(t *testing.T) {
-	a := buildDMKey("acus_a", "acus_b")
-	b := buildDMKey("acus_b", "acus_a")
-	assert.Equal(t, a, b, "the DM key must be identical regardless of argument order")
-	assert.Equal(t, "acus_a:acus_b", a, "the key is the sorted pair joined by a colon")
+func TestDerivedConversationType(t *testing.T) {
+	one := []string{"acus_b"}
+	assert.Equal(t, constants.ConversationTypeDM, derivedConversationType(domain.CreateConversationInput{ParticipantAccountUserIDs: one}))
+	assert.Equal(t, constants.ConversationTypeDM, derivedConversationType(domain.CreateConversationInput{ParticipantAccountUserIDs: one, Title: new("Plans")}), "a title doesn't make a group")
+	assert.Equal(t, constants.ConversationTypeGroup, derivedConversationType(domain.CreateConversationInput{ParticipantAccountUserIDs: []string{"acus_b", "acus_c"}}))
+	assert.Equal(t, constants.ConversationTypeGroup, derivedConversationType(domain.CreateConversationInput{ParticipantAccountUserIDs: one, TopicResourceID: new("so_1")}), "a record discussion is a group")
+	assert.Equal(t, constants.ConversationTypeGroup, derivedConversationType(domain.CreateConversationInput{GroupID: new("cvgp_1")}))
+	assert.Equal(t, constants.ConversationTypeGroup, derivedConversationType(domain.CreateConversationInput{Participants: []domain.ParticipantRoleInput{{AccountUserID: "acus_b", Role: "admin"}}}))
+	assert.Equal(t, constants.ConversationTypeGroup, derivedConversationType(domain.CreateConversationInput{}))
 }
 
 func TestUnreadFrom(t *testing.T) {

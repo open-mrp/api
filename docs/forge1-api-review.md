@@ -1118,18 +1118,18 @@ Docstrings
 Endpoints: conversations (+ participants, messages, attachments, links), groups (+ members), blocks, contacts, notifications, announcements, preferences, email domains, email inboxes, email sender. Actions are already `POST …/actions/{verb}`.
 
 Carried-over conventions
-- [ ] `Entity` references (conversation `topic`, message / notification / announcement / conversation-link `resource`) → `related` record stubs.
-- [ ] Bare IDs → expandable references: email inbox `group_id` → `group`; email sender `email_domain_id` → `email_domain`. Email sender drops the copied `domain` / `domain_status`.
+- [ ] `Entity` references (conversation `topic`, message / notification / announcement / conversation-link `resource`) → `related` record stubs. *(MSG1 done for conversations, messages, announcements, links and attachments — links and attachments hold a single `record`; the notification `resource` is MSG2's.)*
+- [x] Bare IDs → expandable references: email inbox `group_id` → `group`; email sender `email_domain_id` → `email_domain`. Email sender drops the copied `domain` / `domain_status`.
 - [ ] Preference booleans `in_app_enabled` / `email_enabled` / `push_enabled` → `channels: ["in_app", "email", "push"]`.
-- [ ] Message `agent_run_failed` + `agent_error_code` → message `status: failed` + `error { code, message }` (AI A4; `agent_run` is internal).
-- [ ] Conversation `unread` → `unread_count`.
-- [ ] `PUT /messaging/preferences` and `PUT /messaging/email-sender` → `PATCH`.
+- [x] Message `agent_run_failed` + `agent_error_code` → message `status: failed` + `error { code, message }` (AI A4; `agent_run` is internal).
+- [x] Conversation `unread` → `unread_count`.
+- [ ] `PUT /messaging/preferences` and `PUT /messaging/email-sender` → `PATCH`. *(MSG1 done for the email sender; preferences are MSG2's.)*
 
 Decisions
-- [ ] **M1** Email domains use the portal-domain shape: `{ domain, status, dns_records: [{ type, name, value }], verified_at }` replaces `dkim_tokens` and the `mail_from_*` strings. Pending domains are re-checked in the background; `actions/verify` is "check now".
+- [x] **M1** Email domains use the portal-domain shape: `{ domain, status, dns_records: [{ type, name, value }], verified_at }` replaces `dkim_tokens` and the `mail_from_*` strings. Pending domains are re-checked in the background; `actions/verify` is "check now".
 - [ ] **M2** Customer document recipients go public as a customer field: `notification_recipients: [{ account_user (expandable), documents: ["invoice", "acknowledgment", "statement", "shipment"] }]` (null unless included), written by customer PATCH, which replaces the list. The internal `/notification-recipients` routes are removed. New orders copy the `acknowledgment`, `invoice` and `shipment` recipients into `email_recipients` (statements are account-level, not per order). Invoices derive whether anyone receives them from this (replaces `accepts_invoice_emails` and the customer's `notification_preferences`). Personal `/messaging/preferences` is separate.
-- [ ] **M3** Deleted messages are visible tombstones: `status` gains `deleted`, `body` and `attachments` become `null`, `deleted_at` stays. `actions/redact` does the same to another person's message and records the actor.
-- [ ] **M4** Per-person conversation state stays as paired actions (`archive`/`unarchive`, `hide`/`unhide`, `mute`/`unmute`, `read`, `leave`); the caller's state is shown through their participant (`membership`, `notifications`, `read_cursor`). `set-status` and `assign` stay.
+- [x] **M3** Deleted messages are visible tombstones: `status` gains `deleted`, `body` and `attachments` become `null`, `deleted_at` stays. `actions/redact` does the same to another person's message and records the actor.
+- [x] **M4** Per-person conversation state stays as paired actions (`archive`/`unarchive`, `hide`/`unhide`, `mute`/`unmute`, `read`, `leave`); the caller's state is shown through their participant (`membership`, `notifications`, `read_cursor`). `set-status` and `assign` stay.
 - [ ] **M5** Internal: `typing`, `/messaging/support`, `support-availability`. Agent participants, inbox `agent_config` / `agent_trigger_*` and message agent fields move to the AI review. Notification `change_count` → `occurrences`.
 
 Docstrings
@@ -1207,11 +1207,11 @@ Docstrings
 
 ### Starting fresh conversations ✅ decided
 
-- [ ] **C1** Creating a conversation always creates a new one: the per-pair `dm_key` uniqueness is removed. `POST /v1/messaging/conversations { participants: [{ account_user } | { agent }], title?, message?, continues? }`. Find the latest with a person or agent via `participant_ids[]` / `agent_ids[]` filters (`limit=1`). `type: direct_message | group | system` stays descriptive only.
+- [x] **C1** Creating a conversation always creates a new one: the per-pair `dm_key` uniqueness is removed. `POST /v1/messaging/conversations { participants: [{ account_user } | { agent }], title?, message?, continues? }`. Find the latest with a person or agent via `participant_ids[]` / `agent_ids[]` filters (`limit=1`). `type: direct_message | group | system` stays descriptive only. *(MSG1: `{ agent }` participants and `agent_ids[]` are the AI unit's.)*
 - [ ] **C2** An agent's context is the current conversation plus notes (A6) on the records involved and account-wide notes. Nothing else carries between conversations.
-- [ ] **C3** `continues: <conversation id>` links the new conversation to the old one (in `related`). Agents start from a summary of the old conversation, written in the background and posted as the first message.
-- [ ] **C4** `title` is settable on create and PATCH. Agent conversations without a title get a generated one after the first exchange; conversations between people stay untitled until named.
-- [ ] **C5** `DELETE /v1/messaging/conversations/{id}` (hard delete, returns the stub) is allowed only when the caller is the only person participant (e.g. chats with agents). It returns 409 `resource_in_use` when the conversation is on legal hold or an approved tool call in it changed records; those can only be archived. Conversations with other people are archived or left.
+- [ ] **C3** `continues: <conversation id>` links the new conversation to the old one (in `related`). Agents start from a summary of the old conversation, written in the background and posted as the first message. *(MSG1 done: `continues` is stored and shown as `related.continues`. The background summary is the AI unit's.)*
+- [ ] **C4** `title` is settable on create and PATCH. Agent conversations without a title get a generated one after the first exchange; conversations between people stay untitled until named. *(MSG1 done: title on create and PATCH, including direct messages. Generated titles are the AI unit's.)*
+- [ ] **C5** `DELETE /v1/messaging/conversations/{id}` (hard delete, returns the stub) is allowed only when the caller is the only person participant (e.g. chats with agents). It returns 409 `resource_in_use` when the conversation is on legal hold or an approved tool call in it changed records; those can only be archived. Conversations with other people are archived or left. *(MSG1 done: delete, the only-person rule and the legal-hold 409; the approved-tool-call 409 is the AI unit's, with tool calls.)*
 - Note types (A6) stay as four: `comment | preference | fact | instruction`.
 
 | Where | Text (summary ¶ description) |
@@ -1536,6 +1536,7 @@ Settings
 
 Messaging
 - Conversation/message/notification `topic`/`resource` objects → `related` stubs; `unread` → `unread_count`; preference booleans → `channels`; preferences and email sender use PATCH; email sender's `domain`/`domain_status` → include `email_domain`; email domain `dkim_tokens`/`mail_from_*` → `dns_records`; deleted messages arrive as `status: deleted` with null body; notification `change_count` → `occurrences`.
+- (MSG1) Link and attachment `resource` → `record` (include `record` / `attachments.record`); requests send `record: {type, id}` instead of `topic_resource_*`, `link_resource_*` and `resource_type`/`resource_id`. Create conversation drops `type` and `participant_account_user_ids` for `participants: [{account_user_id, role?}]` (one person without a role is a direct message; give `role: member` for a one-member group). List filters: `status` → `memberships[]`, `topic_resource_*` → `record_type`/`record_id`, new `participant_ids[]`; conversation lists, the message list and the announcement list no longer take `q`. A conversation's `status` never reads `hidden`; read the caller's participant `membership` instead. Failed agent replies read `status: failed` + `error` (no `agent_run_failed`/`agent_error_code`). Inbox `group_id` → include `group`. Removing a messaging group member returns the member's deleted stub (refetch the group). Messaging lists default to 25 rows (domains, inboxes, groups, blocks, links page with `next_page_url`). On preview.9 the dashboard keeps its shapes, but `status` stops reading `hidden`, creating a DM always starts a new one, the email-sender DELETE answers 200 `{}` (was 204), removing a group member answers `{}` instead of the group, and those lists stop at 25 rows unless paged.
 - Customer "accepts invoice emails" comes from the customer's `notification_recipients` (include it); invoices drop `accepts_invoice_emails`, so the send-invoice-email button checks the customer's invoice recipients.
 - Notification settings page moves to the single preferences object (`default`, `types`, `auto_subscribe`, `paused_until`) instead of per-category rows. Records get a Follow/Unfollow control (subscriptions). Admin settings gain account notification defaults, and the role editor gains notification defaults. Editing an order no longer follows it unless the user opts in.
 

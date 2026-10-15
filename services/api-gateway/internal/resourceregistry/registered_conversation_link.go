@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/open-mrp/apikit/include"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -14,6 +15,9 @@ func init() {
 		ObjectType: constants.ObjectTypeConversationLink,
 		Load:       resourceloaders.LoadConversationLinks,
 		Subs: []include.SubField{
+			messagingRecordSub("record", constants.ObjectTypeConversationLink,
+				func(p any) string { return p.(*apiresource.ConversationLink).ID }, chatmap.MetaRecord,
+				func(p any, r *apiresource.Record) { p.(*apiresource.ConversationLink).Record = r }),
 			// conversation is fetched by id via the chat batch loader; its own expandable sub-objects (assignee, participants, last_message, …) recurse from the conversation registration.
 			{
 				Key:         "conversation",

@@ -34,7 +34,7 @@ func (*MuteConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMuteConversationRequest)
 }
 
-// Mutes a conversation's notifications for the caller only, leaving the other participants unaffected.
+// Marks a conversation muted for the caller only, leaving the other participants unaffected.
 //
 // While muted the caller gets no notification or email for new messages, though the conversation still accumulates an unread count. A direct @mention pierces the mute and still raises a notification.
 type MuteConversationEndpoint struct{}
@@ -47,7 +47,6 @@ func (e *MuteConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*MuteC
 		Route:             "/v1/messaging/conversations/{id}/actions/mute",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         false,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),

@@ -42,8 +42,8 @@ type Announcement struct {
 	Status constants.NotificationStatus `json:"status" validate:"required"`
 	// How prominently the announcement should be surfaced, from `low` through `urgent`.
 	Priority constants.NotificationPriority `json:"priority" validate:"required"`
-	// The resource the announcement is about, which the client can link to.
-	Resource *Entity `json:"resource" expandable:"true"`
+	// The record the announcement is about.
+	Related *AnnouncementRelated `json:"related"`
 	// When the announcement becomes visible in the feed.
 	//
 	// An announcement scheduled for the future is not returned by the announcement endpoints until this time passes.
@@ -65,19 +65,30 @@ type Announcement struct {
 }
 
 var SampleAnnouncement = &Announcement{
-	ID:        SampleAnnouncementID,
-	Object:    constants.ObjectTypeAnnouncement,
-	Scope:     constants.AnnouncementScopeAccount,
-	Category:  constants.NotificationCategoryOrderUpdated,
-	Status:    constants.NotificationStatusUnseen,
-	Title:     "Scheduled maintenance",
-	Body:      new("The platform will be briefly unavailable tonight at 2am UTC."),
-	Priority:  constants.NotificationPriorityNormal,
-	Resource:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new("Order #1042"), nil),
+	ID:       SampleAnnouncementID,
+	Object:   constants.ObjectTypeAnnouncement,
+	Scope:    constants.AnnouncementScopeAccount,
+	Category: constants.NotificationCategoryOrderUpdated,
+	Status:   constants.NotificationStatusUnseen,
+	Title:    "Scheduled maintenance",
+	Body:     new("The platform will be briefly unavailable tonight at 2am UTC."),
+	Priority: constants.NotificationPriorityNormal,
+	Related: &AnnouncementRelated{
+		Object: constants.ObjectTypeAnnouncementRelated,
+		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},
+	},
 	PublishAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	ExpiresAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+// The record an announcement is about, as a lightweight reference. Retrieve the record by its ID for full details.
+type AnnouncementRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=announcement_related"`
+	// The record the announcement is about, which a client can link to.
+	Record *Record `json:"record" expandable:"true"`
 }
 
 func (*Announcement) SchemaExample() any {

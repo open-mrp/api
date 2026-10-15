@@ -103,7 +103,7 @@ func customerUnread(t *testing.T, customer *Client, convID string) float64 {
 	for _, raw := range list.Data {
 		c := parseJSON(raw)
 		if jsonField(c, "id") == convID {
-			u, _ := c["unread"].(float64)
+			u, _ := c["unread_count"].(float64)
 			return u
 		}
 	}
@@ -311,8 +311,7 @@ func TestExternalCase_RecordLinks(t *testing.T) {
 	// Link a sales order (any id; the link is a plain reference).
 	orderID := "so_" + uniqueName("rec")
 	lr, err := dane.PostFull(conversationsPath+"/"+convID+"/links", map[string]any{
-		"resource_type": "sales_order",
-		"resource_id":   orderID,
+		"record": map[string]any{"type": "sales_order", "id": orderID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, lr.StatusCode, lr.Body)
@@ -323,9 +322,9 @@ func TestExternalCase_RecordLinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, links.Data)
 
-	// The conversation is discoverable from the record via the topic-resource anchor filter.
+	// The conversation is discoverable from the record via the record filter.
 	byRecord, _, err := dane.GetList(conversationsPath, url.Values{
-		"topic_resource_type": {"sales_order"}, "topic_resource_id": {orderID}, "limit": {"50"},
+		"record_type": {"sales_order"}, "record_id": {orderID}, "limit": {"50"},
 	})
 	require.NoError(t, err)
 	found := false

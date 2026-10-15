@@ -13,25 +13,27 @@ const (
 	SampleConversationParticipantID = "cvpt_be2h3ul14cts"
 )
 
-// A conversation thread the caller participates in.
+// A thread of messages between people, devices and agents.
+//
+// A conversation can be about a record, such as an order, which appears in `related`.
 type Conversation struct {
 	// Conversation ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=conversation"`
-	// What kind of conversation this is.
+	// What kind of conversation this is, set from who is in it when it's created.
 	//
-	// - `direct_message`: a 1:1 thread between two users.
-	// - `group`: a named thread with multiple user or agent members (including customer-facing support cases).
+	// - `direct_message`: you and at most one other person.
+	// - `group`: anything else, including customer-facing support cases.
 	// - `system`: a system channel that delivers automated account alerts.
 	Type constants.ConversationType `json:"type" validate:"required"`
 	// Whether this is a team-only conversation (`internal`) or a customer-facing case (`customer`).
 	//
 	// A customer never sees an `internal` conversation, even one that is about them; within a `customer` case they see only the messages that were sent to them, not the team's internal notes on the case.
 	Audience constants.ConversationAudience `json:"audience" validate:"required"`
-	// The display title of a group conversation.
+	// The conversation's title.
 	//
-	// Direct messages carry no stored title; clients derive one from the participants.
+	// Null until someone names it; clients then show the participants instead.
 	Title *string `json:"title"`
 	// The triage lane of a customer-facing case.
 	//
@@ -48,11 +50,9 @@ type Conversation struct {
 	//
 	// This is provenance only: the roster's members were copied into the conversation when it was created, so later edits to the roster never add or remove participants here, and deleting the roster only clears this reference.
 	Group *MessagingGroup `json:"group" expandable:"true"`
-	// The conversation's state from the caller's point of view.
+	// Whether the conversation is archived for everyone: `active` or `archived`.
 	//
-	// - `active`: a normal, visible conversation.
-	// - `archived`: archived for the whole account.
-	// - `hidden`: the caller dismissed the conversation from their own list while everyone else still sees it, which takes precedence over an account-level archive.
+	// Your own state (hidden, muted, how far you've read) is on your participant in `participants`.
 	Status constants.ConversationStatus `json:"status" validate:"required"`
 	// Whether the conversation is under legal hold.
 	//
@@ -66,12 +66,10 @@ type Conversation struct {
 	//
 	// Only current members are listed; anyone who left or was removed is omitted, even though their past messages remain in the thread.
 	Participants *List[ConversationParticipant] `json:"participants" expandable:"true"`
-	// The app record this conversation is anchored to, such as a sales order.
-	//
-	// Anchored conversations surface as the discussion thread on that record.
-	Topic *Entity `json:"topic" expandable:"true"`
-	// Number of messages the caller has not yet read.
-	Unread int64 `json:"unread"`
+	// Records this conversation is about or picks up from.
+	Related *ConversationRelated `json:"related"`
+	// Messages the caller hasn't read yet.
+	UnreadCount int64 `json:"unread_count"`
 	// When the most recent message was sent.
 	LastMessageAt *time.Time `json:"last_message_at"`
 	// The most recent message in the conversation.
@@ -80,6 +78,16 @@ type Conversation struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// Records a conversation is about or picks up from, as lightweight references. Retrieve a record by its ID for full details.
+type ConversationRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=conversation_related"`
+	// The record the conversation is about, such as an order. Its discussions are listed with the `record_type` and `record_id` filters.
+	Record *Record `json:"record" expandable:"true"`
+	// The conversation this one picks up from.
+	Continues *Record `json:"continues" expandable:"true"`
 }
 
 // A participant (membership) in a conversation.
@@ -164,14 +172,18 @@ func (*ConversationParticipant) SchemaExample() any {
 }
 
 var SampleConversation = &Conversation{
-	ID:            SampleConversationID,
-	Object:        constants.ObjectTypeConversation,
-	Type:          constants.ConversationTypeDM,
-	Audience:      constants.ConversationAudienceInternal,
-	Status:        constants.ConversationStatusActive,
-	LegalHold:     new(constants.LegalHoldStatusReleased),
-	Participants:  NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
-	Unread:        2,
+	ID:           SampleConversationID,
+	Object:       constants.ObjectTypeConversation,
+	Type:         constants.ConversationTypeDM,
+	Audience:     constants.ConversationAudienceInternal,
+	Status:       constants.ConversationStatusActive,
+	LegalHold:    new(constants.LegalHoldStatusReleased),
+	Participants: NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
+	Related: &ConversationRelated{
+		Object: constants.ObjectTypeConversationRelated,
+		Record: &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},
+	},
+	UnreadCount:   2,
 	LastMessageAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	LastMessage: &Message{
 		ID:         SampleMessageID,

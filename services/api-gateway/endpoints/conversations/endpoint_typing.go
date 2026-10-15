@@ -31,7 +31,6 @@ func (e *TypingEndpoint) Materialize() *apiendpoint.APIEndpoint[*TypingRequest, 
 		Route:             "/v1/messaging/conversations/{id}/actions/typing",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessage,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *TypingRequest) (*apiresource.MessageResource, *apierror.APIError) {

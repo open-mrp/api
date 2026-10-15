@@ -32,170 +32,207 @@ import (
 // CreateConversationRequest validation
 // ──────────────────────────────────────────────
 
-func TestCovMessagingConversations_Create_MissingType(t *testing.T) {
+// type is set from who is in the conversation; it is not a request field.
+func TestCovMessagingConversations_Create_TypeIsNotAField(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath, map[string]any{
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "type")
-}
-
-func TestCovMessagingConversations_Create_InvalidTypeEnum(t *testing.T) {
-	t.Parallel()
-	user := chatUserClient(t)
-	status, body, err := user.Post(conversationsPath, map[string]any{
-		"type":                         "bogus",
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "type")
-}
-
-// "system" passes gateway enum validation (it is a documented ConversationType value) but is
-// rejected at the service layer — a server-side 400, not a gateway-level one.
-func TestCovMessagingConversations_Create_SystemTypeRejected(t *testing.T) {
-	t.Parallel()
-	user := chatUserClient(t)
-	status, body, err := user.Post(conversationsPath, map[string]any{"type": "system"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	assert.Contains(t, string(body), "Unsupported conversation type")
-}
-
-func TestCovMessagingConversations_Create_DMParticipantCountValidation(t *testing.T) {
-	t.Parallel()
-	user := chatUserClient(t)
-
-	t.Run("zero participants", func(t *testing.T) {
-		status, body, err := user.Post(conversationsPath, map[string]any{
-			"type":                         "direct_message",
-			"participant_account_user_ids": []string{},
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-	})
-
-	t.Run("two participants", func(t *testing.T) {
-		status, body, err := user.Post(conversationsPath, map[string]any{
-			"type":                         "direct_message",
-			"participant_account_user_ids": []string{SeedAccountUser2ID, SeedAdmin2AccountUserID},
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		assert.Contains(t, string(body), "exactly one other participant")
-	})
-}
-
-func TestCovMessagingConversations_Create_DMNonexistentTarget(t *testing.T) {
-	t.Parallel()
-	user := chatUserClient(t)
-	status, body, err := user.Post(conversationsPath, map[string]any{
-		"type":                         "direct_message",
-		"participant_account_user_ids": []string{"acus_doesnotexist000"},
+		"type":         "group",
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	assert.Contains(t, string(body), "does not exist")
+	requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
 }
 
-// A self-DM ("note to self") is explicitly allowed server-side and dedups like any other DM.
+func TestCovMessagingConversations_Create_DerivesType(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+
+	create := func(body map[string]any) map[string]any {
+		resp, err := user.PostFull(conversationsPath, body, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, resp.StatusCode, resp.Body)
+		return parseJSON(resp.Body)
+	}
+	one := []map[string]any{{"account_user_id": SeedAccountUser2ID}}
+	assert.Equal(t, "direct_message", jsonField(create(map[string]any{"participants": one}), "type"))
+	assert.Equal(t, "direct_message", jsonField(create(map[string]any{"participants": one, "title": "Plans"}), "type"), "a title alone keeps a direct message")
+	assert.Equal(t, "group", jsonField(create(map[string]any{"participants": []map[string]any{
+		{"account_user_id": SeedAccountUser2ID}, {"account_user_id": SeedAdmin2AccountUserID}}}), "type"))
+	assert.Equal(t, "group", jsonField(create(map[string]any{"participants": one,
+		"record": map[string]any{"type": "sales_order", "id": SeedSalesOrderID}}), "type"), "a record discussion is a group")
+	assert.Equal(t, "group", jsonField(create(map[string]any{"participants": []map[string]any{
+		{"account_user_id": SeedAccountUser2ID, "role": "member"}}}), "type"), "a role makes a group")
+}
+
+func TestCovMessagingConversations_Create_InvalidRoleEnum(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	status, body, err := user.Post(conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID, "role": "boss"}},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+}
+
+func TestCovMessagingConversations_Create_NoOtherParticipant(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	status, body, err := user.Post(conversationsPath, map[string]any{"participants": []map[string]any{}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "participants")
+}
+
+func TestCovMessagingConversations_Create_NonexistentParticipant(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	status, body, err := user.Post(conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": "acus_doesnotexist000"}},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "participants")
+}
+
+// A self-DM ("note to self") is allowed, and like any conversation every create starts a new one.
 func TestCovMessagingConversations_Create_SelfDM(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
-	resp, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "direct_message",
-		"participant_account_user_ids": []string{SeedAccountUserID},
-	}, newIdempotencyKey())
+	body := map[string]any{"participants": []map[string]any{{"account_user_id": SeedAccountUserID}}}
+	resp, err := user.PostFull(conversationsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 	conv := parseJSON(resp.Body)
 	assert.Equal(t, "direct_message", jsonField(conv, "type"))
-	id := jsonField(conv, "id")
 
-	again, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "direct_message",
-		"participant_account_user_ids": []string{SeedAccountUserID},
-	}, newIdempotencyKey())
+	again, err := user.PostFull(conversationsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, again.StatusCode, again.Body)
-	assert.Equal(t, id, jsonField(parseJSON(again.Body), "id"), "a repeat self-DM dedups to the same conversation")
+	assert.NotEqual(t, jsonField(conv, "id"), jsonField(parseJSON(again.Body), "id"))
 }
 
 func TestCovMessagingConversations_Create_GroupIDNonexistent(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath, map[string]any{
-		"type":     "group",
 		"group_id": "mg_doesnotexist",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "group_id")
 }
 
-func TestCovMessagingConversations_Create_InvalidTopicResourceType(t *testing.T) {
+func TestCovMessagingConversations_Create_InvalidRecordType(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath, map[string]any{
-		"type":                         "group",
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-		"topic_resource_type":          "not_a_type",
-		"topic_resource_id":            "x",
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"record":       map[string]any{"type": "not_a_type", "id": "x"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "topic_resource_type")
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "record.type")
 }
 
-// The topic anchor set at create time is a plain reference, matching AddConversationLinkRequest's
-// documented behavior: no existence check on topic_resource_id. It is expandable — null without
-// ?include=topic, populated with it.
-func TestCovMessagingConversations_Create_TopicAnchorIsPlainReferenceAndExpandable(t *testing.T) {
+// The record a conversation is about appears in related.record: a lightweight stub, null unless included.
+func TestCovMessagingConversations_Create_RecordIsRelatedStub(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 
 	resp, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "group",
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-		"topic_resource_type":          "sales_order",
-		"topic_resource_id":            SeedSalesOrderID,
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"record":       map[string]any{"type": "sales_order", "id": SeedSalesOrderID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
-	convID := jsonField(parseJSON(resp.Body), "id")
+	created := parseJSON(resp.Body)
+	convID := jsonField(created, "id")
+	related := jsonObject(created, "related")
+	require.NotNil(t, related, "related is always present")
+	assert.Equal(t, "conversation_related", jsonField(related, "object"))
+	assertNilField(t, related, "record")
+	assertNilField(t, related, "continues")
 
-	// Without ?include=topic, the field is null even though it was set at create.
-	noInclude, err := user.GetFull(conversationsPath+"/"+convID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, noInclude.StatusCode, noInclude.Body)
-	assertNilField(t, parseJSON(noInclude.Body), "topic")
-
-	withInclude, err := user.GetFull(conversationsPath+"/"+convID, url.Values{"include": {"topic"}})
+	withInclude, err := user.GetFull(conversationsPath+"/"+convID, url.Values{"include": {"related.record"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, withInclude.StatusCode, withInclude.Body)
-	topic := jsonObject(parseJSON(withInclude.Body), "topic")
-	require.NotNil(t, topic, "topic should be populated with ?include=topic")
-	assert.Equal(t, "entity", jsonField(topic, "object"))
-	assert.Equal(t, SeedSalesOrderID, jsonField(topic, "id"))
-	assert.Equal(t, "sales_order", jsonField(topic, "type"))
+	record := jsonObject(jsonObject(parseJSON(withInclude.Body), "related"), "record")
+	require.NotNil(t, record, "related.record should be populated with ?include=related.record")
+	assert.Equal(t, "record", jsonField(record, "object"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(record, "id"))
+	assert.Equal(t, "sales_order", jsonField(record, "type"))
+	assert.NotEmpty(t, jsonField(record, "number"))
 
-	// A nonexistent id is accepted too — no existence check on the topic anchor.
-	respFake, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "group",
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-		"topic_resource_type":          "sales_order",
-		"topic_resource_id":            "so_totallyfake" + uniqueName("x"),
+	// The record's discussions list it.
+	list, _, err := user.GetList(conversationsPath, url.Values{"record_type": {"sales_order"}, "record_id": {SeedSalesOrderID}})
+	require.NoError(t, err)
+	var found bool
+	for _, raw := range list.Data {
+		found = found || jsonField(parseJSON(raw), "id") == convID
+	}
+	assert.True(t, found, "the conversation is among the record's discussions")
+}
+
+// A first message is posted by the creator as the conversation's opening message.
+func TestCovMessagingConversations_Create_WithFirstMessage(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	body := uniqueName("first")
+	resp, err := user.PostFull(withQuery(conversationsPath, url.Values{"include": {"last_message", "last_message.sender"}}), map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"message":      map[string]any{"body": body},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, respFake.StatusCode, respFake.Body)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	conv := parseJSON(resp.Body)
+	require.NotEmpty(t, jsonField(conv, "last_message_at"), "the first message was posted")
+
+	msgs, _, err := user.GetList(conversationsPath+"/"+jsonField(conv, "id")+"/messages", nil)
+	require.NoError(t, err)
+	require.Len(t, msgs.Data, 1)
+	first := parseJSON(msgs.Data[0])
+	assert.Equal(t, body, jsonField(first, "body"))
+	assert.Equal(t, "sent", jsonField(first, "status"))
+}
+
+// continues links the new conversation to one the caller is in, through related.continues.
+func TestCovMessagingConversations_Create_Continues(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	old := createDM(t, user, SeedAccountUser2ID)
+	oldID := jsonField(old, "id")
+
+	resp, err := user.PostFull(withQuery(conversationsPath, url.Values{"include": {"related.continues"}}), map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"continues":    oldID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	cont := jsonObject(jsonObject(parseJSON(resp.Body), "related"), "continues")
+	require.NotNil(t, cont)
+	assert.Equal(t, "record", jsonField(cont, "object"))
+	assert.Equal(t, "conversation", jsonField(cont, "type"))
+	assert.Equal(t, oldID, jsonField(cont, "id"))
+	assert.Equal(t, "active", jsonField(cont, "status"))
+
+	// A conversation the caller isn't in can't be continued.
+	other := chatUser2Client(t)
+	theirs := createDM(t, other, SeedAdmin2AccountUserID)
+	status, body, err := user.Post(conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"continues":    jsonField(theirs, "id"),
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "continues")
 }
 
 // ──────────────────────────────────────────────
@@ -206,9 +243,8 @@ func TestCovMessagingConversations_Create_AllFieldsAndDefaults(t *testing.T) {
 	t.Parallel()
 	owner := chatUserClient(t)
 	resp, err := owner.PostFull(withQuery(conversationsPath, conversationIncludeQuery), map[string]any{
-		"type":                         "group",
-		"title":                        uniqueName("cov-allfields"),
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
+		"title":        uniqueName("cov-allfields"),
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID, "role": "member"}},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -224,8 +260,13 @@ func TestCovMessagingConversations_Create_AllFieldsAndDefaults(t *testing.T) {
 	assert.Equal(t, "active", jsonField(conv, "status"))
 	assert.Equal(t, "released", jsonField(conv, "legal_hold"))
 	assertNilField(t, conv, "assignee")
-	assertNilField(t, conv, "topic")
-	assert.Equal(t, "0", jsonField(conv, "unread"))
+	related := jsonObject(conv, "related")
+	require.NotNil(t, related)
+	assertNilField(t, related, "record")
+	assertNilField(t, related, "continues")
+	assert.NotContains(t, conv, "topic")
+	assert.NotContains(t, conv, "unread")
+	assert.Equal(t, "0", jsonField(conv, "unread_count"))
 	assertNilField(t, conv, "last_message_at")
 	assertNilField(t, conv, "last_message")
 	assertValidTimestamp(t, jsonField(conv, "created_at"), "created_at")
@@ -250,6 +291,85 @@ func TestCovMessagingConversations_Create_AllFieldsAndDefaults(t *testing.T) {
 		require.NotNil(t, actor, "a user participant always carries an actor")
 		assert.Equal(t, "user", jsonField(actor, "type"))
 	}
+}
+
+// Anyone in a direct message can name it.
+func TestCovMessagingConversations_Update_DirectMessageTitle(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	dm := createDM(t, user, SeedAccountUser2ID)
+	title := uniqueName("dm-title")
+	other := chatUser2Client(t)
+	patch, err := other.PatchFull(conversationsPath+"/"+jsonField(dm, "id"), map[string]any{"title": title}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patch.StatusCode, patch.Body)
+	assert.Equal(t, title, jsonField(parseJSON(patch.Body), "title"))
+}
+
+// ──────────────────────────────────────────────
+// DELETE: only conversations with no other person
+// ──────────────────────────────────────────────
+
+func TestCovMessagingConversations_Delete(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+
+	// A conversation with only the caller deletes, returning the stub; it is gone afterwards.
+	self := parseJSON(mustPost(t, user, conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUserID}},
+		"message":      map[string]any{"body": "note to self"},
+	}))
+	selfID := jsonField(self, "id")
+	resp, err := user.DeleteFull(conversationsPath + "/" + selfID)
+	require.NoError(t, err)
+	requireStatus(t, 200, resp.StatusCode, resp.Body)
+	assert.Equal(t, map[string]any{"id": selfID, "object": "conversation", "deleted": true}, parseJSON(resp.Body))
+	gone, err := user.GetFull(conversationsPath+"/"+selfID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, gone.StatusCode)
+
+	// A conversation with another person is archived or left, never deleted.
+	dm := createDM(t, user, SeedAccountUser2ID)
+	status, body, err := user.Delete(conversationsPath + "/" + jsonField(dm, "id"))
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
+
+	// Someone who isn't in the conversation can't see it to delete it.
+	other := chatUser2Client(t)
+	mine := parseJSON(mustPost(t, user, conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUserID}},
+	}))
+	status, body, err = other.Delete(conversationsPath + "/" + jsonField(mine, "id"))
+	require.NoError(t, err)
+	requireStatus(t, 404, status, body)
+}
+
+func TestCovMessagingConversations_Delete_LegalHold(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	self := parseJSON(mustPost(t, user, conversationsPath, map[string]any{
+		"participants": []map[string]any{{"account_user_id": SeedAccountUserID}},
+	}))
+	id := jsonField(self, "id")
+	admin := user
+	hold, err := admin.PostFull(conversationsPath+"/"+id+"/actions/set-legal-hold", map[string]any{"legal_hold": "held"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, hold.StatusCode, hold.Body)
+
+	status, body, err := user.Delete(conversationsPath + "/" + id)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
+}
+
+// mustPost posts body with a fresh idempotency key and returns the 201 response body.
+func mustPost(t *testing.T, c *Client, path string, body map[string]any) []byte {
+	t.Helper()
+	resp, err := c.PostFull(path, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	return resp.Body
 }
 
 // ──────────────────────────────────────────────
@@ -399,9 +519,8 @@ func TestCovMessagingConversations_Idempotency_CreateConversation(t *testing.T) 
 	title := uniqueName("cov-idem-create")
 
 	first, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "group",
-		"title":                        title,
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
+		"title":        title,
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, first.StatusCode, first.Body)
@@ -409,9 +528,8 @@ func TestCovMessagingConversations_Idempotency_CreateConversation(t *testing.T) 
 
 	// Same key, same body -> the same resource.
 	second, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "group",
-		"title":                        title,
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
+		"title":        title,
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, second.StatusCode, second.Body)
@@ -419,9 +537,8 @@ func TestCovMessagingConversations_Idempotency_CreateConversation(t *testing.T) 
 
 	// Same key, different body -> idempotency_error.
 	status, body, err := user.Post(conversationsPath, map[string]any{
-		"type":                         "group",
-		"title":                        uniqueName("cov-idem-create-DIFFERENT"),
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
+		"title":        uniqueName("cov-idem-create-DIFFERENT"),
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -749,11 +866,11 @@ func TestCovMessagingConversations_AddLink_InvalidResourceType(t *testing.T) {
 	convID := jsonField(conv, "id")
 
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/links",
-		map[string]any{"resource_type": "not_a_type", "resource_id": "x"}, newIdempotencyKey())
+		map[string]any{"record": map[string]any{"type": "not_a_type", "id": "x"}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "resource_type")
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "record.type")
 }
 
 // AddConversationLink (POST .../links) returns created_at as the Go zero
@@ -770,41 +887,40 @@ func TestCovMessagingConversations_AddLink_CreatedAtIsPopulated(t *testing.T) {
 	convID := jsonField(conv, "id")
 
 	resp, err := owner.PostFull(conversationsPath+"/"+convID+"/links",
-		map[string]any{"resource_type": "sales_order", "resource_id": SeedSalesOrderID}, newIdempotencyKey())
+		map[string]any{"record": map[string]any{"type": "sales_order", "id": SeedSalesOrderID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 	link := parseJSON(resp.Body)
 	assertValidTimestamp(t, jsonField(link, "created_at"), "created_at")
 }
 
-// `resource` is populated unconditionally (not gated behind ?include=, matching the doc comment that
-// notes it isn't tagged `expandable:"true"`); `conversation` IS gated and only appears with
-// ?include=conversation.
-func TestCovMessagingConversations_Links_ResourceAlwaysPresentConversationExpandable(t *testing.T) {
+// `record` and `conversation` are both expandable: null unless included.
+func TestCovMessagingConversations_Links_RecordAndConversationExpandable(t *testing.T) {
 	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("cov-link-fields"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
 
-	addResp, err := owner.PostFull(conversationsPath+"/"+convID+"/links",
-		map[string]any{"resource_type": "sales_order", "resource_id": SeedSalesOrderID}, newIdempotencyKey())
+	addResp, err := owner.PostFull(withQuery(conversationsPath+"/"+convID+"/links", url.Values{"include": {"record"}}),
+		map[string]any{"record": map[string]any{"type": "sales_order", "id": SeedSalesOrderID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addResp.StatusCode, addResp.Body)
 	added := parseJSON(addResp.Body)
 	assertObjectField(t, added, "conversation_link")
 	assertIDFormat(t, jsonField(added, "id"), "cvlk")
-	resource := jsonObject(added, "resource")
-	require.NotNil(t, resource, "resource is populated on creation without needing ?include=")
-	assert.Equal(t, SeedSalesOrderID, jsonField(resource, "id"))
-	assert.Equal(t, "sales_order", jsonField(resource, "type"))
+	record := jsonObject(added, "record")
+	require.NotNil(t, record, "record is populated with ?include=record")
+	assert.Equal(t, "record", jsonField(record, "object"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(record, "id"))
+	assert.Equal(t, "sales_order", jsonField(record, "type"))
 	assertNilField(t, added, "conversation")
 
-	// List without include: resource still present, conversation still null.
+	// List without include: record and conversation are null.
 	noInclude, _, err := owner.GetList(conversationsPath+"/"+convID+"/links", nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, noInclude.Data)
 	row := parseJSON(noInclude.Data[0])
-	require.NotNil(t, jsonObject(row, "resource"))
+	assertNilField(t, row, "record")
 	assertNilField(t, row, "conversation")
 
 	// List with include=conversation: conversation now populated with the parent id.
@@ -870,9 +986,9 @@ func TestCovMessagingConversations_List_InvalidEnumFilters(t *testing.T) {
 	}{
 		{"type", url.Values{"type": {"bogus"}}, "type"},
 		{"audience", url.Values{"audience": {"bogus"}}, "audience"},
-		{"status", url.Values{"status": {"bogus"}}, "status"},
+		{"memberships", url.Values{"memberships[]": {"bogus"}}, "memberships"},
 		{"workflow_status", url.Values{"workflow_status": {"bogus"}}, "workflow_status"},
-		{"topic_resource_type", url.Values{"topic_resource_type": {"bogus"}}, "topic_resource_type"},
+		{"record_type", url.Values{"record_type": {"bogus"}}, "record_type"},
 	}
 	for _, tc := range cases {
 		tc := tc

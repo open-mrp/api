@@ -30,8 +30,7 @@ actions_are_post PUT /v1/sales/sales-orders/{id}/actions/unissue
 delete_returns_stub DELETE /v1/auth/refresh-tokens
 delete_returns_stub DELETE /v1/catalog/items/{id}/attributes/{attribute_id}
 delete_returns_stub DELETE /v1/core/sandboxes/{id}
-delete_returns_stub DELETE /v1/messaging/email-sender
-delete_returns_stub DELETE /v1/messaging/groups/{id}/members/{member_id}
+
 delete_returns_stub DELETE /v1/operations/operating-calendars/{id}
 delete_returns_stub DELETE /v1/operations/operating-calendars/{id}/closures/{closure_id}
 lists_page_with_list_request GET /v1/auth/registration-sessions
@@ -40,11 +39,7 @@ lists_page_with_list_request GET /v1/core/addresses/suggestions
 lists_page_with_list_request GET /v1/core/analytics/open-orders/{id}/lines
 lists_page_with_list_request GET /v1/core/audit-events/resource-types
 lists_page_with_list_request GET /v1/identity/document-settings
-lists_page_with_list_request GET /v1/messaging/blocks
-lists_page_with_list_request GET /v1/messaging/conversations/{id}/links
-lists_page_with_list_request GET /v1/messaging/email-domains
-lists_page_with_list_request GET /v1/messaging/email-inboxes
-lists_page_with_list_request GET /v1/messaging/groups
+
 lists_page_with_list_request GET /v1/messaging/preferences
 lists_page_with_list_request GET /v1/operations/batches/{id}/flow
 lists_page_with_list_request GET /v1/operations/demand-override-types
@@ -77,9 +72,8 @@ long_running_returns_async_job POST /v1/messaging/notifications
 public_docstrings DELETE /v1/ai/memories/{id}
 public_docstrings DELETE /v1/catalog/product-lines/{id}
 public_docstrings DELETE /v1/catalog/products/{id}
-public_docstrings DELETE /v1/messaging/blocks/{id}
-public_docstrings DELETE /v1/messaging/email-domains/{id}
-public_docstrings DELETE /v1/messaging/email-sender
+
+
 public_docstrings DELETE /v1/operations/carriers/{carrier_id}/service-levels/{id}
 public_docstrings DELETE /v1/settings/integrations/{id}
 public_docstrings DELETE /v1/settings/portal-domains/{id}
@@ -94,10 +88,8 @@ public_docstrings PATCH /v1/catalog/unit-groups/{unit_group_id}/units/{id}
 public_docstrings PATCH /v1/catalog/units/{id}
 public_docstrings PATCH /v1/finance/payment-terms/{id}
 public_docstrings PATCH /v1/identity/account-users/{id}
-public_docstrings PATCH /v1/messaging/conversations/{id}
-public_docstrings PATCH /v1/messaging/email-inboxes/{id}
-public_docstrings PATCH /v1/messaging/groups/{id}
-public_docstrings PATCH /v1/messaging/messages/{id}
+
+
 public_docstrings PATCH /v1/operations/departments/{id}
 public_docstrings PATCH /v1/operations/locations/{id}
 public_docstrings PATCH /v1/operations/machines/{id}
@@ -116,19 +108,8 @@ public_docstrings POST /v1/ai/memories
 public_docstrings POST /v1/ai/runs/{id}/actions/retry
 public_docstrings POST /v1/catalog/items/actions/bulk-reconcile
 public_docstrings POST /v1/core/actions/email-record
-public_docstrings POST /v1/messaging/announcements/{id}/actions/dismiss
-public_docstrings POST /v1/messaging/blocks
-public_docstrings POST /v1/messaging/conversations/{id}/actions/hide
-public_docstrings POST /v1/messaging/conversations/{id}/actions/mute
-public_docstrings POST /v1/messaging/conversations/{id}/actions/read
-public_docstrings POST /v1/messaging/conversations/{id}/actions/redact
-public_docstrings POST /v1/messaging/conversations/{id}/actions/report
-public_docstrings POST /v1/messaging/conversations/{id}/actions/set-legal-hold
-public_docstrings POST /v1/messaging/conversations/{id}/messages
-public_docstrings POST /v1/messaging/conversations/{id}/participants/{pid}/actions/set-role
-public_docstrings POST /v1/messaging/email-domains/{id}/actions/verify
-public_docstrings POST /v1/messaging/email-inboxes
-public_docstrings POST /v1/messaging/messages/{id}/actions/reject
+
+
 public_docstrings POST /v1/messaging/notifications/{id}/actions/dismiss
 public_docstrings POST /v1/operations/fulfillment-recommendations/actions/apply
 public_docstrings POST /v1/operations/machine-downtime-events
@@ -191,10 +172,9 @@ search_documented GET /v1/identity/child-accounts
 search_documented GET /v1/identity/me/tenancy/customer-accounts/{vendor_account_id}
 search_documented GET /v1/identity/permission-groups
 search_documented GET /v1/identity/roles
-search_documented GET /v1/messaging/announcements
-search_documented GET /v1/messaging/contacts
-search_documented GET /v1/messaging/conversations
-search_documented GET /v1/messaging/conversations/{id}/messages
+
+
+
 search_documented GET /v1/messaging/notifications
 search_documented GET /v1/operations/carriers
 search_documented GET /v1/operations/carriers/{carrier_id}/service-levels

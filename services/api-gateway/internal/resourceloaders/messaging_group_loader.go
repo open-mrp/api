@@ -2,8 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/include"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
@@ -13,6 +16,34 @@ import (
 )
 
 var messagingGroupLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.messaging_group")
+
+// LoadMessagingGroups loads rosters by ID, with their members, for a field that includes one. A roster deleted after the including row was read is left out.
+func LoadMessagingGroups(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
+	out := make(map[string]any, len(ids))
+	var actors []*apiresource.Actor
+	for _, id := range ids {
+		groupID := id
+		info, apiErr := grpcutil.CallRPC(ctx, messagingGroupLoaderTracer, "loader.messaging_groups.get", domain.ServiceName,
+			func(ctx context.Context, opts ...grpc.CallOption) (*pb.MessagingGroupInfo, error) {
+				return chatClient.GetMessagingGroup(ctx, &pb.GetMessagingGroupRequest{GroupId: groupID}, opts...)
+			})
+		if apiErr != nil {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				continue
+			}
+			return nil, apiErr
+		}
+		group := chatmap.MessagingGroupFromProto(info)
+		for i := range group.Members.Data {
+			if a := group.Members.Data[i].Actor; a != nil {
+				actors = append(actors, a)
+			}
+		}
+		out[groupID] = &group
+	}
+	HydrateActorNames(ctx, actors)
+	return out, nil
+}
 
 // HydrateMessagingGroups fills the roster's identity (Name + timestamps) on messaging-group references
 // that the chat service stashes by id only. The groups are mutated in place. Members are deliberately

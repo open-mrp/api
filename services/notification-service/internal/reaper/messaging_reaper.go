@@ -1,4 +1,4 @@
-// Package reaper holds the background retention worker for the messaging substrate. It periodically deletes read/dismissed notifications, stale notifications past a hard cap, expired announcements (plus their orphaned receipts), and tombstoned messages with their attachments (deleting each attachment's S3 object before its row), mirroring the inbox purger's lease-guarded single-runner design.
+// Package reaper holds the background retention worker for the messaging substrate. It periodically deletes read/dismissed notifications, stale notifications past a hard cap, expired announcements (plus their orphaned receipts), and the attachments of tombstoned messages (deleting each S3 object before its row), mirroring the inbox purger's lease-guarded single-runner design.
 package reaper
 
 import (
@@ -35,8 +35,6 @@ type MessagingReaperRepo interface {
 	ListPurgeableMessageAttachments(ctx context.Context, retentionHours int, limit int32) ([]AttachmentPurgeRef, error)
 	// DeleteMessageAttachmentByID deletes a single attachment row (after its S3 object is removed).
 	DeleteMessageAttachmentByID(ctx context.Context, id string) error
-	// PurgeTombstonedMessages hard-deletes messages tombstoned longer than retentionHours, only once their attachments are gone.
-	PurgeTombstonedMessages(ctx context.Context, retentionHours int, limit int32) (int64, error)
 }
 
 // MessagingReaperConfig configures the retention worker.
@@ -51,7 +49,7 @@ type MessagingReaperConfig struct {
 	NotificationMaxAgeHours int
 	// AnnouncementRetentionHours (optional; default 2160 = 90d) is how long expired announcements are kept past expiry.
 	AnnouncementRetentionHours int
-	// MessageRetentionHours (optional; default 720 = 30d) is the grace window after a message is tombstoned before it and its attachments are hard-purged.
+	// MessageRetentionHours (optional; default 720 = 30d) is the grace window after a message is tombstoned before its attachments are hard-purged.
 	MessageRetentionHours int
 	// ReapInterval (optional; default 1h) controls how often the reap loop runs.
 	ReapInterval time.Duration
@@ -213,14 +211,8 @@ func (r *MessagingReaper) reap(ctx context.Context) {
 		slog.Info("Purged orphaned announcement receipts", "count", n)
 	}
 
-	// Attachments of tombstoned messages must be purged before the message rows so their S3 objects are deleted first; PurgeTombstonedMessages only removes messages once their attachments are gone.
+	// A tombstoned message keeps its place in the timeline, so only its attachments are purged.
 	r.reapTombstonedAttachments(ctx)
-
-	if n, err := r.repo.PurgeTombstonedMessages(ctx, r.config.MessageRetentionHours, r.config.BatchSize); err != nil {
-		slog.Error("Failed to purge tombstoned messages", "error", err)
-	} else if n > 0 {
-		slog.Info("Purged tombstoned messages", "count", n)
-	}
 }
 
 // reapTombstonedAttachments deletes the S3 object for each purgeable attachment before deleting its row. Object deletion is idempotent, so a crash between the two steps re-attempts the object delete on the next tick rather than orphaning it. When no object store is configured, only rows are removed (object cleanup is then expected from a bucket lifecycle policy).

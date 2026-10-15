@@ -36,7 +36,7 @@ func (*ReportConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleReportConversationRequest)
 }
 
-// Files an abuse report against a conversation, or against one message within it, and returns the conversation.
+// Records an abuse report against a conversation, or against one message in it, and returns the conversation.
 //
 // Only an active participant can report a conversation. The report is recorded for review and changes nothing about the conversation itself — it is not hidden, muted, or removed.
 type ReportConversationEndpoint struct{}
@@ -49,7 +49,6 @@ func (e *ReportConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rep
 		Route:             "/v1/messaging/conversations/{id}/actions/report",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},

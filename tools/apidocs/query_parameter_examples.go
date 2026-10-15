@@ -65,9 +65,9 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return apiresource.SampleAccountUserID
 	case "resource_id":
 		return apiresource.SampleSalesOrderID
-	case "topic_resource_type":
-		return string(constants.ObjectTypeSalesOrder)
-	case "topic_resource_id":
+	case "record_type":
+		return string(constants.RecordTypeSalesOrder)
+	case "record_id":
 		return apiresource.SampleSalesOrderID
 	case "agent_definition_id":
 		return apiresource.SampleAgentDefinitionID
@@ -107,6 +107,7 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"customer_group_ids":   apiresource.SampleAccountGroupID,
 		"pricing_group_ids":    apiresource.SampleAccountGroupID,
 		"sales_rep_ids":        apiresource.SampleAccountUserID,
+		"participant_ids":      apiresource.SampleAccountUserID,
 		"shipping_term_ids":    apiresource.SampleShippingTermID,
 		"payment_term_ids":     apiresource.SamplePaymentTermID,
 		"carrier_ids":          apiresource.SampleCarrierID,

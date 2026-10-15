@@ -33,9 +33,6 @@ func (f *fakeReaperRepo) PurgeExpiredAnnouncements(context.Context, int, int32) 
 func (f *fakeReaperRepo) PurgeOrphanedAnnouncementReceipts(context.Context, int32) (int64, error) {
 	return 0, nil
 }
-func (f *fakeReaperRepo) PurgeTombstonedMessages(context.Context, int, int32) (int64, error) {
-	return 0, nil
-}
 func (f *fakeReaperRepo) ListPurgeableMessageAttachments(context.Context, int, int32) ([]AttachmentPurgeRef, error) {
 	return f.purgeable, nil
 }

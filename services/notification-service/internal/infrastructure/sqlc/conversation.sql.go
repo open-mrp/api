@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/apikit/db"
@@ -136,6 +137,26 @@ func (q *Queries) BindConversationInbox(ctx context.Context, arg BindConversatio
 	return err
 }
 
+const countPersonParticipantsOtherThan = `-- name: CountPersonParticipantsOtherThan :one
+SELECT COUNT(*) FROM conversation_participant
+WHERE conversation_id = ? AND membership = 'active'
+  AND participant_type IN ('user', 'customer')
+  AND (account_user_id IS NULL OR account_user_id <> ?)
+`
+
+type CountPersonParticipantsOtherThanParams struct {
+	ConversationID string
+	AccountUserID  sql.NullString
+}
+
+// Active people in a conversation other than the given account user. Agents and the system are not people.
+func (q *Queries) CountPersonParticipantsOtherThan(ctx context.Context, arg CountPersonParticipantsOtherThanParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPersonParticipantsOtherThan, arg.ConversationID, arg.AccountUserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAgentParticipant = `-- name: CreateAgentParticipant :exec
 INSERT INTO conversation_participant (
     id, conversation_id, account_id, participant_type, agent_config_id,
@@ -167,21 +188,22 @@ func (q *Queries) CreateAgentParticipant(ctx context.Context, arg CreateAgentPar
 const createConversation = `-- name: CreateConversation :exec
 INSERT INTO conversation (
     id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id,
-    created_by_participant_id, next_sequence, metadata, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(3), NOW(3))
+    continues_conversation_id, created_by_participant_id, next_sequence, metadata, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(3), NOW(3))
 `
 
 type CreateConversationParams struct {
-	ID                     string
-	AccountID              string
-	Type                   string
-	Audience               string
-	Title                  sql.NullString
-	GroupID                sql.NullString
-	TopicResourceType      sql.NullString
-	TopicResourceID        sql.NullString
-	CreatedByParticipantID sql.NullString
-	Metadata               db.NullableRawMessage
+	ID                      string
+	AccountID               string
+	Type                    string
+	Audience                string
+	Title                   sql.NullString
+	GroupID                 sql.NullString
+	TopicResourceType       sql.NullString
+	TopicResourceID         sql.NullString
+	ContinuesConversationID sql.NullString
+	CreatedByParticipantID  sql.NullString
+	Metadata                db.NullableRawMessage
 }
 
 func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversationParams) error {
@@ -194,6 +216,7 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		arg.GroupID,
 		arg.TopicResourceType,
 		arg.TopicResourceID,
+		arg.ContinuesConversationID,
 		arg.CreatedByParticipantID,
 		arg.Metadata,
 	)
@@ -292,8 +315,90 @@ func (q *Queries) CreateParticipant(ctx context.Context, arg CreateParticipantPa
 	return err
 }
 
+const deleteConversation = `-- name: DeleteConversation :execrows
+DELETE FROM conversation WHERE id = ? AND account_id = ?
+`
+
+type DeleteConversationParams struct {
+	ID        string
+	AccountID string
+}
+
+func (q *Queries) DeleteConversation(ctx context.Context, arg DeleteConversationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteConversation, arg.ID, arg.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteConversationAttachmentRows = `-- name: DeleteConversationAttachmentRows :exec
+DELETE a FROM message_attachment a
+JOIN message m ON m.id = a.message_id
+WHERE m.conversation_id = ?
+`
+
+func (q *Queries) DeleteConversationAttachmentRows(ctx context.Context, conversationID string) error {
+	_, err := q.db.ExecContext(ctx, deleteConversationAttachmentRows, conversationID)
+	return err
+}
+
+const deleteConversationLinks = `-- name: DeleteConversationLinks :exec
+DELETE FROM conversation_link WHERE conversation_id = ?
+`
+
+func (q *Queries) DeleteConversationLinks(ctx context.Context, conversationID string) error {
+	_, err := q.db.ExecContext(ctx, deleteConversationLinks, conversationID)
+	return err
+}
+
+const deleteConversationMessages = `-- name: DeleteConversationMessages :execrows
+DELETE FROM message WHERE conversation_id = ?
+`
+
+func (q *Queries) DeleteConversationMessages(ctx context.Context, conversationID string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteConversationMessages, conversationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteConversationNotificationsForRecipient = `-- name: DeleteConversationNotificationsForRecipient :exec
+DELETE FROM notification WHERE recipient_account_user_id = ? AND conversation_id = ?
+`
+
+type DeleteConversationNotificationsForRecipientParams struct {
+	RecipientAccountUserID string
+	ConversationID         sql.NullString
+}
+
+// Served by nf_recipient_conversation_idx.
+func (q *Queries) DeleteConversationNotificationsForRecipient(ctx context.Context, arg DeleteConversationNotificationsForRecipientParams) error {
+	_, err := q.db.ExecContext(ctx, deleteConversationNotificationsForRecipient, arg.RecipientAccountUserID, arg.ConversationID)
+	return err
+}
+
+const deleteConversationParticipants = `-- name: DeleteConversationParticipants :exec
+DELETE FROM conversation_participant WHERE conversation_id = ?
+`
+
+func (q *Queries) DeleteConversationParticipants(ctx context.Context, conversationID string) error {
+	_, err := q.db.ExecContext(ctx, deleteConversationParticipants, conversationID)
+	return err
+}
+
+const deleteConversationReports = `-- name: DeleteConversationReports :exec
+DELETE FROM messaging_report WHERE conversation_id = ?
+`
+
+func (q *Queries) DeleteConversationReports(ctx context.Context, conversationID string) error {
+	_, err := q.db.ExecContext(ctx, deleteConversationReports, conversationID)
+	return err
+}
+
 const getConversationByID = `-- name: GetConversationByID :one
-SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at FROM conversation
+SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at, continues_conversation_id FROM conversation
 WHERE id = ? AND account_id = ?
 `
 
@@ -328,12 +433,13 @@ func (q *Queries) GetConversationByID(ctx context.Context, arg GetConversationBy
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ContinuesConversationID,
 	)
 	return i, err
 }
 
 const getCustomerSupportConversation = `-- name: GetCustomerSupportConversation :one
-SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at FROM conversation c
+SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at, c.continues_conversation_id FROM conversation c
 JOIN conversation_participant p ON p.conversation_id = c.id
 WHERE c.account_id = ? AND c.audience = 'customer'
   AND p.participant_type = 'customer' AND p.relation_account_id = ?
@@ -373,6 +479,7 @@ func (q *Queries) GetCustomerSupportConversation(ctx context.Context, arg GetCus
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ContinuesConversationID,
 	)
 	return i, err
 }
@@ -672,7 +779,7 @@ func (q *Queries) ListConversationAttachments(ctx context.Context, conversationI
 }
 
 const listConversationsByResource = `-- name: ListConversationsByResource :many
-SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at FROM conversation c
+SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at, c.continues_conversation_id FROM conversation c
 WHERE c.account_id = ?
   AND (
     (c.topic_resource_type = ? AND c.topic_resource_id = ?)
@@ -737,6 +844,7 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ContinuesConversationID,
 		); err != nil {
 			return nil, err
 		}
@@ -753,7 +861,7 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 
 const listConversationsForUser = `-- name: ListConversationsForUser :many
 SELECT
-    c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at,
+    c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at, c.continues_conversation_id,
     p.id AS participant_id,
     p.last_read_sequence AS participant_last_read_sequence,
     p.hidden_at AS participant_hidden_at
@@ -768,8 +876,15 @@ WHERE c.account_id = ?
   AND (
     (? IS NULL OR ? = 'active') AND p.hidden_at IS NULL
     OR ? = 'hidden' AND p.hidden_at IS NOT NULL
+    OR ? = 'all'
   )
   AND (? IS NULL OR c.type = ?)
+  -- Conversations that also seat any of the given account users, served by cvpt_conv_user_uq.
+  AND (? = 0 OR EXISTS (
+    SELECT 1 FROM conversation_participant op
+    WHERE op.conversation_id = c.id AND op.membership = 'active'
+      AND op.account_user_id IN (/*SLICE:participant_account_user_ids*/?)
+  ))
   -- Conversations with no messages have no last_message_at and sort after every other row, so a
   -- cursor taken in that tail pages them by id alone.
   AND (
@@ -786,14 +901,16 @@ LIMIT ?
 `
 
 type ListConversationsForUserParams struct {
-	AccountUserID       sql.NullString
-	AccountID           string
-	Status              interface{}
-	Type                sql.NullString
-	CursorID            sql.NullString
-	CursorInNullTail    interface{}
-	CursorLastMessageAt sql.NullTime
-	Limit               int32
+	AccountUserID             sql.NullString
+	AccountID                 string
+	Status                    interface{}
+	Type                      sql.NullString
+	IncludeParticipantFilter  interface{}
+	ParticipantAccountUserIds []sql.NullString
+	CursorID                  sql.NullString
+	CursorInNullTail          interface{}
+	CursorLastMessageAt       sql.NullTime
+	Limit                     int32
 }
 
 type ListConversationsForUserRow struct {
@@ -819,6 +936,7 @@ type ListConversationsForUserRow struct {
 	Metadata                    db.NullableRawMessage
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	ContinuesConversationID     sql.NullString
 	ParticipantID               string
 	ParticipantLastReadSequence int64
 	ParticipantHiddenAt         sql.NullTime
@@ -837,23 +955,34 @@ type ListConversationsForUserRow struct {
 // `conversation_participant` and driving from a membership-pinned index. See notes for the
 // membership-first subquery rewrite if this list becomes hot.
 func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversationsForUserParams) ([]ListConversationsForUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, listConversationsForUser,
-		arg.AccountUserID,
-		arg.AccountID,
-		arg.Status,
-		arg.Status,
-		arg.Status,
-		arg.Type,
-		arg.Type,
-		arg.CursorID,
-		arg.CursorInNullTail,
-		arg.CursorLastMessageAt,
-		arg.CursorLastMessageAt,
-		arg.CursorID,
-		arg.CursorInNullTail,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listConversationsForUser
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountUserID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Type)
+	queryParams = append(queryParams, arg.Type)
+	queryParams = append(queryParams, arg.IncludeParticipantFilter)
+	if len(arg.ParticipantAccountUserIds) > 0 {
+		for _, v := range arg.ParticipantAccountUserIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:participant_account_user_ids*/?", strings.Repeat(",?", len(arg.ParticipantAccountUserIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:participant_account_user_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.CursorInNullTail)
+	queryParams = append(queryParams, arg.CursorLastMessageAt)
+	queryParams = append(queryParams, arg.CursorLastMessageAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.CursorInNullTail)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -884,6 +1013,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ContinuesConversationID,
 			&i.ParticipantID,
 			&i.ParticipantLastReadSequence,
 			&i.ParticipantHiddenAt,
@@ -952,7 +1082,7 @@ func (q *Queries) ListParticipants(ctx context.Context, conversationID string) (
 }
 
 const listSupportInbox = `-- name: ListSupportInbox :many
-SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at FROM conversation
+SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at, continues_conversation_id FROM conversation
 WHERE account_id = ?
   AND audience = 'customer'
   AND is_archived = ?
@@ -1042,6 +1172,7 @@ func (q *Queries) ListSupportInbox(ctx context.Context, arg ListSupportInboxPara
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ContinuesConversationID,
 		); err != nil {
 			return nil, err
 		}
@@ -1112,12 +1243,12 @@ func (q *Queries) ReactivateParticipant(ctx context.Context, arg ReactivateParti
 
 const redactConversationMessages = `-- name: RedactConversationMessages :execrows
 UPDATE message
-SET body = NULL, preview = NULL, edited_at = NOW(3), updated_at = NOW(3)
+SET body = NULL, preview = NULL, deleted_at = NOW(3), updated_at = NOW(3)
 WHERE conversation_id = ? AND deleted_at IS NULL
 `
 
-// GDPR redaction: clears the body/preview of every non-deleted message in the conversation while
-// keeping the row as an audit shell. The row is left non-tombstoned so the reaper retains the shell.
+// GDPR redaction: tombstones every live message in the conversation. The rows stay in the timeline
+// with their content cleared.
 func (q *Queries) RedactConversationMessages(ctx context.Context, conversationID string) (int64, error) {
 	result, err := q.db.ExecContext(ctx, redactConversationMessages, conversationID)
 	if err != nil {
@@ -1236,6 +1367,24 @@ type SetParticipantRoleParams struct {
 func (q *Queries) SetParticipantRole(ctx context.Context, arg SetParticipantRoleParams) error {
 	_, err := q.db.ExecContext(ctx, setParticipantRole, arg.Role, arg.ConversationID, arg.AccountUserID)
 	return err
+}
+
+const supportRouteUsesConversation = `-- name: SupportRouteUsesConversation :one
+SELECT EXISTS (
+    SELECT 1 FROM support_route WHERE account_id = ? AND group_conversation_id = ?
+) AS used
+`
+
+type SupportRouteUsesConversationParams struct {
+	AccountID           string
+	GroupConversationID string
+}
+
+func (q *Queries) SupportRouteUsesConversation(ctx context.Context, arg SupportRouteUsesConversationParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, supportRouteUsesConversation, arg.AccountID, arg.GroupConversationID)
+	var used bool
+	err := row.Scan(&used)
+	return used, err
 }
 
 const unhideConversation = `-- name: UnhideConversation :exec

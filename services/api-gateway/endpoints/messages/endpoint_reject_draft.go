@@ -18,7 +18,7 @@ type RejectDraftRequest struct {
 	MessageID string `path:"id" validate:"required"`
 }
 
-// Discards a reply draft without sending it to the customer.
+// Rejects a reply draft without sending it to the customer.
 //
 // The draft is kept as a rejected record for history and can no longer be edited or approved. Because the customer is still owed an answer, the case moves back to waiting on your team.
 type RejectDraftEndpoint struct{}
@@ -32,7 +32,6 @@ func (e *RejectDraftEndpoint) Materialize() *apiendpoint.APIEndpoint[*RejectDraf
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChatMessage,
 		IncludeConfig:     messageIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

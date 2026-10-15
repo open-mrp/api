@@ -66,12 +66,7 @@ func TestCovMessagingEmailDomains_Lifecycle(t *testing.T) {
 	assert.Equal(t, "pending", jsonField(got, "status"))
 	assertNilField(t, got, "verified_at")
 
-	// dkim_tokens must be a non-null array (stub identity provider in e2e).
-	rawTokens, ok := got["dkim_tokens"]
-	require.True(t, ok, "dkim_tokens field should be present")
-	tokens, ok := rawTokens.([]any)
-	require.True(t, ok, "dkim_tokens should be an array")
-	assert.NotEmpty(t, tokens, "dkim_tokens should be non-empty for a freshly created domain")
+	assertEmailDNSRecords(t, got, domain)
 
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -118,11 +113,33 @@ func TestCovMessagingEmailDomains_CreateResponseShape(t *testing.T) {
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
 
-	rawTokens, ok := created["dkim_tokens"]
-	require.True(t, ok, "dkim_tokens field should be present")
-	tokens, ok := rawTokens.([]any)
-	require.True(t, ok, "dkim_tokens should be an array (never null)")
-	assert.NotEmpty(t, tokens)
+	assertEmailDNSRecords(t, created, jsonField(created, "domain"))
+	for _, gone := range []string{"dkim_tokens", "mail_from_domain", "mail_from_mx_record", "mail_from_spf_record"} {
+		assert.NotContains(t, created, gone)
+	}
+}
+
+// assertEmailDNSRecords checks a domain's dns_records: a plain array of {type, name, value} with a DKIM CNAME on the domain for each signing key.
+func assertEmailDNSRecords(t *testing.T, dom map[string]any, domain string) {
+	t.Helper()
+	records, ok := dom["dns_records"].([]any)
+	require.True(t, ok, "dns_records should be an array: %v", dom["dns_records"])
+	require.NotEmpty(t, records, "a freshly created domain has records to publish")
+	var cnames int
+	for _, raw := range records {
+		rec, ok := raw.(map[string]any)
+		require.True(t, ok)
+		assert.ElementsMatch(t, []string{"type", "name", "value"}, mapKeys(rec), "a DNS record is a plain value with no object")
+		assert.Contains(t, []string{"CNAME", "MX", "TXT"}, jsonField(rec, "type"))
+		assert.NotEmpty(t, jsonField(rec, "name"))
+		assert.NotEmpty(t, jsonField(rec, "value"))
+		if jsonField(rec, "type") == "CNAME" {
+			cnames++
+			assert.Contains(t, jsonField(rec, "name"), "._domainkey."+domain)
+			assert.Contains(t, jsonField(rec, "value"), ".dkim.amazonses.com")
+		}
+	}
+	assert.Positive(t, cnames, "each DKIM signing key is a CNAME")
 }
 
 // TestCovMessagingEmailDomains_CreateAllFields is the "assert every response
@@ -140,7 +157,7 @@ func TestCovMessagingEmailDomains_CreateAllFields(t *testing.T) {
 	assert.Equal(t, "email_domain", jsonField(created, "object"))
 	assert.Equal(t, domain, jsonField(created, "domain"))
 	assert.Equal(t, "pending", jsonField(created, "status"))
-	assert.NotNil(t, created["dkim_tokens"])
+	assertEmailDNSRecords(t, created, domain)
 	assertNilField(t, created, "verified_at")
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")

@@ -30,7 +30,7 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 		{"the creator", []domain.ParticipantRoleInput{{AccountUserID: owner, Role: "admin"}}, "", apierror.CodeValidationFailed, "participants[0].account_user_id"},
 		{"a user listed twice", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "admin"}, {AccountUserID: "acus_a", Role: "viewer"}}, "", apierror.CodeValidationFailed, "participants[1].account_user_id"},
 		{"an unknown role", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "boss"}}, "", apierror.CodeValidationFailed, "participants[0].role"},
-		{"a user that is not one of the account's", []domain.ParticipantRoleInput{{AccountUserID: "acus_elsewhere", Role: "admin"}}, "acus_elsewhere", apierror.CodeParameterInvalid, "participants[0].account_user_id"},
+		{"a user that is not one of the account's", []domain.ParticipantRoleInput{{AccountUserID: "acus_elsewhere", Role: "admin"}}, "acus_elsewhere", apierror.CodeValidationFailed, "participants[0].account_user_id"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

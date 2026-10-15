@@ -173,6 +173,15 @@ func Run(
 	}
 	defer scheduledMessageWorker.Stop()
 
+	emailDomainVerifier, err := scheduler.NewEmailDomainVerifier(&scheduler.EmailDomainVerifierConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, emailBridgeSvc, leaseSvc)
+	if err != nil {
+		return err
+	}
+	if err := emailDomainVerifier.Start(ctx); err != nil {
+		return err
+	}
+	defer emailDomainVerifier.Stop()
+
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".consumer")
 	notificationConsumer := event.NewNotificationConsumer(rabbitmq, notificationSvc, inboxRepo, templateRenderer, consumerTracer)
 	if err := notificationConsumer.Listen(ctx); err != nil {

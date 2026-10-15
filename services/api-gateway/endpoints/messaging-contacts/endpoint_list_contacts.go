@@ -19,9 +19,7 @@ import (
 // `q` matches contact names as a case-insensitive substring.
 type ListContactsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on the person's `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
@@ -43,7 +41,6 @@ func (e *ListContactsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListConta
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeActor,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListContactsRequest) (*apiresource.List[apiresource.Actor], *apierror.APIError) {

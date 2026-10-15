@@ -26,7 +26,12 @@ type EmailDomainRepo interface {
 	Create(ctx context.Context, id, accountID string, input *CreateEmailDomainInput) *apierror.APIError
 	GetByID(ctx context.Context, id, accountID string) (*EmailDomain, *apierror.APIError)
 	GetByDomain(ctx context.Context, domain string) (*EmailDomain, *apierror.APIError)
-	ListByAccount(ctx context.Context, accountID string) ([]*EmailDomain, *apierror.APIError)
+	// ListPage returns one keyset page of the account's domains, newest first.
+	ListPage(ctx context.Context, accountID string, page KeysetPage) ([]*EmailDomain, *apierror.APIError)
+	// ListPending returns pending domains across every account last checked before checkedBefore, least recently checked first.
+	ListPending(ctx context.Context, checkedBefore time.Time, limit int32) ([]*EmailDomain, *apierror.APIError)
+	// Touch records that a domain was just re-checked.
+	Touch(ctx context.Context, id string) *apierror.APIError
 	MarkVerified(ctx context.Context, id, accountID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, id, accountID, status string, dkimTokens []string) *apierror.APIError
 	// Delete removes a domain; deleted is false when no matching domain existed.
@@ -56,7 +61,8 @@ type EmailInboxRepo interface {
 	// GetByIDSystem resolves an inbox by id for inbound routing (no account scope), used to match mail
 	// delivered to a per-inbox forwarding address (<inbox_id>@<inbound domain>). IDs are globally unique.
 	GetByIDSystem(ctx context.Context, id string) (*EmailInbox, *apierror.APIError)
-	ListByAccount(ctx context.Context, accountID string) ([]*EmailInbox, *apierror.APIError)
+	// ListPage returns one keyset page of the account's inboxes, newest first.
+	ListPage(ctx context.Context, accountID string, page KeysetPage) ([]*EmailInbox, *apierror.APIError)
 	// CountByDomain returns how many inboxes are bound to a domain, so a domain delete can be blocked while inboxes exist.
 	CountByDomain(ctx context.Context, accountID, emailDomainID string) (int64, *apierror.APIError)
 	Update(ctx context.Context, id, accountID string, input *UpdateEmailInboxInput) *apierror.APIError
@@ -142,6 +148,12 @@ type AnnouncementRepo interface {
 // ConversationRepo persists and queries conversations, their DM-dedup keys, and the caller's membership scoping. Sequence allocation (LockSequence + AdvanceAfterMessage) must run inside a send transaction.
 type ConversationRepo interface {
 	Create(ctx context.Context, id string, input *CreateConversationInput, accountID string) *apierror.APIError
+	// CountOtherPeople counts the active people (users and customers, not agents or the system) in a conversation other than the given account user.
+	CountOtherPeople(ctx context.Context, conversationID, accountUserID string) (int64, *apierror.APIError)
+	// IsSupportRoute reports whether a conversation is designated to handle support.
+	IsSupportRoute(ctx context.Context, accountID, conversationID string) (bool, *apierror.APIError)
+	// Delete removes a conversation with its messages, attachment rows, participants, links, reports and the given recipient's notifications about it.
+	Delete(ctx context.Context, conversationID, accountID, recipientAccountUserID string) *apierror.APIError
 	GetByID(ctx context.Context, id, accountID string) (*Conversation, *apierror.APIError)
 	ListForUser(ctx context.Context, filter ConversationListFilter) ([]*Conversation, *apierror.APIError)
 	// LockSequence locks the conversation row and returns the next sequence to assign.
@@ -183,7 +195,8 @@ type ConversationLinkRepo interface {
 	Create(ctx context.Context, l *ConversationLink) *apierror.APIError
 	// Delete removes a link by id (scoped to its conversation and account); removed is false if no matching link existed.
 	Delete(ctx context.Context, linkID, conversationID, accountID string) (removed bool, apiErr *apierror.APIError)
-	List(ctx context.Context, conversationID, accountID string) ([]*ConversationLink, *apierror.APIError)
+	// ListPage returns one keyset page of a conversation's links, oldest first.
+	ListPage(ctx context.Context, conversationID, accountID string, page KeysetPage) ([]*ConversationLink, *apierror.APIError)
 }
 
 // MessagingGroupRepo persists reusable rosters (messaging_group) and their members.
@@ -192,8 +205,8 @@ type MessagingGroupRepo interface {
 	Create(ctx context.Context, g *MessagingGroup) *apierror.APIError
 	// Get returns a roster (without members), or not-found.
 	Get(ctx context.Context, id, accountID string) (*MessagingGroup, *apierror.APIError)
-	// List returns the account's rosters (without members), most-recently-updated first.
-	List(ctx context.Context, accountID string) ([]*MessagingGroup, *apierror.APIError)
+	// ListPage returns one keyset page of the account's rosters (without members), most recently updated first.
+	ListPage(ctx context.Context, accountID string, page KeysetPage) ([]*MessagingGroup, *apierror.APIError)
 	// Rename updates a roster's name; renamed is false when no matching roster existed.
 	Rename(ctx context.Context, id, accountID, name string) (renamed bool, apiErr *apierror.APIError)
 	// Touch bumps updated_at so the roster re-sorts after a membership change.
@@ -332,6 +345,8 @@ type BlockRepo interface {
 	// ExistsBetween reports whether either user has blocked the other.
 	ExistsBetween(ctx context.Context, a, b string) (bool, *apierror.APIError)
 	List(ctx context.Context, blockerAccountUserID string) ([]*MessageBlock, *apierror.APIError)
+	// ListPage returns one keyset page of the blocker's blocks, newest first.
+	ListPage(ctx context.Context, blockerAccountUserID string, page KeysetPage) ([]*MessageBlock, *apierror.APIError)
 }
 
 // MessageAttachmentRepo persists message attachments and loads them for message presentation.

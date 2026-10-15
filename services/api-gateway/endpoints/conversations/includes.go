@@ -5,21 +5,19 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// conversationIncludeFields is the whitelist of ?include= keys exposed by the conversation endpoints.
-// assignee, group, participants, topic and last_message (with its own sub-objects) are
-// expandable — gated here and resolved by the resourcekit registry from the data the service stashes
-// into LoadMeta.
+// conversationIncludeFields is the whitelist of ?include= keys exposed by the conversation endpoints, resolved from what the service stashes into LoadMeta.
 var conversationIncludeFields = []string{
 	"assignee",
 	"group",
 	"participants",
-	"topic",
+	"related.record",
+	"related.continues",
 	"last_message",
 	"last_message.sender",
 	"last_message.author",
-	"last_message.resource",
+	"last_message.related.record",
 	"last_message.attachments",
-	"last_message.attachments.resource",
+	"last_message.attachments.record",
 }
 
 func conversationIncludeConfig() *apiendpoint.IncludeConfig {
@@ -29,21 +27,21 @@ func conversationIncludeConfig() *apiendpoint.IncludeConfig {
 	})
 }
 
-// conversationLinkIncludeFields is the whitelist of ?include= keys exposed by the conversation-link
-// endpoints. The linked conversation (and its own expandable sub-objects) is fetched by id via the
-// chat batch loader.
+// conversationLinkIncludeFields is the whitelist of ?include= keys exposed by the conversation-link endpoints. The linked conversation (and its own expandable sub-objects) is fetched by id via the chat batch loader.
 var conversationLinkIncludeFields = []string{
+	"record",
 	"conversation",
 	"conversation.assignee",
 	"conversation.group",
 	"conversation.participants",
-	"conversation.topic",
+	"conversation.related.record",
+	"conversation.related.continues",
 	"conversation.last_message",
 	"conversation.last_message.sender",
 	"conversation.last_message.author",
-	"conversation.last_message.resource",
+	"conversation.last_message.related.record",
 	"conversation.last_message.attachments",
-	"conversation.last_message.attachments.resource",
+	"conversation.last_message.attachments.record",
 }
 
 func conversationLinkIncludeConfig() *apiendpoint.IncludeConfig {

@@ -30,7 +30,7 @@ func (*UpdateMessagingGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMessagingGroupRequest)
 }
 
-// Renames a reusable roster.
+// Updates a messaging group's name.
 //
 // Members are managed through the add-member and remove-member endpoints, not here.
 type UpdateMessagingGroupEndpoint struct{}
@@ -43,7 +43,6 @@ func (e *UpdateMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Route:             "/v1/messaging/groups/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMessagingGroupRequest) (*apiresource.MessagingGroup, *apierror.APIError) {

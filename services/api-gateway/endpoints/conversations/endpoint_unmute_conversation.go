@@ -29,7 +29,6 @@ func (e *UnmuteConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Unm
 		Route:             "/v1/messaging/conversations/{id}/actions/unmute",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

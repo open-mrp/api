@@ -34,7 +34,6 @@ func (e *RemoveConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ObjectType:        constants.ObjectTypeConversationLink,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveConversationLinkRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ConversationSvc).RemoveConversationLink, constants.ObjectTypeConversationLink, "link_id")

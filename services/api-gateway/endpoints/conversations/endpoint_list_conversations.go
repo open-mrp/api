@@ -16,28 +16,26 @@ import (
 
 // Request to list the caller's conversations.
 //
-// Supplying a topic resource returns the conversations anchored to that business record; supplying any case filter (or `audience=customer`) returns the support inbox of external customer-service cases.
+// Supplying `record_type` and `record_id` returns that record's discussions; supplying any case filter (or `audience=customer`) returns the support inbox of external customer-service cases.
 type ListConversationsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
-	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Filter by conversation type.
 	Type *constants.ConversationType `query:"type"`
+	// Only conversations that also include any of these account users. With `limit=1`, this finds your latest conversation with someone.
+	ParticipantIDs []string `query:"participant_ids" validate:"omitempty,max=100,dive,required"`
 	// Filter by whether the conversation is team-only or customer-facing.
 	//
 	// - `internal`: threads the customer never sees — direct messages, group threads, and record discussions.
 	// - `customer`: external customer-service cases the customer takes part in, from the portal or a bridged email thread.
 	Audience *constants.ConversationAudience `query:"audience"`
-	// Filter by whether the caller has hidden the conversation from their own list.
-	Status *constants.ConversationListStatus `query:"status" default:"active"`
-	// Restrict to conversations attached to a business record of this type, together with `topic_resource_id`.
+	// Filter by your own membership: `active` (conversations you haven't hidden) or `hidden`. Defaults to `active`.
+	Memberships []constants.ConversationListStatus `query:"memberships"`
+	// Restrict to the discussions of a record of this type, together with `record_id`.
 	//
-	// Matches both conversations anchored to the record and conversations that merely link it, which is what powers the "discussions on this record" view.
-	TopicResourceType *constants.ObjectType `query:"topic_resource_type"`
-	// The id of the business record, together with `topic_resource_type`.
-	TopicResourceID *string `query:"topic_resource_id"`
+	// Matches both conversations about the record and conversations that link it, which is what powers the "discussions on this record" view.
+	RecordType *constants.RecordType `query:"record_type"`
+	// The ID of the record, together with `record_type`.
+	RecordID *string `query:"record_id"`
 	// Filter the support inbox to a single triage lane.
 	//
 	// - `new`: opened but nobody has triaged it yet.
@@ -69,10 +67,31 @@ func (r *ListConversationsRequest) isInboxQuery() bool {
 
 // isByRecordQuery reports whether a topic-resource anchor filter is set.
 func (r *ListConversationsRequest) isByRecordQuery() bool {
-	return r.TopicResourceType != nil && r.TopicResourceID != nil && *r.TopicResourceID != ""
+	return r.RecordType != nil && r.RecordID != nil && *r.RecordID != ""
 }
 
-// Returns the caller's conversations, most recently active first.
+// listStatus is the chat service's hidden-state filter for the requested memberships: both reads every conversation.
+func (r *ListConversationsRequest) listStatus() string {
+	active, hidden := len(r.Memberships) == 0, false
+	for _, m := range r.Memberships {
+		switch m {
+		case constants.ConversationListStatusActive:
+			active = true
+		case constants.ConversationListStatusHidden:
+			hidden = true
+		}
+	}
+	switch {
+	case active && hidden:
+		return "all"
+	case hidden:
+		return string(constants.ConversationListStatusHidden)
+	default:
+		return string(constants.ConversationListStatusActive)
+	}
+}
+
+// Returns a list of your conversations, most recently active first.
 //
 // A customer portal user sees only their own support case with the vendor, and an empty list until they have contacted support.
 type ListConversationsEndpoint struct{}
@@ -86,7 +105,6 @@ func (e *ListConversationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},

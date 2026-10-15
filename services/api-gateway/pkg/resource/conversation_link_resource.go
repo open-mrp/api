@@ -10,9 +10,9 @@ import (
 
 const SampleConversationLinkID = "cvlk_cjaz69kz9dvn"
 
-// A reference from a conversation to a business record it concerns, such as an order, invoice, shipment, or customer.
+// A record a conversation concerns, such as an order, invoice, shipment or customer.
 //
-// Links sit alongside the conversation's primary `topic` anchor, so one thread can reference several records. Listing conversations by business record matches the topic anchor and these links alike, which is what surfaces a conversation on the record's own page.
+// Links sit alongside the record the conversation is about (its `related.record`), so one conversation can reference several records. Listing conversations by record matches both, which is what surfaces a conversation on the record's own page.
 type ConversationLink struct {
 	// Conversation link ID.
 	ID string `json:"id" validate:"required"`
@@ -20,8 +20,8 @@ type ConversationLink struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=conversation_link"`
 	// The conversation this link belongs to.
 	Conversation *Conversation `json:"conversation" expandable:"true"`
-	// The linked business record.
-	Resource *Entity `json:"resource"`
+	// The linked record.
+	Record *Record `json:"record" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
@@ -30,7 +30,7 @@ var SampleConversationLink = &ConversationLink{
 	ID:           SampleConversationLinkID,
 	Object:       constants.ObjectTypeConversationLink,
 	Conversation: SampleConversation,
-	Resource:     NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new("Order #1042"), nil),
+	Record:       &Record{ID: SampleSalesOrderID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeSalesOrder, Number: new("SO-1042"), Status: new("open"), Metadata: map[string]string{}},
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 

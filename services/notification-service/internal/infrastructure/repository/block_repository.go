@@ -72,13 +72,22 @@ func (r *blockRepoImpl) ExistsBetween(ctx context.Context, a, b string) (bool, *
 	return blocked, nil
 }
 
-func (r *blockRepoImpl) List(ctx context.Context, blockerAccountUserID string) ([]*domain.MessageBlock, *apierror.APIError) {
-	ctx, span := blockRepoTracer.Start(ctx, "repository.block.list")
+func (r *blockRepoImpl) ListPage(ctx context.Context, blockerAccountUserID string, page domain.KeysetPage) ([]*domain.MessageBlock, *apierror.APIError) {
+	ctx, span := blockRepoTracer.Start(ctx, "repository.block.list_page")
 	defer span.End()
-	rows, err := r.db.ListBlocks(ctx, blockerAccountUserID)
+	rows, err := r.db.ListBlocksPage(ctx, sqlc.ListBlocksPageParams{
+		BlockerAccountUserID: blockerAccountUserID,
+		CursorCreatedAt:      db.NullTimePtr(page.CursorAt),
+		CursorID:             db.NullStringPtr(page.CursorID),
+		Limit:                page.Limit,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	return blocksFromRows(rows), nil
+}
+
+func blocksFromRows(rows []sqlc.MessagingBlock) []*domain.MessageBlock {
 	blocks := make([]*domain.MessageBlock, 0, len(rows))
 	for _, row := range rows {
 		blocks = append(blocks, &domain.MessageBlock{
@@ -89,5 +98,15 @@ func (r *blockRepoImpl) List(ctx context.Context, blockerAccountUserID string) (
 			CreatedAt:            row.CreatedAt,
 		})
 	}
-	return blocks, nil
+	return blocks
+}
+
+func (r *blockRepoImpl) List(ctx context.Context, blockerAccountUserID string) ([]*domain.MessageBlock, *apierror.APIError) {
+	ctx, span := blockRepoTracer.Start(ctx, "repository.block.list")
+	defer span.End()
+	rows, err := r.db.ListBlocks(ctx, blockerAccountUserID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return blocksFromRows(rows), nil
 }

@@ -103,7 +103,11 @@ func TestMessagingGroup_CRUD(t *testing.T) {
 	delMember, err := owner.DeleteFull(messagingGroupsPath + "/" + groupID + "/members/" + agentMemberID)
 	require.NoError(t, err)
 	requireStatus(t, 200, delMember.StatusCode, delMember.Body)
-	_, agentStillThere := groupMemberActorIDs(t, parseJSON(delMember.Body))[SeedAgentConfigID]
+	assert.Equal(t, map[string]any{"id": agentMemberID, "object": "messaging_group_member", "deleted": true}, parseJSON(delMember.Body))
+	afterRemove, err := owner.GetFull(messagingGroupsPath+"/"+groupID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, afterRemove.StatusCode, afterRemove.Body)
+	_, agentStillThere := groupMemberActorIDs(t, parseJSON(afterRemove.Body))[SeedAgentConfigID]
 	assert.False(t, agentStillThere, "the agent member was removed")
 
 	// Add the agent back.
@@ -127,7 +131,6 @@ func TestMessagingGroup_CRUD(t *testing.T) {
 func startConversationFromGroup(t *testing.T, c *Client, groupID, title string) map[string]any {
 	t.Helper()
 	resp, err := c.PostFull(withQuery(conversationsPath, conversationIncludeQuery), map[string]any{
-		"type":     "group",
 		"title":    title,
 		"group_id": groupID,
 	}, newIdempotencyKey())

@@ -76,10 +76,10 @@ func (s *blockSvcImpl) Unblock(ctx context.Context, req *UnblockRequest) (*apire
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (s *blockSvcImpl) ListBlocks(ctx context.Context, _ *ListBlocksRequest) (*apiresource.List[apiresource.MessagingBlock], *apierror.APIError) {
+func (s *blockSvcImpl) ListBlocks(ctx context.Context, req *ListBlocksRequest) (*apiresource.List[apiresource.MessagingBlock], *apierror.APIError) {
 	resp, rpcErr := grpcutil.CallRPC(ctx, blockSvcTracer, "service.conversations.list_blocks", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListBlocksResponse, error) {
-			return s.chatClient.ListBlocks(ctx, &pb.ListBlocksRequest{}, opts...)
+			return s.chatClient.ListBlocks(ctx, &pb.ListBlocksRequest{Cursor: req.Cursor, Limit: req.Limit}, opts...)
 		})
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -95,5 +95,5 @@ func (s *blockSvcImpl) ListBlocks(ctx context.Context, _ *ListBlocksRequest) (*a
 			CreatedAt: chatmap.TsToTime(b.CreatedAt),
 		})
 	}
-	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

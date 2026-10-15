@@ -46,6 +46,8 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 		TopicResourceID:           req.TopicResourceId,
 		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
 		Participants:              participants,
+		ContinuesConversationID:   req.ContinuesConversationId,
+		MessageBody:               req.MessageBody,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -53,15 +55,26 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 	return conversationToProto(conv), nil
 }
 
+func (h *chatGRPCHandler) DeleteConversation(ctx context.Context, req *pb.DeleteConversationRequest) (*pb.ChatAck, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	if apiErr := h.chatSvc.DeleteConversation(ctx, req.ConversationId); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.ChatAck{}, nil
+}
+
 func (h *chatGRPCHandler) ListConversations(ctx context.Context, req *pb.ListConversationsRequest) (*pb.ListConversationsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 	page, apiErr := h.chatSvc.ListConversations(ctx, domain.ListConversationsInput{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Type:   req.Type,
-		Status: req.Status,
+		Cursor:                    req.Cursor,
+		Limit:                     req.Limit,
+		Type:                      req.Type,
+		Status:                    req.Status,
+		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -388,13 +401,16 @@ func (h *chatGRPCHandler) Unblock(ctx context.Context, req *pb.UnblockRequest) (
 	return &pb.ChatAck{}, nil
 }
 
-func (h *chatGRPCHandler) ListBlocks(ctx context.Context, _ *pb.ListBlocksRequest) (*pb.ListBlocksResponse, error) {
-	blocks, apiErr := h.chatSvc.ListBlocks(ctx)
+func (h *chatGRPCHandler) ListBlocks(ctx context.Context, req *pb.ListBlocksRequest) (*pb.ListBlocksResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	page, apiErr := h.chatSvc.ListBlocks(ctx, domain.PageRequest{Cursor: req.Cursor, Limit: req.Limit})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	out := make([]*pb.BlockInfo, 0, len(blocks))
-	for _, b := range blocks {
+	out := make([]*pb.BlockInfo, 0, len(page.Items))
+	for _, b := range page.Items {
 		out = append(out, &pb.BlockInfo{
 			Id:                   b.ID,
 			AccountId:            b.AccountID,
@@ -403,7 +419,7 @@ func (h *chatGRPCHandler) ListBlocks(ctx context.Context, _ *pb.ListBlocksReques
 			CreatedAt:            timestamppb.New(b.CreatedAt),
 		})
 	}
-	return &pb.ListBlocksResponse{Blocks: out}, nil
+	return &pb.ListBlocksResponse{Blocks: out, PageInfo: pageInfoToProto(page.NextCursor)}, nil
 }
 
 func (h *chatGRPCHandler) ListContacts(ctx context.Context, req *pb.ListContactsRequest) (*pb.ListContactsResponse, error) {
@@ -479,15 +495,18 @@ func (h *chatGRPCHandler) CreateMessagingGroup(ctx context.Context, req *pb.Crea
 }
 
 func (h *chatGRPCHandler) ListMessagingGroups(ctx context.Context, req *pb.ListMessagingGroupsRequest) (*pb.ListMessagingGroupsResponse, error) {
-	groups, apiErr := h.chatSvc.ListMessagingGroups(ctx)
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	page, apiErr := h.chatSvc.ListMessagingGroups(ctx, domain.PageRequest{Cursor: req.Cursor, Limit: req.Limit})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	out := make([]*pb.MessagingGroupInfo, 0, len(groups))
-	for _, g := range groups {
+	out := make([]*pb.MessagingGroupInfo, 0, len(page.Items))
+	for _, g := range page.Items {
 		out = append(out, messagingGroupToProto(g))
 	}
-	return &pb.ListMessagingGroupsResponse{Groups: out}, nil
+	return &pb.ListMessagingGroupsResponse{Groups: out, PageInfo: pageInfoToProto(page.NextCursor)}, nil
 }
 
 func (h *chatGRPCHandler) GetMessagingGroup(ctx context.Context, req *pb.GetMessagingGroupRequest) (*pb.MessagingGroupInfo, error) {
@@ -586,25 +605,26 @@ func conversationStatusString(isArchived bool) string {
 
 func conversationToProto(c *domain.Conversation) *pb.ConversationInfo {
 	info := &pb.ConversationInfo{
-		Id:                   c.ID,
-		AccountId:            c.AccountID,
-		Type:                 c.Type,
-		Title:                c.Title,
-		GroupId:              c.GroupID,
-		TopicResourceType:    c.TopicResourceType,
-		TopicResourceId:      c.TopicResourceID,
-		LastMessageId:        c.LastMessageID,
-		Status:               conversationStatusString(c.IsArchived),
-		Unread:               c.Unread,
-		Hidden:               c.Hidden,
-		LegalHold:            c.LegalHold,
-		Audience:             c.Audience,
-		WorkflowStatus:       c.WorkflowStatus,
-		AssigneeResourceType: c.AssigneeResourceType,
-		AssigneeResourceId:   c.AssigneeResourceID,
-		EmailInboxId:         c.EmailInboxID,
-		CreatedAt:            timestamppb.New(c.CreatedAt),
-		UpdatedAt:            timestamppb.New(c.UpdatedAt),
+		Id:                      c.ID,
+		AccountId:               c.AccountID,
+		Type:                    c.Type,
+		Title:                   c.Title,
+		GroupId:                 c.GroupID,
+		TopicResourceType:       c.TopicResourceType,
+		TopicResourceId:         c.TopicResourceID,
+		ContinuesConversationId: c.ContinuesConversationID,
+		LastMessageId:           c.LastMessageID,
+		Status:                  conversationStatusString(c.IsArchived),
+		Unread:                  c.Unread,
+		Hidden:                  c.Hidden,
+		LegalHold:               c.LegalHold,
+		Audience:                c.Audience,
+		WorkflowStatus:          c.WorkflowStatus,
+		AssigneeResourceType:    c.AssigneeResourceType,
+		AssigneeResourceId:      c.AssigneeResourceID,
+		EmailInboxId:            c.EmailInboxID,
+		CreatedAt:               timestamppb.New(c.CreatedAt),
+		UpdatedAt:               timestamppb.New(c.UpdatedAt),
 	}
 	if c.LastMessageAt != nil {
 		info.LastMessageAt = timestamppb.New(*c.LastMessageAt)
@@ -652,6 +672,10 @@ func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
 	}
 	if p.LastReadAt != nil {
 		info.LastReadAt = timestamppb.New(*p.LastReadAt)
+	}
+	// Hiding is a member's own state, so it reads as their membership rather than as the conversation's status.
+	if p.HiddenAt != nil && p.Membership == string(constants.ParticipantMembershipActive) {
+		info.Membership = string(constants.ParticipantMembershipHidden)
 	}
 	return info
 }
@@ -996,15 +1020,15 @@ func (h *chatGRPCHandler) ListConversationLinks(ctx context.Context, req *pb.Lis
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	links, apiErr := h.chatSvc.ListConversationLinks(ctx, req.ConversationId)
+	page, apiErr := h.chatSvc.ListConversationLinks(ctx, req.ConversationId, domain.PageRequest{Cursor: req.Cursor, Limit: req.Limit})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	out := make([]*pb.ConversationLinkInfo, 0, len(links))
-	for _, l := range links {
+	out := make([]*pb.ConversationLinkInfo, 0, len(page.Items))
+	for _, l := range page.Items {
 		out = append(out, conversationLinkToProto(l))
 	}
-	return &pb.ListConversationLinksResponse{Links: out}, nil
+	return &pb.ListConversationLinksResponse{Links: out, PageInfo: pageInfoToProto(page.NextCursor)}, nil
 }
 
 func (h *chatGRPCHandler) CreateReplyDraft(ctx context.Context, req *pb.CreateReplyDraftRequest) (*pb.MessageInfo, error) {

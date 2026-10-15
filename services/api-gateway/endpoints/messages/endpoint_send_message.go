@@ -21,8 +21,8 @@ type SendMessageRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 	// Message body.
 	//
-	// Required unless the message carries at least one attachment or a resource link.
-	Body string `json:"body" validate:"required_without_all=Attachments LinkResourceID"`
+	// Required unless the message carries at least one attachment or a `record`.
+	Body string `json:"body" validate:"required_without_all=Attachments Record"`
 	// Whether to deliver the message now or hold it as a customer-reply draft.
 	//
 	// - `send`: delivers the message, immediately or at `scheduled_at`.
@@ -62,12 +62,10 @@ type SendMessageRequest struct {
 	ScheduledAt field.Optional[time.Time] `json:"scheduled_at,omitzero"`
 	// The message this one is a reply to.
 	ReplyToMessageID field.Optional[string] `json:"reply_to_message_id,omitzero"`
-	// Type of a resource to link in the message, paired with `link_resource_id`.
+	// A record to link in the message, which appears in its `related.record`.
 	//
 	// Linking a record lets clients render the message as a reference to it. A link counts in place of text, so a message may consist of nothing but the link.
-	LinkResourceType field.Optional[constants.ObjectType] `json:"link_resource_type,omitzero"`
-	// ID of a resource to link in the message, paired with `link_resource_type`.
-	LinkResourceID field.Optional[string] `json:"link_resource_id,omitzero"`
+	Record field.Optional[apiresource.RecordInput] `json:"record,omitzero"`
 	// Attachments to include with the message.
 	Attachments []MessageAttachmentInput `json:"attachments,omitzero"`
 	// Account user ids explicitly @mentioned in the message.
@@ -78,7 +76,7 @@ type SendMessageRequest struct {
 
 // A single attachment supplied when sending a message.
 //
-// For an uploaded file or image, supply the `s3_key` you uploaded to; for a link, supply `url`; for a resource reference, supply `resource_type` and `resource_id`.
+// For an uploaded file or image, supply the `s3_key` you uploaded to; for a link, supply `url`; for a record reference, supply `record`.
 type MessageAttachmentInput struct {
 	// What is being attached.
 	//
@@ -99,10 +97,8 @@ type MessageAttachmentInput struct {
 	SizeBytes field.Optional[int64] `json:"size_bytes,omitzero"`
 	// The web address being shared (link).
 	URL field.Optional[string] `json:"url,omitzero"`
-	// The type of the record being referenced, paired with `resource_id` (resource).
-	ResourceType field.Optional[string] `json:"resource_type,omitzero"`
-	// The id of the record being referenced, paired with `resource_type` (resource).
-	ResourceID field.Optional[string] `json:"resource_id,omitzero"`
+	// The record being referenced (resource).
+	Record field.Optional[apiresource.RecordInput] `json:"record,omitzero"`
 }
 
 var sampleSendMessageSubject = "Re: Order #1042"
@@ -119,8 +115,7 @@ var sampleSendMessageRequest = &SendMessageRequest{
 	Cc:                    []string{"ap@acme.com"},
 	ScheduledAt:           field.Some(time.Date(2026, 5, 10, 15, 0, 0, 0, time.UTC)),
 	ReplyToMessageID:      field.Some(apiresource.SampleMessageID),
-	LinkResourceType:      field.Some(constants.ObjectTypeSalesOrder),
-	LinkResourceID:        field.Some(apiresource.SampleSalesOrderID),
+	Record:                field.Some(*apiresource.SampleRecordInput),
 	Attachments: []MessageAttachmentInput{{
 		Kind:        constants.MessageAttachmentKindFile,
 		S3Key:       field.Some("uploads/acme/quote.pdf"),
@@ -135,7 +130,7 @@ func (*SendMessageRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSendMessageRequest)
 }
 
-// Posts a message to a conversation.
+// Sends a message to a conversation.
 //
 // With `mode` = `send` the message is delivered — immediately, or queued when `scheduled_at` is set — and a retry of an immediate send with the same `client_message_id` returns the original message rather than posting it twice. With `mode` = `draft` the message is proposed as a reply to the customer and held for a teammate to approve instead of being sent, and `channel` is required.
 //
@@ -151,7 +146,6 @@ func (e *SendMessageEndpoint) Materialize() *apiendpoint.APIEndpoint[*SendMessag
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChatMessage,
 		IncludeConfig:     messageIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},

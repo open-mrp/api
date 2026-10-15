@@ -249,22 +249,20 @@ func TestCovMessagingBlocks_CrossAccountTargetRefused(t *testing.T) {
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
 
-// TestCovMessagingBlocks_UnsupportedQueryParamRejected pins down the
-// undocumented behavior for query params ListBlocksRequest{} doesn't
-// declare: per the generic unknown-query-param validation used elsewhere in
-// this codebase, `limit` (and by extension `cursor`/`q`/`sort`) is rejected
-// with 400 parameter_unknown rather than silently ignored, since the list
-// endpoint has no pagination/search fields at all (na for those
-// sub-features, not partial - there is nothing to page or search).
+// The block list pages but has no search, so q is rejected as unknown.
 func TestCovMessagingBlocks_UnsupportedQueryParamRejected(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 
-	status, body, err := user.GetListRaw(blocksPath, url.Values{"limit": {"1"}})
+	status, body, err := user.GetListRaw(blocksPath, url.Values{"q": {"x"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
-	assertErrorParam(t, errObj, "limit")
+	assertErrorParam(t, errObj, "q")
+
+	status, body, err = user.GetListRaw(blocksPath, url.Values{"limit": {"101"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
 }
 
 // TestCovMessagingBlocks_Unauthenticated asserts an empty bearer token (but

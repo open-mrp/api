@@ -38,7 +38,7 @@ func (*UpdateDraftRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateDraftRequest)
 }
 
-// Revises a reply draft before it is sent to the customer.
+// Updates a reply draft before it is sent to the customer.
 //
 // Only a draft that is still awaiting approval can be edited; once it has been approved, rejected, or superseded the request fails. Nothing reaches the customer until the draft is approved.
 type UpdateDraftEndpoint struct{}
@@ -52,7 +52,6 @@ func (e *UpdateDraftEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDraf
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChatMessage,
 		IncludeConfig:     messageIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},

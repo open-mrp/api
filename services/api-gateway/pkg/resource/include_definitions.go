@@ -71,7 +71,13 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAnnouncement,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeAnnouncementRelated,
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "record", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
 		},
 	})
 
@@ -853,7 +859,14 @@ func init() {
 			{Key: "assignee", ObjectType: constants.ObjectTypeActor},
 			{Key: "group", ObjectType: constants.ObjectTypeMessagingGroup},
 			{Key: "participants", ObjectType: constants.ObjectTypeConversationParticipant},
-			{Key: "topic", ObjectType: constants.ObjectTypeEntity},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeConversationRelated,
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "record", ObjectType: constants.ObjectTypeRecord},
+					{Key: "continues", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
 			{Key: "last_message", ObjectType: constants.ObjectTypeChatMessage},
 		},
 	})
@@ -861,6 +874,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeConversationLink,
 		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "record", ObjectType: constants.ObjectTypeRecord},
 			{Key: "conversation", ObjectType: constants.ObjectTypeConversation},
 		},
 	})
@@ -870,7 +884,13 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sender", ObjectType: constants.ObjectTypeActor},
 			{Key: "author", ObjectType: constants.ObjectTypeActor},
-			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeChatMessageRelated,
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "record", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
 			{Key: "attachments", ObjectType: constants.ObjectTypeMessageAttachment},
 			{Key: "conversation", ObjectType: constants.ObjectTypeConversation},
 			{Key: "reply_to", ObjectType: constants.ObjectTypeChatMessage},
@@ -881,7 +901,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMessageAttachment,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+			{Key: "record", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
@@ -896,7 +916,15 @@ func init() {
 		ObjectType: constants.ObjectTypeEmailInbox,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
+			{Key: "group", ObjectType: constants.ObjectTypeMessagingGroup},
 			{Key: "agent_config", ObjectType: constants.ObjectTypeAgentDefinition},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeEmailSender,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
 		},
 	})
 }

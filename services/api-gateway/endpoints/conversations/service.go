@@ -23,6 +23,7 @@ type ConversationSvc interface {
 	CreateConversation(ctx context.Context, req *CreateConversationRequest) (*apiresource.Conversation, *apierror.APIError)
 	ListConversations(ctx context.Context, req *ListConversationsRequest) (*apiresource.List[apiresource.Conversation], *apierror.APIError)
 	GetConversation(ctx context.Context, req *RetrieveConversationRequest) (*apiresource.Conversation, *apierror.APIError)
+	DeleteConversation(ctx context.Context, req *DeleteConversationRequest) (*pb.ChatAck, *apierror.APIError)
 	ContactSupport(ctx context.Context, req *ContactSupportRequest) (*apiresource.Conversation, *apierror.APIError)
 	SupportAvailability(ctx context.Context, req *SupportAvailabilityRequest) (*apiresource.SupportAvailability, *apierror.APIError)
 	MarkConversationRead(ctx context.Context, req *MarkConversationReadRequest) (*apiresource.Conversation, *apierror.APIError)
@@ -109,15 +110,6 @@ func (s *conversationSvcImpl) hydrateConversations(ctx context.Context, convs ..
 	meta := include.GetLoadMeta(ctx)
 	var actors []*apiresource.Actor
 	var groups []*apiresource.MessagingGroup
-	var topics []*apiresource.Entity
-
-	if requested["topic"] {
-		for _, c := range convs {
-			if v, ok := meta.Get(constants.ObjectTypeConversation, c.ID, "topic"); ok {
-				topics = append(topics, v.(*apiresource.Entity))
-			}
-		}
-	}
 
 	if requested["group"] {
 		for _, c := range convs {
@@ -170,25 +162,28 @@ func (s *conversationSvcImpl) hydrateConversations(ctx context.Context, convs ..
 
 	resourceloaders.HydrateActorNames(ctx, actors)
 	resourceloaders.HydrateMessagingGroups(ctx, groups)
-	// A customer-facing case anchors its topic to the customer record, so the customer's name/number
-	// come from the topic entity (no-op for non-customer topics, which stay bare id/type references).
-	resourceloaders.HydrateCustomerEntities(ctx, topics)
 }
 
 func (s *conversationSvcImpl) CreateConversation(ctx context.Context, req *CreateConversationRequest) (*apiresource.Conversation, *apierror.APIError) {
 	pbReq := &pb.CreateConversationRequest{
-		Type:                      string(req.Type),
-		ParticipantAccountUserIds: req.ParticipantAccountUserIDs,
-		Title:                     req.Title.Ptr(),
+		Title:                   req.Title.Ptr(),
+		GroupId:                 req.GroupID.Ptr(),
+		ContinuesConversationId: req.Continues.Ptr(),
 	}
-	if t, ok := req.TopicResourceType.Value(); ok {
-		s := string(t)
-		pbReq.TopicResourceType = &s
+	if r, ok := req.Record.Value(); ok {
+		t := string(r.Type)
+		pbReq.TopicResourceType = &t
+		pbReq.TopicResourceId = &r.ID
 	}
-	pbReq.TopicResourceId = req.TopicResourceID.Ptr()
-	pbReq.GroupId = req.GroupID.Ptr()
+	if m, ok := req.Message.Value(); ok {
+		pbReq.MessageBody = &m.Body
+	}
 	for _, p := range req.Participants {
-		pbReq.Participants = append(pbReq.Participants, &pb.ConversationParticipantRoleInput{AccountUserId: p.AccountUserID, Role: string(p.Role)})
+		if role, ok := p.Role.Value(); ok {
+			pbReq.Participants = append(pbReq.Participants, &pb.ConversationParticipantRoleInput{AccountUserId: p.AccountUserID, Role: string(role)})
+			continue
+		}
+		pbReq.ParticipantAccountUserIds = append(pbReq.ParticipantAccountUserIds, p.AccountUserID)
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, conversationSvcTracer, "service.conversations.create", domain.ServiceName,
@@ -212,11 +207,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, req *ListCo
 		return s.listInbox(ctx, req)
 	}
 
-	status := string(constants.ConversationListStatusActive)
-	if req.Status != nil {
-		status = string(*req.Status)
-	}
-	pbReq := &pb.ListConversationsRequest{Limit: req.Limit, Cursor: req.Cursor, Status: status}
+	pbReq := &pb.ListConversationsRequest{Limit: req.Limit, Cursor: req.Cursor, Status: req.listStatus(), ParticipantAccountUserIds: req.ParticipantIDs}
 	if req.Type != nil {
 		t := string(*req.Type)
 		pbReq.Type = &t
@@ -248,6 +239,13 @@ func (s *conversationSvcImpl) GetConversation(ctx context.Context, req *Retrieve
 	}
 	result := s.toResource(ctx, resp)
 	return &result, nil
+}
+
+func (s *conversationSvcImpl) DeleteConversation(ctx context.Context, req *DeleteConversationRequest) (*pb.ChatAck, *apierror.APIError) {
+	return grpcutil.CallRPC(ctx, conversationSvcTracer, "service.conversations.delete", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ChatAck, error) {
+			return s.chatClient.DeleteConversation(ctx, &pb.DeleteConversationRequest{ConversationId: req.ConversationID}, opts...)
+		})
 }
 
 func (s *conversationSvcImpl) ContactSupport(ctx context.Context, _ *ContactSupportRequest) (*apiresource.Conversation, *apierror.APIError) {

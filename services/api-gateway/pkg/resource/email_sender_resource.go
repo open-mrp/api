@@ -20,8 +20,10 @@ type EmailSender struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_sender"`
-	// The verified email domain this address belongs to.
-	EmailDomainID string `json:"email_domain_id" validate:"required"`
+	// The email domain this address belongs to.
+	//
+	// Mail only sends from this address while the domain is `verified`.
+	EmailDomain *EmailDomain `json:"email_domain" expandable:"true"`
 	// The mailbox name before the `@`.
 	LocalPart string `json:"local_part" validate:"required"`
 	// The full sending address.
@@ -30,10 +32,7 @@ type EmailSender struct {
 	FromName *string `json:"from_name"`
 	// Where customer replies are delivered. When unset, replies go to the sending address.
 	ReplyTo *string `json:"reply_to"`
-	// The domain name the address sends from.
-	Domain string `json:"domain" validate:"required"`
-	// Verification status of the underlying domain.
-	DomainStatus constants.EmailDomainStatus `json:"domain_status" validate:"required"`
+
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -41,15 +40,13 @@ type EmailSender struct {
 }
 
 var SampleEmailSender = &EmailSender{
-	ID:            SampleEmailSenderID,
-	Object:        constants.ObjectTypeEmailSender,
-	EmailDomainID: SampleEmailDomainID,
-	LocalPart:     "orders",
-	Address:       "orders@support.acme.com",
-	Domain:        "support.acme.com",
-	DomainStatus:  "verified",
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:          SampleEmailSenderID,
+	Object:      constants.ObjectTypeEmailSender,
+	EmailDomain: SampleEmailDomain,
+	LocalPart:   "orders",
+	Address:     "orders@support.acme.com",
+	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*EmailSender) SchemaExample() any {

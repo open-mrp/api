@@ -206,6 +206,69 @@ func (q *Queries) ListEmailInboxesByAccount(ctx context.Context, accountID strin
 	return items, nil
 }
 
+const listEmailInboxesPage = `-- name: ListEmailInboxesPage :many
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
+WHERE account_id = ?
+  AND (
+    ? IS NULL
+    OR created_at < ?
+    OR (created_at = ? AND id < ?)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type ListEmailInboxesPageParams struct {
+	AccountID       string
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+// One keyset page of an account's inboxes, newest first.
+func (q *Queries) ListEmailInboxesPage(ctx context.Context, arg ListEmailInboxesPageParams) ([]EmailInbox, error) {
+	rows, err := q.db.QueryContext(ctx, listEmailInboxesPage,
+		arg.AccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailInbox
+	for rows.Next() {
+		var i EmailInbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.EmailDomainID,
+			&i.Address,
+			&i.FromName,
+			&i.Status,
+			&i.AgentConfigID,
+			&i.AgentTriggerPolicy,
+			&i.AgentTriggerKeywords,
+			&i.GroupID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateEmailInbox = `-- name: UpdateEmailInbox :exec
 UPDATE email_inbox
 SET from_name = COALESCE(?, from_name), status = ?, agent_config_id = COALESCE(?, agent_config_id), agent_trigger_policy = COALESCE(?, agent_trigger_policy), agent_trigger_keywords = COALESCE(?, agent_trigger_keywords), group_id = COALESCE(?, group_id), updated_at = NOW(3)

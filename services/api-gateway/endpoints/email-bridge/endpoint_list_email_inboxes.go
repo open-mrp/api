@@ -10,14 +10,17 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to list the account's email inboxes.
-type ListEmailInboxesRequest struct{}
+type ListEmailInboxesRequest struct {
+	object.ListRequest
+}
 
-// Returns the account's email inboxes across every registered domain.
+// Returns a list of your email inboxes across every domain.
 //
-// Every inbox is returned in a single response; this list is not paginated.
+// The inboxes are sorted by creation date, newest first.
 type ListEmailInboxesEndpoint struct{}
 
 func (e *ListEmailInboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailInboxesRequest, *apiresource.List[apiresource.EmailInbox]] {
@@ -29,7 +32,6 @@ func (e *ListEmailInboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListE
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailInbox,
 		IncludeConfig:     emailInboxIncludeConfig(),
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},

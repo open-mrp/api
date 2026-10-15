@@ -32,7 +32,7 @@ func (*MarkConversationReadRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMarkConversationReadRequest)
 }
 
-// Advances the caller's read position in a conversation and returns it with the recalculated unread count.
+// Marks a conversation read up to a message for the caller and returns it with the recalculated `unread_count`.
 //
 // Reading also dismisses the caller's outstanding notifications for this conversation, and updates the read receipt the other participants see.
 type MarkConversationReadEndpoint struct{}
@@ -45,7 +45,6 @@ func (e *MarkConversationReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*M
 		Route:             "/v1/messaging/conversations/{id}/actions/read",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeConversation,
 		IncludeConfig:     conversationIncludeConfig(),

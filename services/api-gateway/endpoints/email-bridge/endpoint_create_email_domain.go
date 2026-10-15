@@ -45,7 +45,6 @@ func (e *CreateEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeEmailDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateEmailDomainRequest) (*apiresource.EmailDomain, *apierror.APIError) {

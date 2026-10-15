@@ -479,8 +479,14 @@ service CoreService {
 
   // Returns all items with on-hand inventory for export.
   rpc ExportItems(ExportItemsRequest) returns (ExportItemsResponse);
-  // Partially updates an item (sku, description, notes).
+  // Creates an item of any type with its sections.
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse);
+  // Partially updates an item.
   rpc UpdateItem(UpdateItemRequest) returns (UpdateItemResponse);
+  // Deletes an item nothing references.
+  rpc DeleteItem(DeleteItemRequest) returns (google.protobuf.Empty);
+  // Creates or updates items of any type by SKU, in the background.
+  rpc BulkUpsertItems(BulkUpsertItemsRequest) returns (BulkUpsertItemsResponse);
   // Adds an attribute to an item.
   rpc AddItemAttribute(AddItemAttributeRequest) returns (AddItemAttributeResponse);
   // Removes an attribute from an item.

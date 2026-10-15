@@ -149,6 +149,11 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 			if apiErr != nil {
 				return apiErr
 			}
+			if created.ItemID != nil {
+				if apiErr := requireItemsAssignable(txCtx, txSvc.repos, params.AccountID, []string{*created.ItemID}, "item_id"); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			// If a receiving order exists for this PO, create a receiving order line for the new line
 			txReceivingRepo := txSvc.repos.NewReceivingOrderRepo()

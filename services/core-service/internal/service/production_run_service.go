@@ -621,6 +621,13 @@ func validateAddBatchInputs(ctx context.Context, repos domain.RepoFactory, accou
 	if apiErr != nil {
 		return apiErr
 	}
+	batchItemIDs := make([]string, len(inputs))
+	for i, b := range inputs {
+		batchItemIDs[i] = b.ItemID
+	}
+	if apiErr := requireItemsAssignable(ctx, repos, accountID, batchItemIDs, "batches"); apiErr != nil {
+		return apiErr
+	}
 	units, apiErr := newUnitIdentifierResolver(ctx, repos, accountID, unitIdentifiers)
 	if apiErr != nil {
 		return apiErr

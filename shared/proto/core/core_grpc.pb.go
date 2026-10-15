@@ -179,7 +179,10 @@ const (
 	CoreService_GetItemCosts_FullMethodName                               = "/core.CoreService/GetItemCosts"
 	CoreService_GetItemTrends_FullMethodName                              = "/core.CoreService/GetItemTrends"
 	CoreService_ExportItems_FullMethodName                                = "/core.CoreService/ExportItems"
+	CoreService_CreateItem_FullMethodName                                 = "/core.CoreService/CreateItem"
 	CoreService_UpdateItem_FullMethodName                                 = "/core.CoreService/UpdateItem"
+	CoreService_DeleteItem_FullMethodName                                 = "/core.CoreService/DeleteItem"
+	CoreService_BulkUpsertItems_FullMethodName                            = "/core.CoreService/BulkUpsertItems"
 	CoreService_AddItemAttribute_FullMethodName                           = "/core.CoreService/AddItemAttribute"
 	CoreService_RemoveItemAttribute_FullMethodName                        = "/core.CoreService/RemoveItemAttribute"
 	CoreService_ChangeItemCategory_FullMethodName                         = "/core.CoreService/ChangeItemCategory"
@@ -751,8 +754,14 @@ type CoreServiceClient interface {
 	GetItemTrends(ctx context.Context, in *GetItemTrendsRequest, opts ...grpc.CallOption) (*GetItemTrendsResponse, error)
 	// Returns all items with on-hand inventory for export.
 	ExportItems(ctx context.Context, in *ExportItemsRequest, opts ...grpc.CallOption) (*ExportItemsResponse, error)
-	// Partially updates an item (sku, description, notes).
+	// Creates an item of any type with its sections.
+	CreateItem(ctx context.Context, in *CreateItemRequest, opts ...grpc.CallOption) (*CreateItemResponse, error)
+	// Partially updates an item.
 	UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*UpdateItemResponse, error)
+	// Deletes an item nothing references.
+	DeleteItem(ctx context.Context, in *DeleteItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Creates or updates items of any type by SKU, in the background.
+	BulkUpsertItems(ctx context.Context, in *BulkUpsertItemsRequest, opts ...grpc.CallOption) (*BulkUpsertItemsResponse, error)
 	// Adds an attribute to an item.
 	AddItemAttribute(ctx context.Context, in *AddItemAttributeRequest, opts ...grpc.CallOption) (*AddItemAttributeResponse, error)
 	// Removes an attribute from an item.
@@ -2637,10 +2646,40 @@ func (c *coreServiceClient) ExportItems(ctx context.Context, in *ExportItemsRequ
 	return out, nil
 }
 
+func (c *coreServiceClient) CreateItem(ctx context.Context, in *CreateItemRequest, opts ...grpc.CallOption) (*CreateItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateItemResponse)
+	err := c.cc.Invoke(ctx, CoreService_CreateItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*UpdateItemResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateItemResponse)
 	err := c.cc.Invoke(ctx, CoreService_UpdateItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) DeleteItem(ctx context.Context, in *DeleteItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, CoreService_DeleteItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) BulkUpsertItems(ctx context.Context, in *BulkUpsertItemsRequest, opts ...grpc.CallOption) (*BulkUpsertItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkUpsertItemsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BulkUpsertItems_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5511,8 +5550,14 @@ type CoreServiceServer interface {
 	GetItemTrends(context.Context, *GetItemTrendsRequest) (*GetItemTrendsResponse, error)
 	// Returns all items with on-hand inventory for export.
 	ExportItems(context.Context, *ExportItemsRequest) (*ExportItemsResponse, error)
-	// Partially updates an item (sku, description, notes).
+	// Creates an item of any type with its sections.
+	CreateItem(context.Context, *CreateItemRequest) (*CreateItemResponse, error)
+	// Partially updates an item.
 	UpdateItem(context.Context, *UpdateItemRequest) (*UpdateItemResponse, error)
+	// Deletes an item nothing references.
+	DeleteItem(context.Context, *DeleteItemRequest) (*emptypb.Empty, error)
+	// Creates or updates items of any type by SKU, in the background.
+	BulkUpsertItems(context.Context, *BulkUpsertItemsRequest) (*BulkUpsertItemsResponse, error)
 	// Adds an attribute to an item.
 	AddItemAttribute(context.Context, *AddItemAttributeRequest) (*AddItemAttributeResponse, error)
 	// Removes an attribute from an item.
@@ -6333,8 +6378,17 @@ func (UnimplementedCoreServiceServer) GetItemTrends(context.Context, *GetItemTre
 func (UnimplementedCoreServiceServer) ExportItems(context.Context, *ExportItemsRequest) (*ExportItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportItems not implemented")
 }
+func (UnimplementedCoreServiceServer) CreateItem(context.Context, *CreateItemRequest) (*CreateItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateItem not implemented")
+}
 func (UnimplementedCoreServiceServer) UpdateItem(context.Context, *UpdateItemRequest) (*UpdateItemResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateItem not implemented")
+}
+func (UnimplementedCoreServiceServer) DeleteItem(context.Context, *DeleteItemRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteItem not implemented")
+}
+func (UnimplementedCoreServiceServer) BulkUpsertItems(context.Context, *BulkUpsertItemsRequest) (*BulkUpsertItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkUpsertItems not implemented")
 }
 func (UnimplementedCoreServiceServer) AddItemAttribute(context.Context, *AddItemAttributeRequest) (*AddItemAttributeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddItemAttribute not implemented")
@@ -9858,6 +9912,24 @@ func _CoreService_ExportItems_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_CreateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).CreateItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_CreateItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).CreateItem(ctx, req.(*CreateItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_UpdateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateItemRequest)
 	if err := dec(in); err != nil {
@@ -9872,6 +9944,42 @@ func _CoreService_UpdateItem_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).UpdateItem(ctx, req.(*UpdateItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_DeleteItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).DeleteItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_DeleteItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).DeleteItem(ctx, req.(*DeleteItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_BulkUpsertItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkUpsertItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BulkUpsertItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BulkUpsertItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BulkUpsertItems(ctx, req.(*BulkUpsertItemsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -15082,8 +15190,20 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_ExportItems_Handler,
 		},
 		{
+			MethodName: "CreateItem",
+			Handler:    _CoreService_CreateItem_Handler,
+		},
+		{
 			MethodName: "UpdateItem",
 			Handler:    _CoreService_UpdateItem_Handler,
+		},
+		{
+			MethodName: "DeleteItem",
+			Handler:    _CoreService_DeleteItem_Handler,
+		},
+		{
+			MethodName: "BulkUpsertItems",
+			Handler:    _CoreService_BulkUpsertItems_Handler,
 		},
 		{
 			MethodName: "AddItemAttribute",

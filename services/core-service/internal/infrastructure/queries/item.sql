@@ -487,6 +487,8 @@ SELECT
     i.burn_rate_id,
     i.account_id,
     i.is_dirty,
+    i.is_active,
+    i.supply_code,
     i.created_at,
     i.updated_at,
     i.deleted_at,
@@ -498,8 +500,7 @@ SELECT
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 WHERE i.id = sqlc.arg('id')
-AND i.account_id = sqlc.arg('account_id')
-AND i.deleted_at IS NULL;
+AND i.account_id = sqlc.arg('account_id');
 
 -- name: GetItemsByIDs :many
 SELECT
@@ -514,8 +515,11 @@ SELECT
     i.burn_rate_id,
     i.account_id,
     i.is_dirty,
+    i.is_active,
+    i.supply_code,
     i.created_at,
     i.updated_at,
+    i.deleted_at,
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
@@ -524,8 +528,7 @@ SELECT
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 WHERE i.id IN (sqlc.slice('ids'))
-AND i.account_id = sqlc.arg('account_id')
-AND i.deleted_at IS NULL;
+AND i.account_id = sqlc.arg('account_id');
 
 -- name: GetItemAttributes :many
 SELECT
@@ -824,7 +827,6 @@ SELECT EXISTS(
   WHERE sku = sqlc.arg('sku')
   AND account_id = sqlc.arg('account_id')
   AND id != sqlc.arg('exclude_id')
-  AND deleted_at IS NULL
 ) AS sku_exists;
 
 -- name: FindItemBySKU :one

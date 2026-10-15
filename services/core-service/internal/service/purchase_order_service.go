@@ -423,6 +423,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				if apiErr != nil {
 					return apiErr
 				}
+				if lineInput.ItemID != nil {
+					if apiErr := requireItemsAssignable(txCtx, txSvc.repos, params.AccountID, []string{*lineInput.ItemID}, "lines"); apiErr != nil {
+						return apiErr
+					}
+				}
 				createdLines = append(createdLines, createdLine)
 
 				// Ensure supplier material link for lines with an item_id

@@ -921,7 +921,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UnitPrice_UpdatesRate() {
 // DeleteProduct
 // =============================================================================
 
-func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
+// Deleting a product deletes its item, which only goes when nothing references it.
+func (s *ProductSvcTestSuite) TestDeleteProduct_Success_DeletesTheUnreferencedItem() {
 	ctx := internalProductIdentityCtx("ac_test123")
 
 	existing := s.existingProduct("it_1", "SKU-DEL")
@@ -930,17 +931,24 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
 		Return(existing, nil).
 		Times(1)
 
-	// Order matters: deleted_record snapshot before soft-delete so the snapshot
-	// captures pre-delete state.
+	refs := repositorymock.NewMockReferenceRepo(s.ctrl)
+	s.repoFactory.EXPECT().NewReferenceRepo().Return(refs).AnyTimes()
+	item := &domain.Item{ID: "it_1", SKU: "SKU-DEL", AccountID: "ac_test123"}
 	gomock.InOrder(
 		s.deletedRecordRepo.EXPECT().
 			CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", "ac_test123", existing).
 			Return(nil).
 			Times(1),
-		s.productRepo.EXPECT().
-			SoftDelete(gomock.Any(), domain.DeleteProductParams{AccountID: "ac_test123", ProductID: "it_1"}).
+		s.itemRepo.EXPECT().
+			GetByIDsWithIncludes(gomock.Any(), "ac_test123", []string{"it_1"}, domain.ItemReadIncludes).
+			Return([]*domain.Item{item}, nil).
+			Times(1),
+		refs.EXPECT().InUseBy(gomock.Any(), "it_1", domain.ItemReferences.Probes).Return(nil, nil).Times(1),
+		s.deletedRecordRepo.EXPECT().
+			CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeItem, "it_1", "ac_test123", item).
 			Return(nil).
 			Times(1),
+		s.itemRepo.EXPECT().HardDelete(gomock.Any(), item).Return(nil).Times(1),
 	)
 
 	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_1"})

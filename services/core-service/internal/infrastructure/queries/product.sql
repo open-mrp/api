@@ -880,7 +880,7 @@ INSERT INTO item (
     sqlc.arg('sku'),
     sqlc.narg('description'),
     sqlc.narg('notes'),
-    'product',
+    sqlc.arg('item_type_code'),
     sqlc.arg('item_category_id'),
     sqlc.arg('unit_value_id'),
     sqlc.arg('unit_cost_id'),

@@ -806,6 +806,7 @@ func (r *productRepoImpl) InsertItem(ctx context.Context, params domain.InsertPr
 	err := r.queries.ProductInsertItem(ctx, sqlc.ProductInsertItemParams{
 		ID:             params.ItemID,
 		Sku:            params.SKU,
+		ItemTypeCode:   string(params.ItemTypeCode),
 		Description:    toNullString(params.Description),
 		Notes:          toNullString(params.Notes),
 		ItemCategoryID: params.CategoryID,

@@ -1913,6 +1913,20 @@ func (mr *MockItemRepoMockRecorder) ClearItemDirtyFlag(ctx, accountID, itemID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearItemDirtyFlag", reflect.TypeOf((*MockItemRepo)(nil).ClearItemDirtyFlag), ctx, accountID, itemID)
 }
 
+// DeleteQuantities mocks base method.
+func (m *MockItemRepo) DeleteQuantities(ctx context.Context, ids []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteQuantities", ctx, ids)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteQuantities indicates an expected call of DeleteQuantities.
+func (mr *MockItemRepoMockRecorder) DeleteQuantities(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteQuantities", reflect.TypeOf((*MockItemRepo)(nil).DeleteQuantities), ctx, ids)
+}
+
 // ExportWithInventory mocks base method.
 func (m *MockItemRepo) ExportWithInventory(ctx context.Context, accountID string) (*domain.ExportItemsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1987,6 +2001,21 @@ func (m *MockItemRepo) Get(ctx context.Context, params domain.GetItemParams) (*d
 func (mr *MockItemRepoMockRecorder) Get(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockItemRepo)(nil).Get), ctx, params)
+}
+
+// GetAssignability mocks base method.
+func (m *MockItemRepo) GetAssignability(ctx context.Context, accountID string, ids []string) ([]domain.ItemAssignability, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAssignability", ctx, accountID, ids)
+	ret0, _ := ret[0].([]domain.ItemAssignability)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAssignability indicates an expected call of GetAssignability.
+func (mr *MockItemRepoMockRecorder) GetAssignability(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAssignability", reflect.TypeOf((*MockItemRepo)(nil).GetAssignability), ctx, accountID, ids)
 }
 
 // GetByIDs mocks base method.
@@ -2125,6 +2154,90 @@ func (mr *MockItemRepoMockRecorder) GetStockingUnit(ctx, accountID, itemID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStockingUnit", reflect.TypeOf((*MockItemRepo)(nil).GetStockingUnit), ctx, accountID, itemID)
 }
 
+// HardDelete mocks base method.
+func (m *MockItemRepo) HardDelete(ctx context.Context, item *domain.Item) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HardDelete", ctx, item)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// HardDelete indicates an expected call of HardDelete.
+func (mr *MockItemRepoMockRecorder) HardDelete(ctx, item any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HardDelete", reflect.TypeOf((*MockItemRepo)(nil).HardDelete), ctx, item)
+}
+
+// Insert mocks base method.
+func (m *MockItemRepo) Insert(ctx context.Context, params domain.InsertItemParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Insert", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Insert indicates an expected call of Insert.
+func (mr *MockItemRepoMockRecorder) Insert(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockItemRepo)(nil).Insert), ctx, params)
+}
+
+// InsertPart mocks base method.
+func (m *MockItemRepo) InsertPart(ctx context.Context, partID, itemID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertPart", ctx, partID, itemID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertPart indicates an expected call of InsertPart.
+func (mr *MockItemRepoMockRecorder) InsertPart(ctx, partID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPart", reflect.TypeOf((*MockItemRepo)(nil).InsertPart), ctx, partID, itemID)
+}
+
+// InsertProduct mocks base method.
+func (m *MockItemRepo) InsertProduct(ctx context.Context, row domain.ItemProductRow) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertProduct", ctx, row)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertProduct indicates an expected call of InsertProduct.
+func (mr *MockItemRepoMockRecorder) InsertProduct(ctx, row any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertProduct", reflect.TypeOf((*MockItemRepo)(nil).InsertProduct), ctx, row)
+}
+
+// InsertQuantity mocks base method.
+func (m *MockItemRepo) InsertQuantity(ctx context.Context, id string, q domain.QuantityInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertQuantity", ctx, id, q)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertQuantity indicates an expected call of InsertQuantity.
+func (mr *MockItemRepoMockRecorder) InsertQuantity(ctx, id, q any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertQuantity", reflect.TypeOf((*MockItemRepo)(nil).InsertQuantity), ctx, id, q)
+}
+
+// InsertRate mocks base method.
+func (m *MockItemRepo) InsertRate(ctx context.Context, id string, rate domain.CreateRateParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertRate", ctx, id, rate)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertRate indicates an expected call of InsertRate.
+func (mr *MockItemRepoMockRecorder) InsertRate(ctx, id, rate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRate", reflect.TypeOf((*MockItemRepo)(nil).InsertRate), ctx, id, rate)
+}
+
 // List mocks base method.
 func (m *MockItemRepo) List(ctx context.Context, params domain.ListItemsParams) (*domain.ListItemsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2198,6 +2311,20 @@ func (mr *MockItemRepoMockRecorder) RemoveAttribute(ctx, params any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAttribute", reflect.TypeOf((*MockItemRepo)(nil).RemoveAttribute), ctx, params)
 }
 
+// ReplaceAttributes mocks base method.
+func (m *MockItemRepo) ReplaceAttributes(ctx context.Context, itemID string, attributeIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceAttributes", ctx, itemID, attributeIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReplaceAttributes indicates an expected call of ReplaceAttributes.
+func (mr *MockItemRepoMockRecorder) ReplaceAttributes(ctx, itemID, attributeIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceAttributes", reflect.TypeOf((*MockItemRepo)(nil).ReplaceAttributes), ctx, itemID, attributeIDs)
+}
+
 // ScanBurnRateItems mocks base method.
 func (m *MockItemRepo) ScanBurnRateItems(ctx context.Context, afterID string, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2214,18 +2341,32 @@ func (mr *MockItemRepoMockRecorder) ScanBurnRateItems(ctx, afterID, staleBefore,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanBurnRateItems", reflect.TypeOf((*MockItemRepo)(nil).ScanBurnRateItems), ctx, afterID, staleBefore, limit)
 }
 
-// Update mocks base method.
-func (m *MockItemRepo) Update(ctx context.Context, params domain.UpdateItemParams) *apierror.APIError {
+// SetFields mocks base method.
+func (m *MockItemRepo) SetFields(ctx context.Context, params domain.SetItemFieldsParams) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, params)
+	ret := m.ctrl.Call(m, "SetFields", ctx, params)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// Update indicates an expected call of Update.
-func (mr *MockItemRepoMockRecorder) Update(ctx, params any) *gomock.Call {
+// SetFields indicates an expected call of SetFields.
+func (mr *MockItemRepoMockRecorder) SetFields(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockItemRepo)(nil).Update), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFields", reflect.TypeOf((*MockItemRepo)(nil).SetFields), ctx, params)
+}
+
+// SetProduct mocks base method.
+func (m *MockItemRepo) SetProduct(ctx context.Context, params domain.SetItemProductParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetProduct", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetProduct indicates an expected call of SetProduct.
+func (mr *MockItemRepoMockRecorder) SetProduct(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProduct", reflect.TypeOf((*MockItemRepo)(nil).SetProduct), ctx, params)
 }
 
 // UpdateConsumptionProductionQuantityUnits mocks base method.
@@ -2254,6 +2395,20 @@ func (m *MockItemRepo) UpdateMaterialOrderPointUnit(ctx context.Context, account
 func (mr *MockItemRepoMockRecorder) UpdateMaterialOrderPointUnit(ctx, accountID, itemID, newUnitID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMaterialOrderPointUnit", reflect.TypeOf((*MockItemRepo)(nil).UpdateMaterialOrderPointUnit), ctx, accountID, itemID, newUnitID)
+}
+
+// UpdateQuantity mocks base method.
+func (m *MockItemRepo) UpdateQuantity(ctx context.Context, id string, q domain.QuantityInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateQuantity", ctx, id, q)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateQuantity indicates an expected call of UpdateQuantity.
+func (mr *MockItemRepoMockRecorder) UpdateQuantity(ctx, id, q any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateQuantity", reflect.TypeOf((*MockItemRepo)(nil).UpdateQuantity), ctx, id, q)
 }
 
 // UpdateRate mocks base method.

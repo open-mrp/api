@@ -172,6 +172,11 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			if apiErr != nil {
 				return apiErr
 			}
+			if created.ItemID != nil {
+				if apiErr := requireItemsAssignable(txCtx, txSvc.repos, params.AccountID, []string{*created.ItemID}, "product_id"); apiErr != nil {
+					return apiErr
+				}
+			}
 			result = created
 
 			changes := audit.ComputeChanges(nil, created)

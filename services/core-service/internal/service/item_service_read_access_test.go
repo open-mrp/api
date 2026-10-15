@@ -49,26 +49,38 @@ func newItemReadSvc(t *testing.T) (domain.ItemSvc, *repositorymock.MockItemRepo,
 	readAccess := mediatormock.NewMockReadAccessMed(ctrl)
 	meds := factorymock.NewMockMediatorFactory(ctrl)
 	meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{ReadAccess: readAccess}).AnyTimes()
-	return NewItemSvc(&ItemSvcConfig{Repos: repos, MediatorFactory: meds, TxManager: &stubTxManager{factory: repos}}), itemRepo, readAccess
+	return NewItemSvc(&ItemSvcConfig{Repos: repos, MediatorFactory: meds, JobSvcFactory: factorymock.NewMockJobSvcFactory(ctrl), TxManager: &stubTxManager{factory: repos}}), itemRepo, readAccess
 }
 
-// An item record, cost included, is the seller's own: a portal user is refused it whatever permissions it holds, before anything is read.
-func TestItemSvc_GetItemRefusesAnyoneButTheSellersOwnUsers(t *testing.T) {
+func TestItemSvc_GetItemRefusesStaffWithoutItemsRead(t *testing.T) {
 	t.Parallel()
 
-	actors := map[string]context.Context{
-		"customer portal user":    itemReadCtx(types.IdentityRelationTypeCustomer, itemReadCustomerID, itemReadSellerID, "items:read"),
-		"supplier portal user":    itemReadCtx(types.IdentityRelationTypeSupplier, itemReadCustomerID, itemReadSellerID, "items:read"),
-		"seller staff at a buyer": itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadCustomerID, "items:read", "customers:read"),
-		"seller staff without it": itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadSellerID, "products:read"),
-	}
-	for name, ctx := range actors {
-		svc, _, _ := newItemReadSvc(t)
-		_, _, apiErr := svc.GetItem(ctx, "itm_1", nil, domain.ItemEmbeds{})
-		if assert.NotNil(t, apiErr, name) {
-			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, name)
-		}
-	}
+	svc, _, _ := newItemReadSvc(t)
+	_, _, apiErr := svc.GetItem(itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadSellerID, "products:read"), "itm_1", nil, domain.ItemEmbeds{})
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
+}
+
+// A portal customer reads only an item it could find in its own list: active, visible in the portal and on a line it
+// may order from. Anything else is not found, so the portal can't probe the seller's catalog.
+func TestItemSvc_GetItemShowsAPortalCustomerOnlyItsOrderableItems(t *testing.T) {
+	t.Parallel()
+
+	svc, itemRepo, readAccess := newItemReadSvc(t)
+	readAccess.EXPECT().CheckCounterpartyReadAccess(gomock.Any(), itemReadCustomerID, itemReadSellerID).Return(nil)
+	visible, active := true, true
+	itemRepo.EXPECT().List(gomock.Any(), domain.ListItemsParams{
+		AccountID:     itemReadSellerID,
+		Limit:         1,
+		IDs:           []string{"itm_hidden"},
+		CustomerIDs:   []string{itemReadCustomerID},
+		IsPortalReady: &visible,
+		IsActive:      &active,
+	}).Return(&domain.ListItemsResult{}, nil)
+
+	_, _, apiErr := svc.GetItem(itemReadCtx(types.IdentityRelationTypeCustomer, itemReadCustomerID, itemReadSellerID), "itm_hidden", nil, domain.ItemEmbeds{})
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func TestItemSvc_GetItemReadsTheSellersItem(t *testing.T) {
@@ -76,7 +88,7 @@ func TestItemSvc_GetItemReadsTheSellersItem(t *testing.T) {
 
 	includes := []string{"unit_value", "unit_cost", "burn_rate", "attributes"}
 	svc, itemRepo, _ := newItemReadSvc(t)
-	itemRepo.EXPECT().Get(gomock.Any(), domain.GetItemParams{AccountID: itemReadSellerID, ItemID: "itm_1", Includes: includes}).
+	itemRepo.EXPECT().Get(gomock.Any(), domain.GetItemParams{AccountID: itemReadSellerID, ItemID: "itm_1", Includes: append(append([]string{}, includes...), "sections")}).
 		Return(&domain.Item{ID: "itm_1"}, nil)
 
 	item, _, apiErr := svc.GetItem(itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadSellerID, "items:read"), "itm_1", includes, domain.ItemEmbeds{})
@@ -123,7 +135,7 @@ func TestItemSvc_BatchGetItemsEmbedsCategoriesAndAttributePropertiesForAnItemRea
 	repos.EXPECT().NewPropertyRepo().Return(propertyRepo).AnyTimes()
 	meds := factorymock.NewMockMediatorFactory(ctrl)
 	meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{}).AnyTimes()
-	svc := NewItemSvc(&ItemSvcConfig{Repos: repos, MediatorFactory: meds, TxManager: &stubTxManager{factory: repos}})
+	svc := NewItemSvc(&ItemSvcConfig{Repos: repos, MediatorFactory: meds, JobSvcFactory: factorymock.NewMockJobSvcFactory(ctrl), TxManager: &stubTxManager{factory: repos}})
 
 	itemRepo.EXPECT().GetByIDs(gomock.Any(), itemReadSellerID, []string{"itm_1", "itm_2"}).Return([]*domain.Item{
 		{ID: "itm_1", ItemCategoryID: "itcg_socks", Attributes: []*domain.ItemAttribute{{ID: "at_beige", PropertyID: "pp_color"}}},

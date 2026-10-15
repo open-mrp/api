@@ -173,6 +173,7 @@ func itemToProto(i *domain.Item) *pb.ItemInfo {
 			pbItem.Attributes[j] = itemAttributeToProto(a)
 		}
 	}
+	itemSectionsToProto(i, pbItem)
 
 	return pbItem
 }
@@ -203,6 +204,10 @@ func (h *gRPCHandler) ListItems(ctx context.Context, req *pb.ListItemsRequest) (
 		Includes:                 req.Includes,
 		ProductLineIDs:           req.ProductLineIds,
 		CustomerIDs:              req.CustomerIds,
+		SKUs:                     req.Skus,
+		SupplierIDs:              req.SupplierIds,
+		IsActive:                 archiveStatusesIsActive(req.Statuses),
+		IsPortalReady:            portalReadyFilter(req.PortalVisibilities),
 	}
 
 	if startDate != nil {
@@ -391,33 +396,6 @@ func (h *gRPCHandler) ExportItems(ctx context.Context, req *pb.ExportItemsReques
 	return &pb.ExportItemsResponse{
 		Items: pbItems,
 		Count: result.Count,
-	}, nil
-}
-
-func (h *gRPCHandler) UpdateItem(ctx context.Context, req *pb.UpdateItemRequest) (*pb.UpdateItemResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	params := domain.UpdateItemParams{
-		ItemID:            req.Id,
-		SKU:               req.Sku,
-		Description:       req.Description,
-		UpdateDescription: req.UpdateDescription,
-		Notes:             req.Notes,
-		UpdateNotes:       req.UpdateNotes,
-	}
-
-	item, apiErr := h.itemSvc.UpdateItem(ctx, params)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.UpdateItemResponse{
-		Item: itemToProto(item),
 	}, nil
 }
 

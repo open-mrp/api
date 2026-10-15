@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/catalogsearch"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
@@ -57,6 +58,7 @@ func mapItemBaseRow(id, sku string, description, notes gosql.NullString, itemTyp
 		BurnRateID:     burnRateID,
 		AccountID:      accountID,
 		IsDirty:        isDirty,
+		Status:         constants.ArchiveStatusActive,
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
 		Category: &domain.ItemCategory{
@@ -71,12 +73,25 @@ func mapItemBaseRow(id, sku string, description, notes gosql.NullString, itemTyp
 }
 
 func mapGetItemBaseRow(row sqlc.GetItemBaseRow) *domain.Item {
-	return mapItemBaseRow(
+	item := mapItemBaseRow(
 		row.ID, row.Sku, row.Description, row.Notes,
 		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
 		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
 		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
 	)
+	setItemState(item, row.IsActive, row.SupplyCode, row.DeletedAt)
+	return item
+}
+
+// setItemState fills in the status and supply an item row carries.
+func setItemState(item *domain.Item, isActive bool, supply gosql.NullString, deletedAt gosql.NullTime) {
+	if deletedAt.Valid {
+		item.DeletedAt = &deletedAt.Time
+	}
+	item.Status = domain.ItemStatus(isActive, item.DeletedAt)
+	if supply.Valid {
+		item.SupplyCode = &supply.String
+	}
 }
 
 func mapRateRow(row sqlc.GetRatesByIDsRow) *domain.Rate {
@@ -466,6 +481,11 @@ func applyItemStitches(ctx context.Context, queries *sqlc.Queries, items []*doma
 	if apiErr := stitchItemAttributes(ctx, queries, items, incs); apiErr != nil {
 		return apiErr
 	}
+	if slices.Contains(incs, "sections") {
+		if apiErr := stitchItemSections(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
+	}
 	if slices.Contains(incs, "category.properties") {
 		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
 			return apiErr
@@ -543,16 +563,18 @@ func (r *itemRepoImpl) Get(ctx context.Context, params domain.GetItemParams) (*d
 }
 
 func mapGetItemsByIDsRow(row sqlc.GetItemsByIDsRow) *domain.Item {
-	return mapItemBaseRow(
+	item := mapItemBaseRow(
 		row.ID, row.Sku, row.Description, row.Notes,
 		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
 		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
 		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
 	)
+	setItemState(item, row.IsActive, row.SupplyCode, row.DeletedAt)
+	return item
 }
 
 func (r *itemRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Item, *apierror.APIError) {
-	return r.GetByIDsWithIncludes(ctx, accountID, ids, []string{"unit_value", "unit_cost", "burn_rate", "attributes"})
+	return r.GetByIDsWithIncludes(ctx, accountID, ids, domain.ItemReadIncludes)
 }
 
 // GetByIDsWithIncludes is the batched form of Get: only the requested stitches are applied.
@@ -825,65 +847,6 @@ func (r *itemRepoImpl) ExportWithInventory(ctx context.Context, accountID string
 		Items: items,
 		Count: int64(len(items)),
 	}, nil
-}
-
-func (r *itemRepoImpl) Update(ctx context.Context, params domain.UpdateItemParams) *apierror.APIError {
-	ctx, span := itemRepoTracer.Start(ctx, "repository.item.update")
-	defer span.End()
-
-	// Update SKU and/or description/notes via COALESCE (non-null fields only)
-	sku := gosql.NullString{}
-	if params.SKU != nil {
-		sku = gosql.NullString{String: *params.SKU, Valid: true}
-	}
-
-	description := gosql.NullString{}
-	if params.Description != nil {
-		description = gosql.NullString{String: *params.Description, Valid: true}
-	}
-
-	notes := gosql.NullString{}
-	if params.Notes != nil {
-		notes = gosql.NullString{String: *params.Notes, Valid: true}
-	}
-
-	// Use COALESCE-based update for non-null values
-	err := r.queries.UpdateItem(ctx, sqlc.UpdateItemParams{
-		Sku:         sku,
-		Description: description,
-		Notes:       notes,
-		ID:          params.ItemID,
-		AccountID:   params.AccountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	// If the caller explicitly set description to null, use the dedicated setter
-	if params.UpdateDescription && params.Description == nil {
-		err := r.queries.SetItemDescription(ctx, sqlc.SetItemDescriptionParams{
-			Description: gosql.NullString{},
-			ID:          params.ItemID,
-			AccountID:   params.AccountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
-
-	// If the caller explicitly set notes to null, use the dedicated setter
-	if params.UpdateNotes && params.Notes == nil {
-		err := r.queries.SetItemNotes(ctx, sqlc.SetItemNotesParams{
-			Notes:     gosql.NullString{},
-			ID:        params.ItemID,
-			AccountID: params.AccountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
-
-	return nil
 }
 
 func (r *itemRepoImpl) CheckSKUExists(ctx context.Context, accountID, sku, excludeID string) (bool, *apierror.APIError) {

@@ -313,6 +313,67 @@ func (x *MoneyPatch) GetValue() *Money {
 	return nil
 }
 
+// A measured amount: value (decimal string) in unit_id, whose dimension is unit_type.
+type QuantityValue struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	UnitId        string                 `protobuf:"bytes,2,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	UnitType      string                 `protobuf:"bytes,3,opt,name=unit_type,json=unitType,proto3" json:"unit_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuantityValue) Reset() {
+	*x = QuantityValue{}
+	mi := &file_core_value_shapes_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuantityValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuantityValue) ProtoMessage() {}
+
+func (x *QuantityValue) ProtoReflect() protoreflect.Message {
+	mi := &file_core_value_shapes_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuantityValue.ProtoReflect.Descriptor instead.
+func (*QuantityValue) Descriptor() ([]byte, []int) {
+	return file_core_value_shapes_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *QuantityValue) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *QuantityValue) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *QuantityValue) GetUnitType() string {
+	if x != nil {
+		return x.UnitType
+	}
+	return ""
+}
+
 var File_core_value_shapes_proto protoreflect.FileDescriptor
 
 const file_core_value_shapes_proto_rawDesc = "" +
@@ -340,7 +401,11 @@ const file_core_value_shapes_proto_rawDesc = "" +
 	"\n" +
 	"MoneyPatch\x12\x14\n" +
 	"\x05clear\x18\x01 \x01(\bR\x05clear\x12!\n" +
-	"\x05value\x18\x02 \x01(\v2\v.core.MoneyR\x05valueB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2\v.core.MoneyR\x05value\"[\n" +
+	"\rQuantityValue\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x12\x17\n" +
+	"\aunit_id\x18\x02 \x01(\tR\x06unitId\x12\x1b\n" +
+	"\tunit_type\x18\x03 \x01(\tR\bunitTypeB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_value_shapes_proto_rawDescOnce sync.Once
@@ -354,13 +419,14 @@ func file_core_value_shapes_proto_rawDescGZIP() []byte {
 	return file_core_value_shapes_proto_rawDescData
 }
 
-var file_core_value_shapes_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_core_value_shapes_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_core_value_shapes_proto_goTypes = []any{
-	(*Money)(nil),      // 0: core.Money
-	(*UnitPrice)(nil),  // 1: core.UnitPrice
-	(*RateInput)(nil),  // 2: core.RateInput
-	(*Discount)(nil),   // 3: core.Discount
-	(*MoneyPatch)(nil), // 4: core.MoneyPatch
+	(*Money)(nil),         // 0: core.Money
+	(*UnitPrice)(nil),     // 1: core.UnitPrice
+	(*RateInput)(nil),     // 2: core.RateInput
+	(*Discount)(nil),      // 3: core.Discount
+	(*MoneyPatch)(nil),    // 4: core.MoneyPatch
+	(*QuantityValue)(nil), // 5: core.QuantityValue
 }
 var file_core_value_shapes_proto_depIdxs = []int32{
 	0, // 0: core.Discount.amount_off:type_name -> core.Money
@@ -384,7 +450,7 @@ func file_core_value_shapes_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_value_shapes_proto_rawDesc), len(file_core_value_shapes_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

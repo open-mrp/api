@@ -543,8 +543,18 @@ type ItemSvc interface {
 	// ExportItems returns all items with on-hand inventory for the caller's account.
 	ExportItems(ctx context.Context) (*ExportItemsResult, *apierror.APIError)
 
-	// UpdateItem partially updates an item (sku, description, notes).
+	// CreateItem creates an item of any type with its sales and material sections.
+	CreateItem(ctx context.Context, params CreateItemParams) (*Item, *apierror.APIError)
+
+	// UpdateItem partially updates an item, merging the section fields sent.
 	UpdateItem(ctx context.Context, params UpdateItemParams) (*Item, *apierror.APIError)
+
+	// DeleteItem hard-deletes an item nothing references (409 resource_in_use otherwise) and returns it as it was.
+	DeleteItem(ctx context.Context, itemID string) (*Item, *apierror.APIError)
+
+	// BulkUpsertItems accepts typed rows matched by SKU and records them on a job. ExecuteBulkUpsertItems writes them.
+	BulkUpsertItems(ctx context.Context, params BulkUpsertItemsParams) (*Job, *apierror.APIError)
+	ExecuteBulkUpsertItems(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// AddItemAttribute adds an attribute to an item.
 	AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*Item, *apierror.APIError)

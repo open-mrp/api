@@ -37,3 +37,10 @@ message MoneyPatch {
   bool clear = 1;
   Money value = 2;
 }
+
+// A measured amount: value (decimal string) in unit_id, whose dimension is unit_type.
+message QuantityValue {
+  string value = 1;
+  string unit_id = 2;
+  string unit_type = 3;
+}

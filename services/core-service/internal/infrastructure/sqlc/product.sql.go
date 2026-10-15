@@ -2668,7 +2668,7 @@ INSERT INTO item (
     ?,
     ?,
     ?,
-    'product',
+    ?,
     ?,
     ?,
     ?,
@@ -2685,6 +2685,7 @@ type ProductInsertItemParams struct {
 	Sku            string
 	Description    sql.NullString
 	Notes          sql.NullString
+	ItemTypeCode   string
 	ItemCategoryID string
 	UnitValueID    string
 	UnitCostID     string
@@ -2698,6 +2699,7 @@ func (q *Queries) ProductInsertItem(ctx context.Context, arg ProductInsertItemPa
 		arg.Sku,
 		arg.Description,
 		arg.Notes,
+		arg.ItemTypeCode,
 		arg.ItemCategoryID,
 		arg.UnitValueID,
 		arg.UnitCostID,

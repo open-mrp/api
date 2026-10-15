@@ -5,6 +5,8 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -22,9 +24,17 @@ type Item struct {
 	BurnRateID     string
 	AccountID      string
 	IsDirty        bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      *time.Time
+	// Status is archived for an archived item and for one soft-deleted before items could be archived.
+	Status     constants.ArchiveStatus `audit:"status"`
+	SupplyCode *string                 `audit:"supply"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  *time.Time
+
+	// Sales is the item's selling details, nil when it isn't sold. Loaded with the "sections" stitch.
+	Sales *ItemSales `audit:"sales"`
+	// MaterialSection is a material's order point and lead time. Loaded with the "sections" stitch.
+	MaterialSection *ItemMaterialSection `audit:"material"`
 
 	// Joined data (populated when listing/getting items)
 	UnitValue *Rate
@@ -37,6 +47,201 @@ type Item struct {
 
 	// Many-to-many joined data
 	Attributes []*ItemAttribute `audit:"attributes"`
+}
+
+// ItemReadIncludes are the stitches an item read whole applies: its prices, attributes and sections.
+var ItemReadIncludes = []string{"unit_value", "unit_cost", "burn_rate", "attributes", "sections"}
+
+// ItemReferences blocks deleting an item that orders, inventory, production or planning still use.
+var ItemReferences = RegisterReferences(References{
+	Noun:       "item",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "orders", Table: "sales_order_line", Column: "item_id"},
+		{Label: "inventory movements", Table: "inventory_receipt", Column: "item_id"},
+		{Label: "inventory movements", Table: "inventory_issue", Column: "item_id"},
+		{Label: "lots", Table: "lot", Column: "item_id"},
+		{Label: "batches", Table: "batch", Column: "item_id"},
+		{Label: "production steps", Table: "production", Column: "item_id"},
+		{Label: "production steps", Table: "consumption", Column: "item_id"},
+		{Label: "planned orders", Table: "production_schedule_line", Column: "item_id"},
+		{Label: "downtime events", Table: "machine_downtime_event", Column: "item_id"},
+	},
+})
+
+// ItemMaterialReferences blocks deleting a material its suppliers still list; it probes by the material's own id.
+var ItemMaterialReferences = RegisterReferences(References{
+	Noun:       "item",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "supplier materials", Table: "supplier_material", Column: "material_id"},
+	},
+})
+
+// ItemStatus is an item's status from its stored flags.
+func ItemStatus(isActive bool, deletedAt *time.Time) constants.ArchiveStatus {
+	if isActive && deletedAt == nil {
+		return constants.ArchiveStatusActive
+	}
+	return constants.ArchiveStatusArchived
+}
+
+// IsSold reports whether the item has a sales section: products and services always do; a material or part does once
+// it has a product row or a selling price, which it carried before materials and parts could be sold.
+func (i *Item) IsSold() bool {
+	switch {
+	case i.Sales != nil:
+		return true
+	case i.ItemTypeCode == string(constants.ItemTypeCodeProduct) || i.ItemTypeCode == string(constants.ItemTypeCodeService):
+		return true
+	case i.SalesUnitPrice == nil:
+		return false
+	default:
+		amount, err := decimal.NewFromString(i.SalesUnitPrice.Amount)
+		return err == nil && !amount.IsZero()
+	}
+}
+
+// ItemSales is an item's selling details, stored on its product row. The price is the item's unit value.
+type ItemSales struct {
+	ProductID     string  `audit:"-"`
+	ProductLineID *string `audit:"product_line_id"`
+	IsPortalReady bool    `audit:"is_portal_ready"`
+	// LeadTime is nil when the item adds no lead time.
+	LeadTime   *QuantityValue `audit:"lead_time"`
+	LeadTimeID *string        `audit:"-"`
+}
+
+// ItemMaterialSection is a material's order point and lead time, each nil when unset (stored as zero).
+type ItemMaterialSection struct {
+	MaterialID   string         `audit:"-"`
+	OrderPointID string         `audit:"-"`
+	LeadTimeID   string         `audit:"-"`
+	OrderPoint   *QuantityValue `audit:"order_point"`
+	LeadTime     *QuantityValue `audit:"lead_time"`
+}
+
+// QuantityValue is a stored quantity's value, unit and the unit's dimension.
+type QuantityValue struct {
+	Value    string `audit:"value"`
+	UnitID   string `audit:"unit_id"`
+	UnitType string `audit:"-"`
+}
+
+// ItemSalesInput is a write of an item's selling details. Unset fields keep their values, or take their defaults on
+// create.
+type ItemSalesInput struct {
+	UnitPrice        *CreateRateParams
+	ProductLineID    field.Clearable[string]
+	PortalVisibility *constants.CustomerPortalVisibility
+	LeadTime         field.Clearable[QuantityInput]
+}
+
+// ItemMaterialInput is a write of a material's purchasing details.
+type ItemMaterialInput struct {
+	OrderPoint field.Clearable[QuantityInput]
+	LeadTime   field.Clearable[QuantityInput]
+}
+
+// CreateItemParams creates an item of any type.
+type CreateItemParams struct {
+	AccountID    string
+	Type         constants.ItemTypeCode
+	SKU          string
+	Description  *string
+	CategoryID   string
+	AttributeIDs []string
+	Status       constants.ArchiveStatus
+	Supply       *constants.Supply
+	UnitCost     *CreateRateParams
+	Sales        *ItemSalesInput
+	Material     *ItemMaterialInput
+}
+
+// DeleteItemParams deletes an item.
+type DeleteItemParams struct {
+	AccountID string
+	ItemID    string
+}
+
+// UpsertItemParams is one bulk upsert row, matched to an existing item by SKU. Accepted rows are stored on the job,
+// so every field is plain data: a Clear flag says the matching field was sent as null.
+type UpsertItemParams struct {
+	Type        constants.ItemTypeCode
+	SKU         string
+	Description *string
+	Category    ObjectIdentifier
+	// CategoryID is Category resolved when the job is accepted.
+	CategoryID string
+	// Attributes replace the item's attributes when HasAttributes.
+	Attributes    []UpsertItemPropertyParams
+	HasAttributes bool
+	Status        *constants.ArchiveStatus
+	Supply        *constants.Supply
+	ClearSupply   bool
+	UnitCost      *CreateRateParams
+	Sales         *UpsertItemSalesRow
+	Material      *UpsertItemMaterialRow
+}
+
+// UpsertItemSalesRow is a bulk row's sales section.
+type UpsertItemSalesRow struct {
+	UnitPrice        *CreateRateParams
+	ProductLineID    *string
+	ClearProductLine bool
+	PortalVisibility *constants.CustomerPortalVisibility
+	LeadTime         *QuantityInput
+	ClearLeadTime    bool
+}
+
+// UpsertItemMaterialRow is a bulk row's material section.
+type UpsertItemMaterialRow struct {
+	OrderPoint      *QuantityInput
+	ClearOrderPoint bool
+	LeadTime        *QuantityInput
+	ClearLeadTime   bool
+}
+
+// Input is the row's sales section as an item write takes it.
+func (r *UpsertItemSalesRow) Input() *ItemSalesInput {
+	if r == nil {
+		return nil
+	}
+	return &ItemSalesInput{
+		UnitPrice:        r.UnitPrice,
+		ProductLineID:    clearableOf(r.ProductLineID, r.ClearProductLine),
+		PortalVisibility: r.PortalVisibility,
+		LeadTime:         clearableOf(r.LeadTime, r.ClearLeadTime),
+	}
+}
+
+// Input is the row's material section as an item write takes it.
+func (r *UpsertItemMaterialRow) Input() *ItemMaterialInput {
+	if r == nil {
+		return nil
+	}
+	return &ItemMaterialInput{
+		OrderPoint: clearableOf(r.OrderPoint, r.ClearOrderPoint),
+		LeadTime:   clearableOf(r.LeadTime, r.ClearLeadTime),
+	}
+}
+
+// clearableOf is a field set to *v, cleared when clear, or unset when neither.
+func clearableOf[T any](v *T, clear bool) field.Clearable[T] {
+	switch {
+	case v != nil:
+		return field.Set(*v)
+	case clear:
+		return field.Clear[T]()
+	default:
+		return field.Unset[T]()
+	}
+}
+
+// BulkUpsertItemsParams creates or updates items by SKU.
+type BulkUpsertItemsParams struct {
+	AccountID string
+	Items     []UpsertItemParams
 }
 
 // RecalcItemBurnRateEvent is the outbox command payload asking a consumer to recompute an item's burn rate from history. It carries only the item's identity; the rate is recomputed from current state, so repeated commands coalesce and a redelivery recomputes the same absolute value.
@@ -154,6 +359,15 @@ type ListItemsParams struct {
 	Includes                 []string
 	ProductLineIDs           []string
 	CustomerIDs              []string
+	// SKUs match exactly, case-insensitively.
+	SKUs []string
+	// IsActive filters by status when set: true for active, false for archived.
+	IsActive *bool
+	// IsPortalReady filters sold items by portal visibility when set; unsold items never match.
+	IsPortalReady *bool
+	SupplierIDs   []string
+	// IDs (internal) narrows the list to these items.
+	IDs []string
 }
 
 type ListItemsResult struct {
@@ -254,8 +468,68 @@ type UpdateItemParams struct {
 	SKU               *string
 	Description       *string
 	UpdateDescription bool // true if the caller explicitly set the description field (even to null)
-	Notes             *string
-	UpdateNotes       bool // true if the caller explicitly set the notes field (even to null)
+	CategoryID        *string
+	// AttributeIDs replaces the item's attributes when set (empty removes them all).
+	AttributeIDs field.Optional[[]string]
+	Status       *constants.ArchiveStatus
+	Supply       field.Clearable[constants.Supply]
+	UnitCost     *CreateRateParams
+	Sales        *ItemSalesInput
+	Material     *ItemMaterialInput
+}
+
+// SetItemFieldsParams writes an item row's own columns; nil fields keep their values.
+type SetItemFieldsParams struct {
+	AccountID      string
+	ItemID         string
+	SKU            *string
+	SetDescription bool
+	Description    *string
+	CategoryID     *string
+	Status         *constants.ArchiveStatus
+	SetSupply      bool
+	Supply         *constants.Supply
+}
+
+// InsertItemParams writes a new item row; its three rates are inserted first.
+type InsertItemParams struct {
+	ItemID          string
+	AccountID       string
+	Type            constants.ItemTypeCode
+	SKU             string
+	Description     *string
+	CategoryID      string
+	UnitValueRateID string
+	UnitCostRateID  string
+	BurnRateRateID  string
+	Status          constants.ArchiveStatus
+	Supply          *constants.Supply
+}
+
+// ItemProductRow writes the product row that holds an item's selling details.
+type ItemProductRow struct {
+	ProductID     string
+	ItemID        string
+	ProductLineID *string
+	IsPortalReady bool
+	LeadTimeID    *string
+}
+
+// SetItemProductParams changes an item's product row; unset fields keep their values.
+type SetItemProductParams struct {
+	ItemID         string
+	SetProductLine bool
+	ProductLineID  *string
+	IsPortalReady  *bool
+	SetLeadTime    bool
+	LeadTimeID     *string
+}
+
+// ItemAssignability is whether an item may be newly assigned to an order, production or purchasing.
+type ItemAssignability struct {
+	ItemID       string
+	SKU          string
+	IsAssignable bool
 }
 
 // AddItemAttributeParams holds parameters for adding an attribute to an item.

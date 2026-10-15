@@ -192,10 +192,14 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 				}
 				return apiErr
 			}
-			if _, apiErr := txSvc.repos.NewMaterialRepo().GetByID(txCtx, domain.GetMaterialParams{AccountID: params.OwnerAccountID, MaterialID: params.MaterialID}); apiErr != nil {
+			material, apiErr := txSvc.repos.NewMaterialRepo().GetByID(txCtx, domain.GetMaterialParams{AccountID: params.OwnerAccountID, MaterialID: params.MaterialID})
+			if apiErr != nil {
 				if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 					return apierror.NewNotFoundError("No material found with the provided ID.").WithParam("material_id")
 				}
+				return apiErr
+			}
+			if apiErr := requireItemsAssignable(txCtx, txSvc.repos, params.OwnerAccountID, []string{material.ItemID}, "material_id"); apiErr != nil {
 				return apiErr
 			}
 

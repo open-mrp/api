@@ -40,6 +40,7 @@ const (
 	BulkUpsertParts            BulkOperation = "bulk_upsert_parts"
 	BulkUpsertProducts         BulkOperation = "bulk_upsert_products"
 	BulkUpsertMaterials        BulkOperation = "bulk_upsert_materials"
+	BulkUpsertItems            BulkOperation = "bulk_upsert_items"
 	BulkUpsertProperties       BulkOperation = "bulk_upsert_properties"
 	// BulkResolveHubspotCompanyReviews applies many company-match decisions at once, the path a reviewed spreadsheet comes back through.
 	BulkResolveHubspotCompanyReviews BulkOperation = "bulk_resolve_hubspot_company_reviews"
@@ -65,6 +66,7 @@ var BulkOperations = []BulkOperation{
 	BulkUpsertParts,
 	BulkUpsertProducts,
 	BulkUpsertMaterials,
+	BulkUpsertItems,
 	BulkUpsertProperties,
 	BulkResolveHubspotCompanyReviews,
 	PackPick,

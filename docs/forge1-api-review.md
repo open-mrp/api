@@ -263,24 +263,24 @@ Docstrings
 Endpoints: carriers list/create/retrieve/update/delete; service levels list/create/retrieve/update/delete under `/carriers/{carrier_id}/service-levels`. Internal (out of scope): `actions/sync-options`, `actions/initiate-oauth`, `oauth-status`.
 
 Carrier
-- [ ] `code` → required `type`: `fedex | ups | usps | ltl | will_call | local_delivery | other`. Migration: `ltl1` → `ltl`, `delivery` → `local_delivery`, `null` → `other`; drop `freight_collect` (unused; a freight-billing concept for shipping terms/orders later). Fixed after create. EDI integrations that used `ltl` vs `ltl1` to tell carriers apart move to `scac`.
-- [ ] Remove `deleted_at`.
-- [ ] Add `scac` (optional; 2–4 uppercase letters, Standard Carrier Alpha Code) on create/update; not unique. EDI integrations send `carrier.scac` instead of mapping carrier types to SCACs. Backfill `scac` on existing carriers from the integrations' current mappings.
-- [ ] Add `status: active | archived` (settable on create/update, `statuses[]` filter); archived carriers can't be newly set on orders or customer defaults.
-- [ ] `customer_portal_visibility` → `portal_visibility`.
-- [ ] `default_service_level` (expandable ServiceLevel, nullable); `default_service_level_id` on create/update (clearable); must belong to the carrier and be active.
-- [ ] `service_levels` include: first 10 + `page_info.next_page_url` to the sub-resource list.
-- [ ] Delete: 409 `resource_in_use` if referenced by `account_relation.default_carrier_id`, `sales_order.carrier_id`, `shipment.carrier_id`, `shipping_case.carrier_id`; returns the stub. Shippo deactivation stays outside the DB transaction.
-- [ ] `q`: substring on `name`. Drop FULLTEXT `carrier_name_idx`, `carrier_description_idx`, `carrier_name_description_idx`.
+- [x] `code` → required `type`: `fedex | ups | usps | ltl | will_call | local_delivery | other`. Migration: `ltl1` → `ltl`, `delivery` → `local_delivery`, `null` → `other`; drop `freight_collect` (unused; a freight-billing concept for shipping terms/orders later). Fixed after create. EDI integrations that used `ltl` vs `ltl1` to tell carriers apart move to `scac`.
+- [x] Remove `deleted_at`.
+- [ ] Add `scac` (optional; 2–4 uppercase letters, Standard Carrier Alpha Code) on create/update; not unique. EDI integrations send `carrier.scac` instead of mapping carrier types to SCACs. Backfill `scac` on existing carriers from the integrations' current mappings. (Field shipped; the backfill is tenant data from the private integrations, so it is set per carrier outside this repo.)
+- [x] Add `status: active | archived` (settable on create/update, `statuses[]` filter); archived carriers can't be newly set on orders or customer defaults.
+- [x] `customer_portal_visibility` → `portal_visibility`.
+- [x] `default_service_level` (expandable ServiceLevel, nullable); `default_service_level_id` on create/update (clearable); must belong to the carrier and be active.
+- [x] `service_levels` include: first 10 + `page_info.next_page_url` to the sub-resource list.
+- [x] Delete: 409 `resource_in_use` if referenced by `account_relation.default_carrier_id`, `sales_order.carrier_id`, `shipment.carrier_id`, `shipping_case.carrier_id`; returns the stub. Shippo deactivation stays outside the DB transaction.
+- [x] `q`: substring on `name`. Drop FULLTEXT `carrier_name_idx`, `carrier_description_idx`, `carrier_name_description_idx`.
 
 Service level
-- [ ] `service_level_token` → `code` (one field, unique per carrier). **DB: `service_level_token` holds the data we want; `code` is legacy.** Copy token into the kept column, then drop the legacy one (prod: identical on all 16 rows, but migrate token → code semantics, not the reverse).
-- [ ] Remove `is_default` (replaced by `carrier.default_service_level`; migrate the 2 flagged rows).
-- [ ] `default_transit_days` → `estimated_transit_days`.
-- [ ] `customer_portal_visibility` → `portal_visibility`; add `status: active | archived` + `statuses[]`.
-- [ ] Delete: 409 `resource_in_use` if referenced by `account_relation.default_carrier_option_id`, `sales_order.carrier_option_id`, `shipment.carrier_option_id`, `shipping_term_free_shipping_rule.carrier_option_id`, or it's the carrier's default; returns the stub.
-- [ ] Sync archives synced service levels the carrier no longer offers instead of deleting them; manually created ones are untouched. Shippo calls stay outside any transaction.
-- [ ] `q`: substring on `name`. Drop FULLTEXT `carrier_option_name_idx`, `carrier_option_code_idx`, `carrier_option_name_code_idx`.
+- [x] `service_level_token` → `code` (one field, unique per carrier). **DB: `service_level_token` holds the data we want; `code` is legacy.** Copy token into the kept column, then drop the legacy one (prod: identical on all 16 rows, but migrate token → code semantics, not the reverse).
+- [x] Remove `is_default` (replaced by `carrier.default_service_level`; migrate the 2 flagged rows).
+- [x] `default_transit_days` → `estimated_transit_days`.
+- [x] `customer_portal_visibility` → `portal_visibility`; add `status: active | archived` + `statuses[]`.
+- [x] Delete: 409 `resource_in_use` if referenced by `account_relation.default_carrier_option_id`, `sales_order.carrier_option_id`, `shipment.carrier_option_id`, `shipping_term_free_shipping_rule.carrier_option_id`, or it's the carrier's default; returns the stub.
+- [x] Sync archives synced service levels the carrier no longer offers instead of deleting them; manually created ones are untouched. Shippo calls stay outside any transaction.
+- [x] `q`: substring on `name`. Drop FULLTEXT `carrier_option_name_idx`, `carrier_option_code_idx`, `carrier_option_name_code_idx`.
 
 Docstrings
 
@@ -1666,11 +1666,17 @@ Carriers
 - `code` → required `type`; values `fedex | ups | usps | ltl | will_call | local_delivery | other` (`delivery` → `local_delivery`, `ltl1` → `ltl`, `null` → `other`, `freight_collect` removed).
 - `deleted_at` removed; `customer_portal_visibility` → `portal_visibility`; new `status`.
 - `default_service_level` / `default_service_level_id` on the carrier replaces `is_default` on service levels.
-- Carrier and service level delete blocked while in use (409); delete returns the stub.
+- Carrier and service level delete blocked while in use (409); delete returns the stub. Delete is a hard delete; preview.9 callers get the 409 too.
+- `default_service_level_id` is accepted on update only (a new carrier has no service levels of its own to name).
 - `service_levels` include: first 10 + `page_info.next_page_url`.
 
 Service levels
 - `service_level_token` → `code`; `default_transit_days` → `estimated_transit_days`; `is_default` removed; `customer_portal_visibility` → `portal_visibility`; new `status`.
+- New expandable `carrier` (null unless included).
+- Delete of the carrier's default is 409 `resource_in_use` (was 422), and the default can't be archived (422 on `status`).
+- Sync archives synced service levels the carrier stopped offering instead of deleting them; lists keep returning them unless filtered with `statuses[]=active`.
+- Archived carriers and service levels are refused (422 `resource_archived`) when newly set on a customer default or an order. preview.9 callers see the same.
+- Rate shop offers only active carriers and service levels.
 
 Units
 - `type` → `dimension`; list filter `type` → `dimensions[]`; `currency` is no longer a dimension, so currency units disappear from lists.

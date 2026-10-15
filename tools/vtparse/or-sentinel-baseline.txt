@@ -117,8 +117,6 @@ services/core-service/internal/infrastructure/sqlc/product.sql.go:listProductsFu
 services/core-service/internal/infrastructure/sqlc/product.sql.go:listProductsFullForwardBase 7
 services/core-service/internal/infrastructure/sqlc/product_line.sql.go:countProductLinesByName 1
 services/core-service/internal/infrastructure/sqlc/product_line.sql.go:exportProductLines 1
-services/core-service/internal/infrastructure/sqlc/product_line.sql.go:listProductLinesBackward 1
-services/core-service/internal/infrastructure/sqlc/product_line.sql.go:listProductLinesForward 2
 services/core-service/internal/infrastructure/sqlc/product_type.sql.go:countProductTypesByCode 1
 services/core-service/internal/infrastructure/sqlc/product_type.sql.go:countProductTypesByName 1
 services/core-service/internal/infrastructure/sqlc/product_type.sql.go:listProductTypesBackward 1

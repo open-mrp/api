@@ -107,61 +107,40 @@ func (r *productLineRepoImpl) List(ctx context.Context, params domain.ListProduc
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.list")
 	defer span.End()
 
-	searchQuery := buildProductLineSearchParams(params.Query)
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-	isActive := gosql.NullBool{}
-	if params.IsActive != nil {
-		isActive = gosql.NullBool{Bool: *params.IsActive, Valid: true}
+	filter := productLineListFilter{
+		accountID: params.AccountID,
+		search:    buildProductLineSearchParams(params.Query).String,
+		isActive:  params.IsActive,
+		dir:       pagination.DirectionForward,
+		limit:     params.Limit + 1,
 	}
-
 	var cursorDir *pagination.Direction
-	var items []*domain.ProductLineFull
-
-	cur, hasCursor := pagination.StringCursor{}, false
 	if params.Cursor != nil {
-		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
-		cur, hasCursor = decoded, true
 		cursorDir = &cur.Direction
+		filter.dir = cur.Direction
+		filter.cursorCreatedAt = &cur.OccurredAt
+		filter.cursorID = cur.ID
 	}
 
-	if hasCursor && cur.Direction == pagination.DirectionBackward {
-		rows, err := r.queries.ListProductLinesBackward(ctx, sqlc.ListProductLinesBackwardParams{
-			AccountID:       accountID,
-			SearchQuery:     searchQuery,
-			IsActive:        isActive,
-			CursorCreatedAt: cur.OccurredAt,
-			CursorID:        cur.ID,
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			items = append(items, mapProductLineRow(sqlc.GetProductLineRow(row)))
-		}
-	} else {
-		forward := sqlc.ListProductLinesForwardParams{
-			AccountID:   accountID,
-			SearchQuery: searchQuery,
-			IsActive:    isActive,
-			Limit:       params.Limit + 1,
-		}
-		if hasCursor {
-			forward.CursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
-			forward.CursorID = gosql.NullString{String: cur.ID, Valid: true}
-		}
-		rows, err := r.queries.ListProductLinesForward(ctx, forward)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			items = append(items, mapProductLineRow(sqlc.GetProductLineRow(row)))
-		}
+	query, args := buildProductLineListQuery(filter)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer rows.Close()
+	scanned, err := scanProductLineListRows(rows)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
+	items := make([]*domain.ProductLineFull, len(scanned))
+	for i, row := range scanned {
+		items[i] = mapProductLineRow(row)
+	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productLineCreatedAt, productLineID)
 	return &domain.ListProductLinesResult{ProductLines: result, PageInfo: pageInfo}, nil
 }

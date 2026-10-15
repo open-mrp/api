@@ -18,7 +18,7 @@ type RetrieveLocationRequest struct {
 	LocationID string `path:"id" validate:"required"`
 }
 
-// Returns a location by ID.
+// Retrieves a location.
 type RetrieveLocationEndpoint struct{}
 
 func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location] {
@@ -31,13 +31,12 @@ func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).GetLocation
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeLocation,
-			Fields:     []string{"parent", "children"},
+			Fields:     []string{"address", "parent", "children"},
 		}),
 		ObjectType: constants.ObjectTypeLocation,
 	})

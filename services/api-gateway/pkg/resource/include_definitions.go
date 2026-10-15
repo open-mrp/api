@@ -673,6 +673,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeLocation,
 		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "parent", ObjectType: constants.ObjectTypeLocation},
 			{Key: "children", ObjectType: constants.ObjectTypeLocation},
 		},

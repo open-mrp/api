@@ -159,13 +159,17 @@ func validateStockingLocations(ctx context.Context, repos domain.RepoFactory, ac
 	if apiErr != nil {
 		return apiErr
 	}
-	found := make(map[string]struct{}, len(locations))
+	found := make(map[string]*domain.Location, len(locations))
 	for _, l := range locations {
-		found[l.ID] = struct{}{}
+		found[l.ID] = l
 	}
 	for _, id := range locationIDs {
-		if _, ok := found[id]; !ok {
+		l, ok := found[id]
+		if !ok {
 			return apierror.NewFieldError("line_items.allocations.location_id", apierror.CodeInvalidFormat, "The storage location was not found.")
+		}
+		if apiErr := domain.RequireAssignable("line_items.allocations.location_id", "location", l.Status); apiErr != nil {
+			return apiErr
 		}
 	}
 	return nil

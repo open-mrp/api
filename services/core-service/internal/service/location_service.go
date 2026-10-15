@@ -181,26 +181,19 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *locationSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewLocationRepo()
 
-			// Validate parent exists in account if provided
-			if params.ParentID != nil {
-				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, *params.ParentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if !inAccount {
-					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "Parent location not found.")
-				}
+			status := constants.ArchiveStatusActive
+			if params.Status != nil {
+				status = *params.Status
 			}
-
-			// Validate all child IDs exist in account
-			for _, childID := range params.ChildIDs {
-				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, childID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if !inAccount {
-					return apierror.NewFieldError("child_ids", apierror.CodeInvalidFormat, "Child location not found.")
-				}
+			if apiErr := checkLocationShape(txCtx, txSvc.repos, params.AccountID, locationShape{
+				typeCode:  params.TypeCode,
+				status:    status,
+				parentID:  params.ParentID,
+				addressID: params.AddressID,
+				childIDs:  params.ChildIDs,
+				newParent: params.ParentID != nil,
+			}); apiErr != nil {
+				return apiErr
 			}
 
 			created, apiErr := txRepo.Create(txCtx, locationID, params)
@@ -208,6 +201,10 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 			result = created
+
+			if apiErr := claimDefaultSite(txCtx, txSvc.repos, params.AccountID, created); apiErr != nil {
+				return apiErr
+			}
 
 			changes := audit.ComputeChanges(nil, created)
 
@@ -293,36 +290,34 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
+			newParent := params.ParentID.IsSet() && !equalStringPtr(params.ParentID.ValuePtr(), old.ParentID)
 			params.ParentID = params.ParentID.BackfillUnsetPtr(old.ParentID)
+			params.AddressID = params.AddressID.BackfillUnsetPtr(old.AddressID)
 
-			if params.ParentID.IsSet() {
-				parentID, _ := params.ParentID.Value()
-				if parentID == params.LocationID {
-					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "A location cannot be its own parent.")
-				}
-				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, parentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if !inAccount {
-					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "Parent location not found.")
-				}
+			wasDefault, apiErr := isDefaultSite(txCtx, txSvc.repos, params.AccountID, params.LocationID)
+			if apiErr != nil {
+				return apiErr
 			}
-
-			if params.ChildIDs.WasProvided() {
-				childIDs := []string{}
-				if params.ChildIDs.IsSet() {
-					childIDs, _ = params.ChildIDs.Value()
-				}
-				for _, childID := range childIDs {
-					inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, childID)
-					if apiErr != nil {
-						return apiErr
-					}
-					if !inAccount {
-						return apierror.NewFieldError("child_ids", apierror.CodeInvalidFormat, "Child location not found.")
-					}
-				}
+			shape := locationShape{
+				id:             params.LocationID,
+				typeCode:       old.TypeCode,
+				status:         old.Status,
+				parentID:       params.ParentID.ValuePtr(),
+				addressID:      params.AddressID.ValuePtr(),
+				newParent:      newParent,
+				wasDefaultSite: wasDefault,
+			}
+			if params.TypeCode != nil {
+				shape.typeCode = *params.TypeCode
+			}
+			if params.Status != nil {
+				shape.status = *params.Status
+			}
+			if params.ChildIDs.IsSet() {
+				shape.childIDs, _ = params.ChildIDs.Value()
+			}
+			if apiErr := checkLocationShape(txCtx, txSvc.repos, params.AccountID, shape); apiErr != nil {
+				return apiErr
 			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -330,6 +325,10 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 			result = updated
+
+			if apiErr := claimDefaultSite(txCtx, txSvc.repos, params.AccountID, updated); apiErr != nil {
+				return apiErr
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 
@@ -395,17 +394,11 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Check for children
-	childCount, apiErr := repo.CountChildren(ctx, params.AccountID, params.LocationID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if childCount > 0 {
-		return tracing.Trace(span, apierror.NewValidationError("Cannot delete a location that has child locations. Please remove or reassign child locations first."))
-	}
-
-	// Delete in transaction
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *locationSvcImpl) *apierror.APIError {
+		if apiErr := domain.LocationReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), location.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeLocation, location.ID, params.AccountID, location); apiErr != nil {
 			return apiErr
 		}

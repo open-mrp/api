@@ -2185,7 +2185,7 @@ INSERT INTO `department` (`id`, `name`, `notes`, `account_id`, `location_id`) VA
 -- ============================================================================
 
 INSERT INTO `storage_location` (`id`, `account_id`, `storage_location_type_code`, `name`, `parent_id`) VALUES
-  (@stloc1, '@account_id', 'building', 'Main Building',          NULL),
+  (@stloc1, '@account_id', 'site',     'Main Building',          NULL),
   (@stloc2, '@account_id', 'section',  'Knitting Floor',         @stloc1),
   (@stloc3, '@account_id', 'section',  'Linking Floor',          @stloc1),
   (@stloc4, '@account_id', 'section',  'Wet Processing Area',    @stloc1),
@@ -2193,6 +2193,8 @@ INSERT INTO `storage_location` (`id`, `account_id`, `storage_location_type_code`
   (@stloc6, '@account_id', 'section',  'Finishing Area',         @stloc1),
   (@stloc7, '@account_id', 'section',  'Pack & Ship',            @stloc1),
   (@stloc8, '@account_id', 'section',  'Raw Materials Storage',  @stloc1);
+
+UPDATE `account` SET default_site_id = @stloc1 WHERE id = '@account_id';
 
 
 -- ============================================================================

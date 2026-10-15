@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/pricing"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
@@ -56,7 +57,7 @@ func TestValidateStockingData_RefusesALocationOutsideTheAccount(t *testing.T) {
 
 	f := newStockingValidationFixture(t)
 	f.locations.EXPECT().GetByIDs(gomock.Any(), "ac_1", []string{"sglc_own", "sglc_elsewhere"}).
-		Return([]*domain.Location{{ID: "sglc_own"}}, nil)
+		Return([]*domain.Location{{ID: "sglc_own", Status: constants.ArchiveStatusActive}}, nil)
 
 	apiErr := stockFourPairsAt(f, "sglc_own", "sglc_elsewhere", "sglc_own")
 	require.NotNil(t, apiErr)
@@ -70,7 +71,7 @@ func TestValidateStockingData_AcceptsTheAccountsOwnLocations(t *testing.T) {
 
 	f := newStockingValidationFixture(t)
 	f.locations.EXPECT().GetByIDs(gomock.Any(), "ac_1", []string{"sglc_a", "sglc_b"}).
-		Return([]*domain.Location{{ID: "sglc_b"}, {ID: "sglc_a"}}, nil)
+		Return([]*domain.Location{{ID: "sglc_b", Status: constants.ArchiveStatusActive}, {ID: "sglc_a", Status: constants.ArchiveStatusActive}}, nil)
 	f.pricing.EXPECT().ItemQuantityUnits(gomock.Any(), "ac_1", []string{"it_sock"}).
 		Return(map[string]map[string]struct{}{"it_sock": {"un_pr": {}}}, nil)
 	f.pricing.EXPECT().ProductQuantityUnits(gomock.Any(), "ac_1", gomock.Any()).Return(nil, nil)

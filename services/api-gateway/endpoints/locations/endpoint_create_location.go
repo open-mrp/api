@@ -16,36 +16,44 @@ import (
 
 // Request to create a location.
 type CreateLocationRequest struct {
-	// Display name of the location.
+	// Display name, unique (case-insensitive) among your account's locations.
 	//
 	// Maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// This location's level in the storage hierarchy.
+	// What kind of place this is.
 	//
-	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — the parent you choose is not required to be the next level up.
+	// `site` is a plant, warehouse or 3PL: always top-level, and the only type with an `address`. The rest run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — the parent you choose is not required to be the next level up.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// The location this one sits under in the storage hierarchy.
+	// `active` (the default) or `archived`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Where the site is. Only a `site` takes an address.
 	//
-	// Must be an existing location in your account. Omit to create a top-level location.
+	// Must be one of your account's addresses.
+	AddressID field.Optional[string] `json:"address_id,omitzero"`
+	// The location this one sits under.
+	//
+	// Must be one of your account's active locations. Omit to create a top-level location; a site is always top-level.
 	ParentID field.Optional[string] `json:"parent_id,omitzero"`
-	// Existing locations to attach beneath the new location.
+	// Existing locations to place beneath the new location.
 	//
-	// Each listed location is reparented onto the new location, detaching it from its current parent. Every ID must belong to your account.
+	// Each listed location is moved onto the new location, detaching it from its current parent. A site can't be listed.
 	ChildIDs field.Optional[[]string] `json:"child_ids,omitzero"`
 }
 
 var sampleCreateLocationRequest = &CreateLocationRequest{
 	Name:     "Warehouse A",
-	TypeCode: "building",
+	TypeCode: constants.LocationTypeCodeBuilding,
 	ParentID: field.Some(apiresource.SampleLocationID),
-	ChildIDs: field.Some([]string{apiresource.SampleLocationID}),
+	ChildIDs: field.Some([]string{apiresource.SampleLocationChildID}),
 }
 
 func (*CreateLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateLocationRequest)
 }
 
-// Creates a storage location, optionally placing it in the location hierarchy.
+// Creates a location.
+//
+// Create a `site` for each plant, warehouse or 3PL, then the buildings, aisles and bins inside it. Your account's first site becomes its default site.
 type CreateLocationEndpoint struct{}
 
 func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location] {
@@ -58,7 +66,6 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionCreate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).CreateLocation
 		},
@@ -67,7 +74,7 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeLocation,
-			Fields:     []string{"parent", "children"},
+			Fields:     []string{"address", "parent", "children"},
 		}),
 		ObjectType: constants.ObjectTypeLocation,
 	})

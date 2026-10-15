@@ -10,9 +10,12 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/apiversion"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -72,9 +75,13 @@ func (m *locationSvcImpl) ExportLocations(ctx context.Context, req *ExportLocati
 
 func (m *locationSvcImpl) ListLocations(ctx context.Context, req *ListLocationsRequest) (*apiresource.List[apiresource.Location], *apierror.APIError) {
 	pbReq := &pb.ListLocationsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:    req.Cursor,
+		Limit:     req.Limit,
+		Query:     req.Query,
+		ParentIds: req.ParentIDs,
+	}
+	for _, status := range req.Statuses {
+		pbReq.Statuses = append(pbReq.Statuses, string(status))
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.list", domain.ServiceName,
@@ -108,9 +115,11 @@ func (m *locationSvcImpl) GetLocation(ctx context.Context, req *RetrieveLocation
 
 func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 	pbReq := &pb.CreateLocationRequest{
-		Name:     req.Name,
-		TypeCode: string(req.TypeCode),
-		ParentId: req.ParentID.Ptr(),
+		Name:      req.Name,
+		TypeCode:  string(req.TypeCode),
+		Status:    req.Status.Ptr().StringPtr(),
+		ParentId:  req.ParentID.Ptr(),
+		AddressId: req.AddressID.Ptr(),
 	}
 	if childIDs := req.ChildIDs.Ptr(); childIDs != nil {
 		pbReq.ChildIds = *childIDs
@@ -129,10 +138,12 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 
 func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 	pbReq := &pb.UpdateLocationRequest{
-		Id:       req.LocationID,
-		Name:     req.Name.Ptr(),
-		TypeCode: req.TypeCode.Ptr().StringPtr(),
-		ParentId: fieldpb.StringClearableToProto(req.ParentID),
+		Id:        req.LocationID,
+		Name:      req.Name.Ptr(),
+		TypeCode:  req.TypeCode.Ptr().StringPtr(),
+		Status:    req.Status.Ptr().StringPtr(),
+		ParentId:  fieldpb.StringClearableToProto(req.ParentID),
+		AddressId: fieldpb.StringClearableToProto(req.AddressID),
 	}
 	pbReq.ChildIds = fieldpb.StringListSliceClearableToProto(req.ChildIDs)
 
@@ -176,7 +187,29 @@ func loadLocationByID(ctx context.Context, id string) (*apiresource.Location, *a
 	return v.(*apiresource.Location), nil
 }
 
+// requirePreview9 keeps a route forge removed working for 1.0.forge-preview.9 callers only.
+func requirePreview9(ctx context.Context) *apierror.APIError {
+	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok && v.Equal(apiversion.V1_0_Forge_Preview9) {
+		return nil
+	}
+	return apierror.NewNotFoundError("This route was removed in 1.0.forge. A location's `type` is an enum field.")
+}
+
+// preview9LocationTypes drops `site`, which preview.9 never had.
+func preview9LocationTypes(types []apiresource.LocationType) []apiresource.LocationType {
+	out := types[:0]
+	for _, t := range types {
+		if t.Code != constants.LocationTypeCodeSite {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 func (m *locationSvcImpl) ListLocationTypes(ctx context.Context, req *ListLocationTypesRequest) (*apiresource.List[apiresource.LocationType], *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListLocationTypesRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
@@ -192,10 +225,15 @@ func (m *locationSvcImpl) ListLocationTypes(ctx context.Context, req *ListLocati
 		return nil, apiErr
 	}
 
-	return LocationTypeListPresenter(ctx, resp), nil
+	list := LocationTypeListPresenter(ctx, resp)
+	list.Data = preview9LocationTypes(list.Data)
+	return list, nil
 }
 
 func (m *locationSvcImpl) GetLocationType(ctx context.Context, req *RetrieveLocationTypeRequest) (*apiresource.LocationType, *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetLocationTypeRequest{
 		Identifier: req.Identifier,
 	}
@@ -210,6 +248,9 @@ func (m *locationSvcImpl) GetLocationType(ctx context.Context, req *RetrieveLoca
 	}
 
 	result := LocationTypePresenter(resp.LocationType)
+	if result.Code == constants.LocationTypeCodeSite {
+		return nil, apierror.NewNotFoundError("Location type not found.")
+	}
 	return &result, nil
 }
 
@@ -223,6 +264,7 @@ func (m *locationSvcImpl) BulkUpsertLocations(ctx context.Context, req *BulkUpse
 		locations = append(locations, &pb.BulkUpsertLocationInput{
 			Name:     loc.Name,
 			TypeCode: string(loc.TypeCode),
+			Status:   loc.Status.StringPtr(),
 			Parent:   apirequest.ObjectIdentifierPtrToProto(loc.Parent),
 			Children: children,
 		})

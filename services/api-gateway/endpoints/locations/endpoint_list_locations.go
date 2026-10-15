@@ -17,15 +17,17 @@ import (
 // Request to list locations.
 type ListLocationsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return locations with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
+	// Only return the locations directly under one of these locations.
+	ParentIDs []string `query:"parent_ids" validate:"omitempty,max=100"`
 }
 
-// Returns a paginated list of locations in your account, newest first.
+// Returns a list of locations.
 //
-// Every location is returned regardless of its depth in the hierarchy, so top-level locations and their descendants appear side by side. The `q` search term matches on location name.
+// Every location in your account is returned regardless of its depth in the hierarchy, newest first. Use `parent_ids` to list one location's children.
 type ListLocationsEndpoint struct{}
 
 func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]] {
@@ -38,13 +40,12 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListLocationsRequest) (*apiresource.List[apiresource.Location], *apierror.APIError) {
 			return svc.(LocationSvc).ListLocations
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeLocation,
-			Fields:     []string{"parent", "children"},
+			Fields:     []string{"address", "parent", "children"},
 		}),
 		ObjectType: constants.ObjectTypeLocation,
 	})

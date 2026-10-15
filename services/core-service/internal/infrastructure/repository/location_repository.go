@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
@@ -31,64 +32,28 @@ func locationID(sl *domain.Location) string           { return sl.ID }
 func locationTypeCreatedAt(slt *domain.LocationType) time.Time { return slt.CreatedAt }
 func locationTypeID(slt *domain.LocationType) string           { return slt.ID }
 
-func mapLocationRow(
-	id string,
-	name string,
-	typeCode string,
-	parentID gosql.NullString,
-	parentName gosql.NullString,
-	parentTypeCode gosql.NullString,
-	createdAt, updatedAt time.Time,
-) *domain.Location {
+func mapLocationRow(row sqlc.GetLocationRow) *domain.Location {
 	sl := &domain.Location{
-		ID:        id,
-		Name:      name,
-		TypeCode:  typeCode,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		ID:        row.ID,
+		Name:      row.Name,
+		TypeCode:  row.TypeCode,
+		Status:    constants.ArchiveStatusFromIsActive(row.IsActive),
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
 	}
-	if parentID.Valid {
-		sl.ParentID = &parentID.String
+	if row.ParentID.Valid {
+		sl.ParentID = &row.ParentID.String
 	}
-	if parentName.Valid {
-		sl.ParentName = &parentName.String
+	if row.ParentName.Valid {
+		sl.ParentName = &row.ParentName.String
 	}
-	if parentTypeCode.Valid {
-		sl.ParentTypeCode = &parentTypeCode.String
+	if row.ParentTypeCode.Valid {
+		sl.ParentTypeCode = &row.ParentTypeCode.String
+	}
+	if row.AddressID.Valid {
+		sl.AddressID = &row.AddressID.String
 	}
 	return sl
-}
-
-func mapForwardLocationRow(row sqlc.ListLocationsForwardRow) *domain.Location {
-	return mapLocationRow(
-		row.ID, row.Name, row.TypeCode,
-		row.ParentID, row.ParentName, row.ParentTypeCode,
-		row.CreatedAt, row.UpdatedAt,
-	)
-}
-
-func mapBackwardLocationRow(row sqlc.ListLocationsBackwardRow) *domain.Location {
-	return mapLocationRow(
-		row.ID, row.Name, row.TypeCode,
-		row.ParentID, row.ParentName, row.ParentTypeCode,
-		row.CreatedAt, row.UpdatedAt,
-	)
-}
-
-func mapGetLocationRow(row sqlc.GetLocationRow) *domain.Location {
-	return mapLocationRow(
-		row.ID, row.Name, row.TypeCode,
-		row.ParentID, row.ParentName, row.ParentTypeCode,
-		row.CreatedAt, row.UpdatedAt,
-	)
-}
-
-func mapGetLocationsByIDsRow(row sqlc.GetLocationsByIDsRow) *domain.Location {
-	return mapLocationRow(
-		row.ID, row.Name, row.TypeCode,
-		row.ParentID, row.ParentName, row.ParentTypeCode,
-		row.CreatedAt, row.UpdatedAt,
-	)
 }
 
 func (r *locationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Location, *apierror.APIError) {
@@ -104,39 +69,49 @@ func (r *locationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids [
 	}
 
 	locations := make([]*domain.Location, len(rows))
-	parentIDs := make([]gosql.NullString, 0, len(rows))
 	for i, row := range rows {
-		locations[i] = mapGetLocationsByIDsRow(row)
-		parentIDs = append(parentIDs, gosql.NullString{String: row.ID, Valid: true})
+		locations[i] = mapLocationRow(sqlc.GetLocationRow(row))
 	}
-
-	if len(parentIDs) > 0 {
-		childRows, err := r.queries.ListLocationChildrenByParentIDs(ctx, sqlc.ListLocationChildrenByParentIDsParams{
-			ParentIds: parentIDs,
-			AccountID: accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		childrenByParent := make(map[string][]domain.LocationChild)
-		for _, cr := range childRows {
-			if cr.ParentID.Valid {
-				childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
-					ID:       cr.ID,
-					Name:     cr.Name,
-					TypeCode: cr.TypeCode,
-				})
-			}
-		}
-		for _, loc := range locations {
-			if children, ok := childrenByParent[loc.ID]; ok {
-				loc.Children = children
-			}
-		}
+	if apiErr := r.loadChildren(ctx, accountID, locations, domain.EmbeddedLocationChildren); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
 	return locations, nil
+}
+
+// loadChildren sets each location's children, newest first, keeping at most limit per location (0 keeps all).
+func (r *locationRepoImpl) loadChildren(ctx context.Context, accountID string, locations []*domain.Location, limit int) *apierror.APIError {
+	if len(locations) == 0 {
+		return nil
+	}
+	parentIDs := make([]gosql.NullString, len(locations))
+	for i, loc := range locations {
+		parentIDs[i] = gosql.NullString{String: loc.ID, Valid: true}
+	}
+	childRows, err := r.queries.ListLocationChildrenByParentIDs(ctx, sqlc.ListLocationChildrenByParentIDsParams{
+		ParentIds: parentIDs,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	childrenByParent := make(map[string][]domain.LocationChild, len(locations))
+	for _, cr := range childRows {
+		if !cr.ParentID.Valid {
+			continue
+		}
+		if limit > 0 && len(childrenByParent[cr.ParentID.String]) >= limit {
+			continue
+		}
+		childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
+			ID:       cr.ID,
+			Name:     cr.Name,
+			TypeCode: cr.TypeCode,
+		})
+	}
+	for _, loc := range locations {
+		loc.Children = childrenByParent[loc.ID]
+	}
+	return nil
 }
 
 func buildLocationSearchParams(query *string) gosql.NullString {
@@ -144,39 +119,6 @@ func buildLocationSearchParams(query *string) gosql.NullString {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
-}
-
-func (r *locationRepoImpl) fetchChildren(ctx context.Context, accountID, parentID string) ([]domain.LocationChild, *apierror.APIError) {
-	rows, err := r.queries.ListLocationChildren(ctx, sqlc.ListLocationChildrenParams{
-		ParentID:  gosql.NullString{String: parentID, Valid: true},
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, apiErr
-	}
-	children := make([]domain.LocationChild, len(rows))
-	for i, row := range rows {
-		children[i] = domain.LocationChild{
-			ID:       row.ID,
-			Name:     row.Name,
-			TypeCode: row.TypeCode,
-		}
-	}
-	return children, nil
-}
-
-func (r *locationRepoImpl) populateChildren(ctx context.Context, accountID string, locations []*domain.Location, incs []string) *apierror.APIError {
-	if !slices.Contains(incs, "children") {
-		return nil
-	}
-	for _, sl := range locations {
-		children, apiErr := r.fetchChildren(ctx, accountID, sl.ID)
-		if apiErr != nil {
-			return apiErr
-		}
-		sl.Children = children
-	}
-	return nil
 }
 
 func (r *locationRepoImpl) Export(ctx context.Context, params domain.ExportLocationsParams) ([]*domain.Location, *apierror.APIError) {
@@ -193,7 +135,6 @@ func (r *locationRepoImpl) Export(ctx context.Context, params domain.ExportLocat
 	}
 
 	locations := make([]*domain.Location, len(rows))
-	parentIDs := make([]gosql.NullString, 0, len(rows))
 	for i, row := range rows {
 		loc := &domain.Location{
 			ID:        row.ID,
@@ -209,34 +150,12 @@ func (r *locationRepoImpl) Export(ctx context.Context, params domain.ExportLocat
 			loc.ParentName = &row.ParentName.String
 		}
 		locations[i] = loc
-		parentIDs = append(parentIDs, gosql.NullString{String: row.ID, Valid: true})
 	}
 
 	// The sheet lists each location's children, so they load in one extra query.
-	if len(parentIDs) > 0 {
-		childRows, err := r.queries.ListLocationChildrenByParentIDs(ctx, sqlc.ListLocationChildrenByParentIDsParams{
-			ParentIds: parentIDs,
-			AccountID: params.AccountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		childrenByParent := make(map[string][]domain.LocationChild, len(parentIDs))
-		for _, cr := range childRows {
-			if cr.ParentID.Valid {
-				childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
-					ID:       cr.ID,
-					Name:     cr.Name,
-					TypeCode: cr.TypeCode,
-				})
-			}
-		}
-		for _, loc := range locations {
-			loc.Children = childrenByParent[loc.ID]
-		}
+	if apiErr := r.loadChildren(ctx, params.AccountID, locations, 0); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
 	return locations, nil
 }
 
@@ -244,75 +163,38 @@ func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocations
 	ctx, span := locationRepoTracer.Start(ctx, "repository.location.list")
 	defer span.End()
 
-	searchQuery := buildLocationSearchParams(params.Query)
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if *cursorDir == pagination.DirectionBackward {
-			rows, err := r.queries.ListLocationsBackward(ctx, sqlc.ListLocationsBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			locations := make([]*domain.Location, len(rows))
-			for i, row := range rows {
-				locations[i] = mapBackwardLocationRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-			if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListLocationsForward(ctx, sqlc.ListLocationsForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		locations := make([]*domain.Location, len(rows))
-		for i, row := range rows {
-			locations[i] = mapForwardLocationRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-		if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	rows, err := r.queries.ListLocationsForward(ctx, sqlc.ListLocationsForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
+	query, args := buildLocationListQuery(locationListFilter{
+		accountID: params.AccountID,
+		search:    buildLocationSearchParams(params.Query).String,
+		isActive:  params.IsActive,
+		parentIDs: params.ParentIDs,
+		cursor:    cursor,
+		limit:     params.Limit + 1,
 	})
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
+	scanned, err := scanLocationListRows(rows)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	locations := make([]*domain.Location, len(rows))
-	for i, row := range rows {
-		locations[i] = mapForwardLocationRow(row)
+	locations := make([]*domain.Location, len(scanned))
+	for i, row := range scanned {
+		locations[i] = mapLocationRow(row)
 	}
-	result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-	if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDirection(cursor), locationCreatedAt, locationID)
+	if slices.Contains(params.Includes, "children") {
+		if apiErr := r.loadChildren(ctx, params.AccountID, result, domain.EmbeddedLocationChildren); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 	return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
 }
@@ -329,14 +211,12 @@ func (r *locationRepoImpl) Get(ctx context.Context, params domain.GetLocationPar
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	sl := mapGetLocationRow(row)
+	sl := mapLocationRow(row)
 
 	if slices.Contains(params.Includes, "children") {
-		children, apiErr := r.fetchChildren(ctx, params.AccountID, sl.ID)
-		if apiErr != nil {
+		if apiErr := r.loadChildren(ctx, params.AccountID, []*domain.Location{sl}, domain.EmbeddedLocationChildren); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		sl.Children = children
 	}
 
 	return sl, nil
@@ -346,12 +226,18 @@ func (r *locationRepoImpl) Create(ctx context.Context, id string, params domain.
 	ctx, span := locationRepoTracer.Start(ctx, "repository.location.create")
 	defer span.End()
 
+	status := constants.ArchiveStatusActive
+	if params.Status != nil {
+		status = *params.Status
+	}
 	if err := r.queries.InsertLocation(ctx, sqlc.InsertLocationParams{
 		ID:                      id,
 		AccountID:               params.AccountID,
 		Name:                    params.Name,
 		StorageLocationTypeCode: params.TypeCode,
 		ParentID:                toNullString(params.ParentID),
+		AddressID:               toNullString(params.AddressID),
+		IsActive:                status.IsActive(),
 	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -378,16 +264,24 @@ func (r *locationRepoImpl) Create(ctx context.Context, id string, params domain.
 	})
 }
 
+// Update writes the fields params sets. ParentID and AddressID are written as given, so the caller backfills an
+// unset one with the current value.
 func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocationParams) (*domain.Location, *apierror.APIError) {
 	ctx, span := locationRepoTracer.Start(ctx, "repository.location.update")
 	defer span.End()
 
+	var isActive gosql.NullBool
+	if params.Status != nil {
+		isActive = gosql.NullBool{Bool: params.Status.IsActive(), Valid: true}
+	}
 	result, err := r.queries.UpdateLocation(ctx, sqlc.UpdateLocationParams{
 		ID:                      params.LocationID,
 		AccountID:               params.AccountID,
 		Name:                    toNullString(params.Name),
 		StorageLocationTypeCode: toNullString(params.TypeCode),
 		ParentID:                field.StringToNullString(params.ParentID),
+		AddressID:               field.StringToNullString(params.AddressID),
+		IsActive:                isActive,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -461,11 +355,7 @@ func (r *locationRepoImpl) FindByNames(ctx context.Context, accountID string, na
 
 	results := make([]*domain.Location, len(rows))
 	for i, row := range rows {
-		results[i] = mapLocationRow(
-			row.ID, row.Name, row.TypeCode,
-			row.ParentID, row.ParentName, row.ParentTypeCode,
-			row.CreatedAt, row.UpdatedAt,
-		)
+		results[i] = mapLocationRow(sqlc.GetLocationRow(row))
 	}
 	return results, nil
 }
@@ -500,18 +390,57 @@ func (r *locationRepoImpl) IsInAccount(ctx context.Context, accountID, locationI
 	return exists, nil
 }
 
-func (r *locationRepoImpl) CountChildren(ctx context.Context, accountID, parentID string) (int64, *apierror.APIError) {
-	ctx, span := locationRepoTracer.Start(ctx, "repository.location.count_children")
+func (r *locationRepoImpl) DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.default_site_id")
 	defer span.End()
 
-	count, err := r.queries.CountLocationChildren(ctx, sqlc.CountLocationChildrenParams{
-		ParentID:  gosql.NullString{String: parentID, Valid: true},
+	id, err := r.queries.GetAccountDefaultSiteID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !id.Valid {
+		return nil, nil
+	}
+	return &id.String, nil
+}
+
+func (r *locationRepoImpl) SetDefaultSiteIfUnset(ctx context.Context, accountID, siteID string) (bool, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.set_default_site_if_unset")
+	defer span.End()
+
+	result, err := r.queries.SetAccountDefaultSiteIfUnset(ctx, sqlc.SetAccountDefaultSiteIfUnsetParams{
+		SiteID:    gosql.NullString{String: siteID, Valid: true},
 		AccountID: accountID,
 	})
-	if err != nil {
-		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to count location children."))
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
 	}
-	return count, nil
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
+	}
+	return n > 0, nil
+}
+
+func (r *locationRepoImpl) ListTreeNodes(ctx context.Context, accountID string) ([]domain.LocationTreeNode, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.list_tree_nodes")
+	defer span.End()
+
+	rows, err := r.queries.ListLocationTreeNodes(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	nodes := make([]domain.LocationTreeNode, len(rows))
+	for i, row := range rows {
+		nodes[i] = domain.LocationTreeNode{ID: row.ID, TypeCode: row.TypeCode}
+		if row.ParentID.Valid {
+			nodes[i].ParentID = &row.ParentID.String
+		}
+	}
+	return nodes, nil
 }
 
 func (r *locationRepoImpl) ListTypes(ctx context.Context, params domain.ListLocationTypesParams) (*domain.ListLocationTypesResult, *apierror.APIError) {

@@ -257,6 +257,8 @@ message LocationInfo {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   optional string parent_type_code = 10;
+  string status = 11;
+  optional string address_id = 12;
 }
 message LocationTypeInfo {
   string id = 1;
@@ -270,6 +272,8 @@ message ListLocationsRequest {
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  repeated string statuses = 5;
+  repeated string parent_ids = 6;
 }
 message ListLocationsResponse {
   repeated LocationInfo locations = 1;
@@ -294,6 +298,8 @@ message CreateLocationRequest {
   optional string parent_id = 3;
   repeated string child_ids = 4;
   repeated string includes = 5;
+  optional string status = 6;
+  optional string address_id = 7;
 }
 message CreateLocationResponse {
   LocationInfo location = 1;
@@ -305,6 +311,8 @@ message UpdateLocationRequest {
   optional StringPatch parent_id = 4;
   optional StringListPatch child_ids = 6;
   repeated string includes = 7;
+  optional string status = 8;
+  optional StringPatch address_id = 9;
 }
 message UpdateLocationResponse {
   LocationInfo location = 1;
@@ -339,6 +347,7 @@ message BulkUpsertLocationInput {
   string type_code = 2;
   ObjectIdentifier parent = 3;
   repeated ObjectIdentifier children = 4;
+  optional string status = 5;
 }
 message BulkUpsertLocationsRequest {
   repeated BulkUpsertLocationInput locations = 1;

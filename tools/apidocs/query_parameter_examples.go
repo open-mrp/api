@@ -121,6 +121,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"invoice_ids":          apiresource.SampleInvoiceID,
 		"item_ids":             apiresource.SampleItemID,
 		"machine_ids":          apiresource.SampleMachineID,
+		"parent_ids":           apiresource.SampleLocationID,
+		"site_ids":             apiresource.SampleLocationID,
 		"scope_ref_ids":        apiresource.SampleItemID,
 		"root_resource_id":     apiresource.SampleAuditEventResourceID,
 		"scanning_station_ids": apiresource.SampleScanningStationID,

@@ -1,52 +1,3 @@
--- name: ListLocationsForward :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code,
-    sl.parent_id,
-    p.name AS parent_name,
-    p.storage_location_type_code AS parent_type_code,
-    sl.created_at,
-    sl.updated_at
-FROM storage_location sl
-LEFT JOIN storage_location p ON p.id = sl.parent_id
-WHERE sl.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR sl.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR sl.created_at < sqlc.narg('cursor_created_at')
-    OR (sl.created_at = sqlc.narg('cursor_created_at') AND sl.id < sqlc.narg('cursor_id'))
-)
-ORDER BY sl.created_at DESC, sl.id DESC
-LIMIT ?;
-
--- name: ListLocationsBackward :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code,
-    sl.parent_id,
-    p.name AS parent_name,
-    p.storage_location_type_code AS parent_type_code,
-    sl.created_at,
-    sl.updated_at
-FROM storage_location sl
-LEFT JOIN storage_location p ON p.id = sl.parent_id
-WHERE sl.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR sl.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sl.created_at > sqlc.arg('cursor_created_at')
-    OR (sl.created_at = sqlc.arg('cursor_created_at') AND sl.id > sqlc.arg('cursor_id'))
-)
-ORDER BY sl.created_at ASC, sl.id ASC
-LIMIT ?;
-
 -- name: GetLocation :one
 SELECT
     sl.id,
@@ -55,28 +6,14 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
 LEFT JOIN storage_location p ON p.id = sl.parent_id
 WHERE sl.id = sqlc.arg('id')
 AND sl.account_id = sqlc.arg('account_id');
-
--- name: ListLocationChildren :many
-SELECT
-    sl.id,
-    sl.name,
-    sl.storage_location_type_code AS type_code
-FROM storage_location sl
-WHERE sl.parent_id = sqlc.arg('parent_id')
-AND sl.account_id = sqlc.arg('account_id')
-ORDER BY sl.name ASC;
-
--- name: CountLocationChildren :one
-SELECT COUNT(*) AS count
-FROM storage_location
-WHERE parent_id = sqlc.arg('parent_id')
-AND account_id = sqlc.arg('account_id');
 
 -- name: GetLocationsByIDs :many
 SELECT
@@ -86,6 +23,8 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
@@ -98,11 +37,12 @@ SELECT
     sl.id,
     sl.name,
     sl.storage_location_type_code AS type_code,
-    sl.parent_id
+    sl.parent_id,
+    sl.created_at
 FROM storage_location sl
 WHERE sl.parent_id IN (sqlc.slice('parent_ids'))
 AND sl.account_id = sqlc.arg('account_id')
-ORDER BY sl.name ASC;
+ORDER BY sl.created_at DESC, sl.id DESC;
 
 -- name: InsertLocation :exec
 INSERT INTO storage_location (
@@ -111,6 +51,8 @@ INSERT INTO storage_location (
     name,
     storage_location_type_code,
     parent_id,
+    address_id,
+    is_active,
     created_at,
     updated_at
 ) VALUES (
@@ -119,6 +61,8 @@ INSERT INTO storage_location (
     sqlc.arg('name'),
     sqlc.arg('storage_location_type_code'),
     sqlc.narg('parent_id'),
+    sqlc.narg('address_id'),
+    sqlc.arg('is_active'),
     NOW(3),
     NOW(3)
 );
@@ -142,6 +86,8 @@ UPDATE storage_location SET
     name = COALESCE(sqlc.narg('name'), name),
     storage_location_type_code = COALESCE(sqlc.narg('storage_location_type_code'), storage_location_type_code),
     parent_id = sqlc.narg('parent_id'),
+    address_id = sqlc.narg('address_id'),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -159,6 +105,8 @@ SELECT
     sl.parent_id,
     p.name AS parent_name,
     p.storage_location_type_code AS parent_type_code,
+    sl.is_active,
+    sl.address_id,
     sl.created_at,
     sl.updated_at
 FROM storage_location sl
@@ -243,3 +191,17 @@ AND (
 )
 ORDER BY sl.created_at DESC, sl.id DESC
 LIMIT ?;
+
+
+-- name: GetAccountDefaultSiteID :one
+SELECT default_site_id FROM account WHERE id = sqlc.arg('account_id');
+
+-- name: SetAccountDefaultSiteIfUnset :execresult
+UPDATE account SET default_site_id = sqlc.arg('site_id'), updated_at = NOW(3)
+WHERE id = sqlc.arg('account_id') AND default_site_id IS NULL;
+
+-- name: ListLocationTreeNodes :many
+-- Every location's place in the tree, for working out which site each belongs to. An account holds a few hundred.
+SELECT id, parent_id, storage_location_type_code AS type_code
+FROM storage_location
+WHERE account_id = sqlc.arg('account_id');

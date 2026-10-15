@@ -406,8 +406,15 @@ INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, ma
     ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.openmrp.ai', 'verified',
      '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', 'mail.mail.e2e.openmrp.ai', NOW(), NOW(), NOW());
 
-INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, created_at, updated_at) VALUES
-    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
+-- The inbox seats a team roster on each new thread, so its `group` include resolves a real group.
+INSERT IGNORE INTO messaging_group (id, account_id, name, created_at, updated_at) VALUES
+    ('cvgp_01seedinboxteam00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'E2E Support Team', NOW(), NOW());
+
+INSERT IGNORE INTO messaging_group_member (id, group_id, account_id, member_type, account_user_id, created_at) VALUES
+    ('cvgppt_01seedinboxtm00', 'cvgp_01seedinboxteam00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'user', 'acus_s83fjhyfmqen', NOW());
+
+INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, group_id, created_at, updated_at) VALUES
+    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', 'cvgp_01seedinboxteam00', NOW(), NOW());
 
 -- A configured sender so GET/PUT/DELETE /v1/messaging/email-sender resolve against a real row.
 INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, from_name, reply_to, created_at, updated_at) VALUES

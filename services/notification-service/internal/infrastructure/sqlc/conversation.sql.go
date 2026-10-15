@@ -8,8 +8,6 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"strings"
-	"time"
 
 	"github.com/open-mrp/apikit/db"
 )
@@ -859,178 +857,6 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 	return items, nil
 }
 
-const listConversationsForUser = `-- name: ListConversationsForUser :many
-SELECT
-    c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at, c.continues_conversation_id,
-    p.id AS participant_id,
-    p.last_read_sequence AS participant_last_read_sequence,
-    p.hidden_at AS participant_hidden_at
-FROM conversation c
-JOIN conversation_participant p
-    ON p.conversation_id = c.id AND p.account_user_id = ?
-WHERE c.account_id = ?
-  AND p.membership = 'active'
-  -- Internal conversations only. External customer-facing cases (audience='customer': portal support
-  -- and email-bridged threads) live in the support inbox, not a staff member's Messages list.
-  AND c.audience = 'internal'
-  AND (
-    (? IS NULL OR ? = 'active') AND p.hidden_at IS NULL
-    OR ? = 'hidden' AND p.hidden_at IS NOT NULL
-    OR ? = 'all'
-  )
-  AND (? IS NULL OR c.type = ?)
-  -- Conversations that also seat any of the given account users, served by cvpt_conv_user_uq.
-  AND (? = 0 OR EXISTS (
-    SELECT 1 FROM conversation_participant op
-    WHERE op.conversation_id = c.id AND op.membership = 'active'
-      AND op.account_user_id IN (/*SLICE:participant_account_user_ids*/?)
-  ))
-  -- Conversations with no messages have no last_message_at and sort after every other row, so a
-  -- cursor taken in that tail pages them by id alone.
-  AND (
-    ? IS NULL
-    OR (? = FALSE AND (
-      c.last_message_at < ?
-      OR (c.last_message_at = ? AND c.id < ?)
-      OR c.last_message_at IS NULL
-    ))
-    OR (? = TRUE AND c.last_message_at IS NULL AND c.id < ?)
-  )
-ORDER BY c.last_message_at DESC, c.id DESC
-LIMIT ?
-`
-
-type ListConversationsForUserParams struct {
-	AccountUserID             sql.NullString
-	AccountID                 string
-	Status                    interface{}
-	Type                      sql.NullString
-	IncludeParticipantFilter  interface{}
-	ParticipantAccountUserIds []sql.NullString
-	CursorID                  sql.NullString
-	CursorInNullTail          interface{}
-	CursorLastMessageAt       sql.NullTime
-	Limit                     int32
-}
-
-type ListConversationsForUserRow struct {
-	ID                          string
-	AccountID                   string
-	Type                        string
-	Audience                    string
-	Title                       sql.NullString
-	GroupID                     sql.NullString
-	TopicResourceType           sql.NullString
-	TopicResourceID             sql.NullString
-	CreatedByParticipantID      sql.NullString
-	NextSequence                int64
-	LastMessageID               sql.NullString
-	LastMessageAt               sql.NullTime
-	IsArchived                  bool
-	LegalHold                   bool
-	WorkflowStatus              sql.NullString
-	AssigneeResourceType        sql.NullString
-	AssigneeResourceID          sql.NullString
-	EmailInboxID                sql.NullString
-	EmailExternalAddress        sql.NullString
-	Metadata                    db.NullableRawMessage
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
-	ContinuesConversationID     sql.NullString
-	ParticipantID               string
-	ParticipantLastReadSequence int64
-	ParticipantHiddenAt         sql.NullTime
-}
-
-// Lists the caller's active, non-hidden conversations (most-recently-active first), joined with
-// the caller's participant row so the service can compute per-conversation unread.
-// Keyset paginates on (c.last_message_at DESC, c.id DESC) over the parent `conversation`.
-// ACCEPTED RESIDUAL (performant-list-endpoint-patterns.md, residual-documentation):
-// the selective scope (membership: p.account_user_id + p.membership='active' + p.hidden_at IS NULL)
-// lives on the joined `conversation_participant`, while the keyset sort key lives on the
-// parent `conversation`. For a user whose memberships are sparse relative to the account's
-// conversation volume, the optimizer can drive the keyset off `conversation` and probe
-// participant per row (a rare-match stall) rather than driving membership-first. This is
-// accepted rather than denormalizing the keyset sort columns (last_message_at, id) onto
-// `conversation_participant` and driving from a membership-pinned index. See notes for the
-// membership-first subquery rewrite if this list becomes hot.
-func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversationsForUserParams) ([]ListConversationsForUserRow, error) {
-	query := listConversationsForUser
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountUserID)
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Type)
-	queryParams = append(queryParams, arg.Type)
-	queryParams = append(queryParams, arg.IncludeParticipantFilter)
-	if len(arg.ParticipantAccountUserIds) > 0 {
-		for _, v := range arg.ParticipantAccountUserIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:participant_account_user_ids*/?", strings.Repeat(",?", len(arg.ParticipantAccountUserIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:participant_account_user_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.CursorInNullTail)
-	queryParams = append(queryParams, arg.CursorLastMessageAt)
-	queryParams = append(queryParams, arg.CursorLastMessageAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.CursorInNullTail)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListConversationsForUserRow
-	for rows.Next() {
-		var i ListConversationsForUserRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.AccountID,
-			&i.Type,
-			&i.Audience,
-			&i.Title,
-			&i.GroupID,
-			&i.TopicResourceType,
-			&i.TopicResourceID,
-			&i.CreatedByParticipantID,
-			&i.NextSequence,
-			&i.LastMessageID,
-			&i.LastMessageAt,
-			&i.IsArchived,
-			&i.LegalHold,
-			&i.WorkflowStatus,
-			&i.AssigneeResourceType,
-			&i.AssigneeResourceID,
-			&i.EmailInboxID,
-			&i.EmailExternalAddress,
-			&i.Metadata,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ContinuesConversationID,
-			&i.ParticipantID,
-			&i.ParticipantLastReadSequence,
-			&i.ParticipantHiddenAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listParticipants = `-- name: ListParticipants :many
 SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND membership = 'active'
@@ -1093,7 +919,7 @@ WHERE account_id = ?
   AND (? = FALSE OR workflow_status <> 'resolved')
   AND (? IS NULL OR assignee_resource_id = ?)
   AND (? IS NULL OR assignee_resource_id IS NULL)
-  -- A case with no messages sorts last; see ListConversationsForUser for the null-tail cursor.
+  -- A case with no messages sorts last; see buildConversationListQuery for the null-tail cursor.
   AND (
     ? IS NULL
     OR (? = FALSE AND (

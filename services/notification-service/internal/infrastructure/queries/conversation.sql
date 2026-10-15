@@ -57,58 +57,6 @@ SET next_sequence = next_sequence + 1,
     updated_at = NOW(3)
 WHERE id = ?;
 
--- name: ListConversationsForUser :many
--- Lists the caller's active, non-hidden conversations (most-recently-active first), joined with
--- the caller's participant row so the service can compute per-conversation unread.
--- Keyset paginates on (c.last_message_at DESC, c.id DESC) over the parent `conversation`.
--- ACCEPTED RESIDUAL (performant-list-endpoint-patterns.md, residual-documentation):
--- the selective scope (membership: p.account_user_id + p.membership='active' + p.hidden_at IS NULL)
--- lives on the joined `conversation_participant`, while the keyset sort key lives on the
--- parent `conversation`. For a user whose memberships are sparse relative to the account's
--- conversation volume, the optimizer can drive the keyset off `conversation` and probe
--- participant per row (a rare-match stall) rather than driving membership-first. This is
--- accepted rather than denormalizing the keyset sort columns (last_message_at, id) onto
--- `conversation_participant` and driving from a membership-pinned index. See notes for the
--- membership-first subquery rewrite if this list becomes hot.
-SELECT
-    c.*,
-    p.id AS participant_id,
-    p.last_read_sequence AS participant_last_read_sequence,
-    p.hidden_at AS participant_hidden_at
-FROM conversation c
-JOIN conversation_participant p
-    ON p.conversation_id = c.id AND p.account_user_id = sqlc.arg('account_user_id')
-WHERE c.account_id = sqlc.arg('account_id')
-  AND p.membership = 'active'
-  -- Internal conversations only. External customer-facing cases (audience='customer': portal support
-  -- and email-bridged threads) live in the support inbox, not a staff member's Messages list.
-  AND c.audience = 'internal'
-  AND (
-    (sqlc.narg('status') IS NULL OR sqlc.narg('status') = 'active') AND p.hidden_at IS NULL
-    OR sqlc.narg('status') = 'hidden' AND p.hidden_at IS NOT NULL
-    OR sqlc.narg('status') = 'all'
-  )
-  AND (sqlc.narg('type') IS NULL OR c.type = sqlc.narg('type'))
-  -- Conversations that also seat any of the given account users, served by cvpt_conv_user_uq.
-  AND (sqlc.arg('include_participant_filter') = 0 OR EXISTS (
-    SELECT 1 FROM conversation_participant op
-    WHERE op.conversation_id = c.id AND op.membership = 'active'
-      AND op.account_user_id IN (sqlc.slice('participant_account_user_ids'))
-  ))
-  -- Conversations with no messages have no last_message_at and sort after every other row, so a
-  -- cursor taken in that tail pages them by id alone.
-  AND (
-    sqlc.narg('cursor_id') IS NULL
-    OR (sqlc.arg('cursor_in_null_tail') = FALSE AND (
-      c.last_message_at < sqlc.narg('cursor_last_message_at')
-      OR (c.last_message_at = sqlc.narg('cursor_last_message_at') AND c.id < sqlc.narg('cursor_id'))
-      OR c.last_message_at IS NULL
-    ))
-    OR (sqlc.arg('cursor_in_null_tail') = TRUE AND c.last_message_at IS NULL AND c.id < sqlc.narg('cursor_id'))
-  )
-ORDER BY c.last_message_at DESC, c.id DESC
-LIMIT ?;
-
 -- name: GetDMConversationID :one
 SELECT conversation_id FROM conversation_dm_key
 WHERE account_id = ? AND dm_key = ?;
@@ -277,7 +225,7 @@ WHERE account_id = sqlc.arg('account_id')
   AND (sqlc.arg('hide_resolved') = FALSE OR workflow_status <> 'resolved')
   AND (sqlc.narg('assignee_resource_id') IS NULL OR assignee_resource_id = sqlc.narg('assignee_resource_id'))
   AND (sqlc.narg('unassigned') IS NULL OR assignee_resource_id IS NULL)
-  -- A case with no messages sorts last; see ListConversationsForUser for the null-tail cursor.
+  -- A case with no messages sorts last; see buildConversationListQuery for the null-tail cursor.
   AND (
     sqlc.narg('cursor_id') IS NULL
     OR (sqlc.arg('cursor_in_null_tail') = FALSE AND (

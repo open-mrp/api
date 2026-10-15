@@ -17,10 +17,16 @@ ORDER BY updated_at DESC, id DESC;
 -- One keyset page of an account's rosters, most recently updated first.
 SELECT * FROM messaging_group
 WHERE account_id = sqlc.arg('account_id')
+ORDER BY updated_at DESC, id DESC
+LIMIT ?;
+
+-- name: ListMessagingGroupsPageAfter :many
+-- The page after a cursor.
+SELECT * FROM messaging_group
+WHERE account_id = sqlc.arg('account_id')
   AND (
-    sqlc.narg('cursor_updated_at') IS NULL
-    OR updated_at < sqlc.narg('cursor_updated_at')
-    OR (updated_at = sqlc.narg('cursor_updated_at') AND id < sqlc.narg('cursor_id'))
+    updated_at < sqlc.arg('cursor_updated_at')
+    OR (updated_at = sqlc.arg('cursor_updated_at') AND id < sqlc.narg('cursor_id'))
   )
 ORDER BY updated_at DESC, id DESC
 LIMIT ?;

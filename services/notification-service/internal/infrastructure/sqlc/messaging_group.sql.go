@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const clearConversationGroup = `-- name: ClearConversationGroup :exec
@@ -226,27 +227,68 @@ func (q *Queries) ListMessagingGroups(ctx context.Context, accountID string) ([]
 const listMessagingGroupsPage = `-- name: ListMessagingGroupsPage :many
 SELECT id, account_id, name, created_by_account_user_id, created_at, updated_at FROM messaging_group
 WHERE account_id = ?
+ORDER BY updated_at DESC, id DESC
+LIMIT ?
+`
+
+type ListMessagingGroupsPageParams struct {
+	AccountID string
+	Limit     int32
+}
+
+// One keyset page of an account's rosters, most recently updated first.
+func (q *Queries) ListMessagingGroupsPage(ctx context.Context, arg ListMessagingGroupsPageParams) ([]MessagingGroup, error) {
+	rows, err := q.db.QueryContext(ctx, listMessagingGroupsPage, arg.AccountID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MessagingGroup
+	for rows.Next() {
+		var i MessagingGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Name,
+			&i.CreatedByAccountUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMessagingGroupsPageAfter = `-- name: ListMessagingGroupsPageAfter :many
+SELECT id, account_id, name, created_by_account_user_id, created_at, updated_at FROM messaging_group
+WHERE account_id = ?
   AND (
-    ? IS NULL
-    OR updated_at < ?
+    updated_at < ?
     OR (updated_at = ? AND id < ?)
   )
 ORDER BY updated_at DESC, id DESC
 LIMIT ?
 `
 
-type ListMessagingGroupsPageParams struct {
+type ListMessagingGroupsPageAfterParams struct {
 	AccountID       string
-	CursorUpdatedAt sql.NullTime
+	CursorUpdatedAt time.Time
 	CursorID        sql.NullString
 	Limit           int32
 }
 
-// One keyset page of an account's rosters, most recently updated first.
-func (q *Queries) ListMessagingGroupsPage(ctx context.Context, arg ListMessagingGroupsPageParams) ([]MessagingGroup, error) {
-	rows, err := q.db.QueryContext(ctx, listMessagingGroupsPage,
+// The page after a cursor.
+func (q *Queries) ListMessagingGroupsPageAfter(ctx context.Context, arg ListMessagingGroupsPageAfterParams) ([]MessagingGroup, error) {
+	rows, err := q.db.QueryContext(ctx, listMessagingGroupsPageAfter,
 		arg.AccountID,
-		arg.CursorUpdatedAt,
 		arg.CursorUpdatedAt,
 		arg.CursorUpdatedAt,
 		arg.CursorID,

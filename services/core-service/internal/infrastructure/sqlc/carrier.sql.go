@@ -69,6 +69,7 @@ func (q *Queries) DeleteCarrierOptionsByCarrierID(ctx context.Context, arg Delet
 }
 
 const getCarrier = `-- name: GetCarrier :one
+
 SELECT
     carrier.id,
     carrier.name,
@@ -108,6 +109,7 @@ type GetCarrierRow struct {
 	UpdatedAt              time.Time
 }
 
+// The carrier queries below select identical columns, so their rows convert to GetCarrierRow.
 func (q *Queries) GetCarrier(ctx context.Context, arg GetCarrierParams) (GetCarrierRow, error) {
 	row := q.db.QueryRowContext(ctx, getCarrier, arg.ID, arg.AccountID)
 	var i GetCarrierRow
@@ -271,210 +273,6 @@ func (q *Queries) InsertCarrier(ctx context.Context, arg InsertCarrierParams) er
 		arg.AccountID,
 	)
 	return err
-}
-
-const listCarriersBackward = `-- name: ListCarriersBackward :many
-SELECT
-    carrier.id,
-    carrier.name,
-    carrier.code,
-    carrier.scac,
-    carrier.shippo_carrier_account_id,
-    carrier.account_number,
-    carrier.is_portal_enabled,
-    carrier.is_active,
-    carrier.default_carrier_option_id,
-    carrier.account_id,
-    carrier.created_at,
-    carrier.updated_at
-FROM carrier
-WHERE (carrier.account_id = ? OR carrier.account_id IS NULL)
-AND carrier.deleted_at IS NULL
-AND (
-    ? IS NULL
-    OR carrier.name LIKE ?
-)
-AND (? IS NULL OR carrier.is_active = ?)
-AND (
-    carrier.created_at > ?
-    OR (carrier.created_at = ? AND carrier.id > ?)
-)
-ORDER BY carrier.created_at ASC, carrier.id ASC
-LIMIT ?
-`
-
-type ListCarriersBackwardParams struct {
-	AccountID       sql.NullString
-	SearchQuery     sql.NullString
-	IsActive        sql.NullBool
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type ListCarriersBackwardRow struct {
-	ID                     string
-	Name                   string
-	Code                   sql.NullString
-	Scac                   sql.NullString
-	ShippoCarrierAccountID sql.NullString
-	AccountNumber          sql.NullString
-	IsPortalEnabled        bool
-	IsActive               bool
-	DefaultCarrierOptionID sql.NullString
-	AccountID              sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-}
-
-func (q *Queries) ListCarriersBackward(ctx context.Context, arg ListCarriersBackwardParams) ([]ListCarriersBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCarriersBackward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.IsActive,
-		arg.IsActive,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCarriersBackwardRow
-	for rows.Next() {
-		var i ListCarriersBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Scac,
-			&i.ShippoCarrierAccountID,
-			&i.AccountNumber,
-			&i.IsPortalEnabled,
-			&i.IsActive,
-			&i.DefaultCarrierOptionID,
-			&i.AccountID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listCarriersForward = `-- name: ListCarriersForward :many
-
-SELECT
-    carrier.id,
-    carrier.name,
-    carrier.code,
-    carrier.scac,
-    carrier.shippo_carrier_account_id,
-    carrier.account_number,
-    carrier.is_portal_enabled,
-    carrier.is_active,
-    carrier.default_carrier_option_id,
-    carrier.account_id,
-    carrier.created_at,
-    carrier.updated_at
-FROM carrier
-WHERE (carrier.account_id = ? OR carrier.account_id IS NULL)
-AND carrier.deleted_at IS NULL
-AND (
-    ? IS NULL
-    OR carrier.name LIKE ?
-)
-AND (? IS NULL OR carrier.is_active = ?)
-AND (
-    ? IS NULL
-    OR carrier.created_at < ?
-    OR (carrier.created_at = ? AND carrier.id < ?)
-)
-ORDER BY carrier.created_at DESC, carrier.id DESC
-LIMIT ?
-`
-
-type ListCarriersForwardParams struct {
-	AccountID       sql.NullString
-	SearchQuery     sql.NullString
-	IsActive        sql.NullBool
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListCarriersForwardRow struct {
-	ID                     string
-	Name                   string
-	Code                   sql.NullString
-	Scac                   sql.NullString
-	ShippoCarrierAccountID sql.NullString
-	AccountNumber          sql.NullString
-	IsPortalEnabled        bool
-	IsActive               bool
-	DefaultCarrierOptionID sql.NullString
-	AccountID              sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-}
-
-// The carrier queries below select identical columns, so their rows convert to GetCarrierRow.
-func (q *Queries) ListCarriersForward(ctx context.Context, arg ListCarriersForwardParams) ([]ListCarriersForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCarriersForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.IsActive,
-		arg.IsActive,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCarriersForwardRow
-	for rows.Next() {
-		var i ListCarriersForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Scac,
-			&i.ShippoCarrierAccountID,
-			&i.AccountNumber,
-			&i.IsPortalEnabled,
-			&i.IsActive,
-			&i.DefaultCarrierOptionID,
-			&i.AccountID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const setCarrierDefaultCarrierOption = `-- name: SetCarrierDefaultCarrierOption :exec

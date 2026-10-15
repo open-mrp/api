@@ -27,11 +27,7 @@ services/core-service/internal/infrastructure/sqlc/batch.sql.go:countBatchesBySc
 services/core-service/internal/infrastructure/sqlc/batch.sql.go:listBatchesByScanningStationBackward 1
 services/core-service/internal/infrastructure/sqlc/batch.sql.go:listBatchesByScanningStationForward 2
 services/core-service/internal/infrastructure/sqlc/carrier.sql.go:countCarriersByName 1
-services/core-service/internal/infrastructure/sqlc/carrier.sql.go:listCarriersBackward 1
-services/core-service/internal/infrastructure/sqlc/carrier.sql.go:listCarriersForward 2
 services/core-service/internal/infrastructure/sqlc/carrier_option.sql.go:countCarrierOptionsByCodeInCarrier 1
-services/core-service/internal/infrastructure/sqlc/carrier_option.sql.go:listCarrierOptionsBackward 1
-services/core-service/internal/infrastructure/sqlc/carrier_option.sql.go:listCarrierOptionsForward 2
 services/core-service/internal/infrastructure/sqlc/child_account.sql.go:listChildAccountsBackward 1
 services/core-service/internal/infrastructure/sqlc/child_account.sql.go:listChildAccountsForward 2
 services/core-service/internal/infrastructure/sqlc/customer.sql.go:countCustomers 17
@@ -96,8 +92,6 @@ services/core-service/internal/infrastructure/sqlc/part.sql.go:exportPartsWithFi
 services/core-service/internal/infrastructure/sqlc/part.sql.go:listPartsBackwardBase 5
 services/core-service/internal/infrastructure/sqlc/part.sql.go:listPartsForwardBase 6
 services/core-service/internal/infrastructure/sqlc/payment_term.sql.go:countPaymentTermsByName 1
-services/core-service/internal/infrastructure/sqlc/payment_term.sql.go:listPaymentTermsBackward 1
-services/core-service/internal/infrastructure/sqlc/payment_term.sql.go:listPaymentTermsForward 2
 services/core-service/internal/infrastructure/sqlc/permission_group.sql.go:listPermissionGroupsBackward 1
 services/core-service/internal/infrastructure/sqlc/permission_group.sql.go:listPermissionGroupsForward 2
 services/core-service/internal/infrastructure/sqlc/pick.sql.go:countPicks 7
@@ -138,8 +132,6 @@ services/core-service/internal/infrastructure/sqlc/production_step_query.sql.go:
 services/core-service/internal/infrastructure/sqlc/production_step_query.sql.go:listProductionStepsForward 9
 services/core-service/internal/infrastructure/sqlc/property.sql.go:countPropertiesByName 1
 services/core-service/internal/infrastructure/sqlc/property.sql.go:exportProperties 1
-services/core-service/internal/infrastructure/sqlc/property.sql.go:listPropertiesBackward 2
-services/core-service/internal/infrastructure/sqlc/property.sql.go:listPropertiesForward 2
 services/core-service/internal/infrastructure/sqlc/purchase_order.sql.go:isDuplicatePurchaseOrderNumber 1
 services/core-service/internal/infrastructure/sqlc/purchase_order.sql.go:listPurchaseOrdersBackward 6
 services/core-service/internal/infrastructure/sqlc/purchase_order.sql.go:listPurchaseOrdersForward 7
@@ -175,8 +167,6 @@ services/core-service/internal/infrastructure/sqlc/shipment.sql.go:listShipments
 services/core-service/internal/infrastructure/sqlc/shipment_line.sql.go:getSalesOrderLineShipmentCapacity 1
 services/core-service/internal/infrastructure/sqlc/shipment_line.sql.go:listShipmentLinesBackward 1
 services/core-service/internal/infrastructure/sqlc/shipment_line.sql.go:listShipmentLinesForward 2
-services/core-service/internal/infrastructure/sqlc/shipping_term.sql.go:listShippingTermsBackward 1
-services/core-service/internal/infrastructure/sqlc/shipping_term.sql.go:listShippingTermsForward 2
 services/core-service/internal/infrastructure/sqlc/supplier.sql.go:countSuppliers 4
 services/core-service/internal/infrastructure/sqlc/supplier.sql.go:listSuppliersBackward 4
 services/core-service/internal/infrastructure/sqlc/supplier.sql.go:listSuppliersForward 5
@@ -195,8 +185,6 @@ services/core-service/internal/infrastructure/sqlc/transaction.sql.go:listTransa
 services/core-service/internal/infrastructure/sqlc/unit.sql.go:countUnitsByAbbreviation 1
 services/core-service/internal/infrastructure/sqlc/unit.sql.go:countUnitsByName 1
 services/core-service/internal/infrastructure/sqlc/unit.sql.go:exportUnits 1
-services/core-service/internal/infrastructure/sqlc/unit.sql.go:listUnitsBackward 2
-services/core-service/internal/infrastructure/sqlc/unit.sql.go:listUnitsForward 3
 services/core-service/internal/infrastructure/sqlc/unit_group.sql.go:countUnitGroupsByName 1
 services/core-service/internal/infrastructure/sqlc/unit_group.sql.go:exportUnitGroups 1
 services/core-service/internal/infrastructure/sqlc/unit_group.sql.go:listUnitGroupsBackward 2
@@ -205,7 +193,6 @@ services/core-service/internal/infrastructure/sqlc/unit_group.sql.go:listUnitGro
 services/core-service/internal/infrastructure/sqlc/unit_group.sql.go:listUnitGroupsForwardBase 3
 services/core-service/internal/infrastructure/sqlc/volume_discount.sql.go:countVolumeDiscountsByName 1
 services/notification-service/internal/infrastructure/sqlc/announcement.sql.go:listActiveAnnouncements 1
-services/notification-service/internal/infrastructure/sqlc/conversation.sql.go:listConversationsForUser 3
 services/notification-service/internal/infrastructure/sqlc/conversation.sql.go:listSupportInbox 5
 services/notification-service/internal/infrastructure/sqlc/message.sql.go:listDraftMessagesByConversation 1
 services/notification-service/internal/infrastructure/sqlc/message.sql.go:listMessages 2

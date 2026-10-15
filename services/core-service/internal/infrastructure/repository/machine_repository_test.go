@@ -52,14 +52,14 @@ func TestBuildMachineListQuery_SearchRanksTheExactNameFirst(t *testing.T) {
 	at := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	query, args = buildMachineListQuery(machineListFilter{
 		accountID: "ac_1", search: "Loom",
-		cursor:    &pagination.StringCursor{Direction: pagination.DirectionForward, OccurredAt: at, ID: "mch_9"}, limit: 26,
+		cursor: &pagination.StringCursor{Direction: pagination.DirectionForward, OccurredAt: at, ID: "mch_9"}, limit: 26,
 	})
 	assert.Contains(t, query, "AND ((m.name <> ?) > ? OR ((m.name <> ?) = ? AND (m.created_at < ? OR (m.created_at = ? AND m.id < ?))))")
 	assert.Equal(t, []any{"Loom", "ac_1", "Loom%", "Loom", 0, "Loom", 0, at, at, "mch_9", int32(26)}, args)
 
 	query, _ = buildMachineListQuery(machineListFilter{
 		accountID: "ac_1", search: "Loom",
-		cursor:    &pagination.StringCursor{Direction: pagination.DirectionBackward, OccurredAt: at, ID: "mch_9", MatchTier: new(1)}, limit: 26,
+		cursor: &pagination.StringCursor{Direction: pagination.DirectionBackward, OccurredAt: at, ID: "mch_9", MatchTier: new(1)}, limit: 26,
 	})
 	assert.Contains(t, query, "ORDER BY match_tier DESC, m.created_at ASC, m.id ASC")
 }

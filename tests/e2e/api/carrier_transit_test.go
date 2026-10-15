@@ -44,12 +44,12 @@ const (
 func transitAddress(t *testing.T, postalCode string) string {
 	t.Helper()
 	status, body, err := apiClient.Post(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-transit-ship-to"),
-		"street_line_1": "1 Transit Way",
-		"locality":      "Columbus",
-		"state":         "OH",
-		"postal_code":   postalCode,
-		"country":       "US",
+		"name":        uniqueName("e2e-transit-ship-to"),
+		"line_1":      "1 Transit Way",
+		"city":        "Columbus",
+		"state":       "OH",
+		"postal_code": postalCode,
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

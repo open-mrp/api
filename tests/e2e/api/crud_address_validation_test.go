@@ -17,17 +17,22 @@ const (
 )
 
 // ---------------------------------------------------------------------------
-// Validate Address (POST /v1/core/addresses/validate)
+// postValidateAddress validates an address. It saves nothing, so a fresh idempotency key is harmless.
+func postValidateAddress(body map[string]any) (int, []byte, error) {
+	return apiClient.Post(addressValidatePath, body, newIdempotencyKey())
+}
+
+// Validate Address (POST /v1/core/addresses/actions/validate)
 // ---------------------------------------------------------------------------
 
 func TestAddressValidation_ValidAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "1600 Amphitheatre Parkway",
-		"city":           "Mountain View",
-		"state":          "CA",
-		"postal_code":    "94043",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "1600 Amphitheatre Parkway",
+		"city":        "Mountain View",
+		"state":       "CA",
+		"postal_code": "94043",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -40,7 +45,7 @@ func TestAddressValidation_ValidAddress(t *testing.T) {
 	components := jsonObject(result, "components")
 	require.NotNil(t, components, "components should be present for a valid address")
 	assert.Equal(t, "address_components", jsonField(components, "object"))
-	assert.NotEmpty(t, jsonField(components, "address_line_1"))
+	assert.NotEmpty(t, jsonField(components, "line_1"))
 	assert.NotEmpty(t, jsonField(components, "city"))
 	assert.NotEmpty(t, jsonField(components, "state"))
 	assert.NotEmpty(t, jsonField(components, "postal_code"))
@@ -50,13 +55,13 @@ func TestAddressValidation_ValidAddress(t *testing.T) {
 
 func TestAddressValidation_ValidAddressWithLine2(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "20 W 34th St",
-		"address_line_2": "Suite 100",
-		"city":           "New York",
-		"state":          "NY",
-		"postal_code":    "10001",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "20 W 34th St",
+		"line_2":      "Suite 100",
+		"city":        "New York",
+		"state":       "NY",
+		"postal_code": "10001",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -67,17 +72,17 @@ func TestAddressValidation_ValidAddressWithLine2(t *testing.T) {
 
 	components := jsonObject(result, "components")
 	require.NotNil(t, components, "components should be present")
-	assert.NotEmpty(t, jsonField(components, "address_line_1"))
+	assert.NotEmpty(t, jsonField(components, "line_1"))
 }
 
 func TestAddressValidation_InvalidAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "99999 Nonexistent Blvd",
-		"city":           "Faketown",
-		"state":          "ZZ",
-		"postal_code":    "00000",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "99999 Nonexistent Blvd",
+		"city":        "Faketown",
+		"state":       "ZZ",
+		"postal_code": "00000",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -94,7 +99,7 @@ func TestAddressValidation_InvalidAddress(t *testing.T) {
 
 func TestAddressValidation_MissingRequiredFields(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
+	status, body, err := postValidateAddress(map[string]any{
 		"city":        "Denver",
 		"state":       "CO",
 		"postal_code": "80202",
@@ -102,16 +107,16 @@ func TestAddressValidation_MissingRequiredFields(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
-		"Missing address_line_1 should return 400 or 422, got %d: %s", status, string(body))
+		"Missing line_1 should return 400 or 422, got %d: %s", status, string(body))
 }
 
 func TestAddressValidation_MissingCity(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"state":          "CO",
-		"postal_code":    "80202",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -120,11 +125,11 @@ func TestAddressValidation_MissingCity(t *testing.T) {
 
 func TestAddressValidation_MissingCountry(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "Denver",
-		"state":          "CO",
-		"postal_code":    "80202",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "80202",
 	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -133,12 +138,12 @@ func TestAddressValidation_MissingCountry(t *testing.T) {
 
 func TestAddressValidation_CountryNameNormalization(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "1600 Amphitheatre Parkway",
-		"city":           "Mountain View",
-		"state":          "CA",
-		"postal_code":    "94043",
-		"country":        "United States",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "1600 Amphitheatre Parkway",
+		"city":        "Mountain View",
+		"state":       "CA",
+		"postal_code": "94043",
+		"country":     "United States",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -153,12 +158,12 @@ func TestAddressValidation_CountryNameNormalization(t *testing.T) {
 
 func TestAddressValidation_UnsupportedRegion(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "Thimphu Plaza",
-		"city":           "Thimphu",
-		"state":          "Thimphu",
-		"postal_code":    "11001",
-		"country":        "BT",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "Thimphu Plaza",
+		"city":        "Thimphu",
+		"state":       "Thimphu",
+		"postal_code": "11001",
+		"country":     "BT",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -247,7 +252,7 @@ func TestAddressDetails_FromAutocomplete(t *testing.T) {
 	address := jsonObject(result, "address")
 	require.NotNil(t, address, "address components should be present")
 	assert.Equal(t, "address_components", jsonField(address, "object"))
-	assert.NotEmpty(t, jsonField(address, "address_line_1"))
+	assert.NotEmpty(t, jsonField(address, "line_1"))
 	assert.NotEmpty(t, jsonField(address, "city"))
 	assert.NotEmpty(t, jsonField(address, "state"))
 	assert.NotEmpty(t, jsonField(address, "postal_code"))

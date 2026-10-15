@@ -36,7 +36,7 @@ func TestAccounts_SetDefaultBillingAddress(t *testing.T) {
 	billing := jsonObject(parseJSON(body), "default_billing_address")
 	require.NotNil(t, billing, "the update returns the new default: %s", body)
 	assert.Equal(t, addressID, jsonField(billing, "id"))
-	assert.Equal(t, "123 Test St", jsonField(jsonObject(billing, "geolocation"), "street_line_1"))
+	assert.Equal(t, "123 Test St", jsonField(billing, "line_1"))
 	assert.Equal(t, addressID, accountDefaultBillingAddressID(t))
 
 	status, body, err = apiClient.Patch(accountsPath+"/"+SeedAccountID,

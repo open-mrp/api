@@ -427,7 +427,7 @@ func TestCovSalesCustomers_ListFilterByCityStatePostalCode(t *testing.T) {
 		"bill_to_address": map[string]any{
 			"name":        name + " Billing",
 			"country":     "US",
-			"locality":    city,
+			"city":        city,
 			"state":       "ZZ",
 			"postal_code": "99999",
 		},

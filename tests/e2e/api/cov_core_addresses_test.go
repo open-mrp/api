@@ -13,30 +13,30 @@ import (
 
 // ---------------------------------------------------------------------------
 // This file extends coverage for `/v1/core/addresses` (address-validation
-// endpoints: PUT actions/validate, GET suggestions, GET details/{id}).
+// endpoints: POST actions/validate, GET suggestions, GET details/{id}).
 //
 // Path constants (addressAutocompletePath, addressDetailsPath,
 // addressValidatePath) already exist in crud_address_validation_test.go —
 // reused here, not redeclared. That file also already covers the core
 // happy-path + missing-required-field cases; this file closes the remaining
-// gaps: address_line_2 null/populated assertions, validation_messages
+// gaps: line_2 null/populated assertions, validation_messages
 // empty-array assertion, blank-string and explicit-null variants, unknown
 // field/query-param rejection, page_info shape, and a tightened
 // InvalidPlaceID assertion that no longer tolerates a 5xx.
 // ---------------------------------------------------------------------------
 
 // TestCovCoreAddresses_ValidateAddress_Line2NullWhenOmitted asserts that
-// components.address_line_2 is null when address_line_2 is not supplied,
+// components.line_2 is null when line_2 is not supplied,
 // and that validation_messages is an empty array (not null) for a clean
 // valid address.
 func TestCovCoreAddresses_ValidateAddress_Line2NullWhenOmitted(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "1600 Amphitheatre Parkway",
-		"city":           "Mountain View",
-		"state":          "CA",
-		"postal_code":    "94043",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "1600 Amphitheatre Parkway",
+		"city":        "Mountain View",
+		"state":       "CA",
+		"postal_code": "94043",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -52,20 +52,20 @@ func TestCovCoreAddresses_ValidateAddress_Line2NullWhenOmitted(t *testing.T) {
 	components := jsonObject(result, "components")
 	require.NotNil(t, components)
 	assertObjectField(t, components, "address_components")
-	assertNilField(t, components, "address_line_2")
+	assertNilField(t, components, "line_2")
 }
 
 // TestCovCoreAddresses_ValidateAddress_Line2PopulatedWhenProvided asserts
-// that a supplied address_line_2 round-trips into components.address_line_2.
+// that a supplied line_2 round-trips into components.line_2.
 func TestCovCoreAddresses_ValidateAddress_Line2PopulatedWhenProvided(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "20 W 34th St",
-		"address_line_2": "Suite 100",
-		"city":           "New York",
-		"state":          "NY",
-		"postal_code":    "10001",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "20 W 34th St",
+		"line_2":      "Suite 100",
+		"city":        "New York",
+		"state":       "NY",
+		"postal_code": "10001",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -73,57 +73,57 @@ func TestCovCoreAddresses_ValidateAddress_Line2PopulatedWhenProvided(t *testing.
 	result := parseJSON(body)
 	components := jsonObject(result, "components")
 	require.NotNil(t, components)
-	assert.Equal(t, "Suite 100", jsonField(components, "address_line_2"))
+	assert.Equal(t, "Suite 100", jsonField(components, "line_2"))
 }
 
 // TestCovCoreAddresses_ValidateAddress_Line2Null asserts that an explicit
-// JSON null for the optional address_line_2 field is rejected with 400
+// JSON null for the optional line_2 field is rejected with 400
 // ("cannot be null"), per field.Optional semantics.
 func TestCovCoreAddresses_ValidateAddress_Line2Null(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "1600 Amphitheatre Parkway",
-		"address_line_2": nil,
-		"city":           "Mountain View",
-		"state":          "CA",
-		"postal_code":    "94043",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "1600 Amphitheatre Parkway",
+		"line_2":      nil,
+		"city":        "Mountain View",
+		"state":       "CA",
+		"postal_code": "94043",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "address_line_2")
+	assertErrorParam(t, errObj, "line_2")
 }
 
 // TestCovCoreAddresses_ValidateAddress_BlankAddressLine1 asserts a blank
-// (empty-string) address_line_1 is rejected with 400, distinct from the
+// (empty-string) line_1 is rejected with 400, distinct from the
 // omitted-key case already covered by TestAddressValidation_MissingRequiredFields.
 func TestCovCoreAddresses_ValidateAddress_BlankAddressLine1(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "",
-		"city":           "Denver",
-		"state":          "CO",
-		"postal_code":    "80202",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "address_line_1")
+	assertErrorParam(t, errObj, "line_1")
 }
 
 // TestCovCoreAddresses_ValidateAddress_BlankCity asserts a blank city is
 // rejected with 400.
 func TestCovCoreAddresses_ValidateAddress_BlankCity(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "",
-		"state":          "CO",
-		"postal_code":    "80202",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"city":        "",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -135,12 +135,12 @@ func TestCovCoreAddresses_ValidateAddress_BlankCity(t *testing.T) {
 // rejected with 400.
 func TestCovCoreAddresses_ValidateAddress_BlankState(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "Denver",
-		"state":          "",
-		"postal_code":    "80202",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"city":        "Denver",
+		"state":       "",
+		"postal_code": "80202",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -152,12 +152,12 @@ func TestCovCoreAddresses_ValidateAddress_BlankState(t *testing.T) {
 // postal_code is rejected with 400.
 func TestCovCoreAddresses_ValidateAddress_BlankPostalCode(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "Denver",
-		"state":          "CO",
-		"postal_code":    "",
-		"country":        "US",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "",
+		"country":     "US",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -169,12 +169,12 @@ func TestCovCoreAddresses_ValidateAddress_BlankPostalCode(t *testing.T) {
 // is rejected with 400.
 func TestCovCoreAddresses_ValidateAddress_BlankCountry(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "Denver",
-		"state":          "CO",
-		"postal_code":    "80202",
-		"country":        "",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "123 Main St",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
@@ -194,12 +194,12 @@ func TestCovCoreAddresses_ValidateAddress_BlankCountry(t *testing.T) {
 // live stack does not return.
 func TestCovCoreAddresses_ValidateAddress_GarbageCountry(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "1600 Amphitheatre Parkway",
-		"city":           "Mountain View",
-		"state":          "CA",
-		"postal_code":    "94043",
-		"country":        "Nonexistent Countryland",
+	status, body, err := postValidateAddress(map[string]any{
+		"line_1":      "1600 Amphitheatre Parkway",
+		"city":        "Mountain View",
+		"state":       "CA",
+		"postal_code": "94043",
+		"country":     "Nonexistent Countryland",
 	})
 	require.NoError(t, err)
 	require.NotEqual(t, 500, status, "garbage country must not 500: %s", string(body))
@@ -217,7 +217,7 @@ func TestCovCoreAddresses_ValidateAddress_GarbageCountry(t *testing.T) {
 // actions/validate rejects a body containing only an unrecognized field.
 func TestCovCoreAddresses_ValidateAddress_UnknownFieldRejected(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
+	status, body, err := postValidateAddress(map[string]any{
 		bogusE2EJSONField: "should_be_rejected",
 	})
 	require.NoError(t, err)
@@ -298,7 +298,7 @@ func TestCovCoreAddresses_Suggestions_BlankInputRejected(t *testing.T) {
 // autocomplete -> details (the required pattern for this stateless group,
 // since Google/stub place IDs are not seedable) and asserts every
 // AddressDetailsResult and nested AddressComponents json field, including
-// the never-before-asserted address_line_2 (null, since neither stub place
+// the never-before-asserted line_2 (null, since neither stub place
 // entry has a second line — see
 // services/core-service/internal/infrastructure/stub/address_validation.go).
 func TestCovCoreAddresses_Details_FromAutocomplete_AllFields(t *testing.T) {
@@ -328,8 +328,8 @@ func TestCovCoreAddresses_Details_FromAutocomplete_AllFields(t *testing.T) {
 	address := jsonObject(result, "address")
 	require.NotNil(t, address)
 	assertObjectField(t, address, "address_components")
-	assert.NotEmpty(t, jsonField(address, "address_line_1"))
-	assertNilField(t, address, "address_line_2")
+	assert.NotEmpty(t, jsonField(address, "line_1"))
+	assertNilField(t, address, "line_2")
 	assert.NotEmpty(t, jsonField(address, "city"))
 	assert.NotEmpty(t, jsonField(address, "state"))
 	assert.NotEmpty(t, jsonField(address, "postal_code"))

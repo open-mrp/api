@@ -32,11 +32,7 @@ func TestCovSalesAddresses_CreateResponseShape(t *testing.T) {
 	assertObjectField(t, created, "address")
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
-
-	geo := jsonObject(created, "geolocation")
-	require.NotNil(t, geo, "geolocation should be present")
-	assertIDFormat(t, jsonField(geo, "id"), "gl")
-	assertObjectField(t, geo, "geolocation")
+	assert.NotContains(t, created, "geolocation", "the address fields are flat, with no geolocation")
 }
 
 // TestCovSalesAddresses_CreateOmittedFieldsDefault confirms that creating an
@@ -63,14 +59,13 @@ func TestCovSalesAddresses_CreateOmittedFieldsDefault(t *testing.T) {
 	assertNilField(t, created, "email")
 	assert.Equal(t, "standard", jsonField(created, "type"), "type should default to standard when omitted")
 
-	geo := jsonObject(created, "geolocation")
-	require.NotNil(t, geo, "geolocation should always be present")
-	assertNilField(t, geo, "street_line_1")
-	assertNilField(t, geo, "street_line_2")
-	assertNilField(t, geo, "locality")
-	assertNilField(t, geo, "state")
-	assertNilField(t, geo, "postal_code")
-	assert.Equal(t, "US", jsonField(geo, "country"))
+	assertNilField(t, created, "line_1")
+	assertNilField(t, created, "line_2")
+	assertNilField(t, created, "city")
+	assertNilField(t, created, "state")
+	assertNilField(t, created, "postal_code")
+	assert.Equal(t, "US", jsonField(created, "country"))
+	assertNilField(t, created, "receive_calendar")
 }
 
 // TestCovSalesAddresses_UpdateClearNullableFields confirms the highest-risk
@@ -93,24 +88,24 @@ func TestCovSalesAddresses_UpdateClearNullableFields(t *testing.T) {
 
 	// First set the three clearable fields to non-null values.
 	setStatus, setBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"phone":         "555-000-0000",
-		"email":         name + "@e2e-test.openmrp.ai",
-		"street_line_2": "Suite 5",
+		"phone":  "555-000-0000",
+		"email":  name + "@e2e-test.openmrp.ai",
+		"line_2": "Suite 5",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, setStatus, setBody)
 	setResp := parseJSON(setBody)
 	assert.Equal(t, "555-000-0000", jsonField(setResp, "phone"))
 	assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(setResp, "email"))
-	setGeo := jsonObject(setResp, "geolocation")
+	setGeo := setResp
 	require.NotNil(t, setGeo)
-	assert.Equal(t, "Suite 5", jsonField(setGeo, "street_line_2"))
+	assert.Equal(t, "Suite 5", jsonField(setGeo, "line_2"))
 
 	// Now clear all three via explicit JSON null.
 	clearStatus, clearBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"phone":         nil,
-		"email":         nil,
-		"street_line_2": nil,
+		"phone":  nil,
+		"email":  nil,
+		"line_2": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, clearStatus, clearBody)
@@ -118,9 +113,9 @@ func TestCovSalesAddresses_UpdateClearNullableFields(t *testing.T) {
 	cleared := parseJSON(clearBody)
 	assertNilField(t, cleared, "phone")
 	assertNilField(t, cleared, "email")
-	clearedGeo := jsonObject(cleared, "geolocation")
+	clearedGeo := cleared
 	require.NotNil(t, clearedGeo)
-	assertNilField(t, clearedGeo, "street_line_2")
+	assertNilField(t, clearedGeo, "line_2")
 
 	// Name should be unaffected by the clear.
 	assert.Equal(t, name, jsonField(cleared, "name"))
@@ -415,14 +410,14 @@ func TestCovSalesAddresses_ListLimitNegative(t *testing.T) {
 		"limit=-1 should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// TestCovSalesAddresses_ListInvalidTypeFilter confirms an out-of-enum "type"
+// TestCovSalesAddresses_ListInvalidTypeFilter confirms an out-of-enum "types[]"
 // query filter is rejected rather than silently ignored.
 func TestCovSalesAddresses_ListInvalidTypeFilter(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(addressesPath, url.Values{"type": {"bogus_type"}})
+	status, body, err := apiClient.GetListRaw(addressesPath, url.Values{"types[]": {"bogus_type"}})
 	require.NoError(t, err)
 	require.True(t, status == 400 || status == 422,
-		"type=bogus_type should return 400 or 422, got %d: %s", status, string(body))
+		"types[]=bogus_type should return 400 or 422, got %d: %s", status, string(body))
 }
 
 // TestCovSalesAddresses_ListInvalidCursor confirms a malformed cursor is

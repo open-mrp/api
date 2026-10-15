@@ -568,18 +568,18 @@ func validCustomerBody(name string) map[string]any {
 // registers cleanup, returning its ID for use as an order bill-to / ship-to.
 func createE2EAddress(t *testing.T, name string) string {
 	t.Helper()
-	status, body, err := apiClient.Post("/v1/sales/addresses", map[string]any{
-		"name":          name,
-		"street_line_1": "123 Test St",
-		"locality":      "Los Angeles",
-		"state":         "CA",
-		"postal_code":   "90001",
-		"country":       "US",
+	status, body, err := apiClient.Post("/v1/core/addresses", map[string]any{
+		"name":        name,
+		"line_1":      "123 Test St",
+		"city":        "Los Angeles",
+		"state":       "CA",
+		"postal_code": "90001",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
-	t.Cleanup(func() { _, _, _ = apiClient.Delete("/v1/sales/addresses/" + id) })
+	t.Cleanup(func() { _, _, _ = apiClient.Delete("/v1/core/addresses/" + id) })
 	return id
 }
 

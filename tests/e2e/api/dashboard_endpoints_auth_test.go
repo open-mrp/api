@@ -68,7 +68,7 @@ var dashboardPublicOperations = map[string]string{
 // dashboardValidBodies pass validation, for operations that decide on credentials only once the body is valid.
 var dashboardValidBodies = map[string]map[string]any{
 	"register-customer": {"account_slug": "e2e-sweep-no-such-seller"},
-	"validate-address":  {"address_line_1": "1 Main St", "city": "Los Angeles", "state": "CA", "postal_code": "90001", "country": "US"},
+	"validate-address":  {"line_1": "1 Main St", "city": "Los Angeles", "state": "CA", "postal_code": "90001", "country": "US"},
 }
 
 type dashboardOperation struct {

@@ -1043,7 +1043,7 @@ func TestDashAccounts_PortalProfileIsTheSellersLetterhead(t *testing.T) {
 	require.NotNil(t, address, "the letterhead carries the seller's billing address: %s", body)
 	assertObjectField(t, address, "address")
 	assert.Equal(t, jsonField(jsonObject(account, "default_billing_address"), "id"), jsonField(address, "id"))
-	assertObjectField(t, jsonObject(address, "geolocation"), "geolocation")
+	assert.NotEmpty(t, jsonField(address, "country"), "the address fields are flat")
 }
 
 // --- User profiles ---

@@ -24,12 +24,12 @@ const seededExpressServiceLevelID = "crop_01seedexpress00000"
 func rateShopRequestBody() map[string]any {
 	return map[string]any{
 		"to_address": map[string]any{
-			"name":          "Destination",
-			"street_line_1": "456 Oak Avenue",
-			"locality":      "Los Angeles",
-			"state":         "CA",
-			"postal_code":   "90001",
-			"country":       "US",
+			"name":        "Destination",
+			"line_1":      "456 Oak Avenue",
+			"city":        "Los Angeles",
+			"state":       "CA",
+			"postal_code": "90001",
+			"country":     "US",
 		},
 		"parcels": []map[string]any{
 			{"weight": 5.0, "length": 12.0, "width": 8.0, "height": 6.0},

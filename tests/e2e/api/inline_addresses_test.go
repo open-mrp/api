@@ -17,12 +17,12 @@ import (
 
 func inlineAddressBody(name, street string) map[string]any {
 	return map[string]any{
-		"name":          name,
-		"street_line_1": street,
-		"locality":      "Columbus",
-		"state":         "OH",
-		"postal_code":   "43204",
-		"country":       "US",
+		"name":        name,
+		"line_1":      street,
+		"city":        "Columbus",
+		"state":       "OH",
+		"postal_code": "43204",
+		"country":     "US",
 	}
 }
 
@@ -49,12 +49,12 @@ func addressIn(t *testing.T, accountID, addressID string) map[string]any {
 func savedCounterpartyAddress(t *testing.T, accountID, name string) string {
 	t.Helper()
 	status, body, err := apiClient.WithAccountID(accountID).Post(addressesPath, map[string]any{
-		"name":          name,
-		"street_line_1": "9 Spindle Way",
-		"locality":      "Los Angeles",
-		"state":         "CA",
-		"postal_code":   "90001",
-		"country":       "US",
+		"name":        name,
+		"line_1":      "9 Spindle Way",
+		"city":        "Los Angeles",
+		"state":       "CA",
+		"postal_code": "90001",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -124,7 +124,7 @@ func TestInlineAddresses_PurchaseOrderCreateNeedsOnlyCreatePermission(t *testing
 	billName, shipName := uniqueName("e2e-inline-po-bill"), uniqueName("e2e-inline-po-ship")
 	body := inlinePurchaseOrderBody(supplierID)
 	body["bill_to_address"] = inlineAddressBody(billName, "1 Inline Way")
-	body["ship_to_address"] = map[string]any{"id": existingID, "name": shipName, "street_line_1": "2 Updated Rd", "phone": "555-0101"}
+	body["ship_to_address"] = map[string]any{"id": existingID, "name": shipName, "line_1": "2 Updated Rd", "phone": "555-0101"}
 
 	status, resp, err := client.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -142,14 +142,14 @@ func TestInlineAddresses_PurchaseOrderCreateNeedsOnlyCreatePermission(t *testing
 
 	created := addressIn(t, supplierID, billID)
 	assert.Equal(t, billName, jsonField(created, "name"), "the new address is saved to the supplier")
-	assert.Equal(t, "1 Inline Way", jsonField(jsonObject(created, "geolocation"), "street_line_1"))
-	assert.Equal(t, "US", jsonField(jsonObject(created, "geolocation"), "country"))
+	assert.Equal(t, "1 Inline Way", jsonField(created, "line_1"))
+	assert.Equal(t, "US", jsonField(created, "country"))
 
 	updated := addressIn(t, supplierID, existingID)
 	assert.Equal(t, shipName, jsonField(updated, "name"))
 	assert.Equal(t, "555-0101", jsonField(updated, "phone"))
-	assert.Equal(t, "2 Updated Rd", jsonField(jsonObject(updated, "geolocation"), "street_line_1"))
-	assert.Equal(t, "Los Angeles", jsonField(jsonObject(updated, "geolocation"), "locality"), "fields the inline update leaves out are kept")
+	assert.Equal(t, "2 Updated Rd", jsonField(updated, "line_1"))
+	assert.Equal(t, "Los Angeles", jsonField(updated, "city"), "fields the inline update leaves out are kept")
 
 	expectAuditEvent(t, billID, "address", "create")
 	expectAuditEvent(t, existingID, "address", "update")
@@ -285,7 +285,7 @@ func TestInlineAddresses_PurchaseOrderRejections(t *testing.T) {
 			assertErrorParam(t, requireErrorResponse(t, resp, tc.code, "invalid_request_error"), tc.param)
 		})
 	}
-	assert.Equal(t, "9 Spindle Way", jsonField(jsonObject(addressIn(t, supplierID, supplierAddressID), "geolocation"), "street_line_1"), "a refused order saves no address")
+	assert.Equal(t, "9 Spindle Way", jsonField(addressIn(t, supplierID, supplierAddressID), "line_1"), "a refused order saves no address")
 }
 
 // --- Sales orders ---
@@ -301,7 +301,7 @@ func TestInlineAddresses_SalesOrderCreateNeedsOnlyCreatePermission(t *testing.T)
 	billName, shipName := uniqueName("e2e-inline-so-bill"), uniqueName("e2e-inline-so-ship")
 	body := inlineSalesOrderBody(customerID)
 	body["bill_to_address"] = inlineAddressBody(billName, "6 Billing Blvd")
-	body["ship_to_address"] = map[string]any{"id": existingID, "name": shipName, "street_line_2": "Dock 4"}
+	body["ship_to_address"] = map[string]any{"id": existingID, "name": shipName, "line_2": "Dock 4"}
 
 	status, resp, err := client.Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -316,11 +316,11 @@ func TestInlineAddresses_SalesOrderCreateNeedsOnlyCreatePermission(t *testing.T)
 	assert.Equal(t, existingID, jsonField(ship, "id"))
 	assert.Equal(t, shipName, jsonField(ship, "name"))
 
-	assert.Equal(t, "6 Billing Blvd", jsonField(jsonObject(addressIn(t, customerID, billID), "geolocation"), "street_line_1"), "the new address is saved to the customer")
+	assert.Equal(t, "6 Billing Blvd", jsonField(addressIn(t, customerID, billID), "line_1"), "the new address is saved to the customer")
 	updated := addressIn(t, customerID, existingID)
 	assert.Equal(t, shipName, jsonField(updated, "name"))
-	assert.Equal(t, "Dock 4", jsonField(jsonObject(updated, "geolocation"), "street_line_2"))
-	assert.Equal(t, "9 Spindle Way", jsonField(jsonObject(updated, "geolocation"), "street_line_1"), "fields the inline update leaves out are kept")
+	assert.Equal(t, "Dock 4", jsonField(updated, "line_2"))
+	assert.Equal(t, "9 Spindle Way", jsonField(updated, "line_1"), "fields the inline update leaves out are kept")
 }
 
 func TestInlineAddresses_SalesOrderUpdateNeedsOnlyUpdatePermission(t *testing.T) {
@@ -446,7 +446,7 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 			assertErrorParam(t, requireErrorResponse(t, resp, tc.code, "invalid_request_error"), tc.param)
 		})
 	}
-	assert.Equal(t, "9 Spindle Way", jsonField(jsonObject(addressIn(t, otherCustomerID, otherCustomerAddressID), "geolocation"), "street_line_1"), "another customer's address is never touched")
+	assert.Equal(t, "9 Spindle Way", jsonField(addressIn(t, otherCustomerID, otherCustomerAddressID), "line_1"), "another customer's address is never touched")
 }
 
 // --- Account ---
@@ -489,7 +489,7 @@ func TestInlineAddresses_AccountUpdateNeedsOnlySelfUpdate(t *testing.T) {
 	assert.NotEqual(t, ownAddressID, shipping)
 	edited := addressIn(t, SeedAccountID, ownAddressID)
 	assert.Equal(t, billName, jsonField(edited, "name"))
-	assert.Equal(t, "90002", jsonField(jsonObject(edited, "geolocation"), "postal_code"))
+	assert.Equal(t, "90002", jsonField(edited, "postal_code"))
 	assert.Equal(t, shipName, jsonField(addressIn(t, SeedAccountID, shipping), "name"))
 }
 

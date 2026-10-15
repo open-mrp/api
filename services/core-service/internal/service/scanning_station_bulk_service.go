@@ -163,7 +163,7 @@ func upsertScanningStationInTx(txCtx context.Context, txRepos domain.RepoFactory
 	}
 
 	if old.DepartmentID != row.DepartmentID {
-		return "", apierror.NewFieldError("department", apierror.CodeInvalidFormat, fmt.Sprintf("Scanning station %q belongs to department %q and cannot be moved by bulk upsert.", old.Name, old.DepartmentName))
+		return "", apierror.NewFieldError("work_center", apierror.CodeInvalidFormat, fmt.Sprintf("Scanning station %q belongs to work center %q and cannot be moved by bulk upsert; move it with Update Scanning Station.", old.Name, old.DepartmentName))
 	}
 	if old.Type != row.Type {
 		return "", apierror.NewFieldError("type", apierror.CodeInvalidFormat, fmt.Sprintf("Scanning station %q has type %q, which cannot be changed by bulk upsert.", old.Name, old.Type))

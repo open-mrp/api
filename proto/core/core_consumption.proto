@@ -170,6 +170,8 @@ message ListScanningStationsRequest {
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  // Only stations in one of these departments.
+  repeated string department_ids = 5;
 }
 message ListScanningStationsResponse {
   repeated ScanningStationInfo scanning_stations = 1;
@@ -209,6 +211,8 @@ message UpdateScanningStationRequest {
   optional StringPatch label_type_code = 5;
   optional string operator_requirement = 6;
   repeated string includes = 7;
+  // Moves the station to this department.
+  optional string department_id = 8;
 }
 message UpdateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;

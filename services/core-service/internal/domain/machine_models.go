@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )
@@ -16,16 +17,31 @@ type Machine struct {
 	DepartmentName      *string `audit:"department_name"`
 	DepartmentCreatedAt *time.Time
 	DepartmentUpdatedAt *time.Time
-	ProductionStepID    *string `audit:"production_step_id"`
+	ProductionStepID    *string                 `audit:"production_step_id"`
+	Status              constants.ArchiveStatus `audit:"status"`
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
+
+// MachineReferences blocks deleting a machine that batches or downtime events still name.
+var MachineReferences = RegisterReferences(References{
+	Noun:       "machine",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "batches", Table: "_batches_machines", Column: "B"},
+		{Label: "downtime events", Table: "machine_downtime_event", Column: "machine_id"},
+	},
+})
 
 type ListMachinesParams struct {
 	AccountID string
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	// DepartmentIDs keeps machines in one of these departments; empty for all.
+	DepartmentIDs []string
+	// IsActive keeps active (true) or archived (false) machines; nil for both.
+	IsActive *bool
 }
 
 type ListMachinesResult struct {
@@ -52,6 +68,7 @@ type CreateMachineParams struct {
 	SerialNumber string
 	Notes        *string
 	DepartmentID string
+	Status       constants.ArchiveStatus
 }
 
 type UpdateMachineParams struct {
@@ -60,6 +77,9 @@ type UpdateMachineParams struct {
 	Name         *string
 	SerialNumber *string
 	Notes        field.Clearable[string]
+	Status       *constants.ArchiveStatus
+	// DepartmentID moves the machine to this department.
+	DepartmentID *string
 }
 
 type DeleteMachineParams struct {
@@ -77,6 +97,8 @@ type UpsertMachineParams struct {
 	SerialNumber string
 	Notes        *string
 	Department   ObjectIdentifier
+	// Status, when set, archives or reactivates the machine; a new machine without one is active.
+	Status *constants.ArchiveStatus
 }
 
 // BulkUpsertMachinesParams holds the parameters for bulk upserting machines.
@@ -142,4 +164,5 @@ type ResolvedUpsertMachineRow struct {
 	SerialNumber string
 	Notes        *string
 	DepartmentID string
+	Status       *constants.ArchiveStatus
 }

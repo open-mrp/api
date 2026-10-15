@@ -162,6 +162,7 @@ SELECT
     d.created_at AS department_created_at,
     d.updated_at AS department_updated_at,
     m.production_step_id,
+    m.is_active,
     m.created_at,
     m.updated_at
 FROM machine m
@@ -185,6 +186,7 @@ type FindMachinesByNamesRow struct {
 	DepartmentCreatedAt time.Time
 	DepartmentUpdatedAt time.Time
 	ProductionStepID    sql.NullString
+	IsActive            bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -221,6 +223,7 @@ func (q *Queries) FindMachinesByNames(ctx context.Context, arg FindMachinesByNam
 			&i.DepartmentCreatedAt,
 			&i.DepartmentUpdatedAt,
 			&i.ProductionStepID,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -248,6 +251,7 @@ SELECT
     d.created_at AS department_created_at,
     d.updated_at AS department_updated_at,
     m.production_step_id,
+    m.is_active,
     m.created_at,
     m.updated_at
 FROM machine m
@@ -271,6 +275,7 @@ type FindMachinesBySerialNumbersRow struct {
 	DepartmentCreatedAt time.Time
 	DepartmentUpdatedAt time.Time
 	ProductionStepID    sql.NullString
+	IsActive            bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -307,6 +312,7 @@ func (q *Queries) FindMachinesBySerialNumbers(ctx context.Context, arg FindMachi
 			&i.DepartmentCreatedAt,
 			&i.DepartmentUpdatedAt,
 			&i.ProductionStepID,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -334,6 +340,7 @@ SELECT
     d.created_at AS department_created_at,
     d.updated_at AS department_updated_at,
     m.production_step_id,
+    m.is_active,
     m.created_at,
     m.updated_at
 FROM machine m
@@ -357,6 +364,7 @@ type GetMachineRow struct {
 	DepartmentCreatedAt time.Time
 	DepartmentUpdatedAt time.Time
 	ProductionStepID    sql.NullString
+	IsActive            bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -374,6 +382,7 @@ func (q *Queries) GetMachine(ctx context.Context, arg GetMachineParams) (GetMach
 		&i.DepartmentCreatedAt,
 		&i.DepartmentUpdatedAt,
 		&i.ProductionStepID,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -391,6 +400,7 @@ SELECT
     d.created_at AS department_created_at,
     d.updated_at AS department_updated_at,
     m.production_step_id,
+    m.is_active,
     m.created_at,
     m.updated_at
 FROM machine m
@@ -414,6 +424,7 @@ type GetMachinesByIDsRow struct {
 	DepartmentCreatedAt time.Time
 	DepartmentUpdatedAt time.Time
 	ProductionStepID    sql.NullString
+	IsActive            bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -448,6 +459,7 @@ func (q *Queries) GetMachinesByIDs(ctx context.Context, arg GetMachinesByIDsPara
 			&i.DepartmentCreatedAt,
 			&i.DepartmentUpdatedAt,
 			&i.ProductionStepID,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -473,6 +485,7 @@ INSERT INTO machine (
     notes,
     department_id,
     production_step_id,
+    is_active,
     created_at,
     updated_at
 ) VALUES (
@@ -483,6 +496,7 @@ INSERT INTO machine (
     ?,
     ?,
     NULL,
+    ?,
     NOW(3),
     NOW(3)
 )
@@ -495,6 +509,7 @@ type InsertMachineParams struct {
 	SerialNumber string
 	Notes        sql.NullString
 	DepartmentID string
+	IsActive     bool
 }
 
 func (q *Queries) InsertMachine(ctx context.Context, arg InsertMachineParams) error {
@@ -505,6 +520,7 @@ func (q *Queries) InsertMachine(ctx context.Context, arg InsertMachineParams) er
 		arg.SerialNumber,
 		arg.Notes,
 		arg.DepartmentID,
+		arg.IsActive,
 	)
 	return err
 }
@@ -535,230 +551,6 @@ func (q *Queries) ListMachineIDsByProductionStep(ctx context.Context, arg ListMa
 			return nil, err
 		}
 		items = append(items, id)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMachinesBackward = `-- name: ListMachinesBackward :many
-SELECT
-    m.id,
-    m.name,
-    m.serial_number,
-    m.notes,
-    m.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    m.production_step_id,
-    m.created_at,
-    m.updated_at,
-    CAST(COALESCE(m.name <> ?, 0) AS SIGNED) AS match_tier
-FROM machine m
-JOIN department d ON d.id = m.department_id
-WHERE m.account_id = ?
-AND (
-    ? IS NULL
-    OR m.name LIKE ?
-)
-AND (
-    COALESCE(m.name <> ?, 0) < CAST(? AS SIGNED)
-    OR (
-        COALESCE(m.name <> ?, 0) = CAST(? AS SIGNED)
-        AND (
-            m.created_at > ?
-            OR (m.created_at = ? AND m.id > ?)
-        )
-    )
-)
-ORDER BY COALESCE(m.name <> ?, 0) DESC, m.created_at ASC, m.id ASC
-LIMIT ?
-`
-
-type ListMachinesBackwardParams struct {
-	SearchExact     sql.NullString
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorMatchTier sql.NullInt64
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type ListMachinesBackwardRow struct {
-	ID                  string
-	Name                string
-	SerialNumber        string
-	Notes               sql.NullString
-	DepartmentID        string
-	DepartmentName      string
-	DepartmentCreatedAt time.Time
-	DepartmentUpdatedAt time.Time
-	ProductionStepID    sql.NullString
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	MatchTier           int64
-}
-
-func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBackwardParams) ([]ListMachinesBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMachinesBackward,
-		arg.SearchExact,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchExact,
-		arg.CursorMatchTier,
-		arg.SearchExact,
-		arg.CursorMatchTier,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.SearchExact,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMachinesBackwardRow
-	for rows.Next() {
-		var i ListMachinesBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.SerialNumber,
-			&i.Notes,
-			&i.DepartmentID,
-			&i.DepartmentName,
-			&i.DepartmentCreatedAt,
-			&i.DepartmentUpdatedAt,
-			&i.ProductionStepID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.MatchTier,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMachinesForward = `-- name: ListMachinesForward :many
-SELECT
-    m.id,
-    m.name,
-    m.serial_number,
-    m.notes,
-    m.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    m.production_step_id,
-    m.created_at,
-    m.updated_at,
-    CAST(COALESCE(m.name <> ?, 0) AS SIGNED) AS match_tier
-FROM machine m
-JOIN department d ON d.id = m.department_id
-WHERE m.account_id = ?
-AND (
-    ? IS NULL
-    OR m.name LIKE ?
-)
-AND (
-    ? IS NULL
-    OR COALESCE(m.name <> ?, 0) > CAST(? AS SIGNED)
-    OR (
-        COALESCE(m.name <> ?, 0) = CAST(? AS SIGNED)
-        AND (
-            m.created_at < ?
-            OR (m.created_at = ? AND m.id < ?)
-        )
-    )
-)
-ORDER BY COALESCE(m.name <> ?, 0) ASC, m.created_at DESC, m.id DESC
-LIMIT ?
-`
-
-type ListMachinesForwardParams struct {
-	SearchExact     sql.NullString
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorMatchTier sql.NullInt64
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListMachinesForwardRow struct {
-	ID                  string
-	Name                string
-	SerialNumber        string
-	Notes               sql.NullString
-	DepartmentID        string
-	DepartmentName      string
-	DepartmentCreatedAt time.Time
-	DepartmentUpdatedAt time.Time
-	ProductionStepID    sql.NullString
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	MatchTier           int64
-}
-
-// A search lists the machine named exactly the term first (match tier 0), then its other prefix matches
-// (tier 1); without a search every machine is tier 0. Newest first within a tier.
-func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwardParams) ([]ListMachinesForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMachinesForward,
-		arg.SearchExact,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.SearchExact,
-		arg.CursorMatchTier,
-		arg.SearchExact,
-		arg.CursorMatchTier,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.SearchExact,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMachinesForwardRow
-	for rows.Next() {
-		var i ListMachinesForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.SerialNumber,
-			&i.Notes,
-			&i.DepartmentID,
-			&i.DepartmentName,
-			&i.DepartmentCreatedAt,
-			&i.DepartmentUpdatedAt,
-			&i.ProductionStepID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.MatchTier,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -804,6 +596,7 @@ SET
     m.name = COALESCE(?, m.name),
     m.serial_number = COALESCE(?, m.serial_number),
     m.notes = ?,
+    m.is_active = COALESCE(?, m.is_active),
     m.updated_at = NOW(3)
 WHERE m.id = ?
 AND m.account_id = ?
@@ -813,6 +606,7 @@ type UpdateMachineParams struct {
 	Name         sql.NullString
 	SerialNumber sql.NullString
 	Notes        sql.NullString
+	IsActive     sql.NullBool
 	ID           string
 	AccountID    string
 }
@@ -822,6 +616,7 @@ func (q *Queries) UpdateMachine(ctx context.Context, arg UpdateMachineParams) (s
 		arg.Name,
 		arg.SerialNumber,
 		arg.Notes,
+		arg.IsActive,
 		arg.ID,
 		arg.AccountID,
 	)

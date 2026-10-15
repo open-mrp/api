@@ -307,6 +307,16 @@ func (s *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, para
 			params.LabelSizeCode = params.LabelSizeCode.BackfillUnsetPtr(old.LabelSizeCode)
 			params.LabelTypeCode = params.LabelTypeCode.BackfillUnsetPtr(old.LabelTypeCode)
 
+			if params.DepartmentID != nil && *params.DepartmentID != old.DepartmentID {
+				deptRepo := txSvc.repos.NewDepartmentRepo()
+				if _, apiErr := deptRepo.Get(txCtx, domain.GetDepartmentParams{AccountID: params.AccountID, DepartmentID: *params.DepartmentID}); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := deptRepo.SetScanningStationsDepartmentID(txCtx, *params.DepartmentID, params.AccountID, []string{params.ScanningStationID}); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
@@ -378,6 +388,10 @@ func (s *scanningStationSvcImpl) DeleteScanningStation(ctx context.Context, scan
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *scanningStationSvcImpl) *apierror.APIError {
+		if apiErr := domain.ScanningStationReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), scanningStation.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeScanningStation, scanningStation.ID, accountID, scanningStation); apiErr != nil {
 			return apiErr
 		}

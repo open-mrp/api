@@ -70,6 +70,7 @@ func resolveBulkUpsertMachineRows(ctx context.Context, repos domain.RepoFactory,
 			SerialNumber: row.SerialNumber,
 			Notes:        row.Notes,
 			DepartmentID: deptIDByIdentifier[row.Department],
+			Status:       row.Status,
 		}
 	}
 	return resolved, nil
@@ -161,11 +162,11 @@ func matchMachineForUpsert(row domain.ResolvedUpsertMachineRow, nameMatch, seria
 	}
 	switch {
 	case nameMatch != nil && serialMatch != nil:
-		return nil, apierror.NewConflictErrorWithParam("department", fmt.Sprintf("Machine %q (matched by name and serial number) belongs to department %q and cannot be moved.", old.Name, oldDept))
+		return nil, apierror.NewConflictErrorWithParam("work_center", fmt.Sprintf("Machine %q (matched by name and serial number) belongs to work center %q; move it with Update Machine.", old.Name, oldDept))
 	case nameMatch != nil:
 		return nil, apierror.NewConflictErrorWithParam("name", fmt.Sprintf("A machine named %q already exists.", old.Name))
 	default:
-		return nil, apierror.NewConflictErrorWithParam("serial_number", fmt.Sprintf("Serial number %q is already used by machine %q in department %q.", row.SerialNumber, old.Name, oldDept))
+		return nil, apierror.NewConflictErrorWithParam("serial_number", fmt.Sprintf("Serial number %q is already used by machine %q in work center %q.", row.SerialNumber, old.Name, oldDept))
 	}
 }
 
@@ -189,6 +190,7 @@ func upsertMachineInTx(txCtx context.Context, txRepos domain.RepoFactory, accoun
 			SerialNumber: row.SerialNumber,
 			Notes:        row.Notes,
 			DepartmentID: row.DepartmentID,
+			Status:       machineStatus(row.Status),
 		})
 		if apiErr != nil {
 			return "", apiErr
@@ -221,6 +223,7 @@ func upsertMachineInTx(txCtx context.Context, txRepos domain.RepoFactory, accoun
 		Name:         &name,
 		SerialNumber: &serial,
 		Notes:        notes,
+		Status:       row.Status,
 	})
 	if apiErr != nil {
 		return "", apiErr

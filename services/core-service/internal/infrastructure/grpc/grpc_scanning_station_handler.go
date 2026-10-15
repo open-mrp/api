@@ -93,10 +93,11 @@ func (h *gRPCHandler) ListScanningStations(ctx context.Context, req *pb.ListScan
 	}
 
 	params := domain.ListScanningStationsParams{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: req.Includes,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Query:         req.Query,
+		Includes:      req.Includes,
+		DepartmentIDs: req.DepartmentIds,
 	}
 
 	result, apiErr := h.scanningStationSvc.ListScanningStations(ctx, params)
@@ -197,6 +198,7 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 	params := domain.UpdateScanningStationParams{
 		ScanningStationID: req.Id,
 		Name:              req.Name,
+		DepartmentID:      req.DepartmentId,
 		Notes:             fieldpb.StringClearableFromProto(req.Notes),
 		LabelSizeCode:     clearLabelWhenEmpty(fieldpb.StringClearableFromProto(req.LabelSizeCode)),
 		LabelTypeCode:     clearLabelWhenEmpty(fieldpb.StringClearableFromProto(req.LabelTypeCode)),

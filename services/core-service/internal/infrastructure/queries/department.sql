@@ -26,14 +26,14 @@ SELECT id, name, scanning_station_type_code, material_check_required, department
 FROM scanning_station
 WHERE department_id IN (sqlc.slice('department_ids'))
 AND account_id = sqlc.arg('account_id')
-ORDER BY name ASC;
+ORDER BY created_at DESC, id DESC;
 
 -- name: ListMachinesByDepartmentIDs :many
 SELECT m.id, m.name, m.serial_number, m.department_id, m.created_at, m.updated_at
 FROM machine m
 WHERE m.department_id IN (sqlc.slice('department_ids'))
 AND m.account_id = sqlc.arg('account_id')
-ORDER BY m.name ASC;
+ORDER BY m.created_at DESC, m.id DESC;
 
 -- name: ListDepartmentsForward :many
 SELECT
@@ -187,20 +187,6 @@ SELECT
 FROM department d
 WHERE d.name IN (sqlc.slice('names'))
 AND d.account_id = sqlc.arg('account_id');
-
--- name: ListScanningStationsByDepartmentID :many
-SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
-FROM scanning_station
-WHERE department_id = sqlc.arg('department_id')
-AND account_id = sqlc.arg('account_id')
-ORDER BY name ASC;
-
--- name: ListMachinesByDepartmentID :many
-SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
-FROM machine m
-WHERE m.department_id = sqlc.arg('department_id')
-AND m.account_id = sqlc.arg('account_id')
-ORDER BY m.name ASC;
 
 -- name: SetMachinesDepartmentID :exec
 UPDATE machine

@@ -325,6 +325,9 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 			if apiErr != nil {
 				return apiErr
 			}
+			if apiErr := domain.RequireAssignable("machine_id", "machine", machine.Status); apiErr != nil {
+				return apiErr
+			}
 
 			// Two concurrent open events for one machine would double-count its downtime against the same wall-clock window and push Availability below zero.
 			if params.EndedAt == nil {
@@ -459,6 +462,9 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 					MachineID: *params.MachineID,
 				})
 				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := domain.RequireAssignable("machine_id", "machine", machine.Status); apiErr != nil {
 					return apiErr
 				}
 				existing.MachineID = machine.ID

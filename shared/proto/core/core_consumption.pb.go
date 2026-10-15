@@ -1534,11 +1534,13 @@ func (x *ScanningStationInfo) GetUpdatedAt() *timestamppb.Timestamp {
 }
 
 type ListScanningStationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Cursor   *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit    int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query    *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Only stations in one of these departments.
+	DepartmentIds []string `protobuf:"bytes,5,rep,name=department_ids,json=departmentIds,proto3" json:"department_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1597,6 +1599,13 @@ func (x *ListScanningStationsRequest) GetQuery() string {
 func (x *ListScanningStationsRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListScanningStationsRequest) GetDepartmentIds() []string {
+	if x != nil {
+		return x.DepartmentIds
 	}
 	return nil
 }
@@ -1990,8 +1999,10 @@ type UpdateScanningStationRequest struct {
 	LabelTypeCode       *StringPatch           `protobuf:"bytes,5,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
 	OperatorRequirement *string                `protobuf:"bytes,6,opt,name=operator_requirement,json=operatorRequirement,proto3,oneof" json:"operator_requirement,omitempty"`
 	Includes            []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Moves the station to this department.
+	DepartmentId  *string `protobuf:"bytes,8,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateScanningStationRequest) Reset() {
@@ -2071,6 +2082,13 @@ func (x *UpdateScanningStationRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateScanningStationRequest) GetDepartmentId() string {
+	if x != nil && x.DepartmentId != nil {
+		return *x.DepartmentId
+	}
+	return ""
 }
 
 type UpdateScanningStationResponse struct {
@@ -6487,12 +6505,13 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_codeB\x18\n" +
 	"\x16_department_created_atB\x18\n" +
-	"\x16_department_updated_at\"\x9c\x01\n" +
+	"\x16_department_updated_at\"\xc3\x01\n" +
 	"\x1bListScanningStationsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12%\n" +
+	"\x0edepartment_ids\x18\x05 \x03(\tR\rdepartmentIdsB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"\x93\x01\n" +
 	"\x1cListScanningStationsResponse\x12F\n" +
@@ -6521,7 +6540,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_code\"e\n" +
 	"\x1dCreateScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\x9d\x03\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xd9\x03\n" +
 	"\x1cUpdateScanningStationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
@@ -6529,12 +6548,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0flabel_size_code\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\rlabelSizeCode\x88\x01\x01\x12>\n" +
 	"\x0flabel_type_code\x18\x05 \x01(\v2\x11.core.StringPatchH\x03R\rlabelTypeCode\x88\x01\x01\x126\n" +
 	"\x14operator_requirement\x18\x06 \x01(\tH\x04R\x13operatorRequirement\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12(\n" +
+	"\rdepartment_id\x18\b \x01(\tH\x05R\fdepartmentId\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_codeB\x17\n" +
-	"\x15_operator_requirement\"e\n" +
+	"\x15_operator_requirementB\x10\n" +
+	"\x0e_department_id\"e\n" +
 	"\x1dUpdateScanningStationResponse\x12D\n" +
 	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\".\n" +
 	"\x1cDeleteScanningStationRequest\x12\x0e\n" +

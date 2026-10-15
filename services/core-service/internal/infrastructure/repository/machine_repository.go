@@ -7,12 +7,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/catalogsearch"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
-	"github.com/open-mrp/apikit/safeconv"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -44,56 +43,6 @@ func machBuildSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: db.EscapeLike(*query) + "%", Valid: true}
 }
 
-// machCursorMatchTier is the cursor's match tier; a cursor without one is from a list every machine of
-// which is tier 0.
-func machCursorMatchTier(cur pagination.StringCursor) gosql.NullInt64 {
-	tier := catalogsearch.NullTierInt64Param(cur.MatchTier)
-	tier.Valid = true
-	return tier
-}
-
-func mapMachineForwardRow(row sqlc.ListMachinesForwardRow) *domain.Machine {
-	m := &domain.Machine{
-		ID:                  row.ID,
-		Name:                row.Name,
-		SerialNumber:        row.SerialNumber,
-		DepartmentID:        &row.DepartmentID,
-		DepartmentName:      &row.DepartmentName,
-		DepartmentCreatedAt: &row.DepartmentCreatedAt,
-		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.Notes.Valid {
-		m.Notes = &row.Notes.String
-	}
-	if row.ProductionStepID.Valid {
-		m.ProductionStepID = &row.ProductionStepID.String
-	}
-	return m
-}
-
-func mapMachineBackwardRow(row sqlc.ListMachinesBackwardRow) *domain.Machine {
-	m := &domain.Machine{
-		ID:                  row.ID,
-		Name:                row.Name,
-		SerialNumber:        row.SerialNumber,
-		DepartmentID:        &row.DepartmentID,
-		DepartmentName:      &row.DepartmentName,
-		DepartmentCreatedAt: &row.DepartmentCreatedAt,
-		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.Notes.Valid {
-		m.Notes = &row.Notes.String
-	}
-	if row.ProductionStepID.Valid {
-		m.ProductionStepID = &row.ProductionStepID.String
-	}
-	return m
-}
-
 func mapGetMachineRow(row sqlc.GetMachineRow) *domain.Machine {
 	m := &domain.Machine{
 		ID:                  row.ID,
@@ -112,6 +61,7 @@ func mapGetMachineRow(row sqlc.GetMachineRow) *domain.Machine {
 	if row.ProductionStepID.Valid {
 		m.ProductionStepID = &row.ProductionStepID.String
 	}
+	m.Status = constants.ArchiveStatusFromIsActive(row.IsActive)
 	return m
 }
 
@@ -133,6 +83,7 @@ func mapGetMachinesByIDsRow(row sqlc.GetMachinesByIDsRow) *domain.Machine {
 	if row.ProductionStepID.Valid {
 		m.ProductionStepID = &row.ProductionStepID.String
 	}
+	m.Status = constants.ArchiveStatusFromIsActive(row.IsActive)
 	return m
 }
 
@@ -154,6 +105,7 @@ func mapFindMachinesBySerialNumbersRow(row sqlc.FindMachinesBySerialNumbersRow) 
 	if row.ProductionStepID.Valid {
 		m.ProductionStepID = &row.ProductionStepID.String
 	}
+	m.Status = constants.ArchiveStatusFromIsActive(row.IsActive)
 	return m
 }
 
@@ -175,6 +127,7 @@ func mapFindMachinesByNamesRow(row sqlc.FindMachinesByNamesRow) *domain.Machine 
 	if row.ProductionStepID.Valid {
 		m.ProductionStepID = &row.ProductionStepID.String
 	}
+	m.Status = constants.ArchiveStatusFromIsActive(row.IsActive)
 	return m
 }
 
@@ -219,77 +172,42 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.list")
 	defer span.End()
 
-	searchQuery := machBuildSearchParams(params.Query)
-	searchExact := db.NullStringPtr(params.Query)
-	tiers := map[string]int32{}
-	matchTier := func(m *domain.Machine) int32 { return tiers[m.ID] }
-	page := func(machines []*domain.Machine, cursorDir *pagination.Direction) *domain.ListMachinesResult {
-		result, pageInfo := pagination.BuildPageStringWithSearchRank(machines, params.Limit, cursorDir, searchExact.Valid, machineCreatedAt, machineID, matchTier)
-		return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
-	if params.Cursor == nil {
-		rows, err := r.queries.ListMachinesForward(ctx, sqlc.ListMachinesForwardParams{
-			AccountID:   params.AccountID,
-			SearchQuery: searchQuery,
-			SearchExact: searchExact,
-			Limit:       params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		machines := make([]*domain.Machine, len(rows))
-		for i, row := range rows {
-			machines[i] = mapMachineForwardRow(row)
-			tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
-		}
-		return page(machines, nil), nil
+	var search string
+	if params.Query != nil {
+		search = *params.Query
 	}
-
-	cur, err := pagination.DecodeStringCursor(*params.Cursor)
-	if err != nil {
-		return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-	}
-
-	if cur.Direction == pagination.DirectionBackward {
-		rows, err := r.queries.ListMachinesBackward(ctx, sqlc.ListMachinesBackwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			SearchExact:     searchExact,
-			CursorMatchTier: machCursorMatchTier(cur),
-			CursorCreatedAt: cur.OccurredAt,
-			CursorID:        cur.ID,
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		machines := make([]*domain.Machine, len(rows))
-		for i, row := range rows {
-			machines[i] = mapMachineBackwardRow(row)
-			tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
-		}
-		return page(machines, &cur.Direction), nil
-	}
-
-	rows, err := r.queries.ListMachinesForward(ctx, sqlc.ListMachinesForwardParams{
-		AccountID:       params.AccountID,
-		SearchQuery:     searchQuery,
-		SearchExact:     searchExact,
-		CursorMatchTier: machCursorMatchTier(cur),
-		CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-		CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-		Limit:           params.Limit + 1,
+	query, args := buildMachineListQuery(machineListFilter{
+		accountID:     params.AccountID,
+		search:        search,
+		departmentIDs: params.DepartmentIDs,
+		isActive:      params.IsActive,
+		cursor:        cursor,
+		limit:         params.Limit + 1,
 	})
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	machines := make([]*domain.Machine, len(rows))
-	for i, row := range rows {
-		machines[i] = mapMachineForwardRow(row)
-		tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
+	defer func() { _ = rows.Close() }()
+	scanned, err := scanMachineListRows(rows)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-	return page(machines, &cur.Direction), nil
+
+	machines := make([]*domain.Machine, len(scanned))
+	tiers := make(map[string]int32, len(scanned))
+	for i, row := range scanned {
+		machines[i] = row.machine
+		tiers[row.machine.ID] = row.tier
+	}
+	matchTier := func(m *domain.Machine) int32 { return tiers[m.ID] }
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(machines, params.Limit, cursorDirection(cursor), search != "",
+		machineCreatedAt, machineID, matchTier)
+	return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}, nil
 }
 
 func (r *machineRepoImpl) Export(ctx context.Context, params domain.ExportMachinesParams) ([]*domain.Machine, *apierror.APIError) {
@@ -352,6 +270,7 @@ func (r *machineRepoImpl) Create(ctx context.Context, id string, params domain.C
 		SerialNumber: params.SerialNumber,
 		Notes:        machToNullString(params.Notes),
 		DepartmentID: params.DepartmentID,
+		IsActive:     params.Status != constants.ArchiveStatusArchived,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -370,6 +289,7 @@ func (r *machineRepoImpl) Update(ctx context.Context, params domain.UpdateMachin
 		Name:         machToNullString(params.Name),
 		SerialNumber: machToNullString(params.SerialNumber),
 		Notes:        field.StringToNullString(params.Notes),
+		IsActive:     archiveStatusToNullBool(params.Status),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

@@ -39,7 +39,7 @@ func validateBulkUpsertDepartmentRows(rows []domain.UpsertDepartmentParams) *api
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
-	return rowErrs.Summary("departments")
+	return rowErrs.Summary("work_centers")
 }
 
 // resolves each row's location reference by id or name
@@ -53,12 +53,16 @@ func resolveBulkUpsertDepartmentRows(ctx context.Context, repos domain.RepoFacto
 
 	repo := repos.NewLocationRepo()
 	locationIDByIdentifier, apiErr := resolveObjectIdentifiers(
-		ctx, accountID, "departments", "location", "location", "locations", identifiers,
+		ctx, accountID, "work_centers", "location", "location", "locations", identifiers,
 		repo.GetByIDs, repo.FindByNames,
 		func(l *domain.Location) string { return l.ID },
 		func(l *domain.Location) string { return l.Name },
 	)
 	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := requireAssignableRowLocations(ctx, repo, accountID, identifiers, locationIDByIdentifier); apiErr != nil {
 		return nil, apiErr
 	}
 
@@ -76,6 +80,37 @@ func resolveBulkUpsertDepartmentRows(ctx context.Context, repos domain.RepoFacto
 		}
 	}
 	return resolved, nil
+}
+
+// requireAssignableRowLocations rejects rows naming an archived location, row-indexed under work_centers[i].location.
+func requireAssignableRowLocations(ctx context.Context, repo domain.LocationRepo, accountID string, identifiers []*domain.ObjectIdentifier, resolved map[domain.ObjectIdentifier]string) *apierror.APIError {
+	var ids []string
+	for _, identifier := range identifiers {
+		if identifier != nil {
+			ids = append(ids, resolved[*identifier])
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	locations, apiErr := repo.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	status := make(map[string]constants.ArchiveStatus, len(locations))
+	for _, l := range locations {
+		status[l.ID] = l.Status
+	}
+	var rowErrs apierror.RowErrors
+	for i, identifier := range identifiers {
+		if identifier == nil {
+			continue
+		}
+		if f, archived := domain.ArchivedField("location", "location", status[resolved[*identifier]]); archived {
+			rowErrs.AddField(i, f.Param, f.Code, f.Message)
+		}
+	}
+	return rowErrs.Summary("work_centers")
 }
 
 // the engine's Write hook: matches each row against existing departments by name and upserts it in its own savepoint, so a bad row rolls back only itself.
@@ -150,7 +185,7 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 		if apiErr := audit.NewPublisher().Publish(ctx, txRepos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionCreate,
-			ResourceType: constants.ObjectTypeDepartment,
+			ResourceType: constants.ObjectTypeWorkCenter,
 			ResourceID:   created.ID,
 			Changes:      changes,
 		}); apiErr != nil {
@@ -181,7 +216,7 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 	if apiErr := audit.NewPublisher().Publish(ctx, txRepos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,
 		Action:       constants.AuditActionUpdate,
-		ResourceType: constants.ObjectTypeDepartment,
+		ResourceType: constants.ObjectTypeWorkCenter,
 		ResourceID:   updated.ID,
 		Changes:      changes,
 	}); apiErr != nil {
@@ -195,11 +230,11 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 func (s *departmentSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertDepartmentParams, domain.ResolvedUpsertDepartmentRow] {
 	return bulkOperationSpec[domain.UpsertDepartmentParams, domain.ResolvedUpsertDepartmentRow]{
 		JobType:          constants.JobTypeBulkUpsert,
-		ResourceType:     constants.ObjectTypeDepartment,
+		ResourceType:     constants.ObjectTypeWorkCenter,
 		RoutingKey:       messaging.BulkUpsertDepartments.RoutingKey(),
 		PermissionDomain: types.PermissionDomainDepartments,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
-		EntityName:       "departments",
+		EntityName:       "work centers",
 		Validate:         validateBulkUpsertDepartmentRows,
 		Resolve:          resolveBulkUpsertDepartmentRows,
 		Write:            writeBulkUpsertDepartments,
@@ -228,7 +263,7 @@ func (s *departmentSvcImpl) exportSpec() exportSpec[*domain.Department, domain.E
 		PermissionDomain: types.PermissionDomainDepartments,
 		Name:             "Departments",
 		Slug:             "departments",
-		ResourceType:     constants.ObjectTypeDepartment,
+		ResourceType:     constants.ObjectTypeWorkCenter,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 24},
 			{Header: "Name", Key: "name", Width: 28},

@@ -179,7 +179,11 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("name", "A department with this name already exists.")
+				return apierror.NewConflictErrorWithParam("name", "A work center with this name already exists.")
+			}
+
+			if apiErr := txSvc.requireAssignableMembers(txCtx, params.AccountID, params.LocationID, params.ScanningStationIDs, params.MachineIDs); apiErr != nil {
+				return apiErr
 			}
 
 			if params.LaborRate != nil {
@@ -228,7 +232,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeDepartment,
+				ResourceType: constants.ObjectTypeWorkCenter,
 				ResourceID:   created.ID,
 				Changes:      changes,
 			}); apiErr != nil {
@@ -301,8 +305,12 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("name", "A department with this name already exists.")
+					return apierror.NewConflictErrorWithParam("name", "A work center with this name already exists.")
 				}
+			}
+
+			if apiErr := txSvc.requireAssignableMembers(txCtx, params.AccountID, params.LocationID, params.ScanningStationIDs, params.MachineIDs); apiErr != nil {
+				return apiErr
 			}
 
 			// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
@@ -364,7 +372,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeDepartment,
+				ResourceType: constants.ObjectTypeWorkCenter,
 				ResourceID:   updated.ID,
 				Changes:      changes,
 			}); apiErr != nil {
@@ -431,7 +439,7 @@ func resolveDepartmentIdentifiersInTx(txCtx context.Context, repos domain.RepoFa
 	idByIdentifier := make(map[domain.ObjectIdentifier]string, len(identifiers))
 	var rowErrs apierror.RowErrors
 	for i, identifier := range identifiers {
-		param := "department"
+		param := "work_center"
 		var resolvedID string
 		switch {
 		case identifier.ID != "":
@@ -441,11 +449,11 @@ func resolveDepartmentIdentifiersInTx(txCtx context.Context, repos domain.RepoFa
 		case identifier.Name != "":
 			resolvedID = idByName[strings.ToLower(identifier.Name)]
 		default:
-			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, "a department id or name is required")
+			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, "a work center id or name is required")
 			continue
 		}
 		if resolvedID == "" {
-			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("department %q was not found", objectIdentifierLabel(identifier.ID, identifier.Name)))
+			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("work center %q was not found", objectIdentifierLabel(identifier.ID, identifier.Name)))
 			continue
 		}
 		idByIdentifier[identifier] = resolvedID
@@ -487,7 +495,7 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewGoneError("This department has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This work center has already been deleted and can no longer be modified."),
 				)
 			}
 		}
@@ -495,6 +503,10 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *departmentSvcImpl) *apierror.APIError {
+		if apiErr := domain.DepartmentReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), department.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeDepartment, department.ID, accountID, department); apiErr != nil {
 			return apiErr
 		}
@@ -511,7 +523,7 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeDepartment,
+			ResourceType: constants.ObjectTypeWorkCenter,
 			ResourceID:   department.ID,
 			Changes:      changes,
 		}); apiErr != nil {
@@ -526,6 +538,20 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 	}
 
 	return nil
+}
+
+// requireAssignableMembers checks what a create or update assigns to the work center: its location and the machines
+// and scanning stations moving into it.
+func (s *departmentSvcImpl) requireAssignableMembers(ctx context.Context, accountID string, locationID *string, stationIDs, machineIDs []string) *apierror.APIError {
+	if locationID != nil {
+		if apiErr := requireAssignableLocation(ctx, s.repos, accountID, "location_id", *locationID); apiErr != nil {
+			return apiErr
+		}
+	}
+	if apiErr := requireKnownScanningStations(ctx, s.repos, accountID, "scanning_station_ids", stationIDs); apiErr != nil {
+		return apiErr
+	}
+	return requireAssignableMachines(ctx, s.repos, accountID, "machine_ids", machineIDs)
 }
 
 func (s *departmentSvcImpl) BatchGetDepartmentsByIDs(ctx context.Context, ids []string) ([]*domain.Department, *apierror.APIError) {

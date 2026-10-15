@@ -171,6 +171,7 @@ SELECT
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
     rdu.abbreviation AS unit_price_denominator_unit_abbreviation,
+    sol.unit_price_currency,
     -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
     -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
     -- dashboard would price the line differently: units of different dimensions, a unit with an

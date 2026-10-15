@@ -500,10 +500,8 @@ func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
 	}
 
-	info.UnitPrice = unitPriceToProto(l.UnitPriceValue, l.UnitPriceDenominatorUnitID)
-	if l.UnitCostValue != nil && l.UnitCostDenominatorUnitID != nil {
-		info.UnitCost = unitPriceToProto(*l.UnitCostValue, *l.UnitCostDenominatorUnitID)
-	}
+	info.UnitPrice = l.UnitPrice.ToProto()
+	info.UnitCost = domain.UnitPricePtrToProto(l.UnitCost)
 
 	return info
 }

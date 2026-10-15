@@ -194,6 +194,8 @@ func mapProductFullFindRow(row sqlc.FindProductsBySKUsRow) *domain.ProductFull {
 			UpdatedAt:        row.ProductLineUpdatedAt.Time,
 		}
 	}
+	product.Item.SalesUnitPrice = storedRatePrice(product.Item.UnitValue, row.SalesUnitPriceCurrency)
+	product.Item.UnitCostPrice = storedRatePrice(product.Item.UnitCost, row.UnitCostCurrency)
 
 	return product
 }

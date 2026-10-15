@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	gosql "database/sql"
 	"strings"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/db/backfill"
 )
 
@@ -240,4 +243,41 @@ func moneyDriftQuery(t copyTable) string {
 	}
 	return "SELECT COUNT(*) FROM " + t.table + " " + t.alias + "\n" + t.joins + "\nWHERE NOT (" + t.uncopiedWhere(t.alias) +
 		") AND NOT (" + strings.Join(same, " AND ") + ")"
+}
+
+// storedCurrency is a money copy's currency. A row the backfill has yet to reach has no copy, and its
+// amount, like every amount in a quantity or rate row, is usd.
+func storedCurrency(c gosql.NullString) constants.Currency {
+	if c.Valid && c.String != "" {
+		return constants.Currency(c.String)
+	}
+	return constants.CurrencyUSD
+}
+
+// storedMoney is an amount read from its quantity row with the currency copied beside it.
+func storedMoney(amount string, currency gosql.NullString) domain.Money {
+	return domain.Money{Amount: amount, Currency: storedCurrency(currency)}
+}
+
+// storedMoneyPtr is storedMoney for an amount that may be absent.
+func storedMoneyPtr(amount gosql.NullString, currency gosql.NullString) *domain.Money {
+	if !amount.Valid {
+		return nil
+	}
+	m := storedMoney(amount.String, currency)
+	return &m
+}
+
+// storedRatePrice is storedUnitPrice for a rate row that may be missing.
+func storedRatePrice(r *domain.Rate, currency gosql.NullString) *domain.UnitPrice {
+	if r == nil {
+		return nil
+	}
+	p := storedUnitPrice(r.Value, currency, r.DenominatorUnitID)
+	return &p
+}
+
+// storedUnitPrice is a price read from its rate row with the currency copied beside it.
+func storedUnitPrice(amount string, currency gosql.NullString, perUnitID string) domain.UnitPrice {
+	return domain.UnitPrice{Amount: amount, Currency: storedCurrency(currency), PerUnitID: perUnitID}
 }

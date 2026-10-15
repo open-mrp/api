@@ -38,7 +38,7 @@ func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material
 		notes = &row.ItemNotes.String
 	}
 
-	return &domain.Material{
+	m := &domain.Material{
 		ID:     row.ID,
 		ItemID: row.ItemID,
 		Item: &domain.Item{
@@ -108,6 +108,9 @@ func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
+	m.Item.SalesUnitPrice = storedRatePrice(m.Item.UnitValue, row.SalesUnitPriceCurrency)
+	m.Item.UnitCostPrice = storedRatePrice(m.Item.UnitCost, row.UnitCostCurrency)
+	return m
 }
 
 func mapMaterialBaseItem(itemID, sku string, description, notes gosql.NullString, itemTypeCode, itemCategoryID, categoryName, itemCategoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID string, isDirty bool, itemCreatedAt, itemUpdatedAt, categoryCreatedAt, categoryUpdatedAt time.Time) *domain.Item {

@@ -21,13 +21,16 @@ type Quantity struct {
 }
 
 type ShippingTerm struct {
-	ID                          string
-	Name                        string                     `audit:"name"`
-	Type                        constants.ShippingTermType `audit:"type"`
-	FlatRate                    *Quantity                  `audit:"flat_rate"`
-	MinimumOrderValue           *Quantity                  `audit:"minimum_order_value"`
-	FreeShippingServiceLevelIDs []string                   `audit:"free_shipping_service_level_ids"`
-	FreeShippingServiceLevels   []*ServiceLevel            `audit:"-"`
+	ID                string
+	Name              string                     `audit:"name"`
+	Type              constants.ShippingTermType `audit:"type"`
+	FlatRate          *Quantity                  `audit:"flat_rate"`
+	MinimumOrderValue *Quantity                  `audit:"minimum_order_value"`
+	// FlatRateAmount and MinimumOrderAmount are FlatRate and MinimumOrderValue as money.
+	FlatRateAmount              *Money          `audit:"-"`
+	MinimumOrderAmount          *Money          `audit:"-"`
+	FreeShippingServiceLevelIDs []string        `audit:"free_shipping_service_level_ids"`
+	FreeShippingServiceLevels   []*ServiceLevel `audit:"-"`
 	AccountID                   *string
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time

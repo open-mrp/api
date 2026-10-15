@@ -60,6 +60,7 @@ func (r *salesTargetRepoImpl) List(ctx context.Context, params domain.ListSalesT
 			AmountID:     row.AmountID,
 			AmountValue:  row.AmountValue,
 			AmountUnitID: row.AmountUnitID,
+			Amount:       storedMoney(row.AmountValue, row.AmountCurrency),
 
 			AmountUnitName:              row.AmountUnitName,
 			AmountUnitAbbreviation:      row.AmountUnitAbbreviation,
@@ -99,6 +100,7 @@ func (r *salesTargetRepoImpl) Get(ctx context.Context, targetID string) (*domain
 		AmountID:     row.AmountID,
 		AmountValue:  row.AmountValue,
 		AmountUnitID: row.AmountUnitID,
+		Amount:       storedMoney(row.AmountValue, row.AmountCurrency),
 
 		AmountUnitName:              row.AmountUnitName,
 		AmountUnitAbbreviation:      row.AmountUnitAbbreviation,

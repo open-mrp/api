@@ -497,6 +497,8 @@ SELECT
     i.unit_value_id,
     i.unit_cost_id,
     i.burn_rate_id,
+    i.sales_unit_price_currency,
+    i.unit_cost_currency,
     i.account_id,
     i.is_dirty,
     i.created_at AS item_created_at,
@@ -570,6 +572,8 @@ type GetMaterialByItemIDRow struct {
 	UnitValueID                string
 	UnitCostID                 string
 	BurnRateID                 string
+	SalesUnitPriceCurrency     sql.NullString
+	UnitCostCurrency           sql.NullString
 	AccountID                  string
 	IsDirty                    bool
 	ItemCreatedAt              time.Time
@@ -627,6 +631,8 @@ func (q *Queries) GetMaterialByItemID(ctx context.Context, arg GetMaterialByItem
 		&i.UnitValueID,
 		&i.UnitCostID,
 		&i.BurnRateID,
+		&i.SalesUnitPriceCurrency,
+		&i.UnitCostCurrency,
 		&i.AccountID,
 		&i.IsDirty,
 		&i.ItemCreatedAt,

@@ -67,6 +67,8 @@ type InvoiceLine struct {
 	UnitPriceDenUnit string
 	// UnitPriceDenUnitAbbr labels the price's pricing unit ("$8.50 / pr"). It is the rate's own denominator, which can differ from the line's quantity unit.
 	UnitPriceDenUnitAbbr string
+	// UnitPrice is the order line's price as money per unit.
+	UnitPrice UnitPrice
 	// Pricing* are the base ratios of the quantity's unit and of the unit the price is quoted per, as
 	// decimal strings, empty when the line cannot be priced. Read them through PriceUnitConversion.
 	PricingQuantityRatioNumerator   string

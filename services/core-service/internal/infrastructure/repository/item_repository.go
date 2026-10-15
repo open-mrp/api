@@ -167,12 +167,29 @@ func stitchItemRates(ctx context.Context, queries *sqlc.Queries, items []*domain
 		rateMap[row.ID] = mapRateRow(row)
 	}
 
+	currencies := map[string]sqlc.GetItemMoneyCurrenciesByIDsRow{}
+	if wantUnitValue || wantUnitCost {
+		itemIDs := make([]string, len(items))
+		for i, item := range items {
+			itemIDs[i] = item.ID
+		}
+		rows, err := queries.GetItemMoneyCurrenciesByIDs(ctx, itemIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, row := range rows {
+			currencies[row.ID] = row
+		}
+	}
+
 	for _, item := range items {
 		if wantUnitValue {
 			item.UnitValue = rateMap[item.UnitValueID]
+			item.SalesUnitPrice = storedRatePrice(item.UnitValue, currencies[item.ID].SalesUnitPriceCurrency)
 		}
 		if wantUnitCost {
 			item.UnitCost = rateMap[item.UnitCostID]
+			item.UnitCostPrice = storedRatePrice(item.UnitCost, currencies[item.ID].UnitCostCurrency)
 		}
 		if wantBurnRate {
 			item.BurnRate = rateMap[item.BurnRateID]

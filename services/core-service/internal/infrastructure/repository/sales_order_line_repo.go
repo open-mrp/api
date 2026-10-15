@@ -744,6 +744,12 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
 	}
 
+	line.UnitPrice = storedUnitPrice(row.UnitPriceValue, row.UnitPriceCurrency, row.UnitPriceDenominatorUnitID)
+	if row.UnitCostValue.Valid && row.UnitCostDenominatorUnitID.Valid {
+		cost := storedUnitPrice(row.UnitCostValue.String, row.UnitCostCurrency, row.UnitCostDenominatorUnitID.String)
+		line.UnitCost = &cost
+	}
+
 	return line
 }
 
@@ -820,6 +826,12 @@ func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLin
 	}
 	if row.UnitCostDenominatorUnitAbbreviation.Valid {
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
+	}
+
+	line.UnitPrice = storedUnitPrice(row.UnitPriceValue, row.UnitPriceCurrency, row.UnitPriceDenominatorUnitID)
+	if row.UnitCostValue.Valid && row.UnitCostDenominatorUnitID.Valid {
+		cost := storedUnitPrice(row.UnitCostValue.String, row.UnitCostCurrency, row.UnitCostDenominatorUnitID.String)
+		line.UnitCost = &cost
 	}
 
 	return line

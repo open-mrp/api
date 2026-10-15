@@ -22,19 +22,21 @@ type Customer struct {
 	// ReceiveCalendarID is the days this customer's dock accepts freight, in the same chain as the lead time above.
 	ReceiveCalendarID *string `audit:"receive_calendar_id"`
 	// FulfillmentPolicy marks the customer make-to-order: when make_to_order, their history is left out of the production-schedule forecast and their orders are built only when placed. Nil inherits the account group's policy, then make-to-stock.
-	FulfillmentPolicy                  *constants.FulfillmentPolicy  `audit:"fulfillment_policy_code"`
-	Note                               *string                       `audit:"note"`
-	Email                              *string                       `audit:"email"`
-	Phone                              *string                       `audit:"phone"`
-	URL                                *string                       `audit:"url"`
-	CarrierBillingType                 *constants.CarrierBillingType `audit:"carrier_billing_type"`
-	CarrierBillingAccount              *string                       `audit:"carrier_billing_account"`
-	CreditLimitID                      *string                       `audit:"credit_limit_id"`
-	CreditLimitValue                   *string                       `audit:"credit_limit_value"`
-	CreditLimitUnitID                  *string                       `audit:"credit_limit_unit_id"`
-	CreditLimitUnitAbbreviation        *string
-	CreditLimitUnitName                *string
-	CreditLimitUnitType                *string
+	FulfillmentPolicy           *constants.FulfillmentPolicy  `audit:"fulfillment_policy_code"`
+	Note                        *string                       `audit:"note"`
+	Email                       *string                       `audit:"email"`
+	Phone                       *string                       `audit:"phone"`
+	URL                         *string                       `audit:"url"`
+	CarrierBillingType          *constants.CarrierBillingType `audit:"carrier_billing_type"`
+	CarrierBillingAccount       *string                       `audit:"carrier_billing_account"`
+	CreditLimitID               *string                       `audit:"credit_limit_id"`
+	CreditLimitValue            *string                       `audit:"credit_limit_value"`
+	CreditLimitUnitID           *string                       `audit:"credit_limit_unit_id"`
+	CreditLimitUnitAbbreviation *string
+	CreditLimitUnitName         *string
+	CreditLimitUnitType         *string
+	// CreditLimit is the credit limit as money.
+	CreditLimit                        *Money  `audit:"-"`
 	AcceptsInvoiceEmails               bool    `audit:"accepts_invoice_emails"`
 	DefaultCarrierID                   *string `audit:"default_carrier_id"`
 	DefaultCarrierName                 *string

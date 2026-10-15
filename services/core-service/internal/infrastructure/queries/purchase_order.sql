@@ -480,6 +480,8 @@ SELECT STRAIGHT_JOIN
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    sol.unit_price_currency,
+    sol.unit_cost_currency,
     -- Timestamps
     sol.created_at,
     sol.updated_at,
@@ -558,6 +560,8 @@ SELECT STRAIGHT_JOIN
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    sol.unit_price_currency,
+    sol.unit_cost_currency,
     -- Timestamps
     sol.created_at,
     sol.updated_at,
@@ -637,6 +641,8 @@ SELECT STRAIGHT_JOIN
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    sol.unit_price_currency,
+    sol.unit_cost_currency,
     -- Timestamps
     sol.created_at,
     sol.updated_at,

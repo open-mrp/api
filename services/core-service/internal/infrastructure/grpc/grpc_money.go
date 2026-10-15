@@ -152,23 +152,7 @@ func unitPriceToProto(value, denominatorUnitID string) *pb.UnitPrice {
 	return domain.UnitPriceFromCurrencyRate(value, denominatorUnitID).ToProto()
 }
 
-// itemPriceToProto presents an item's unit value or unit cost, stored as a currency rate, as a price.
-func itemPriceToProto(r *domain.Rate) *pb.UnitPrice {
-	if r == nil {
-		return nil
-	}
-	return unitPriceToProto(r.Value, r.DenominatorUnitID)
-}
-
 // moneyToProto presents an amount stored as a quantity in a currency unit.
 func moneyToProto(value string) *pb.Money {
 	return domain.MoneyFromCurrencyQuantity(value).ToProto()
-}
-
-// moneyQuantityToProto presents an amount stored as a quantity in a currency unit, or nil when there is none.
-func moneyQuantityToProto(q *domain.Quantity) *pb.Money {
-	if q == nil {
-		return nil
-	}
-	return moneyToProto(q.Value)
 }

@@ -24,6 +24,7 @@ SELECT
     -- Freight amount
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
@@ -139,6 +140,7 @@ SELECT
     sc.updated_at,
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,

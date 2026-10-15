@@ -57,6 +57,10 @@ type SalesOrderLine struct {
 	UnitCostDenominatorUnitID   *string `audit:"unit_cost_denominator_unit_id"`
 	UnitCostDenominatorUnitAbbr *string `audit:"unit_cost_denominator_unit_abbr"`
 
+	// UnitPrice and UnitCost are the line's price and cost as money per unit.
+	UnitPrice UnitPrice  `audit:"-"`
+	UnitCost  *UnitPrice `audit:"-"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -431,5 +431,11 @@ func mapPurchaseOrderLineRow(row sqlc.GetPurchaseOrderLineRow) *domain.PurchaseO
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
 	}
 
+	line.UnitPrice = storedUnitPrice(row.UnitPriceValue, row.UnitPriceCurrency, row.UnitPriceDenominatorUnitID)
+	if row.UnitCostValue.Valid && row.UnitCostDenominatorUnitID.Valid {
+		cost := storedUnitPrice(row.UnitCostValue.String, row.UnitCostCurrency, row.UnitCostDenominatorUnitID.String)
+		line.UnitCost = &cost
+	}
+
 	return line
 }

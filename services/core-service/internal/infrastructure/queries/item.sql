@@ -965,3 +965,9 @@ SELECT p.id, p.account_id,
 FROM (SELECT i.id, i.account_id, i.burn_rate_id, i.deleted_at FROM item i WHERE i.id > sqlc.arg('after_id') ORDER BY i.id LIMIT ?) p
 LEFT JOIN rate r ON r.id = p.burn_rate_id
 ORDER BY p.id;
+
+-- name: GetItemMoneyCurrenciesByIDs :many
+-- The currencies copied beside each item's sales price and unit cost, by primary key.
+SELECT i.id, i.sales_unit_price_currency, i.unit_cost_currency
+FROM item i
+WHERE i.id IN (sqlc.slice('ids'));

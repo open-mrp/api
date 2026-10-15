@@ -107,7 +107,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 
 	// A credit limit whose unit row is missing cannot be stated, so it reads as none instead of failing the whole customer.
 	if c.CreditLimitID != nil && c.CreditLimitUnitID != nil {
-		p.CreditLimit = moneyToProto(*c.CreditLimitValue)
+		p.CreditLimit = domain.MoneyPtrToProto(c.CreditLimit)
 	}
 
 	if c.DefaultCarrierID != nil {

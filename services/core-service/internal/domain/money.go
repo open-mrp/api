@@ -41,6 +41,22 @@ func (p UnitPrice) ToProto() *pb.UnitPrice {
 	return &pb.UnitPrice{Amount: p.Amount, Currency: string(p.Currency), PerUnitId: p.PerUnitID}
 }
 
+// MoneyPtrToProto converts an amount that may be absent.
+func MoneyPtrToProto(m *Money) *pb.Money {
+	if m == nil {
+		return nil
+	}
+	return m.ToProto()
+}
+
+// UnitPricePtrToProto converts a price that may be absent.
+func UnitPricePtrToProto(p *UnitPrice) *pb.UnitPrice {
+	if p == nil {
+		return nil
+	}
+	return p.ToProto()
+}
+
 // ToProto converts the discount for the gateway.
 func (d Discount) ToProto() *pb.Discount {
 	out := &pb.Discount{Type: string(d.Type), PercentOff: d.PercentOff}

@@ -12,6 +12,8 @@ type SalesTarget struct {
 	AmountID     string
 	AmountValue  string `audit:"amount_value"`
 	AmountUnitID string `audit:"amount_unit_id"`
+	// Amount is the target as money.
+	Amount Money `audit:"-"`
 	// The amount's unit, carried alongside the id so the API can render a quantity without a second lookup.
 	AmountUnitName              string
 	AmountUnitAbbreviation      string

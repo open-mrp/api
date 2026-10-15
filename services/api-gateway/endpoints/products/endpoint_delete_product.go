@@ -31,10 +31,8 @@ func (e *DeleteProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePr
 		Route:             "/v1/catalog/products/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionDelete}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProduct,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ProductSvc).DeleteProduct, constants.ObjectTypeProduct, "id")

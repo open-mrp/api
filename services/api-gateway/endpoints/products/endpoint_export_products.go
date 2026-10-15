@@ -54,9 +54,7 @@ func (e *ExportProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportP
 		Route:             "/v1/catalog/products/actions/export",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
-		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

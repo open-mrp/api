@@ -32,10 +32,8 @@ func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteM
 		Route:             "/v1/catalog/materials/{id}",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeMaterial,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMaterialRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(MaterialSvc).DeleteMaterial, constants.ObjectTypeMaterial, "id")
 		},

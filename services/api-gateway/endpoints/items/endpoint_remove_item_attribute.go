@@ -23,6 +23,8 @@ type RemoveItemAttributeRequest struct {
 // Unassigns an attribute from an item and returns the updated item.
 //
 // Returns a not-found error if the attribute is not currently assigned to the item, so unlike adding an attribute, this call is not safe to repeat blindly. The attribute itself is not deleted and stays available for other items.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type RemoveItemAttributeEndpoint struct{}
 
 func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item] {
@@ -32,17 +34,15 @@ func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).RemoveItemAttribute
 		},
 		ObjectType: constants.ObjectTypeItem,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
+			Fields:     []string{"category", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
 	})
 }

@@ -22,6 +22,10 @@ import (
 type ItemSvc interface {
 	ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
 	GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError)
+	CreateItem(ctx context.Context, req *CreateItemRequest) (*apiresource.Item, *apierror.APIError)
+	UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError)
+	DeleteItem(ctx context.Context, req *DeleteItemRequest) (*apiresource.Item, *apierror.APIError)
+	BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
 	GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError)
 	GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError)
@@ -67,6 +71,9 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 	onlyInitialSubassemblies := req.SubassemblyFilter != nil &&
 		*req.SubassemblyFilter == constants.SubassemblyFilterInitialOnly
 
+	if apiErr := req.CreatedRange.Validate(); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListItemsRequest{
 		Cursor:                   req.Cursor,
 		Limit:                    req.Limit,
@@ -74,18 +81,21 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		Types:                    itemTypeStrings(req.Types),
 		CategoryIds:              req.CategoryIDs,
 		AttributeIds:             req.AttributeIDs,
-		SupplierId:               req.SupplierID,
+		SupplierIds:              req.SupplierIDs,
 		IsExactMatch:             false,
 		OnlyInitialSubassemblies: onlyInitialSubassemblies,
 		ProductLineIds:           req.ProductLineIDs,
 		CustomerIds:              req.CustomerIDs,
+		Skus:                     req.SKUs,
+		Statuses:                 enumStrings(req.Statuses),
+		PortalVisibilities:       enumStrings(req.PortalVisibilities),
 	}
 
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	if req.CreatedAfter != nil {
+		pbReq.StartDate = timestamppb.New(*req.CreatedAfter)
 	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.CreatedBefore != nil {
+		pbReq.EndDate = timestamppb.New(*req.CreatedBefore)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.list", domain.ServiceName,
@@ -256,6 +266,9 @@ func (m *itemSvcImpl) ExportItems(ctx context.Context, req *ExportItemsRequest) 
 }
 
 func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Send `attribute_ids` on Update Item instead."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.AddItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
@@ -274,6 +287,9 @@ func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttribut
 }
 
 func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Send `attribute_ids` on Update Item instead."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.RemoveItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
@@ -292,6 +308,9 @@ func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAt
 }
 
 func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Send `category_id` on Update Item instead."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ChangeItemCategoryRequest{
 		ItemId:     req.ItemID,
 		CategoryId: req.CategoryID,
@@ -339,6 +358,9 @@ func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemIn
 }
 
 func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Use Bulk Upsert Items instead."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbItems := make([]*pb.BulkCreateItemInput, len(req.Items))
 	for i, item := range req.Items {
 		pbItems[i] = &pb.BulkCreateItemInput{

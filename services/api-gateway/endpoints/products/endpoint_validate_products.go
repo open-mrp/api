@@ -43,8 +43,6 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeProduct,
 		Public:            false,
-		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}}},
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
@@ -57,7 +55,7 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 func validateProductsIncludeConfig() *apiendpoint.IncludeConfig {
 	cfg := apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 		ObjectType: constants.ObjectTypeProduct,
-		Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+		Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.attributes"},
 	})
 	cfg.ExtractRoots = func(resp any) []any {
 		vpr := resp.(*apiresource.ValidateProductsResponse)

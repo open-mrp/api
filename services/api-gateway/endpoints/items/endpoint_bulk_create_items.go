@@ -64,6 +64,8 @@ func (*BulkCreateItemsRequest) SchemaExample() any {
 // An input whose SKU already exists updates the existing item in place instead of creating a duplicate. A failure on one item does not abort the rest of the batch; check each result's status.
 //
 // Newly created items start with a unit value, unit cost, and burn rate of zero, counted in their category's base unit; set the real figures afterwards.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type BulkCreateItemsEndpoint struct{}
 
 func (e *BulkCreateItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse] {
@@ -74,8 +76,6 @@ func (e *BulkCreateItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCr
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
-		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError) {
 			return svc.(ItemSvc).BulkCreateItems

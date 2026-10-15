@@ -36,12 +36,16 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Items",
-		Description:  "List and manage inventory items.",
+		Description:  "Materials, parts, products and services you buy, make, stock or sell.",
 		ResourceType: &apiresource.Item{},
 	}
 
 	listItemsEndpoint := apiendpoint.From(&itemep.ListItemsEndpoint{}).WithService(inner, itemSvc)
 	getItemEndpoint := apiendpoint.From(&itemep.RetrieveItemEndpoint{}).WithService(inner, itemSvc)
+	createItemEndpoint := apiendpoint.From(&itemep.CreateItemEndpoint{}).WithService(inner, itemSvc)
+	updateItemEndpoint := apiendpoint.From(&itemep.UpdateItemEndpoint{}).WithService(inner, itemSvc)
+	deleteItemEndpoint := apiendpoint.From(&itemep.DeleteItemEndpoint{}).WithService(inner, itemSvc)
+	bulkUpsertItemsEndpoint := apiendpoint.From(&itemep.BulkUpsertItemsEndpoint{}).WithService(inner, itemSvc)
 	getItemInventoryEndpoint := apiendpoint.From(&itemep.RetrieveItemInventoryEndpoint{}).WithService(inner, itemSvc)
 	getItemLotDefaultEndpoint := apiendpoint.From(&itemep.RetrieveItemLotDefaultEndpoint{}).WithService(inner, itemSvc)
 	getItemCostsEndpoint := apiendpoint.From(&itemep.GetItemCostsEndpoint{}).WithService(inner, itemSvc)
@@ -57,6 +61,10 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listItemsEndpoint,
 		getItemEndpoint,
+		createItemEndpoint,
+		updateItemEndpoint,
+		deleteItemEndpoint,
+		bulkUpsertItemsEndpoint,
 		getItemInventoryEndpoint,
 		getItemLotDefaultEndpoint,
 		getItemCostsEndpoint,

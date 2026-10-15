@@ -44,7 +44,8 @@ func TestInventoryChangeLogFromProto(t *testing.T) {
 		ID:           icl.ItemId,
 		Object:       "item",
 		SKU:          icl.ItemSku,
-		ItemTypeCode: "product",
+		Type:         "product",
+		Status:       "active",
 	}
 	result.Quantity = &apiresource.Quantity{
 		Value: icl.QuantityValue,

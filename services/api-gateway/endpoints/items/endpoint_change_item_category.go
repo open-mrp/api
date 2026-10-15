@@ -29,6 +29,8 @@ type ChangeItemCategoryRequest struct {
 // The item's rate units (unit value, unit cost, burn rate) and any related order-point, consumption, and production quantity units are switched to the new category's base unit. Only the units change — the numbers attached to them are carried over as they were, so review any figure whose meaning depends on the unit after moving between categories that count differently.
 //
 // Re-assigning the item's current category succeeds and changes nothing.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type ChangeItemCategoryEndpoint struct{}
 
 func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item] {
@@ -39,17 +41,15 @@ func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cha
 		Route:             "/v1/catalog/items/{id}/category/{category_id}",
 		SDKMethodKey:      "change_category",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).ChangeItemCategory
 		},
 		ObjectType: constants.ObjectTypeItem,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
+			Fields:     []string{"category", "attributes", "attributes.property", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
 	})
 }

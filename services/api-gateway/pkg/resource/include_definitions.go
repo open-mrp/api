@@ -336,9 +336,8 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
-			{Key: "unit_value", ObjectType: ""},
-			{Key: "unit_cost", ObjectType: ""},
-			{Key: "burn_rate", ObjectType: ""},
+			{Key: "sales.product_line", ObjectType: constants.ObjectTypeProductLine},
+			{Key: "default_manufacturing_method", ObjectType: constants.ObjectTypeManufacturingMethod},
 		},
 	})
 

@@ -79,10 +79,8 @@ func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUp
 		Route:             "/v1/catalog/parts/actions/bulk-upsert",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}, {Domain: types.PermissionDomainParts, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

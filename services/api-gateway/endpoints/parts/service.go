@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -64,6 +65,9 @@ func NewPartSvc(config *PartSvcConfig) PartSvc {
 }
 
 func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListPartsRequest{
 		Cursor:       req.Cursor,
 		Limit:        req.Limit,
@@ -105,14 +109,19 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 }
 
 func (m *partSvcImpl) GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	return loadPartByID(ctx, req.ItemID)
 }
 
 func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreatePartRequest{
 		Sku:          req.SKU,
 		Description:  req.Description.Ptr(),
-		Notes:        req.Notes.Ptr(),
 		CategoryId:   req.CategoryID,
 		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
@@ -131,6 +140,9 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 }
 
 func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbParts := make([]*pb.UpsertPartInput, len(req.Parts))
 	for i, p := range req.Parts {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
@@ -140,7 +152,6 @@ func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsR
 		pbParts[i] = &pb.UpsertPartInput{
 			Sku:         p.SKU,
 			Description: p.Description.Ptr(),
-			Notes:       p.Notes.Ptr(),
 			Category:    apirequest.ObjectIdentifierToProto(p.Category),
 			UnitPrice:   rateInputToProto(p.UnitPrice.Ptr()),
 			UnitCost:    rateInputToProto(p.UnitCost.Ptr()),
@@ -162,11 +173,13 @@ func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsR
 }
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdatePartRequest{
 		Id:          req.ItemID,
 		Sku:         req.SKU.Ptr(),
 		Description: fieldpb.StringClearableToProto(req.Description),
-		Notes:       fieldpb.StringClearableToProto(req.Notes),
 		CategoryId:  req.CategoryID.Ptr(),
 	}
 
@@ -185,6 +198,9 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 }
 
 func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeletePartRequest{
 		Id: req.ItemID,
 	}
@@ -205,6 +221,9 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 }
 
 func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, partsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ExportPartsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,

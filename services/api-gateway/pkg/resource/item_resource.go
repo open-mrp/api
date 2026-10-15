@@ -11,66 +11,108 @@ import (
 const SampleItemID = "it_pej07ckhvu62"
 const SampleItemSKU = "ALM-2024-1001"
 
-// An entry in your catalog: something you sell, consume, or build with.
+// Something you buy, make, stock or sell: a material, part, product or service.
 type Item struct {
 	// Item ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Stock keeping unit code, unique within the account.
-	SKU string `json:"sku" validate:"required"`
-	// Item description.
-	Description *string `json:"description"`
-	// Free-form notes about the item.
-	//
-	// Null to customer and supplier portal users: they are your own team's notes.
-	Notes *string `json:"notes" sensitive:"internal"`
 	// What kind of item this is.
 	//
-	// - `product`: a finished product.
-	// - `material`: a raw material or component consumed in production.
-	// - `part`: a part used in production.
-	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
-	// The category this item belongs to.
+	// `material`: bought and consumed in production. `part`: produced and used to make other items. `product`: a physical item you sell. `service`: something you sell that is never stocked, picked or shipped, such as installation. Can't change after creation.
+	Type constants.ItemTypeCode `json:"type" validate:"required"`
+	// Whether the item can be added to new orders, production and purchasing.
 	//
-	// The category's unit group determines the base unit the item's rates (`unit_value`, `unit_cost`, `burn_rate`) are expressed in.
+	// `archived` items stay on the records already using them.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// Your stock keeping unit, unique (case-insensitive) within your account.
+	SKU string `json:"sku" validate:"required"`
+	// Description of the item.
+	//
+	// Shown to customers in the portal for visible products.
+	Description *string `json:"description"`
+	// The category the item is classified under.
 	Category *ItemCategory `json:"category" expandable:"true"`
-	// Selling value per unit, expressed as a rate (e.g. `$25.50 / kg`).
-	UnitValue *UnitPrice `json:"unit_value" expandable:"true"`
-	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
-	//
-	// For items a production flow produces, this is restated from the flow shortly after anything the item is built from changes, so it can change without the item having been edited.
-	//
-	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	UnitCost *UnitPrice `json:"unit_cost" expandable:"true" sensitive:"cost"`
-	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
-	//
-	// Null to customer and supplier portal users: it is drawn from every customer's demand.
-	BurnRate *Rate `json:"burn_rate" expandable:"true" sensitive:"internal"`
-	// Attributes assigned to this item.
+	// The item's attributes, at most one per property, such as `Size: Large`.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
+	// What one stocking unit of the item costs you.
+	//
+	// For items made by a production flow, it's restated from the flow when anything the item is built from changes. `null` without `costs:read`, and always `null` for portal users.
+	UnitCost *UnitPrice `json:"unit_cost" sensitive:"cost"`
+	// How fast the item is consumed, such as `120 pr / day`.
+	//
+	// Calculated from demand; read-only. Always `null` for portal users.
+	BurnRate *Rate `json:"burn_rate" sensitive:"internal"`
+	// Where the item comes from when an order line or plan doesn't say.
+	//
+	// `stock`: taken from inventory. `make`: produced for the demand. `buy`: purchased for the demand. `null` uses the product line's, then the account default. Always `null` for portal users.
+	Supply *constants.Supply `json:"supply" sensitive:"internal"`
+	// Selling details. `null` for a material or part you don't sell.
+	Sales *ItemSales `json:"sales"`
+	// Purchasing details, for materials. `null` for other types, and always `null` for portal users.
+	Material *ItemMaterial `json:"material" sensitive:"internal"`
+	// The manufacturing method used for new production of this item when nothing more specific applies.
+	//
+	// Always `null` for portal users.
+	DefaultManufacturingMethod *ManufacturingMethod `json:"default_manufacturing_method" expandable:"true" sensitive:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// An item's selling details.
+type ItemSales struct {
+	// Base price on sales orders, before price lists apply.
+	UnitPrice *UnitPrice `json:"unit_price" validate:"required"`
+	// The product line the item is sold under.
+	//
+	// Customers are granted access to whole lines, so an item with no line is never shown in the customer portal. The line also sets the default commission and freight policies.
+	ProductLine *ProductLine `json:"product_line" expandable:"true"`
+	// Whether customers with access to the item's product line can see and order it in the portal.
+	//
+	// Defaults to `hidden`.
+	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
+	// How long production or purchasing takes before the item can ship, in business days.
+	//
+	// An order line is promised by the later of this and the customer's lead time. `null` when the item adds none.
+	LeadTime *Quantity `json:"lead_time"`
+}
+
+// A material's purchasing details.
+type ItemMaterial struct {
+	// Reorder when on-hand stock falls to this quantity.
+	//
+	// `null` when there is no order point.
+	OrderPoint *Quantity `json:"order_point"`
+	// How long the material usually takes to arrive after it's ordered, in a time unit.
+	//
+	// `null` when unknown.
+	LeadTime *Quantity `json:"lead_time"`
 }
 
 var sampleDescription = "6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"
 
 var SampleItem = &Item{
-	ID:           SampleItemID,
-	Object:       constants.ObjectTypeItem,
-	SKU:          SampleItemSKU,
-	Description:  &sampleDescription,
-	Notes:        nil,
-	ItemTypeCode: constants.ItemTypeCodeProduct,
-	Category:     SampleItemCategory,
-	UnitValue:    SampleUnitPrice,
-	UnitCost:     SampleUnitPrice,
-	BurnRate:     SampleRate,
-	Attributes:   NewList([]Attribute{*SampleAttribute}, PageInfo{}),
-	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:          SampleItemID,
+	Object:      constants.ObjectTypeItem,
+	Type:        constants.ItemTypeCodeProduct,
+	Status:      constants.ArchiveStatusActive,
+	SKU:         SampleItemSKU,
+	Description: &sampleDescription,
+	Category:    SampleItemCategory,
+	Attributes:  NewList([]Attribute{*SampleAttribute}, PageInfo{}),
+	UnitCost:    SampleUnitPrice,
+	BurnRate:    SampleRate,
+	Supply:      new(constants.SupplyStock),
+	Sales: &ItemSales{
+		UnitPrice:        SampleUnitPrice,
+		ProductLine:      SampleProductLine,
+		PortalVisibility: constants.CustomerPortalVisibilityVisible,
+		LeadTime:         &Quantity{Value: "10", Unit: sampleDayUnit},
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Item) SchemaExample() any {

@@ -108,6 +108,8 @@ func NormalizeRateValue(value string) string {
 
 var sampleHourUnit = newSampleUnit("Hour", "hr", constants.UnitDimensionTime)
 
+var sampleDayUnit = newSampleUnit("Day", "d", constants.UnitDimensionTime)
+
 var SampleMoney = &Money{Amount: "1234.56", Currency: constants.CurrencyUSD}
 
 var SampleQuantity = &Quantity{Value: "1200", Unit: SampleUnit}

@@ -89,10 +89,8 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).CreateMaterial
@@ -102,7 +100,7 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMaterial,
-			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.attributes"},
 		}),
 	})
 }

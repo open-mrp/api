@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -60,6 +61,9 @@ func NewMaterialSvc(config *MaterialSvcConfig) MaterialSvc {
 }
 
 func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListMaterialsRequest{
 		Cursor:       req.Cursor,
 		Limit:        req.Limit,
@@ -100,14 +104,19 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 }
 
 func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	return loadMaterialByID(ctx, req.ItemID)
 }
 
 func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreateMaterialRequest{
 		Sku:          req.SKU,
 		Description:  req.Description.Ptr(),
-		Notes:        req.Notes.Ptr(),
 		CategoryId:   req.CategoryID,
 		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
@@ -131,6 +140,9 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 }
 
 func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbMaterials := make([]*pb.UpsertMaterialInput, len(req.Materials))
 	for i, m := range req.Materials {
 		pbProps := make([]*pb.UpsertItemPropertyInput, len(m.Properties))
@@ -141,7 +153,6 @@ func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpse
 		pbInput := &pb.UpsertMaterialInput{
 			Sku:         m.SKU,
 			Description: m.Description.Ptr(),
-			Notes:       m.Notes.Ptr(),
 			Category:    apirequest.ObjectIdentifierToProto(m.Category),
 			UnitPrice:   rateInputToProto(m.UnitPrice.Ptr()),
 			UnitCost:    rateInputToProto(m.UnitCost.Ptr()),
@@ -170,13 +181,14 @@ func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpse
 }
 
 func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdateMaterialRequest{
 		Id:                req.ItemID,
 		Sku:               req.SKU.Ptr(),
 		Description:       req.Description.Ptr(),
 		UpdateDescription: req.Description.IsSet(),
-		Notes:             req.Notes.Ptr(),
-		UpdateNotes:       req.Notes.IsSet(),
 		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
 		CategoryId:        req.CategoryID.Ptr(),
 	}
@@ -201,6 +213,9 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 }
 
 func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteMaterialRequest{Id: req.ItemID}
 	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.DeleteMaterialResponse, error) {
@@ -216,6 +231,9 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 }
 
 func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, materialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ExportMaterialsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,

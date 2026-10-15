@@ -47,70 +47,6 @@ func operatorRequirementToBool(r constants.OperatorRequirement) bool {
 	return r == constants.OperatorRequirementMaterialCheck
 }
 
-func mapScanningStationForwardRow(row sqlc.ListScanningStationsForwardRow) *domain.ScanningStation {
-	ss := &domain.ScanningStation{
-		ID:                  row.ID,
-		Name:                row.Name,
-		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
-		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
-		DepartmentID:        row.DepartmentID,
-		AccountID:           row.AccountID,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.Notes.Valid {
-		ss.Notes = &row.Notes.String
-	}
-	if row.LabelSizeCode.Valid {
-		ss.LabelSizeCode = &row.LabelSizeCode.String
-	}
-	if row.LabelTypeCode.Valid {
-		ss.LabelTypeCode = &row.LabelTypeCode.String
-	}
-	if row.DepartmentName.Valid {
-		ss.DepartmentName = row.DepartmentName.String
-	}
-	if row.DepartmentCreatedAt.Valid {
-		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
-	}
-	if row.DepartmentUpdatedAt.Valid {
-		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
-	}
-	return ss
-}
-
-func mapScanningStationBackwardRow(row sqlc.ListScanningStationsBackwardRow) *domain.ScanningStation {
-	ss := &domain.ScanningStation{
-		ID:                  row.ID,
-		Name:                row.Name,
-		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
-		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
-		DepartmentID:        row.DepartmentID,
-		AccountID:           row.AccountID,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.Notes.Valid {
-		ss.Notes = &row.Notes.String
-	}
-	if row.LabelSizeCode.Valid {
-		ss.LabelSizeCode = &row.LabelSizeCode.String
-	}
-	if row.LabelTypeCode.Valid {
-		ss.LabelTypeCode = &row.LabelTypeCode.String
-	}
-	if row.DepartmentName.Valid {
-		ss.DepartmentName = row.DepartmentName.String
-	}
-	if row.DepartmentCreatedAt.Valid {
-		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
-	}
-	if row.DepartmentUpdatedAt.Valid {
-		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
-	}
-	return ss
-}
-
 func mapFindScanningStationsByNamesRow(row sqlc.FindScanningStationsByNamesRow) *domain.ScanningStation {
 	ss := &domain.ScanningStation{
 		ID:                  row.ID,
@@ -147,86 +83,28 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.list")
 	defer span.End()
 
-	searchQuery := ssBuildSearchParams(params.Query)
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListScanningStationsBackward(ctx, sqlc.ListScanningStationsBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			stations := make([]*domain.ScanningStation, len(rows))
-			for i, row := range rows {
-				stations[i] = mapScanningStationBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
-
-			if slices.Contains(params.Includes, "production_steps") {
-				for _, ss := range result {
-					if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-						return nil, tracing.Trace(span, apiErr)
-					}
-				}
-			}
-
-			return &domain.ListScanningStationsResult{ScanningStations: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListScanningStationsForward(ctx, sqlc.ListScanningStationsForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		stations := make([]*domain.ScanningStation, len(rows))
-		for i, row := range rows {
-			stations[i] = mapScanningStationForwardRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
-
-		if slices.Contains(params.Includes, "production_steps") {
-			for _, ss := range result {
-				if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
-			}
-		}
-
-		return &domain.ListScanningStationsResult{ScanningStations: result, PageInfo: pageInfo}, nil
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
-	rows, err := r.queries.ListScanningStationsForward(ctx, sqlc.ListScanningStationsForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
+	query, args := buildScanningStationListQuery(scanningStationListFilter{
+		accountID:     params.AccountID,
+		search:        ssBuildSearchParams(params.Query).String,
+		departmentIDs: params.DepartmentIDs,
+		cursor:        cursor,
+		limit:         params.Limit + 1,
 	})
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
+	stations, err := scanScanningStationListRows(rows)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	stations := make([]*domain.ScanningStation, len(rows))
-	for i, row := range rows {
-		stations[i] = mapScanningStationForwardRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
-
+	result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDirection(cursor), ssCreatedAt, ssID)
 	if slices.Contains(params.Includes, "production_steps") {
 		for _, ss := range result {
 			if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
@@ -234,7 +112,6 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 			}
 		}
 	}
-
 	return &domain.ListScanningStationsResult{ScanningStations: result, PageInfo: pageInfo}, nil
 }
 

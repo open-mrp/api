@@ -217,6 +217,7 @@ func (s *machineSvcImpl) CreateMachine(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
+			params.Status = machineStatus(&params.Status)
 			created, apiErr := txMachineRepo.Create(txCtx, machineID, params)
 			if apiErr != nil {
 				return apiErr
@@ -318,6 +319,16 @@ func (s *machineSvcImpl) UpdateMachine(ctx context.Context, params domain.Update
 			// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
 			params.Notes = params.Notes.BackfillUnsetPtr(old.Notes)
 
+			if params.DepartmentID != nil && (old.DepartmentID == nil || *params.DepartmentID != *old.DepartmentID) {
+				deptRepo := txSvc.repos.NewDepartmentRepo()
+				if _, apiErr := deptRepo.Get(txCtx, domain.GetDepartmentParams{AccountID: params.AccountID, DepartmentID: *params.DepartmentID}); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := deptRepo.SetMachinesDepartmentID(txCtx, *params.DepartmentID, params.AccountID, []string{params.MachineID}); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
@@ -386,6 +397,10 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *machineSvcImpl) *apierror.APIError {
+		if apiErr := domain.MachineReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), machine.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMachine, machine.ID, accountID, machine); apiErr != nil {
 			return apiErr
 		}

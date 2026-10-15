@@ -373,9 +373,9 @@ func TestDeletedRecordScope_Production(t *testing.T) {
 			name: "machine",
 			setup: func(t *testing.T) deletedScopeTarget {
 				return createdPath(t, machinesPath, map[string]any{
-					"name":          uniqueName("e2e-dscope-mch"),
-					"serial_number": uniqueName("e2e-dscope-sn"),
-					"department_id": SeedDepartmentID,
+					"name":           uniqueName("e2e-dscope-mch"),
+					"serial_number":  uniqueName("e2e-dscope-sn"),
+					"work_center_id": SeedDepartmentID,
 				})
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-mch")},

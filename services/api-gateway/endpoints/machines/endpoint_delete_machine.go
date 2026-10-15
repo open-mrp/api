@@ -21,7 +21,7 @@ type DeleteMachineRequest struct {
 
 // Deletes a machine.
 //
-// Deletion is permanent, and repeating the call reports that the machine has already been deleted. Downtime events and schedule lines already logged against the machine are kept rather than removed with it.
+// A machine that batches or downtime events name can't be deleted (409 `resource_in_use`); archive it instead by setting `status` to `archived`.
 type DeleteMachineEndpoint struct{}
 
 func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineRequest, *object.Deleted] {
@@ -34,7 +34,6 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		ObjectType:        constants.ObjectTypeMachine,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionDelete},
 		}},

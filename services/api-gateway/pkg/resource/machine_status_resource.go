@@ -110,7 +110,7 @@ var (
 var SampleMachineStatus = &MachineStatus{
 	Object:              constants.ObjectTypeMachineStatus,
 	Machine:             NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleMachineStatusMachineName, nil),
-	Department:          NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Department:          NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	Status:              constants.MachineWorkStatusRunning,
 	WeekPlannedQuantity: 600,
 	WeekScannedQuantity: 120,

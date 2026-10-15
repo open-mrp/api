@@ -17,15 +17,13 @@ import (
 // Request to list scanning stations.
 type ListScanningStationsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return stations at one of these work centers.
+	WorkCenterIDs []string `query:"work_center_ids" validate:"omitempty,max=100"`
 }
 
-// Returns a paginated list of scanning stations in your account.
-//
-// The `q` search term matches the station name.
+// Returns a list of your scanning stations, newest first.
 type ListScanningStationsEndpoint struct{}
 
 func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]] {
@@ -38,14 +36,13 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError) {
 			return svc.(ScanningStationSvc).ListScanningStations
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeScanningStation,
-			Fields:     []string{"department", "production_steps"},
+			Fields:     []string{"work_center", "production_steps"},
 		}),
 	})
 }

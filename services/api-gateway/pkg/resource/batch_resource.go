@@ -148,7 +148,7 @@ var SampleBatch = &Batch{
 	Seconds:         SampleQuantity,
 	Waste:           SampleQuantity,
 	ScanningStation: NewEntity(SampleScanningStationID, constants.ObjectTypeScanningStation, new(SampleScanningStationName), nil),
-	Department:      NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Department:      NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	ProductionStep:  nil,
 	ProductionRun:   SampleProductionRunReference,
 	Machines:        NewList([]Entity{*NewEntity(SampleMachineID, constants.ObjectTypeMachine, new(SampleMachineName), nil)}, PageInfo{}),

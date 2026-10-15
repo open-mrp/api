@@ -72,8 +72,6 @@ services/core-service/internal/infrastructure/sqlc/location.sql.go:listLocationT
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:countMachinesByName 1
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:countMachinesBySerialNumber 1
 services/core-service/internal/infrastructure/sqlc/machine.sql.go:exportMachines 1
-services/core-service/internal/infrastructure/sqlc/machine.sql.go:listMachinesBackward 1
-services/core-service/internal/infrastructure/sqlc/machine.sql.go:listMachinesForward 2
 services/core-service/internal/infrastructure/sqlc/machine_downtime.sql.go:listMachineDowntimeEventsBackward 7
 services/core-service/internal/infrastructure/sqlc/machine_downtime.sql.go:listMachineDowntimeEventsForward 8
 services/core-service/internal/infrastructure/sqlc/material.sql.go:exportMaterialsWithFilters 5
@@ -154,8 +152,6 @@ services/core-service/internal/infrastructure/sqlc/sandbox_account.sql.go:listSa
 services/core-service/internal/infrastructure/sqlc/sandbox_account.sql.go:listSandboxAccountsWithOwnerForward 2
 services/core-service/internal/infrastructure/sqlc/scanning_station_query.sql.go:countScanningStationsByName 1
 services/core-service/internal/infrastructure/sqlc/scanning_station_query.sql.go:exportScanningStations 1
-services/core-service/internal/infrastructure/sqlc/scanning_station_query.sql.go:listScanningStationsBackward 1
-services/core-service/internal/infrastructure/sqlc/scanning_station_query.sql.go:listScanningStationsForward 2
 services/core-service/internal/infrastructure/sqlc/settlement.sql.go:checkSettlementNumberDuplicate 1
 services/core-service/internal/infrastructure/sqlc/settlement.sql.go:countSettlements 5
 services/core-service/internal/infrastructure/sqlc/shipment.sql.go:listShipmentsBackward 9

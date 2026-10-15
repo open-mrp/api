@@ -31,14 +31,13 @@ func (e *RetrieveScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).GetScanningStation
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeScanningStation,
-			Fields:     []string{"department", "production_steps"},
+			Fields:     []string{"work_center", "production_steps"},
 		}),
 	})
 }

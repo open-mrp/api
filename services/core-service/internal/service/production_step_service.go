@@ -441,6 +441,11 @@ func (s *productionStepSvcImpl) setStepMachines(ctx context.Context, accountID s
 		}
 		for _, m := range machines {
 			previousStep[m.ID] = m.ProductionStepID
+			if m.ProductionStepID == nil || *m.ProductionStepID != step.ID {
+				if apiErr := domain.RequireAssignable("machine_ids", "machine", m.Status); apiErr != nil {
+					return apiErr
+				}
+			}
 		}
 	}
 

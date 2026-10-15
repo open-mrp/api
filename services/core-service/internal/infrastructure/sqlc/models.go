@@ -1272,6 +1272,7 @@ type Machine struct {
 	ProductionStepID sql.NullString
 	SerialNumber     string
 	DepartmentID     string
+	IsActive         bool
 }
 
 type MachineDowntimeEvent struct {

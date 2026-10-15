@@ -40,7 +40,7 @@ func covOperationsScanningStationsCreateBody(name string) map[string]any {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}
 }
 
@@ -79,7 +79,7 @@ func TestCovOperationsScanningStations_CreateResponseShape(t *testing.T) {
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
 
 	// Expandable fields are null unless explicitly included.
-	assertNilField(t, created, "department")
+	assertNilField(t, created, "work_center")
 	assertNilField(t, created, "production_steps")
 }
 
@@ -295,7 +295,7 @@ func TestCovOperationsScanningStations_CreateValidation_InvalidEnums(t *testing.
 func TestCovOperationsScanningStations_CreateNonexistentDepartment(t *testing.T) {
 	t.Parallel()
 	body := covOperationsScanningStationsCreateBody(uniqueName("e2e-cov-stn-baddept"))
-	body["department_id"] = "dp_nonexistent000000000"
+	body["work_center_id"] = "dp_nonexistent000000000"
 
 	status, respBody, err := apiClient.Post(scanningStationsPath, body, newIdempotencyKey())
 	require.NoError(t, err)

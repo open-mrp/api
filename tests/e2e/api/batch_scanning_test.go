@@ -73,7 +73,7 @@ func newScanStation(t *testing.T, stationType string) string {
 		"name":                 uniqueName("e2e-scan-" + stationType),
 		"type":                 stationType,
 		"operator_requirement": "material_check",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, raw)

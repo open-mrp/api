@@ -33,20 +33,7 @@ func LoadScanningStations(ctx context.Context, ids []string) (map[string]any, *a
 	for _, ss := range resp.ScanningStations {
 		out[ss.Id] = ScanningStationFromProto(ss)
 
-		if ss.DepartmentId != "" {
-			dept := &apiresource.Department{
-				ID:     ss.DepartmentId,
-				Object: constants.ObjectTypeDepartment,
-				Name:   ss.DepartmentName,
-			}
-			if ss.DepartmentCreatedAt != nil {
-				dept.CreatedAt = ss.DepartmentCreatedAt.AsTime()
-			}
-			if ss.DepartmentUpdatedAt != nil {
-				dept.UpdatedAt = ss.DepartmentUpdatedAt.AsTime()
-			}
-			meta.Set(constants.ObjectTypeScanningStation, ss.Id, "department", dept)
-		}
+		meta.Set(constants.ObjectTypeScanningStation, ss.Id, "work_center_id", ss.DepartmentId)
 
 		steps := make([]apiresource.ProductionStep, len(ss.ProductionSteps))
 		for i, s := range ss.ProductionSteps {
@@ -86,7 +73,6 @@ func ScanningStationFromProto(ss *pb.ScanningStationInfo) *apiresource.ScanningS
 		ID:                  ss.Id,
 		Object:              constants.ObjectTypeScanningStation,
 		Name:                ss.Name,
-		Notes:               ss.Notes,
 		Type:                constants.ScanningStationType(ss.Type),
 		OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
 		CreatedAt:           grpcutil.TimestampToTime(ss.CreatedAt),

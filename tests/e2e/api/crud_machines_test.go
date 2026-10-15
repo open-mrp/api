@@ -20,11 +20,10 @@ func TestMachines_CRUD(t *testing.T) {
 	serialNumber := uniqueName("SN")
 
 	// CREATE
-	createResp, err := apiClient.PostFull(machinesPath+"?include=department", map[string]any{
-		"name":          name,
-		"serial_number": serialNumber,
-		"notes":         "test machine notes",
-		"department_id": SeedDepartmentID,
+	createResp, err := apiClient.PostFull(machinesPath+"?include=work_center", map[string]any{
+		"name":           name,
+		"serial_number":  serialNumber,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -36,15 +35,14 @@ func TestMachines_CRUD(t *testing.T) {
 	assert.Equal(t, "machine", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, serialNumber, jsonField(created, "serial_number"))
-	assert.Equal(t, "test machine notes", jsonField(created, "notes"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
 	// Department sub-resource
-	dept := jsonObject(created, "department")
+	dept := jsonObject(created, "work_center")
 	require.NotNil(t, dept, "department should be present")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 
 	// GET
 	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+id, nil)
@@ -60,14 +58,12 @@ func TestMachines_CRUD(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id, map[string]any{
 		"name":          newName,
 		"serial_number": newSerial,
-		"notes":         "updated notes",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
 	assert.Equal(t, newSerial, jsonField(updated, "serial_number"))
-	assert.Equal(t, "updated notes", jsonField(updated, "notes"))
 
 	// DELETE
 	delStatus, delBody, err := apiClient.Delete(machinesPath + "/" + id)
@@ -86,11 +82,10 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-mc-allf")
 	serial := uniqueName("SN-ALLF")
-	createResp, err := apiClient.PostFull(machinesPath+"?include=department", map[string]any{
-		"name":          name,
-		"serial_number": serial,
-		"notes":         "Create notes",
-		"department_id": SeedDepartmentID,
+	createResp, err := apiClient.PostFull(machinesPath+"?include=work_center", map[string]any{
+		"name":           name,
+		"serial_number":  serial,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -104,22 +99,24 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "machine", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, serial, jsonField(got, "serial_number"))
-	assert.Equal(t, "Create notes", jsonField(got, "notes"))
-	assert.NotEmpty(t, jsonField(got, "created_at"))
-	assert.NotEmpty(t, jsonField(got, "updated_at"))
+	assert.Equal(t, "active", jsonField(got, "status"), "status defaults to active")
+	assert.NotContains(t, got, "notes")
+	assert.NotContains(t, got, "department")
+	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
+	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	dept := jsonObject(got, "department")
-	require.NotNil(t, dept, "department must be set after create")
+	dept := jsonObject(got, "work_center")
+	require.NotNil(t, dept, "work center must be set after create")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-mc-allf-u")
 	updatedSerial := uniqueName("SN-ALLF-U")
-	patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=department", map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=work_center", map[string]any{
 		"name":          updatedName,
 		"serial_number": updatedSerial,
-		"notes":         "Updated notes",
+		"status":        "archived",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -128,10 +125,10 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, updatedSerial, jsonField(updated, "serial_number"))
-	assert.Equal(t, "Updated notes", jsonField(updated, "notes"))
+	assert.Equal(t, "archived", jsonField(updated, "status"))
 
 	// Department should be preserved
-	updDept := jsonObject(updated, "department")
+	updDept := jsonObject(updated, "work_center")
 	require.NotNil(t, updDept, "department should be preserved")
 	assert.Equal(t, SeedDepartmentID, jsonField(updDept, "id"))
 }
@@ -158,9 +155,9 @@ func TestMachines_ListPagination(t *testing.T) {
 	var ids []string
 	for i := 0; i < 2; i++ {
 		status, body, err := apiClient.Post(machinesPath, map[string]any{
-			"name":          fmt.Sprintf("%s-%d", prefix, i),
-			"serial_number": uniqueName("e2e-mach-pg-sn"),
-			"department_id": SeedDepartmentID,
+			"name":           fmt.Sprintf("%s-%d", prefix, i),
+			"serial_number":  uniqueName("e2e-mach-pg-sn"),
+			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -197,9 +194,9 @@ func TestMachines_ListSearchPutsTheExactNameFirst(t *testing.T) {
 	var ids []string
 	for _, name := range []string{exact, exact + "0", exact + "1", exact + "2"} {
 		status, body, err := apiClient.Post(machinesPath, map[string]any{
-			"name":          name,
-			"serial_number": uniqueName("e2e-mach-exact-sn"),
-			"department_id": SeedDepartmentID,
+			"name":           name,
+			"serial_number":  uniqueName("e2e-mach-exact-sn"),
+			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -242,14 +239,14 @@ func TestMachines_GetByID(t *testing.T) {
 
 func TestMachines_GetByID_IncludeDepartment(t *testing.T) {
 	t.Parallel()
-	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+SeedMachineID, url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+SeedMachineID, url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
-	dept := jsonObject(parseJSON(getBody), "department")
-	require.NotNil(t, dept, "department should be present with ?include=department")
+	dept := jsonObject(parseJSON(getBody), "work_center")
+	require.NotNil(t, dept, "department should be present with ?include=work_center")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 	assert.NotEmpty(t, jsonField(dept, "name"))
 }
 
@@ -262,22 +259,22 @@ func TestMachines_List_DepartmentNullWithoutInclude(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		require.NotNil(t, m)
-		assertNilField(t, m, "department")
+		assertNilField(t, m, "work_center")
 	}
 }
 
 func TestMachines_List_IncludeDepartment(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(machinesPath, url.Values{"q": {"Knitting"}, "include": {"department"}})
+	list, _, err := apiClient.GetList(machinesPath, url.Values{"q": {"Knitting"}, "include": {"work_center"}})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		require.NotNil(t, m)
-		dept := jsonObject(m, "department")
-		require.NotNil(t, dept, "department should be populated with ?include=department")
-		assert.Equal(t, "department", jsonField(dept, "object"))
+		dept := jsonObject(m, "work_center")
+		require.NotNil(t, dept, "department should be populated with ?include=work_center")
+		assert.Equal(t, "work_center", jsonField(dept, "object"))
 		assert.NotEmpty(t, jsonField(dept, "id"))
 		assert.NotEmpty(t, jsonField(dept, "name"))
 	}
@@ -297,18 +294,18 @@ func TestMachines_CreateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 
 	status1, body1, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          name,
-		"serial_number": serial,
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"serial_number":  serial,
+		"work_center_id": SeedDepartmentID,
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
 	status2, body2, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          name,
-		"serial_number": serial,
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"serial_number":  serial,
+		"work_center_id": SeedDepartmentID,
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
@@ -320,9 +317,9 @@ func TestMachines_CreateIdempotent(t *testing.T) {
 func TestMachines_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          "",
-		"serial_number": "SN-EMPTY",
-		"department_id": SeedDepartmentID,
+		"name":           "",
+		"serial_number":  "SN-EMPTY",
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -339,10 +336,10 @@ func TestMachines_OmittedFields(t *testing.T) {
 	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
 		name := uniqueName("e2e-mc-omit")
 		serial := uniqueName("SN-OMIT")
-		status, body, err := apiClient.Post(machinesPath+"?include=department", map[string]any{
-			"name":          name,
-			"serial_number": serial,
-			"department_id": SeedDepartmentID,
+		status, body, err := apiClient.Post(machinesPath+"?include=work_center", map[string]any{
+			"name":           name,
+			"serial_number":  serial,
+			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -355,11 +352,10 @@ func TestMachines_OmittedFields(t *testing.T) {
 		assertObjectField(t, got, "machine")
 		assert.Equal(t, name, jsonField(got, "name"))
 		assert.Equal(t, serial, jsonField(got, "serial_number"))
-		assertNilField(t, got, "notes")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-		dept := jsonObject(got, "department")
+		dept := jsonObject(got, "work_center")
 		require.NotNil(t, dept, "department should be populated")
 		assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	})
@@ -367,11 +363,10 @@ func TestMachines_OmittedFields(t *testing.T) {
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-mc-pres")
 		serial := uniqueName("SN-PRES")
-		createStatus, createBody, err := apiClient.Post(machinesPath+"?include=department", map[string]any{
-			"name":          name,
-			"serial_number": serial,
-			"notes":         "Original notes",
-			"department_id": SeedDepartmentID,
+		createStatus, createBody, err := apiClient.Post(machinesPath+"?include=work_center", map[string]any{
+			"name":           name,
+			"serial_number":  serial,
+			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -382,21 +377,21 @@ func TestMachines_OmittedFields(t *testing.T) {
 		defer apiClient.Delete(machinesPath + "/" + id)
 		origCreatedAt := jsonField(created, "created_at")
 
-		// Update ONLY notes
-		patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=department", map[string]any{
-			"notes": "Changed notes",
+		// Update ONLY status
+		patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=work_center", map[string]any{
+			"status": "archived",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
 
 		got := parseJSON(patchBody)
-		assert.Equal(t, "Changed notes", jsonField(got, "notes"))
 		assert.Equal(t, name, jsonField(got, "name"), "name should be preserved")
 		assert.Equal(t, serial, jsonField(got, "serial_number"), "serial_number should be preserved")
+		assert.Equal(t, "archived", jsonField(got, "status"))
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-		dept := jsonObject(got, "department")
+		dept := jsonObject(got, "work_center")
 		require.NotNil(t, dept, "department should be preserved")
 		assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	})
@@ -407,18 +402,18 @@ func TestMachines_CreateDuplicateName(t *testing.T) {
 	name := uniqueName("e2e-dup-machine")
 
 	status1, body1, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          name,
-		"serial_number": uniqueName("SN"),
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"serial_number":  uniqueName("SN"),
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id := jsonField(parseJSON(body1), "id")
 
 	status2, body2, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          name,
-		"serial_number": uniqueName("SN"),
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"serial_number":  uniqueName("SN"),
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status2, "Duplicate name should return 409: %s", string(body2))
@@ -431,54 +426,21 @@ func TestMachines_CreateDuplicateSerialNumber(t *testing.T) {
 	serial := uniqueName("SN-dup")
 
 	status1, body1, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          uniqueName("e2e-dup-serial-a"),
-		"serial_number": serial,
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-dup-serial-a"),
+		"serial_number":  serial,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id := jsonField(parseJSON(body1), "id")
 
 	status2, body2, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          uniqueName("e2e-dup-serial-b"),
-		"serial_number": serial,
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-dup-serial-b"),
+		"serial_number":  serial,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status2, "Duplicate serial number should return 409: %s", string(body2))
 
 	apiClient.Delete(machinesPath + "/" + id)
-}
-
-func TestMachines_UpdateNotes_OmittedKeepsAndNullClears(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          uniqueName("e2e-mc-notes"),
-		"serial_number": uniqueName("SN-NOTES"),
-		"notes":         "Keep me",
-		"department_id": SeedDepartmentID,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	id := jsonField(parseJSON(body), "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(machinesPath + "/" + id)
-
-	renamed := uniqueName("e2e-mc-notes-r")
-	status, body, err = apiClient.Patch(machinesPath+"/"+id, map[string]any{"name": renamed}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	got := parseJSON(body)
-	assert.Equal(t, renamed, jsonField(got, "name"))
-	assert.Equal(t, "Keep me", jsonField(got, "notes"), "omitting notes must leave them unchanged")
-
-	status, body, err = apiClient.Patch(machinesPath+"/"+id, map[string]any{"notes": nil}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	assertNilField(t, parseJSON(body), "notes")
-
-	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+id, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assertNilField(t, parseJSON(getBody), "notes")
 }

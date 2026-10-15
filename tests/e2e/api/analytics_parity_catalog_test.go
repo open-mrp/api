@@ -150,9 +150,9 @@ func TestAnalyticsParityOpenBatches_CountsWhatIsLeftPerStationAndItem(t *testing
 		"name":                 uniqueName("e2e-parity-station"),
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}), "id")
-	department := jsonField(parseJSON(mustGet(t, "/v1/operations/departments/"+SeedDepartmentID)), "name")
+	department := jsonField(parseJSON(mustGet(t, departmentsPath+"/"+SeedDepartmentID)), "name")
 	line := parityProductLine(t)
 	_, sock := parityProduct(t, line)
 	emptyLine := parityProductLine(t)

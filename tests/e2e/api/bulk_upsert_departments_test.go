@@ -20,7 +20,7 @@ func bulkUpsertDepartments(t *testing.T, departments ...map[string]any) (int, []
 	for i, d := range departments {
 		rows[i] = d
 	}
-	status, body, err := apiClient.Post(departmentsBulkUpsertPath, map[string]any{"departments": rows}, newIdempotencyKey())
+	status, body, err := apiClient.Post(departmentsBulkUpsertPath, map[string]any{"work_centers": rows}, newIdempotencyKey())
 	require.NoError(t, err)
 	return status, body
 }
@@ -70,20 +70,19 @@ func TestDepartments_BulkUpsert_AllCreates(t *testing.T) {
 
 	require.Len(t, createdIDs, 2)
 	for _, createdID := range createdIDs {
-		assertIDFormat(t, createdID, id.DepartmentIDPrefix)
+		assertIDFormat(t, createdID, id.WorkCenterIDPrefix)
 	}
 	assert.Empty(t, updatedIDs)
 }
 
 // TestDepartments_BulkUpsert_CreateWithAllFields exercises the full create branch:
-// notes and location.
+// location.
 func TestDepartments_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-bup-dept-full")
 	createdIDs, _ := bulkUpsertDepartmentIDs(t, map[string]any{
 		"name":     name,
-		"notes":    "full department notes",
 		"location": map[string]any{"name": "Main Building"}, // resolved to SeedLocationID server-side
 	})
 	defer cleanupDepartmentIDs(createdIDs)
@@ -94,7 +93,7 @@ func TestDepartments_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "full department notes", jsonField(got, "notes"))
+	assert.NotContains(t, got, "notes", "work centers have no notes")
 	loc := jsonObject(got, "location")
 	require.NotNil(t, loc, "location should be populated with ?include=location")
 	assert.Equal(t, SeedLocationID, jsonField(loc, "id"))
@@ -135,7 +134,7 @@ func TestDepartments_BulkUpsert_RejectsDuplicateNameInRequest(t *testing.T) {
 func TestDepartments_BulkUpsert_EmptyRejected(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Post(departmentsBulkUpsertPath, map[string]any{"departments": []any{}}, newIdempotencyKey())
+	status, body, err := apiClient.Post(departmentsBulkUpsertPath, map[string]any{"work_centers": []any{}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 }
@@ -151,11 +150,11 @@ func TestDepartments_BulkUpsert_RejectsUnknownLocation(t *testing.T) {
 	)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "departments[1].location")
+	assertErrorParam(t, errObj, "work_centers[1].location")
 }
 
 // TestDepartments_BulkUpsert_UpdatesEveryField creates a department, then upserts the
-// same name (different casing) changing notes and location — asserting the match is
+// same name (different casing) changing its location — asserting the match is
 // case-insensitive, the ID is stable, the name adopts the new casing, and omitted
 // fields are preserved on a subsequent update.
 func TestDepartments_BulkUpsert_UpdatesEveryField(t *testing.T) {
@@ -164,8 +163,7 @@ func TestDepartments_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	name := uniqueName("e2e-bup-dept-upd")
 
 	createdIDs, _ := bulkUpsertDepartmentIDs(t, map[string]any{
-		"name":  name,
-		"notes": "original notes",
+		"name": name,
 	})
 	defer cleanupDepartmentIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
@@ -174,7 +172,6 @@ func TestDepartments_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	upper := strings.ToUpper(name)
 	created, updated := bulkUpsertDepartmentIDs(t, map[string]any{
 		"name":     upper,
-		"notes":    "updated notes",
 		"location": map[string]any{"name": "main building"}, // case-insensitive resolution
 	})
 	assert.Empty(t, created, "existing name must update, not create")
@@ -186,18 +183,16 @@ func TestDepartments_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, upper, jsonField(got, "name"), "name adopts the request's casing")
-	assert.Equal(t, "updated notes", jsonField(got, "notes"))
 	loc := jsonObject(got, "location")
 	require.NotNil(t, loc, "location should be populated with ?include=location")
 	assert.Equal(t, SeedLocationID, jsonField(loc, "id"))
 
-	// Omitted notes and location are preserved on a subsequent update.
+	// An omitted location is preserved on a subsequent update.
 	bulkUpsertDepartmentIDs(t, map[string]any{"name": upper})
 	getStatus2, getBody2, err := apiClient.GetListRaw(departmentsPath+"/"+departmentID, url.Values{"include": {"location"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
 	got2 := parseJSON(getBody2)
-	assert.Equal(t, "updated notes", jsonField(got2, "notes"))
 	loc2 := jsonObject(got2, "location")
 	require.NotNil(t, loc2, "location should be preserved when omitted on update")
 	assert.Equal(t, SeedLocationID, jsonField(loc2, "id"))
@@ -213,7 +208,7 @@ func TestDepartments_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
 	defer cleanupDepartmentIDs(seeded)
 
 	created, updated := bulkUpsertDepartmentIDs(t,
-		map[string]any{"name": existingName, "notes": "touched"},
+		map[string]any{"name": existingName, "location": map[string]any{"id": SeedLocationID}},
 		map[string]any{"name": newName},
 	)
 	defer cleanupDepartmentIDs(created)

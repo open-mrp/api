@@ -262,7 +262,7 @@ func TestIncludeReads_ProductionStepReaderGetsItemsMachinesStationAndDepartment(
 	t.Parallel()
 	reader := customRoleClient(t, "production_steps:read")
 	includes := []string{
-		"production.produced_item", "consumptions.consumed_item", "machines", "machines.department",
+		"production.produced_item", "consumptions.consumed_item", "machines", "machines.work_center",
 		"scanning_station", "department",
 	}
 

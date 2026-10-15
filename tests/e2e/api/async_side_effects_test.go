@@ -791,9 +791,9 @@ func TestLocations_RequestLogs(t *testing.T) {
 func TestMachines_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, machinesPath, map[string]any{
-		"name":          uniqueName("e2e-machine-audit"),
-		"serial_number": uniqueName("SN"),
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-machine-audit"),
+		"serial_number":  uniqueName("SN"),
+		"work_center_id": SeedDepartmentID,
 	})
 	id := jsonField(created, "id")
 
@@ -811,9 +811,9 @@ func TestMachines_AuditEvents(t *testing.T) {
 func TestMachines_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, machinesPath, map[string]any{
-		"name":          uniqueName("e2e-machine-rlog"),
-		"serial_number": uniqueName("SN"),
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-machine-rlog"),
+		"serial_number":  uniqueName("SN"),
+		"work_center_id": SeedDepartmentID,
 	})
 
 	expectRequestLog(t, "POST", "201", machinesPath)
@@ -981,7 +981,7 @@ func TestScanningStations_AuditEvents(t *testing.T) {
 		"name":                 uniqueName("e2e-station-audit"),
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	})
 	id := jsonField(created, "id")
 
@@ -1002,7 +1002,7 @@ func TestScanningStations_RequestLogs(t *testing.T) {
 		"name":                 uniqueName("e2e-station-rlog"),
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	})
 
 	expectRequestLog(t, "POST", "201", scanningStationsPath)

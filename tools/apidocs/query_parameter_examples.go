@@ -100,7 +100,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 	idSamples := map[string]string{
 		"customer_ids":         apiresource.SampleCustomerID,
 		"supplier_ids":         apiresource.SampleSupplierID,
-		"department_ids":       apiresource.SampleDepartmentID,
+		"department_ids":       apiresource.SampleWorkCenterID,
+		"work_center_ids":      apiresource.SampleWorkCenterID,
 		"product_line_ids":     apiresource.SampleProductLineID,
 		"category_ids":         apiresource.SampleItemCategoryID,
 		"item_category_ids":    apiresource.SampleItemCategoryID,

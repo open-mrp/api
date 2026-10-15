@@ -286,7 +286,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	dept := jsonObject(got, "department")
 	require.NotNil(t, dept, "department must be set after create")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-au-allf-u")

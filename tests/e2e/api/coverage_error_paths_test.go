@@ -112,7 +112,7 @@ func TestUnknownID_Deletes(t *testing.T) {
 	runUnknownIDCases(t, map[string]unknownIDCase{
 		"transaction":                  {method: "DELETE", path: "/v1/finance/transactions/tx_doesnotexist00000", want: 404},
 		"email domain":                 {method: "DELETE", path: "/v1/messaging/email-domains/emdm_doesnotexist", want: 404},
-		"department":                   {method: "DELETE", path: "/v1/operations/departments/dept_doesnotexist0", want: 404},
+		"department":                   {method: "DELETE", path: "/v1/operations/work-centers/dept_doesnotexist0", want: 404},
 		"machine":                      {method: "DELETE", path: "/v1/operations/machines/mch_doesnotexist000", want: 404},
 		"production step":              {method: "DELETE", path: "/v1/operations/production-steps/prs_doesnotexist000", want: 404},
 		"registration flow":            {method: "DELETE", path: "/v1/sales/registration-flows/rgfl_doesnotexist", want: 404},

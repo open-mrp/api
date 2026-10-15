@@ -190,7 +190,7 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 
 	dept := jsonObject(au, "department")
 	require.NotNil(t, dept, "account_user.department should be populated with ?include=account_user.department")
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 }
 

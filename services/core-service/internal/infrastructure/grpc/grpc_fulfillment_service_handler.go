@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -31,6 +32,7 @@ func machineToProto(m *domain.Machine) *pb.MachineInfo {
 		Notes:          m.Notes,
 		DepartmentId:   m.DepartmentID,
 		DepartmentName: m.DepartmentName,
+		Status:         string(m.Status),
 		CreatedAt:      timestamppb.New(m.CreatedAt),
 		UpdatedAt:      timestamppb.New(m.UpdatedAt),
 	}
@@ -62,9 +64,11 @@ func (h *fulfillmentGRPCHandler) ListMachines(ctx context.Context, req *pb.ListM
 	}
 
 	params := domain.ListMachinesParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Query:         req.Query,
+		DepartmentIDs: req.DepartmentIds,
+		IsActive:      constants.IsActiveFilter(archiveStatuses(req.Statuses)),
 	}
 
 	result, apiErr := h.machineSvc.ListMachines(ctx, params)
@@ -117,6 +121,9 @@ func (h *fulfillmentGRPCHandler) CreateMachine(ctx context.Context, req *pb.Crea
 		Notes:        req.Notes,
 		DepartmentID: req.DepartmentId,
 	}
+	if status := optionalArchiveStatus(req.Status); status != nil {
+		params.Status = *status
+	}
 
 	machine, apiErr := h.machineSvc.CreateMachine(ctx, params)
 	if apiErr != nil {
@@ -143,6 +150,7 @@ func (h *fulfillmentGRPCHandler) BulkUpsertMachines(ctx context.Context, req *pb
 			SerialNumber: m.SerialNumber,
 			Notes:        m.Notes,
 			Department:   objectIdentifierFromProto(m.Department),
+			Status:       optionalArchiveStatus(m.Status),
 		}
 	}
 
@@ -167,6 +175,8 @@ func (h *fulfillmentGRPCHandler) UpdateMachine(ctx context.Context, req *pb.Upda
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
 		Notes:        fieldpb.StringClearableFromProto(req.Notes),
+		Status:       optionalArchiveStatus(req.Status),
+		DepartmentID: req.DepartmentId,
 	}
 
 	machine, apiErr := h.machineSvc.UpdateMachine(ctx, params)

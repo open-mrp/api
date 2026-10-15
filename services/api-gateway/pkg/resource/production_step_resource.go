@@ -49,7 +49,7 @@ type ProductionStep struct {
 	// Steps that this step feeds into.
 	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
 	// Department responsible for this step.
-	Department *Department `json:"department" expandable:"true"`
+	Department *WorkCenter `json:"department" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -72,7 +72,7 @@ var SampleProductionStep = &ProductionStep{
 	Consumptions:    NewList([]Consumption{*SampleConsumption}, PageInfo{}),
 	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
 	ScanningStation: SampleScanningStation,
-	Department:      SampleDepartment,
+	Department:      SampleWorkCenter,
 	InSteps:         NewList([]ProductionStep{}, PageInfo{}),
 	OutSteps:        NewList([]ProductionStep{}, PageInfo{}),
 	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),

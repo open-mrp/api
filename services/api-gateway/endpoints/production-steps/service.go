@@ -495,7 +495,7 @@ func stashProductionStepMeta(meta *include.LoadMeta, s *pb.ProductionStepInfo) {
 			mUpdated = grpcutil.TimestampToTime(m.UpdatedAt)
 		}
 		if m.DepartmentId != nil && *m.DepartmentId != "" {
-			meta.Set(constants.ObjectTypeMachine, m.Id, "department_id", *m.DepartmentId)
+			meta.Set(constants.ObjectTypeMachine, m.Id, "work_center_id", *m.DepartmentId)
 		}
 		machines[i] = apiresource.Machine{
 			ID:           m.Id,

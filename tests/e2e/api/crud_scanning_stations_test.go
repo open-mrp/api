@@ -17,15 +17,13 @@ const scanningStationsPath = "/v1/operations/scanning-stations"
 func TestScanningStations_CRUD(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-station")
-	notes := "test station notes"
 
 	// CREATE
 	createResp, err := apiClient.PostFull(scanningStationsPath, map[string]any{
 		"name":                 name,
 		"type":                 "init_batch",
-		"notes":                notes,
 		"operator_requirement": "material_check",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -36,14 +34,13 @@ func TestScanningStations_CRUD(t *testing.T) {
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "scanning_station", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, notes, jsonField(created, "notes"))
 	assert.Equal(t, "init_batch", jsonField(created, "type"))
 	assert.Equal(t, "material_check", jsonField(created, "operator_requirement"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
 	// Expandable fields are null unless explicitly included.
-	assertNilField(t, created, "department")
+	assertNilField(t, created, "work_center")
 
 	// GET
 	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+id, nil)
@@ -57,14 +54,12 @@ func TestScanningStations_CRUD(t *testing.T) {
 	newName := uniqueName("e2e-station-upd")
 	patchStatus, patchBody, err := apiClient.Patch(scanningStationsPath+"/"+id, map[string]any{
 		"name":                 newName,
-		"notes":                "updated notes",
 		"operator_requirement": "none",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
-	assert.Equal(t, "updated notes", jsonField(updated, "notes"))
 	assert.Equal(t, "none", jsonField(updated, "operator_requirement"))
 
 	// DELETE
@@ -86,11 +81,10 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	createResp, err := apiClient.PostFull(scanningStationsPath, map[string]any{
 		"name":                 name,
 		"type":                 "init_batch",
-		"notes":                "Create notes",
 		"operator_requirement": "material_check",
 		"label_size":           "1x1",
 		"label_type":           "tag",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -104,7 +98,6 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "scanning_station", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, "init_batch", jsonField(got, "type"))
-	assert.Equal(t, "Create notes", jsonField(got, "notes"))
 	assert.Equal(t, "material_check", jsonField(got, "operator_requirement"))
 	assert.Equal(t, "1x1", jsonField(got, "label_size"))
 	assert.Equal(t, "tag", jsonField(got, "label_type"))
@@ -112,13 +105,12 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	assertNilField(t, got, "department")
+	assertNilField(t, got, "work_center")
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-stn-allf-u")
 	patchStatus, patchBody, err := apiClient.Patch(scanningStationsPath+"/"+id, map[string]any{
 		"name":                 updatedName,
-		"notes":                "Updated notes",
 		"operator_requirement": "none",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -127,7 +119,6 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "Updated notes", jsonField(updated, "notes"))
 	assert.Equal(t, "none", jsonField(updated, "operator_requirement"))
 	assert.Equal(t, "init_batch", jsonField(updated, "type"), "type should be preserved")
 	assert.Equal(t, "1x1", jsonField(updated, "label_size"), "label_size should be preserved")
@@ -135,7 +126,7 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
-	assertNilField(t, updated, "department")
+	assertNilField(t, updated, "work_center")
 
 	// ── UPDATE clearing the label codes — null and "" are both clear signals ──
 	clearStatus, clearBody, err := apiClient.Patch(scanningStationsPath+"/"+id, map[string]any{
@@ -147,7 +138,6 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	cleared := parseJSON(clearBody)
 	assertNilField(t, cleared, "label_size")
 	assertNilField(t, cleared, "label_type")
-	assert.Equal(t, "Updated notes", jsonField(cleared, "notes"), "omitted notes should be preserved")
 }
 
 func TestScanningStations_List(t *testing.T) {
@@ -175,7 +165,7 @@ func TestScanningStations_ListPagination(t *testing.T) {
 			"name":                 fmt.Sprintf("%s-%d", prefix, i),
 			"type":                 "init_batch",
 			"operator_requirement": "none",
-			"department_id":        SeedDepartmentID,
+			"work_center_id":       SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -230,14 +220,14 @@ func TestScanningStations_GetByID(t *testing.T) {
 
 func TestScanningStations_GetByID_IncludeDepartment(t *testing.T) {
 	t.Parallel()
-	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+SeedScanningStationID, url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+SeedScanningStationID, url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
-	dept := jsonObject(parseJSON(getBody), "department")
-	require.NotNil(t, dept, "department should be present with ?include=department")
+	dept := jsonObject(parseJSON(getBody), "work_center")
+	require.NotNil(t, dept, "department should be present with ?include=work_center")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 	assert.NotEmpty(t, jsonField(dept, "name"))
 }
 
@@ -278,7 +268,7 @@ func TestScanningStations_CreateIdempotent(t *testing.T) {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
@@ -288,7 +278,7 @@ func TestScanningStations_CreateIdempotent(t *testing.T) {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
@@ -303,7 +293,7 @@ func TestScanningStations_CreateValidation_EmptyName(t *testing.T) {
 		"name":                 "",
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -318,7 +308,7 @@ func TestScanningStations_CreateDuplicateName(t *testing.T) {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
@@ -328,7 +318,7 @@ func TestScanningStations_CreateDuplicateName(t *testing.T) {
 		"name":                 name,
 		"type":                 "move_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status2, "Duplicate name should return 409: %s", string(body2))
@@ -345,7 +335,7 @@ func TestScanningStations_ConnectProductionSteps(t *testing.T) {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department_id":        SeedDepartmentID,
+		"work_center_id":       SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -393,7 +383,7 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 			"name":                 name,
 			"type":                 "init_batch",
 			"operator_requirement": "none",
-			"department_id":        SeedDepartmentID,
+			"work_center_id":       SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -406,7 +396,6 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		assertObjectField(t, got, "scanning_station")
 		assert.Equal(t, name, jsonField(got, "name"))
 		assert.Equal(t, "init_batch", jsonField(got, "type"))
-		assertNilField(t, got, "notes")
 		assert.Equal(t, "none", jsonField(got, "operator_requirement"))
 		assertNilField(t, got, "label_size_code")
 		assertNilField(t, got, "label_type_code")
@@ -414,7 +403,7 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-		assertNilField(t, got, "department")
+		assertNilField(t, got, "work_center")
 	})
 
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
@@ -422,7 +411,7 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		status, body, err := apiClient.Post(scanningStationsPath, map[string]any{
 			"type":                 "init_batch",
 			"operator_requirement": "none",
-			"department_id":        SeedDepartmentID,
+			"work_center_id":       SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.True(t, status == 400 || status == 422,
@@ -432,7 +421,7 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		status2, body2, err := apiClient.Post(scanningStationsPath, map[string]any{
 			"name":                 uniqueName("e2e-stn-notype"),
 			"operator_requirement": "none",
-			"department_id":        SeedDepartmentID,
+			"work_center_id":       SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.True(t, status2 == 400 || status2 == 422,
@@ -455,9 +444,8 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		createStatus, createBody, err := apiClient.Post(scanningStationsPath, map[string]any{
 			"name":                 name,
 			"type":                 "init_batch",
-			"notes":                "Original notes",
 			"operator_requirement": "material_check",
-			"department_id":        SeedDepartmentID,
+			"work_center_id":       SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -479,11 +467,10 @@ func TestScanningStations_OmittedFields(t *testing.T) {
 		got := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(got, "name"))
 		assert.Equal(t, "init_batch", jsonField(got, "type"), "type should be preserved")
-		assert.Equal(t, "Original notes", jsonField(got, "notes"), "notes should be preserved")
 		assert.Equal(t, "material_check", jsonField(got, "operator_requirement"), "operator_requirement should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-		assertNilField(t, got, "department")
+		assertNilField(t, got, "work_center")
 	})
 }

@@ -152,7 +152,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "user", ObjectType: constants.ObjectTypeUser},
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
-			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
 		},
 	})
 
@@ -165,7 +165,7 @@ func init() {
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
-					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+					{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
 				},
 			},
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
@@ -188,14 +188,14 @@ func init() {
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
-					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+					{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
 				},
 			},
 		},
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeDepartment,
+		ObjectType: constants.ObjectTypeWorkCenter,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "location", ObjectType: constants.ObjectTypeLocation},
 			{Key: "scanning_stations", ObjectType: constants.ObjectTypeScanningStation},
@@ -533,7 +533,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMachine,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
 		},
 	})
 
@@ -548,7 +548,7 @@ func init() {
 		ObjectType: constants.ObjectTypeMachineDowntimeEvent,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "machine", ObjectType: constants.ObjectTypeMachine},
-			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "reported_by", ObjectType: constants.ObjectTypeActor},
 		},
@@ -678,7 +678,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeScanningStation,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
 			{Key: "production_steps", ObjectType: constants.ObjectTypeProductionStep},
 		},
 	})
@@ -850,7 +850,7 @@ func init() {
 			{Key: "consumptions", ObjectType: constants.ObjectTypeConsumption},
 			{Key: "machines", ObjectType: constants.ObjectTypeMachine},
 			{Key: "scanning_station", ObjectType: constants.ObjectTypeScanningStation},
-			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
 			{Key: "in_steps", ObjectType: constants.ObjectTypeProductionStep},
 			{Key: "out_steps", ObjectType: constants.ObjectTypeProductionStep},
 		},

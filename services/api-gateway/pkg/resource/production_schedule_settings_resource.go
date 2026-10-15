@@ -152,7 +152,7 @@ var sampleGenerationCron = "0 6 * * 1"
 
 var SampleProductionScheduleSettings = &ProductionScheduleSettings{
 	Object:                         constants.ObjectTypeProductionScheduleSettings,
-	ConstraintDepartment:           NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	ConstraintDepartment:           NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	PlanningHorizonWeeks:           13,
 	FrozenWeeks:                    1,
 	WeekStartDay:                   1,
@@ -345,7 +345,7 @@ var SampleProductionScheduleResourceSetting = &ProductionScheduleResourceSetting
 	ID:                  SampleProductionScheduleResourceSettingID,
 	Object:              constants.ObjectTypeProductionScheduleResourceSetting,
 	ScopeType:           constants.ScheduleResourceScopeDepartment,
-	Scope:               NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Scope:               NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	ParticipationStatus: constants.ParticipationStatusIncluded,
 	LeadTimeWeeks:       new(0.5),
 	LeadTimeOffsetWeeks: 1,

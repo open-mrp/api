@@ -12,7 +12,6 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
-	"github.com/open-mrp/apikit/field"
 )
 
 // UpsertMachineInput is the input for a single machine in a bulk upsert operation.
@@ -22,10 +21,11 @@ type UpsertMachineInput struct {
 	Name string `json:"name" validate:"required,max=255"`
 	// Serial number of the machine. Also used for matching — see `name`.
 	SerialNumber string `json:"serial_number" validate:"required,max=255"`
-	// Free-form notes about the machine. Preserved when omitted on update.
-	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Department this machine belongs to, referenced by `id` or `name`. Create-only.
-	Department apirequest.ObjectIdentifier `json:"department" validate:"required"`
+	// Work center the machine belongs to, referenced by `id` or `name`. A row matching an existing machine must name
+	// the machine's current work center; move machines with Update Machine.
+	WorkCenter apirequest.ObjectIdentifier `json:"work_center" validate:"required"`
+	// `active` or `archived`. Omitted, a new machine is active and an existing one keeps its status.
+	Status *constants.ArchiveStatus `json:"status,omitempty"`
 }
 
 // BulkUpsertMachinesRequest is the request to bulk upsert machines.
@@ -40,9 +40,9 @@ var sampleBulkUpsertMachinesRequest = &BulkUpsertMachinesRequest{
 		{
 			Name:         apiresource.SampleMachineName,
 			SerialNumber: apiresource.SampleMachineSerialNumber,
-			Department: apirequest.ObjectIdentifier{
-				ID:   apiresource.SampleDepartmentID,
-				Name: apiresource.SampleDepartmentName,
+			WorkCenter: apirequest.ObjectIdentifier{
+				ID:   apiresource.SampleWorkCenterID,
+				Name: apiresource.SampleWorkCenterName,
 			},
 		},
 	},
@@ -52,8 +52,9 @@ func (*BulkUpsertMachinesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertMachinesRequest)
 }
 
-// Creates or updates multiple machines for the account, matched by name or serial number
-// (case-insensitive), then writes asynchronously — 202 with a job to poll.
+// Creates or updates many machines at once.
+//
+// Rows are matched to your existing machines by name or serial number (case-insensitive). The writes run in the background: the response is a 202 with an async job to poll for each row's result.
 type BulkUpsertMachinesEndpoint struct{}
 
 func (e *BulkUpsertMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertMachinesRequest, *apiresource.AsyncJob] {
@@ -63,10 +64,9 @@ func (e *BulkUpsertMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/actions/bulk-upsert",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMachines, Action: types.ActionCreate}, {Domain: types.PermissionDomainMachines, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

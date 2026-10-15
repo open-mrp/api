@@ -18,9 +18,9 @@ func TestMachineItems_ReplaceListSuggest(t *testing.T) {
 
 	name := uniqueName("e2e-mc-items")
 	createResp, err := apiClient.PostFull(machinesPath, map[string]any{
-		"name":          name,
-		"serial_number": uniqueName("SN-MI"),
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"serial_number":  uniqueName("SN-MI"),
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)

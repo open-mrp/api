@@ -17,16 +17,17 @@ import (
 // Request to list machines.
 type ListMachinesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive prefix match on `name`; the machine named exactly the term comes first.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return machines at one of these work centers.
+	WorkCenterIDs []string `query:"work_center_ids" validate:"omitempty,max=100"`
+	// Only return machines with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 }
 
-// Returns a paginated list of machines in your account, most recently created first.
+// Returns a list of your machines, newest first.
 //
-// The search term matches the start of the machine name, and a machine named exactly the term is listed
-// first.
+// With `q`, the machine named exactly the term is listed first.
 type ListMachinesEndpoint struct{}
 
 func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachinesRequest, *apiresource.List[apiresource.Machine]] {
@@ -38,14 +39,13 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionRead},
 		}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMachine,
-			Fields:     []string{"department"},
+			Fields:     []string{"work_center"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 			return svc.(MachineSvc).ListMachines

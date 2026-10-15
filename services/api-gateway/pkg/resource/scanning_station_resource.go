@@ -14,7 +14,7 @@ import (
 
 const SampleScanningStationName = "Packaging Line 1"
 
-// A station on the production floor where operators scan batches to perform a batch operation, such as initializing or moving a batch.
+// A station on the production floor, at a work center, where operators scan batches to perform a batch operation, such as initializing or moving a batch.
 type ScanningStation struct {
 	// Scanning station ID.
 	ID string `json:"id" validate:"required"`
@@ -22,10 +22,8 @@ type ScanningStation struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_station"`
 	// Display name of the scanning station.
 	//
-	// Unique within the account.
+	// Unique within your account (case-insensitive).
 	Name string `json:"name" validate:"required"`
-	// Free-form notes about the scanning station.
-	Notes *string `json:"notes"`
 	// Scanning station type, determining which batch operation an operator performs when they scan here.
 	//
 	// - `init_batch`: starts a new batch at the beginning of a production flow.
@@ -47,10 +45,10 @@ type ScanningStation struct {
 	// - `none`: no additional operator check is required.
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement"`
-	// The department this scanning station belongs to.
+	// The work center this scanning station belongs to.
 	//
-	// Assigned when the station is created and cannot be reassigned afterward.
-	Department *Department `json:"department" expandable:"true"`
+	// Null unless included.
+	WorkCenter *WorkCenter `json:"work_center" expandable:"true"`
 	// Production steps connected to this station.
 	//
 	// A production step can be connected to at most one scanning station, so connecting a step here disconnects it from any other station. Manage the connections with Connect Production Steps to Scanning Station.
@@ -61,18 +59,15 @@ type ScanningStation struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var sampleScanningStationNotes = "Initializes batches at the start of the packaging line."
-
 var SampleScanningStation = &ScanningStation{
 	ID:                  SampleScanningStationID,
 	Object:              constants.ObjectTypeScanningStation,
 	Name:                SampleScanningStationName,
-	Notes:               &sampleScanningStationNotes,
 	Type:                constants.ScanningStationTypeInitBatch,
 	LabelSizeCode:       new(constants.LabelSizeCodeTwoByFour),
 	LabelTypeCode:       new(constants.LabelTypeCodeTraveler),
 	OperatorRequirement: constants.OperatorRequirementNone,
-	Department:          nil,
+	WorkCenter:          nil,
 	ProductionSteps:     nil,
 	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

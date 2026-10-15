@@ -63,6 +63,8 @@ message MachineInfo {
   google.protobuf.Timestamp updated_at = 8;
   optional google.protobuf.Timestamp department_created_at = 9;
   optional google.protobuf.Timestamp department_updated_at = 10;
+  // active | archived.
+  string status = 11;
 }
 
 message ListMachinesRequest {
@@ -70,6 +72,10 @@ message ListMachinesRequest {
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  // Only machines in one of these departments.
+  repeated string department_ids = 5;
+  // Only machines with one of these statuses (active | archived); empty for all.
+  repeated string statuses = 6;
 }
 
 message ListMachinesResponse {
@@ -99,6 +105,8 @@ message CreateMachineRequest {
   optional string notes = 3;
   string department_id = 4;
   repeated string includes = 5;
+  // active | archived; active when absent.
+  optional string status = 6;
 }
 
 message CreateMachineResponse {
@@ -111,6 +119,9 @@ message UpdateMachineRequest {
   optional string serial_number = 3;
   optional StringPatch notes = 4;
   repeated string includes = 5;
+  optional string status = 6;
+  // Moves the machine to this department.
+  optional string department_id = 7;
 }
 
 message UpdateMachineResponse {
@@ -131,6 +142,8 @@ message UpsertMachineInput {
   string serial_number = 2;
   optional string notes = 3;
   ObjectIdentifier department = 4;
+  // active | archived; absent keeps an existing machine's status and makes a new one active.
+  optional string status = 5;
 }
 
 message BulkUpsertMachinesRequest {

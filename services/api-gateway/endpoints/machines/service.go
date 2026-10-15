@@ -12,7 +12,6 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -87,9 +86,11 @@ func (m *machineSvcImpl) ExportMachines(ctx context.Context, req *ExportMachines
 
 func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 	pbReq := &pb.ListMachinesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Query:         req.Query,
+		DepartmentIds: req.WorkCenterIDs,
+		Statuses:      statusStrings(req.Statuses),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.list", domain.ServiceName,
@@ -129,8 +130,8 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 	pbReq := &pb.CreateMachineRequest{
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
-		Notes:        req.Notes.Ptr(),
-		DepartmentId: req.DepartmentID,
+		DepartmentId: req.WorkCenterID,
+		Status:       req.Status.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.create", domain.ServiceName,
@@ -151,8 +152,8 @@ func (m *machineSvcImpl) BulkUpsertMachines(ctx context.Context, req *BulkUpsert
 		pbMachines[i] = &pb.UpsertMachineInput{
 			Name:         machine.Name,
 			SerialNumber: machine.SerialNumber,
-			Notes:        machine.Notes.Ptr(),
-			Department:   apirequest.ObjectIdentifierToProto(machine.Department),
+			Department:   apirequest.ObjectIdentifierToProto(machine.WorkCenter),
+			Status:       machine.Status.StringPtr(),
 		}
 	}
 
@@ -172,7 +173,8 @@ func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRe
 		Id:           req.MachineID,
 		Name:         req.Name.Ptr(),
 		SerialNumber: req.SerialNumber.Ptr(),
-		Notes:        fieldpb.StringClearableToProto(req.Notes),
+		Status:       req.Status.Ptr().StringPtr(),
+		DepartmentId: req.WorkCenterID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.update", domain.ServiceName,
@@ -293,4 +295,13 @@ func (m *machineSvcImpl) SuggestMachineItemsFromScans(ctx context.Context, req *
 		suggestions = append(suggestions, row)
 	}
 	return apiresource.NewList(suggestions, apiresource.PageInfo{}), nil
+}
+
+// statusStrings is statuses as the core RPC takes them.
+func statusStrings(statuses []constants.ArchiveStatus) []string {
+	out := make([]string, len(statuses))
+	for i, s := range statuses {
+		out[i] = string(s)
+	}
+	return out
 }

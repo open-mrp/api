@@ -21,8 +21,6 @@ type UpsertScanningStationInput struct {
 	// by name (case-insensitive): a match updates that station, no match creates a new
 	// one.
 	Name string `json:"name" validate:"required,max=255"`
-	// Free-form notes about the scanning station. Preserved when omitted on update.
-	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Scanning station type, determining which batch operation the station performs.
 	//
 	// - `init_batch`: initializes a new batch.
@@ -48,9 +46,10 @@ type UpsertScanningStationInput struct {
 	// - `tag`: a label attached to the physical product.
 	// - `traveler`: a routing sheet that accompanies the batch through every production step.
 	LabelTypeCode field.Clearable[constants.LabelTypeCode] `json:"label_type,omitzero"`
-	// Department this station belongs to, referenced by `id` or `name`. Create-only: a row
-	// updating an existing station must state that station's current department.
-	Department apirequest.ObjectIdentifier `json:"department" validate:"required"`
+	// Work center the station belongs to, referenced by `id` or `name`. A row matching an
+	// existing station must name the station's current work center; move stations with
+	// Update Scanning Station.
+	WorkCenter apirequest.ObjectIdentifier `json:"work_center" validate:"required"`
 }
 
 // Request to bulk upsert scanning stations.
@@ -66,9 +65,9 @@ var sampleBulkUpsertScanningStationsRequest = &BulkUpsertScanningStationsRequest
 			Name:                apiresource.SampleScanningStationName,
 			Type:                constants.ScanningStationTypeInitBatch,
 			OperatorRequirement: constants.OperatorRequirementNone,
-			Department: apirequest.ObjectIdentifier{
-				ID:   apiresource.SampleDepartmentID,
-				Name: apiresource.SampleDepartmentName,
+			WorkCenter: apirequest.ObjectIdentifier{
+				ID:   apiresource.SampleWorkCenterID,
+				Name: apiresource.SampleWorkCenterName,
 			},
 		},
 	},
@@ -78,8 +77,9 @@ func (*BulkUpsertScanningStationsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertScanningStationsRequest)
 }
 
-// Creates or updates multiple scanning stations for the account, matched by name (case-insensitive).
-// Validates and resolves synchronously, then writes asynchronously — 202 with a job to poll.
+// Creates or updates many scanning stations at once.
+//
+// Rows are matched to your existing stations by name (case-insensitive). The writes run in the background: the response is a 202 with an async job to poll for each row's result.
 type BulkUpsertScanningStationsEndpoint struct{}
 
 func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.AsyncJob] {
@@ -89,10 +89,9 @@ func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/actions/bulk-upsert",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionCreate}, {Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

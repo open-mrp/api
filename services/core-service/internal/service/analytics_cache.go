@@ -58,7 +58,7 @@ var analyticsFamilyResources = map[analyticsFamily][]constants.ObjectType{
 		constants.ObjectTypeBatch, constants.ObjectTypeMachineDowntimeEvent, constants.ObjectTypeMachineDowntimeReason,
 		constants.ObjectTypeProductionSchedule, constants.ObjectTypeProductionScheduleLine, constants.ObjectTypeProductionScheduleSettings,
 		constants.ObjectTypeProductionScheduleDeviation, constants.ObjectTypeProductionStep, constants.ObjectTypeProductionRun,
-		constants.ObjectTypeDepartment, constants.ObjectTypeMachine, constants.ObjectTypeScanningStation, constants.ObjectTypeItem,
+		constants.ObjectTypeDepartment, constants.ObjectTypeWorkCenter, constants.ObjectTypeMachine, constants.ObjectTypeScanningStation, constants.ObjectTypeItem,
 		constants.ObjectTypeRate, constants.ObjectTypeQuantity, constants.ObjectTypeUnit, constants.ObjectTypeUnitGroup,
 		constants.ObjectTypeItemCategory, constants.ObjectTypeConsumption, constants.ObjectTypeProduct, constants.ObjectTypeProductLine,
 	},

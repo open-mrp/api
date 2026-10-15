@@ -15,9 +15,21 @@ func init() {
 		Load:       resourceloaders.LoadScanningStations,
 		Subs: []include.SubField{
 			{
-				Key:         "department",
+				Key:         "work_center",
+				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
-				Populate:    populateDepartmentOnScanningStation,
+				ExtractIDs: func(ctx context.Context, parent any) []string {
+					if id := scanningStationWorkCenterID(ctx, parent.(*apiresource.ScanningStation)); id != "" {
+						return []string{id}
+					}
+					return nil
+				},
+				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
+					ss := parent.(*apiresource.ScanningStation)
+					if v, ok := loaded[scanningStationWorkCenterID(ctx, ss)]; ok {
+						ss.WorkCenter = v.(*apiresource.WorkCenter)
+					}
+				},
 			},
 			{
 				Key:         "production_steps",
@@ -28,14 +40,9 @@ func init() {
 	})
 }
 
-func populateDepartmentOnScanningStation(ctx context.Context, parent any, _ map[string]any) {
-	ss := parent.(*apiresource.ScanningStation)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeScanningStation, ss.ID, "department")
-	if !ok {
-		return
-	}
-	ss.Department = v.(*apiresource.Department)
+func scanningStationWorkCenterID(ctx context.Context, ss *apiresource.ScanningStation) string {
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeScanningStation, ss.ID, "work_center_id")
+	return id
 }
 
 func populateProductionStepsOnScanningStation(ctx context.Context, parent any, _ map[string]any) {

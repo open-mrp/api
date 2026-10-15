@@ -223,7 +223,7 @@ func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 		"consumptions",
 		"consumptions.consumed_item",
 		"consumptions.consumed_item.category.unit_group.base_unit",
-		"machines.department",
+		"machines.work_center",
 	}}
 	listed := url.Values{"item_ids": {s.fixture.partItemID}, "include": includes["include"]}
 	for path, query := range map[string]url.Values{productionStepsPath + "/" + s.id: includes, productionStepsPath: listed} {
@@ -273,9 +273,9 @@ func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 func createMachineForStep(t *testing.T) string {
 	t.Helper()
 	status, body, err := apiClient.Post(machinesPath, map[string]any{
-		"name":          uniqueName("e2e-step-machine"),
-		"serial_number": uniqueName("SN"),
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-step-machine"),
+		"serial_number":  uniqueName("SN"),
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -286,13 +286,13 @@ func createMachineForStep(t *testing.T) string {
 
 func stepMachineIDs(t *testing.T, stepID string) []string {
 	t.Helper()
-	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+stepID, url.Values{"include": {"machines.department"}})
+	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+stepID, url.Values{"include": {"machines.work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	var ids []string
 	for _, m := range jsonArray(jsonObject(parseJSON(body), "machines"), "data") {
 		machine := m.(map[string]any)
-		assert.Equal(t, "department", jsonField(jsonObject(machine, "department"), "object"), "machines.department expands")
+		assert.Equal(t, "work_center", jsonField(jsonObject(machine, "work_center"), "object"), "machines.work_center expands")
 		assert.NotEmpty(t, jsonField(machine, "serial_number"), "a step's machine carries its serial number")
 		ids = append(ids, jsonField(machine, "id"))
 	}

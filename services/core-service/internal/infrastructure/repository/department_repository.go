@@ -119,44 +119,64 @@ func mapGetDepartmentRow(row sqlc.GetDepartmentRow) *domain.Department {
 	return dept
 }
 
-func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domain.Department) *apierror.APIError {
-	stations, err := r.queries.ListScanningStationsByDepartmentID(ctx, sqlc.ListScanningStationsByDepartmentIDParams{
-		DepartmentID: dept.ID,
-		AccountID:    dept.AccountID,
+// attachMembers loads the departments' scanning stations and machines, newest first, in one query apiece. A positive
+// limit keeps that many of each per department.
+func (r *departmentRepoImpl) attachMembers(ctx context.Context, accountID string, departments []*domain.Department, limit int) *apierror.APIError {
+	if len(departments) == 0 {
+		return nil
+	}
+	ids := make([]string, len(departments))
+	for i, d := range departments {
+		ids[i] = d.ID
+	}
+
+	stationRows, err := r.queries.ListScanningStationsByDepartmentIDs(ctx, sqlc.ListScanningStationsByDepartmentIDsParams{
+		DepartmentIds: ids,
+		AccountID:     accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	dept.ScanningStations = make([]domain.DepartmentScanningStation, len(stations))
-	for i, s := range stations {
-		dept.ScanningStations[i] = domain.DepartmentScanningStation{
+	stationsByDept := make(map[string][]domain.DepartmentScanningStation, len(ids))
+	for _, s := range stationRows {
+		if limit > 0 && len(stationsByDept[s.DepartmentID]) >= limit {
+			continue
+		}
+		stationsByDept[s.DepartmentID] = append(stationsByDept[s.DepartmentID], domain.DepartmentScanningStation{
 			ID:                  s.ID,
 			Name:                s.Name,
 			Type:                s.ScanningStationTypeCode,
 			OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
 			CreatedAt:           s.CreatedAt,
 			UpdatedAt:           s.UpdatedAt,
-		}
+		})
 	}
 
-	machines, err := r.queries.ListMachinesByDepartmentID(ctx, sqlc.ListMachinesByDepartmentIDParams{
-		DepartmentID: dept.ID,
-		AccountID:    dept.AccountID,
+	machineRows, err := r.queries.ListMachinesByDepartmentIDs(ctx, sqlc.ListMachinesByDepartmentIDsParams{
+		DepartmentIds: ids,
+		AccountID:     accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	dept.Machines = make([]domain.DepartmentMachine, len(machines))
-	for i, m := range machines {
-		dept.Machines[i] = domain.DepartmentMachine{
+	machinesByDept := make(map[string][]domain.DepartmentMachine, len(ids))
+	for _, m := range machineRows {
+		if limit > 0 && len(machinesByDept[m.DepartmentID]) >= limit {
+			continue
+		}
+		machinesByDept[m.DepartmentID] = append(machinesByDept[m.DepartmentID], domain.DepartmentMachine{
 			ID:           m.ID,
 			Name:         m.Name,
 			SerialNumber: m.SerialNumber,
 			CreatedAt:    m.CreatedAt,
 			UpdatedAt:    m.UpdatedAt,
-		}
+		})
 	}
 
+	for _, dept := range departments {
+		dept.ScanningStations = stationsByDept[dept.ID]
+		dept.Machines = machinesByDept[dept.ID]
+	}
 	return nil
 }
 
@@ -172,7 +192,6 @@ func (r *departmentRepoImpl) GetByIDs(ctx context.Context, accountID string, ids
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	deptIDs := make([]string, len(rows))
 	departments := make([]*domain.Department, len(rows))
 	for i, row := range rows {
 		dept := &domain.Department{
@@ -192,51 +211,10 @@ func (r *departmentRepoImpl) GetByIDs(ctx context.Context, accountID string, ids
 			row.LegacyLaborRateValue, row.LegacyLaborRatePerUnitID)
 		dept.LaborRateRowID = nullStringPtr(row.LaborRateID)
 		departments[i] = dept
-		deptIDs[i] = row.ID
 	}
 
-	if len(deptIDs) > 0 {
-		stationRows, err := r.queries.ListScanningStationsByDepartmentIDs(ctx, sqlc.ListScanningStationsByDepartmentIDsParams{
-			DepartmentIds: deptIDs,
-			AccountID:     accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		stationsByDept := make(map[string][]domain.DepartmentScanningStation, len(deptIDs))
-		for _, s := range stationRows {
-			stationsByDept[s.DepartmentID] = append(stationsByDept[s.DepartmentID], domain.DepartmentScanningStation{
-				ID:                  s.ID,
-				Name:                s.Name,
-				Type:                s.ScanningStationTypeCode,
-				OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
-				CreatedAt:           s.CreatedAt,
-				UpdatedAt:           s.UpdatedAt,
-			})
-		}
-
-		machineRows, err := r.queries.ListMachinesByDepartmentIDs(ctx, sqlc.ListMachinesByDepartmentIDsParams{
-			DepartmentIds: deptIDs,
-			AccountID:     accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		machinesByDept := make(map[string][]domain.DepartmentMachine, len(deptIDs))
-		for _, m := range machineRows {
-			machinesByDept[m.DepartmentID] = append(machinesByDept[m.DepartmentID], domain.DepartmentMachine{
-				ID:           m.ID,
-				Name:         m.Name,
-				SerialNumber: m.SerialNumber,
-				CreatedAt:    m.CreatedAt,
-				UpdatedAt:    m.UpdatedAt,
-			})
-		}
-
-		for _, dept := range departments {
-			dept.ScanningStations = stationsByDept[dept.ID]
-			dept.Machines = machinesByDept[dept.ID]
-		}
+	if apiErr := r.attachMembers(ctx, accountID, departments, domain.EmbeddedDepartmentMembers); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return departments, nil
@@ -278,61 +256,12 @@ func (r *departmentRepoImpl) Export(ctx context.Context, params domain.ExportDep
 		ids[i] = row.ID
 	}
 
-	// The sheet lists each department's stations and machines, so both children
-	// are loaded in one query apiece rather than per row.
-	if len(ids) > 0 {
-		if apiErr := r.attachExportChildren(ctx, params.AccountID, ids, departments); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	// The sheet lists each department's stations and machines.
+	if apiErr := r.attachMembers(ctx, params.AccountID, departments, 0); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return departments, nil
-}
-
-// loads every listed department's stations and machines in two queries
-func (r *departmentRepoImpl) attachExportChildren(ctx context.Context, accountID string, ids []string, departments []*domain.Department) *apierror.APIError {
-	stationRows, err := r.queries.ListScanningStationsByDepartmentIDs(ctx, sqlc.ListScanningStationsByDepartmentIDsParams{
-		DepartmentIds: ids,
-		AccountID:     accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	stationsByDept := make(map[string][]domain.DepartmentScanningStation, len(ids))
-	for _, s := range stationRows {
-		stationsByDept[s.DepartmentID] = append(stationsByDept[s.DepartmentID], domain.DepartmentScanningStation{
-			ID:                  s.ID,
-			Name:                s.Name,
-			Type:                s.ScanningStationTypeCode,
-			OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
-			CreatedAt:           s.CreatedAt,
-			UpdatedAt:           s.UpdatedAt,
-		})
-	}
-
-	machineRows, err := r.queries.ListMachinesByDepartmentIDs(ctx, sqlc.ListMachinesByDepartmentIDsParams{
-		DepartmentIds: ids,
-		AccountID:     accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	machinesByDept := make(map[string][]domain.DepartmentMachine, len(ids))
-	for _, m := range machineRows {
-		machinesByDept[m.DepartmentID] = append(machinesByDept[m.DepartmentID], domain.DepartmentMachine{
-			ID:           m.ID,
-			Name:         m.Name,
-			SerialNumber: m.SerialNumber,
-			CreatedAt:    m.CreatedAt,
-			UpdatedAt:    m.UpdatedAt,
-		})
-	}
-
-	for _, dept := range departments {
-		dept.ScanningStations = stationsByDept[dept.ID]
-		dept.Machines = machinesByDept[dept.ID]
-	}
-	return nil
 }
 
 func (r *departmentRepoImpl) List(ctx context.Context, params domain.ListDepartmentsParams) (*domain.ListDepartmentsResult, *apierror.APIError) {
@@ -366,12 +295,6 @@ func (r *departmentRepoImpl) List(ctx context.Context, params domain.ListDepartm
 			}
 			result, pageInfo := pagination.BuildPageString(depts, params.Limit, cursorDir, departmentCreatedAt, departmentID)
 
-			for _, dept := range result {
-				if apiErr := r.attachSubResources(ctx, dept); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
-			}
-
 			return &domain.ListDepartmentsResult{Departments: result, PageInfo: pageInfo}, nil
 		}
 
@@ -391,12 +314,6 @@ func (r *departmentRepoImpl) List(ctx context.Context, params domain.ListDepartm
 		}
 		result, pageInfo := pagination.BuildPageString(depts, params.Limit, cursorDir, departmentCreatedAt, departmentID)
 
-		for _, dept := range result {
-			if apiErr := r.attachSubResources(ctx, dept); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-		}
-
 		return &domain.ListDepartmentsResult{Departments: result, PageInfo: pageInfo}, nil
 	}
 
@@ -415,12 +332,6 @@ func (r *departmentRepoImpl) List(ctx context.Context, params domain.ListDepartm
 	}
 	result, pageInfo := pagination.BuildPageString(depts, params.Limit, cursorDir, departmentCreatedAt, departmentID)
 
-	for _, dept := range result {
-		if apiErr := r.attachSubResources(ctx, dept); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
 	return &domain.ListDepartmentsResult{Departments: result, PageInfo: pageInfo}, nil
 }
 
@@ -437,7 +348,7 @@ func (r *departmentRepoImpl) Get(ctx context.Context, params domain.GetDepartmen
 	}
 
 	dept := mapGetDepartmentRow(row)
-	if apiErr := r.attachSubResources(ctx, dept); apiErr != nil {
+	if apiErr := r.attachMembers(ctx, params.AccountID, []*domain.Department{dept}, 0); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

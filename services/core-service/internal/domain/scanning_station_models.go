@@ -26,6 +26,17 @@ type ScanningStation struct {
 	UpdatedAt           time.Time
 }
 
+// ScanningStationReferences blocks deleting a station that batches, production steps or inventory changes still
+// name.
+var ScanningStationReferences = RegisterReferences(References{
+	Noun: "scanning station",
+	Probes: []ReferenceProbe{
+		{Label: "batches", Table: "batch", Column: "scanning_station_id"},
+		{Label: "production steps", Table: "production_step", Column: "scanning_station_id"},
+		{Label: "inventory changes", Table: "inventory_change_log", Column: "scanning_station_id"},
+	},
+})
+
 // ProductionStepRef is a reference to a production step with the minimal required fields.
 type ProductionStepRef struct {
 	ID             string
@@ -42,6 +53,8 @@ type ListScanningStationsParams struct {
 	Limit     int32
 	Query     *string
 	Includes  []string
+	// DepartmentIDs keeps stations in one of these departments; empty for all.
+	DepartmentIDs []string
 }
 
 type ListScanningStationsResult struct {
@@ -84,6 +97,8 @@ type UpdateScanningStationParams struct {
 	LabelTypeCode       field.Clearable[string]
 	OperatorRequirement *constants.OperatorRequirement
 	Includes            []string
+	// DepartmentID moves the station to this department.
+	DepartmentID *string
 }
 
 type DeleteScanningStationParams struct {

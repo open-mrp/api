@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/apikit/timeutil"
 )
 
-// A piece of production equipment, such as a CNC router or press, assigned to a department.
+// A piece of production equipment, such as a CNC router or press, at a work center.
 type Machine struct {
 	// Machine ID.
 	ID string `json:"id" validate:"required"`
@@ -16,16 +16,20 @@ type Machine struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=machine"`
 	// Display name of the machine.
 	//
-	// Unique within the account.
+	// Unique within your account (case-insensitive).
 	Name string `json:"name" validate:"required"`
 	// Serial number of the machine.
-	SerialNumber string `json:"serial_number" validate:"required"`
-	// Free-form notes about the machine.
-	Notes *string `json:"notes"`
-	// The department this machine belongs to.
 	//
-	// Set when the machine is created; a machine cannot be moved to another department afterwards.
-	Department *Department `json:"department" expandable:"true"`
+	// Unique within your account (case-insensitive).
+	SerialNumber string `json:"serial_number" validate:"required"`
+	// Whether the machine can be newly assigned.
+	//
+	// `active`: in use. `archived`: retired; it stays on the batches, downtime events and operations that already name it, but can't be newly assigned to them or moved into a work center.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// The work center this machine belongs to.
+	//
+	// Null unless included.
+	WorkCenter *WorkCenter `json:"work_center" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -35,16 +39,14 @@ type Machine struct {
 const SampleMachineName = "CNC Router"
 const SampleMachineSerialNumber = "SN-2024-0001"
 
-var sampleMachineNotes = "Spindle rebuilt March 2026; torque calibration due quarterly."
-
-// Department is left nil here because SampleDepartment embeds SampleMachine in its machines list, and a back-reference would be an initialization cycle.
+// WorkCenter is left nil here because SampleWorkCenter embeds SampleMachine in its machines list, and a back-reference would be an initialization cycle.
 var SampleMachine = &Machine{
 	ID:           SampleMachineID,
 	Object:       constants.ObjectTypeMachine,
 	Name:         SampleMachineName,
 	SerialNumber: SampleMachineSerialNumber,
-	Notes:        &sampleMachineNotes,
-	Department:   nil,
+	Status:       constants.ArchiveStatusActive,
+	WorkCenter:   nil,
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

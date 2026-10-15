@@ -64,9 +64,9 @@ func newTestMachine(t *testing.T) string {
 	t.Helper()
 
 	resp, err := apiClient.PostFull(machinesPath, map[string]any{
-		"name":          uniqueName("e2e-downtime-mc"),
-		"serial_number": uniqueName("SN-DT"),
-		"department_id": SeedDepartmentID,
+		"name":           uniqueName("e2e-downtime-mc"),
+		"serial_number":  uniqueName("SN-DT"),
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -798,7 +798,7 @@ func TestMachineDowntimeEvents_Includes(t *testing.T) {
 		// The department is denormalized onto the event at write time from the machine, so it must resolve without the caller passing it.
 		department := jsonObject(parseJSON(body), "department")
 		require.NotNil(t, department, "department should expand")
-		assert.Equal(t, "department", jsonField(department, "object"))
+		assert.Equal(t, "work_center", jsonField(department, "object"))
 	})
 
 	// The reporter is recorded whatever the identity type — user, API key, or agent — so the expandable is a polymorphic actor rather than an account user, and it must resolve for every actor kind.

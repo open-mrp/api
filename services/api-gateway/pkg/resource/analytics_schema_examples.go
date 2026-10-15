@@ -298,7 +298,7 @@ var SampleAnalyzeOeeResponse = &AnalyzeOeeResponse{
 	Object: constants.ObjectTypeAnalyzeOeeResponse,
 	Departments: NewList([]OeeDepartment{
 		{
-			Department:              NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+			Department:              NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 			GoodUnits:               980,
 			WasteUnits:              20,
 			SecondsUnits:            5,

@@ -713,62 +713,12 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 	return items, nil
 }
 
-const listMachinesByDepartmentID = `-- name: ListMachinesByDepartmentID :many
-SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
-FROM machine m
-WHERE m.department_id = ?
-AND m.account_id = ?
-ORDER BY m.name ASC
-`
-
-type ListMachinesByDepartmentIDParams struct {
-	DepartmentID string
-	AccountID    string
-}
-
-type ListMachinesByDepartmentIDRow struct {
-	ID           string
-	Name         string
-	SerialNumber string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
-
-func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachinesByDepartmentIDParams) ([]ListMachinesByDepartmentIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMachinesByDepartmentID, arg.DepartmentID, arg.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMachinesByDepartmentIDRow
-	for rows.Next() {
-		var i ListMachinesByDepartmentIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.SerialNumber,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listMachinesByDepartmentIDs = `-- name: ListMachinesByDepartmentIDs :many
 SELECT m.id, m.name, m.serial_number, m.department_id, m.created_at, m.updated_at
 FROM machine m
 WHERE m.department_id IN (/*SLICE:department_ids*/?)
 AND m.account_id = ?
-ORDER BY m.name ASC
+ORDER BY m.created_at DESC, m.id DESC
 `
 
 type ListMachinesByDepartmentIDsParams struct {
@@ -826,64 +776,12 @@ func (q *Queries) ListMachinesByDepartmentIDs(ctx context.Context, arg ListMachi
 	return items, nil
 }
 
-const listScanningStationsByDepartmentID = `-- name: ListScanningStationsByDepartmentID :many
-SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
-FROM scanning_station
-WHERE department_id = ?
-AND account_id = ?
-ORDER BY name ASC
-`
-
-type ListScanningStationsByDepartmentIDParams struct {
-	DepartmentID string
-	AccountID    string
-}
-
-type ListScanningStationsByDepartmentIDRow struct {
-	ID                      string
-	Name                    string
-	ScanningStationTypeCode string
-	MaterialCheckRequired   bool
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-}
-
-func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg ListScanningStationsByDepartmentIDParams) ([]ListScanningStationsByDepartmentIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listScanningStationsByDepartmentID, arg.DepartmentID, arg.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListScanningStationsByDepartmentIDRow
-	for rows.Next() {
-		var i ListScanningStationsByDepartmentIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ScanningStationTypeCode,
-			&i.MaterialCheckRequired,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listScanningStationsByDepartmentIDs = `-- name: ListScanningStationsByDepartmentIDs :many
 SELECT id, name, scanning_station_type_code, material_check_required, department_id, created_at, updated_at
 FROM scanning_station
 WHERE department_id IN (/*SLICE:department_ids*/?)
 AND account_id = ?
-ORDER BY name ASC
+ORDER BY created_at DESC, id DESC
 `
 
 type ListScanningStationsByDepartmentIDsParams struct {

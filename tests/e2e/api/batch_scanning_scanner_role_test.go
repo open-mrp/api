@@ -163,7 +163,7 @@ func TestBatchScanningScanner_RunsEveryStation(t *testing.T) {
 
 	// The station page: the station, what was scanned there, and what a scan will use.
 	for _, station := range []string{c.initStation, c.moveStation, c.splitStation, mergeStation} {
-		requireSameForBoth(t, operator, scanningStationsPath+"/"+station, url.Values{"include": {"department"}})
+		requireSameForBoth(t, operator, scanningStationsPath+"/"+station, url.Values{"include": {"work_center"}})
 	}
 	requireSamePostForBoth(t, operator, scanningStationsPath+"/"+c.initStation+"/consumptions", map[string]any{"batch_ids": []string{first}})
 

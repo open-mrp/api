@@ -30,7 +30,7 @@ func init() {
 			},
 			{
 				Key:         "department",
-				Target:      constants.ObjectTypeDepartment,
+				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDepartmentIDFromProductionStep,
 				Populate:    populateDepartmentOnProductionStep,
@@ -113,7 +113,7 @@ func populateDepartmentOnProductionStep(ctx context.Context, parent any, loaded 
 	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
 	if v, ok := loaded[id]; ok {
-		ps.Department = v.(*apiresource.Department)
+		ps.Department = v.(*apiresource.WorkCenter)
 	}
 }
 

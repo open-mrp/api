@@ -41,14 +41,14 @@ func TestAccountGroups_CRUD(t *testing.T) {
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
 
 	// Read
-	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+id, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(accountGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, name, jsonField(parseJSON(getBody), "name"))
 
 	// Update
 	newName := uniqueName("e2e-acgrp-upd")
-	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"name":              newName,
 		"commission_policy": "applied",
 		"freight_policy":    "free",
@@ -64,12 +64,12 @@ func TestAccountGroups_CRUD(t *testing.T) {
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
 	// Delete
-	delStatus, delBody, err := apiClient.Delete(accountGroupsPath + "/" + id)
+	delStatus, delBody, err := p9Client().Delete(accountGroupsPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
 	// Verify deletion
-	getStatus2, _, err := apiClient.GetListRaw(accountGroupsPath+"/"+id, nil)
+	getStatus2, _, err := p9Client().GetListRaw(accountGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus2)
 }
@@ -80,7 +80,7 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-acgrp-allf")
-	got := createAndCleanup(t, accountGroupsPath, map[string]any{
+	got := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name":              name,
 		"type":              "type_group",
 		"description":       "Test description",
@@ -100,7 +100,7 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 
 	// Update with different values
 	updatedName := uniqueName("e2e-acgrp-allf-u")
-	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"name":              updatedName,
 		"description":       "Updated description",
 		"commission_policy": "exempt",
@@ -123,13 +123,13 @@ func TestAccountGroups_CreateIdempotent(t *testing.T) {
 	name := uniqueName("e2e-idem-acgrp")
 	idemKey := newIdempotencyKey()
 
-	status1, body1, err := apiClient.Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
+	status1, body1, err := p9Client().Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
-	t.Cleanup(func() { apiClient.Delete(accountGroupsPath + "/" + id1) })
+	t.Cleanup(func() { p9Client().Delete(accountGroupsPath + "/" + id1) })
 
-	status2, body2, err := apiClient.Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
+	status2, body2, err := p9Client().Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
@@ -141,7 +141,7 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
-		got := createAndCleanup(t, accountGroupsPath, map[string]any{
+		got := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 			"name": uniqueName("e2e-acgrp-omit"),
 			"type": "type_group",
 		})
@@ -158,7 +158,7 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
 		// Missing name
-		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+		status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 			"type": "type_group",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 			"Missing name should return 400 or 422, got %d: %s", status, string(body))
 
 		// Missing type
-		status, body, err = apiClient.Post(accountGroupsPath, map[string]any{
+		status, body, err = p9Client().Post(accountGroupsPath, map[string]any{
 			"name": uniqueName("e2e-acgrp-notype"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
-		created := createAndCleanup(t, accountGroupsPath, map[string]any{
+		created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 			"name":              uniqueName("e2e-acgrp-pres"),
 			"type":              "type_group",
 			"description":       "Original desc",
@@ -186,7 +186,7 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		origCreatedAt := jsonField(created, "created_at")
 
 		newName := uniqueName("e2e-acgrp-pres-u")
-		patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+		patchStatus, patchBody, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 			"name": newName,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestAccountGroups_List(t *testing.T) {
 
 	t.Run("Default", func(t *testing.T) {
 		t.Parallel()
-		list, _, err := apiClient.GetList(accountGroupsPath, nil)
+		list, _, err := p9Client().GetList(accountGroupsPath, nil)
 		require.NoError(t, err)
 		assert.Equal(t, "list", list.Object)
 		assert.GreaterOrEqual(t, len(list.Data), 1)
@@ -223,7 +223,7 @@ func TestAccountGroups_List(t *testing.T) {
 
 	t.Run("SearchByName", func(t *testing.T) {
 		t.Parallel()
-		list, _, err := apiClient.GetList(accountGroupsPath, url.Values{"q": {"DME"}})
+		list, _, err := p9Client().GetList(accountGroupsPath, url.Values{"q": {"DME"}})
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'DME' should return at least 1 result")
 
@@ -238,14 +238,14 @@ func TestAccountGroups_List(t *testing.T) {
 
 	t.Run("SearchNoResults", func(t *testing.T) {
 		t.Parallel()
-		list, _, err := apiClient.GetList(accountGroupsPath, url.Values{"q": {"zzzznotagroup99999"}})
+		list, _, err := p9Client().GetList(accountGroupsPath, url.Values{"q": {"zzzznotagroup99999"}})
 		require.NoError(t, err)
 		assertEmptyListData(t, list.Data)
 	})
 
 	t.Run("FilterByType", func(t *testing.T) {
 		t.Parallel()
-		list, _, err := apiClient.GetList(accountGroupsPath, url.Values{"type": {"type_group"}})
+		list, _, err := p9Client().GetList(accountGroupsPath, url.Values{"type": {"type_group"}})
 		require.NoError(t, err)
 		require.NotEmpty(t, list.Data)
 
@@ -260,7 +260,7 @@ func TestAccountGroups_List(t *testing.T) {
 
 func TestAccountGroups_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name": "",
 		"type": "type_group",
 	}, newIdempotencyKey())

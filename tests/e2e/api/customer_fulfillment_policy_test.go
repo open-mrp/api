@@ -34,13 +34,13 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 		"the policy set on create should come back on defaults")
 
 	// It has to persist, not only echo from the write.
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {"defaults"}})
+	getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+id, url.Values{"include": {"defaults"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, "make_to_order", customerDefaultsPolicy(parseJSON(getBody)))
 
 	// Switching to make-to-stock puts the customer's demand back into the forecast.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
 		"fulfillment_policy": "make_to_stock",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 	assert.Equal(t, "make_to_stock", customerDefaultsPolicy(parseJSON(patchBody)))
 
 	// An update that omits the field must not wipe it: unset means "leave alone", not "clear".
-	preserveStatus, preserveBody, err := apiClient.Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
+	preserveStatus, preserveBody, err := p9Client().Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
 		"note": "unrelated edit",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 		"an update that omits fulfillment_policy must preserve it")
 
 	// Clearing it returns the customer to inheriting its group, then the default.
-	clearStatus, clearBody, err := apiClient.Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
+	clearStatus, clearBody, err := p9Client().Patch(customersPath+"/"+id+"?include=defaults", map[string]any{
 		"fulfillment_policy": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestFulfillmentPolicy_CustomerRejectsUnknownValue(t *testing.T) {
 
 	body := validCustomerBody(uniqueName("e2e-cust-mto-bad"))
 	body["fulfillment_policy"] = "make_to_whatever"
-	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, respBody, err := p9Client().Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a bad policy must be a client error: %s", string(respBody))
 	assert.Equal(t, 422, status, "body: %s", string(respBody))

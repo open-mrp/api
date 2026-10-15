@@ -21,13 +21,13 @@ func TestAccountGroupLeadTime_RoundTripsAndClears(t *testing.T) {
 
 	groupID := leadTimeAccountGroup(t, "e2e-grp-lt", ptrInt(21))
 
-	status, body, err := apiClient.GetListRaw(accountGroupsPath+"/"+groupID, nil)
+	status, body, err := p9Client().GetListRaw(accountGroupsPath+"/"+groupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, "21", jsonField(parseJSON(body), "default_lead_time_days"),
 		"a lead time set at creation must be readable back")
 
-	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+groupID,
+	patchStatus, patchBody, err := p9Client().Patch(accountGroupsPath+"/"+groupID,
 		map[string]any{"default_lead_time_days": 45}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, patchStatus, 500, "updating the lead time must not 5xx: %s", string(patchBody))
@@ -36,13 +36,13 @@ func TestAccountGroupLeadTime_RoundTripsAndClears(t *testing.T) {
 
 	// An unrelated edit must leave it alone: a rename that silently reset a contractual
 	// lead time would be found only by the customer who missed a delivery.
-	renameStatus, renameBody, err := apiClient.Patch(accountGroupsPath+"/"+groupID,
+	renameStatus, renameBody, err := p9Client().Patch(accountGroupsPath+"/"+groupID,
 		map[string]any{"name": uniqueName("e2e-grp-lt-renamed")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, renameStatus, renameBody)
 	assert.Equal(t, "45", jsonField(parseJSON(renameBody), "default_lead_time_days"))
 
-	clearStatus, clearBody, err := apiClient.Patch(accountGroupsPath+"/"+groupID,
+	clearStatus, clearBody, err := p9Client().Patch(accountGroupsPath+"/"+groupID,
 		map[string]any{"default_lead_time_days": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, clearStatus, 500, "clearing the lead time must not 5xx: %s", string(clearBody))
@@ -58,7 +58,7 @@ func TestAccountGroupLeadTime_DefaultsToNull(t *testing.T) {
 
 	groupID := leadTimeAccountGroup(t, "e2e-grp-lt-none", nil)
 
-	status, body, err := apiClient.GetListRaw(accountGroupsPath+"/"+groupID, nil)
+	status, body, err := p9Client().GetListRaw(accountGroupsPath+"/"+groupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Nil(t, parseJSON(body)["default_lead_time_days"])
@@ -72,18 +72,18 @@ func TestAccountGroupLeadTime_ClearingDropsCustomersToTheAccount(t *testing.T) {
 	groupID := leadTimeAccountGroup(t, "e2e-grp-lt-drop", ptrInt(21))
 	customerID := leadTimeCustomer(t, "e2e-grp-lt-drop-cust", nil, groupID)
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	require.Equal(t, "account_group", jsonField(parseJSON(body), "source"),
 		"precondition: the customer is inheriting from the group")
 
-	clearStatus, clearBody, err := apiClient.Patch(accountGroupsPath+"/"+groupID,
+	clearStatus, clearBody, err := p9Client().Patch(accountGroupsPath+"/"+groupID,
 		map[string]any{"default_lead_time_days": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, clearStatus, clearBody)
 
-	afterStatus, afterBody, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+	afterStatus, afterBody, err := p9Client().GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, afterStatus, afterBody)
 	assert.Equal(t, "account", jsonField(parseJSON(afterBody), "source"),
@@ -99,7 +99,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 	t.Run("group accepts zero", func(t *testing.T) {
 		groupID := leadTimeAccountGroup(t, "e2e-grp-lt-zero", ptrInt(0))
 
-		status, body, err := apiClient.GetListRaw(accountGroupsPath+"/"+groupID, nil)
+		status, body, err := p9Client().GetListRaw(accountGroupsPath+"/"+groupID, nil)
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 		assert.Equal(t, "0", jsonField(parseJSON(body), "default_lead_time_days"),
@@ -114,7 +114,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 		{"beyond ten years", 3651},
 	} {
 		t.Run("group create rejects "+tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+			status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 				"name":                   uniqueName("e2e-grp-lt-bad"),
 				"type":                   "type_group",
 				"default_lead_time_days": tc.value,
@@ -127,7 +127,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 		t.Run("group update rejects "+tc.name, func(t *testing.T) {
 			groupID := leadTimeAccountGroup(t, "e2e-grp-lt-badupd", nil)
 
-			status, body, err := apiClient.Patch(accountGroupsPath+"/"+groupID,
+			status, body, err := p9Client().Patch(accountGroupsPath+"/"+groupID,
 				map[string]any{"default_lead_time_days": tc.value}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
@@ -138,7 +138,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 			body := validCustomerBody(uniqueName("e2e-cust-lt-bad"))
 			body["lead_time_days"] = tc.value
 
-			status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+			status, respBody, err := p9Client().Post(customersPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(respBody))
 			assert.Equal(t, 422, status, "body: %s", string(respBody))
@@ -147,7 +147,7 @@ func TestLeadTimeDays_ValidatesItsRange(t *testing.T) {
 		t.Run("customer update rejects "+tc.name, func(t *testing.T) {
 			customerID := leadTimeCustomer(t, "e2e-cust-lt-badupd", nil, "")
 
-			status, respBody, err := apiClient.Patch(customersPath+"/"+customerID,
+			status, respBody, err := p9Client().Patch(customersPath+"/"+customerID,
 				map[string]any{"lead_time_days": tc.value}, newIdempotencyKey())
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(respBody))
@@ -164,7 +164,7 @@ func TestCustomerLeadTime_AppearsOnTheCustomer(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-cust-lt-field", ptrInt(17), "")
 
 	// Ordering defaults are expandable, so they are asked for rather than assumed.
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+"?include=defaults", nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+customerID+"?include=defaults", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

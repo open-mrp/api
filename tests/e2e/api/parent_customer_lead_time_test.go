@@ -194,7 +194,7 @@ func setCustomerLeadTime(t *testing.T, customerID string, days *int) {
 	if days != nil {
 		body["lead_time_days"] = *days
 	}
-	status, respBody, err := apiClient.Patch(customersPath+"/"+customerID, body, newIdempotencyKey())
+	status, respBody, err := p9Client().Patch(customersPath+"/"+customerID, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "setting a lead time must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)
@@ -219,7 +219,7 @@ func TestParentCustomerLeadTime_ParentResolvesItsOwn(t *testing.T) {
 func TestParentCustomerLeadTime_IsNotCopiedOntoTheChild(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=defaults", nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=defaults", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

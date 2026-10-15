@@ -338,7 +338,7 @@ func TestIncludeReads_ProductLineAccessEmbedsItsCustomerGroupAndLines(t *testing
 func TestIncludeReads_WriteIncludesNeedOnlyTheWritePermission(t *testing.T) {
 	t.Parallel()
 	body := validCustomerBody(uniqueName("e2e-incl-write"))
-	body["default_sales_rep_id"] = SeedAccountUserID
+	customerDefaults(body)["sales_rep_id"] = SeedAccountUserID
 	customerID := jsonField(createAndCleanup(t, customersPath, body), "id")
 	path := customersPath + "/" + customerID
 	includes := []string{"freight_preferences.carrier", "defaults.sales_rep", "defaults.sales_rep.user"}

@@ -78,7 +78,7 @@ func TestForgePaymentTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := jsonField(forgePaymentTerm(t, map[string]any{"status": "archived"}), "id")
 
 	body := validCustomerBody(uniqueName("e2e-forge-pt-archcust"))
-	body["default_payment_term_id"] = archivedID
+	customerDefaults(body)["payment_term_id"] = archivedID
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
@@ -285,7 +285,7 @@ func TestForgeShippingTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := jsonField(forgeShippingTerm(t, map[string]any{"status": "archived"}), "id")
 
 	body := validCustomerBody(uniqueName("e2e-forge-st-archcust"))
-	body["default_shipping_term_id"] = archivedID
+	customerDefaults(body)["shipping_term_id"] = archivedID
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {

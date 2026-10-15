@@ -39,7 +39,7 @@ func TestNestedUserInclude_CustomerDefaultsSalesRep(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-nestusr")
 	body := validCustomerBody(name)
-	body["default_sales_rep_id"] = SeedAccountUserID
+	customerDefaults(body)["sales_rep_id"] = SeedAccountUserID
 
 	createResp, err := apiClient.PostFull(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)

@@ -241,7 +241,7 @@ func TestCreateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testi
 
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
-	assert.Equal(t, "default_service_level_id", apiErr.Param)
+	assert.Equal(t, "defaults.service_level_id", apiErr.Param)
 }
 
 // The pair is checked as the customer will hold it, so a default carrier or service level sent alone is checked against the other one already held.
@@ -270,7 +270,7 @@ func TestUpdateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testi
 
 			require.NotNil(t, apiErr)
 			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
-			assert.Equal(t, "default_service_level_id", apiErr.Param)
+			assert.Equal(t, "defaults.service_level_id", apiErr.Param)
 		})
 	}
 }

@@ -36,7 +36,7 @@ func TestCustomers_CRUD(t *testing.T) {
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
 	// GET
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
@@ -45,7 +45,7 @@ func TestCustomers_CRUD(t *testing.T) {
 
 	// UPDATE
 	newNote := "updated note"
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id, map[string]any{
 		"note": newNote,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -55,12 +55,12 @@ func TestCustomers_CRUD(t *testing.T) {
 	assert.Equal(t, name, jsonField(updated, "name"))
 
 	// DELETE
-	delStatus, delBody, err := apiClient.Delete(customersPath + "/" + id)
+	delStatus, delBody, err := p9Client().Delete(customersPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
 	// Verify deletion
-	getStatus2, _, err := apiClient.GetListRaw(customersPath+"/"+id, nil)
+	getStatus2, _, err := p9Client().GetListRaw(customersPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus2)
 }
@@ -102,7 +102,7 @@ func TestCustomers_CreateResponseShape(t *testing.T) {
 	assert.Nil(t, got["child_accounts"], "child_accounts should be null without ?include=child_accounts")
 	assert.Nil(t, got["credit_limit"], "credit_limit should be null without ?include=credit_limit")
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 func TestCustomers_CreateWithAllFields(t *testing.T) {
@@ -155,7 +155,7 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
@@ -207,7 +207,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
 	assertCreatedLocation(t, createResp.Header, id)
-	defer apiClient.Delete(customersPath + "/" + id)
+	defer p9Client().Delete(customersPath + "/" + id)
 
 	// Top-level scalar fields
 	assert.Equal(t, "customer", jsonField(got, "object"))
@@ -313,7 +313,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	// Verify the update via GET with include
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
+	getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
@@ -477,7 +477,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 
 func TestCustomers_CreateValidation_MissingName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing name should return 400 or 422, got %d: %s", status, string(body))
@@ -485,7 +485,7 @@ func TestCustomers_CreateValidation_MissingName(t *testing.T) {
 
 func TestCustomers_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := p9Client().Post(customersPath, map[string]any{
 		"name": "",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -495,7 +495,7 @@ func TestCustomers_CreateValidation_EmptyName(t *testing.T) {
 
 func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 
@@ -506,13 +506,13 @@ func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 func TestCustomers_UpdateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-blank")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
-	defer apiClient.Delete(customersPath + "/" + id)
+	defer p9Client().Delete(customersPath + "/" + id)
 
-	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
+	status, body, err := p9Client().Patch(customersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -520,7 +520,7 @@ func TestCustomers_UpdateValidation_EmptyName(t *testing.T) {
 
 func TestCustomers_GetNotFound_ErrorShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/ac_000000000000000000000000", nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/ac_000000000000000000000000", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 
@@ -530,7 +530,7 @@ func TestCustomers_GetNotFound_ErrorShape(t *testing.T) {
 func TestCustomers_ResponseFieldFormats(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-fmt")
-	status, body, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
@@ -542,7 +542,7 @@ func TestCustomers_ResponseFieldFormats(t *testing.T) {
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 // ──────────────────────────────────────────────
@@ -555,23 +555,23 @@ func TestCustomers_CreateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	payload := validCustomerBody(name)
 
-	status1, body1, err := apiClient.Post(customersPath, payload, idemKey)
+	status1, body1, err := p9Client().Post(customersPath, payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
-	status2, body2, err := apiClient.Post(customersPath, payload, idemKey)
+	status2, body2, err := p9Client().Post(customersPath, payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
 
-	apiClient.Delete(customersPath + "/" + id1)
+	p9Client().Delete(customersPath + "/" + id1)
 }
 
 func TestCustomers_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-cust-upd")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -579,17 +579,17 @@ func TestCustomers_UpdateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	payload := map[string]any{"note": "idempotent note"}
 
-	status1, body1, err := apiClient.Patch(customersPath+"/"+id, payload, idemKey)
+	status1, body1, err := p9Client().Patch(customersPath+"/"+id, payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 
-	status2, body2, err := apiClient.Patch(customersPath+"/"+id, payload, idemKey)
+	status2, body2, err := p9Client().Patch(customersPath+"/"+id, payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 
 	assert.Equal(t, jsonField(parseJSON(body1), "note"), jsonField(parseJSON(body2), "note"))
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 // ──────────────────────────────────────────────
@@ -598,7 +598,7 @@ func TestCustomers_UpdateIdempotent(t *testing.T) {
 
 func TestCustomers_GetSeeded(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -614,7 +614,7 @@ func TestCustomers_GetSeeded(t *testing.T) {
 
 func TestCustomers_GetNotFound(t *testing.T) {
 	t.Parallel()
-	getStatus, _, err := apiClient.GetListRaw(customersPath+"/ac_000000000000000000000000", nil)
+	getStatus, _, err := p9Client().GetListRaw(customersPath+"/ac_000000000000000000000000", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus)
 }
@@ -626,12 +626,12 @@ func TestCustomers_GetNotFound(t *testing.T) {
 func TestCustomers_UpdateOnlyNote(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-note")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id, map[string]any{
 		"note": "a note",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -641,18 +641,18 @@ func TestCustomers_UpdateOnlyNote(t *testing.T) {
 	assert.Equal(t, "a note", jsonField(patched, "note"))
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-multi")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id, map[string]any{
 		"note":              "multi-field update",
 		"phone":             "555-999-8888",
 		"commission_policy": "exempt",
@@ -665,7 +665,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	assert.Equal(t, "multi-field update", jsonField(patched, "note"))
 	assert.Equal(t, "exempt", jsonField(patched, "commission_policy"))
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 // ──────────────────────────────────────────────
@@ -675,17 +675,17 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 func TestCustomers_DeleteThenGetReturns404(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-del")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	delStatus, delBody, err := apiClient.Delete(customersPath + "/" + id)
+	delStatus, delBody, err := p9Client().Delete(customersPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
 	// GET after delete → 404
-	getStatus, _, err := apiClient.GetListRaw(customersPath+"/"+id, nil)
+	getStatus, _, err := p9Client().GetListRaw(customersPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus)
 }
@@ -696,7 +696,7 @@ func TestCustomers_DeleteThenGetReturns404(t *testing.T) {
 
 func TestCustomers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -720,7 +720,7 @@ func TestCustomers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 func TestCustomers_IncludeContactInfo(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -732,7 +732,7 @@ func TestCustomers_IncludeContactInfo(t *testing.T) {
 
 func TestCustomers_IncludeFreightPreferences(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -749,7 +749,7 @@ func TestCustomers_IncludeFreightPreferences(t *testing.T) {
 
 func TestCustomers_IncludeDefaults(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -766,7 +766,7 @@ func TestCustomers_IncludeDefaults(t *testing.T) {
 
 func TestCustomers_IncludeNotificationPreferences(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"notification_preferences"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"notification_preferences"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -778,7 +778,7 @@ func TestCustomers_IncludeNotificationPreferences(t *testing.T) {
 
 func TestCustomers_IncludeBillToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"bill_to_address"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"bill_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -791,7 +791,7 @@ func TestCustomers_IncludeBillToAddress(t *testing.T) {
 
 func TestCustomers_IncludeShipToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"ship_to_address"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"ship_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -804,7 +804,7 @@ func TestCustomers_IncludeShipToAddress(t *testing.T) {
 
 func TestCustomers_IncludeType(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"type"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"type"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -817,7 +817,7 @@ func TestCustomers_IncludeType(t *testing.T) {
 
 func TestCustomers_IncludePriceGroups(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"price_groups"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"price_groups"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -862,13 +862,13 @@ func TestCustomers_CreditLimitRejectsAnUnsupportedCurrency(t *testing.T) {
 
 	payload := validCustomerBody(uniqueName("e2e-cust-cl-eur"))
 	payload["credit_limit"] = euros
-	status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, payload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
 
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-cl-eur-upd")))
-	status, body, err = apiClient.Patch(customersPath+"/"+jsonField(cust, "id"), map[string]any{"credit_limit": euros}, newIdempotencyKey())
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-cl-eur-upd")))
+	status, body, err = p9Client().Patch(customersPath+"/"+jsonField(cust, "id"), map[string]any{"credit_limit": euros}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
@@ -880,7 +880,7 @@ func TestCustomers_CreditLimitRejectsAnUnsupportedCurrency(t *testing.T) {
 
 func TestCustomers_IncludeFreightPreferencesCarrier(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences.carrier"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences.carrier"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -896,7 +896,7 @@ func TestCustomers_IncludeFreightPreferencesCarrier(t *testing.T) {
 
 func TestCustomers_IncludeDefaultsPaymentTerm(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.payment_term"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.payment_term"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -916,7 +916,7 @@ func TestCustomers_IncludeDefaultsPaymentTerm(t *testing.T) {
 
 func TestCustomers_IncludeDefaultsSalesRep(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.sales_rep"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.sales_rep"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -933,7 +933,7 @@ func TestCustomers_IncludeDefaultsSalesRep(t *testing.T) {
 
 func TestCustomers_IncludeMultiple(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info,defaults"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info,defaults"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -953,7 +953,7 @@ func TestCustomers_IncludeMultiple(t *testing.T) {
 
 func TestCustomers_IncludeMultipleWithNested(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{
 		"include": {"contact_info,defaults.payment_term,freight_preferences.carrier"},
 	})
 	require.NoError(t, err)
@@ -1008,7 +1008,7 @@ func TestCustomers_CreateWithInclude(t *testing.T) {
 	// Other expandable fields should still be null
 	assert.Nil(t, got["defaults"], "defaults should be null when not included")
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 func TestCustomers_UpdateWithInclude(t *testing.T) {
@@ -1016,13 +1016,13 @@ func TestCustomers_UpdateWithInclude(t *testing.T) {
 	name := uniqueName("e2e-cust-inc-upd")
 	createPayload := validCustomerBody(name)
 	createPayload["email"] = name + "@e2e-test.openmrp.ai"
-	createStatus, createBody, err := apiClient.Post(customersPath, createPayload, newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, createPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
 	newEmail := uniqueName("e2e-cust-upd") + "@e2e-test.openmrp.ai"
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id+"?include=contact_info", map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id+"?include=contact_info", map[string]any{
 		"email": newEmail,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1034,7 +1034,7 @@ func TestCustomers_UpdateWithInclude(t *testing.T) {
 	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
 	assert.Equal(t, newEmail, jsonField(contactInfo, "email"))
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 // Included sub-resource field completeness tests are in included_fields_test.go.
@@ -1050,14 +1050,14 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-cust-omit")
 		includeStr := "contact_info,defaults,freight_preferences,notification_preferences"
 
-		status, body, err := apiClient.Post(customersPath+"?include="+includeStr, validCustomerBody(name), newIdempotencyKey())
+		status, body, err := p9Client().Post(customersPath+"?include="+includeStr, validCustomerBody(name), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 
 		got := parseJSON(body)
 		id := jsonField(got, "id")
 		require.NotEmpty(t, id)
-		defer apiClient.Delete(customersPath + "/" + id)
+		defer p9Client().Delete(customersPath + "/" + id)
 
 		// Top-level defaults
 		assertIDFormat(t, id, "ac")
@@ -1128,26 +1128,26 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		createPayload["default_sales_rep_id"] = SeedAccountUserID
 		createPayload["carrier_billing_type"] = "third_party"
 		createPayload["carrier_billing_account"] = "ACCT-ORIG"
-		createStatus, createBody, err := apiClient.Post(customersPath+"?include="+includeStr, createPayload, newIdempotencyKey())
+		createStatus, createBody, err := p9Client().Post(customersPath+"?include="+includeStr, createPayload, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
 
 		created := parseJSON(createBody)
 		id := jsonField(created, "id")
 		require.NotEmpty(t, id)
-		defer apiClient.Delete(customersPath + "/" + id)
+		defer p9Client().Delete(customersPath + "/" + id)
 		origNumber := jsonField(created, "number")
 		origCreatedAt := jsonField(created, "created_at")
 
 		// Update ONLY the note
-		patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+		patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+id, map[string]any{
 			"note": "Changed note",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
 
 		// GET with full include to verify preservation
-		getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
+		getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
 		require.NoError(t, err)
 		requireStatus(t, 200, getStatus, getBody)
 
@@ -1231,7 +1231,7 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer first.
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-addr-link")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-addr-link")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1249,7 +1249,7 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrID) })
 
 	// Update customer's billing address to the new address.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"bill_to_address_id": addrID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1278,7 +1278,7 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-upd-addr")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-upd-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1304,7 +1304,7 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrBID) })
 
 	// Set billing address to A.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"bill_to_address_id": addrAID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1317,7 +1317,7 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 		"address A should be in customer's address list after create")
 
 	// Update customer's billing address to B.
-	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus2, patchBody2, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"bill_to_address_id": addrBID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1348,7 +1348,7 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-ship-addr")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-ship-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1374,7 +1374,7 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrBID) })
 
 	// Set shipping address to A.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"ship_to_address_id": addrAID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1387,7 +1387,7 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 		"address A should be in customer's address list after create")
 
 	// Update customer's shipping address to B.
-	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus2, patchBody2, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"ship_to_address_id": addrBID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1406,7 +1406,7 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-same-addr")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-same-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1423,7 +1423,7 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrID) })
 
 	// Set the same address for both billing and shipping (no duplicate key error).
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"bill_to_address_id": addrID,
 		"ship_to_address_id": addrID,
 	}, newIdempotencyKey())
@@ -1462,20 +1462,20 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	t.Parallel()
 
 	// Create two pricing groups.
-	pg1 := createAndCleanup(t, accountGroupsPath, map[string]any{
+	pg1 := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-pg1"),
 		"type": "pricing_group",
 	})
 	pg1ID := jsonField(pg1, "id")
 
-	pg2 := createAndCleanup(t, accountGroupsPath, map[string]any{
+	pg2 := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-pg2"),
 		"type": "pricing_group",
 	})
 	pg2ID := jsonField(pg2, "id")
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-pg")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-pg")))
 	custID := jsonField(cust, "id")
 
 	// Verify no price groups initially.
@@ -1492,7 +1492,7 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	assert.Empty(t, pgData, "price_groups should be empty initially")
 
 	// Set price groups to [pg1, pg2].
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"customer_price_group_ids": []string{pg1ID, pg2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1521,7 +1521,7 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	assert.True(t, pgIDs[pg2ID], "pg2 should be present")
 
 	// Replace price groups with only [pg1].
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"customer_price_group_ids": []string{pg1ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1546,7 +1546,7 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	}
 
 	// Clear all price groups by sending empty array.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"customer_price_group_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1586,7 +1586,7 @@ func TestCustomers_UpdateContactInfo(t *testing.T) {
 	assert.Equal(t, "https://original.example.com", jsonField(ci, "url"))
 
 	// Update email only — phone and url should be preserved.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
 		"email": name + "-updated@test.com",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1599,7 +1599,7 @@ func TestCustomers_UpdateContactInfo(t *testing.T) {
 	assert.Equal(t, "https://original.example.com", jsonField(updatedCI, "url"), "url should be preserved")
 
 	// Clear email by sending null — phone and url should be preserved.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
 		"email": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1612,7 +1612,7 @@ func TestCustomers_UpdateContactInfo(t *testing.T) {
 	assert.Equal(t, "https://original.example.com", jsonField(clearedCI, "url"), "url should be preserved after clearing email")
 
 	// Update without sending any contact fields — all should be preserved.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
 		"note": "unrelated update",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1630,12 +1630,12 @@ func TestCustomers_UpdateAndClearNote(t *testing.T) {
 
 	notePayload := validCustomerBody(uniqueName("e2e-cust-note"))
 	notePayload["note"] = "initial note"
-	cust := createAndCleanup(t, customersPath, notePayload)
+	cust := createAndCleanupP9(t, customersPath, notePayload)
 	custID := jsonField(cust, "id")
 	assert.Equal(t, "initial note", jsonField(cust, "note"))
 
 	// Update note to a new value.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"note": "updated note",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1643,7 +1643,7 @@ func TestCustomers_UpdateAndClearNote(t *testing.T) {
 	assert.Equal(t, "updated note", jsonField(parseJSON(patchBody), "note"))
 
 	// Clear note by sending null.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"note": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1651,7 +1651,7 @@ func TestCustomers_UpdateAndClearNote(t *testing.T) {
 	assertNilField(t, parseJSON(patchBody), "note")
 
 	// Update unrelated field — note should remain cleared.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"number": "NUM-999",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1750,7 +1750,7 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 func TestCustomers_UpdateRejectsNullForNonNullableFields(t *testing.T) {
 	t.Parallel()
 
-	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-nonnull")))
+	cust := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-cust-nonnull")))
 	custID := jsonField(cust, "id")
 
 	tests := []struct {
@@ -1764,7 +1764,7 @@ func TestCustomers_UpdateRejectsNullForNonNullableFields(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+			status, body, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 				tc.field: nil,
 			}, newIdempotencyKey())
 			require.NoError(t, err)
@@ -1791,7 +1791,7 @@ func TestCustomers_CreateRejectsNullForNonNullableFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			payload := validCustomerBody(uniqueName("e2e-cust-nonnull"))
 			payload[tc.field] = nil
-			status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+			status, body, err := p9Client().Post(customersPath, payload, newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -1804,7 +1804,7 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	t.Parallel()
 
 	// Create a pricing group.
-	pg := createAndCleanup(t, accountGroupsPath, map[string]any{
+	pg := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-pg-pres"),
 		"type": "pricing_group",
 	})
@@ -1813,11 +1813,11 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	// Create a customer with the pricing group.
 	pgPresPayload := validCustomerBody(uniqueName("e2e-cust-pg-pres"))
 	pgPresPayload["customer_price_group_ids"] = []string{pgID}
-	cust := createAndCleanup(t, customersPath, pgPresPayload)
+	cust := createAndCleanupP9(t, customersPath, pgPresPayload)
 	custID := jsonField(cust, "id")
 
 	// Update an unrelated field (note) — should NOT clear price groups.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"note": "Updated note, price groups should remain",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1840,7 +1840,7 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	}
 
 	// Sending an empty array should clear the price groups.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = p9Client().Patch(customersPath+"/"+custID, map[string]any{
 		"customer_price_group_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)

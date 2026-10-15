@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -547,12 +548,14 @@ const e2eCurrencyUnitID = "dollar"
 // Tests can override individual fields by writing to the returned map before posting.
 func validCustomerBody(name string) map[string]any {
 	return map[string]any{
-		"name":                     name,
-		"status":                   "normal",
-		"default_carrier_id":       SeedCarrierID,
-		"default_payment_term_id":  SeedPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"customer_type_group_id":   SeedCustomerGroupID,
+		"name":     name,
+		"standing": "normal",
+		"defaults": map[string]any{
+			"carrier_id":       SeedCarrierID,
+			"payment_term_id":  SeedPaymentTermID,
+			"shipping_term_id": SeedShippingTermID,
+		},
+		"group_id": SeedCustomerGroupID,
 		"bill_to_address": map[string]any{
 			"name":    name + " Billing",
 			"country": "US",
@@ -562,6 +565,27 @@ func validCustomerBody(name string) map[string]any {
 			"country": "US",
 		},
 	}
+}
+
+// p9Client is apiClient as a 1.0.forge-preview.9 caller, for the tests that pin what the dashboard (still on
+// preview.9) sends and reads.
+func p9Client() *Client {
+	return apiClient.WithAPIVersion(preview9Version)
+}
+
+// customerDefaults is a customer request body's defaults section, created when the body has none.
+func customerDefaults(body map[string]any) map[string]any {
+	d, ok := body["defaults"].(map[string]any)
+	if !ok {
+		d = map[string]any{}
+		body["defaults"] = d
+	}
+	return d
+}
+
+// dayLeadTime is a lead time of days as requests take it.
+func dayLeadTime(days int) map[string]any {
+	return map[string]any{"value": strconv.Itoa(days), "unit_id": "day"}
 }
 
 // createE2EAddress creates an address (owned by the actor's target account) and
@@ -608,6 +632,17 @@ func minimalSalesOrderCreateBody(t *testing.T, buyerAccountID string) map[string
 			},
 		},
 	}
+}
+
+// createAndCleanupP9 is createAndCleanup as a preview.9 caller.
+func createAndCleanupP9(t *testing.T, path string, body map[string]any) map[string]any {
+	t.Helper()
+	status, respBody, err := p9Client().Post(path, body, newIdempotencyKey())
+	require.NoError(t, err, "POST %s failed", path)
+	requireStatus(t, 201, status, respBody)
+	created := parseJSON(respBody)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(path + "/" + jsonField(created, "id")) })
+	return created
 }
 
 // createAndCleanup creates a resource via POST and registers t.Cleanup to delete it.

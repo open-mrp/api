@@ -31,10 +31,10 @@ func leadTimeCustomer(t *testing.T, namePrefix string, leadTimeDays *int, accoun
 
 	body := validCustomerBody(uniqueName(namePrefix))
 	if leadTimeDays != nil {
-		body["lead_time_days"] = *leadTimeDays
+		customerDefaults(body)["lead_time"] = dayLeadTime(*leadTimeDays)
 	}
 	if accountGroupID != "" {
-		body["customer_type_group_id"] = accountGroupID
+		body["group_id"] = accountGroupID
 	}
 
 	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())

@@ -23,7 +23,7 @@ func TestCovSalesAccountGroups_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covacgp-shape")
-	got := createAndCleanup(t, accountGroupsPath, map[string]any{
+	got := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": name,
 		"type": "pricing_group",
 	})
@@ -48,7 +48,7 @@ func TestCovSalesAccountGroups_ListPagination(t *testing.T) {
 	prefix := uniqueName("e2e-covacgp-pg")
 	var ids []string
 	for i := 0; i < 2; i++ {
-		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+		status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 			"name": fmt.Sprintf("%s-%d", prefix, i),
 			"type": "type_group",
 		}, newIdempotencyKey())
@@ -56,7 +56,7 @@ func TestCovSalesAccountGroups_ListPagination(t *testing.T) {
 		requireStatus(t, 201, status, body)
 		id := jsonField(parseJSON(body), "id")
 		require.NotEmpty(t, id)
-		defer apiClient.Delete(accountGroupsPath + "/" + id)
+		defer p9Client().Delete(accountGroupsPath + "/" + id)
 		ids = append(ids, id)
 	}
 
@@ -71,7 +71,7 @@ func TestCovSalesAccountGroups_ListPagination(t *testing.T) {
 func TestCovSalesAccountGroups_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-idemupd"),
 		"type": "type_group",
 	})
@@ -81,13 +81,13 @@ func TestCovSalesAccountGroups_UpdateIdempotent(t *testing.T) {
 	newName := uniqueName("e2e-covacgp-idemupd-new")
 	body := map[string]any{"name": newName}
 
-	status1, body1, err := apiClient.Patch(accountGroupsPath+"/"+id, body, idemKey)
+	status1, body1, err := p9Client().Patch(accountGroupsPath+"/"+id, body, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 	got1 := parseJSON(body1)
 	assert.Equal(t, newName, jsonField(got1, "name"))
 
-	status2, body2, err := apiClient.Patch(accountGroupsPath+"/"+id, body, idemKey)
+	status2, body2, err := p9Client().Patch(accountGroupsPath+"/"+id, body, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 	got2 := parseJSON(body2)
@@ -105,7 +105,7 @@ func TestCovSalesAccountGroups_UpdateIdempotent(t *testing.T) {
 // accepted or a 5xx.
 func TestCovSalesAccountGroups_CreateValidation_InvalidTypeEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-badtype"),
 		"type": "bogus_type",
 	}, newIdempotencyKey())
@@ -120,7 +120,7 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidTypeEnum(t *testing.T) {
 // with 400.
 func TestCovSalesAccountGroups_CreateValidation_InvalidCommissionPolicyEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name":              uniqueName("e2e-covacgp-badcp"),
 		"type":              "type_group",
 		"commission_policy": "not_a_policy",
@@ -136,7 +136,7 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidCommissionPolicyEnum(t *t
 // 400.
 func TestCovSalesAccountGroups_CreateValidation_InvalidFreightPolicyEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name":           uniqueName("e2e-covacgp-badfp"),
 		"type":           "type_group",
 		"freight_policy": "not_a_policy",
@@ -152,7 +152,7 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidFreightPolicyEnum(t *test
 func TestCovSalesAccountGroups_CreateValidation_NameTooLong(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", 256)
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name": longName,
 		"type": "type_group",
 	}, newIdempotencyKey())
@@ -170,12 +170,12 @@ func TestCovSalesAccountGroups_CreateValidation_DuplicateName(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covacgp-dupe")
-	createAndCleanup(t, accountGroupsPath, map[string]any{
+	createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": name,
 		"type": "type_group",
 	})
 
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := p9Client().Post(accountGroupsPath, map[string]any{
 		"name": name,
 		"type": "pricing_group",
 	}, newIdempotencyKey())
@@ -192,13 +192,13 @@ func TestCovSalesAccountGroups_CreateValidation_DuplicateName(t *testing.T) {
 // with 400.
 func TestCovSalesAccountGroups_UpdateValidation_InvalidCommissionPolicyEnum(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-updbadcp"),
 		"type": "type_group",
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"commission_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -212,13 +212,13 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidCommissionPolicyEnum(t *t
 // 400.
 func TestCovSalesAccountGroups_UpdateValidation_InvalidFreightPolicyEnum(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-updbadfp"),
 		"type": "type_group",
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"freight_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -231,14 +231,14 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidFreightPolicyEnum(t *test
 // name is rejected with 400 on update.
 func TestCovSalesAccountGroups_UpdateValidation_NameTooLong(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-updlong"),
 		"type": "type_group",
 	})
 	id := jsonField(created, "id")
 
 	longName := strings.Repeat("b", 256)
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"name": longName,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -253,7 +253,7 @@ func TestCovSalesAccountGroups_UpdateValidation_NameTooLong(t *testing.T) {
 // not the actual persisted/returned value).
 func TestCovSalesAccountGroups_UpdateDescriptionNullClears(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name":        uniqueName("e2e-covacgp-clear"),
 		"type":        "type_group",
 		"description": "will be cleared",
@@ -261,7 +261,7 @@ func TestCovSalesAccountGroups_UpdateDescriptionNullClears(t *testing.T) {
 	id := jsonField(created, "id")
 	require.Equal(t, "will be cleared", jsonField(created, "description"))
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"description": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestCovSalesAccountGroups_UpdateDescriptionNullClears(t *testing.T) {
 	assertNilField(t, got, "description")
 
 	// Confirm the clear persisted via a follow-up GET, not just the PATCH response.
-	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+id, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(accountGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assertNilField(t, parseJSON(getBody), "description")
@@ -284,13 +284,13 @@ func TestCovSalesAccountGroups_UpdateDescriptionNullClears(t *testing.T) {
 // and that the account group's type is left unchanged.
 func TestCovSalesAccountGroups_UpdateTypeFieldRejected(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-typenoop"),
 		"type": "pricing_group",
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+id, map[string]any{
 		"type": "type_group",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -298,7 +298,7 @@ func TestCovSalesAccountGroups_UpdateTypeFieldRejected(t *testing.T) {
 	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 
-	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+id, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(accountGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, "pricing_group", jsonField(parseJSON(getBody), "type"),
@@ -311,7 +311,7 @@ const covSalesAccountGroupsFakeID = "acgp_00000000000000000000"
 
 func TestCovSalesAccountGroups_GetNotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, nil)
+	status, body, err := p9Client().GetListRaw(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
@@ -319,7 +319,7 @@ func TestCovSalesAccountGroups_GetNotFound(t *testing.T) {
 
 func TestCovSalesAccountGroups_UpdateNotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, map[string]any{
+	status, body, err := p9Client().Patch(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, map[string]any{
 		"name": uniqueName("e2e-covacgp-notfound"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -329,7 +329,7 @@ func TestCovSalesAccountGroups_UpdateNotFound(t *testing.T) {
 
 func TestCovSalesAccountGroups_DeleteNotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Delete(accountGroupsPath + "/" + covSalesAccountGroupsFakeID)
+	status, body, err := p9Client().Delete(accountGroupsPath + "/" + covSalesAccountGroupsFakeID)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
@@ -346,13 +346,13 @@ func TestCovSalesAccountGroups_DeleteNotFound(t *testing.T) {
 func TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Delete(accountGroupsPath + "/" + SeedCustomerGroupID)
+	status, body, err := p9Client().Delete(accountGroupsPath + "/" + SeedCustomerGroupID)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 
 	// Confirm the group still exists (was not deleted despite the error).
-	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+SeedCustomerGroupID, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(accountGroupsPath+"/"+SeedCustomerGroupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, SeedCustomerGroupName, jsonField(parseJSON(getBody), "name"))
@@ -366,7 +366,7 @@ func TestCovSalesAccountGroups_TenantIsolation_Update(t *testing.T) {
 	t.Parallel()
 	clientB := getTenantBClient()
 
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-iso-patch"),
 		"type": "type_group",
 	})
@@ -387,7 +387,7 @@ func TestCovSalesAccountGroups_TenantIsolation_Delete(t *testing.T) {
 	t.Parallel()
 	clientB := getTenantBClient()
 
-	created := createAndCleanup(t, accountGroupsPath, map[string]any{
+	created := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covacgp-iso-delete"),
 		"type": "type_group",
 	})
@@ -398,7 +398,7 @@ func TestCovSalesAccountGroups_TenantIsolation_Delete(t *testing.T) {
 	assert.Equal(t, 404, status,
 		"Tenant B should get 404 for DELETE on tenant A's account group: %s", string(body))
 
-	getStatus, _, err := apiClient.GetListRaw(accountGroupsPath+"/"+id, nil)
+	getStatus, _, err := p9Client().GetListRaw(accountGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, getStatus, "account group should still exist in tenant A after tenant B's delete attempt")
 }
@@ -410,7 +410,7 @@ func TestCovSalesAccountGroups_TenantIsolation_ListDoesNotLeak(t *testing.T) {
 	clientB := getTenantBClient()
 
 	distinctName := uniqueName("e2e-covacgp-iso-leak")
-	createAndCleanup(t, accountGroupsPath, map[string]any{
+	createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": distinctName,
 		"type": "type_group",
 	})
@@ -430,21 +430,21 @@ func TestCovSalesAccountGroups_ListLimitBoundaries(t *testing.T) {
 
 	t.Run("Zero", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"limit": {"0"}})
+		status, body, err := p9Client().GetListRaw(accountGroupsPath, url.Values{"limit": {"0"}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
 	})
 
 	t.Run("Negative", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"limit": {"-1"}})
+		status, body, err := p9Client().GetListRaw(accountGroupsPath, url.Values{"limit": {"-1"}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
 	})
 
 	t.Run("TooLarge", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"limit": {"1001"}})
+		status, body, err := p9Client().GetListRaw(accountGroupsPath, url.Values{"limit": {"1001"}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
 	})
@@ -454,7 +454,7 @@ func TestCovSalesAccountGroups_ListLimitBoundaries(t *testing.T) {
 // value returns 400 rather than a 5xx.
 func TestCovSalesAccountGroups_ListMalformedCursor(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"cursor": {"not-a-valid-cursor"}})
+	status, body, err := p9Client().GetListRaw(accountGroupsPath, url.Values{"cursor": {"not-a-valid-cursor"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
@@ -467,7 +467,7 @@ func TestCovSalesAccountGroups_ListMalformedCursor(t *testing.T) {
 // codebase (see TestCovCatalogUnits_ListInvalidTypeFilter).
 func TestCovSalesAccountGroups_ListInvalidTypeFilter(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"type": {"bogus"}})
+	status, body, err := p9Client().GetListRaw(accountGroupsPath, url.Values{"type": {"bogus"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")

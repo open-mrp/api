@@ -936,8 +936,8 @@ func dashShipmentsTermCustomer(t *testing.T, term map[string]any) string {
 	term["name"] = uniqueName("e2e-dash-term")
 	created := createAndCleanup(t, shippingTermsPath, term)
 	body := validCustomerBody(uniqueName("e2e-dash-term-cust"))
-	body["default_shipping_term_id"] = jsonField(created, "id")
-	body["customer_type_group_id"] = leadTimeAccountGroup(t, "e2e-dash-term-grp", nil)
+	customerDefaults(body)["shipping_term_id"] = jsonField(created, "id")
+	body["group_id"] = leadTimeAccountGroup(t, "e2e-dash-term-grp", nil)
 	return jsonField(createAndCleanup(t, customersPath, body), "id")
 }
 

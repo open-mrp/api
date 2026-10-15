@@ -34,7 +34,7 @@ import (
 func setupOrderCustomerWithServiceLevel(t *testing.T) string {
 	t.Helper()
 	body := validCustomerBody(uniqueName("e2e-so-defaults-cust"))
-	body["default_service_level_id"] = SeedServiceLevelID
+	customerDefaults(body)["service_level_id"] = SeedServiceLevelID
 
 	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)

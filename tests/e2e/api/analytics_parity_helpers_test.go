@@ -52,7 +52,7 @@ func parityCustomer(t *testing.T, groupID string, productLineIDs ...string) stri
 	t.Helper()
 	body := validCustomerBody(uniqueName("e2e-parity-cust"))
 	if groupID != "" {
-		body["customer_type_group_id"] = groupID
+		body["group_id"] = groupID
 	}
 	created := createAndCleanup(t, customersPath, body)
 	customerID := jsonField(created, "id")

@@ -30,7 +30,12 @@ func dashCustomersNew(t *testing.T, prefix string, extra map[string]any) string 
 	for k, v := range extra {
 		body[k] = v
 	}
-	return jsonField(createAndCleanup(t, customersPath, body), "id")
+	status, respBody, err := p9Client().Post(customersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	id := jsonField(parseJSON(respBody), "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
+	return id
 }
 
 // dashCustomersRead reads a customer with the given comma-separated includes.
@@ -48,7 +53,7 @@ func dashCustomersRead(t *testing.T, client *Client, customerID, include string)
 
 func dashCustomersRequireExists(t *testing.T, customerID string) map[string]any {
 	t.Helper()
-	status, got := dashCustomersRead(t, apiClient, customerID, "")
+	status, got := dashCustomersRead(t, p9Client(), customerID, "")
 	require.Equal(t, 200, status, "customer %s must still exist", customerID)
 	return got
 }
@@ -105,7 +110,7 @@ func dashCustomersVendorAccounts(t *testing.T, person *Client) []string {
 
 func dashCustomersCustomerIDsNamed(t *testing.T, name string) []string {
 	t.Helper()
-	list, status, err := apiClient.GetList(customersPath, url.Values{"q": {name}})
+	list, status, err := p9Client().GetList(customersPath, url.Values{"q": {name}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	var ids []string
@@ -129,24 +134,24 @@ func TestDashCustomers_NumberIsUniqueWithinTheAccount(t *testing.T) {
 
 	duplicate := validCustomerBody(uniqueName("e2e-dc-num-b"))
 	duplicate["number"] = number
-	status, body, err := apiClient.Post(customersPath, duplicate, newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, duplicate, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
-		apiClient.Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
+		p9Client().Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
 	}
 	requireStatus(t, 409, status, body)
 	assert.Equal(t, "number", errorParam(body))
 
 	other := dashCustomersNew(t, "e2e-dc-num-c", nil)
 	otherNumber := jsonField(dashCustomersRequireExists(t, other), "number")
-	status, body, err = apiClient.Patch(customersPath+"/"+other, map[string]any{"number": number}, newIdempotencyKey())
+	status, body, err = p9Client().Patch(customersPath+"/"+other, map[string]any{"number": number}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
 	assert.Equal(t, "number", errorParam(body))
 	assert.Equal(t, otherNumber, jsonField(dashCustomersRequireExists(t, other), "number"), "the refused edit changed nothing")
 
 	// Re-saving a customer's own number is not a conflict with itself.
-	status, body, err = apiClient.Patch(customersPath+"/"+first, map[string]any{"number": number}, newIdempotencyKey())
+	status, body, err = p9Client().Patch(customersPath+"/"+first, map[string]any{"number": number}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
@@ -171,7 +176,7 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 	t.Cleanup(func() { _, _, _ = asCustomer.Delete(addressesPath + "/" + dockID) })
 
 	const include = "defaults,defaults.payment_term,freight_preferences,freight_preferences.service_level,bill_to_address,ship_to_address"
-	status, body, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{
+	status, body, err = p9Client().Patch(customersPath+"/"+customerID, map[string]any{
 		"bill_to_address_id":  dockID,
 		"ship_to_address_id":  dockID,
 		"receive_calendar_id": calendarID,
@@ -179,7 +184,7 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	_, set := dashCustomersRead(t, apiClient, customerID, include)
+	_, set := dashCustomersRead(t, p9Client(), customerID, include)
 	defaults := jsonObject(set, "defaults")
 	freight := jsonObject(set, "freight_preferences")
 	require.NotNil(t, defaults)
@@ -192,7 +197,7 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 	assert.Equal(t, dockID, jsonField(jsonObject(set, "bill_to_address"), "id"))
 	assert.Equal(t, dockID, jsonField(jsonObject(set, "ship_to_address"), "id"))
 
-	status, body, err = apiClient.Patch(customersPath+"/"+customerID+"?include="+include, map[string]any{
+	status, body, err = p9Client().Patch(customersPath+"/"+customerID+"?include="+include, map[string]any{
 		"lead_time_days":           nil,
 		"receive_calendar_id":      nil,
 		"fulfillment_policy":       nil,
@@ -203,7 +208,7 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	_, reread := dashCustomersRead(t, apiClient, customerID, include)
+	_, reread := dashCustomersRead(t, p9Client(), customerID, include)
 
 	for label, got := range map[string]map[string]any{"the response": parseJSON(body), "a later read": reread} {
 		defaults := jsonObject(got, "defaults")
@@ -229,16 +234,16 @@ func TestDashCustomers_AnEditKeepsTheReceiveCalendar(t *testing.T) {
 	customerID := dashCustomersNew(t, "e2e-dc-cal", map[string]any{"receive_calendar_id": calendarID, "lead_time_days": 4})
 	// The calendar refuses deletion while referenced, and it is cleaned up after the customer.
 	t.Cleanup(func() {
-		_, _, _ = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"receive_calendar_id": nil}, newIdempotencyKey())
+		_, _, _ = p9Client().Patch(customersPath+"/"+customerID, map[string]any{"receive_calendar_id": nil}, newIdempotencyKey())
 	})
-	_, created := dashCustomersRead(t, apiClient, customerID, "defaults")
+	_, created := dashCustomersRead(t, p9Client(), customerID, "defaults")
 	require.Equal(t, calendarID, jsonField(jsonObject(created, "defaults"), "receive_calendar_id"))
 
-	status, body, err := apiClient.Patch(customersPath+"/"+customerID+"?include=defaults", map[string]any{"note": "e2e unrelated edit"}, newIdempotencyKey())
+	status, body, err := p9Client().Patch(customersPath+"/"+customerID+"?include=defaults", map[string]any{"note": "e2e unrelated edit"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, calendarID, jsonField(jsonObject(parseJSON(body), "defaults"), "receive_calendar_id"), "the edit response keeps the calendar")
-	_, got := dashCustomersRead(t, apiClient, customerID, "defaults")
+	_, got := dashCustomersRead(t, p9Client(), customerID, "defaults")
 	defaults := jsonObject(got, "defaults")
 	assert.Equal(t, calendarID, jsonField(defaults, "receive_calendar_id"), "a later read keeps the calendar")
 	assert.Equal(t, "4", jsonField(defaults, "lead_time_days"))
@@ -277,7 +282,7 @@ func TestDashCustomers_UpdateRejectsInvalidValues(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Patch(customersPath+"/"+customerID, tc.body, newIdempotencyKey())
+			status, body, err := p9Client().Patch(customersPath+"/"+customerID, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireClientRejection(t, status, body)
 			assert.Equal(t, tc.param, errorParam(body))
@@ -476,7 +481,7 @@ func TestDashCustomers_MergeNeedsUpdateAndDeleteTogether(t *testing.T) {
 		map[string]any{"source_customer_ids": []string{sourceID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	status, _ = dashCustomersRead(t, apiClient, sourceID, "")
+	status, _ = dashCustomersRead(t, p9Client(), sourceID, "")
 	assert.Equal(t, 404, status, "the merged source is gone")
 }
 
@@ -523,13 +528,13 @@ func TestDashCustomers_PortalActorReachesOnlyItsOwnCustomer(t *testing.T) {
 		status, body, err := do()
 		require.NoError(t, err)
 		if name == "create" && status == 201 {
-			apiClient.Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
+			p9Client().Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
 		}
 		assert.Equal(t, 403, status, "%s: %s", name, body)
 	}
 
 	assertNilField(t, dashCustomersRequireExists(t, otherID), "note")
-	_, own = dashCustomersRead(t, apiClient, SeedCustomerAccountID, "")
+	_, own = dashCustomersRead(t, p9Client(), SeedCustomerAccountID, "")
 	assert.NotEqual(t, "e2e portal edit", jsonField(own, "note"))
 }
 
@@ -568,11 +573,11 @@ func TestDashCustomers_AnotherTenantCannotReachCustomerActions(t *testing.T) {
 // Only the owner is told a customer was already deleted; to another tenant the id never existed.
 func TestDashCustomers_AnotherTenantCannotTellADeletedCustomerExisted(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-dc-gone")), newIdempotencyKey())
+	status, body, err := p9Client().Post(customersPath, validCustomerBody(uniqueName("e2e-dc-gone")), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	customerID := jsonField(parseJSON(body), "id")
-	status, body, err = apiClient.Delete(customersPath + "/" + customerID)
+	status, body, err = p9Client().Delete(customersPath + "/" + customerID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -580,7 +585,7 @@ func TestDashCustomers_AnotherTenantCannotTellADeletedCustomerExisted(t *testing
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "another tenant must not learn the customer existed: %s", body)
 
-	status, body, err = apiClient.Delete(customersPath + "/" + customerID)
+	status, body, err = p9Client().Delete(customersPath + "/" + customerID)
 	require.NoError(t, err)
 	requireStatus(t, 410, status, body)
 	requireErrorResponse(t, body, "resource_gone", "invalid_request_error")
@@ -609,7 +614,7 @@ func TestDashCustomers_MergeMovesTheSourcesOrdersToTheTarget(t *testing.T) {
 
 	order := retrieveSalesOrder(t, orderID, "customer")
 	assert.Equal(t, targetID, jsonField(jsonObject(order, "customer"), "id"), "the source's order now belongs to the target")
-	status, _ = dashCustomersRead(t, apiClient, sourceID, "")
+	status, _ = dashCustomersRead(t, p9Client(), sourceID, "")
 	assert.Equal(t, 404, status, "the source is gone")
 
 	status, access := readAccess(t, customerAccessPath+"/"+targetID)
@@ -646,7 +651,7 @@ func TestDashCustomers_BulkDeleteRemovesEveryNamedCustomer(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, first.StatusCode, first.Body)
 	for _, customerID := range []string{a, b} {
-		status, _ := dashCustomersRead(t, apiClient, customerID, "")
+		status, _ := dashCustomersRead(t, p9Client(), customerID, "")
 		assert.Equal(t, 404, status, "customer %s was deleted", customerID)
 	}
 
@@ -791,7 +796,7 @@ func TestDashCustomers_RegisteringANewCustomer(t *testing.T) {
 	requireStatus(t, 201, status, resp)
 	ids := dashCustomersCustomerIDsNamed(t, name)
 	for _, customerID := range ids {
-		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + customerID) })
+		t.Cleanup(func() { _, _, _ = p9Client().Delete(customersPath + "/" + customerID) })
 	}
 	require.Len(t, ids, 1, "the registration created one customer")
 	customerID := ids[0]
@@ -802,7 +807,7 @@ func TestDashCustomers_RegisteringANewCustomer(t *testing.T) {
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
 	assert.Len(t, dashCustomersCustomerIDsNamed(t, name), 1, "a replay registers nobody twice")
 
-	status, got := dashCustomersRead(t, apiClient, customerID, "contact_info,type,defaults.payment_term,defaults.shipping_term,bill_to_address,ship_to_address")
+	status, got := dashCustomersRead(t, p9Client(), customerID, "contact_info,type,defaults.payment_term,defaults.shipping_term,bill_to_address,ship_to_address")
 	require.Equal(t, 200, status)
 	assert.NotEmpty(t, jsonField(got, "number"), "the seller numbers the new customer")
 	contact := jsonObject(got, "contact_info")
@@ -888,7 +893,7 @@ func TestDashCustomers_RegisteringANewCustomerNeedsTheSellersDetails(t *testing.
 			status, resp, err := person.Post(dashCustomersRegistrationPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			for _, customerID := range dashCustomersCustomerIDsNamed(t, name) {
-				_, _, _ = apiClient.Delete(customersPath + "/" + customerID)
+				_, _, _ = p9Client().Delete(customersPath + "/" + customerID)
 			}
 			require.Less(t, status, 500, "%s", resp)
 			assert.Contains(t, []int{422, 404}, status, "the registration is refused: %s", resp)
@@ -1075,7 +1080,7 @@ func dashCustomersLink(t *testing.T, parentID, childID string) (int, []byte) {
 func TestDashCustomers_ChildAccountLinkIsRepeatable(t *testing.T) {
 	t.Parallel()
 	parentID := dashCustomersNew(t, "e2e-dc-link-parent", nil)
-	child := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-dc-link-child")))
+	child := createAndCleanupP9(t, customersPath, validCustomerBody(uniqueName("e2e-dc-link-child")))
 	childID := jsonField(child, "id")
 
 	status, first := dashCustomersLink(t, parentID, childID)

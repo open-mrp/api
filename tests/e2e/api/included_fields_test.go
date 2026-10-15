@@ -112,7 +112,7 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	got := parseJSON(body)
 	assertCustomerIncludedFieldsPopulated(t, got)
 
-	apiClient.Delete(customersPath + "/" + jsonField(got, "id"))
+	p9Client().Delete(customersPath + "/" + jsonField(got, "id"))
 }
 
 func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
@@ -120,7 +120,7 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	name := uniqueName("e2e-cust-noempty-u")
 	updPayload := validCustomerBody(name)
 	updPayload["default_priority"] = SeedPriorityCode
-	createStatus, createBody, err := apiClient.Post(customersPath, updPayload, newIdempotencyKey())
+	createStatus, createBody, err := p9Client().Post(customersPath, updPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -136,7 +136,7 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	got := parseJSON(patchBody)
 	assertCustomerIncludedFieldsPopulated(t, got)
 
-	apiClient.Delete(customersPath + "/" + id)
+	p9Client().Delete(customersPath + "/" + id)
 }
 
 // ──────────────────────────────────────────────

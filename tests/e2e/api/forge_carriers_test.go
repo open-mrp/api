@@ -128,7 +128,7 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	carrier := forgeCarrier(t, map[string]any{"status": "archived"})
 
 	body := validCustomerBody(uniqueName("e2e-forge-carr-archcust"))
-	body["default_carrier_id"] = jsonField(carrier, "id")
+	customerDefaults(body)["carrier_id"] = jsonField(carrier, "id")
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
@@ -276,8 +276,8 @@ func TestForgeServiceLevels_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := covOperationsCarriersCreateServiceLevel(t, serviceLevelsPath(carrierID), map[string]any{"status": "archived"})
 
 	body := validCustomerBody(uniqueName("e2e-forge-sl-archcust"))
-	body["default_carrier_id"] = carrierID
-	body["default_service_level_id"] = archivedID
+	customerDefaults(body)["carrier_id"] = carrierID
+	customerDefaults(body)["service_level_id"] = archivedID
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {

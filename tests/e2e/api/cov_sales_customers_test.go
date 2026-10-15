@@ -33,7 +33,7 @@ func covSalesCustomersCreate(t *testing.T, extra map[string]any) map[string]any 
 	for k, v := range extra {
 		body[k] = v
 	}
-	return createAndCleanup(t, customersPath, body)
+	return createAndCleanupP9(t, customersPath, body)
 }
 
 // ──────────────────────────────────────────────
@@ -46,17 +46,17 @@ func TestCovSalesCustomers_MergeHappyPath(t *testing.T) {
 	target := covSalesCustomersCreate(t, nil)
 	targetID := jsonField(target, "id")
 
-	source1Status, source1Body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src1")), newIdempotencyKey())
+	source1Status, source1Body, err := p9Client().Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src1")), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, source1Status, source1Body)
 	source1ID := jsonField(parseJSON(source1Body), "id")
 
-	source2Status, source2Body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src2")), newIdempotencyKey())
+	source2Status, source2Body, err := p9Client().Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src2")), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, source2Status, source2Body)
 	source2ID := jsonField(parseJSON(source2Body), "id")
 
-	mergeStatus, mergeBody, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+	mergeStatus, mergeBody, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": []string{source1ID, source2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -70,16 +70,16 @@ func TestCovSalesCustomers_MergeHappyPath(t *testing.T) {
 	assertValidTimestamp(t, jsonField(merged, "updated_at"), "updated_at")
 
 	// Sources are deleted after a successful merge.
-	src1Status, _, err := apiClient.GetListRaw(customersPath+"/"+source1ID, nil)
+	src1Status, _, err := p9Client().GetListRaw(customersPath+"/"+source1ID, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, src1Status, "source customer 1 should be deleted after merge")
 
-	src2Status, _, err := apiClient.GetListRaw(customersPath+"/"+source2ID, nil)
+	src2Status, _, err := p9Client().GetListRaw(customersPath+"/"+source2ID, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, src2Status, "source customer 2 should be deleted after merge")
 
 	// Target still exists and is retrievable normally.
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+targetID, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+targetID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 }
@@ -87,7 +87,7 @@ func TestCovSalesCustomers_MergeHappyPath(t *testing.T) {
 func TestCovSalesCustomers_MergeConsolidatesPriceGroups(t *testing.T) {
 	t.Parallel()
 
-	pg := createAndCleanup(t, accountGroupsPath, map[string]any{
+	pg := createAndCleanupP9(t, accountGroupsPath, map[string]any{
 		"name": uniqueName("e2e-covcust-merge-pg"),
 		"type": "pricing_group",
 	})
@@ -104,7 +104,7 @@ func TestCovSalesCustomers_MergeConsolidatesPriceGroups(t *testing.T) {
 	// Cancel the auto-registered cleanup for the source: it will be deleted by
 	// the merge itself, and a post-merge Delete call would 404 harmlessly, but
 	// we don't want to rely on that — call merge explicitly instead.
-	mergeStatus, mergeBody, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge?include=price_groups", map[string]any{
+	mergeStatus, mergeBody, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge?include=price_groups", map[string]any{
 		"source_customer_ids": []string{sourceID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestCovSalesCustomers_MergeSelfMergeRejected(t *testing.T) {
 	target := covSalesCustomersCreate(t, nil)
 	targetID := jsonField(target, "id")
 
-	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+	status, body, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": []string{targetID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestCovSalesCustomers_MergeDuplicateSourceIDsRejected(t *testing.T) {
 	source := covSalesCustomersCreate(t, nil)
 	sourceID := jsonField(source, "id")
 
-	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+	status, body, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": []string{sourceID, sourceID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestCovSalesCustomers_MergeNonexistentSourceNotFound(t *testing.T) {
 	target := covSalesCustomersCreate(t, nil)
 	targetID := jsonField(target, "id")
 
-	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+	status, body, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": []string{"ac_000000000000000000000000"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -209,7 +209,7 @@ func TestCovSalesCustomers_MergeNonexistentTargetNotFound(t *testing.T) {
 	source := covSalesCustomersCreate(t, nil)
 	sourceID := jsonField(source, "id")
 
-	status, body, err := apiClient.Post(customersPath+"/ac_000000000000000000000000/actions/merge", map[string]any{
+	status, body, err := p9Client().Post(customersPath+"/ac_000000000000000000000000/actions/merge", map[string]any{
 		"source_customer_ids": []string{sourceID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestCovSalesCustomers_MergeEmptySourceListIsNoOp(t *testing.T) {
 	target := covSalesCustomersCreate(t, nil)
 	targetID := jsonField(target, "id")
 
-	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+	status, body, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
 		"source_customer_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -255,12 +255,12 @@ func TestCovSalesCustomers_MergeIdempotentReplay(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	payload := map[string]any{"source_customer_ids": []string{sourceID}}
 
-	status1, body1, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
+	status1, body1, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
-	status2, body2, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
+	status2, body2, err := p9Client().Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 	id2 := jsonField(parseJSON(body2), "id")
@@ -268,7 +268,7 @@ func TestCovSalesCustomers_MergeIdempotentReplay(t *testing.T) {
 	assert.Equal(t, id1, id2, "replaying the same idempotency key should return the same merged target")
 
 	// Source must still be gone (not re-merged / re-deleted a second time).
-	srcStatus, _, err := apiClient.GetListRaw(customersPath+"/"+sourceID, nil)
+	srcStatus, _, err := p9Client().GetListRaw(customersPath+"/"+sourceID, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, srcStatus)
 }
@@ -292,28 +292,28 @@ func TestCovSalesCustomers_MergePortalActorForbidden(t *testing.T) {
 
 func TestCovSalesCustomers_ListFilterByShippingTermID(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"shipping_term_ids": {SeedShippingTermID}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"shipping_term_ids": {SeedShippingTermID}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "filter by seeded shipping term should return at least 1 result")
 }
 
 func TestCovSalesCustomers_ListFilterByShippingTermID_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"shipping_term_ids": {"shtm_00000000000000000000000000"}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"shipping_term_ids": {"shtm_00000000000000000000000000"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "bogus shipping term id should return no results")
 }
 
 func TestCovSalesCustomers_ListFilterByPaymentTermID(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"payment_term_ids": {SeedPaymentTermID}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"payment_term_ids": {SeedPaymentTermID}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "filter by seeded payment term should return at least 1 result")
 }
 
 func TestCovSalesCustomers_ListFilterByPaymentTermID_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"payment_term_ids": {"pytm_00000000000000000000000000"}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"payment_term_ids": {"pytm_00000000000000000000000000"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "bogus payment term id should return no results")
 }
@@ -324,14 +324,14 @@ func TestCovSalesCustomers_ListFilterByPaymentTermID_NoResults(t *testing.T) {
 
 func TestCovSalesCustomers_ListFilterByCarrierID(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"carrier_ids": {SeedCarrierID}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"carrier_ids": {SeedCarrierID}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "filter by seeded carrier should return at least 1 result")
 }
 
 func TestCovSalesCustomers_ListFilterByCarrierID_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"carrier_ids": {"bogus_carrier_id_xyz"}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"carrier_ids": {"bogus_carrier_id_xyz"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "bogus carrier id should return no results")
 }
@@ -343,7 +343,7 @@ func TestCovSalesCustomers_ListFilterByServiceLevelID(t *testing.T) {
 
 func TestCovSalesCustomers_ListFilterByServiceLevelID_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"service_level_ids": {"crop_00000000000000000000000000"}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"service_level_ids": {"crop_00000000000000000000000000"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "bogus service level id should return no results")
 }
@@ -363,7 +363,7 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode(t *testing.T) {
 		"freight_policy": "free",
 	})
 
-	list, _, err := apiClient.GetList(customersPath, url.Values{
+	list, _, err := p9Client().GetList(customersPath, url.Values{
 		"freight_status_codes": {"free"},
 		"q":                    {name},
 	})
@@ -383,7 +383,7 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode_NoResults(t *testing.T)
 
 	// The customer was created with free_freight; filtering for billed_freight
 	// scoped to its unique name must exclude it.
-	list, _, err := apiClient.GetList(customersPath, url.Values{
+	list, _, err := p9Client().GetList(customersPath, url.Values{
 		"freight_status_codes": {"billed"},
 		"q":                    {name},
 	})
@@ -434,22 +434,22 @@ func TestCovSalesCustomers_ListFilterByCityStatePostalCode(t *testing.T) {
 	})
 	custID := jsonField(cust, "id")
 
-	cityList, _, err := apiClient.GetList(customersPath, url.Values{"city": {city}})
+	cityList, _, err := p9Client().GetList(customersPath, url.Values{"city": {city}})
 	require.NoError(t, err)
 	assert.True(t, listContainsID(cityList, custID), "city filter should match the newly created customer's bill-to address")
 
-	combinedList, _, err := apiClient.GetList(customersPath, url.Values{"city": {city}, "state": {"ZZ"}, "postal_code": {"99999"}})
+	combinedList, _, err := p9Client().GetList(customersPath, url.Values{"city": {city}, "state": {"ZZ"}, "postal_code": {"99999"}})
 	require.NoError(t, err)
 	assert.True(t, listContainsID(combinedList, custID), "combined city+state+postal_code filter should match")
 
-	noMatchList, _, err := apiClient.GetList(customersPath, url.Values{"city": {city}, "postal_code": {"00000"}})
+	noMatchList, _, err := p9Client().GetList(customersPath, url.Values{"city": {city}, "postal_code": {"00000"}})
 	require.NoError(t, err)
 	assert.False(t, listContainsID(noMatchList, custID), "mismatched postal_code combined with a matching city must exclude the customer")
 }
 
 func TestCovSalesCustomers_ListFilterByCity_NoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(customersPath, url.Values{"city": {"zzz-nonexistent-city-e2e-99999"}})
+	list, _, err := p9Client().GetList(customersPath, url.Values{"city": {"zzz-nonexistent-city-e2e-99999"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "nonexistent city should return no results")
 }
@@ -466,7 +466,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 	custID := jsonField(cust, "id")
 
 	// Bracket: a wide window covering "now" must include the customer.
-	inRange, _, err := apiClient.GetList(customersPath, url.Values{
+	inRange, _, err := p9Client().GetList(customersPath, url.Values{
 		"starts_at": {"2026-01-01T00:00:00Z"},
 		"ends_at":   {"2030-01-01T00:00:00Z"},
 		"q":         {name},
@@ -475,7 +475,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 	assert.True(t, listContainsID(inRange, custID), "wide date range bracketing now should include the newly created customer")
 
 	// starts_at in the far future must exclude it.
-	afterRange, _, err := apiClient.GetList(customersPath, url.Values{
+	afterRange, _, err := p9Client().GetList(customersPath, url.Values{
 		"starts_at": {"2030-01-01T00:00:00Z"},
 		"q":         {name},
 	})
@@ -483,7 +483,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 	assertEmptyListData(t, afterRange.Data, "starts_at in the far future should exclude a customer created now")
 
 	// ends_at in the far past must exclude it.
-	beforeRange, _, err := apiClient.GetList(customersPath, url.Values{
+	beforeRange, _, err := p9Client().GetList(customersPath, url.Values{
 		"ends_at": {"2020-01-01T00:00:00Z"},
 		"q":       {name},
 	})
@@ -501,7 +501,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_account,child_accounts"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_account,child_accounts"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -540,7 +540,7 @@ func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T)
 func TestCovSalesCustomers_FreightPreferencesServiceLevelPopulated(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences,freight_preferences.service_level"}})
+	status, body, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences,freight_preferences.service_level"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -584,7 +584,7 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
-	defer apiClient.Delete(customersPath + "/" + id)
+	defer p9Client().Delete(customersPath + "/" + id)
 
 	fp := jsonObject(created, "freight_preferences")
 	require.NotNil(t, fp, "freight_preferences should be present with ?include on create")
@@ -593,7 +593,7 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 	assert.Equal(t, SeedServiceLevelID, jsonField(sl, "id"))
 
 	// Clear via null.
-	clearStatus, clearBody, err := apiClient.Patch(customersPath+"/"+id+"?include=freight_preferences.service_level", map[string]any{
+	clearStatus, clearBody, err := p9Client().Patch(customersPath+"/"+id+"?include=freight_preferences.service_level", map[string]any{
 		"default_service_level_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -618,13 +618,13 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 func TestCovSalesCustomers_DeleteConflictWhenReferencedBySalesOrders(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Delete(customersPath + "/" + SeedCustomerAccountID)
+	status, body, err := p9Client().Delete(customersPath + "/" + SeedCustomerAccountID)
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
 	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
 
 	// Confirm the customer was NOT deleted.
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
+	getStatus, getBody, err := p9Client().GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, SeedCustomerAccountID, jsonField(parseJSON(getBody), "id"))

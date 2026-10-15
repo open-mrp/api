@@ -26,6 +26,8 @@ type LocationSvcTestSuite struct {
 	locationSvc       domain.LocationSvc
 	locationRepo      *repositorymock.MockLocationRepo
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
+	referenceRepo     *repositorymock.MockReferenceRepo
+	addressRepo       *repositorymock.MockAddressRepo
 	repoFactory       *factorymock.MockRepoFactory
 	mediatorFactory   *factorymock.MockMediatorFactory
 	idempotencyMed    *mediatormock.MockIdempotencyMed
@@ -39,6 +41,10 @@ func (suite *LocationSvcTestSuite) SetupSuite() {
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewLocationRepo().Return(suite.locationRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
+	suite.referenceRepo = repositorymock.NewMockReferenceRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(suite.referenceRepo).AnyTimes()
+	suite.addressRepo = repositorymock.NewMockAddressRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewAddressRepo().Return(suite.addressRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
@@ -437,8 +443,12 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_Success_WithParent() {
 
 	suite.expectLocIdempotencyStarted()
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_parent").
-		Return(true, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_parent"}).
+		Return([]*domain.Location{{ID: "loc_parent", TypeCode: "site", Status: constants.ArchiveStatusActive}}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().
+		ListTreeNodes(gomock.Any(), "ac_loc1").
+		Return([]domain.LocationTreeNode{{ID: "loc_parent", TypeCode: "site"}}, nil).
 		Times(1)
 	suite.locationRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -462,12 +472,8 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_Success_WithChildren() {
 
 	suite.expectLocIdempotencyStarted()
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_child1").
-		Return(true, nil).
-		Times(1)
-	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_child2").
-		Return(true, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_child1", "loc_child2"}).
+		Return([]*domain.Location{{ID: "loc_child1", TypeCode: "bin"}, {ID: "loc_child2", TypeCode: "bin"}}, nil).
 		Times(1)
 	suite.locationRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -519,8 +525,8 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_ParentNotInAccount() {
 
 	suite.expectLocIdempotencyStarted()
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_foreign").
-		Return(false, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_foreign"}).
+		Return(nil, nil).
 		Times(1)
 	suite.expectLocCacheError()
 
@@ -541,8 +547,8 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_ChildNotInAccount() {
 
 	suite.expectLocIdempotencyStarted()
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_foreign_child").
-		Return(false, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_foreign_child"}).
+		Return(nil, nil).
 		Times(1)
 	suite.expectLocCacheError()
 
@@ -556,6 +562,106 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_ChildNotInAccount() {
 	suite.NotNil(err)
 	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("child_ids", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestCreateLocation_SiteWithParentRejected() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.CreateLocation(ctx, domain.CreateLocationParams{
+		Name:     "Plant 2",
+		TypeCode: "site",
+		ParentID: strPtr("loc_parent"),
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
+	suite.Equal("parent_id", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestCreateLocation_AddressOnNonSiteRejected() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.CreateLocation(ctx, domain.CreateLocationParams{
+		Name:      "Bin",
+		TypeCode:  "bin",
+		AddressID: strPtr("adr_1"),
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal("address_id", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestCreateLocation_ArchivedParentRejected() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.locationRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_old"}).
+		Return([]*domain.Location{{ID: "loc_old", TypeCode: "building", Status: constants.ArchiveStatusArchived}}, nil).
+		Times(1)
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.CreateLocation(ctx, domain.CreateLocationParams{
+		Name:     "Bin",
+		TypeCode: "bin",
+		ParentID: strPtr("loc_old"),
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal("resource_archived", string(err.Code))
+	suite.Equal("parent_id", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestCreateLocation_SiteChildRejected() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.locationRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_site"}).
+		Return([]*domain.Location{{ID: "loc_site", TypeCode: "site"}}, nil).
+		Times(1)
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.CreateLocation(ctx, domain.CreateLocationParams{
+		Name:     "Building",
+		TypeCode: "building",
+		ChildIDs: []string{"loc_site"},
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal("child_ids", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestCreateLocation_SiteWithAddressBecomesDefault() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_loc1", "adr_1").Return(true, nil).Times(1)
+	suite.locationRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&domain.Location{ID: "loc_site", TypeCode: "site", Status: constants.ArchiveStatusActive, AddressID: strPtr("adr_1")}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().SetDefaultSiteIfUnset(gomock.Any(), "ac_loc1", "loc_site").Return(true, nil).Times(1)
+	suite.expectLocCacheSuccess()
+
+	result, err := suite.locationSvc.CreateLocation(ctx, domain.CreateLocationParams{
+		Name:      "Plant",
+		TypeCode:  "site",
+		AddressID: strPtr("adr_1"),
+	})
+
+	suite.Nil(err)
+	suite.Equal("loc_site", result.ID)
 }
 
 func (suite *LocationSvcTestSuite) TestCreateLocation_RepoCreateError() {
@@ -632,6 +738,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_Success() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u1"}).
 		Return(&domain.Location{ID: "loc_u1", Name: "Rack A"}, nil).
 		Times(1)
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
 	suite.locationRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		Return(&domain.Location{ID: "loc_u1", Name: "Rack B"}, nil).
@@ -708,6 +815,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_SelfParentRejected() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u2"}).
 		Return(&domain.Location{ID: "loc_u2", Name: "Self"}, nil).
 		Times(1)
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
 	suite.expectLocCacheError()
 
 	result, err := suite.locationSvc.UpdateLocation(ctx, domain.UpdateLocationParams{
@@ -735,10 +843,10 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ParentNotInAccount() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u3"}).
 		Return(&domain.Location{ID: "loc_u3", Name: "Bin"}, nil).
 		Times(1)
-	// Second IsInAccount: verify the new parent_id
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_foreign_parent").
-		Return(false, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_foreign_parent"}).
+		Return(nil, nil).
 		Times(1)
 	suite.expectLocCacheError()
 
@@ -765,9 +873,10 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ChildNotInAccount() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u4"}).
 		Return(&domain.Location{ID: "loc_u4", Name: "Aisle"}, nil).
 		Times(1)
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
 	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_foreign_child").
-		Return(false, nil).
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_foreign_child"}).
+		Return(nil, nil).
 		Times(1)
 	suite.expectLocCacheError()
 
@@ -796,11 +905,8 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_BackfillsExistingParentID(
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u5"}).
 		Return(&domain.Location{ID: "loc_u5", Name: "Old", ParentID: strPtr("loc_p")}, nil).
 		Times(1)
-	// Validate the backfilled parent exists (non-empty ParentID != LocationID path)
-	suite.locationRepo.EXPECT().
-		IsInAccount(gomock.Any(), "ac_loc1", "loc_p").
-		Return(true, nil).
-		Times(1)
+	// The kept parent is not re-checked.
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
 	suite.locationRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.UpdateLocationParams) (*domain.Location, *apierror.APIError) {
@@ -835,7 +941,8 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ClearsParent() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_u6"}).
 		Return(&domain.Location{ID: "loc_u6", Name: "Bin", ParentID: strPtr("loc_p")}, nil).
 		Times(1)
-	// Explicit clear: IsInAccount should NOT be called for the parent.
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
+	// Explicit clear: the parent is not looked up.
 	suite.locationRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.UpdateLocationParams) (*domain.Location, *apierror.APIError) {
@@ -852,6 +959,64 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ClearsParent() {
 
 	suite.Nil(err)
 	suite.NotNil(result)
+}
+
+func (suite *LocationSvcTestSuite) TestUpdateLocation_DefaultSiteCannotBeArchived() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+	archived := constants.ArchiveStatusArchived
+
+	suite.expectLocIdempotencyStarted()
+	suite.locationRepo.EXPECT().IsInAccount(gomock.Any(), "ac_loc1", "loc_site").Return(true, nil).Times(1)
+	suite.locationRepo.EXPECT().
+		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_site"}).
+		Return(&domain.Location{ID: "loc_site", TypeCode: "site", Status: constants.ArchiveStatusActive}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(strPtr("loc_site"), nil).Times(1)
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.UpdateLocation(ctx, domain.UpdateLocationParams{
+		LocationID: "loc_site",
+		Status:     &archived,
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal("status", err.Param)
+}
+
+func (suite *LocationSvcTestSuite) TestUpdateLocation_DescendantParentRejected() {
+	ctx := idempotencyCtx(internalLocationCtx("ac_loc1"))
+
+	suite.expectLocIdempotencyStarted()
+	suite.locationRepo.EXPECT().IsInAccount(gomock.Any(), "ac_loc1", "loc_top").Return(true, nil).Times(1)
+	suite.locationRepo.EXPECT().
+		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_top"}).
+		Return(&domain.Location{ID: "loc_top", TypeCode: "building", Status: constants.ArchiveStatusActive}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(1)
+	suite.locationRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_loc1", []string{"loc_bin"}).
+		Return([]*domain.Location{{ID: "loc_bin", TypeCode: "bin", Status: constants.ArchiveStatusActive}}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().
+		ListTreeNodes(gomock.Any(), "ac_loc1").
+		Return([]domain.LocationTreeNode{
+			{ID: "loc_top", TypeCode: "building"},
+			{ID: "loc_shelf", ParentID: strPtr("loc_top"), TypeCode: "shelf"},
+			{ID: "loc_bin", ParentID: strPtr("loc_shelf"), TypeCode: "bin"},
+		}, nil).
+		Times(1)
+	suite.expectLocCacheError()
+
+	result, err := suite.locationSvc.UpdateLocation(ctx, domain.UpdateLocationParams{
+		LocationID: "loc_top",
+		ParentID:   field.Set("loc_bin"),
+	})
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal("parent_id", err.Param)
+	suite.Contains(err.PublicMessage, "descendants")
 }
 
 func (suite *LocationSvcTestSuite) TestUpdateLocation_IdempotencyFinished() {
@@ -902,9 +1067,9 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_Success() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_d1"}).
 		Return(&domain.Location{ID: "loc_d1", Name: "Bin Del"}, nil).
 		Times(1)
-	suite.locationRepo.EXPECT().
-		CountChildren(gomock.Any(), "ac_loc1", "loc_d1").
-		Return(int64(0), nil).
+	suite.referenceRepo.EXPECT().
+		InUseBy(gomock.Any(), "loc_d1", domain.LocationReferences.Probes).
+		Return(nil, nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_d1", "ac_loc1", gomock.Any()).
@@ -986,28 +1151,29 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_HasChildren() {
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_parent"}).
 		Return(&domain.Location{ID: "loc_parent", Name: "Aisle"}, nil).
 		Times(1)
-	suite.locationRepo.EXPECT().
-		CountChildren(gomock.Any(), "ac_loc1", "loc_parent").
-		Return(int64(3), nil).
+	suite.referenceRepo.EXPECT().
+		InUseBy(gomock.Any(), "loc_parent", domain.LocationReferences.Probes).
+		Return([]string{"stock", "child locations"}, nil).
 		Times(1)
 
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_parent"})
 
-	suite.NotNil(err)
-	suite.Equal(apierror.CodeValidationFailed, err.Code)
-	suite.Contains(err.PublicMessage, "child locations")
+	suite.Require().NotNil(err)
+	suite.Equal("resource_in_use", string(err.Code))
+	suite.Contains(err.PublicMessage, "stock and child locations")
+	suite.Contains(err.PublicMessage, "archived")
 }
 
-func (suite *LocationSvcTestSuite) TestDeleteLocation_CountChildrenError() {
+func (suite *LocationSvcTestSuite) TestDeleteLocation_ReferenceCheckError() {
 	ctx := internalLocationCtx("ac_loc1")
 
 	suite.locationRepo.EXPECT().
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_d_err"}).
 		Return(&domain.Location{ID: "loc_d_err", Name: "Bin"}, nil).
 		Times(1)
-	suite.locationRepo.EXPECT().
-		CountChildren(gomock.Any(), "ac_loc1", "loc_d_err").
-		Return(int64(0), apierror.NewInternalError(errors.New("db"), "count query failed")).
+	suite.referenceRepo.EXPECT().
+		InUseBy(gomock.Any(), "loc_d_err", domain.LocationReferences.Probes).
+		Return(nil, apierror.NewInternalError(errors.New("db"), "probe failed")).
 		Times(1)
 
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_d_err"})
@@ -1172,6 +1338,23 @@ func (suite *LocationSvcTestSuite) expectLinkAuditReads(n int) {
 		Times(n)
 }
 
+// expectLinkChecks allows the checks n parent links make: the new parent is an active location and the tree has no
+// cycle.
+func (suite *LocationSvcTestSuite) expectLinkChecks(n int) {
+	suite.locationRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_loc1", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, ids []string) ([]*domain.Location, *apierror.APIError) {
+			return []*domain.Location{{ID: ids[0], TypeCode: "building", Status: constants.ArchiveStatusActive}}, nil
+		}).
+		Times(n)
+	suite.locationRepo.EXPECT().ListTreeNodes(gomock.Any(), "ac_loc1").Return(nil, nil).Times(n)
+}
+
+// expectNotDefaultSite allows n updates to find the account has no default site.
+func (suite *LocationSvcTestSuite) expectNotDefaultSite(n int) {
+	suite.locationRepo.EXPECT().DefaultSiteID(gomock.Any(), "ac_loc1").Return(nil, nil).Times(n)
+}
+
 func (suite *LocationSvcTestSuite) writeLocations(rows ...domain.ResolvedUpsertLocationRow) (created, updated []string, rowErrs []apierror.RowError, apiErr *apierror.APIError) {
 	res, apiErr := writeBulkUpsertLocations(internalLocationCtx("ac_loc1"), suite.repoFactory, passthroughSavepoint{}, "ac_loc1", rows)
 	if apiErr != nil {
@@ -1224,6 +1407,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_AllUpdates() {
 		Update(gomock.Any(), gomock.Any()).
 		Return(&domain.Location{ID: "loc_ex1", Name: "Bin A", TypeCode: "bin"}, nil).
 		Times(1)
+	suite.expectNotDefaultSite(1)
 
 	created, updated, rowErrs, err := suite.writeLocations(domain.ResolvedUpsertLocationRow{Name: "Bin A", TypeCode: "bin"})
 
@@ -1253,6 +1437,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_MixedCreateAndUp
 		Update(gomock.Any(), gomock.Any()).
 		Return(&domain.Location{ID: "loc_ex2", Name: "Bin B"}, nil).
 		Times(1)
+	suite.expectNotDefaultSite(1)
 
 	created, updated, rowErrs, err := suite.writeLocations(
 		domain.ResolvedUpsertLocationRow{Name: "Bin B", TypeCode: "bin"},
@@ -1280,6 +1465,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_ParentLinkApplie
 		}).
 		Times(1)
 	suite.expectLinkAuditReads(2)
+	suite.expectLinkChecks(1)
 	// LinkParent is called with the created id as child and the resolved parent id.
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_parent_p2").
@@ -1316,6 +1502,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_ChildLinksApplie
 			Return(&domain.Location{ID: childID}, nil).
 			Times(2)
 	}
+	suite.expectLinkChecks(2)
 	// LinkParent is called for each child id (child → this location as parent).
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", "loc_child_a", gomock.Any()).
@@ -1352,6 +1539,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_LinkFailureRecor
 		}).
 		Times(1)
 	suite.expectLinkAuditReads(1)
+	suite.expectLinkChecks(1)
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_parent_err").
 		Return(apierror.NewInternalError(errors.New("db"), "link failed")).
@@ -1398,6 +1586,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_UpdateFailureRec
 		Update(gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewInternalError(errors.New("db"), "update failed")).
 		Times(1)
+	suite.expectNotDefaultSite(1)
 
 	created, updated, rowErrs, err := suite.writeLocations(domain.ResolvedUpsertLocationRow{Name: "Bin Err", TypeCode: "bin"})
 
@@ -1441,6 +1630,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_PartialSuccess()
 		}).
 		Times(2)
 	suite.expectLinkAuditReads(1)
+	suite.expectLinkChecks(1)
 	// The bad row's parent link fails.
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_bad_parent").
@@ -1476,6 +1666,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_IntraBatchParent
 		}).
 		Times(2)
 	suite.expectLinkAuditReads(2)
+	suite.expectLinkChecks(1)
 	var linkChild, linkParent string
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), gomock.Any()).

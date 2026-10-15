@@ -14,25 +14,31 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update a location.
+// Request to update a location.
 type UpdateLocationRequest struct {
 	// Location ID.
 	LocationID string `path:"id" validate:"required"`
-	// Display name of the location.
+	// Display name, unique (case-insensitive) among your account's locations.
 	//
 	// Maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// This location's level in the storage hierarchy.
+	// What kind of place this is.
 	//
-	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — the parent is not required to be the next level up.
+	// `site` is a plant, warehouse or 3PL: always top-level, and the only type with an `address`. The rest run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. Your default site stays a `site`.
 	TypeCode field.Optional[constants.LocationTypeCode] `json:"type,omitzero"`
-	// The location this one sits under in the storage hierarchy.
+	// `active` or `archived`. Your default site can't be archived.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Where the site is. Only a `site` takes an address.
 	//
-	// Must be an existing location in your account, and cannot be the location being updated. Send `null` to detach it from its parent and make it a top-level location.
+	// Must be one of your account's addresses. Send `null` to remove it.
+	AddressID field.Clearable[string] `json:"address_id,omitzero"`
+	// The location this one sits under.
+	//
+	// Must be one of your account's active locations, and not this location or one below it. Send `null` to make it a top-level location.
 	ParentID field.Clearable[string] `json:"parent_id,omitzero" validate:"omitempty"`
 	// The locations that sit directly beneath this one.
 	//
-	// This replaces the full set of children: current children that are not listed are detached and become top-level locations, and listed locations are reparented onto this location. Send `null` to detach every child. Omit the field to leave the existing children untouched.
+	// Replaces the full set of children: current children not listed become top-level locations, and listed locations are moved onto this one. Send `null` to detach every child; omit to leave them as they are. A site can't be listed.
 	ChildIDs field.Clearable[[]string] `json:"child_ids,omitzero"`
 }
 
@@ -40,14 +46,16 @@ var sampleUpdateLocationRequest = &UpdateLocationRequest{
 	Name:     field.Some("Warehouse B"),
 	TypeCode: field.Some(constants.LocationTypeCodeSection),
 	ParentID: field.Set(apiresource.SampleLocationID),
-	ChildIDs: field.Set([]string{apiresource.SampleLocationID}),
+	ChildIDs: field.Set([]string{apiresource.SampleLocationChildID}),
 }
 
 func (*UpdateLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateLocationRequest)
 }
 
-// Partially updates a location.
+// Updates a location.
+//
+// Only fields you send are changed. Archiving keeps the location's stock, history and children; it just can't be chosen for new stock or as a new parent.
 type UpdateLocationEndpoint struct{}
 
 func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location] {
@@ -60,13 +68,12 @@ func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateL
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).UpdateLocation
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeLocation,
-			Fields:     []string{"parent", "children"},
+			Fields:     []string{"address", "parent", "children"},
 		}),
 		ObjectType: constants.ObjectTypeLocation,
 	})

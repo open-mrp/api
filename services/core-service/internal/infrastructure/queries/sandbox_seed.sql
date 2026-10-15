@@ -2184,8 +2184,11 @@ INSERT INTO `department` (`id`, `name`, `notes`, `account_id`, `location_id`) VA
 -- SECTION 17: STORAGE LOCATIONS
 -- ============================================================================
 
+-- The building sits in the default site the sandbox was created with (top-level if it has none).
+SET @site = (SELECT default_site_id FROM `account` WHERE id = '@account_id');
+
 INSERT INTO `storage_location` (`id`, `account_id`, `storage_location_type_code`, `name`, `parent_id`) VALUES
-  (@stloc1, '@account_id', 'building', 'Main Building',          NULL),
+  (@stloc1, '@account_id', 'building', 'Main Building',          NULLIF(@site, '')),
   (@stloc2, '@account_id', 'section',  'Knitting Floor',         @stloc1),
   (@stloc3, '@account_id', 'section',  'Linking Floor',          @stloc1),
   (@stloc4, '@account_id', 'section',  'Wet Processing Area',    @stloc1),

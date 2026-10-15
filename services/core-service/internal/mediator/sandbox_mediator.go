@@ -113,6 +113,10 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 		return nil, tracing.Trace(span, addrErr)
 	}
 
+	if _, siteErr := NewSiteMed(&SiteMedConfig{Repos: m.repos}).CreateDefaultSite(ctx, accountID); siteErr != nil {
+		return nil, tracing.Trace(span, siteErr)
+	}
+
 	adminRoleID, roleErr := m.repos.NewAccountUserRepo().GetAdminRoleID(ctx)
 	if roleErr != nil {
 		return nil, tracing.Trace(span, roleErr)

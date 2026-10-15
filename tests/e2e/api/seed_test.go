@@ -107,7 +107,7 @@ const (
 	SeedProductionScheduleID     = "pnsc_01seede2eschedule"
 	SeedProductionScheduleLineID = "pnscln_01seede2eline01" // generated in real use; seeded only so nested {id} paths resolve
 	SeedLocationID               = "sglc_01seedbuilding0000"
-	SeedLocationParentID         = "sglc_01seedcampus00000" // parent of SeedLocationID (type=campus); for ?include=parent on the stable fixture
+	SeedLocationParentID         = "sglc_01seedcampus00000" // parent of SeedLocationID (the default site); for ?include=parent on the stable fixture
 	SeedScanningStationID        = "sgsn_01k0a8201zegarjfsjaw5n7yfv"
 
 	// Operations

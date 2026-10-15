@@ -38,7 +38,6 @@ func (e *ExportLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

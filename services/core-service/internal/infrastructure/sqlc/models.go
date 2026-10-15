@@ -27,6 +27,7 @@ type Account struct {
 	InternalStripeSubscriptionID sql.NullString
 	SubscriptionStatus           sql.NullString
 	SubscriptionCurrentPeriodEnd sql.NullTime
+	DefaultSiteID                sql.NullString
 }
 
 type AccountAddress struct {
@@ -2538,6 +2539,7 @@ type StorageLocation struct {
 	ParentID                sql.NullString
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	IsActive                bool
 }
 
 type StorageLocationType struct {

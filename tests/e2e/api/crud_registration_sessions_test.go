@@ -149,6 +149,10 @@ func TestRegistration_FullJourney(t *testing.T) {
 	assert.NotEmpty(t, sandboxID)
 	assert.Equal(t, accountName+" Sandbox", sandboxName)
 
+	// Both accounts are born with a default site named after them.
+	requireDefaultSite(t, accountID, accountName)
+	requireDefaultSite(t, sandboxID, sandboxName)
+
 	// 8. Completing registration has platform-service schedule the registrant's
 	//    follow-up a day out. It arrives over the outbox, so wait for it.
 	var followupStatus, followupEmail string

@@ -23,8 +23,17 @@ type SandboxMedTestSuite struct {
 	sandboxAccountRepo *repositorymock.MockSandboxAccountRepo
 	registrationRepo   *repositorymock.MockRegistrationRepo
 	calendarRepo       *repositorymock.MockOperatingCalendarRepo
+	locationRepo       *repositorymock.MockLocationRepo
 	repoFactory        *factorymock.MockRepoFactory
 	ctrl               *gomock.Controller
+}
+
+// expectDefaultSite allows the default site a new sandbox gets.
+func (suite *SandboxMedTestSuite) expectDefaultSite(name string) {
+	suite.locationRepo.EXPECT().SiteSeed(gomock.Any(), gomock.Any()).Return(&domain.AccountSiteSeed{AccountName: name}, nil).Times(1)
+	suite.locationRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&domain.Location{ID: "lc_site", Name: name, TypeCode: "site"}, nil).Times(1)
+	suite.locationRepo.EXPECT().SetDefaultSiteIfUnset(gomock.Any(), gomock.Any(), "lc_site").Return(true, nil).Times(1)
 }
 
 func (suite *SandboxMedTestSuite) SetupSuite() {
@@ -34,12 +43,15 @@ func (suite *SandboxMedTestSuite) SetupSuite() {
 	suite.sandboxAccountRepo = repositorymock.NewMockSandboxAccountRepo(suite.ctrl)
 	suite.registrationRepo = repositorymock.NewMockRegistrationRepo(suite.ctrl)
 	suite.calendarRepo = repositorymock.NewMockOperatingCalendarRepo(suite.ctrl)
+	suite.locationRepo = repositorymock.NewMockLocationRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAccountRepo().Return(suite.accountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAccountUserRepo().Return(suite.accountUserRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSandboxAccountRepo().Return(suite.sandboxAccountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewRegistrationRepo().Return(suite.registrationRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOperatingCalendarRepo().Return(suite.calendarRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewLocationRepo().Return(suite.locationRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&recordingOutboxRepo{}).AnyTimes()
 
 	// Provisioning seeds a sandbox's shipping and receiving calendars. What it writes is covered in internal/calendarseed; here it only has to not be a surprise.
 	suite.calendarRepo.EXPECT().GetByCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
@@ -97,6 +109,7 @@ func (suite *SandboxMedTestSuite) TestCreate_Success() {
 		CreateBusinessAddress(gomock.Any(), gomock.Any(), "My Sandbox", domain.RegistrationAddress{Country: "US"}).
 		Return(nil).
 		Times(1)
+	suite.expectDefaultSite("My Sandbox")
 
 	suite.accountUserRepo.EXPECT().
 		GetAdminRoleID(gomock.Any()).
@@ -185,6 +198,22 @@ func (suite *SandboxMedTestSuite) TestCreate_CopiesOwnerPlanCode() {
 		CreateBusinessAddress(gomock.Any(), gomock.Any(), "Pro Sandbox", domain.RegistrationAddress{Country: "US"}).
 		Return(nil).
 		Times(1)
+
+	// The sandbox gets its default site, named after it, at its business address.
+	suite.locationRepo.EXPECT().
+		SiteSeed(gomock.Any(), gomock.Any()).
+		Return(&domain.AccountSiteSeed{AccountName: "Pro Sandbox", ShippingAddressID: new("adr_sb")}, nil).
+		Times(1)
+	suite.locationRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, p domain.CreateLocationParams) (*domain.Location, *apierror.APIError) {
+			suite.Equal("Pro Sandbox", p.Name)
+			suite.Equal("site", p.TypeCode)
+			suite.Equal("adr_sb", *p.AddressID)
+			return &domain.Location{ID: id, Name: p.Name, TypeCode: p.TypeCode, AddressID: p.AddressID}, nil
+		}).
+		Times(1)
+	suite.locationRepo.EXPECT().SetDefaultSiteIfUnset(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
 
 	suite.accountUserRepo.EXPECT().
 		GetAdminRoleID(gomock.Any()).
@@ -420,6 +449,7 @@ func (suite *SandboxMedTestSuite) TestCreate_UnlimitedSandboxes() {
 		CreateBusinessAddress(gomock.Any(), gomock.Any(), "Unlimited Sandbox", domain.RegistrationAddress{Country: "US"}).
 		Return(nil).
 		Times(1)
+	suite.expectDefaultSite("Unlimited Sandbox")
 
 	suite.accountUserRepo.EXPECT().
 		GetAdminRoleID(gomock.Any()).

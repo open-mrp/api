@@ -589,6 +589,10 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 			return apiErr
 		}
 
+		if _, apiErr := txSvc.mediators().Site.CreateDefaultSite(txCtx, customerAccountID); apiErr != nil {
+			return apiErr
+		}
+
 		// Link the user to the new customer account
 		accountUserID, apiErr := id.GenID(id.AccountUserIDPrefix, nil)
 		if apiErr != nil {

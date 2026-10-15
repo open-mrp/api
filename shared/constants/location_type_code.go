@@ -4,6 +4,8 @@ package constants
 type LocationTypeCode string
 
 const (
+	// LocationTypeCodeSite indicates a site: a top-level location with an address, such as a plant, warehouse or 3PL.
+	LocationTypeCodeSite LocationTypeCode = "site"
 	// LocationTypeCodeBuilding indicates a building-level location.
 	LocationTypeCodeBuilding LocationTypeCode = "building"
 	// LocationTypeCodeSection indicates a section within a building.
@@ -20,7 +22,7 @@ const (
 
 func (s LocationTypeCode) IsValid() bool {
 	switch s {
-	case LocationTypeCodeBuilding, LocationTypeCodeSection, LocationTypeCodeAisle, LocationTypeCodeRack, LocationTypeCodeShelf, LocationTypeCodeBin:
+	case LocationTypeCodeSite, LocationTypeCodeBuilding, LocationTypeCodeSection, LocationTypeCodeAisle, LocationTypeCodeRack, LocationTypeCodeShelf, LocationTypeCodeBin:
 		return true
 	default:
 		return false
@@ -28,5 +30,5 @@ func (s LocationTypeCode) IsValid() bool {
 }
 
 func (s LocationTypeCode) EnumValues() []string {
-	return []string{string(LocationTypeCodeBuilding), string(LocationTypeCodeSection), string(LocationTypeCodeAisle), string(LocationTypeCodeRack), string(LocationTypeCodeShelf), string(LocationTypeCodeBin)}
+	return []string{string(LocationTypeCodeSite), string(LocationTypeCodeBuilding), string(LocationTypeCodeSection), string(LocationTypeCodeAisle), string(LocationTypeCodeRack), string(LocationTypeCodeShelf), string(LocationTypeCodeBin)}
 }

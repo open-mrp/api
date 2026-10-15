@@ -20146,21 +20146,6 @@ func (m *MockLocationRepo) EXPECT() *MockLocationRepoMockRecorder {
 	return m.recorder
 }
 
-// CountChildren mocks base method.
-func (m *MockLocationRepo) CountChildren(ctx context.Context, accountID, parentID string) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountChildren", ctx, accountID, parentID)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountChildren indicates an expected call of CountChildren.
-func (mr *MockLocationRepoMockRecorder) CountChildren(ctx, accountID, parentID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountChildren", reflect.TypeOf((*MockLocationRepo)(nil).CountChildren), ctx, accountID, parentID)
-}
-
 // Create mocks base method.
 func (m *MockLocationRepo) Create(ctx context.Context, id string, params domain.CreateLocationParams) (*domain.Location, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -20174,6 +20159,21 @@ func (m *MockLocationRepo) Create(ctx context.Context, id string, params domain.
 func (mr *MockLocationRepoMockRecorder) Create(ctx, id, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockLocationRepo)(nil).Create), ctx, id, params)
+}
+
+// DefaultSiteID mocks base method.
+func (m *MockLocationRepo) DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultSiteID", ctx, accountID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DefaultSiteID indicates an expected call of DefaultSiteID.
+func (mr *MockLocationRepoMockRecorder) DefaultSiteID(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultSiteID", reflect.TypeOf((*MockLocationRepo)(nil).DefaultSiteID), ctx, accountID)
 }
 
 // Delete mocks base method.
@@ -20309,6 +20309,21 @@ func (mr *MockLocationRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLocationRepo)(nil).List), ctx, params)
 }
 
+// ListTreeNodes mocks base method.
+func (m *MockLocationRepo) ListTreeNodes(ctx context.Context, accountID string) ([]domain.LocationTreeNode, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTreeNodes", ctx, accountID)
+	ret0, _ := ret[0].([]domain.LocationTreeNode)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListTreeNodes indicates an expected call of ListTreeNodes.
+func (mr *MockLocationRepoMockRecorder) ListTreeNodes(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTreeNodes", reflect.TypeOf((*MockLocationRepo)(nil).ListTreeNodes), ctx, accountID)
+}
+
 // ListTypes mocks base method.
 func (m *MockLocationRepo) ListTypes(ctx context.Context, params domain.ListLocationTypesParams) (*domain.ListLocationTypesResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -20322,6 +20337,36 @@ func (m *MockLocationRepo) ListTypes(ctx context.Context, params domain.ListLoca
 func (mr *MockLocationRepoMockRecorder) ListTypes(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTypes", reflect.TypeOf((*MockLocationRepo)(nil).ListTypes), ctx, params)
+}
+
+// SetDefaultSiteIfUnset mocks base method.
+func (m *MockLocationRepo) SetDefaultSiteIfUnset(ctx context.Context, accountID, siteID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDefaultSiteIfUnset", ctx, accountID, siteID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetDefaultSiteIfUnset indicates an expected call of SetDefaultSiteIfUnset.
+func (mr *MockLocationRepoMockRecorder) SetDefaultSiteIfUnset(ctx, accountID, siteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultSiteIfUnset", reflect.TypeOf((*MockLocationRepo)(nil).SetDefaultSiteIfUnset), ctx, accountID, siteID)
+}
+
+// SiteSeed mocks base method.
+func (m *MockLocationRepo) SiteSeed(ctx context.Context, accountID string) (*domain.AccountSiteSeed, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SiteSeed", ctx, accountID)
+	ret0, _ := ret[0].(*domain.AccountSiteSeed)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SiteSeed indicates an expected call of SiteSeed.
+func (mr *MockLocationRepoMockRecorder) SiteSeed(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SiteSeed", reflect.TypeOf((*MockLocationRepo)(nil).SiteSeed), ctx, accountID)
 }
 
 // Update mocks base method.

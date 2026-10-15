@@ -566,3 +566,87 @@ func (mr *MockProductionRunActivityMedMockRecorder) NotifyRunDeleted(ctx, identi
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyRunDeleted", reflect.TypeOf((*MockProductionRunActivityMed)(nil).NotifyRunDeleted), ctx, identity, run)
 }
+
+// MockSiteMed is a mock of SiteMed interface.
+type MockSiteMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockSiteMedMockRecorder
+	isgomock struct{}
+}
+
+// MockSiteMedMockRecorder is the mock recorder for MockSiteMed.
+type MockSiteMedMockRecorder struct {
+	mock *MockSiteMed
+}
+
+// NewMockSiteMed creates a new mock instance.
+func NewMockSiteMed(ctrl *gomock.Controller) *MockSiteMed {
+	mock := &MockSiteMed{ctrl: ctrl}
+	mock.recorder = &MockSiteMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSiteMed) EXPECT() *MockSiteMedMockRecorder {
+	return m.recorder
+}
+
+// CreateDefaultSite mocks base method.
+func (m *MockSiteMed) CreateDefaultSite(ctx context.Context, accountID string) (*domain.Location, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDefaultSite", ctx, accountID)
+	ret0, _ := ret[0].(*domain.Location)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateDefaultSite indicates an expected call of CreateDefaultSite.
+func (mr *MockSiteMedMockRecorder) CreateDefaultSite(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDefaultSite", reflect.TypeOf((*MockSiteMed)(nil).CreateDefaultSite), ctx, accountID)
+}
+
+// DefaultSiteID mocks base method.
+func (m *MockSiteMed) DefaultSiteID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultSiteID", ctx, accountID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DefaultSiteID indicates an expected call of DefaultSiteID.
+func (mr *MockSiteMedMockRecorder) DefaultSiteID(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultSiteID", reflect.TypeOf((*MockSiteMed)(nil).DefaultSiteID), ctx, accountID)
+}
+
+// LocationIDsInSites mocks base method.
+func (m *MockSiteMed) LocationIDsInSites(ctx context.Context, accountID string, siteIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LocationIDsInSites", ctx, accountID, siteIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LocationIDsInSites indicates an expected call of LocationIDsInSites.
+func (mr *MockSiteMedMockRecorder) LocationIDsInSites(ctx, accountID, siteIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocationIDsInSites", reflect.TypeOf((*MockSiteMed)(nil).LocationIDsInSites), ctx, accountID, siteIDs)
+}
+
+// Resolve mocks base method.
+func (m *MockSiteMed) Resolve(ctx context.Context, accountID string, siteID *string, param string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resolve", ctx, accountID, siteID, param)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Resolve indicates an expected call of Resolve.
+func (mr *MockSiteMedMockRecorder) Resolve(ctx, accountID, siteID, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockSiteMed)(nil).Resolve), ctx, accountID, siteID, param)
+}

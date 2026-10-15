@@ -903,7 +903,7 @@ Docstrings
   - Remove the deprecated `GET …/actions/export`; keep `POST …/actions/export` (job).
 - [ ] **N3** Public `GET /v1/operations/inventory-levels?item_ids[]&location_ids[]&as_of` (was internal `/inventories`): `{ item (expandable), location (expandable), on_hand, reserved, available_to_promise, short }` (Quantities). `GET /v1/catalog/items/{id}/inventory` kept, same shape.
 - [ ] **N4** Lot default: `quantity: float64` + `unit` → `lot: Quantity | null` (`null` = no lot convention; was `0`); `item` / `product_line` (`Entity`) → expandable references; `source` kept.
-- [ ] **N5** Locations: remove `/location-types` (E1; `type` enum stays); add `status: active | archived`; delete → 409 `resource_in_use` while stock, movements or child locations reference it; `children` expandable List (first 10 + `next_page_url`); new `parent_ids[]` filter.
+- [x] **N5** Locations: remove `/location-types` (E1; `type` enum stays); add `status: active | archived`; delete → 409 `resource_in_use` while stock, movements or child locations reference it; `children` expandable List (first 10 + `next_page_url`); new `parent_ids[]` filter. *(INV2: `/location-types` is internal and preview.9-only; delete also blocks on deliveries, work centers, batches and the account's default site; the tree refuses cycles; archived locations can't be a new parent or a stocking location.)*
 
 Docstrings
 
@@ -1337,6 +1337,9 @@ These are decisions where our design differs from common ERP practice. They supe
   - Location `type` gains `site`, a top-level location with an `address` (a plant, warehouse or 3PL). Every account has one default site (`settings`), created from today's top-level location.
   - Nullable, expandable `site` on sales orders (ship-from; defaults to the account's default site), shipments and picks (from the order), purchase orders and receiving (receive-at), jobs and work orders (where made), and inventory levels (filter `site_ids[]`).
   - Additive multi-site later; a single-site account never sets it.
+  - [x] *(INV2)* Location `type: site` with expandable `address` (`address_id` on writes; only sites have one; sites are top-level). `account.default_site_id` (internal, no endpoint yet): data migration 00019 makes each account's top-level location (an existing site first, else the oldest) its default site at the account's shipping address; new accounts get one at creation (`SiteMed.CreateDefaultSite`: an active site named after the account, at its shipping address when it has one) from registration, sandbox creation, portal customer registration and supplier creation; merchant-created customers are left to CUS (one call after the customer account insert). An account with no default site has its first site claim the default. The default site can't be archived, retyped or deleted. A location under no site belongs to the default site.
+  - [ ] Document `site` fields: each document unit (SO1, PO, FUL1, JOB) adds its own, reusing core `SiteMed.Resolve` (named site or the default; 422 on a non-site, `resource_archived` on an archived one) and gateway `resourceloaders.StashSiteID` + `resourceregistry.SiteSub` (register the `site` include key against `location`).
+  - [ ] Inventory levels `site_ids[]` → INV1 (no per-location levels endpoint exists yet): expand the filter with core `SiteMed.LocationIDsInSites` and filter levels by those location IDs.
 - [x] **Q3 Commercial vs physical grouping.**
   - **Product lines** hold commercial policy: customer access, portal visibility default, commission and freight policy, sales targets and territories, price-list scope, and `supply` default (O3).
   - **Item categories** hold physical grouping: item `type`, properties and attributes, and production defaults. `default_lot_size` moves from product lines to categories (lot-size defaults inherit item → category → account).
@@ -1625,6 +1628,7 @@ Inventory
 - Stock changes: `PATCH /items/{id}/inventory` → `POST /operations/inventory-movements` (returns the movement, with `reason` enum); bulk reconcile → `inventory-movements/actions/bulk-create` (202 job).
 - Change logs → inventory movements: `action_type` → `type` (`receipt | shipment | consumption | output | transfer | adjustment | reconciliation | return`), `responsible_*` → `actor`; filters `actor_ids`/`actor_types`/`occurred_after`/`occurred_before`; deprecated GET export removed.
 - New public `inventory-levels` list for many items/locations; lot default `quantity` float → `lot` Quantity or null; `/location-types` removed; locations archivable.
+- Locations: new type `site` (top-level, with `address`); each account's top-level location became its default site, which can't be archived, retyped, moved under a parent or deleted. Deleting a location in use is 409 `resource_in_use` (was 422 for children only). `include=children` holds the first 10 with `next_page_url` (list with `parent_ids[]`). A parent can't be archived or one of the location's own descendants; a site can't be a child. On preview.9 a site reads as `building`.
 
 Fulfillment
 - Shipments, shipping cases, deliveries move to public routes; pick `pick` → `pick-all`, `void` → `reset` (POST); pick line `quantity` → `picked_quantity`; `finished_at` → `completed_at`.

@@ -85,7 +85,6 @@ public_docstrings PATCH /v1/identity/account-users/{id}
 
 
 public_docstrings PATCH /v1/operations/departments/{id}
-public_docstrings PATCH /v1/operations/locations/{id}
 public_docstrings PATCH /v1/operations/machines/{id}
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
 public_docstrings PATCH /v1/operations/scanning-stations/{id}
@@ -166,8 +165,6 @@ search_documented GET /v1/operations/demand-overrides
 search_documented GET /v1/operations/departments
 search_documented GET /v1/operations/inventories
 search_documented GET /v1/operations/inventory-change-logs
-search_documented GET /v1/operations/location-types
-search_documented GET /v1/operations/locations
 search_documented GET /v1/operations/machine-downtime-events
 search_documented GET /v1/operations/machines
 search_documented GET /v1/operations/machines/{id}/items

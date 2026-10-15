@@ -21,7 +21,7 @@ type DeleteCustomerRequest struct {
 
 // Deletes a customer.
 //
-// Fails with a conflict error if any sales orders still reference the customer; delete or reassign those orders, or merge the customer into another first.
+// Only while no order, invoice, shipment or child customer references it. Its own price list is deleted with it. Archive it instead, or merge it into another customer.
 type DeleteCustomerEndpoint struct{}
 
 func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteC
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCustomerRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(CustomerSvc).DeleteCustomer, constants.ObjectTypeCustomer, "id")
 		},

@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -14,240 +15,122 @@ func init() {
 		ObjectType: constants.ObjectTypeCustomer,
 		Load:       resourceloaders.LoadCustomers,
 		Subs: []include.SubField{
-			valueShapeSub(constants.ObjectTypeCustomer, "credit_limit", customerID, func(p, v any) { p.(*apiresource.Customer).CreditLimit = v.(*apiresource.Money) }),
-			{Key: "contact_info", Populate: populateContactInfoOnCustomer},
-			{Key: "freight_preferences", Populate: populateFreightPreferencesOnCustomer},
-			// freight_preferences.carrier is fetched by id via LoadCarriers (not built inline) so the loaded
-			// Carrier carries its service_level_ids preview, enabling the nested freight_preferences.carrier.service_levels include.
-			{Key: "freight_preferences.carrier", Target: constants.ObjectTypeCarrier, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractFPCarrierIDFromCustomer, Populate: populateCarrierOnCustomerFP},
-			{Key: "freight_preferences.service_level", Populate: populateServiceLevelOnCustomerFP},
-			{Key: "defaults", Populate: populateDefaultsOnCustomer},
-			{Key: "defaults.payment_term", Populate: populatePaymentTermOnCustomerDefaults},
-			{Key: "defaults.shipping_term", Populate: populateShippingTermOnCustomerDefaults},
-			{Key: "defaults.priority", Populate: populatePriorityOnCustomerDefaults},
-			{
-				Key:         "defaults.sales_rep",
-				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractSalesRepIDFromCustomerDefaults,
-				Populate:    populateSalesRepOnCustomerDefaults,
-			},
-			{Key: "notification_preferences", Populate: populateNotificationPreferencesOnCustomer},
-			{Key: "bill_to_address", Populate: populateBillToAddressOnCustomer},
-			{Key: "ship_to_address", Populate: populateShipToAddressOnCustomer},
-			{Key: "type", Populate: populateTypeOnCustomer},
+			customerRef("group", constants.ObjectTypeAccountGroup, resourceloaders.CustomerMetaGroupID, func(c *apiresource.Customer, v any) {
+				c.Group = v.(*apiresource.AccountGroup)
+			}),
 			{Key: "price_groups", Populate: populatePriceGroupsOnCustomer},
-			{Key: "parent_account", Target: constants.ObjectTypeCustomer, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractParentAccountIDFromCustomer, Populate: populateParentAccountOnCustomer},
-			{Key: "child_accounts", Target: constants.ObjectTypeCustomer, Cardinality: include.CardinalityList, ExtractIDs: extractChildAccountIDsFromCustomer, Populate: populateChildAccountsOnCustomer},
+			customerRef("parent_customer", constants.ObjectTypeCustomer, resourceloaders.CustomerMetaParentCustomerID, func(c *apiresource.Customer, v any) {
+				c.ParentCustomer = v.(*apiresource.Customer)
+			}),
+			{Key: "child_customers", Target: constants.ObjectTypeCustomer, Cardinality: include.CardinalityList, ExtractIDs: extractChildCustomerIDs, Populate: populateChildCustomers},
+			{Key: "notification_recipients", Populate: populateNotificationRecipientsOnCustomer},
+			{Key: "notification_recipients.account_user", Populate: populateRecipientAccountUsersOnCustomer},
+			customerRef("defaults.carrier", constants.ObjectTypeCarrier, resourceloaders.CustomerMetaCarrierID, func(c *apiresource.Customer, v any) {
+				c.Defaults.Carrier = v.(*apiresource.Carrier)
+			}),
+			customerRef("defaults.service_level", constants.ObjectTypeServiceLevel, resourceloaders.CustomerMetaServiceLevelID, func(c *apiresource.Customer, v any) {
+				c.Defaults.ServiceLevel = v.(*apiresource.ServiceLevel)
+			}),
+			customerRef("defaults.payment_term", constants.ObjectTypePaymentTerm, resourceloaders.CustomerMetaPaymentTermID, func(c *apiresource.Customer, v any) {
+				c.Defaults.PaymentTerm = v.(*apiresource.PaymentTerm)
+			}),
+			customerRef("defaults.shipping_term", constants.ObjectTypeShippingTerm, resourceloaders.CustomerMetaShippingTermID, func(c *apiresource.Customer, v any) {
+				c.Defaults.ShippingTerm = v.(*apiresource.ShippingTerm)
+			}),
+			customerRef("defaults.sales_rep", constants.ObjectTypeAccountUser, resourceloaders.CustomerMetaSalesRepID, func(c *apiresource.Customer, v any) {
+				c.Defaults.SalesRep = v.(*apiresource.AccountUser)
+			}),
+			customerRef("defaults.receive_calendar", constants.ObjectTypeOperatingCalendar, resourceloaders.CustomerMetaReceiveCalendarID, func(c *apiresource.Customer, v any) {
+				c.Defaults.ReceiveCalendar = v.(*apiresource.OperatingCalendar)
+			}),
+			{Key: "defaults.bill_to_address", Populate: func(ctx context.Context, parent any, _ map[string]any) {
+				c := parent.(*apiresource.Customer)
+				if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaBillToAddress); ok && c.Defaults != nil {
+					c.Defaults.BillToAddress = v.(*apiresource.Address)
+				}
+			}},
+			{Key: "defaults.ship_to_address", Populate: func(ctx context.Context, parent any, _ map[string]any) {
+				c := parent.(*apiresource.Customer)
+				if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaShipToAddress); ok && c.Defaults != nil {
+					c.Defaults.ShipToAddress = v.(*apiresource.Address)
+				}
+			}},
 		},
 	})
 }
 
-func customerID(p any) string { return p.(*apiresource.Customer).ID }
-
-func populateContactInfoOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "contact_info")
-	if !ok {
-		return
+// customerRef declares an include that loads one record a customer names by the ID its presenter stashed under
+// metaKey, and sets it with set.
+func customerRef(key string, target constants.ObjectType, metaKey string, set func(c *apiresource.Customer, v any)) include.SubField {
+	idOf := func(ctx context.Context, parent any) string {
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, parent.(*apiresource.Customer).ID, metaKey)
+		return id
 	}
-	c.ContactInfo = v.(*apiresource.CustomerContactInfo)
-}
-
-func populateFreightPreferencesOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "freight_preferences")
-	if !ok {
-		return
+	return include.SubField{
+		Key:         key,
+		Target:      target,
+		Cardinality: include.CardinalityOnePtr,
+		ExtractIDs: func(ctx context.Context, parent any) []string {
+			if id := idOf(ctx, parent); id != "" {
+				return []string{id}
+			}
+			return nil
+		},
+		Populate: func(ctx context.Context, parent any, loaded map[string]any) {
+			c := parent.(*apiresource.Customer)
+			if c.Defaults == nil {
+				c.Defaults = &apiresource.CustomerDefaults{}
+			}
+			if v, ok := loaded[idOf(ctx, parent)]; ok && v != nil {
+				set(c, v)
+			}
+		},
 	}
-	c.FreightPreferences = v.(*apiresource.CustomerFreightPreferences)
-}
-
-func populateDefaultsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults")
-	if !ok {
-		return
-	}
-	c.Defaults = v.(*apiresource.CustomerDefaults)
-}
-
-func populateNotificationPreferencesOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "notification_preferences")
-	if !ok {
-		return
-	}
-	c.NotificationPreferences = v.(*apiresource.CustomerNotificationPreferences)
-}
-
-func populateBillToAddressOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "bill_to_address")
-	if !ok {
-		return
-	}
-	c.BillToAddress = v.(*apiresource.Address)
-}
-
-func populateShipToAddressOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "ship_to_address")
-	if !ok {
-		return
-	}
-	c.ShipToAddress = v.(*apiresource.Address)
-}
-
-func populateTypeOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "type")
-	if !ok {
-		return
-	}
-	c.Type = v.(*apiresource.AccountGroup)
 }
 
 func populatePriceGroupsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "price_groups")
-	if !ok {
-		return
-	}
-	c.PriceGroups = v.(*apiresource.List[apiresource.AccountGroup])
-}
-
-func extractParentAccountIDFromCustomer(ctx context.Context, parent any) []string {
-	c := parent.(*apiresource.Customer)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateParentAccountOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
-	c := parent.(*apiresource.Customer)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
-		c.ParentAccount = v.(*apiresource.Customer)
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaPriceGroups); ok {
+		c.PriceGroups = v.(*apiresource.List[apiresource.AccountGroup])
 	}
 }
 
-func extractChildAccountIDsFromCustomer(ctx context.Context, parent any) []string {
+func extractChildCustomerIDs(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaChildCustomerIDs)
 	return ids
 }
 
-func populateChildAccountsOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
+func populateChildCustomers(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	ids := extractChildCustomerIDs(ctx, parent)
 	items := make([]apiresource.Customer, 0, len(ids))
 	for _, id := range ids {
-		if v, ok := loaded[id]; ok {
-			items = append(items, *(v.(*apiresource.Customer)))
+		if v, ok := loaded[id].(*apiresource.Customer); ok {
+			items = append(items, *v)
 		}
 	}
-	c.ChildAccounts = apiresource.NewList(items, apiresource.PageInfo{})
+	c.ChildCustomers = apiresource.NewList(items, apiresource.PageInfo{})
 }
 
-// extractFPCarrierIDFromCustomer returns the customer's default-carrier id (stashed by stashCustomerMeta) so the resolver fetches the full Carrier via LoadCarriers — which carries the service_level_ids preview the nested freight_preferences.carrier.service_levels include needs.
-func extractFPCarrierIDFromCustomer(ctx context.Context, parent any) []string {
+func populateNotificationRecipientsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateCarrierOnCustomerFP(ctx context.Context, parent any, loaded map[string]any) {
-	c := parent.(*apiresource.Customer)
-	if c.FreightPreferences == nil {
-		return
-	}
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
-		c.FreightPreferences.Carrier = v.(*apiresource.Carrier)
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaRecipients); ok {
+		c.NotificationRecipients = v.(*apiresource.List[apiresource.EmailRecipient])
 	}
 }
 
-func populateServiceLevelOnCustomerFP(ctx context.Context, parent any, _ map[string]any) {
+// populateRecipientAccountUsersOnCustomer sets each recipient's account user, which core-service loaded with the
+// recipients: they belong to the customer's account, which the account-user loader can't reach.
+func populateRecipientAccountUsersOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	if c.FreightPreferences == nil {
+	if c.NotificationRecipients == nil {
+		populateNotificationRecipientsOnCustomer(ctx, parent, nil)
+	}
+	if c.NotificationRecipients == nil {
 		return
 	}
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "fp_service_level")
-	if !ok {
-		return
-	}
-	c.FreightPreferences.ServiceLevel = v.(*apiresource.ServiceLevel)
-}
-
-func populatePaymentTermOnCustomerDefaults(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	if c.Defaults == nil {
-		return
-	}
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_payment_term")
-	if !ok {
-		return
-	}
-	c.Defaults.PaymentTerm = v.(*apiresource.PaymentTerm)
-}
-
-func populateShippingTermOnCustomerDefaults(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	if c.Defaults == nil {
-		return
-	}
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_shipping_term")
-	if !ok {
-		return
-	}
-	c.Defaults.ShippingTerm = v.(*apiresource.ShippingTerm)
-}
-
-func populatePriorityOnCustomerDefaults(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	if c.Defaults == nil {
-		return
-	}
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_priority")
-	if !ok {
-		return
-	}
-	c.Defaults.Priority = v.(*apiresource.Priority)
-}
-
-func extractSalesRepIDFromCustomerDefaults(ctx context.Context, parent any) []string {
-	c := parent.(*apiresource.Customer)
-	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateSalesRepOnCustomerDefaults(ctx context.Context, parent any, loaded map[string]any) {
-	c := parent.(*apiresource.Customer)
-	if c.Defaults == nil {
-		return
-	}
-	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
-		c.Defaults.SalesRep = v.(*apiresource.AccountUser)
+	for i := range c.NotificationRecipients.Data {
+		c.NotificationRecipients.Data[i].AccountUser = resourceloaders.CustomerRecipientUser(ctx, c.ID, i)
 	}
 }

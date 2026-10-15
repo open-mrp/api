@@ -26,6 +26,8 @@ type ListChildAccountsRequest struct {
 // Returns a paginated list of the accounts linked directly beneath the target account.
 //
 // Only direct children are returned, not children of those children. Results are ordered by when your customer record for each child was created, newest first, and the `q` search term matches the child account's name.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets a customer's `parent_customer_id` with Update Customer.
 type ListChildAccountsEndpoint struct{}
 
 func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListChildAccountsRequest, *apiresource.List[apiresource.ChildAccount]] {
@@ -37,7 +39,6 @@ func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChildAccount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},

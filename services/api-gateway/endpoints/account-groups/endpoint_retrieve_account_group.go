@@ -31,7 +31,6 @@ func (e *RetrieveAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).GetAccountGroup

@@ -3,6 +3,7 @@ package accountgroupep
 import (
 	"context"
 	"fmt"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -95,12 +96,20 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 		freightPolicy = v
 	}
 	pbReq := &pb.CreateAccountGroupRequest{
-		Name:                req.Name,
-		Type:                string(req.Type),
-		CommissionPolicy:    string(commissionPolicy),
-		FreightPolicy:       string(freightPolicy),
-		Description:         req.Description.Ptr(),
-		DefaultLeadTimeDays: req.DefaultLeadTimeDays.Ptr(),
+		Name:             req.Name,
+		Type:             string(fieldpb.ApplyOptional(constants.AccountGroupTypeTypeGroup, req.Type)),
+		CommissionPolicy: string(commissionPolicy),
+		FreightPolicy:    string(freightPolicy),
+		Description:      req.Description.Ptr(),
+	}
+	if defaults, ok := req.Defaults.Value(); ok {
+		patch, apiErr := apirequest.LeadTimeDaysPatch(defaults.LeadTime, "defaults.lead_time")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if patch != nil && !patch.Clear {
+			pbReq.DefaultLeadTimeDays = patch.Value
+		}
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountGroupResponse, error) {
@@ -114,12 +123,18 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 
 func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountGroupRequest{
-		Id:                  req.AccountGroupID,
-		Name:                req.Name.Ptr(),
-		Description:         fieldpb.StringClearableToProto(req.Description),
-		CommissionPolicy:    req.CommissionPolicy.Ptr().StringPtr(),
-		FreightPolicy:       req.FreightPolicy.Ptr().StringPtr(),
-		DefaultLeadTimeDays: fieldpb.Int32ClearableToProto(req.DefaultLeadTimeDays),
+		Id:               req.AccountGroupID,
+		Name:             req.Name.Ptr(),
+		Description:      fieldpb.StringClearableToProto(req.Description),
+		CommissionPolicy: req.CommissionPolicy.Ptr().StringPtr(),
+		FreightPolicy:    req.FreightPolicy.Ptr().StringPtr(),
+	}
+	if defaults, ok := req.Defaults.Value(); ok {
+		patch, apiErr := apirequest.LeadTimeDaysPatch(defaults.LeadTime, "defaults.lead_time")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		pbReq.DefaultLeadTimeDays = patch
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupResponse, error) {

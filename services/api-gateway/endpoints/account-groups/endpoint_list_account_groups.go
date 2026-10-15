@@ -17,17 +17,15 @@ import (
 // Request to list account groups.
 type ListAccountGroupsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name` or `description`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filters results to account groups of the given type.
-	Type *constants.AccountGroupType `query:"type"`
+	// Only return groups of this type.
+	Type *constants.AccountGroupType `query:"type" visibility:"internal"`
 }
 
-// Returns a paginated list of account groups, newest first.
+// Returns a list of account groups.
 //
-// The `q` search term matches the group's name and description.
+// Sorted by creation date, newest first.
 type ListAccountGroupsEndpoint struct{}
 
 func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]] {
@@ -40,7 +38,6 @@ func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError) {
 			return svc.(AccountGroupSvc).ListAccountGroups

@@ -44,7 +44,7 @@ func (carrierForgeToPreview9) ForcedIncludes(objectType object.Type) []string {
 	case constants.ObjectTypeServiceLevel:
 		return []string{"carrier", "carrier.default_service_level"}
 	case constants.ObjectTypeCustomer:
-		return []string{"freight_preferences.carrier.default_service_level"}
+		return []string{"defaults.carrier.default_service_level"}
 	}
 	return nil
 }

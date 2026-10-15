@@ -57,5 +57,5 @@ func TestPreview9_PolicyValuesUpgradeInCustomerFilters(t *testing.T) {
 	q := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeCustomer, customersRoute, url.Values{
 		"commission_status_codes[]": {"commission_exempt"}, "freight_status_codes": {"free_freight"},
 	})
-	assert.Equal(t, url.Values{"commission_status_codes[]": {"exempt"}, "freight_status_codes": {"free"}}, q)
+	assert.Equal(t, url.Values{"commission_policies[]": {"exempt"}, "freight_policies": {"free"}}, q)
 }

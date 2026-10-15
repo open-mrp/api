@@ -131,7 +131,7 @@ func TestLoadCustomerProductLineAccess_EmbedsTheRealRecords(t *testing.T) {
 		t.Fatalf("LoadCustomerProductLineAccess: %v", apiErr)
 	}
 	access := out["ac_buyer"].(*apiresource.CustomerProductLineAccess)
-	if access.Customer == nil || access.Customer.Object != constants.ObjectTypeCustomer || access.Customer.Status != "normal" || !access.Customer.CreatedAt.Equal(accessTestCreatedAt) {
+	if access.Customer == nil || access.Customer.Object != constants.ObjectTypeCustomer || access.Customer.Standing != constants.CustomerStandingNormal || !access.Customer.CreatedAt.Equal(accessTestCreatedAt) {
 		t.Fatalf("customer = %+v, want the real customer record", access.Customer)
 	}
 	if access.ProductLines == nil || len(access.ProductLines.Data) != 2 {

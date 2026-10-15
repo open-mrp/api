@@ -21,9 +21,7 @@ type DeleteAccountGroupRequest struct {
 
 // Deletes an account group.
 //
-// Deletion fails with a validation error while the group is still in use: a `type_group` that is set as a customer's type cannot be deleted, and no group can be deleted while it grants product line access, backs a volume discount, or is attached to a customer registration flow.
-//
-// Deleting a `pricing_group` first unassigns it from every customer it was applied to, so those customers immediately stop receiving its pricing.
+// Only while no customer has it as their `group`, and it backs no product line access or registration flow. Its price list assignments are removed with it.
 type DeleteAccountGroupEndpoint struct{}
 
 func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *object.Deleted] {
@@ -37,7 +35,6 @@ func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(AccountGroupSvc).DeleteAccountGroup, constants.ObjectTypeAccountGroup, "id")
 		},

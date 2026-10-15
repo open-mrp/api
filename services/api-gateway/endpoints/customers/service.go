@@ -23,6 +23,14 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func standingsToStrings(codes []constants.CustomerStanding) []string {
+	out := make([]string, len(codes))
+	for i, c := range codes {
+		out[i] = string(c)
+	}
+	return out
+}
+
 func accountStatusCodesToStrings(codes []constants.AccountStatusCode) []string {
 	out := make([]string, len(codes))
 	for i, c := range codes {
@@ -69,7 +77,7 @@ type CustomerSvc interface {
 	GetCustomerLeadTime(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError)
 	ListNotificationRecipients(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
-	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError)
+	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 	ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
@@ -84,13 +92,6 @@ type customerSvcImpl struct {
 }
 
 var customerSvcTracer = tracing.GetTracer("api-gateway.endpoints.customers.service")
-
-var customerIncludes = []string{
-	"bill_to_address", "ship_to_address", "type", "parent_account",
-	"freight_preferences", "freight_preferences.carrier", "freight_preferences.service_level",
-	"defaults", "defaults.payment_term", "defaults.shipping_term", "defaults.priority", "defaults.sales_rep",
-	"contact_info", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
-}
 
 func (c *CustomerSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -110,50 +111,49 @@ func NewCustomerSvc(config *CustomerSvcConfig) CustomerSvc {
 }
 
 func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
+	if apiErr := req.CreatedRange.Validate(); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListCustomersRequest{
 		Cursor:                req.Cursor,
 		Limit:                 req.Limit,
 		Query:                 req.Query,
-		CustomerGroupIds:      req.CustomerGroupIDs,
+		CustomerGroupIds:      req.GroupIDs,
 		PricingGroupIds:       req.PricingGroupIDs,
 		SalesRepIds:           req.SalesRepIDs,
-		StatusCodes:           accountStatusCodesToStrings(req.StatusCodes),
+		StatusCodes:           standingsToStrings(req.Standings),
 		ShippingTermIds:       req.ShippingTermIDs,
 		PaymentTermIds:        req.PaymentTermIDs,
-		CommissionStatusCodes: commissionPoliciesToStrings(req.CommissionPolicyCodes),
-		FreightStatusCodes:    freightPoliciesToStrings(req.FreightPolicyCodes),
+		CommissionStatusCodes: commissionPoliciesToStrings(req.CommissionPolicies),
+		FreightStatusCodes:    freightPoliciesToStrings(req.FreightPolicies),
 		CarrierIds:            req.CarrierIDs,
 		ServiceLevelIds:       req.ServiceLevelIDs,
-		IsParentAccount:       parentAccountStatusToBoolPtr(req.ParentAccountStatus),
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
-		Includes:              include.FilterIncludes(ctx, customerIncludes...),
+		Created:               req.CreatedRange.ToProto(),
+		Includes:              resourceloaders.CustomerCoreIncludes(ctx),
 	}
-
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	for _, s := range req.Statuses {
+		pbReq.Statuses = append(pbReq.Statuses, string(s))
 	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	for _, t := range req.RelationshipTypes {
+		pbReq.RelationshipTypes = append(pbReq.RelationshipTypes, string(t))
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListCustomersResponse, error) {
 			return m.coreClient.ListCustomers(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	if resp == nil {
 		return apiresource.NewList[apiresource.Customer](nil, apiresource.PageInfo{}), nil
 	}
 	items := make([]apiresource.Customer, len(resp.Customers))
 	for i, c := range resp.Customers {
-		items[i] = customerFromProto(c)
-		stashCustomerMeta(ctx, &items[i], c)
+		items[i] = *resourceloaders.CustomerFromProto(ctx, c)
 	}
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -197,7 +197,7 @@ func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustom
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.GetCustomerRequest{
 		Id:       req.CustomerID,
-		Includes: include.FilterIncludes(ctx, customerIncludes...),
+		Includes: resourceloaders.CustomerCoreIncludes(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.get", domain.ServiceName,
@@ -209,62 +209,51 @@ func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomer
 		return nil, apiErr
 	}
 
-	result := customerFromProto(resp.Customer)
-	stashCustomerMeta(ctx, &result, resp.Customer)
-	return &result, nil
+	return resourceloaders.CustomerFromProto(ctx, resp.Customer), nil
 }
 
 func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
-	statusCode := constants.AccountStatusCodeNormal
-	if v, ok := req.StatusCode.Value(); ok {
-		statusCode = v
-	}
-	commissionPolicy := constants.CommissionPolicyExempt
-	if v, ok := req.CommissionPolicy.Value(); ok {
-		commissionPolicy = v
-	}
-	freightPolicy := constants.FreightPolicyBilled
-	if v, ok := req.FreightPolicy.Value(); ok {
-		freightPolicy = v
-	}
-	priorityCode := constants.PriorityCodeNormal
-	if v, ok := req.DefaultPriorityCode.Value(); ok {
-		priorityCode = v
-	}
+	standing := string(fieldpb.ApplyOptional(constants.CustomerStandingNormal, req.Standing))
+	commissionPolicy := string(fieldpb.ApplyOptional(constants.CommissionPolicyExempt, req.CommissionPolicy))
+	freightPolicy := string(fieldpb.ApplyOptional(constants.FreightPolicyBilled, req.FreightPolicy))
 
-	statusCodeStr := string(statusCode)
-	commissionPolicyStr := string(commissionPolicy)
-	freightPolicyStr := string(freightPolicy)
-	priorityCodeStr := string(priorityCode)
+	leadTime, apiErr := apirequest.OptionalLeadTimeDays(req.Defaults.LeadTime, "defaults.lead_time")
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
 	pbReq := &pb.CreateCustomerRequest{
 		Name:                  req.Name,
 		Number:                req.Number.Ptr(),
-		Note:                  req.Note.Ptr(),
-		Email:                 req.Email.Ptr(),
-		Phone:                 req.Phone.Ptr(),
-		Url:                   req.URL.Ptr(),
-		StatusCode:            &statusCodeStr,
-		CommissionPolicy:      &commissionPolicyStr,
-		FreightPolicy:         &freightPolicyStr,
-		DefaultLeadTimeDays:   req.LeadTimeDays.Ptr(),
-		ReceiveCalendarId:     req.ReceiveCalendarID.Ptr(),
-		FulfillmentPolicyCode: req.FulfillmentPolicy.Ptr().StringPtr(),
-		DefaultCarrierId:      &req.DefaultCarrierID,
-		DefaultServiceLevelId: req.DefaultServiceLevelID.Ptr(),
-		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
-		DefaultShippingTermId: &req.DefaultShippingTermID,
-		DefaultPriorityCode:   &priorityCodeStr,
-		DefaultSalesRepId:     req.DefaultSalesRepID.Ptr(),
-		CustomerPriceGroupIds: req.CustomerPriceGroupIDs,
-		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
-		CarrierBillingType:    req.CarrierBillingType.Ptr().StringPtr(),
-		CarrierBillingAccount: req.CarrierBillingAccount.Ptr(),
-		Includes:              include.FilterIncludes(ctx, customerIncludes...),
+		Instructions:          req.Instructions.Ptr(),
+		StatusCode:            &standing,
+		ArchiveStatus:         req.Status.Ptr().StringPtr(),
+		CommissionPolicy:      &commissionPolicy,
+		FreightPolicy:         &freightPolicy,
+		DefaultLeadTimeDays:   leadTime,
+		ReceiveCalendarId:     req.Defaults.ReceiveCalendarID.Ptr(),
+		Supply:                req.Defaults.Supply.Ptr().StringPtr(),
+		DefaultCarrierId:      &req.Defaults.CarrierID,
+		DefaultServiceLevelId: req.Defaults.ServiceLevelID.Ptr(),
+		DefaultPaymentTermId:  &req.Defaults.PaymentTermID,
+		DefaultShippingTermId: &req.Defaults.ShippingTermID,
+		DefaultSalesRepId:     req.Defaults.SalesRepID.Ptr(),
+		CustomerPriceGroupIds: req.PriceGroupIDs,
+		CustomerTypeGroupId:   &req.GroupID,
+		ParentCustomerId:      req.ParentCustomerID.Ptr(),
+		Includes:              resourceloaders.CustomerCoreIncludes(ctx),
 	}
+	if contact, ok := req.Contact.Value(); ok {
+		pbReq.Email, pbReq.Phone, pbReq.Url = contact.Email.ValuePtr(), contact.Phone.ValuePtr(), contact.URL.ValuePtr()
+	}
+	billingType := string(constants.CarrierBillingTypeSender)
+	if billing, ok := req.CarrierBilling.Value(); ok {
+		billingType = string(fieldpb.ApplyOptional(constants.CarrierBillingTypeSender, billing.Type))
+		pbReq.CarrierBillingAccount = billing.AccountNumber.ValuePtr()
+	}
+	pbReq.CarrierBillingType = &billingType
 
 	pbReq.CreditLimit = apirequest.OptionalMoneyToProto(req.CreditLimit)
-
 	pbReq.BillToAddress = addressInputToCustomerProto(&req.BillToAddress)
 	pbReq.ShipToAddress = addressInputToCustomerProto(&req.ShipToAddress)
 
@@ -272,14 +261,10 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateCustomerResponse, error) {
 			return m.coreClient.CreateCustomer(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := customerFromProto(resp.Customer)
-	stashCustomerMeta(ctx, &result, resp.Customer)
-	return &result, nil
+	return resourceloaders.CustomerFromProto(ctx, resp.Customer), nil
 }
 
 func (m *customerSvcImpl) DeleteCustomer(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -452,25 +437,19 @@ func accountUserFromRecipientProto(au *pb.AccountUserDetail) *apiresource.Accoun
 	}
 }
 
-func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {
+func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 	pbReq := &pb.MergeCustomersRequest{
 		TargetCustomerId:  req.CustomerID,
 		SourceCustomerIds: req.SourceCustomerIDs,
-		Includes:          include.FilterIncludes(ctx, customerIncludes...),
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.merge", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.MergeCustomersResponse, error) {
 			return m.coreClient.MergeCustomers(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := customerFromProto(resp.Customer)
-	stashCustomerMeta(ctx, &result, resp.Customer)
-	return &result, nil
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
@@ -478,46 +457,56 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Id:                       req.CustomerID,
 		Name:                     req.Name.Ptr(),
 		Number:                   req.Number.Ptr(),
-		Note:                     fieldpb.StringClearableToProto(req.Note),
-		Email:                    fieldpb.StringClearableToProto(req.Email),
-		Phone:                    fieldpb.StringClearableToProto(req.Phone),
-		Url:                      fieldpb.StringClearableToProto(req.URL),
-		StatusCode:               req.StatusCode.Ptr().StringPtr(),
+		Instructions:             fieldpb.StringClearableToProto(req.Instructions),
+		StatusCode:               req.Standing.Ptr().StringPtr(),
+		ArchiveStatus:            req.Status.Ptr().StringPtr(),
 		CommissionPolicy:         req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:            req.FreightPolicy.Ptr().StringPtr(),
-		DefaultLeadTimeDays:      fieldpb.Int32ClearableToProto(req.LeadTimeDays),
-		ReceiveCalendarId:        fieldpb.StringClearableToProto(req.ReceiveCalendarID),
-		FulfillmentPolicyCode:    fieldpb.EnumClearableToProto(req.FulfillmentPolicy),
-		DefaultCarrierId:         req.DefaultCarrierID.Ptr(),
-		DefaultServiceLevelId:    fieldpb.StringClearableToProto(req.DefaultServiceLevelID),
-		DefaultPaymentTermId:     req.DefaultPaymentTermID.Ptr(),
-		DefaultShippingTermId:    req.DefaultShippingTermID.Ptr(),
-		DefaultPriorityCode:      req.DefaultPriorityCode.Ptr().StringPtr(),
-		DefaultSalesRepId:        fieldpb.StringClearableToProto(req.DefaultSalesRepID),
-		BillToAddressId:          fieldpb.StringClearableToProto(req.BillToAddressID),
-		ShipToAddressId:          fieldpb.StringClearableToProto(req.ShipToAddressID),
-		CustomerPriceGroupIds:    ptrutil.Deref(req.CustomerPriceGroupIDs.Ptr()),
-		CustomerTypeGroupId:      req.CustomerTypeGroupID.Ptr(),
-		CarrierBillingType:       req.CarrierBillingType.Ptr().StringPtr(),
-		CarrierBillingAccount:    fieldpb.StringClearableToProto(req.CarrierBillingAccount),
-		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs.IsSet(),
-		Includes:                 include.FilterIncludes(ctx, customerIncludes...),
+		CustomerPriceGroupIds:    ptrutil.Deref(req.PriceGroupIDs.Ptr()),
+		HasCustomerPriceGroupIds: req.PriceGroupIDs.IsSet(),
+		CustomerTypeGroupId:      req.GroupID.Ptr(),
+		ParentCustomerId:         fieldpb.StringClearableToProto(req.ParentCustomerID),
+		Includes:                 resourceloaders.CustomerCoreIncludes(ctx),
 	}
-
+	if contact, ok := req.Contact.Value(); ok {
+		pbReq.Email = fieldpb.StringClearableToProto(contact.Email)
+		pbReq.Phone = fieldpb.StringClearableToProto(contact.Phone)
+		pbReq.Url = fieldpb.StringClearableToProto(contact.URL)
+	}
+	if billing, ok := req.CarrierBilling.Value(); ok {
+		pbReq.CarrierBillingType = billing.Type.Ptr().StringPtr()
+		pbReq.CarrierBillingAccount = fieldpb.StringClearableToProto(billing.AccountNumber)
+	}
+	if defaults, ok := req.Defaults.Value(); ok {
+		leadTime, apiErr := apirequest.LeadTimeDaysPatch(defaults.LeadTime, "defaults.lead_time")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		pbReq.DefaultLeadTimeDays = leadTime
+		pbReq.DefaultCarrierId = defaults.CarrierID.Ptr()
+		pbReq.DefaultServiceLevelId = fieldpb.StringClearableToProto(defaults.ServiceLevelID)
+		pbReq.DefaultPaymentTermId = defaults.PaymentTermID.Ptr()
+		pbReq.DefaultShippingTermId = defaults.ShippingTermID.Ptr()
+		pbReq.DefaultSalesRepId = fieldpb.StringClearableToProto(defaults.SalesRepID)
+		pbReq.BillToAddressId = fieldpb.StringClearableToProto(defaults.BillToAddressID)
+		pbReq.ShipToAddressId = fieldpb.StringClearableToProto(defaults.ShipToAddressID)
+		pbReq.ReceiveCalendarId = fieldpb.StringClearableToProto(defaults.ReceiveCalendarID)
+		pbReq.Supply = fieldpb.EnumClearableToProto(defaults.Supply)
+	}
+	if recipients, ok := req.NotificationRecipients.Value(); ok {
+		pbReq.NotificationRecipients = recipientsToProto(recipients)
+		pbReq.HasNotificationRecipients = true
+	}
 	pbReq.CreditLimit = apirequest.MoneyFieldToProto(req.CreditLimit)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateCustomerResponse, error) {
 			return m.coreClient.UpdateCustomer(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := customerFromProto(resp.Customer)
-	stashCustomerMeta(ctx, &result, resp.Customer)
-	return &result, nil
+	return resourceloaders.CustomerFromProto(ctx, resp.Customer), nil
 }
 
 func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerAddressInput {
@@ -538,289 +527,6 @@ func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerA
 	}
 }
 
-// --- inline presenter functions ---
-
-func customerFromProto(c *pb.CustomerProto) apiresource.Customer {
-	if c == nil {
-		return apiresource.Customer{}
-	}
-
-	return apiresource.Customer{
-		ID:               c.Id,
-		Object:           constants.ObjectTypeCustomer,
-		Name:             c.Name,
-		Number:           c.Number,
-		Status:           constants.AccountStatusCode(c.Status),
-		RelationshipType: customerRelationshipType(c.IsParentAccount, c.ParentAccount != nil),
-		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
-		Note:             c.Note,
-		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
-		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
-	}
-}
-
-func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.CustomerProto) {
-	if c == nil {
-		return
-	}
-	meta := include.GetLoadMeta(ctx)
-
-	meta.Set(constants.ObjectTypeCustomer, cust.ID, "contact_info", &apiresource.CustomerContactInfo{
-		Object: constants.ObjectTypeCustomerContactInfo,
-		Email:  c.Email,
-		Phone:  c.Phone,
-		URL:    c.Url,
-	})
-
-	fp := buildFreightPreferences(c)
-	meta.Set(constants.ObjectTypeCustomer, cust.ID, "freight_preferences", fp)
-	if c.DefaultCarrier != nil {
-		// Stash only the FK id: the carrier sub fetches the full Carrier via LoadCarriers (so its
-		// service_level_ids preview is available for freight_preferences.carrier.service_levels). Never fabricate.
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "fp_carrier_id", c.DefaultCarrier.Id)
-		fp.Carrier = nil
-	}
-	if c.DefaultServiceLevel != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "fp_service_level", fp.ServiceLevel)
-		fp.ServiceLevel = nil
-	}
-
-	defaults := buildDefaults(c)
-	meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults", defaults)
-	if defaults.PaymentTerm != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_payment_term", defaults.PaymentTerm)
-		defaults.PaymentTerm = nil
-	}
-	if defaults.ShippingTerm != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_shipping_term", defaults.ShippingTerm)
-		defaults.ShippingTerm = nil
-	}
-	if defaults.Priority != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_priority", defaults.Priority)
-		defaults.Priority = nil
-	}
-	if c.DefaultSalesRep != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_sales_rep_id", c.DefaultSalesRep.Id)
-	}
-
-	meta.Set(constants.ObjectTypeCustomer, cust.ID, "notification_preferences", &apiresource.CustomerNotificationPreferences{
-		Object:               constants.ObjectTypeCustomerNotificationPreferences,
-		AcceptsInvoiceEmails: c.AcceptsInvoiceEmails,
-	})
-
-	if c.CreditLimit != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "credit_limit", resourceloaders.MoneyFromProto(c.CreditLimit))
-	}
-
-	if c.BillToAddress != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "bill_to_address", buildCustomerAddress(c.BillToAddress))
-	}
-
-	if c.ShipToAddress != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "ship_to_address", buildCustomerAddress(c.ShipToAddress))
-	}
-
-	if c.TypeGroup != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "type", buildAccountGroupFromProto(c.TypeGroup))
-	}
-
-	priceGroups := make([]apiresource.AccountGroup, len(c.PriceGroups))
-	for i, pg := range c.PriceGroups {
-		priceGroups[i] = buildAccountGroupValueFromProto(pg)
-	}
-	meta.Set(constants.ObjectTypeCustomer, cust.ID, "price_groups",
-		apiresource.NewList(priceGroups, apiresource.PageInfo{}))
-
-	// parent_account and child_accounts are expandable Customer references:
-	// stash the FK ids so LoadCustomers fetches the real Customers on ?include=.
-	// Never fabricate.
-	if c.ParentAccount != nil && c.ParentAccount.Id != "" {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "parent_account_id", c.ParentAccount.Id)
-	}
-	if len(c.ChildAccounts) > 0 {
-		childIDs := make([]string, 0, len(c.ChildAccounts))
-		for _, child := range c.ChildAccounts {
-			if child.Id != "" {
-				childIDs = append(childIDs, child.Id)
-			}
-		}
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "child_account_ids", childIDs)
-	}
-}
-
-// --- helpers ---
-
-func buildFreightPreferences(c *pb.CustomerProto) *apiresource.CustomerFreightPreferences {
-	fp := &apiresource.CustomerFreightPreferences{
-		Object: constants.ObjectTypeCustomerFreightPreferences,
-		Status: constants.FreightPolicy(c.FreightPolicy),
-	}
-
-	if c.DefaultCarrier != nil {
-		carrierVisibility := constants.CustomerPortalVisibilityHidden
-		if c.DefaultCarrier.IsPortalEnabled {
-			carrierVisibility = constants.CustomerPortalVisibilityVisible
-		}
-		carrier := &apiresource.Carrier{
-			ID:               c.DefaultCarrier.Id,
-			Object:           constants.ObjectTypeCarrier,
-			Name:             c.DefaultCarrier.Name,
-			PortalVisibility: carrierVisibility,
-		}
-		if c.DefaultCarrier.CreatedAt != nil {
-			carrier.CreatedAt = c.DefaultCarrier.CreatedAt.AsTime()
-		}
-		if c.DefaultCarrier.UpdatedAt != nil {
-			carrier.UpdatedAt = c.DefaultCarrier.UpdatedAt.AsTime()
-		}
-		fp.Carrier = carrier
-	}
-
-	if c.DefaultServiceLevel != nil {
-		sl := &apiresource.ServiceLevel{
-			ID:     c.DefaultServiceLevel.Id,
-			Object: constants.ObjectTypeServiceLevel,
-			Name:   c.DefaultServiceLevel.Name,
-		}
-		if c.DefaultServiceLevel.ServiceLevelToken != nil {
-			sl.Code = constants.ServiceLevelCode(*c.DefaultServiceLevel.ServiceLevelToken)
-		}
-		if c.DefaultServiceLevel.IsPortalEnabled != nil && *c.DefaultServiceLevel.IsPortalEnabled {
-			sl.PortalVisibility = constants.CustomerPortalVisibilityVisible
-		} else {
-			sl.PortalVisibility = constants.CustomerPortalVisibilityHidden
-		}
-		if c.DefaultServiceLevel.CreatedAt != nil {
-			sl.CreatedAt = c.DefaultServiceLevel.CreatedAt.AsTime()
-		}
-		if c.DefaultServiceLevel.UpdatedAt != nil {
-			sl.UpdatedAt = c.DefaultServiceLevel.UpdatedAt.AsTime()
-		}
-		fp.ServiceLevel = sl
-	}
-
-	if c.CarrierBillingType != nil {
-		bt := constants.CarrierBillingType(*c.CarrierBillingType)
-		fp.BillingType = &bt
-	}
-
-	fp.BillingAccount = c.CarrierBillingAccount
-	return fp
-}
-
-func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
-	d := &apiresource.CustomerDefaults{Object: constants.ObjectTypeCustomerDefaults, LeadTimeDays: c.DefaultLeadTimeDays, ReceiveCalendarID: c.ReceiveCalendarId}
-	if c.FulfillmentPolicyCode != nil && *c.FulfillmentPolicyCode != "" {
-		fp := constants.FulfillmentPolicy(*c.FulfillmentPolicyCode)
-		d.FulfillmentPolicy = &fp
-	}
-
-	if c.DefaultPaymentTerm != nil {
-		ptStatus := constants.ArchiveStatusArchived
-		if c.DefaultPaymentTerm.IsActive {
-			ptStatus = constants.ArchiveStatusActive
-		}
-		pt := &apiresource.PaymentTerm{
-			ID:     c.DefaultPaymentTerm.Id,
-			Object: constants.ObjectTypePaymentTerm,
-			Name:   c.DefaultPaymentTerm.Name,
-			Status: ptStatus,
-		}
-		if c.DefaultPaymentTerm.CreatedAt != nil {
-			pt.CreatedAt = c.DefaultPaymentTerm.CreatedAt.AsTime()
-		}
-		if c.DefaultPaymentTerm.UpdatedAt != nil {
-			pt.UpdatedAt = c.DefaultPaymentTerm.UpdatedAt.AsTime()
-		}
-		d.PaymentTerm = pt
-	}
-
-	if c.DefaultShippingTerm != nil {
-		st := &apiresource.ShippingTerm{
-			ID:     c.DefaultShippingTerm.Id,
-			Object: constants.ObjectTypeShippingTerm,
-			Name:   c.DefaultShippingTerm.Name,
-			Type:   constants.ShippingTermType(c.DefaultShippingTerm.Type),
-		}
-		if c.DefaultShippingTerm.CreatedAt != nil {
-			st.CreatedAt = c.DefaultShippingTerm.CreatedAt.AsTime()
-		}
-		if c.DefaultShippingTerm.UpdatedAt != nil {
-			st.UpdatedAt = c.DefaultShippingTerm.UpdatedAt.AsTime()
-		}
-		d.ShippingTerm = st
-	}
-
-	if c.DefaultPriority != nil {
-		// Real priority data from the proto (id, code, name); owner is an
-		// expandable sub-resource left nil. Never fabricate.
-		d.Priority = &apiresource.Priority{
-			ID:        c.DefaultPriority.Id,
-			Object:    constants.ObjectTypePriority,
-			Code:      constants.PriorityCode(c.DefaultPriority.Code),
-			Name:      c.DefaultPriority.Name,
-			CreatedAt: grpcutil.TimestampToTime(c.CreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(c.CreatedAt),
-		}
-	}
-
-	// sales_rep is an expandable reference: the FK id is stashed in LoadMeta so
-	// LoadAccountUsers fetches the real account user on
-	// ?include=defaults.sales_rep. Never fabricate.
-
-	return d
-}
-
-func buildCustomerAddress(a *pb.CustomerAddressProto) *apiresource.Address {
-	return resourceloaders.CustomerAddressFromProto(a)
-}
-
-func buildAccountGroupFromProto(g *pb.CustomerAccountGroupProto) *apiresource.AccountGroup {
-	ag := &apiresource.AccountGroup{
-		ID:               g.Id,
-		Object:           constants.ObjectTypeAccountGroup,
-		Name:             g.Name,
-		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
-		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
-		Type:             constants.AccountGroupType(g.Type),
-	}
-	if g.CreatedAt != nil {
-		ag.CreatedAt = g.CreatedAt.AsTime()
-	}
-	if g.UpdatedAt != nil {
-		ag.UpdatedAt = g.UpdatedAt.AsTime()
-	}
-	return ag
-}
-
-func buildAccountGroupValueFromProto(g *pb.CustomerAccountGroupProto) apiresource.AccountGroup {
-	ag := apiresource.AccountGroup{
-		ID:               g.Id,
-		Object:           constants.ObjectTypeAccountGroup,
-		Name:             g.Name,
-		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
-		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
-		Type:             constants.AccountGroupType(g.Type),
-	}
-	if g.CreatedAt != nil {
-		ag.CreatedAt = g.CreatedAt.AsTime()
-	}
-	if g.UpdatedAt != nil {
-		ag.UpdatedAt = g.UpdatedAt.AsTime()
-	}
-	return ag
-}
-
-func customerRelationshipType(isParent bool, hasParent bool) constants.CustomerRelationshipType {
-	if isParent {
-		return constants.CustomerRelationshipTypeParent
-	}
-	if hasParent {
-		return constants.CustomerRelationshipTypeChild
-	}
-	return constants.CustomerRelationshipTypeStandalone
-}
-
 func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError) {
 	pbReq := &pb.GetCustomerLeadTimeRequest{Id: req.CustomerID}
 
@@ -834,17 +540,17 @@ func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *Retrieve
 
 	out := &apiresource.CustomerLeadTime{
 		Object:   constants.ObjectTypeCustomerLeadTime,
-		Customer: apiresource.NewEntity(resp.CustomerId, constants.ObjectTypeCustomer, nil, nil),
-		Days:     resp.Days,
+		LeadTime: resourceloaders.DaysQuantity(&resp.Days),
 		Source:   constants.LeadTimeSource(resp.Source),
 	}
 	// The winning rule's id is loader-side metadata rather than a public field: the `account_group` and `parent_customer` includes resolve it into the nested resource, keyed by the customer the lead time was resolved for. Only one is ever set — whichever rule decided — so an include the source did not produce stays null.
 	meta := include.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeCustomerLeadTime, "lead_time", "customer_id", resp.CustomerId)
 	if resp.AccountGroupId != nil && *resp.AccountGroupId != "" {
-		meta.Set(constants.ObjectTypeCustomerLeadTime, resp.CustomerId, "account_group_id", *resp.AccountGroupId)
+		meta.Set(constants.ObjectTypeCustomerLeadTime, "lead_time", "account_group_id", *resp.AccountGroupId)
 	}
 	if resp.ParentCustomerId != nil && *resp.ParentCustomerId != "" {
-		meta.Set(constants.ObjectTypeCustomerLeadTime, resp.CustomerId, "parent_customer_id", *resp.ParentCustomerId)
+		meta.Set(constants.ObjectTypeCustomerLeadTime, "lead_time", "parent_customer_id", *resp.ParentCustomerId)
 	}
 	return out, nil
 }

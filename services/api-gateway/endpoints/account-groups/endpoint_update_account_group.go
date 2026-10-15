@@ -18,24 +18,16 @@ import (
 type UpdateAccountGroupRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
-	// Display name of the account group.
-	//
-	// Must be unique within your account.
+	// Display name, unique (case-insensitive) among your account's groups.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Free-form description of the account group.
+	// Free-form description of the group. Send `null` to clear it.
 	Description field.Clearable[string] `json:"description,omitzero"`
-	// How sales commission applies to accounts in this group.
-	//
-	// - `applied`: sales commission is calculated on orders from accounts in this group.
-	// - `exempt`: orders from accounts in this group are exempt from commission.
+	// Whether orders from the group's customers earn commission: `applied` or `exempt`.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
-	// How freight charges apply to orders from accounts in this group.
-	//
-	// - `free`: customers within this group will not have to pay for freight.
-	// - `billed`: freight will be applied to any order within this account group, unless overridden elsewhere.
+	// Whether the group's customers are billed for freight: `billed` or `free`.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
-	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own. Clearing it returns the group's customers to the account default.
-	DefaultLeadTimeDays field.Clearable[int32] `json:"default_lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	// Values the group's customers inherit. Only fields you send are changed.
+	Defaults field.Optional[AccountGroupDefaultsInput] `json:"defaults,omitzero"`
 }
 
 var sampleUpdateAccountGroupDescription = "Customers who buy in bulk at wholesale pricing."
@@ -50,11 +42,9 @@ func (*UpdateAccountGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountGroupRequest)
 }
 
-// Partially updates an account group.
+// Updates an account group.
 //
-// Only the provided fields are changed. The account group's `type` cannot be changed after creation, and renaming the group to a name another group in your account already uses returns a conflict error.
-//
-// A new commission or freight policy takes effect for every account already in the group, not just accounts added afterwards.
+// Only fields you send are changed. New policies apply to every customer already in the group.
 type UpdateAccountGroupEndpoint struct{}
 
 func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup] {
@@ -67,7 +57,6 @@ func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).UpdateAccountGroup

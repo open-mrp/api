@@ -2,6 +2,8 @@ package resourceloaders
 
 import (
 	"context"
+	"strings"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -16,7 +18,8 @@ import (
 
 var customerLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.customer")
 
-// LoadCustomers fetches customers by ID via BatchGetCustomersByIDs and builds expandable Customer references with real header data. Nested sub-resources (addresses, defaults, …) are their own expandable relations and are not populated here.
+// LoadCustomers fetches customers by ID via BatchGetCustomersByIDs and presents them in full: their sections are
+// always populated, and their related records load through their own includes.
 func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -28,18 +31,9 @@ func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Customers))
 	for _, c := range resp.Customers {
-		out[c.Id] = customerReferenceFromProto(c)
-		// The addresses come with the customer; stash them so a caller reaching the customer
-		// through an include (a transaction's `customer.bill_to_address`) gets them in full.
-		if c.BillToAddress != nil {
-			meta.Set(constants.ObjectTypeCustomer, c.Id, "bill_to_address", CustomerAddressFromProto(c.BillToAddress))
-		}
-		if c.ShipToAddress != nil {
-			meta.Set(constants.ObjectTypeCustomer, c.Id, "ship_to_address", CustomerAddressFromProto(c.ShipToAddress))
-		}
+		out[c.Id] = CustomerFromProto(ctx, c)
 	}
 	return out, nil
 }
@@ -80,25 +74,205 @@ func HydrateCustomerEntities(ctx context.Context, entities []*apiresource.Entity
 	}
 }
 
-func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
+// Load-meta keys the customer presenter stashes for the includes that resolve a customer's related records.
+const (
+	CustomerMetaGroupID               = "group_id"
+	CustomerMetaPriceGroups           = "price_groups"
+	CustomerMetaParentCustomerID      = "parent_customer_id"
+	CustomerMetaChildCustomerIDs      = "child_customer_ids"
+	CustomerMetaRecipients            = "notification_recipients"
+	CustomerMetaRecipientUsers        = "notification_recipient_users"
+	CustomerMetaCarrierID             = "defaults_carrier_id"
+	CustomerMetaServiceLevelID        = "defaults_service_level_id"
+	CustomerMetaPaymentTermID         = "defaults_payment_term_id"
+	CustomerMetaShippingTermID        = "defaults_shipping_term_id"
+	CustomerMetaSalesRepID            = "defaults_sales_rep_id"
+	CustomerMetaBillToAddress         = "defaults_bill_to_address"
+	CustomerMetaShipToAddress         = "defaults_ship_to_address"
+	CustomerMetaReceiveCalendarID     = "defaults_receive_calendar_id"
+	customerDayUnitID                 = "day"
+	customerDefaultCarrierBillingType = constants.CarrierBillingTypeSender
+)
+
+// CustomerFromProto is a customer as the response shows it: its own fields and sections, with the IDs of its
+// related records stashed for their includes. Related records stay null until included.
+func CustomerFromProto(ctx context.Context, c *pb.CustomerProto) *apiresource.Customer {
+	if c == nil {
+		return nil
+	}
 	relationship := constants.CustomerRelationshipTypeStandalone
 	if c.IsParentAccount {
 		relationship = constants.CustomerRelationshipTypeParent
 	} else if c.ParentAccount != nil {
 		relationship = constants.CustomerRelationshipTypeChild
 	}
-	return &apiresource.Customer{
+	status := constants.ArchiveStatus(c.ArchiveStatus)
+	if !status.IsValid() {
+		status = constants.ArchiveStatusActive
+	}
+	billing := customerDefaultCarrierBillingType
+	if c.CarrierBillingType != nil && *c.CarrierBillingType != "" {
+		billing = constants.CarrierBillingType(*c.CarrierBillingType)
+	}
+	cust := &apiresource.Customer{
 		ID:               c.Id,
 		Object:           constants.ObjectTypeCustomer,
+		Status:           status,
+		Standing:         constants.CustomerStandingFromStatusCode(c.Status),
 		Name:             c.Name,
 		Number:           c.Number,
-		Status:           constants.AccountStatusCode(c.Status),
 		RelationshipType: relationship,
+		Instructions:     c.Instructions,
 		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
-		Note:             c.Note,
+		FreightPolicy:    constants.FreightPolicy(c.FreightPolicy),
+		Contact:          &apiresource.CustomerContact{Email: c.Email, Phone: c.Phone, URL: c.Url},
+		CarrierBilling:   &apiresource.CustomerCarrierBilling{Type: billing, AccountNumber: c.CarrierBillingAccount},
+		Defaults:         &apiresource.CustomerDefaults{},
 		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
 	}
+	if c.CreditLimit != nil {
+		cust.CreditLimit = MoneyFromProto(c.CreditLimit)
+	}
+	cust.Defaults.LeadTime = DaysQuantity(c.DefaultLeadTimeDays)
+	if c.Supply != nil && *c.Supply != "" {
+		supply := constants.Supply(*c.Supply)
+		cust.Defaults.Supply = &supply
+	}
+	stashCustomerRefs(ctx, cust.ID, c)
+	return cust
+}
+
+// stashCustomerRefs records the IDs (and the records the proto already holds in full) that the customer's
+// includes resolve.
+func stashCustomerRefs(ctx context.Context, id string, c *pb.CustomerProto) {
+	meta := include.GetLoadMeta(ctx)
+	set := func(key, value string) {
+		if value != "" {
+			meta.Set(constants.ObjectTypeCustomer, id, key, value)
+		}
+	}
+	if c.TypeGroup != nil {
+		set(CustomerMetaGroupID, c.TypeGroup.Id)
+	}
+	if c.ParentAccount != nil {
+		set(CustomerMetaParentCustomerID, c.ParentAccount.Id)
+	}
+	if c.DefaultCarrier != nil {
+		set(CustomerMetaCarrierID, c.DefaultCarrier.Id)
+	}
+	if c.DefaultServiceLevel != nil {
+		set(CustomerMetaServiceLevelID, c.DefaultServiceLevel.Id)
+	}
+	if c.DefaultPaymentTerm != nil {
+		set(CustomerMetaPaymentTermID, c.DefaultPaymentTerm.Id)
+	}
+	if c.DefaultShippingTerm != nil {
+		set(CustomerMetaShippingTermID, c.DefaultShippingTerm.Id)
+	}
+	if c.DefaultSalesRep != nil {
+		set(CustomerMetaSalesRepID, c.DefaultSalesRep.Id)
+	}
+	if c.ReceiveCalendarId != nil {
+		set(CustomerMetaReceiveCalendarID, *c.ReceiveCalendarId)
+	}
+	if c.BillToAddress != nil {
+		meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaBillToAddress, CustomerAddressFromProto(c.BillToAddress))
+	}
+	if c.ShipToAddress != nil {
+		meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaShipToAddress, CustomerAddressFromProto(c.ShipToAddress))
+	}
+	if len(c.ChildAccounts) > 0 {
+		childIDs := make([]string, 0, len(c.ChildAccounts))
+		for _, child := range c.ChildAccounts {
+			if child.Id != "" {
+				childIDs = append(childIDs, child.Id)
+			}
+		}
+		meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaChildCustomerIDs, childIDs)
+	}
+	priceGroups := make([]apiresource.AccountGroup, len(c.PriceGroups))
+	for i, g := range c.PriceGroups {
+		priceGroups[i] = apiresource.AccountGroup{
+			ID:               g.Id,
+			Object:           constants.ObjectTypeAccountGroup,
+			Name:             g.Name,
+			CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
+			FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
+			Type:             constants.AccountGroupType(g.Type),
+			Defaults:         &apiresource.AccountGroupDefaults{},
+			CreatedAt:        grpcutil.TimestampToTime(g.CreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(g.UpdatedAt),
+		}
+	}
+	meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaPriceGroups, apiresource.NewList(priceGroups, apiresource.PageInfo{}))
+	if c.HasNotificationRecipients {
+		recipients := make([]apiresource.EmailRecipient, len(c.NotificationRecipients))
+		users := make(map[string]*apiresource.AccountUser, len(c.NotificationRecipients))
+		for i, r := range c.NotificationRecipients {
+			docs := make([]constants.RecipientDocument, len(r.Documents))
+			for j, d := range r.Documents {
+				docs[j] = constants.RecipientDocument(d)
+			}
+			recipients[i] = apiresource.EmailRecipient{Documents: docs}
+			users[r.AccountUserId] = &apiresource.AccountUser{
+				ID:         r.AccountUserId,
+				Object:     constants.ObjectTypeAccountUser,
+				Status:     constants.AccountUserStatus(r.AccountUserStatus),
+				LastUsedAt: grpcutil.TimestampToTimePtr(r.AccountUserLastUsedAt),
+				CreatedAt:  grpcutil.TimestampToTime(r.AccountUserCreatedAt),
+				UpdatedAt:  grpcutil.TimestampToTime(r.AccountUserUpdatedAt),
+			}
+		}
+		recipientUserIDs := make([]string, len(c.NotificationRecipients))
+		for i, r := range c.NotificationRecipients {
+			recipientUserIDs[i] = r.AccountUserId
+		}
+		meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaRecipients, apiresource.NewList(recipients, apiresource.PageInfo{}))
+		meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaRecipientUsers, customerRecipientUsers{ids: recipientUserIDs, byID: users})
+	}
+}
+
+// customerRecipientUsers are a customer's recipients' account users, in recipient order.
+type customerRecipientUsers struct {
+	ids  []string
+	byID map[string]*apiresource.AccountUser
+}
+
+// CustomerRecipientUser is the account user of a customer's i-th notification recipient, when they were loaded.
+func CustomerRecipientUser(ctx context.Context, customerID string, i int) *apiresource.AccountUser {
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, customerID, CustomerMetaRecipientUsers)
+	if !ok {
+		return nil
+	}
+	users := v.(customerRecipientUsers)
+	if i < 0 || i >= len(users.ids) {
+		return nil
+	}
+	return users.byID[users.ids[i]]
+}
+
+// CustomerCoreIncludes are the includes core-service needs to load what a customer request's includes ask for.
+func CustomerCoreIncludes(ctx context.Context) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, key := range include.RequestedIncludes(ctx) {
+		for prefix, core := range customerCoreIncludeKeys {
+			if (key == prefix || strings.HasPrefix(key, prefix+".")) && !seen[core] {
+				seen[core] = true
+				out = append(out, core)
+			}
+		}
+	}
+	return out
+}
+
+var customerCoreIncludeKeys = map[string]string{
+	"defaults.bill_to_address": "bill_to_address",
+	"defaults.ship_to_address": "ship_to_address",
+	"child_customers":          "child_accounts",
+	"price_groups":             "price_groups",
+	"notification_recipients":  "notification_recipients",
 }
 
 // CustomerAddressFromProto is a customer's or supplier's default address as the response shows it. nil stays nil.

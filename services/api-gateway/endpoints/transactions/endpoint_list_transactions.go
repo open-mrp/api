@@ -67,7 +67,7 @@ func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListT
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransactionSummary,
-			Fields:     []string{"customer", "customer.bill_to_address"},
+			Fields:     []string{"customer", "customer.defaults.bill_to_address"},
 		}),
 	})
 }

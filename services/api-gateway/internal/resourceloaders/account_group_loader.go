@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -36,15 +37,26 @@ func LoadAccountGroups(ctx context.Context, ids []string) (map[string]any, *apie
 
 func accountGroupFromProto(ag *pb.AccountGroupInfo) *apiresource.AccountGroup {
 	return &apiresource.AccountGroup{
-		ID:                  ag.Id,
-		Object:              constants.ObjectTypeAccountGroup,
-		Name:                ag.Name,
-		Description:         ag.Description,
-		CommissionPolicy:    new(constants.CommissionPolicy(ag.CommissionPolicy)),
-		FreightPolicy:       constants.FreightPolicy(ag.FreightPolicy),
-		Type:                constants.AccountGroupType(ag.Type),
-		DefaultLeadTimeDays: ag.DefaultLeadTimeDays,
-		CreatedAt:           grpcutil.TimestampToTime(ag.CreatedAt),
-		UpdatedAt:           grpcutil.TimestampToTime(ag.UpdatedAt),
+		ID:               ag.Id,
+		Object:           constants.ObjectTypeAccountGroup,
+		Name:             ag.Name,
+		Description:      ag.Description,
+		CommissionPolicy: new(constants.CommissionPolicy(ag.CommissionPolicy)),
+		FreightPolicy:    constants.FreightPolicy(ag.FreightPolicy),
+		Type:             constants.AccountGroupType(ag.Type),
+		Defaults:         &apiresource.AccountGroupDefaults{LeadTime: DaysQuantity(ag.DefaultLeadTimeDays)},
+		CreatedAt:        grpcutil.TimestampToTime(ag.CreatedAt),
+		UpdatedAt:        grpcutil.TimestampToTime(ag.UpdatedAt),
 	}
 }
+
+// DaysQuantity is a lead time stored in whole days as a Quantity in the day unit, or nil when none is set.
+func DaysQuantity(days *int32) *apiresource.Quantity {
+	if days == nil {
+		return nil
+	}
+	return &apiresource.Quantity{Value: strconv.FormatInt(int64(*days), 10), Unit: apiresource.UnitStub(DayUnitID)}
+}
+
+// DayUnitID is the system unit every lead time is counted in.
+const DayUnitID = "day"

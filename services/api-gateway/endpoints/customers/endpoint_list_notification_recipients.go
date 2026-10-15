@@ -21,6 +21,8 @@ type ListNotificationRecipientsRequest struct {
 // Returns the account users configured to receive email notifications on this customer's orders, with the notification types each receives.
 //
 // These are defaults for order-entry clients to pre-fill on a new order; creating a sales order does not apply them automatically. Recipients whose account user has since been removed from the customer's account are omitted.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge reads the customer's `notification_recipients`.
 type ListNotificationRecipientsEndpoint struct{}
 
 func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {
@@ -32,7 +34,6 @@ func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpo
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
 			return svc.(CustomerSvc).ListNotificationRecipients

@@ -80,6 +80,7 @@ func TestForgeCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	created := createAndCleanup(t, customersPath, body)
 	customerID := jsonField(created, "id")
 	assertIDFormat(t, customerID, id.AccountIDPrefix)
+	requireDefaultSite(t, customerID, name)
 	assertObjectField(t, created, "customer")
 	assert.Equal(t, "active", jsonField(created, "status"))
 	assert.Equal(t, "hold_shipment", jsonField(created, "standing"))

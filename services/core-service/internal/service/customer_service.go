@@ -395,6 +395,9 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 			if _, apiErr := txCustomerRepo.Create(txCtx, accountID, relationID, brandingID, params, customerNumber); apiErr != nil {
 				return apiErr
 			}
+			if _, apiErr := txSvc.mediators().Site.CreateDefaultSite(txCtx, accountID); apiErr != nil {
+				return apiErr
+			}
 
 			// Ensure billing/shipping addresses are linked to the customer account.
 			if params.BillToAddressID != nil {

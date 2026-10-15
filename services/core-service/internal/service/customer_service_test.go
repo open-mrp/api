@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,8 @@ type customerSvcSetup struct {
 	carriers      *repositorymock.MockCarrierRepo
 	serviceLevels *repositorymock.MockServiceLevelRepo
 	idempotency   *mediatormock.MockIdempotencyMed
+	sites         *mediatormock.MockSiteMed
+	addresses     *repositorymock.MockAddressRepo
 	outbox        *recordingOutboxRepo
 }
 
@@ -39,6 +42,7 @@ func newCustomerSvcSetup(t *testing.T) *customerSvcSetup {
 		carriers:      repositorymock.NewMockCarrierRepo(ctrl),
 		serviceLevels: repositorymock.NewMockServiceLevelRepo(ctrl),
 		idempotency:   mediatormock.NewMockIdempotencyMed(ctrl),
+		sites:         mediatormock.NewMockSiteMed(ctrl),
 		outbox:        &recordingOutboxRepo{},
 	}
 	repos := factorymock.NewMockRepoFactory(ctrl)
@@ -48,8 +52,10 @@ func newCustomerSvcSetup(t *testing.T) *customerSvcSetup {
 	repos.EXPECT().NewCarrierRepo().Return(s.carriers).AnyTimes()
 	repos.EXPECT().NewServiceLevelRepo().Return(s.serviceLevels).AnyTimes()
 	repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
+	s.addresses = repositorymock.NewMockAddressRepo(ctrl)
+	repos.EXPECT().NewAddressRepo().Return(s.addresses).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
-	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency}).AnyTimes()
+	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency, Site: s.sites}).AnyTimes()
 	jobs := factorymock.NewMockJobSvcFactory(ctrl)
 
 	s.svc = NewCustomerSvc(&CustomerSvcConfig{
@@ -302,4 +308,39 @@ func TestUpdateCustomer_TakesANewCarrierWithItsServiceLevelClearedAndLeavesAnUnt
 			require.Nil(t, apiErr)
 		})
 	}
+}
+
+// Every account starts with its default site, so a customer's is made in the transaction that creates the customer:
+// a create whose site can't be made is refused rather than leaving an account without one.
+func TestCreateCustomer_GivesTheNewAccountItsDefaultSite(t *testing.T) {
+	s := newCustomerSvcSetup(t)
+	s.expectWrite()
+	s.customers.EXPECT().LockNumbers(gomock.Any(), "ac_seller").Return(nil)
+	s.expectRoutingOwned("cr_own", "")
+	s.customers.EXPECT().ExistsByNumber(gomock.Any(), "ac_seller", "C-9", nil).Return(false, nil)
+	s.addresses.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil)
+
+	var accountID string
+	s.customers.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "C-9").
+		DoAndReturn(func(_ context.Context, id, _, _ string, _ domain.CreateCustomerParams, _ string) (*domain.Customer, *apierror.APIError) {
+			accountID = id
+			return &domain.Customer{ID: id}, nil
+		})
+	siteErr := apierror.NewInternalError(errors.New("boom"), "site insert failed")
+	s.sites.EXPECT().CreateDefaultSite(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string) (*domain.Location, *apierror.APIError) {
+			assert.Equal(t, accountID, id, "the site belongs to the new customer's account")
+			return nil, siteErr
+		})
+
+	_, apiErr := s.svc.CreateCustomer(customerInternalCtx("ac_seller"), domain.CreateCustomerParams{
+		Name:             "Buyer Co",
+		Number:           new("C-9"),
+		DefaultCarrierID: new("cr_own"),
+		BillToAddress:    &domain.CreateAddressParams{Name: "HQ", Country: "US"},
+		ShipToAddress:    &domain.CreateAddressParams{Name: "HQ", Country: "US"},
+	})
+	require.NotNil(t, apiErr)
+	assert.Same(t, siteErr, apiErr)
+	assert.NotEmpty(t, accountID)
 }

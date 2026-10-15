@@ -762,8 +762,8 @@ func TestProducts_ChangeProductLine(t *testing.T) {
 	plStatus, plBody, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-pdln-for-product"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, plStatus, plBody)

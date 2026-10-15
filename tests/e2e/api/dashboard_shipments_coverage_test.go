@@ -985,7 +985,7 @@ func TestDashShipments_RateShopAppliesFreightTerms(t *testing.T) {
 		t.Parallel()
 		line := createAndCleanup(t, productLinesPath, map[string]any{
 			"name": uniqueName("e2e-dash-free-pdln"), "unit_group_id": SeedUnitGroupID,
-			"commission_policy": "commission_applied", "freight_policy": "free_freight",
+			"commission_policy": "applied", "freight_policy": "free",
 		})
 		assert.Equal(t, "none", jsonField(rateShop(t, "", 10, SeedProductLineID), "exemption_type"))
 		assertExempt(t, rateShop(t, "", 10, SeedProductLineID, jsonField(line, "id")))

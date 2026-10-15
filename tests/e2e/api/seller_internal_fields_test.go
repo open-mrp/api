@@ -20,7 +20,7 @@ import (
 var sellerInternalFields = map[string][]string{
 	"production_run":    {"responsible_user", "batch_count", "batch_summaries"},
 	"item":              {"burn_rate", "notes"},
-	"product_line":      {"default_lot", "fulfillment_policy", "notes", "commission_policy"},
+	"product_line":      {"supply", "commission_policy"},
 	"customer":          {"note", "commission_policy"},
 	"customer_defaults": {"fulfillment_policy"},
 	"account_group":     {"commission_policy"},
@@ -132,8 +132,8 @@ func TestSellerInternal_ProductLinePlanningIsWithheldFromPortals(t *testing.T) {
 	created := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":               uniqueName("e2e-internal-pdln"),
 		"unit_group_id":      SeedUnitGroupID,
-		"commission_policy":  "commission_applied",
-		"freight_policy":     "billed_freight",
+		"commission_policy":  "applied",
+		"freight_policy":     "billed",
 		"fulfillment_policy": "make_to_order",
 		"default_lot":        map[string]any{"value": "60", "unit_id": SeedPairUnitID},
 	})
@@ -160,8 +160,8 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 	line := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-internal-notes-pdln"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 	// The API takes no product line notes; the seller's team writes them in the dashboard.
 	_, err := authDB(t).Exec("UPDATE product_line SET notes = ? WHERE id = ?", "Renegotiate with the mill before the spring run", jsonField(line, "id"))
@@ -186,7 +186,7 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 	for who, client := range map[string]*Client{"admin": apiClient, "catalog reader": customRoleClient(t, "product_lines:read", "items:read")} {
 		got := parseJSON(mustGetAs(t, client, linePath, nil))
 		assert.Equal(t, "Renegotiate with the mill before the spring run", jsonField(got, "notes"), who)
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"), who)
+		assert.Equal(t, "applied", jsonField(got, "commission_policy"), who)
 		assert.Equal(t, "Margin is thin on this one", jsonField(itemOf(client), "notes"), who)
 	}
 

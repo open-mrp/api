@@ -62,3 +62,7 @@ INSERT IGNORE INTO product_line (id, name, unit_group_id, default_lot_id, accoun
     ('credit', 'Credit', 'each_group', NULL, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('pdln_01k0a735ypfjva933tg57wfx0t', 'eBad', 'each_group', NULL, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('pdln_01gf7a8200ef99y3gj77z4q25z', 'Pace', 'ungp_1gf7a8200f8x8jjpq5a9kdrhd', 'qty_01seedpacelot000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- The doff lives on the Socks category, which is where planning reads it.
+UPDATE item_category SET default_lot_size_id = 'qty_01seedsockslot00'
+WHERE id = 'itcg_01seedsocks000000' AND default_lot_size_id IS NULL;

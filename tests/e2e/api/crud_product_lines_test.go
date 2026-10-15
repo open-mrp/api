@@ -110,8 +110,8 @@ func TestProductLines_CRUD(t *testing.T) {
 	createResp, err := apiClient.PostFull(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -164,9 +164,12 @@ func TestProductLines_CreateAndUpdateAllFields(t *testing.T) {
 	name := uniqueName("e2e-pdln-allf")
 	createResp, err := apiClient.PostFull(productLinesPath+"?include=unit_group", map[string]any{
 		"name":              name,
+		"description":       "Wool and cotton socks.",
+		"status":            "active",
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
+		"supply":            "make",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -174,30 +177,37 @@ func TestProductLines_CreateAndUpdateAllFields(t *testing.T) {
 	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertIDFormat(t, id, "pdln")
 	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(productLinesPath + "/" + id)
 
 	assert.Equal(t, "product_line", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"))
-	assert.Equal(t, "billed_freight", jsonField(got, "freight_policy"))
-	assertNilField(t, got, "description")
-	assertNilField(t, got, "notes")
+	assert.Equal(t, "Wool and cotton socks.", jsonField(got, "description"))
+	assert.Equal(t, "active", jsonField(got, "status"))
+	assert.Equal(t, "applied", jsonField(got, "commission_policy"))
+	assert.Equal(t, "billed", jsonField(got, "freight_policy"))
+	assert.Equal(t, "make", jsonField(got, "supply"))
 	assertNilField(t, got, "owner")
+	assert.NotContains(t, got, "notes")
+	assert.NotContains(t, got, "default_lot")
+	assert.NotContains(t, got, "fulfillment_policy")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
 	unitGroup := jsonObject(got, "unit_group")
 	require.NotNil(t, unitGroup, "unit_group must be set after create")
 	assert.Equal(t, SeedUnitGroupID, jsonField(unitGroup, "id"))
-	assert.Equal(t, "unit_group", jsonField(unitGroup, "object"))
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-pdln-allf-u")
 	patchStatus, patchBody, err := apiClient.Patch(productLinesPath+"/"+id+"?include=unit_group", map[string]any{
 		"name":              updatedName,
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "free_freight",
+		"description":       "Socks only.",
+		"status":            "archived",
+		"commission_policy": "exempt",
+		"freight_policy":    "free",
+		"supply":            "buy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -205,15 +215,29 @@ func TestProductLines_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "commission_exempt", jsonField(updated, "commission_policy"))
-	assert.Equal(t, "free_freight", jsonField(updated, "freight_policy"))
-	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
+	assert.Equal(t, "Socks only.", jsonField(updated, "description"))
+	assert.Equal(t, "archived", jsonField(updated, "status"))
+	assert.Equal(t, "exempt", jsonField(updated, "commission_policy"))
+	assert.Equal(t, "free", jsonField(updated, "freight_policy"))
+	assert.Equal(t, "buy", jsonField(updated, "supply"))
+	assert.Equal(t, jsonField(got, "created_at"), jsonField(updated, "created_at"))
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-
-	// unit_group should be preserved
 	updUnitGroup := jsonObject(updated, "unit_group")
 	require.NotNil(t, updUnitGroup, "unit_group should be preserved")
 	assert.Equal(t, SeedUnitGroupID, jsonField(updUnitGroup, "id"))
+
+	// ── CLEAR the clearable fields ──
+	clearStatus, clearBody, err := apiClient.Patch(productLinesPath+"/"+id, map[string]any{
+		"description": nil,
+		"supply":      nil,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, clearStatus, clearBody)
+	cleared := parseJSON(clearBody)
+	assertNilField(t, cleared, "description")
+	assertNilField(t, cleared, "supply")
+	assert.Equal(t, updatedName, jsonField(cleared, "name"))
+	assert.Equal(t, "archived", jsonField(cleared, "status"))
 }
 
 func TestProductLines_CreateResponseShape(t *testing.T) {
@@ -222,8 +246,8 @@ func TestProductLines_CreateResponseShape(t *testing.T) {
 	createResp, err := apiClient.PostFull(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -248,24 +272,25 @@ func TestProductLines_CreateValidation_MissingName(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing name should return 400 or 422, got %d: %s", status, string(body))
 }
 
-func TestProductLines_CreateValidation_MissingUnitGroupID(t *testing.T) {
+func TestProductLines_CreateWithoutUnitGroup(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(productLinesPath, map[string]any{
+	created := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-pdln-noug"),
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
-	}, newIdempotencyKey())
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
+	})
+	status, body, err := apiClient.GetListRaw(productLinesPath+"/"+jsonField(created, "id"), url.Values{"include": {"unit_group"}})
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
-		"Missing unit_group_id should return 400 or 422, got %d: %s", status, string(body))
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "unit_group")
 }
 
 func TestProductLines_CreateIdempotent(t *testing.T) {
@@ -276,8 +301,8 @@ func TestProductLines_CreateIdempotent(t *testing.T) {
 	status1, body1, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
@@ -286,8 +311,8 @@ func TestProductLines_CreateIdempotent(t *testing.T) {
 	status2, body2, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
@@ -304,8 +329,8 @@ func TestProductLines_UpdateOnlyName(t *testing.T) {
 	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -321,7 +346,7 @@ func TestProductLines_UpdateOnlyName(t *testing.T) {
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(patched, "name"))
-	assert.Equal(t, "commission_exempt", jsonField(patched, "commission_policy"), "commission_policy should be preserved when only name is updated")
+	assert.Equal(t, "exempt", jsonField(patched, "commission_policy"), "commission_policy should be preserved when only name is updated")
 
 	apiClient.Delete(productLinesPath + "/" + id)
 }
@@ -332,8 +357,8 @@ func TestProductLines_UpdatePolicyFields(t *testing.T) {
 	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -342,15 +367,15 @@ func TestProductLines_UpdatePolicyFields(t *testing.T) {
 
 	// Update both policy fields
 	patchStatus, patchBody, err := apiClient.Patch(productLinesPath+"/"+id, map[string]any{
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "free_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
-	assert.Equal(t, "commission_exempt", jsonField(patched, "commission_policy"), "commission_policy should be updated")
-	assert.Equal(t, "free_freight", jsonField(patched, "freight_policy"), "freight_policy should be updated")
+	assert.Equal(t, "exempt", jsonField(patched, "commission_policy"), "commission_policy should be updated")
+	assert.Equal(t, "free", jsonField(patched, "freight_policy"), "freight_policy should be updated")
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved when only policy fields are updated")
 
 	apiClient.Delete(productLinesPath + "/" + id)
@@ -362,8 +387,8 @@ func TestProductLines_UpdateIdempotent(t *testing.T) {
 	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -411,8 +436,8 @@ func TestProductLines_DeleteAlreadyDeletedFails(t *testing.T) {
 	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -427,6 +452,63 @@ func TestProductLines_DeleteAlreadyDeletedFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status2 == 404 || status2 == 410,
 		"Deleting an already-deleted product line should return 404 or 410, got %d", status2)
+}
+
+func TestProductLines_DeleteReturnsStub(t *testing.T) {
+	t.Parallel()
+	created := createAndCleanup(t, productLinesPath, map[string]any{
+		"name":              uniqueName("e2e-pdln-stub"),
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
+	})
+	id := jsonField(created, "id")
+
+	status, body, err := apiClient.Delete(productLinesPath + "/" + id)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	stub := parseJSON(body)
+	assert.Equal(t, id, jsonField(stub, "id"))
+	assert.Equal(t, "product_line", jsonField(stub, "object"))
+	assert.Equal(t, "true", jsonField(stub, "deleted"))
+}
+
+// A line that a product still sells under can't be deleted; archiving is the way to retire it.
+func TestProductLines_DeleteInUseConflicts(t *testing.T) {
+	t.Parallel()
+	lineID := jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+		"name":              uniqueName("e2e-pdln-inuse"),
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
+	}), "id")
+	createSellableItemInLine(t, uniqueName("e2e-pdln-inuse-sku"), lineID)
+
+	status, body, err := apiClient.Delete(productLinesPath + "/" + lineID)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	errObj := requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
+	assert.Contains(t, jsonField(errObj, "message"), "products")
+	assert.Contains(t, jsonField(errObj, "message"), "archived")
+
+	getStatus, _, err := apiClient.GetListRaw(productLinesPath+"/"+lineID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 200, getStatus, "the line survives a refused delete")
+}
+
+// Customer and account-group access to a line goes with it.
+func TestProductLines_DeleteRemovesAccess(t *testing.T) {
+	t.Parallel()
+	fx := newAccessFixture(t)
+	customerPath := customerAccessPath + "/" + fx.customerID
+	grantAccess(t, customerAccessPath, map[string]any{"customer_id": fx.customerID, "product_line_ids": []string{fx.lineA, fx.lineB}})
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(customerPath) })
+
+	status, body, err := apiClient.Delete(productLinesPath + "/" + fx.lineA)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	readStatus, record := readAccess(t, customerPath)
+	require.Equal(t, 200, readStatus)
+	assert.Equal(t, []string{fx.lineB}, grantedLines(t, record))
 }
 
 func TestProductLines_DeleteDefaultProductLineRejected(t *testing.T) {
@@ -450,9 +532,8 @@ func TestProductLines_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-pdln-omit")
 		status, body, err := apiClient.Post(productLinesPath, map[string]any{
 			"name":              name,
-			"unit_group_id":     SeedUnitGroupID,
-			"commission_policy": "commission_applied",
-			"freight_policy":    "billed_freight",
+			"commission_policy": "applied",
+			"freight_policy":    "billed",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -464,23 +545,34 @@ func TestProductLines_OmittedFields(t *testing.T) {
 
 		assertObjectField(t, got, "product_line")
 		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"))
-		assert.Equal(t, "billed_freight", jsonField(got, "freight_policy"))
+		assert.Equal(t, "active", jsonField(got, "status"), "status defaults to active")
+		assert.Equal(t, "applied", jsonField(got, "commission_policy"))
+		assert.Equal(t, "billed", jsonField(got, "freight_policy"))
 		assertNilField(t, got, "description")
-		assertNilField(t, got, "notes")
+		assertNilField(t, got, "supply")
 		assertNilField(t, got, "owner")
 		assertNilField(t, got, "unit_group")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
 
+	t.Run("MissingRequiredPolicies", func(t *testing.T) {
+		status, body, err := apiClient.Post(productLinesPath, map[string]any{
+			"name": uniqueName("e2e-pdln-nopol"),
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, body)
+	})
+
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-pdln-pres")
 		createStatus, createBody, err := apiClient.Post(productLinesPath+"?include=unit_group", map[string]any{
 			"name":              name,
+			"description":       "Keep me.",
 			"unit_group_id":     SeedUnitGroupID,
-			"commission_policy": "commission_applied",
-			"freight_policy":    "billed_freight",
+			"commission_policy": "applied",
+			"freight_policy":    "billed",
+			"supply":            "stock",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -491,7 +583,6 @@ func TestProductLines_OmittedFields(t *testing.T) {
 		defer apiClient.Delete(productLinesPath + "/" + id)
 		origCreatedAt := jsonField(created, "created_at")
 
-		// Update ONLY name
 		newName := uniqueName("e2e-pdln-pres-u")
 		patchStatus, patchBody, err := apiClient.Patch(productLinesPath+"/"+id+"?include=unit_group", map[string]any{
 			"name": newName,
@@ -501,8 +592,11 @@ func TestProductLines_OmittedFields(t *testing.T) {
 
 		got := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(got, "name"))
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"), "commission_policy should be preserved")
-		assert.Equal(t, "billed_freight", jsonField(got, "freight_policy"), "freight_policy should be preserved")
+		assert.Equal(t, "Keep me.", jsonField(got, "description"))
+		assert.Equal(t, "active", jsonField(got, "status"))
+		assert.Equal(t, "applied", jsonField(got, "commission_policy"), "commission_policy should be preserved")
+		assert.Equal(t, "billed", jsonField(got, "freight_policy"), "freight_policy should be preserved")
+		assert.Equal(t, "stock", jsonField(got, "supply"), "supply should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -572,8 +666,8 @@ func TestProductLines_IncludeOwnerAccount(t *testing.T) {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -713,8 +807,8 @@ func TestProductLines_BulkUpsert_AllCreates(t *testing.T) {
 	name2 := uniqueName("e2e-bulkpl-b")
 
 	createdIDs, updatedIDs := bulkUpsertProductLineIDs(t,
-		bulkUpsertPLInput(name1, SeedUnitGroupID, "commission_applied", "billed_freight"),
-		bulkUpsertPLInput(name2, SeedUnitGroupID, "commission_exempt", "free_freight"),
+		bulkUpsertPLInput(name1, SeedUnitGroupID, "applied", "billed"),
+		bulkUpsertPLInput(name2, SeedUnitGroupID, "exempt", "free"),
 	)
 	defer cleanupProductLineIDs(createdIDs)
 
@@ -730,13 +824,13 @@ func TestProductLines_BulkUpsert_AllUpdates(t *testing.T) {
 	name := uniqueName("e2e-bulkpl-upd")
 
 	// Create
-	createdIDs, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight"))
+	createdIDs, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "applied", "billed"))
 	defer cleanupProductLineIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
 	productLineID := createdIDs[0]
 
 	// Update (same name → matches, flips policies)
-	created, updated := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "commission_exempt", "free_freight"))
+	created, updated := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "exempt", "free"))
 	assert.Empty(t, created, "no creates expected on update")
 	require.Len(t, updated, 1, "should have 1 updated ID")
 	assert.Equal(t, productLineID, updated[0], "updated ID must match the originally created ID")
@@ -746,8 +840,8 @@ func TestProductLines_BulkUpsert_AllUpdates(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
-	assert.Equal(t, "free_freight", jsonField(got, "freight_policy"))
+	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
+	assert.Equal(t, "free", jsonField(got, "freight_policy"))
 }
 
 func TestProductLines_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
@@ -756,13 +850,13 @@ func TestProductLines_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
 	newName := uniqueName("e2e-bulkpl-mix-new")
 
 	// Seed existing
-	seeded, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(existingName, SeedUnitGroupID, "commission_applied", "billed_freight"))
+	seeded, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(existingName, SeedUnitGroupID, "applied", "billed"))
 	defer cleanupProductLineIDs(seeded)
 
 	// Mix: update existing + create new
 	created, updated := bulkUpsertProductLineIDs(t,
-		bulkUpsertPLInput(existingName, SeedUnitGroupID, "commission_applied", "billed_freight"),
-		bulkUpsertPLInput(newName, SeedUnitGroupID, "commission_exempt", "free_freight"),
+		bulkUpsertPLInput(existingName, SeedUnitGroupID, "applied", "billed"),
+		bulkUpsertPLInput(newName, SeedUnitGroupID, "exempt", "free"),
 	)
 	defer cleanupProductLineIDs(created)
 
@@ -777,7 +871,7 @@ func TestProductLines_BulkUpsert_Idempotency(t *testing.T) {
 	name := uniqueName("e2e-bulkpl-idem")
 	idemKey := newIdempotencyKey()
 	payload := map[string]any{
-		"product_lines": []any{bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight")},
+		"product_lines": []any{bulkUpsertPLInput(name, SeedUnitGroupID, "applied", "billed")},
 	}
 
 	status1, body1, err := apiClient.Post(productLinesBulkUpsertPath, payload, idemKey)
@@ -803,8 +897,8 @@ func TestProductLines_BulkUpsert_DuplicateNameRejected(t *testing.T) {
 	name := uniqueName("e2e-bulkpl-dup")
 
 	status, body := bulkUpsertProductLines(t,
-		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight"),
-		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_exempt", "free_freight"),
+		bulkUpsertPLInput(name, SeedUnitGroupID, "applied", "billed"),
+		bulkUpsertPLInput(name, SeedUnitGroupID, "exempt", "free"),
 	)
 	requireStatus(t, 422, status, body)
 }
@@ -818,8 +912,8 @@ func TestProductLines_BulkUpsert_ResolvesUnitGroupByName(t *testing.T) {
 	createdIDs, _ := bulkUpsertProductLineIDs(t, map[string]any{
 		"name":              name,
 		"unit_group":        map[string]any{"name": "socks"}, // by name, case-insensitive
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 	defer cleanupProductLineIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
@@ -838,10 +932,131 @@ func TestProductLines_BulkUpsert_RejectsUnknownUnitGroup(t *testing.T) {
 	t.Parallel()
 
 	status, body := bulkUpsertProductLines(t,
-		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugok"), SeedUnitGroupID, "commission_applied", "billed_freight"),
-		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugbad"), "ungp_does_not_exist_00000", "commission_exempt", "free_freight"),
+		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugok"), SeedUnitGroupID, "applied", "billed"),
+		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugbad"), "ungp_does_not_exist_00000", "exempt", "free"),
 	)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "product_lines[1].unit_group")
+}
+
+// --- Status ---
+
+func TestProductLines_ListFiltersByStatus(t *testing.T) {
+	t.Parallel()
+	prefix := uniqueName("e2e-pdln-st")
+	activeID := jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+		"name": prefix + "-a", "commission_policy": "applied", "freight_policy": "billed",
+	}), "id")
+	archivedID := jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+		"name": prefix + "-b", "status": "archived", "commission_policy": "applied", "freight_policy": "billed",
+	}), "id")
+
+	ids := func(q url.Values) []string {
+		list, _, err := apiClient.GetList(productLinesPath, q)
+		require.NoError(t, err)
+		var out []string
+		for _, item := range list.Data {
+			out = append(out, DataItemField(item, "id"))
+		}
+		return out
+	}
+
+	all := ids(url.Values{"q": {prefix}})
+	assert.ElementsMatch(t, []string{activeID, archivedID}, all)
+
+	archived := ids(url.Values{"q": {prefix}, "statuses[]": {"archived"}})
+	assert.Equal(t, []string{archivedID}, archived)
+
+	active := ids(url.Values{"q": {prefix}, "statuses[]": {"active"}})
+	assert.Equal(t, []string{activeID}, active)
+
+	status, body, err := apiClient.GetListRaw(productLinesPath, url.Values{"statuses[]": {"inactive"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+}
+
+// Search is a case-insensitive substring match on the name, not a word match.
+func TestProductLines_ListSearchIsSubstring(t *testing.T) {
+	t.Parallel()
+	token := strings.ToLower(uniqueName("Zq"))
+	id := jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+		"name": "Line" + strings.ToUpper(token) + "Tail", "commission_policy": "applied", "freight_policy": "billed",
+	}), "id")
+
+	list, _, err := apiClient.GetList(productLinesPath, url.Values{"q": {token}})
+	require.NoError(t, err)
+	require.Len(t, list.Data, 1)
+	assert.Equal(t, id, DataItemField(list.Data[0], "id"))
+}
+
+// An archived line stays on its products but can't be assigned to a new one or newly granted.
+func TestProductLines_ArchivedCannotBeNewlyAssigned(t *testing.T) {
+	t.Parallel()
+	fx := newAccessFixture(t)
+	setStatus := func(id, status string) {
+		code, body, err := apiClient.Patch(productLinesPath+"/"+id, map[string]any{"status": status}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 200, code, body)
+	}
+
+	itemID := createSellableItemInLine(t, uniqueName("e2e-pdln-arch-sku"), fx.lineA)
+	_ = itemID
+	setStatus(fx.lineA, "archived")
+
+	t.Run("new product", func(t *testing.T) {
+		body := validProductBody(uniqueName("e2e-pdln-arch-new"))
+		body["product_line_id"] = fx.lineA
+		status, resp, err := apiClient.Post(productsPath, body, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, resp)
+		errObj := requireErrorResponse(t, resp, "resource_archived", "invalid_request_error")
+		assertErrorParam(t, errObj, "product_line_id")
+	})
+
+	t.Run("customer grant", func(t *testing.T) {
+		status, resp, err := apiClient.Post(customerAccessPath, map[string]any{
+			"customer_id": fx.customerID, "product_line_ids": []string{fx.lineA},
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, resp)
+		errObj := requireErrorResponse(t, resp, "resource_archived", "invalid_request_error")
+		assertErrorParam(t, errObj, "product_line_ids")
+	})
+
+	t.Run("existing grant keeps the archived line", func(t *testing.T) {
+		setStatus(fx.lineA, "active")
+		customerPath := customerAccessPath + "/" + fx.customerID
+		grantAccess(t, customerAccessPath, map[string]any{"customer_id": fx.customerID, "product_line_ids": []string{fx.lineA}})
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(customerPath) })
+		setStatus(fx.lineA, "archived")
+
+		status, resp, err := apiClient.Patch(customerPath, map[string]any{
+			"product_line_ids": []string{fx.lineA, fx.lineB},
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 200, status, resp)
+	})
+}
+
+func TestProductLines_InvalidSupplyRejected(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(productLinesPath, map[string]any{
+		"name": uniqueName("e2e-pdln-badsupply"), "commission_policy": "applied", "freight_policy": "billed", "supply": "make_to_order",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+}
+
+func TestProductLines_DeleteIdempotentReplayIsGone(t *testing.T) {
+	t.Parallel()
+	id := jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+		"name": uniqueName("e2e-pdln-gone"), "commission_policy": "applied", "freight_policy": "billed",
+	}), "id")
+	status, body, err := apiClient.Delete(productLinesPath + "/" + id)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	status, _, err = apiClient.Delete(productLinesPath + "/" + id)
+	require.NoError(t, err)
+	assert.Equal(t, 410, status)
 }

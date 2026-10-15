@@ -1260,7 +1260,7 @@ func TestDashCustomers_ProductLineAccessCarriesTheRealRecords(t *testing.T) {
 	lines := jsonArray(jsonObject(created, "product_lines"), "data")
 	require.Len(t, lines, 1)
 	line := lines[0].(map[string]any)
-	assert.Equal(t, "commission_applied", jsonField(line, "commission_policy"))
+	assert.Equal(t, "applied", jsonField(line, "commission_policy"))
 	assert.NotEqual(t, dashCustomersZeroTime, jsonField(line, "created_at"))
 
 	status, body, err = apiClient.Post(accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA}}, newIdempotencyKey())

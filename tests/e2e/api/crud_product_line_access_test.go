@@ -26,8 +26,8 @@ func newAccessFixture(t *testing.T) accessFixture {
 		return jsonField(createAndCleanup(t, productLinesPath, map[string]any{
 			"name":              uniqueName(prefix),
 			"unit_group_id":     SeedUnitGroupID,
-			"commission_policy": "commission_applied",
-			"freight_policy":    "billed_freight",
+			"commission_policy": "applied",
+			"freight_policy":    "billed",
 		}), "id")
 	}
 	return accessFixture{

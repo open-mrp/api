@@ -11598,6 +11598,21 @@ func (m *MockOperatingCalendarSvc) EXPECT() *MockOperatingCalendarSvcMockRecorde
 	return m.recorder
 }
 
+// BatchGetOperatingCalendarsByIDs mocks base method.
+func (m *MockOperatingCalendarSvc) BatchGetOperatingCalendarsByIDs(ctx context.Context, ids []string) ([]domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetOperatingCalendarsByIDs", ctx, ids)
+	ret0, _ := ret[0].([]domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetOperatingCalendarsByIDs indicates an expected call of BatchGetOperatingCalendarsByIDs.
+func (mr *MockOperatingCalendarSvcMockRecorder) BatchGetOperatingCalendarsByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetOperatingCalendarsByIDs", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).BatchGetOperatingCalendarsByIDs), ctx, ids)
+}
+
 // CreateOperatingCalendar mocks base method.
 func (m *MockOperatingCalendarSvc) CreateOperatingCalendar(ctx context.Context, params domain.CreateOperatingCalendarParams) (*domain.OperatingCalendar, *apierror.APIError) {
 	m.ctrl.T.Helper()

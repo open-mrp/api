@@ -45,12 +45,12 @@ var sampleCreateSupplierRequest = &CreateSupplierRequest{
 	Number: apiresource.SampleSupplierNumber,
 	Note:   field.Some(sampleCreateSupplierNote),
 	BillToAddress: field.Some(apirequest.AddressInput{
-		Name:        apiresource.SampleSupplierName,
-		StreetLine1: field.SomePtr(&sampleCreateSupplierStreetLine1),
-		Locality:    field.SomePtr(&sampleCreateSupplierLocality),
-		State:       field.SomePtr(&sampleCreateSupplierState),
-		PostalCode:  field.SomePtr(&sampleCreateSupplierPostalCode),
-		Country:     "US",
+		Name:       apiresource.SampleSupplierName,
+		Line1:      field.SomePtr(&sampleCreateSupplierStreetLine1),
+		City:       field.SomePtr(&sampleCreateSupplierLocality),
+		State:      field.SomePtr(&sampleCreateSupplierState),
+		PostalCode: field.SomePtr(&sampleCreateSupplierPostalCode),
+		Country:    "US",
 	}),
 }
 

@@ -37,7 +37,7 @@ func TestInlineAddressToProto(t *testing.T) {
 
 	assert.Nil(t, InlineAddressToProto(field.None[InlineAddressInput]()), "an absent inline address sends nothing")
 
-	got := InlineAddressToProto(decodeInlineAddressRequest(t, `{"bill_to_address":{"id":"ad_dock","type":"drop_ship","phone":null,"street_line_2":"Dock 4"}}`).BillToAddress)
+	got := InlineAddressToProto(decodeInlineAddressRequest(t, `{"bill_to_address":{"id":"ad_dock","type":"drop_ship","phone":null,"line_2":"Dock 4"}}`).BillToAddress)
 	require.NotNil(t, got)
 	assert.Equal(t, "ad_dock", got.GetId())
 	assert.True(t, got.GetIsDropShip())
@@ -46,4 +46,18 @@ func TestInlineAddressToProto(t *testing.T) {
 	assert.Equal(t, "Dock 4", got.GetStreetLine_2().GetValue())
 	assert.Nil(t, got.Name)
 	assert.Nil(t, got.Country)
+}
+
+// country is an uppercase ISO 3166-1 alpha-2 code.
+func TestInlineAddressInput_CountryMustBeAnISOCode(t *testing.T) {
+	t.Parallel()
+
+	for _, country := range []string{"us", "XX", "USA"} {
+		req := decodeInlineAddressRequest(t, `{"bill_to_address":{"name":"Dock","country":"`+country+`"}}`)
+		apiErr := validate.Validate(&req)
+		require.NotNil(t, apiErr, country)
+		assert.Equal(t, "bill_to_address.country", apiErr.Param, country)
+	}
+	req := decodeInlineAddressRequest(t, `{"bill_to_address":{"name":"Dock","country":"CA"}}`)
+	assert.Nil(t, validate.Validate(&req))
 }

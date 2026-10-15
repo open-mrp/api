@@ -15,17 +15,17 @@ func TestAddresses_UpdateClearNullableFields(t *testing.T) {
 	id := SeedAddressID
 
 	setStatus, setBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"email":         "clear-me@e2e.openmrp.ai",
-		"phone":         "555-111-2222",
-		"street_line_2": "Suite 500",
+		"email":  "clear-me@e2e.openmrp.ai",
+		"phone":  "555-111-2222",
+		"line_2": "Suite 500",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, setStatus, setBody)
 
 	clearStatus, clearBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"email":         nil,
-		"phone":         nil,
-		"street_line_2": nil,
+		"email":  nil,
+		"phone":  nil,
+		"line_2": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, clearStatus, clearBody)
@@ -36,9 +36,9 @@ func TestAddresses_UpdateClearNullableFields(t *testing.T) {
 	got := parseJSON(getBody)
 	assertNilField(t, got, "email")
 	assertNilField(t, got, "phone")
-	geo := jsonObject(got, "geolocation")
+	geo := got
 	require.NotNil(t, geo)
-	assertNilField(t, geo, "street_line_2")
+	assertNilField(t, geo, "line_2")
 }
 
 func TestParts_UpdateClearDescriptionAndNotes(t *testing.T) {

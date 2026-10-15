@@ -245,6 +245,21 @@ func (mr *MockAddressMedMockRecorder) Save(ctx, accountID, input, param any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockAddressMed)(nil).Save), ctx, accountID, input, param)
 }
 
+// Snapshot mocks base method.
+func (m *MockAddressMed) Snapshot(ctx context.Context, accountID string, input *domain.AddressSnapshot, param string) (*domain.AddressSnapshot, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Snapshot", ctx, accountID, input, param)
+	ret0, _ := ret[0].(*domain.AddressSnapshot)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Snapshot indicates an expected call of Snapshot.
+func (mr *MockAddressMedMockRecorder) Snapshot(ctx, accountID, input, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockAddressMed)(nil).Snapshot), ctx, accountID, input, param)
+}
+
 // Update mocks base method.
 func (m *MockAddressMed) Update(ctx context.Context, params domain.UpdateAddressParams) (*domain.Address, *apierror.APIError) {
 	m.ctrl.T.Helper()

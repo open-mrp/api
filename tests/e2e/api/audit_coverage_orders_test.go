@@ -280,7 +280,7 @@ func TestOrderCascadeAudit_ShipToChangeAuditsTheOrdersShipments(t *testing.T) {
 	shipmentID := jsonField(shipments[0].(map[string]any), "id")
 
 	status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{
-		"shipping_address": map[string]any{"name": uniqueName("e2e-audit-reroute"), "street_line_1": "1 Audit Way", "country": "US"},
+		"shipping_address": map[string]any{"name": uniqueName("e2e-audit-reroute"), "line_1": "1 Audit Way", "country": "US"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

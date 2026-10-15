@@ -3,6 +3,7 @@ package supplierep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -205,9 +206,9 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 		Phone:        a.Phone.Ptr(),
 		Email:        a.Email.Ptr(),
 		IsDropShip:   addressTypeToDropShip(a.Type.Ptr()),
-		StreetLine_1: a.StreetLine1.Ptr(),
-		StreetLine_2: a.StreetLine2.Ptr(),
-		Locality:     a.Locality.Ptr(),
+		StreetLine_1: a.Line1.Ptr(),
+		StreetLine_2: a.Line2.Ptr(),
+		Locality:     a.City.Ptr(),
 		State:        a.State.Ptr(),
 		PostalCode:   a.PostalCode.Ptr(),
 		Country:      a.Country,
@@ -280,44 +281,9 @@ func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) 
 }
 
 func addressProtoToResource(a *pb.CustomerAddressProto) *apiresource.Address {
-	if a == nil {
-		return nil
-	}
-
-	var geolocation *apiresource.Geolocation
-	if a.Geolocation != nil {
-		geolocation = &apiresource.Geolocation{
-			ID:          a.Geolocation.Id,
-			Object:      constants.ObjectTypeGeolocation,
-			StreetLine1: a.Geolocation.StreetLine_1,
-			StreetLine2: a.Geolocation.StreetLine_2,
-			Locality:    a.Geolocation.Locality,
-			State:       a.Geolocation.State,
-			PostalCode:  a.Geolocation.PostalCode,
-			Country:     a.Geolocation.Country,
-		}
-	}
-
-	return &apiresource.Address{
-		ID:          a.Id,
-		Object:      constants.ObjectTypeAddress,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		Type:        addressTypeFromDropShip(a.IsDropShip),
-		Geolocation: geolocation,
-		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
-	}
+	return resourceloaders.CustomerAddressFromProto(a)
 }
 
 func addressTypeToDropShip(t *constants.AddressType) bool {
 	return t != nil && *t == constants.AddressTypeDropShip
-}
-
-func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
-	if isDropShip {
-		return constants.AddressTypeDropShip
-	}
-	return constants.AddressTypeStandard
 }

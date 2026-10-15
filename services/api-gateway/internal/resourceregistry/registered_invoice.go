@@ -37,7 +37,7 @@ func init() {
 				Populate:    populateShipmentOnInvoice,
 			},
 			// Read in full with the invoice, so they need no loader (and none of its permissions).
-			{Key: "billing_address", Populate: populateBillingAddressOnInvoice},
+			{Key: "billing_address", Target: constants.ObjectTypeAddress, ExtractRefs: extractBillingAddressRefFromInvoice, Populate: populateBillingAddressOnInvoice},
 			{Key: "payment_term", Populate: populatePaymentTermOnInvoice},
 			{
 				Key:         "related.sales_order",
@@ -114,7 +114,7 @@ func init() {
 				ExtractIDs:  extractParentAccountIDFromInvoiceForPayment,
 				Populate:    populateParentAccountOnInvoiceForPayment,
 			},
-			{Key: "billing_address", Populate: populateBillingAddressOnInvoiceForPayment},
+			{Key: "billing_address", Target: constants.ObjectTypeAddress, ExtractRefs: extractBillingAddressRefFromInvoiceForPayment, Populate: populateBillingAddressOnInvoiceForPayment},
 			{Key: "allocations", Target: constants.ObjectTypeInvoiceAllocation, ExtractRefs: extractAllocationRefsFromInvoiceForPayment, Populate: populateAllocationsOnInvoiceForPayment},
 		},
 	})
@@ -178,6 +178,14 @@ func populateShipmentOnInvoice(ctx context.Context, parent any, loaded map[strin
 	if v, ok := loaded[id]; ok {
 		inv.Shipment = v.(*apiresource.Shipment)
 	}
+}
+
+// extractBillingAddressRefFromInvoice hands the populated billing address on for its own includes (receive_calendar).
+func extractBillingAddressRefFromInvoice(_ context.Context, parent any) []any {
+	if a := parent.(*apiresource.Invoice).BillingAddress; a != nil {
+		return []any{a}
+	}
+	return nil
 }
 
 func populateBillingAddressOnInvoice(ctx context.Context, parent any, _ map[string]any) {
@@ -343,6 +351,13 @@ func populateParentAccountOnInvoiceForPayment(ctx context.Context, parent any, l
 	if v, ok := loaded[id]; ok {
 		inv.ParentAccount = v.(*apiresource.Account)
 	}
+}
+
+func extractBillingAddressRefFromInvoiceForPayment(_ context.Context, parent any) []any {
+	if a := parent.(*apiresource.InvoiceForPayment).BillingAddress; a != nil {
+		return []any{a}
+	}
+	return nil
 }
 
 func populateBillingAddressOnInvoiceForPayment(ctx context.Context, parent any, _ map[string]any) {

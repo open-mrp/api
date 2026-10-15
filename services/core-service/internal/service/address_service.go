@@ -370,11 +370,6 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 		return tracing.Trace(span, apierror.NewNotFoundError("Address not found."))
 	}
 
-	// Check not in use
-	if apiErr := repo.CheckAddressNotInUse(ctx, params.AddressID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
 	// Fetch address before deletion for audit
 	address, apiErr := repo.Get(ctx, domain.GetAddressParams(params))
 	if apiErr != nil {
@@ -383,13 +378,17 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 
 	// Delete in transaction
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *addressSvcImpl) *apierror.APIError {
+		if apiErr := domain.AddressReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), params.AddressID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAddress, address.ID, params.AccountID, address); apiErr != nil {
 			return apiErr
 		}
 
 		txRepo := txSvc.repos.NewAddressRepo()
 
-		// A non-active account may still default to this address (CheckAddressNotInUse only blocks
+		// A non-active account may still default to this address (AddressReferences only blocks
 		// active-account defaults). Switch those defaults over to the account-relation defaults first
 		// so the account keeps a valid default instead of a pointer to the row we're about to delete.
 		if apiErr := txRepo.SwitchAccountDefaultAddressToRelation(txCtx, params.AddressID); apiErr != nil {

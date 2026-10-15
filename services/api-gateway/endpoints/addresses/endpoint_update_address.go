@@ -14,91 +14,75 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update an address.
-//
-// Omitted fields are left unchanged.
+// Request to update an address. Omitted fields are left unchanged.
 type UpdateAddressRequest struct {
 	// Address ID.
 	AddressID string `path:"id" validate:"required"`
-	// Display name of the address.
+	// A label for the address, such as `Main warehouse`.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,min=1,max=255"`
-	// Phone number associated with the address.
-	//
-	// Send `null` to clear.
-	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
-	// Email address associated with the address.
-	//
-	// Send `null` to clear.
-	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// How the address is used.
 	//
-	// - `standard`: a normal shipping or billing address.
-	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
+	// `standard`: a normal billing or shipping address. `drop_ship`: shipped to directly on the customer's behalf, such as an end customer.
 	Type field.Optional[constants.AddressType] `json:"type,omitzero"`
-	// The operating calendar naming the days this dock accepts freight, overriding the customer's own. Clearing it returns this address to the customer's own calendar.
-	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
-	// First line of the street address.
-	StreetLine1 field.Optional[string] `json:"street_line_1,omitzero" validate:"omitempty,max=255"`
-	// Second line of the street address.
-	//
-	// Send `null` to clear.
-	StreetLine2 field.Clearable[string] `json:"street_line_2,omitzero" validate:"omitempty,max=255"`
+	// Street address.
+	Line1 field.Optional[string] `json:"line_1,omitzero" validate:"omitempty,max=255"`
+	// Apartment, suite, unit or building. Send `null` to clear.
+	Line2 field.Clearable[string] `json:"line_2,omitzero" validate:"omitempty,max=255"`
 	// City or locality.
-	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
-	// State or administrative area.
+	City field.Optional[string] `json:"city,omitzero" validate:"omitempty,max=255"`
+	// State, province or region; in the US and Canada, the two-letter code.
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
-	// Two-letter country code.
-	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,max=2"`
+	// Two-letter country code (ISO 3166-1 alpha-2), such as `US`.
+	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,iso3166_1_alpha2"`
+	// Phone number at the address. Send `null` to clear.
+	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
+	// Email address at the address. Send `null` to clear.
+	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
+	// ID of the operating calendar naming the days this location accepts freight. Send `null` to use the customer's calendar.
+	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty" visibility:"internal"`
 }
 
-var sampleUpdateName = "Warehouse"
-var sampleUpdateAddressPhone = "555-123-4567"
-var sampleUpdateAddressEmail = "warehouse@acme.com"
-var sampleUpdateAddressStreetLine1 = "123 Main St"
-var sampleUpdateAddressStreetLine2 = "Suite 400"
-var sampleUpdateAddressLocality = "Springfield"
-var sampleUpdateAddressState = "IL"
-var sampleUpdateAddressPostalCode = "62701"
-var sampleUpdateAddressCountry = "US"
-
 var sampleUpdateAddressRequest = &UpdateAddressRequest{
-	Name:        field.Some(sampleUpdateName),
-	Phone:       field.Set(sampleUpdateAddressPhone),
-	Email:       field.Set(sampleUpdateAddressEmail),
-	Type:        field.Some(constants.AddressTypeStandard),
-	StreetLine1: field.Some(sampleUpdateAddressStreetLine1),
-	StreetLine2: field.Set(sampleUpdateAddressStreetLine2),
-	Locality:    field.Some(sampleUpdateAddressLocality),
-	State:       field.Some(sampleUpdateAddressState),
-	PostalCode:  field.Some(sampleUpdateAddressPostalCode),
-	Country:     field.Some(sampleUpdateAddressCountry),
+	Name:       field.Some("Warehouse"),
+	Type:       field.Some(constants.AddressTypeStandard),
+	Line1:      field.Some("123 Main St"),
+	Line2:      field.Set("Suite 400"),
+	City:       field.Some("Springfield"),
+	State:      field.Some("IL"),
+	PostalCode: field.Some("62701"),
+	Country:    field.Some("US"),
+	Phone:      field.Set("555-123-4567"),
+	Email:      field.Set("warehouse@acme.com"),
 }
 
 func (*UpdateAddressRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAddressRequest)
 }
 
-// Partially updates an address.
+// Updates an address.
 //
-// Changing a street, locality, state, postal code, or country field may replace the address's geolocation, so the geolocation `id` in the response can change.
+// Only fields you send are changed. Documents already created keep the address as it was when they were created.
 type UpdateAddressEndpoint struct{}
 
 func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address]{
 		Title:             "Update Address",
 		Method:            http.MethodPatch,
-		Route:             "/v1/sales/addresses/{id}",
+		Route:             addressRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAddress,
+			Fields:     []string{"receive_calendar"},
+		}),
 	})
 }

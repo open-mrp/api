@@ -386,7 +386,6 @@ type AddressRepo interface {
 	CreateGeolocation(ctx context.Context, id string, params CreateAddressParams) *apierror.APIError
 	UpdateGeolocation(ctx context.Context, geolocationID string, params UpdateAddressParams) *apierror.APIError
 	RelinkGeolocation(ctx context.Context, addressID, geolocationID string) *apierror.APIError
-	CheckAddressNotInUse(ctx context.Context, addressID string) *apierror.APIError
 	// SwitchAccountDefaultAddressToRelation realigns any account default billing/shipping pointer at
 	// the given address to the account-relation default (owner→this account), falling back to NULL
 	// when the relation has no usable default. It keeps a non-active account from being left with a
@@ -533,6 +532,8 @@ type CarrierTransitEstimateRepo interface {
 type OperatingCalendarRepo interface {
 	Get(ctx context.Context, accountID, calendarID string) (*OperatingCalendar, *apierror.APIError)
 	GetByCode(ctx context.Context, accountID, code string) (*OperatingCalendar, *apierror.APIError)
+	// GetByIDs returns the calendars among ids that belong to one of accountIDs; the rest are left out.
+	GetByIDs(ctx context.Context, accountIDs, ids []string) ([]OperatingCalendar, *apierror.APIError)
 	List(ctx context.Context, params ListOperatingCalendarsParams) ([]OperatingCalendar, *apierror.APIError)
 	// ResolveShip returns the calendar the account tenders freight on, preferring an explicitly configured one over the account default. Nil means none is configured, and the caller falls back to Monday-to-Friday.
 	ResolveShip(ctx context.Context, accountID string) (*OperatingCalendar, *apierror.APIError)

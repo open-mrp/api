@@ -2,6 +2,9 @@ package resourceloaders
 
 import (
 	"context"
+	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -15,7 +18,7 @@ import (
 
 var addressLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.address")
 
-// LoadAddresses fetches addresses by ID via BatchGetAddressesByIDs. Geolocation is an inline sub-record (always present, not expandable) so it's populated directly from the proto response. Address exposes no expandable sub-resources so no LoadMeta is needed.
+// LoadAddresses fetches addresses by ID via BatchGetAddressesByIDs.
 func LoadAddresses(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -29,43 +32,77 @@ func LoadAddresses(ctx context.Context, ids []string) (map[string]any, *apierror
 	}
 	out := make(map[string]any, len(resp.Addresses))
 	for _, a := range resp.Addresses {
-		out[a.Id] = AddressFromProto(a)
+		out[a.Id] = AddressFromProto(ctx, a)
 	}
 	return out, nil
 }
 
-// AddressFromProto builds an address with its geolocation, which is always inline.
-func AddressFromProto(a *pb.AddressInfo) *apiresource.Address {
+// AddressFromProto builds an address and stashes its receive calendar's ID for the receive_calendar include.
+func AddressFromProto(ctx context.Context, a *pb.AddressInfo) *apiresource.Address {
+	addr := AddressFromInfo(a)
+	if addr != nil {
+		StashReceiveCalendar(ctx, addr.ID, a.ReceiveCalendarId)
+	}
+	return addr
+}
+
+// AddressFromInfo builds an address without making its receive calendar includable. nil stays nil.
+func AddressFromInfo(a *pb.AddressInfo) *apiresource.Address {
+	if a == nil {
+		return nil
+	}
+	parts := AddressParts{
+		ID:         a.Id,
+		Name:       a.Name,
+		IsDropShip: a.IsDropShip,
+		Phone:      a.Phone,
+		Email:      a.Email,
+		CreatedAt:  grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(a.UpdatedAt),
+	}
+	if g := a.Geolocation; g != nil {
+		parts.Line1, parts.Line2, parts.City, parts.State, parts.PostalCode, parts.Country = g.StreetLine_1, g.StreetLine_2, g.Locality, g.State, g.PostalCode, g.Country
+	}
+	return NewAddress(parts)
+}
+
+// AddressParts are the fields of an address, whichever RPC carried it.
+type AddressParts struct {
+	ID, Name                              string
+	IsDropShip                            bool
+	Line1, Line2, City, State, PostalCode *string
+	Country                               string
+	Phone, Email                          *string
+	CreatedAt, UpdatedAt                  time.Time
+}
+
+// NewAddress is the address response for p. receive_calendar stays nil until included.
+func NewAddress(p AddressParts) *apiresource.Address {
 	addressType := constants.AddressTypeStandard
-	if a.IsDropShip {
+	if p.IsDropShip {
 		addressType = constants.AddressTypeDropShip
 	}
 	return &apiresource.Address{
-		ID:                a.Id,
-		Object:            constants.ObjectTypeAddress,
-		Name:              a.Name,
-		Phone:             a.Phone,
-		Email:             a.Email,
-		Type:              addressType,
-		ReceiveCalendarID: a.ReceiveCalendarId,
-		Geolocation:       geolocationFromProto(a.Geolocation),
-		CreatedAt:         grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:         grpcutil.TimestampToTime(a.UpdatedAt),
+		ID:         p.ID,
+		Object:     constants.ObjectTypeAddress,
+		Name:       p.Name,
+		Type:       addressType,
+		Line1:      p.Line1,
+		Line2:      p.Line2,
+		City:       p.City,
+		State:      p.State,
+		PostalCode: p.PostalCode,
+		Country:    p.Country,
+		Phone:      p.Phone,
+		Email:      p.Email,
+		CreatedAt:  p.CreatedAt,
+		UpdatedAt:  p.UpdatedAt,
 	}
 }
 
-func geolocationFromProto(g *pb.GeolocationInfo) *apiresource.Geolocation {
-	if g == nil {
-		return nil
-	}
-	return &apiresource.Geolocation{
-		ID:          g.Id,
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: g.StreetLine_1,
-		StreetLine2: g.StreetLine_2,
-		Locality:    g.Locality,
-		State:       g.State,
-		PostalCode:  g.PostalCode,
-		Country:     g.Country,
+// StashReceiveCalendar records the calendar an address names, for its receive_calendar include. nil records nothing.
+func StashReceiveCalendar(ctx context.Context, addressID string, calendarID *string) {
+	if calendarID != nil && *calendarID != "" {
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAddress, addressID, "receive_calendar_id", *calendarID)
 	}
 }

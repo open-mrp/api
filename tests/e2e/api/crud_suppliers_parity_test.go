@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const supplierAddressesPath = "/v1/sales/addresses"
+const supplierAddressesPath = "/v1/core/addresses"
 
 func supplierMaterialsOf(supplierID string) string {
 	return suppliersPath + "/" + supplierID + "/materials"
@@ -26,12 +26,12 @@ func searchToken(prefix string) string {
 
 func paritySupplierAddressBody(name, street string) map[string]any {
 	return map[string]any{
-		"name":          name,
-		"street_line_1": street,
-		"locality":      "Los Angeles",
-		"state":         "CA",
-		"postal_code":   "90001",
-		"country":       "US",
+		"name":        name,
+		"line_1":      street,
+		"city":        "Los Angeles",
+		"state":       "CA",
+		"postal_code": "90001",
+		"country":     "US",
 	}
 }
 
@@ -166,7 +166,7 @@ func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	require.NotNil(t, shipTo, "ship_to_address is returned from create when included")
 	assertObjectField(t, billTo, "address")
 	assert.Equal(t, name+" Billing", jsonField(billTo, "name"))
-	assert.Equal(t, "1 Bill St", jsonField(jsonObject(billTo, "geolocation"), "street_line_1"))
+	assert.Equal(t, "1 Bill St", jsonField(billTo, "line_1"))
 	assert.Equal(t, name+" Dock", jsonField(shipTo, "name"))
 	assert.NotEqual(t, jsonField(billTo, "id"), jsonField(shipTo, "id"), "two different addresses are two records")
 

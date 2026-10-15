@@ -1237,9 +1237,9 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 
 	// Create an address on the customer's account.
 	addrResp, err := customerClient.PostFull(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-addr-link"),
-		"street_line_1": "100 Link St",
-		"country":       "US",
+		"name":    uniqueName("e2e-addr-link"),
+		"line_1":  "100 Link St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrResp.StatusCode, addrResp.Body)
@@ -1284,9 +1284,9 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 
 	// Create two addresses on the customer's account.
 	addrAStatus, addrABody, err := customerClient.Post(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-addr-a"),
-		"street_line_1": "100 A St",
-		"country":       "US",
+		"name":    uniqueName("e2e-addr-a"),
+		"line_1":  "100 A St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrAStatus, addrABody)
@@ -1294,9 +1294,9 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrAID) })
 
 	addrBStatus, addrBBody, err := customerClient.Post(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-addr-b"),
-		"street_line_1": "200 B St",
-		"country":       "US",
+		"name":    uniqueName("e2e-addr-b"),
+		"line_1":  "200 B St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrBStatus, addrBBody)
@@ -1354,9 +1354,9 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 
 	// Create two addresses on the customer's account.
 	addrAStatus, addrABody, err := customerClient.Post(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-ship-a"),
-		"street_line_1": "100 Ship A St",
-		"country":       "US",
+		"name":    uniqueName("e2e-ship-a"),
+		"line_1":  "100 Ship A St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrAStatus, addrABody)
@@ -1364,9 +1364,9 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrAID) })
 
 	addrBStatus, addrBBody, err := customerClient.Post(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-ship-b"),
-		"street_line_1": "200 Ship B St",
-		"country":       "US",
+		"name":    uniqueName("e2e-ship-b"),
+		"line_1":  "200 Ship B St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrBStatus, addrBBody)
@@ -1412,9 +1412,9 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 
 	// Create a single address on the customer's account.
 	addrResp, err := customerClient.PostFull(addressesPath, map[string]any{
-		"name":          uniqueName("e2e-addr-both"),
-		"street_line_1": "100 Both St",
-		"country":       "US",
+		"name":    uniqueName("e2e-addr-both"),
+		"line_1":  "100 Both St",
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, addrResp.StatusCode, addrResp.Body)

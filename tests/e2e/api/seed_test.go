@@ -371,6 +371,8 @@ const (
 	// Operating calendar fixtures (0014_e2e_extras.sql). Neither is a default and nothing links to them, so they exist purely for the generic contract suites and cannot move any ship-by date.
 	SeedOperatingCalendarID        = "occd_01e2eshipcal00000"
 	SeedOperatingCalendarClosureID = "occdcn_01e2eclosure000"
+	// SeedReceivingDockAddressID is a saved address naming the seeded receiving calendar, for its receive_calendar include.
+	SeedReceivingDockAddressID = "ad_01seedrecvdock00000"
 	// Rated by the stub: ground 3 days, 2-day 2 days, overnight 1 day.
 	SeedTransitGroundServiceLevelID    = "crop_01e2etransitgrnd00"
 	SeedTransitTwoDayServiceLevelID    = "crop_01e2etransit2day0"
@@ -613,7 +615,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/locations/":                                          SeedLocationID,
 	"/v1/sales/account-groups/":                                          SeedCustomerGroupID,
 	"/v1/sales/account-prices/":                                          SeedAccountPriceID,
-	"/v1/sales/addresses/":                                               SeedAddressID,
+	"/v1/core/addresses/":                                                SeedReceivingDockAddressID,
 	"/v1/sales/order-discounts/":                                         SeedOrderDiscountID,
 	"/v1/sales/product-line-access/":                                     SeedProductLineAccessID,
 	"/v1/sales/registration-flows/":                                      SeedRegistrationFlowID,
@@ -683,7 +685,7 @@ var nullableFieldSeeds = map[string]string{
 	"note":  "e2e nullable test note",
 
 	// Clearable text fields (generic PATCH test)
-	"street_line_2": "Suite 100",
+	"line_2": "Suite 100",
 	// description and notes are intentionally excluded: the product PATCH
 	// cascades both to the item table via ProductUpdateItem, but the product
 	// GET response surfaces them on the expandable item sub-resource (not at

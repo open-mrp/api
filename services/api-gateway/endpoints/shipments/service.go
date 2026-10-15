@@ -438,9 +438,9 @@ func (m *shipmentSvcImpl) DeleteShipmentLine(ctx context.Context, req *DeleteShi
 func addressInputToProto(a apirequest.AddressInput) *pb.AddressInput {
 	return &pb.AddressInput{
 		Name:    a.Name,
-		Street1: ptrutil.Deref(a.StreetLine1.Ptr()),
-		Street2: a.StreetLine2.Ptr(),
-		City:    ptrutil.Deref(a.Locality.Ptr()),
+		Street1: ptrutil.Deref(a.Line1.Ptr()),
+		Street2: a.Line2.Ptr(),
+		City:    ptrutil.Deref(a.City.Ptr()),
 		State:   ptrutil.Deref(a.State.Ptr()),
 		Zip:     ptrutil.Deref(a.PostalCode.Ptr()),
 		Country: a.Country,
@@ -541,41 +541,12 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 // the shipment query joined. The address belongs to the customer account and is
 // cross-account, so it cannot be resolved by the account-scoped loader.
 func buildShipmentShippingAddress(s *pb.ShipmentInfo) *apiresource.Address {
-	addr := &apiresource.Address{
-		ID:        s.ShippingAddressId,
-		Object:    constants.ObjectTypeAddress,
-		Phone:     s.ShippingAddressPhone,
-		Email:     s.ShippingAddressEmail,
-		Type:      constants.AddressTypeStandard,
-		CreatedAt: grpcutil.TimestampToTime(s.ShippingAddressCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(s.ShippingAddressUpdatedAt),
-	}
-	if s.ShippingAddressName != nil {
-		addr.Name = *s.ShippingAddressName
-	}
-	if s.ShippingAddressIsDropShip != nil && *s.ShippingAddressIsDropShip {
-		addr.Type = constants.AddressTypeDropShip
-	}
-
-	country := ""
-	if s.ShippingAddressCountry != nil {
-		country = *s.ShippingAddressCountry
-	}
-	geo := &apiresource.Geolocation{
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: s.ShippingAddressStreetLine_1,
-		StreetLine2: s.ShippingAddressStreetLine_2,
-		Locality:    s.ShippingAddressLocality,
-		State:       s.ShippingAddressState,
-		PostalCode:  s.ShippingAddressPostalCode,
-		Country:     country,
-	}
-	if s.ShippingAddressGeolocationId != nil {
-		geo.ID = *s.ShippingAddressGeolocationId
-	}
-	addr.Geolocation = geo
-
-	return addr
+	return resourceloaders.OrderAddress(
+		s.ShippingAddressId, s.ShippingAddressName, s.ShippingAddressStreetLine_1, s.ShippingAddressStreetLine_2,
+		s.ShippingAddressLocality, s.ShippingAddressState, s.ShippingAddressPostalCode, s.ShippingAddressCountry,
+		s.ShippingAddressPhone, s.ShippingAddressEmail, s.ShippingAddressIsDropShip,
+		grpcutil.TimestampToTime(s.ShippingAddressCreatedAt), grpcutil.TimestampToTime(s.ShippingAddressUpdatedAt),
+	)
 }
 
 // shipmentFreightFromProto builds the Freight sub-resource (carrier selection +

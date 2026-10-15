@@ -9,83 +9,59 @@ import (
 )
 
 const SampleCRUDAddressID = "ad_j8cz0b79pwdb"
-const SampleGeolocationID = "gl_betrf3v346k5"
 
-// The street-level location details of an address.
-type Geolocation struct {
-	// Geolocation ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=geolocation"`
-	// First line of the street address.
-	StreetLine1 *string `json:"street_line_1"`
-	// Second line of the street address.
-	StreetLine2 *string `json:"street_line_2"`
-	// City or locality.
-	Locality *string `json:"locality"`
-	// State or administrative area.
-	State *string `json:"state"`
-	// Postal or ZIP code.
-	PostalCode *string `json:"postal_code"`
-	// Two-letter country code.
-	Country string `json:"country" validate:"required"`
-}
-
-// A saved address that can be used for billing and shipping on sales orders, invoices, and shipments.
+// A saved address, used as a billing or shipping address on orders, invoices and shipments.
 type Address struct {
 	// Address ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address"`
-	// Display name of the address.
+	// A label for the address, such as `Main warehouse`.
 	Name string `json:"name" validate:"required"`
-	// Phone number associated with the address.
-	Phone *string `json:"phone"`
-	// Email address associated with the address.
-	Email *string `json:"email"`
 	// How the address is used.
 	//
-	// - `standard`: a normal shipping or billing address.
-	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
+	// `standard`: a normal billing or shipping address. `drop_ship`: shipped to directly on the customer's behalf, such as an end customer.
 	Type constants.AddressType `json:"type" validate:"required"`
-	// The operating calendar naming the days this dock accepts freight.
+	// Street address.
+	Line1 *string `json:"line_1"`
+	// Apartment, suite, unit or building.
+	Line2 *string `json:"line_2"`
+	// City or locality.
+	City *string `json:"city"`
+	// State, province or region; in the US and Canada, the two-letter code.
+	State *string `json:"state"`
+	// Postal or ZIP code.
+	PostalCode *string `json:"postal_code"`
+	// Two-letter country code (ISO 3166-1 alpha-2), such as `US`.
+	Country string `json:"country" validate:"required"`
+	// Phone number at the address.
+	Phone *string `json:"phone"`
+	// Email address at the address.
+	Email *string `json:"email"`
+	// Days this location accepts freight.
 	//
-	// The most specific link in the receiving chain: set it when one of a customer's sites keeps different days from the rest. Null falls through to the customer, then their group, then the account default.
-	ReceiveCalendarID *string `json:"receive_calendar_id"`
-	// Street-level location details for the address.
-	Geolocation *Geolocation `json:"geolocation" validate:"required"`
+	// Set it when one site keeps different days from the rest. `null` uses the customer's calendar, then your account default.
+	ReceiveCalendar *OperatingCalendar `json:"receive_calendar" expandable:"true" visibility:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var sampleStreetLine1 = "4200 Industrial Pkwy"
-var sampleLocality = "Columbus"
-var sampleState = "OH"
-var samplePostalCode = "43204"
-
-var sampleAddressPhone = "+1-614-555-0142"
-var sampleAddressEmail = "receiving@acme.example.com"
-
 var SampleAddress = &Address{
-	ID:     SampleCRUDAddressID,
-	Object: constants.ObjectTypeAddress,
-	Name:   "Headquarters",
-	Phone:  &sampleAddressPhone,
-	Email:  &sampleAddressEmail,
-	Type:   constants.AddressTypeStandard,
-	Geolocation: &Geolocation{
-		ID:          SampleGeolocationID,
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: &sampleStreetLine1,
-		Locality:    &sampleLocality,
-		State:       &sampleState,
-		PostalCode:  &samplePostalCode,
-		Country:     "US",
-	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:         SampleCRUDAddressID,
+	Object:     constants.ObjectTypeAddress,
+	Name:       "Headquarters",
+	Type:       constants.AddressTypeStandard,
+	Line1:      new("4200 Industrial Pkwy"),
+	City:       new("Columbus"),
+	State:      new("OH"),
+	PostalCode: new("43204"),
+	Country:    "US",
+	Phone:      new("+1-614-555-0142"),
+	Email:      new("receiving@acme.example.com"),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Address) SchemaExample() any {

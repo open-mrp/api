@@ -780,7 +780,7 @@ func TestDashCustomers_RegisteringANewCustomer(t *testing.T) {
 		"customer_name":        name,
 		"customer_group_id":    SeedCustomerGroupID,
 		"phone":                "555-0100",
-		"address":              map[string]any{"name": name + " HQ", "country": "US", "street_line_1": "1 Main St", "locality": "Austin", "state": "TX", "postal_code": "78701"},
+		"address":              map[string]any{"name": name + " HQ", "country": "US", "line_1": "1 Main St", "city": "Austin", "state": "TX", "postal_code": "78701"},
 		"shipping_term_id":     SeedShippingTermID,
 		"payment_term_id":      SeedPaymentTermID,
 	}
@@ -825,7 +825,7 @@ func TestDashCustomers_RegisteringAsAnExistingCustomer(t *testing.T) {
 	number := searchToken("e2edcreg")
 	customerID := dashCustomersNew(t, "e2e-dc-reg-existing", map[string]any{
 		"number":          number,
-		"bill_to_address": map[string]any{"name": "Billing", "street_line_1": "1 Main St", "locality": "Springfield", "state": "IL", "postal_code": "62701", "country": "US"},
+		"bill_to_address": map[string]any{"name": "Billing", "line_1": "1 Main St", "city": "Springfield", "state": "IL", "postal_code": "62701", "country": "US"},
 	})
 	body := map[string]any{"account_slug": SeedAccountSlug, "is_existing_customer": true, "customer_number": number, "lookup_postal_code": "62701"}
 
@@ -909,7 +909,7 @@ func TestDashCustomers_SellerManagesACustomersAddresses(t *testing.T) {
 	name := searchToken("e2edcdock")
 
 	status, body, err := asCustomer.Post(addressesPath, map[string]any{
-		"name": name, "phone": "555-0101", "country": "US", "street_line_1": "9 Dock Rd", "locality": "Reno", "state": "NV", "postal_code": "89501",
+		"name": name, "phone": "555-0101", "country": "US", "line_1": "9 Dock Rd", "city": "Reno", "state": "NV", "postal_code": "89501",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

@@ -39,6 +39,23 @@ type Address struct {
 	UpdatedAt         time.Time
 }
 
+// AddressReferences blocks deleting an address that a document or a default still uses. An account's own default
+// blocks only while the account is active; a non-active account's default is switched to its relation's on delete.
+var AddressReferences = RegisterReferences(References{
+	Noun: "address",
+	Probes: []ReferenceProbe{
+		{Label: "orders", Table: "sales_order", Column: "billing_address_id"},
+		{Label: "orders", Table: "sales_order", Column: "shipping_address_id"},
+		{Label: "invoices", Table: "invoice", Column: "billing_address_id"},
+		{Label: "shipments", Table: "shipment", Column: "shipping_address_id"},
+		{Label: "customer or supplier defaults", Table: "account_relation", Column: "default_billing_address_id"},
+		{Label: "customer or supplier defaults", Table: "account_relation", Column: "default_shipping_address_id"},
+		{Label: "account defaults", Table: "account", Column: "default_billing_address_id", Where: "onboarding_status_code = 'active'"},
+		{Label: "account defaults", Table: "account", Column: "default_shipping_address_id", Where: "onboarding_status_code = 'active'"},
+		{Label: "locations", Table: "storage_location", Column: "address_id"},
+	},
+})
+
 // ListAddressesParams contains the parameters for listing addresses.
 type ListAddressesParams struct {
 	AccountID string

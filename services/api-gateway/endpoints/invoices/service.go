@@ -256,7 +256,7 @@ func stashInvoiceMeta(ctx context.Context, d *pb.InvoiceInfo, inv *apiresource.I
 	}
 	// Core reads these in full with the invoice, so expanding them needs no address or payment-term permission.
 	if d.BillingAddress != nil {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "billing_address", resourceloaders.AddressFromProto(d.BillingAddress))
+		meta.Set(constants.ObjectTypeInvoice, inv.ID, "billing_address", resourceloaders.AddressFromProto(ctx, d.BillingAddress))
 	}
 	if d.PaymentTerm != nil {
 		meta.Set(constants.ObjectTypeInvoice, inv.ID, "payment_term", resourceloaders.PaymentTermFromProto(d.PaymentTerm))
@@ -387,7 +387,7 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id", *d.ParentAccountId)
 	}
 	if d.BillingAddress != nil {
-		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address", resourceloaders.AddressFromProto(d.BillingAddress))
+		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address", resourceloaders.AddressFromProto(ctx, d.BillingAddress))
 	}
 	meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "allocations", apiresource.NewList(allocations, apiresource.PageInfo{}))
 	return inv

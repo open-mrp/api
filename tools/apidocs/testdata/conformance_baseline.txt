@@ -5,7 +5,6 @@ actions_are_post PUT /v1/auth/registration-sessions/{token}/actions/verify-token
 actions_are_post PUT /v1/catalog/products/actions/validate
 actions_are_post PUT /v1/catalog/units/actions/validate
 actions_are_post PUT /v1/core/actions/check-duplicates
-actions_are_post PUT /v1/core/addresses/actions/validate
 actions_are_post PUT /v1/identity/account-users/{id}/actions/activate
 actions_are_post PUT /v1/identity/account-users/{id}/actions/disable
 actions_are_post PUT /v1/identity/account-users/{id}/actions/remove
@@ -92,7 +91,6 @@ public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
 public_docstrings PATCH /v1/operations/scanning-stations/{id}
 public_docstrings PATCH /v1/sales/account-groups/{id}
 public_docstrings PATCH /v1/sales/account-prices/{id}
-public_docstrings PATCH /v1/sales/addresses/{id}
 public_docstrings PATCH /v1/sales/customers/{id}
 public_docstrings PATCH /v1/sales/order-discounts/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}
@@ -110,14 +108,12 @@ public_docstrings POST /v1/operations/machine-downtime-events
 public_docstrings POST /v1/operations/picks/{id}/actions/pack
 public_docstrings POST /v1/operations/production-schedules/{id}/actions/release-week
 public_docstrings POST /v1/operations/shipments/actions/rate-shop
-public_docstrings POST /v1/sales/contacts/actions/find-by-email
 public_docstrings POST /v1/sales/sales-orders/{id}/actions/quote-freight
 public_docstrings POST /v1/sales/sales-orders/{id}/lines/actions/reorder
 public_docstrings POST /v1/settings/integrations
 public_docstrings POST /v1/settings/portal-domains
 public_docstrings POST /v1/settings/portal-domains/{id}/actions/verify
 public_docstrings PUT /v1/ai/agents/{id}/status
-public_docstrings PUT /v1/core/addresses/actions/validate
 public_docstrings PUT /v1/identity/account-users/{id}/actions/activate
 public_docstrings PUT /v1/identity/account-users/{id}/actions/disable
 public_docstrings PUT /v1/operations/production-schedule-settings/items/{item_id}
@@ -197,7 +193,6 @@ search_documented GET /v1/sales/account-prices
 search_documented GET /v1/sales/account-statuses
 search_documented GET /v1/sales/account-users/{id}/sales-targets
 search_documented GET /v1/sales/accounts/{account_id}/territories
-search_documented GET /v1/sales/addresses
 search_documented GET /v1/sales/customers
 search_documented GET /v1/sales/order-discounts
 search_documented GET /v1/sales/portal-registration-sessions

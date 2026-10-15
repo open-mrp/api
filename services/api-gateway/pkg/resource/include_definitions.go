@@ -15,6 +15,13 @@ func registerIncludes(oi *apiendpoint.ObjectIncludes) {
 
 func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeAddress,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "receive_calendar", ObjectType: constants.ObjectTypeOperatingCalendar},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomerPricingFinding,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},

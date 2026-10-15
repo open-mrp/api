@@ -96,7 +96,6 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleSupportRouteID:                      {},
 		apiresource.SampleEnterpriseInquiryID:                 {},
 		apiresource.SampleEmailContactID:                      {},
-		apiresource.SampleGeolocationID:                       {},
 		apiresource.SampleHubspotCompanyReviewID:              {},
 		apiresource.SampleHubspotSyncJobID:                    {},
 		apiresource.SampleHubspotSyncRecordID:                 {},

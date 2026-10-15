@@ -2,6 +2,10 @@
 SELECT * FROM operating_calendar
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id') AND deleted_at IS NULL;
 
+-- name: GetOperatingCalendarsByIDs :many
+SELECT * FROM operating_calendar
+WHERE id IN (sqlc.slice('ids')) AND account_id IN (sqlc.slice('account_ids')) AND deleted_at IS NULL;
+
 -- name: GetOperatingCalendarByCode :one
 SELECT * FROM operating_calendar
 WHERE account_id = sqlc.arg('account_id') AND code = sqlc.arg('code') AND deleted_at IS NULL;

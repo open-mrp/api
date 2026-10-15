@@ -28,13 +28,13 @@ func TestCreateOptionalFieldExplicitNullRejected(t *testing.T) {
 	t.Run("address_input_phone", func(t *testing.T) {
 		t.Parallel()
 		status, _, err := apiClient.Post(addressesPath, map[string]any{
-			"name":          uniqueName("e2e-addr-null"),
-			"phone":         nil,
-			"street_line_1": "1 Null St",
-			"locality":      "Denver",
-			"state":         "CO",
-			"postal_code":   "80202",
-			"country":       "US",
+			"name":        uniqueName("e2e-addr-null"),
+			"phone":       nil,
+			"line_1":      "1 Null St",
+			"city":        "Denver",
+			"state":       "CO",
+			"postal_code": "80202",
+			"country":     "US",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.True(t, status == 400 || status == 422,

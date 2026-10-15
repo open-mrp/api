@@ -51,20 +51,20 @@ var (
 
 var sampleRateShopRequest = &RateShopRequest{
 	FromAddress: field.Some(apirequest.AddressInput{
-		Name:        "Origin Warehouse",
-		StreetLine1: field.SomePtr(&sampleRateShopFromStreetLine1),
-		Locality:    field.SomePtr(&sampleRateShopFromLocality),
-		State:       field.SomePtr(&sampleRateShopFromState),
-		PostalCode:  field.SomePtr(&sampleRateShopFromPostalCode),
-		Country:     apiresource.SampleAddressCountry,
+		Name:       "Origin Warehouse",
+		Line1:      field.SomePtr(&sampleRateShopFromStreetLine1),
+		City:       field.SomePtr(&sampleRateShopFromLocality),
+		State:      field.SomePtr(&sampleRateShopFromState),
+		PostalCode: field.SomePtr(&sampleRateShopFromPostalCode),
+		Country:    apiresource.SampleAddressCountry,
 	}),
 	ToAddress: apirequest.AddressInput{
-		Name:        "Destination",
-		StreetLine1: field.SomePtr(&sampleRateShopToStreetLine1),
-		Locality:    field.SomePtr(&sampleRateShopToLocality),
-		State:       field.SomePtr(&sampleRateShopToState),
-		PostalCode:  field.SomePtr(&sampleRateShopToPostalCode),
-		Country:     "US",
+		Name:       "Destination",
+		Line1:      field.SomePtr(&sampleRateShopToStreetLine1),
+		City:       field.SomePtr(&sampleRateShopToLocality),
+		State:      field.SomePtr(&sampleRateShopToState),
+		PostalCode: field.SomePtr(&sampleRateShopToPostalCode),
+		Country:    "US",
 	},
 	Parcels: []ParcelInput{
 		{

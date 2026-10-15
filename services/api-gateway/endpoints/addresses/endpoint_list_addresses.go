@@ -17,17 +17,15 @@ import (
 // Request to list addresses.
 type ListAddressesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`, `line_1`, `line_2`, `city`, `state`, `postal_code` or `country`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filters results to addresses of the given type.
-	Type *constants.AddressType `query:"type"`
+	// Only return addresses of these types.
+	Types []constants.AddressType `query:"types"`
 }
 
-// Returns a paginated list of addresses.
+// Returns a list of addresses.
 //
-// Addresses belonging to the account you are acting in are returned newest first. The `q` search term matches the address name, street lines, city, state, postal code, and country.
+// Returns the addresses of the account you're acting in, newest first.
 type ListAddressesEndpoint struct{}
 
 func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddressesRequest, *apiresource.List[apiresource.Address]] {
@@ -35,15 +33,18 @@ func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddr
 		Title:             "List Addresses",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/sales/addresses",
+		Route:             addressesRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError) {
 			return svc.(AddressSvc).ListAddresses
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAddress,
+			Fields:     []string{"receive_calendar"},
+		}),
 	})
 }

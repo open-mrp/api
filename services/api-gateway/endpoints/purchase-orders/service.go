@@ -794,45 +794,30 @@ func buildAddressFromProto(
 	name, line1, line2, locality, state, postalCode, country, phone, email *string,
 	createdAt, updatedAt *timestamppb.Timestamp,
 ) *apiresource.Address {
-	addr := &apiresource.Address{
-		ID:     id,
-		Object: constants.ObjectTypeAddress,
-		Type:   constants.AddressTypeStandard,
-		Phone:  phone,
-		Email:  email,
+	parts := resourceloaders.AddressParts{
+		ID:         id,
+		IsDropShip: addrType != nil && constants.AddressType(*addrType) == constants.AddressTypeDropShip,
+		Line1:      line1,
+		Line2:      line2,
+		City:       locality,
+		State:      state,
+		PostalCode: postalCode,
+		Phone:      phone,
+		Email:      email,
 	}
-
-	if addrType != nil {
-		addr.Type = constants.AddressType(*addrType)
-	}
-
 	if name != nil {
-		addr.Name = *name
+		parts.Name = *name
 	}
-
+	if country != nil {
+		parts.Country = *country
+	}
 	if createdAt != nil {
-		addr.CreatedAt = createdAt.AsTime()
+		parts.CreatedAt = createdAt.AsTime()
 	}
 	if updatedAt != nil {
-		addr.UpdatedAt = updatedAt.AsTime()
+		parts.UpdatedAt = updatedAt.AsTime()
 	}
-
-	countryStr := ""
-	if country != nil {
-		countryStr = *country
-	}
-
-	addr.Geolocation = &apiresource.Geolocation{
-		Object:      constants.ObjectTypeGeolocation,
-		StreetLine1: line1,
-		StreetLine2: line2,
-		Locality:    locality,
-		State:       state,
-		PostalCode:  postalCode,
-		Country:     countryStr,
-	}
-
-	return addr
+	return resourceloaders.NewAddress(parts)
 }
 
 // purchaseOrderLineUnitIDs names the units a set of lines is measured in, so a caller can resolve them before presenting.

@@ -21,21 +21,20 @@ type DeleteAddressRequest struct {
 
 // Deletes an address.
 //
-// Deletion fails if the address is in use as a billing or shipping address on a sales order, invoice, or shipment, or as a default account address.
+// Only while no order, invoice or shipment uses it and it isn't a customer's or supplier's default.
 type DeleteAddressEndpoint struct{}
 
 func (e *DeleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAddressRequest, *object.Deleted] {
 	return (&apiendpoint.APIEndpoint[*DeleteAddressRequest, *object.Deleted]{
 		Title:             "Delete Address",
 		Method:            http.MethodDelete,
-		Route:             "/v1/sales/addresses/{id}",
+		Route:             addressRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeAddress,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAddressRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(AddressSvc).DeleteAddress, constants.ObjectTypeAddress, "id")
 		},

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const addressesPath = "/v1/sales/addresses"
+const addressesPath = "/v1/core/addresses"
 
 func TestAddresses_CRUD(t *testing.T) {
 	t.Parallel()
@@ -21,16 +21,16 @@ func TestAddresses_CRUD(t *testing.T) {
 
 	// CREATE
 	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
-		"name":          name,
-		"phone":         phone,
-		"email":         email,
-		"type":          "drop_ship",
-		"street_line_1": "100 Test Ave",
-		"street_line_2": "Suite 200",
-		"locality":      "Denver",
-		"state":         "CO",
-		"postal_code":   "80202",
-		"country":       "US",
+		"name":        name,
+		"phone":       phone,
+		"email":       email,
+		"type":        "drop_ship",
+		"line_1":      "100 Test Ave",
+		"line_2":      "Suite 200",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -47,14 +47,10 @@ func TestAddresses_CRUD(t *testing.T) {
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	// Geolocation sub-resource
-	geo := jsonObject(created, "geolocation")
-	require.NotNil(t, geo, "geolocation should be present")
-	assert.NotEmpty(t, jsonField(geo, "id"))
-	assert.Equal(t, "geolocation", jsonField(geo, "object"))
-	assert.Equal(t, "100 Test Ave", jsonField(geo, "street_line_1"))
-	assert.Equal(t, "Suite 200", jsonField(geo, "street_line_2"))
-	assert.Equal(t, "Denver", jsonField(geo, "locality"))
+	geo := created
+	assert.Equal(t, "100 Test Ave", jsonField(geo, "line_1"))
+	assert.Equal(t, "Suite 200", jsonField(geo, "line_2"))
+	assert.Equal(t, "Denver", jsonField(geo, "city"))
 	assert.Equal(t, "CO", jsonField(geo, "state"))
 	assert.Equal(t, "80202", jsonField(geo, "postal_code"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
@@ -104,16 +100,16 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	name := uniqueName("e2e-addr-allf")
 	email := name + "@e2e-test.openmrp.ai"
 	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
-		"name":          name,
-		"phone":         "555-000-1234",
-		"email":         email,
-		"type":          "drop_ship",
-		"street_line_1": "100 Create Ave",
-		"street_line_2": "Suite 200",
-		"locality":      "Denver",
-		"state":         "CO",
-		"postal_code":   "80202",
-		"country":       "US",
+		"name":        name,
+		"phone":       "555-000-1234",
+		"email":       email,
+		"type":        "drop_ship",
+		"line_1":      "100 Create Ave",
+		"line_2":      "Suite 200",
+		"city":        "Denver",
+		"state":       "CO",
+		"postal_code": "80202",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -132,13 +128,10 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
-	geo := jsonObject(got, "geolocation")
-	require.NotNil(t, geo, "geolocation must be set after create")
-	assert.NotEmpty(t, jsonField(geo, "id"))
-	assert.Equal(t, "geolocation", jsonField(geo, "object"))
-	assert.Equal(t, "100 Create Ave", jsonField(geo, "street_line_1"))
-	assert.Equal(t, "Suite 200", jsonField(geo, "street_line_2"))
-	assert.Equal(t, "Denver", jsonField(geo, "locality"))
+	geo := got
+	assert.Equal(t, "100 Create Ave", jsonField(geo, "line_1"))
+	assert.Equal(t, "Suite 200", jsonField(geo, "line_2"))
+	assert.Equal(t, "Denver", jsonField(geo, "city"))
 	assert.Equal(t, "CO", jsonField(geo, "state"))
 	assert.Equal(t, "80202", jsonField(geo, "postal_code"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
@@ -147,15 +140,15 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	updatedName := uniqueName("e2e-addr-allf-u")
 	updatedEmail := updatedName + "@e2e-test.openmrp.ai"
 	patchStatus, patchBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"name":          updatedName,
-		"phone":         "555-999-8888",
-		"email":         updatedEmail,
-		"type":          "standard",
-		"street_line_1": "200 Update Blvd",
-		"street_line_2": "Floor 3",
-		"locality":      "Seattle",
-		"state":         "WA",
-		"postal_code":   "98101",
+		"name":        updatedName,
+		"phone":       "555-999-8888",
+		"email":       updatedEmail,
+		"type":        "standard",
+		"line_1":      "200 Update Blvd",
+		"line_2":      "Floor 3",
+		"city":        "Seattle",
+		"state":       "WA",
+		"postal_code": "98101",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -167,11 +160,11 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, updatedEmail, jsonField(updated, "email"))
 	assert.Equal(t, "standard", jsonField(updated, "type"))
 
-	updGeo := jsonObject(updated, "geolocation")
+	updGeo := updated
 	require.NotNil(t, updGeo, "geolocation should be present after update")
-	assert.Equal(t, "200 Update Blvd", jsonField(updGeo, "street_line_1"))
-	assert.Equal(t, "Floor 3", jsonField(updGeo, "street_line_2"))
-	assert.Equal(t, "Seattle", jsonField(updGeo, "locality"))
+	assert.Equal(t, "200 Update Blvd", jsonField(updGeo, "line_1"))
+	assert.Equal(t, "Floor 3", jsonField(updGeo, "line_2"))
+	assert.Equal(t, "Seattle", jsonField(updGeo, "city"))
 	assert.Equal(t, "WA", jsonField(updGeo, "state"))
 	assert.Equal(t, "98101", jsonField(updGeo, "postal_code"))
 	assert.Equal(t, "US", jsonField(updGeo, "country"), "country should be preserved")
@@ -190,12 +183,9 @@ func TestAddresses_GetByID(t *testing.T) {
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
-	geo := jsonObject(got, "geolocation")
-	require.NotNil(t, geo, "geolocation should be present")
-	assert.NotEmpty(t, jsonField(geo, "id"))
-	assert.Equal(t, "geolocation", jsonField(geo, "object"))
-	assert.Equal(t, "789 Mission St", jsonField(geo, "street_line_1"))
-	assert.Equal(t, "San Francisco", jsonField(geo, "locality"))
+	geo := got
+	assert.Equal(t, "789 Mission St", jsonField(geo, "line_1"))
+	assert.Equal(t, "San Francisco", jsonField(geo, "city"))
 	assert.Equal(t, "CA", jsonField(geo, "state"))
 	assert.Equal(t, "94103", jsonField(geo, "postal_code"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
@@ -230,13 +220,13 @@ func TestAddresses_ListPagination(t *testing.T) {
 	var ids []string
 	for i := 0; i < 2; i++ {
 		status, body, err := apiClient.Post(addressesPath, map[string]any{
-			"name":          fmt.Sprintf("%s-%d", prefix, i),
-			"type":          "drop_ship",
-			"street_line_1": "100 Pagination Ave",
-			"locality":      "Denver",
-			"state":         "CO",
-			"postal_code":   "80202",
-			"country":       "US",
+			"name":        fmt.Sprintf("%s-%d", prefix, i),
+			"type":        "drop_ship",
+			"line_1":      "100 Pagination Ave",
+			"city":        "Denver",
+			"state":       "CO",
+			"postal_code": "80202",
+			"country":     "US",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -286,8 +276,8 @@ func TestAddresses_ListFilterDropShipTrue(t *testing.T) {
 	dropShipName := createAddressForFilterTest(t, "drop_ship")
 
 	list, _, err := apiClient.GetList(addressesPath, url.Values{
-		"type": {"drop_ship"},
-		"q":    {dropShipName},
+		"types[]": {"drop_ship"},
+		"q":       {dropShipName},
 	})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1, "should find the drop-ship address we just created")
@@ -302,8 +292,8 @@ func TestAddresses_ListFilterDropShipFalse(t *testing.T) {
 	nonDropShipName := createAddressForFilterTest(t, "standard")
 
 	list, _, err := apiClient.GetList(addressesPath, url.Values{
-		"type": {"standard"},
-		"q":    {nonDropShipName},
+		"types[]": {"standard"},
+		"q":       {nonDropShipName},
 	})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1, "should find the non-drop-ship address we just created")
@@ -319,7 +309,7 @@ func TestAddresses_ListFilterDropShipNarrowsResults(t *testing.T) {
 	nonDropShipName := createAddressForFilterTest(t, "standard")
 
 	// Filtering by type=drop_ship should return the drop-ship one but NOT the standard one.
-	dsList, _, err := apiClient.GetList(addressesPath, url.Values{"type": {"drop_ship"}})
+	dsList, _, err := apiClient.GetList(addressesPath, url.Values{"types[]": {"drop_ship"}})
 	require.NoError(t, err)
 	dsNames := make(map[string]bool, len(dsList.Data))
 	for _, item := range dsList.Data {
@@ -329,7 +319,7 @@ func TestAddresses_ListFilterDropShipNarrowsResults(t *testing.T) {
 	assert.False(t, dsNames[nonDropShipName], "type=drop_ship should NOT include the standard address")
 
 	// Filtering by type=standard should return the standard one but NOT the drop-ship one.
-	nonDsList, _, err := apiClient.GetList(addressesPath, url.Values{"type": {"standard"}})
+	nonDsList, _, err := apiClient.GetList(addressesPath, url.Values{"types[]": {"standard"}})
 	require.NoError(t, err)
 	nonDsNames := make(map[string]bool, len(nonDsList.Data))
 	for _, item := range nonDsList.Data {
@@ -435,12 +425,12 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 
 	// Create
 	createStatus, createBody, err := apiClient.Post(addressesPath, map[string]any{
-		"name":          name,
-		"street_line_1": "500 Original St",
-		"locality":      "Austin",
-		"state":         "TX",
-		"postal_code":   "73301",
-		"country":       "US",
+		"name":        name,
+		"line_1":      "500 Original St",
+		"city":        "Austin",
+		"state":       "TX",
+		"postal_code": "73301",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -462,11 +452,9 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 	assert.Equal(t, "555-111-2222", jsonField(updated, "phone"))
 	assert.Equal(t, newName+"@test.openmrp.ai", jsonField(updated, "email"))
 
-	// Geolocation should be preserved
-	geo := jsonObject(updated, "geolocation")
-	require.NotNil(t, geo, "geolocation should still be present after address-only update")
-	assert.Equal(t, "500 Original St", jsonField(geo, "street_line_1"))
-	assert.Equal(t, "Austin", jsonField(geo, "locality"))
+	geo := updated
+	assert.Equal(t, "500 Original St", jsonField(geo, "line_1"))
+	assert.Equal(t, "Austin", jsonField(geo, "city"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
 }
 
@@ -476,12 +464,12 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 
 	// Create
 	createStatus, createBody, err := apiClient.Post(addressesPath, map[string]any{
-		"name":          name,
-		"street_line_1": "600 Old Rd",
-		"locality":      "Miami",
-		"state":         "FL",
-		"postal_code":   "33101",
-		"country":       "US",
+		"name":        name,
+		"line_1":      "600 Old Rd",
+		"city":        "Miami",
+		"state":       "FL",
+		"postal_code": "33101",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -490,10 +478,10 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 
 	// Update geolocation fields
 	patchStatus, patchBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"street_line_1": "700 New Blvd",
-		"locality":      "Seattle",
-		"state":         "WA",
-		"postal_code":   "98101",
+		"line_1":      "700 New Blvd",
+		"city":        "Seattle",
+		"state":       "WA",
+		"postal_code": "98101",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -503,10 +491,10 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 	assert.Equal(t, name, jsonField(updated, "name"))
 
 	// Geolocation should reflect updates
-	geo := jsonObject(updated, "geolocation")
+	geo := updated
 	require.NotNil(t, geo, "geolocation should be present")
-	assert.Equal(t, "700 New Blvd", jsonField(geo, "street_line_1"))
-	assert.Equal(t, "Seattle", jsonField(geo, "locality"))
+	assert.Equal(t, "700 New Blvd", jsonField(geo, "line_1"))
+	assert.Equal(t, "Seattle", jsonField(geo, "city"))
 	assert.Equal(t, "WA", jsonField(geo, "state"))
 	assert.Equal(t, "98101", jsonField(geo, "postal_code"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
@@ -517,8 +505,8 @@ func TestAddresses_DeleteInUse(t *testing.T) {
 	// The seeded address is used as billing address on sales orders, invoices, and account defaults.
 	delStatus, delBody, err := apiClient.Delete(addressesPath + "/" + SeedAddressID)
 	require.NoError(t, err)
-	assert.True(t, delStatus == 400 || delStatus == 409 || delStatus == 422,
-		"Deleting in-use address should return 400, 409, or 422, got %d: %s", delStatus, string(delBody))
+	requireStatus(t, 409, delStatus, delBody)
+	assert.Equal(t, "resource_in_use", jsonField(jsonObject(parseJSON(delBody), "error"), "code"))
 }
 
 // A PATCH changes only what it names, so the dock's receiving calendar survives an edit to the address's other fields and goes only when cleared.
@@ -532,15 +520,27 @@ func TestAddresses_UpdateKeepsReceiveCalendarUnlessCleared(t *testing.T) {
 		"country":             "US",
 	})
 	id := jsonField(created, "id")
-	require.Equal(t, calendarID, jsonField(created, "receive_calendar_id"))
+	assertNilField(t, created, "receive_calendar")
+	withCalendar := url.Values{"include[]": {"receive_calendar"}}
 
-	status, body, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{"name": uniqueName("e2e-addr-cal-renamed")}, newIdempotencyKey())
+	status, body, err := apiClient.GetListRaw(addressesPath+"/"+id, withCalendar)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, calendarID, jsonField(parseJSON(body), "receive_calendar_id"), "an update that does not name the calendar must keep it")
+	require.Equal(t, calendarID, jsonField(jsonObject(parseJSON(body), "receive_calendar"), "id"))
+
+	status, body, err = apiClient.Patch(addressesPath+"/"+id, map[string]any{"name": uniqueName("e2e-addr-cal-renamed")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	status, body, err = apiClient.GetListRaw(addressesPath+"/"+id, withCalendar)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, calendarID, jsonField(jsonObject(parseJSON(body), "receive_calendar"), "id"), "an update that does not name the calendar must keep it")
 
 	status, body, err = apiClient.Patch(addressesPath+"/"+id, map[string]any{"receive_calendar_id": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assertNilField(t, parseJSON(body), "receive_calendar_id")
+	status, body, err = apiClient.GetListRaw(addressesPath+"/"+id, withCalendar)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "receive_calendar")
 }

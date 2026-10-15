@@ -529,9 +529,9 @@ func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerA
 		Phone:        a.Phone.Ptr(),
 		Email:        a.Email.Ptr(),
 		IsDropShip:   addressTypeToDropShip(a.Type.Ptr()),
-		StreetLine_1: a.StreetLine1.Ptr(),
-		StreetLine_2: a.StreetLine2.Ptr(),
-		Locality:     a.Locality.Ptr(),
+		StreetLine_1: a.Line1.Ptr(),
+		StreetLine_2: a.Line2.Ptr(),
+		Locality:     a.City.Ptr(),
 		State:        a.State.Ptr(),
 		PostalCode:   a.PostalCode.Ptr(),
 		Country:      a.Country,
@@ -772,35 +772,7 @@ func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
 }
 
 func buildCustomerAddress(a *pb.CustomerAddressProto) *apiresource.Address {
-	if a == nil {
-		return nil
-	}
-
-	var geolocation *apiresource.Geolocation
-	if a.Geolocation != nil {
-		geolocation = &apiresource.Geolocation{
-			ID:          a.Geolocation.Id,
-			Object:      constants.ObjectTypeGeolocation,
-			StreetLine1: a.Geolocation.StreetLine_1,
-			StreetLine2: a.Geolocation.StreetLine_2,
-			Locality:    a.Geolocation.Locality,
-			State:       a.Geolocation.State,
-			PostalCode:  a.Geolocation.PostalCode,
-			Country:     a.Geolocation.Country,
-		}
-	}
-
-	return &apiresource.Address{
-		ID:          a.Id,
-		Object:      constants.ObjectTypeAddress,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		Type:        addressTypeFromDropShip(a.IsDropShip),
-		Geolocation: geolocation,
-		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
-	}
+	return resourceloaders.CustomerAddressFromProto(a)
 }
 
 func buildAccountGroupFromProto(g *pb.CustomerAccountGroupProto) *apiresource.AccountGroup {
@@ -847,13 +819,6 @@ func customerRelationshipType(isParent bool, hasParent bool) constants.CustomerR
 		return constants.CustomerRelationshipTypeChild
 	}
 	return constants.CustomerRelationshipTypeStandalone
-}
-
-func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
-	if isDropShip {
-		return constants.AddressTypeDropShip
-	}
-	return constants.AddressTypeStandard
 }
 
 func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError) {

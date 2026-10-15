@@ -203,3 +203,54 @@ func (s *AddressMedTestSuite) TestPreviewOfANewAddressIsBuiltFromItsFields() {
 	s.Equal("OH", *got.Geolocation.State)
 	s.Equal("US", got.Geolocation.Country)
 }
+
+func (s *AddressMedTestSuite) TestSnapshotOfASavedAddressCopiesIt() {
+	s.address.EXPECT().Get(gomock.Any(), domain.GetAddressParams{AccountID: inlineSupplierAccountID, AddressID: inlineAddressID}).Return(s.storedDock(), nil)
+
+	snap, apiErr := s.med.Snapshot(s.ctx, inlineSupplierAccountID, &domain.AddressSnapshot{AddressID: strPtr(inlineAddressID)}, "ship_to")
+
+	s.Require().Nil(apiErr)
+	s.Equal(&domain.AddressSnapshot{
+		AddressID: strPtr(inlineAddressID),
+		Name:      "Dock",
+		Line1:     strPtr("9 Spindle Way"),
+		City:      strPtr("Los Angeles"),
+		Country:   "US",
+		Phone:     strPtr("555-0100"),
+	}, snap)
+	s.Empty(s.outbox.messages, "a snapshot writes nothing")
+}
+
+func (s *AddressMedTestSuite) TestSnapshotOfAnAddressOutsideTheAccountIsNotFoundOnTheID() {
+	s.address.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("Address not found."))
+
+	_, apiErr := s.med.Snapshot(s.ctx, inlineSupplierAccountID, &domain.AddressSnapshot{AddressID: strPtr("ad_elsewhere")}, "bill_to")
+
+	s.Require().NotNil(apiErr)
+	s.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
+	s.Equal("bill_to.address_id", apiErr.Param)
+}
+
+func (s *AddressMedTestSuite) TestSnapshotOfInlineFieldsKeepsThemWithoutASource() {
+	input := &domain.AddressSnapshot{Name: "  Site B  ", Line1: strPtr("1 Elm"), Country: "CA"}
+
+	snap, apiErr := s.med.Snapshot(s.ctx, inlineSupplierAccountID, input, "ship_to")
+
+	s.Require().Nil(apiErr)
+	s.Equal(&domain.AddressSnapshot{Name: "Site B", Line1: strPtr("1 Elm"), Country: "CA"}, snap)
+	s.Equal("  Site B  ", input.Name, "the input is not modified")
+}
+
+func (s *AddressMedTestSuite) TestSnapshotOfInlineFieldsNeedsANameAndCountry() {
+	_, apiErr := s.med.Snapshot(s.ctx, inlineSupplierAccountID, &domain.AddressSnapshot{Name: "Dock"}, "ship_to")
+	s.Require().NotNil(apiErr)
+	s.Equal("ship_to.country", apiErr.Param)
+
+	_, apiErr = s.med.Snapshot(s.ctx, inlineSupplierAccountID, &domain.AddressSnapshot{Name: " ", Country: "US"}, "ship_to")
+	s.Require().NotNil(apiErr)
+	s.Equal("ship_to.name", apiErr.Param)
+
+	snap, apiErr := s.med.Snapshot(s.ctx, inlineSupplierAccountID, nil, "ship_to")
+	s.Nil(apiErr)
+	s.Nil(snap)
+}

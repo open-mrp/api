@@ -164,13 +164,13 @@ func valuesWithout(values map[string]any, keys ...string) map[string]any {
 // account has no billing address to edit yet.
 func createAccountAddress(t *testing.T, c *Client, name string) string {
 	t.Helper()
-	status, body, err := c.Post("/v1/sales/addresses", map[string]any{
-		"name":          name,
-		"street_line_1": "123 Test St",
-		"locality":      "Los Angeles",
-		"state":         "CA",
-		"postal_code":   "90001",
-		"country":       "US",
+	status, body, err := c.Post("/v1/core/addresses", map[string]any{
+		"name":        name,
+		"line_1":      "123 Test St",
+		"city":        "Los Angeles",
+		"state":       "CA",
+		"postal_code": "90001",
+		"country":     "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -271,7 +271,7 @@ func TestAccounts_RetrieveWithEveryIncludeAsTheDashboardDoes(t *testing.T) {
 		require.NotNil(t, addr, "the seeded account has a %s: %v", f, got)
 		assertIDFormat(t, jsonField(addr, "id"), "ad")
 		assertObjectField(t, addr, "address")
-		assertObjectField(t, jsonObject(addr, "geolocation"), "geolocation")
+		assert.NotEmpty(t, jsonField(addr, "country"), "the address fields are flat")
 	}
 }
 
@@ -454,7 +454,7 @@ func TestAccountUpdate_SavesTheDashboardSettingsForm(t *testing.T) {
 	billing := jsonObject(got, "default_billing_address")
 	require.NotNil(t, billing)
 	assert.Equal(t, "E2E Settings Billing", jsonField(billing, "name"))
-	assert.Equal(t, "123 Test St", jsonField(jsonObject(billing, "geolocation"), "street_line_1"))
+	assert.Equal(t, "123 Test St", jsonField(billing, "line_1"))
 }
 
 // A new slug moves the customer portal: the public branding lookup finds the account under it, and the
@@ -618,7 +618,7 @@ func TestAccountUpdate_RefusesADefaultAddressTheAccountDoesNotHave(t *testing.T)
 	before := accountValues(readAccount(t, acct.owner, acct.id))
 
 	deletedID := createAccountAddress(t, acct.owner, "E2E Deleted Address")
-	status, body, err := acct.owner.Delete("/v1/sales/addresses/" + deletedID)
+	status, body, err := acct.owner.Delete("/v1/core/addresses/" + deletedID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

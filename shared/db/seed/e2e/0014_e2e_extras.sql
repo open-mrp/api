@@ -406,8 +406,15 @@ INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, ma
     ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.openmrp.ai', 'verified',
      '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', 'mail.mail.e2e.openmrp.ai', NOW(), NOW(), NOW());
 
-INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, created_at, updated_at) VALUES
-    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
+-- The inbox seats a team roster on each new thread, so its `group` include resolves a real group.
+INSERT IGNORE INTO messaging_group (id, account_id, name, created_at, updated_at) VALUES
+    ('cvgp_01seedinboxteam00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'E2E Support Team', NOW(), NOW());
+
+INSERT IGNORE INTO messaging_group_member (id, group_id, account_id, member_type, account_user_id, created_at) VALUES
+    ('cvgppt_01seedinboxtm00', 'cvgp_01seedinboxteam00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'user', 'acus_s83fjhyfmqen', NOW());
+
+INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, group_id, created_at, updated_at) VALUES
+    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', 'cvgp_01seedinboxteam00', NOW(), NOW());
 
 -- A configured sender so GET/PUT/DELETE /v1/messaging/email-sender resolve against a real row.
 INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, from_name, reply_to, created_at, updated_at) VALUES
@@ -1883,7 +1890,7 @@ INSERT IGNORE INTO job (
 -- ============================================================
 -- OPERATING CALENDARS (fixtures for the generic contract suites)
 -- ============================================================
--- Deliberately not defaults and deliberately unlinked, so nothing resolves against them.
+-- Deliberately not defaults, and linked to nothing a commitment reads, so nothing resolves against them.
 -- A default calendar here would put its closures into every ship-by date in the suite and
 -- make the commitment tests depend on which holidays happen to fall near the run date.
 INSERT IGNORE INTO operating_calendar (
@@ -1900,6 +1907,17 @@ INSERT IGNORE INTO operating_calendar_closure (
     id, account_id, operating_calendar_id, closed_on, name, created_at, updated_at
 ) VALUES
     ('occdcn_01e2eclosure000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'occd_01e2eshipcal00000', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'E2E fixture closure', NOW(3), NOW(3));
+
+-- A saved dock that names the receiving calendar, so an address's receive_calendar include resolves a real
+-- calendar. No order, customer or setting uses this address, so nothing resolves a ship-by date through it.
+INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES
+    ('gl_01seedrecvdock00000', '77 Receiving Way', 'Columbus', 'OH', '43204', 'US', NOW(), NOW());
+
+INSERT IGNORE INTO address (id, name, geolocation_id, receive_calendar_id, created_at, updated_at) VALUES
+    ('ad_01seedrecvdock00000', 'E2E receiving dock', 'gl_01seedrecvdock00000', 'occd_01e2erecvcal00000', NOW(), NOW());
+
+INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, updated_at) VALUES
+    ('acad_01seedrecvdock0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ad_01seedrecvdock00000', NOW(), NOW());
 
 
 -- ============================================================

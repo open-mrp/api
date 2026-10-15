@@ -26,13 +26,13 @@ type UpdateAccountGroupRequest struct {
 	Description field.Clearable[string] `json:"description,omitzero"`
 	// How sales commission applies to accounts in this group.
 	//
-	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
-	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
+	// - `applied`: sales commission is calculated on orders from accounts in this group.
+	// - `exempt`: orders from accounts in this group are exempt from commission.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
 	// How freight charges apply to orders from accounts in this group.
 	//
-	// - `free_freight`: customers within this group will not have to pay for freight.
-	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
+	// - `free`: customers within this group will not have to pay for freight.
+	// - `billed`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own. Clearing it returns the group's customers to the account default.
 	DefaultLeadTimeDays field.Clearable[int32] `json:"default_lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`

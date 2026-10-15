@@ -119,7 +119,7 @@ func (s *transactionScan) transaction() *domain.Transaction {
 		CustomerID:                &s.customerID,
 		CustomerNumber:            nullStringPtr(s.customerNumber),
 		CustomerStatusCode:        nullStringPtr(s.customerStatus),
-		CustomerCommissionPolicy:  nullStringPtr(s.customerCommission),
+		CustomerCommissionPolicy:  commissionPolicyPtr(s.customerCommission),
 		CustomerCreatedAt:         nullTimePtr(s.customerCreatedAt),
 		CustomerUpdatedAt:         nullTimePtr(s.customerUpdatedAt),
 		ResponsibleUserName:       nonEmptyPtr(s.responsibleName),

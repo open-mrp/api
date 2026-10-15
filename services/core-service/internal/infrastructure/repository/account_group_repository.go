@@ -48,8 +48,8 @@ func mapAccountGroupRow(
 		ID:                   id,
 		OwnerAccountID:       ownerAccountID,
 		Name:                 name,
-		CommissionPolicyCode: commissionStatusCode,
-		FreightPolicyCode:    freightStatusCode,
+		CommissionPolicyCode: string(constants.CommissionPolicyFromStatusCode(commissionStatusCode)),
+		FreightPolicyCode:    string(constants.FreightPolicyFromStatusCode(freightStatusCode)),
 		AccountGroupTypeCode: accountGroupTypeCode,
 		CreatedAt:            createdAt,
 		UpdatedAt:            updatedAt,
@@ -218,8 +218,8 @@ func (r *accountGroupRepoImpl) Create(ctx context.Context, id string, params dom
 		OwnerAccountID:       params.AccountID,
 		Name:                 params.Name,
 		Description:          toNullString(params.Description),
-		CommissionStatusCode: params.CommissionPolicyCode,
-		FreightStatusCode:    params.FreightPolicyCode,
+		CommissionStatusCode: constants.CommissionPolicy(params.CommissionPolicyCode).StatusCode(),
+		FreightStatusCode:    constants.FreightPolicy(params.FreightPolicyCode).StatusCode(),
 		AccountGroupTypeCode: params.AccountGroupTypeCode,
 		DefaultLeadTimeDays:  toNullInt32(params.DefaultLeadTimeDays),
 	})
@@ -239,8 +239,8 @@ func (r *accountGroupRepoImpl) Update(ctx context.Context, params domain.UpdateA
 		OwnerAccountID:       params.AccountID,
 		Name:                 toNullString(params.Name),
 		Description:          field.StringToNullString(params.Description),
-		CommissionStatusCode: toNullString(params.CommissionPolicyCode),
-		FreightStatusCode:    toNullString(params.FreightPolicyCode),
+		CommissionStatusCode: toNullString(commissionStatusCodePtr(params.CommissionPolicyCode)),
+		FreightStatusCode:    toNullString(freightStatusCodePtr(params.FreightPolicyCode)),
 		DefaultLeadTimeDays:  field.Int32ToNullInt32(params.DefaultLeadTimeDays),
 	})
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, accountGroupDuplicateKeyMapping); apiErr != nil {
@@ -393,4 +393,20 @@ func (r *accountGroupRepoImpl) ExistsByName(ctx context.Context, accountID, name
 		return false, tracing.Trace(span, apiErr)
 	}
 	return count > 0, nil
+}
+
+func commissionStatusCodePtr(policy *string) *string {
+	if policy == nil {
+		return nil
+	}
+	code := constants.CommissionPolicy(*policy).StatusCode()
+	return &code
+}
+
+func freightStatusCodePtr(policy *string) *string {
+	if policy == nil {
+		return nil
+	}
+	code := constants.FreightPolicy(*policy).StatusCode()
+	return &code
 }

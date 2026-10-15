@@ -1345,7 +1345,7 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	so.PickID = nullStringToPtr(row.PickID)
 	so.PriorityID = &row.PriorityID
 	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+	so.CustomerCommissionPolicy = commissionPolicyPtr(row.CustomerCommissionPolicy)
 
 	return so
 }
@@ -1495,7 +1495,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	so.PickID = nullStringToPtr(row.PickID)
 	so.PriorityID = &row.PriorityID
 	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+	so.CustomerCommissionPolicy = commissionPolicyPtr(row.CustomerCommissionPolicy)
 
 	return so
 }
@@ -1747,7 +1747,7 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	so.PickID = nullStringToPtr(row.PickID)
 	so.PriorityID = &row.PriorityID
 	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+	so.CustomerCommissionPolicy = commissionPolicyPtr(row.CustomerCommissionPolicy)
 
 	return so
 }

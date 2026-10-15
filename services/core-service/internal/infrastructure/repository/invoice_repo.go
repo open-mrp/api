@@ -454,7 +454,7 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 	}
 	invoice.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
 	invoice.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	invoice.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+	invoice.CustomerCommissionPolicy = commissionPolicyPtr(row.CustomerCommissionPolicy)
 
 	invoice.BillingAddress = mapAddressRow(
 		row.BillingAddressID, row.BillingAddressName, row.BillingAddressPhone, row.BillingAddressEmail, row.BillingAddressIsDropShip,

@@ -85,7 +85,7 @@ func useAccessClient(t *testing.T, client stubAccessClient) {
 }
 
 func accessTestLine(id string) *pb.ProductLineInfo {
-	return &pb.ProductLineInfo{Id: id, Name: "Line " + id, CommissionPolicy: "commission_applied", FreightPolicy: "billed_freight", CreatedAt: timestamppb.New(accessTestCreatedAt)}
+	return &pb.ProductLineInfo{Id: id, Name: "Line " + id, CommissionPolicy: "applied", FreightPolicy: "billed", CreatedAt: timestamppb.New(accessTestCreatedAt)}
 }
 
 func callerContext() context.Context {

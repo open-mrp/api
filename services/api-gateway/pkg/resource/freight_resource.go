@@ -13,10 +13,10 @@ type Freight struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=freight"`
 	// How freight is arranged and billed for the record.
 	//
-	// - `free_freight`: no shipping cost to the buyer.
-	// - `billed_freight`: freight is billed to the buyer.
+	// - `free`: no shipping cost to the buyer.
+	// - `billed`: freight is billed to the buyer.
 	//
-	// Sales orders, purchase orders, and shipments do not carry a policy of their own. Freight on those records is waived when the customer's freight preferences, the customer's type group, any of its pricing groups, the customer's shipping term, or any product line on the order is `free_freight`.
+	// Sales orders, purchase orders, and shipments do not carry a policy of their own. Freight on those records is waived when the customer's freight preferences, the customer's type group, any of its pricing groups, the customer's shipping term, or any product line on the order is `free`.
 	Policy *constants.FreightPolicy `json:"policy"`
 	// The shipping carrier selected to fulfill the shipment.
 	Carrier *Carrier `json:"carrier"`

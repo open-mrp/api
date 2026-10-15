@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
@@ -87,8 +88,8 @@ func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.Vol
 				ID:               cg.ID,
 				AccountGroupID:   cg.AccountGroupID,
 				Name:             cg.Name,
-				CommissionPolicy: cg.CommissionStatusCode,
-				FreightPolicy:    cg.FreightStatusCode,
+				CommissionPolicy: string(constants.CommissionPolicyFromStatusCode(cg.CommissionStatusCode)),
+				FreightPolicy:    string(constants.FreightPolicyFromStatusCode(cg.FreightStatusCode)),
 				Type:             cg.AccountGroupTypeCode,
 				CreatedAt:        cg.CreatedAt,
 				UpdatedAt:        cg.UpdatedAt,
@@ -224,8 +225,8 @@ func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*d
 				ID:               cg.ID,
 				AccountGroupID:   cg.AccountGroupID,
 				Name:             cg.Name,
-				CommissionPolicy: cg.CommissionStatusCode,
-				FreightPolicy:    cg.FreightStatusCode,
+				CommissionPolicy: string(constants.CommissionPolicyFromStatusCode(cg.CommissionStatusCode)),
+				FreightPolicy:    string(constants.FreightPolicyFromStatusCode(cg.FreightStatusCode)),
 				Type:             cg.AccountGroupTypeCode,
 				CreatedAt:        cg.CreatedAt,
 				UpdatedAt:        cg.UpdatedAt,

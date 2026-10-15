@@ -42,10 +42,10 @@ type Customer struct {
 	RelationshipType constants.CustomerRelationshipType `json:"relationship_type" validate:"required"`
 	// How sales commission applies to this customer's orders.
 	//
-	// - `commission_exempt`: this customer's orders are exempt from sales commission.
-	// - `commission_applied`: sales commission is calculated on this customer's orders.
+	// - `exempt`: this customer's orders are exempt from sales commission.
+	// - `applied`: sales commission is calculated on this customer's orders.
 	//
-	// The customer counts as exempt if this field, its `type` group, or any of its `price_groups` is `commission_exempt`. Exempt customers never have a sales rep assigned automatically when an order is created without one.
+	// The customer counts as exempt if this field, its `type` group, or any of its `price_groups` is `exempt`. Exempt customers never have a sales rep assigned automatically when an order is created without one.
 	//
 	// Null to customer and supplier portal users, like the rest of your commission settings.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
@@ -101,10 +101,10 @@ type CustomerFreightPreferences struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_freight_preferences"`
 	// Freight policy applied to this customer's orders.
 	//
-	// - `free_freight`: the customer is not billed for freight.
-	// - `billed_freight`: freight is billed to the customer.
+	// - `free`: the customer is not billed for freight.
+	// - `billed`: freight is billed to the customer.
 	//
-	// Freight is waived when this field, the customer's `type` group, any of its `price_groups`, or any product line the ordered products belong to is `free_freight`, so a shipment can come back freight-exempt even while this field is `billed_freight`.
+	// Freight is waived when this field, the customer's `type` group, any of its `price_groups`, or any product line the ordered products belong to is `free`, so a shipment can come back freight-exempt even while this field is `billed`.
 	Status constants.FreightPolicy `json:"status" validate:"required"`
 	// Carrier used on this customer's orders when the order does not specify one.
 	Carrier *Carrier `json:"carrier" expandable:"true"`

@@ -50,12 +50,11 @@ type AnalyzeDeliveryPerformanceEndpoint struct{}
 func (e *AnalyzeDeliveryPerformanceEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDeliveryPerformanceRequest, *apiresource.AnalyzeDeliveryPerformanceResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeDeliveryPerformanceRequest, *apiresource.AnalyzeDeliveryPerformanceResponse]{
 		Title:             "Analyze Delivery Performance",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/delivery-performance",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/delivery-performance/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Public:            false,
 		AgentTool:         true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}},

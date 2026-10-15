@@ -254,7 +254,7 @@ func (p productionCostPlant) report(t *testing.T, client *Client, body map[strin
 	if _, ok := body["ends_at"]; !ok {
 		body["ends_at"] = pcTimestamp(pcWindowEnd)
 	}
-	got := mustPutAnalytics(t, client, productionCostsPath, nil, body)
+	got := mustQueryAnalytics(t, client, productionCostsPath, nil, body)
 	assert.Equal(t, "analyze_production_costs_response", jsonField(got, "object"))
 	return got
 }
@@ -534,11 +534,11 @@ func TestAnalyticsProductionCosts_NeedsCostsRead(t *testing.T) {
 	body := map[string]any{"starts_at": pcTimestamp(pcWindowStart), "ends_at": pcTimestamp(pcWindowEnd), "category_ids": []string{SeedItemCategoryID}}
 
 	for _, perm := range []string{"items:read", "batches:read"} {
-		status, _, raw := putAnalytics(t, customRoleClient(t, perm), productionCostsPath, nil, body)
+		status, _, raw := queryAnalytics(t, customRoleClient(t, perm), productionCostsPath, nil, body)
 		assert.Equal(t, 403, status, "%s: %s", perm, string(raw))
 	}
 
-	got := mustPutAnalytics(t, customRoleClient(t, "costs:read"), productionCostsPath, nil, body)
+	got := mustQueryAnalytics(t, customRoleClient(t, "costs:read"), productionCostsPath, nil, body)
 	assert.Equal(t, "analyze_production_costs_response", jsonField(got, "object"))
 	assert.Equal(t, "hour", jsonField(jsonObject(got, "time_unit"), "id"), "a cost reader sees the units the report is counted in without units:read")
 }
@@ -546,15 +546,15 @@ func TestAnalyticsProductionCosts_NeedsCostsRead(t *testing.T) {
 func TestAnalyticsProductionCosts_Validation(t *testing.T) {
 	t.Parallel()
 
-	status, _, raw := putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"ends_at": pcTimestamp(pcWindowEnd)})
+	status, _, raw := queryAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"ends_at": pcTimestamp(pcWindowEnd)})
 	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "starts_at")
 
-	status, _, raw = putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowStart)})
+	status, _, raw = queryAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowStart)})
 	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "ends_at")
 
-	status, _, raw = putAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowEnd), "ends_at": pcTimestamp(pcWindowStart)})
+	status, _, raw = queryAnalytics(t, apiClient, productionCostsPath, nil, map[string]any{"starts_at": pcTimestamp(pcWindowEnd), "ends_at": pcTimestamp(pcWindowStart)})
 	requireStatus(t, 422, status, raw)
 	assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), "ends_at")
 }

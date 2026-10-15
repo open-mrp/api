@@ -27,13 +27,13 @@ type AnalyzeMaterialsEndpoint struct{}
 func (e *AnalyzeMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse]{
 		Title:             "Analyze Materials",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/materials",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/materials/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeMaterialsRequest) (*apiresource.AnalyzeMaterialsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeMaterials

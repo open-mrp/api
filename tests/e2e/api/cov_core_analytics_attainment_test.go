@@ -15,7 +15,7 @@ const scheduleAttainmentPath = "/v1/core/analytics/schedule-attainment"
 func analyzeAttainment(t *testing.T, body map[string]any) map[string]any {
 	t.Helper()
 
-	status, respBody, err := apiClient.Put(scheduleAttainmentPath, body)
+	status, respBody, err := apiClient.QueryAnalytics(scheduleAttainmentPath, nil, body)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, respBody)
 	return parseJSON(respBody)
@@ -46,7 +46,7 @@ func TestScheduleAttainment_NoBaselineReportsNullNotZero(t *testing.T) {
 func TestScheduleAttainment_RejectsInvertedPeriod(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(scheduleAttainmentPath, map[string]any{
+	status, body, err := apiClient.QueryAnalytics(scheduleAttainmentPath, nil, map[string]any{
 		"starts_at": "2026-08-01T00:00:00Z",
 		"ends_at":   "2026-07-01T00:00:00Z",
 	})
@@ -58,7 +58,7 @@ func TestScheduleAttainment_RejectsInvertedPeriod(t *testing.T) {
 func TestScheduleAttainment_RejectsUnknownGroupBy(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(scheduleAttainmentPath, map[string]any{
+	status, body, err := apiClient.QueryAnalytics(scheduleAttainmentPath, nil, map[string]any{
 		"starts_at": "2026-07-01T00:00:00Z",
 		"ends_at":   "2026-08-01T00:00:00Z",
 		"group_by":  "shift",

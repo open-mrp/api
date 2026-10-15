@@ -102,7 +102,7 @@ func TestSalesAnalytics_LinesOfSeveralCustomersPageBothWays(t *testing.T) {
 
 	filter := saleFilter(a.customerID)
 	filter["customer_ids"] = []string{a.customerID, b.customerID}
-	status, all, raw := putSales(t, salesLinesPath, url.Values{"limit": {"10"}}, filter)
+	status, all, raw := querySales(t, salesLinesPath, url.Values{"limit": {"10"}}, filter)
 	requireStatus(t, 200, status, raw)
 	var want []string
 	for _, row := range jsonArray(all, "data") {
@@ -110,10 +110,10 @@ func TestSalesAnalytics_LinesOfSeveralCustomersPageBothWays(t *testing.T) {
 	}
 	require.Len(t, want, 4, "two lines per sale")
 
-	status, first, raw := putSales(t, salesLinesPath, url.Values{"limit": {"3"}}, filter)
+	status, first, raw := querySales(t, salesLinesPath, url.Values{"limit": {"3"}}, filter)
 	requireStatus(t, 200, status, raw)
 	next := cursorFromURL(t, jsonField(jsonObject(first, "page_info"), "next_page_url"))
-	status, second, raw := putSales(t, salesLinesPath, url.Values{"limit": {"3"}, "cursor": {next}}, filter)
+	status, second, raw := querySales(t, salesLinesPath, url.Values{"limit": {"3"}, "cursor": {next}}, filter)
 	requireStatus(t, 200, status, raw)
 	var got []string
 	for _, page := range []map[string]any{first, second} {
@@ -124,7 +124,7 @@ func TestSalesAnalytics_LinesOfSeveralCustomersPageBothWays(t *testing.T) {
 	assert.Equal(t, want, got, "two pages hold the list in its order")
 
 	prev := cursorFromURL(t, jsonField(jsonObject(second, "page_info"), "previous_page_url"))
-	status, back, raw := putSales(t, salesLinesPath, url.Values{"limit": {"3"}, "cursor": {prev}}, filter)
+	status, back, raw := querySales(t, salesLinesPath, url.Values{"limit": {"3"}, "cursor": {prev}}, filter)
 	requireStatus(t, 200, status, raw)
 	var backIDs []string
 	for _, row := range jsonArray(back, "data") {

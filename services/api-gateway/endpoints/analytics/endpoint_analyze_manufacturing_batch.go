@@ -38,13 +38,13 @@ type AnalyzeManufacturingBatchEndpoint struct{}
 func (e *AnalyzeManufacturingBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse]{
 		Title:             "Analyze Manufacturing Batch",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/manufacturing-batch",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/manufacturing-batch/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingBatchRequest) (*apiresource.AnalyzeManufacturingBatchResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturingBatch

@@ -26,7 +26,7 @@ const (
 // analyzeCustomerPricing calls the configured-pricing audit and fails on anything other than 200. A 5xx here is a backend defect, never something to skip past.
 func analyzeCustomerPricing(t *testing.T, params url.Values, body map[string]any) map[string]any {
 	t.Helper()
-	status, respBody, err := apiClient.PutRaw(customerPricingPath, params, body)
+	status, respBody, err := apiClient.QueryAnalytics(customerPricingPath, params, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "customer pricing analytics must not 5xx: %s", string(respBody))
 	requireStatus(t, http.StatusOK, status, respBody)
@@ -35,7 +35,7 @@ func analyzeCustomerPricing(t *testing.T, params url.Values, body map[string]any
 
 func analyzeRealizedMargins(t *testing.T, params url.Values, body map[string]any) map[string]any {
 	t.Helper()
-	status, respBody, err := apiClient.PutRaw(realizedMarginsPath, params, body)
+	status, respBody, err := apiClient.QueryAnalytics(realizedMarginsPath, params, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "realized margin analytics must not 5xx: %s", string(respBody))
 	requireStatus(t, http.StatusOK, status, respBody)
@@ -291,7 +291,7 @@ func TestAnalyticsCustomerPricing_ExpandsCustomerAndProductLine(t *testing.T) {
 func TestAnalyticsCustomerPricing_RejectsUnknownInclude(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.PutRaw(customerPricingPath, url.Values{"include": {"not_a_relation"}}, map[string]any{})
+	status, body, err := apiClient.QueryAnalytics(customerPricingPath, url.Values{"include": {"not_a_relation"}}, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "an unknown include is a client error: %s", string(body))
 	assert.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
@@ -311,7 +311,7 @@ func TestAnalyticsCustomerPricing_RejectsOutOfRangeFractions(t *testing.T) {
 		{"outlier_tolerance", "not-a-number"},
 	} {
 		t.Run(tc.field+"="+tc.value, func(t *testing.T) {
-			status, body, err := apiClient.Put(customerPricingPath, map[string]any{tc.field: tc.value})
+			status, body, err := apiClient.QueryAnalytics(customerPricingPath, nil, map[string]any{tc.field: tc.value})
 			require.NoError(t, err)
 			require.Less(t, status, 500, "bad input must not 5xx: %s", string(body))
 			require.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
@@ -366,7 +366,7 @@ func TestAnalyticsRealizedMargins_ResponseShape(t *testing.T) {
 func TestAnalyticsRealizedMargins_RequiresAWindow(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(realizedMarginsPath, map[string]any{})
+	status, body, err := apiClient.QueryAnalytics(realizedMarginsPath, nil, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing window is a client error: %s", string(body))
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "body: %s", string(body))
@@ -377,7 +377,7 @@ func TestAnalyticsRealizedMargins_RejectsInvertedWindow(t *testing.T) {
 	t.Parallel()
 
 	end := time.Now().UTC()
-	status, body, err := apiClient.Put(realizedMarginsPath, map[string]any{
+	status, body, err := apiClient.QueryAnalytics(realizedMarginsPath, nil, map[string]any{
 		"starts_at": rfc3339(end),
 		"ends_at":   rfc3339(end.AddDate(-1, 0, 0)),
 	})
@@ -392,7 +392,7 @@ func TestAnalyticsRealizedMargins_RejectsUnknownInclude(t *testing.T) {
 	t.Parallel()
 
 	end := time.Now().UTC()
-	status, body, err := apiClient.PutRaw(realizedMarginsPath, url.Values{"include": {"not_a_relation"}}, map[string]any{
+	status, body, err := apiClient.QueryAnalytics(realizedMarginsPath, url.Values{"include": {"not_a_relation"}}, map[string]any{
 		"starts_at": rfc3339(end.AddDate(-1, 0, 0)),
 		"ends_at":   rfc3339(end),
 	})

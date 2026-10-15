@@ -1623,7 +1623,7 @@ Core
 - Search results: `include[]=data.resource` to get labels (no `entity` stubs); `customer` filter → `customer_ids[]`.
 - Audit events: `root_resource_type` / `root_resource_id` → `root_resource_types[]` / `root_resource_ids[]`.
 - Pack list: `POST /core/records/actions/generate-pack-list` → `POST /v1/operations/shipments/{id}/actions/generate-pack-list`.
-- Analytics: all internal (OEE, OEE trend, delivery performance, schedule attainment included) — dashboard keeps using internal routes; PUT → GET/POST query.
+- Analytics: all internal (OEE, OEE trend, delivery performance, schedule attainment included) — dashboard keeps using internal routes; PUT → GET/POST query. Every PUT report is now `POST …/actions/query` (preview.9 PUTs are rerouted). `new-customers-table` and `sales-lines` cap `limit` at 100 (default 25; preview.9 keeps its 100 / 50 defaults), so larger pages must follow `next_page_url`.
 - Jobs: cancel → `actions/cancel`; job list available. Audit/request log date filters → `occurred_after`/`occurred_before`; audit resource-types endpoint removed.
 
 Production planning

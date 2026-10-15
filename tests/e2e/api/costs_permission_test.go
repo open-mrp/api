@@ -291,7 +291,7 @@ func TestCosts_SalesReportsHideCostWithoutCostsRead(t *testing.T) {
 	withCosts := customRoleClient(t, "invoices:read", costsRead)
 
 	entries := func(client *Client) []map[string]any {
-		got := mustPutAnalytics(t, client, analyzeSalesPath, nil, filter)
+		got := mustQueryAnalytics(t, client, analyzeSalesPath, nil, filter)
 		rows := listRows(t, got)
 		require.NotEmpty(t, rows)
 		return rows
@@ -308,10 +308,10 @@ func TestCosts_SalesReportsHideCostWithoutCostsRead(t *testing.T) {
 		}
 	}
 
-	summary := mustPutAnalytics(t, invoicesOnly, salesSummaryPath, nil, filter)
+	summary := mustQueryAnalytics(t, invoicesOnly, salesSummaryPath, nil, filter)
 	assertNilField(t, jsonObject(summary, "overall"), "cost")
 	assert.NotNil(t, jsonObject(jsonObject(summary, "overall"), "revenue"))
-	summary = mustPutAnalytics(t, withCosts, salesSummaryPath, nil, filter)
+	summary = mustQueryAnalytics(t, withCosts, salesSummaryPath, nil, filter)
 	assert.NotNil(t, jsonObject(jsonObject(summary, "overall"), "cost"), "a costs:read holder sees the cost of what was sold")
 
 	now := time.Now().UTC()
@@ -319,13 +319,13 @@ func TestCosts_SalesReportsHideCostWithoutCostsRead(t *testing.T) {
 		"starts_at": rfc3339(now.Add(-24 * time.Hour)), "ends_at": rfc3339(now.Add(24 * time.Hour)),
 		"comparison_starts_at": rfc3339(now.Add(-48 * time.Hour)), "comparison_ends_at": rfc3339(now.Add(-24 * time.Hour)),
 	}
-	batch := mustPutAnalytics(t, invoicesOnly, manufacturingBatchPath, nil, batchBody)
+	batch := mustQueryAnalytics(t, invoicesOnly, manufacturingBatchPath, nil, batchBody)
 	for _, period := range []string{"current", "comparison"} {
 		assertNilField(t, jsonObject(batch, period), "costs_per_unit")
 		assertNilField(t, jsonObject(batch, period), "margin")
 		assert.NotNil(t, jsonObject(batch, period)["production"], "the other metrics are not cost data")
 	}
-	batch = mustPutAnalytics(t, withCosts, manufacturingBatchPath, nil, batchBody)
+	batch = mustQueryAnalytics(t, withCosts, manufacturingBatchPath, nil, batchBody)
 	assert.NotNil(t, jsonObject(batch, "current")["costs_per_unit"])
 }
 
@@ -344,17 +344,17 @@ func TestCosts_CostReportsNeedCostsRead(t *testing.T) {
 		extraPerm  []string
 	}{
 		{"item costs", "GET", itemsPath + "/" + SeedItemID + "/costs", nil, "items:read", nil},
-		{"production costs", "PUT", productionCostsPath, window, "batches:read", nil},
-		{"realized margins", "PUT", realizedMarginsPath, window, "invoices:read", nil},
-		{"customer pricing", "PUT", customerPricingPath, map[string]any{}, "discounts:read", nil},
-		{"manufacturing cost per unit", "PUT", manufacturingPath, withType(window, "costsPerUnit"), "invoices:read", []string{"invoices:read"}},
-		{"manufacturing margin", "PUT", manufacturingPath, withType(window, "margin"), "invoices:read", []string{"invoices:read"}},
+		{"production costs", "POST", productionCostsPath, window, "batches:read", nil},
+		{"realized margins", "POST", realizedMarginsPath, window, "invoices:read", nil},
+		{"customer pricing", "POST", customerPricingPath, map[string]any{}, "discounts:read", nil},
+		{"manufacturing cost per unit", "POST", manufacturingPath, withType(window, "costsPerUnit"), "invoices:read", []string{"invoices:read"}},
+		{"manufacturing margin", "POST", manufacturingPath, withType(window, "margin"), "invoices:read", []string{"invoices:read"}},
 	}
 	call := func(client *Client, method, path string, body map[string]any) (int, []byte) {
 		if method == "GET" {
 			return getAs(t, client, path)
 		}
-		status, _, raw := putAnalytics(t, client, path, nil, body)
+		status, _, raw := queryAnalytics(t, client, path, nil, body)
 		return status, raw
 	}
 	for _, r := range reports {
@@ -378,7 +378,7 @@ func TestCosts_CostReportsNeedCostsRead(t *testing.T) {
 	}
 
 	// A manufacturing metric that is not cost data keeps the report's own permission.
-	status, _, raw := putAnalytics(t, customRoleClient(t, "invoices:read"), manufacturingPath, nil, withType(window, "production"))
+	status, _, raw := queryAnalytics(t, customRoleClient(t, "invoices:read"), manufacturingPath, nil, withType(window, "production"))
 	requireStatus(t, http.StatusOK, status, raw)
 }
 
@@ -560,7 +560,7 @@ func TestCosts_CustomerPortalDocumentsCarryNoCost(t *testing.T) {
 		assertNilField(t, item, "unit_cost")
 	}
 
-	receipts := mustPutAnalytics(t, portal, inventoryReceiptsPath, nil, map[string]any{})
+	receipts := mustQueryAnalytics(t, portal, inventoryReceiptsPath, nil, map[string]any{})
 	requireNoCost(t, "customer portal", "inventory receipts", mustJSON(t, receipts))
 }
 

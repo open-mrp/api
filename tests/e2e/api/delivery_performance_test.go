@@ -19,7 +19,7 @@ const deliveryPerformancePath = "/v1/core/analytics/delivery-performance"
 func analyzeDelivery(t *testing.T, body map[string]any) map[string]any {
 	t.Helper()
 
-	status, respBody, err := apiClient.Put(deliveryPerformancePath, body)
+	status, respBody, err := apiClient.QueryAnalytics(deliveryPerformancePath, nil, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "delivery performance must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)
@@ -178,7 +178,7 @@ func TestDeliveryPerformance_BacklogBandsAlwaysPresent(t *testing.T) {
 func TestDeliveryPerformance_ValidatesItsWindow(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(deliveryPerformancePath, map[string]any{
+	status, body, err := apiClient.QueryAnalytics(deliveryPerformancePath, nil, map[string]any{
 		"starts_at": time.Now().UTC().Format(time.RFC3339),
 		"ends_at":   time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339),
 	})
@@ -364,7 +364,7 @@ func TestDeliveryPerformance_RejectsMalformedRequests(t *testing.T) {
 		{"unparseable date", map[string]any{"starts_at": "last tuesday", "ends_at": "2026-01-01T00:00:00Z"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Put(deliveryPerformancePath, tc.body)
+			status, body, err := apiClient.QueryAnalytics(deliveryPerformancePath, nil, tc.body)
 			require.NoError(t, err)
 			require.Less(t, status, 500, "must not 5xx: %s", string(body))
 			assertClientRejection(t, status, body, "body: %s", string(body))
@@ -375,7 +375,7 @@ func TestDeliveryPerformance_RejectsMalformedRequests(t *testing.T) {
 		body := deliveryWindow()
 		body[bogusE2EJSONField] = "x"
 
-		status, respBody, err := apiClient.Put(deliveryPerformancePath, body)
+		status, respBody, err := apiClient.QueryAnalytics(deliveryPerformancePath, nil, body)
 		require.NoError(t, err)
 		assertJSONUnknownFieldRejected(t, "PUT", deliveryPerformancePath, status, respBody)
 	})
@@ -389,7 +389,7 @@ func TestDeliveryPerformance_IsScopedToTheCallingTenant(t *testing.T) {
 	clientB := getTenantBClient()
 
 	analyzeAsB := func() map[string]any {
-		status, body, err := clientB.Put(deliveryPerformancePath, deliveryWindow())
+		status, body, err := clientB.QueryAnalytics(deliveryPerformancePath, nil, deliveryWindow())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
 		requireStatus(t, 200, status, body)

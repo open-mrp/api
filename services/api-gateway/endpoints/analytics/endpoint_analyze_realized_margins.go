@@ -44,13 +44,13 @@ type AnalyzeRealizedMarginsEndpoint struct{}
 func (e *AnalyzeRealizedMarginsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeRealizedMarginsRequest, *apiresource.AnalyzeRealizedMarginsResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeRealizedMarginsRequest, *apiresource.AnalyzeRealizedMarginsResponse]{
 		Title:             "Analyze Realized Margins",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/realized-margins",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/realized-margins/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		// Invoiced revenue per customer is exactly what Analyze Sales gates behind invoices:read, and this endpoint reads the same rows. Permissions are any-of, so listing discounts:read alongside it would let a discount reader see invoiced revenue they cannot read directly.
 		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}}},
 		// The roots the include resolver walks are the findings, not the response wrapper.

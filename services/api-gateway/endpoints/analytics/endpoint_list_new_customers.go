@@ -25,7 +25,7 @@ type ListNewCustomersRequest struct {
 	// Opaque cursor from a previous page's `next_page_url` or `previous_page_url`. Omit for the first page.
 	Cursor *string `query:"cursor"`
 	// Maximum number of customers to return.
-	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
+	Limit int32 `query:"limit" default:"25" validate:"min=1,max=100"`
 }
 
 // Returns the customers added in a period that have placed an order, newest first order first, each with the date of its first order and its lifetime sales. Sales count sales orders only: lines priced above zero, outside the shipping and misc product lines, over the customer's whole history rather than the period. Customers that have never ordered are left out.
@@ -34,13 +34,12 @@ type ListNewCustomersEndpoint struct{}
 func (e *ListNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNewCustomersRequest, *apiresource.List[apiresource.NewCustomer]] {
 	return (&apiendpoint.APIEndpoint[*ListNewCustomersRequest, *apiresource.List[apiresource.NewCustomer]]{
 		Title:             "List New Customers",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/new-customers-table",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/new-customers-table/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNewCustomersRequest) (*apiresource.List[apiresource.NewCustomer], *apierror.APIError) {

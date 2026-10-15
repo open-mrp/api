@@ -101,7 +101,7 @@ func TestAnalyticsParityOpenOrders_SummaryCountsOnlyOpenSaleLines(t *testing.T) 
 	t.Parallel()
 	book := seedOpenOrderBook(t)
 
-	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(nil))
+	summary := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(nil))
 	assert.Equal(t, "open_orders_summary", jsonField(summary, "object"))
 	// 21.25 + 36 + 20; the shipped order, the estimate and the freight lines are not counted.
 	assertReportMoney(t, summary, "ordered", "77.25")
@@ -110,10 +110,10 @@ func TestAnalyticsParityOpenOrders_SummaryCountsOnlyOpenSaleLines(t *testing.T) 
 	assertReportMoney(t, summary, "invoiced", "8")
 
 	// The line filters narrow what is counted.
-	summary = mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}}))
+	summary = mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}}))
 	assertReportMoney(t, summary, "ordered", "36")
 	assertReportMoney(t, summary, "invoiced", "0")
-	summary = mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}}))
+	summary = mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}}))
 	assertReportMoney(t, summary, "ordered", "77.25")
 }
 
@@ -123,7 +123,7 @@ func TestAnalyticsParityOpenOrders_BreakdownTotalsEachItemInItsBaseUnit(t *testi
 	t.Parallel()
 	book := seedOpenOrderBook(t)
 
-	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, nil, book.filter(nil)))
+	rows := listRows(t, mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, nil, book.filter(nil)))
 	require.Len(t, rows, 2, "only items on open lines: %v", rows)
 
 	// Most back-ordered first: SCK-002 has 12 pr (2 dz) back-ordered, SCK-001 has 5 + 6 = 11.
@@ -141,7 +141,7 @@ func TestAnalyticsParityOpenOrders_BreakdownTotalsEachItemInItsBaseUnit(t *testi
 	assertQuantity(t, sck001, "quantity_back_ordered", "11", SeedUnitID)
 	assertQuantity(t, sck001, "quantity_invoiced", "4", SeedUnitID)
 
-	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, nil, book.filter(map[string]any{"item_ids": []string{SeedItemID}})))
+	rows = listRows(t, mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, nil, book.filter(map[string]any{"item_ids": []string{SeedItemID}})))
 	require.Len(t, rows, 1)
 	assertItem(t, rows[0], SeedItemID, "SCK-001")
 	assertQuantity(t, rows[0], "quantity_ordered", "15", SeedUnitID)
@@ -152,7 +152,7 @@ func TestAnalyticsParityOpenOrders_BreakdownPagesByCursor(t *testing.T) {
 	book := seedOpenOrderBook(t)
 	body := book.filter(nil)
 
-	first := mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}}, body)
+	first := mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}}, body)
 	rows := listRows(t, first)
 	require.Len(t, rows, 1)
 	assertItem(t, rows[0], parityItemSCK002, "SCK-002")
@@ -160,7 +160,7 @@ func TestAnalyticsParityOpenOrders_BreakdownPagesByCursor(t *testing.T) {
 	assert.Equal(t, "true", pageFlag(info, "next"))
 	assert.Equal(t, "false", pageFlag(info, "prev"))
 
-	second := mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}, body)
+	second := mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}, body)
 	rows = listRows(t, second)
 	require.Len(t, rows, 1)
 	assertItem(t, rows[0], SeedItemID, "SCK-001")
@@ -168,7 +168,7 @@ func TestAnalyticsParityOpenOrders_BreakdownPagesByCursor(t *testing.T) {
 	assert.Equal(t, "false", pageFlag(info, "next"))
 	assert.Equal(t, "true", pageFlag(info, "prev"))
 
-	back := mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}}, body)
+	back := mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}}, body)
 	rows = listRows(t, back)
 	require.Len(t, rows, 1)
 	assertItem(t, rows[0], parityItemSCK002, "SCK-002")
@@ -207,17 +207,17 @@ func TestAnalyticsParityOpenOrders_ListShowsOpenOrdersNewestFirst(t *testing.T) 
 	t.Parallel()
 	book := seedOpenOrderBook(t)
 
-	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(nil)))
+	rows := listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, nil, book.filter(nil)))
 	require.Len(t, rows, 2, "the shipped order and the estimate are not open: %v", rows)
 	assertOpenOrderRow(t, rows[0], book, book.b, "1", "20")
 	assertOpenOrderRow(t, rows[1], book, book.a, "2", "57.25")
 
 	// A line filter counts only matching lines, and an order with none drops out.
-	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}})))
+	rows = listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}})))
 	require.Len(t, rows, 1)
 	assertOpenOrderRow(t, rows[0], book, book.a, "1", "36")
 
-	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}})))
+	rows = listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}})))
 	require.Len(t, rows, 2)
 }
 
@@ -226,7 +226,7 @@ func TestAnalyticsParityOpenOrders_ListPagesByCursor(t *testing.T) {
 	book := seedOpenOrderBook(t)
 	body := book.filter(nil)
 
-	first := mustPutAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}}, body)
+	first := mustQueryAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}}, body)
 	rows := listRows(t, first)
 	require.Len(t, rows, 1)
 	assert.Equal(t, jsonField(book.b, "id"), jsonField(jsonObject(rows[0], "order"), "id"))
@@ -234,7 +234,7 @@ func TestAnalyticsParityOpenOrders_ListPagesByCursor(t *testing.T) {
 	assert.Equal(t, "true", pageFlag(info, "next"))
 	assert.Equal(t, "false", pageFlag(info, "prev"))
 
-	second := mustPutAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}, body)
+	second := mustQueryAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}, body)
 	rows = listRows(t, second)
 	require.Len(t, rows, 1)
 	assert.Equal(t, jsonField(book.a, "id"), jsonField(jsonObject(rows[0], "order"), "id"))
@@ -242,7 +242,7 @@ func TestAnalyticsParityOpenOrders_ListPagesByCursor(t *testing.T) {
 	assert.Equal(t, "false", pageFlag(info, "next"))
 	assert.Equal(t, "true", pageFlag(info, "prev"))
 
-	back := mustPutAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}}, body)
+	back := mustQueryAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}}, body)
 	rows = listRows(t, back)
 	require.Len(t, rows, 1)
 	assert.Equal(t, jsonField(book.b, "id"), jsonField(jsonObject(rows[0], "order"), "id"))
@@ -351,14 +351,14 @@ func TestAnalyticsParityOpenOrders_CustomerFilterIncludesChildAccountsAndGroupsN
 		"the child's group":    {"customer_group_ids": []string{group}},
 		"parent and the group": {"customer_ids": []string{parent}, "customer_group_ids": []string{group}},
 	} {
-		summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
+		summary := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
 		assert.Equal(t, "6", reportMoneyAmount(t, summary, "ordered"), name)
 	}
 
 	other := newAccountGroup(t)
-	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{parent}, "customer_group_ids": []string{other}})
+	summary := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{parent}, "customer_group_ids": []string{other}})
 	assert.Equal(t, "0", reportMoneyAmount(t, summary, "ordered"), "the customer and group filters combine with AND")
-	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, map[string]any{"customer_group_ids": []string{other}}))
+	rows := listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, nil, map[string]any{"customer_group_ids": []string{other}}))
 	assert.Empty(t, rows)
 }
 
@@ -372,7 +372,7 @@ func TestAnalyticsParityOpenOrders_PurchaseOrdersAreNeverOpenSalesOrders(t *test
 
 	// A purchase order is bought by the account itself; a fresh customer keeps the filter's cache entry this run's own.
 	fresh := parityCustomer(t, "")
-	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"100"}}, map[string]any{"customer_ids": []string{SeedAccountID, fresh}}))
+	rows := listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, url.Values{"limit": {"100"}}, map[string]any{"customer_ids": []string{SeedAccountID, fresh}}))
 	for _, row := range rows {
 		assert.NotEqual(t, poID, jsonField(jsonObject(row, "order"), "id"), "an issued purchase order is not an open sales order")
 	}
@@ -384,10 +384,10 @@ func TestAnalyticsParityOpenOrders_AnotherTenantsCustomerYieldsNothing(t *testin
 	t.Parallel()
 	_, foreignBuyer := otherTenantSalesOrder(t)
 	body := map[string]any{"customer_ids": []string{foreignBuyer, parityCustomer(t, "")}}
-	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
+	summary := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
 	assert.Equal(t, "0", reportMoneyAmount(t, summary, "ordered"))
-	assert.Empty(t, listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, body)))
-	assert.Empty(t, listRows(t, mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, nil, body)))
+	assert.Empty(t, listRows(t, mustQueryAnalytics(t, apiClient, openOrdersPath, nil, body)))
+	assert.Empty(t, listRows(t, mustQueryAnalytics(t, apiClient, openOrdersBreakdownPath, nil, body)))
 }
 
 // --- Sales reps and permissions ---
@@ -400,18 +400,18 @@ func TestAnalyticsParityOpenOrders_SalesRepsSeeOnlyTheirOwnOrders(t *testing.T) 
 	theirs := issueParityOrder(t, customer, "", parityLine(parityProductSCK002, "3", SeedUnitID, "2.00")) // $6
 	body := map[string]any{"customer_ids": []string{customer}}
 
-	admin := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
+	admin := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
 	assert.Equal(t, "10", reportMoneyAmount(t, admin, "ordered"))
-	byRep := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{repID}})
+	byRep := mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{repID}})
 	assert.Equal(t, "4", reportMoneyAmount(t, byRep, "ordered"), "an admin can filter to one rep")
 
-	repSummary := mustPutAnalytics(t, rep, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{SeedAccountUserID}})
+	repSummary := mustQueryAnalytics(t, rep, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{SeedAccountUserID}})
 	assert.Equal(t, "4", reportMoneyAmount(t, repSummary, "ordered"), "a rep sees only their own orders, whatever they ask for")
 
-	rows := listRows(t, mustPutAnalytics(t, rep, openOrdersPath, nil, body))
+	rows := listRows(t, mustQueryAnalytics(t, rep, openOrdersPath, nil, body))
 	require.Len(t, rows, 1)
 	assert.Equal(t, jsonField(mine, "id"), jsonField(jsonObject(rows[0], "order"), "id"))
-	products := listRows(t, mustPutAnalytics(t, rep, openOrdersBreakdownPath, nil, body))
+	products := listRows(t, mustQueryAnalytics(t, rep, openOrdersBreakdownPath, nil, body))
 	require.Len(t, products, 1)
 	assertItem(t, products[0], SeedItemID, "SCK-001")
 
@@ -432,7 +432,7 @@ func TestAnalyticsParityOpenOrders_TotalsNeedInvoicesAndTheDetailNeedsSalesOrder
 
 	invoices := customRoleClient(t, "invoices:read")
 	for _, path := range []string{openOrdersSummaryPath, openOrdersBreakdownPath, openOrdersPath} {
-		status, _, raw := putAnalytics(t, invoices, path, nil, body)
+		status, _, raw := queryAnalytics(t, invoices, path, nil, body)
 		assert.Equal(t, 200, status, "%s: %s", path, string(raw))
 	}
 	status, _, raw := openOrderLines(t, invoices, jsonField(order, "id"))
@@ -443,7 +443,7 @@ func TestAnalyticsParityOpenOrders_TotalsNeedInvoicesAndTheDetailNeedsSalesOrder
 
 	salesOrders := customRoleClient(t, "sales_orders:read", "jobs:read")
 	for _, path := range []string{openOrdersSummaryPath, openOrdersBreakdownPath, openOrdersPath} {
-		status, _, raw := putAnalytics(t, salesOrders, path, nil, body)
+		status, _, raw := queryAnalytics(t, salesOrders, path, nil, body)
 		assert.Equal(t, 403, status, "%s: %s", path, string(raw))
 	}
 	status, lines, raw := openOrderLines(t, salesOrders, jsonField(order, "id"))
@@ -482,7 +482,7 @@ func TestAnalyticsParityOpenOrders_RejectsBadRequests(t *testing.T) {
 		{"summary with an unknown field", openOrdersSummaryPath, nil, map[string]any{"starts_at": "2026-01-01T00:00:00Z"}},
 	}
 	for _, tc := range cases {
-		status, _, raw := putAnalytics(t, apiClient, tc.path, tc.params, tc.body)
+		status, _, raw := queryAnalytics(t, apiClient, tc.path, tc.params, tc.body)
 		assert.Contains(t, []int{400, 422}, status, "%s: %s", tc.name, string(raw))
 	}
 }

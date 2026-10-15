@@ -157,12 +157,12 @@ func paddedNumber(number string) string {
 	return textutil.FormatRecordNumber(number)
 }
 
-func putAnalytics(t *testing.T, client *Client, path string, params url.Values, body map[string]any) (int, map[string]any, []byte) {
+func queryAnalytics(t *testing.T, client *Client, path string, params url.Values, body map[string]any) (int, map[string]any, []byte) {
 	t.Helper()
 	if body == nil {
 		body = map[string]any{}
 	}
-	status, respBody, err := client.PutRaw(path, params, body)
+	status, respBody, err := client.QueryAnalytics(path, params, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s must not 5xx: %s", path, string(respBody))
 	if status != 200 {
@@ -171,9 +171,9 @@ func putAnalytics(t *testing.T, client *Client, path string, params url.Values, 
 	return status, parseJSON(respBody), respBody
 }
 
-func mustPutAnalytics(t *testing.T, client *Client, path string, params url.Values, body map[string]any) map[string]any {
+func mustQueryAnalytics(t *testing.T, client *Client, path string, params url.Values, body map[string]any) map[string]any {
 	t.Helper()
-	status, parsed, raw := putAnalytics(t, client, path, params, body)
+	status, parsed, raw := queryAnalytics(t, client, path, params, body)
 	requireStatus(t, 200, status, raw)
 	return parsed
 }

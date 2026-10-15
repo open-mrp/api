@@ -40,12 +40,11 @@ type AnalyzeScheduleAttainmentEndpoint struct{}
 func (e *AnalyzeScheduleAttainmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeScheduleAttainmentRequest, *apiresource.AnalyzeScheduleAttainmentResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeScheduleAttainmentRequest, *apiresource.AnalyzeScheduleAttainmentResponse]{
 		Title:             "Analyze Schedule Attainment",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/schedule-attainment",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/schedule-attainment/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Public:            false,
 		AgentTool:         true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead}}},

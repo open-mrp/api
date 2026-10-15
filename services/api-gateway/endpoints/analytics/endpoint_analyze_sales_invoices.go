@@ -31,13 +31,12 @@ type AnalyzeSalesInvoicesEndpoint struct{}
 func (e *AnalyzeSalesInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesInvoicesRequest, *apiresource.List[apiresource.SalesInvoice]] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesInvoicesRequest, *apiresource.List[apiresource.SalesInvoice]]{
 		Title:             "Analyze Sales Invoices",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/sales-invoices",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/sales-invoices/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesInvoicesRequest) (*apiresource.List[apiresource.SalesInvoice], *apierror.APIError) {

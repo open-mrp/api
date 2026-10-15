@@ -31,7 +31,6 @@ func (e *ListOpenOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOpenOrderLine,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenOrderLinesRequest) (*apiresource.List[apiresource.OpenOrderLine], *apierror.APIError) {

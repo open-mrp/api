@@ -23,7 +23,7 @@ func newCustomersToday(t *testing.T, params url.Values, extra map[string]any) (i
 	for k, v := range extra {
 		body[k] = v
 	}
-	return putSales(t, newCustomersPath, params, body)
+	return querySales(t, newCustomersPath, params, body)
 }
 
 // newCustomerRow finds the customer in a list of new customers, or nil.
@@ -42,7 +42,7 @@ func awaitNewCustomer(t *testing.T, customerID string) map[string]any {
 	var row map[string]any
 	eventually(t, 45*time.Second, time.Second, func() error {
 		// 503 means the buyer summaries are still being backfilled on a fresh stack.
-		status, list, body := newCustomersToday(t, url.Values{"limit": {"1000"}}, map[string]any{"customer_group_ids": []string{SeedCustomerGroupID}})
+		status, list, body := newCustomersToday(t, url.Values{"limit": {"100"}}, map[string]any{"customer_group_ids": []string{SeedCustomerGroupID}})
 		if status != 200 {
 			return fmt.Errorf("new customers answered %d: %s", status, string(body))
 		}
@@ -88,7 +88,7 @@ func TestNewCustomers_LeavesOutACustomerThatHasNotOrdered(t *testing.T) {
 	// Another customer's sale proves the summaries are current before asserting the absence.
 	awaitNewCustomer(t, shipSaleToNewCustomer(t).customerID)
 
-	status, list, body := newCustomersToday(t, url.Values{"limit": {"1000"}}, nil)
+	status, list, body := newCustomersToday(t, url.Values{"limit": {"100"}}, nil)
 	requireStatus(t, 200, status, body)
 	assert.Nil(t, newCustomerRow(list, customerID), "a customer with no orders is not a new customer yet")
 }
@@ -110,7 +110,7 @@ func TestNewCustomers_Filters(t *testing.T) {
 		}, false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			status, list, body := newCustomersToday(t, url.Values{"limit": {"1000"}}, tt.body)
+			status, list, body := newCustomersToday(t, url.Values{"limit": {"100"}}, tt.body)
 			requireStatus(t, 200, status, body)
 			assert.Equal(t, tt.listed, newCustomerRow(list, sale.customerID) != nil)
 		})
@@ -130,7 +130,7 @@ func TestNewCustomers_PagesByCursorBothWays(t *testing.T) {
 		mine = append(mine, customerID)
 	}
 	eventually(t, 45*time.Second, time.Second, func() error {
-		status, list, body := newCustomersToday(t, url.Values{"limit": {"1000"}}, map[string]any{"customer_group_ids": []string{groupID}})
+		status, list, body := newCustomersToday(t, url.Values{"limit": {"100"}}, map[string]any{"customer_group_ids": []string{groupID}})
 		if status != 200 {
 			return fmt.Errorf("new customers answered %d: %s", status, string(body))
 		}
@@ -163,7 +163,7 @@ func TestNewCustomers_PagesByCursorBothWays(t *testing.T) {
 		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
 	}
 	require.ElementsMatch(t, mine, forward, "one page per customer of the group")
-	all, _ := page(url.Values{"limit": {"1000"}})
+	all, _ := page(url.Values{"limit": {"100"}})
 	require.Equal(t, all, forward, "one at a time, the same customers in the same order")
 
 	var backward []string
@@ -184,7 +184,7 @@ func TestNewCustomers_RejectsABadWindow(t *testing.T) {
 		"ends before it starts": {"starts_at": rfc3339(now), "ends_at": rfc3339(now.Add(-time.Hour))},
 	} {
 		t.Run(name, func(t *testing.T) {
-			status, _, raw := putSales(t, newCustomersPath, nil, body)
+			status, _, raw := querySales(t, newCustomersPath, nil, body)
 			assertClientRejection(t, status, raw, string(raw))
 		})
 	}
@@ -230,7 +230,7 @@ func TestSalesAnalytics_AnInvoiceSpanningTwoProductLinesCountsOnce(t *testing.T)
 			"group_by": "customer", "customer_ids": []string{customerID}, "product_line_ids": productLines,
 			"starts_at": rfc3339(now.Add(-24 * time.Hour)), "ends_at": rfc3339(now.Add(24 * time.Hour)),
 		}
-		status, list, raw := putSales(t, salesBreakdownPath, nil, body)
+		status, list, raw := querySales(t, salesBreakdownPath, nil, body)
 		requireStatus(t, 200, status, raw)
 		groups := jsonArray(list, "data")
 		if len(groups) == 0 {

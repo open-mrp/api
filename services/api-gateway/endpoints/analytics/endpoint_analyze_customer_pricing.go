@@ -37,13 +37,13 @@ type AnalyzeCustomerPricingEndpoint struct{}
 func (e *AnalyzeCustomerPricingEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeCustomerPricingRequest, *apiresource.AnalyzeCustomerPricingResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeCustomerPricingRequest, *apiresource.AnalyzeCustomerPricingResponse]{
 		Title:             "Analyze Customer Pricing",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/customer-pricing",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/customer-pricing/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}}},
 		// The roots the include resolver walks are the findings, not the response wrapper, so ObjectType names the finding and ExtractRoots reaches into the list.
 		ObjectType:    constants.ObjectTypeCustomerPricingFinding,

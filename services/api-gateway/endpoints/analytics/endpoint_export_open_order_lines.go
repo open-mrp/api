@@ -31,7 +31,6 @@ func (e *ExportOpenOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*E
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

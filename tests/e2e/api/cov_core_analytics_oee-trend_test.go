@@ -16,7 +16,7 @@ const analyticsOeeTrendPath = "/v1/core/analytics/oee-trend"
 func analyzeOeeTrend(t *testing.T, body map[string]any) map[string]any {
 	t.Helper()
 
-	status, respBody, err := apiClient.Put(analyticsOeeTrendPath, body)
+	status, respBody, err := apiClient.QueryAnalytics(analyticsOeeTrendPath, nil, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "OEE trend analytics must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)

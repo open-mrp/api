@@ -29,13 +29,12 @@ type ListOpenOrdersEndpoint struct{}
 func (e *ListOpenOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenOrdersRequest, *apiresource.List[apiresource.OpenOrder]] {
 	return (&apiendpoint.APIEndpoint[*ListOpenOrdersRequest, *apiresource.List[apiresource.OpenOrder]]{
 		Title:             "List Open Orders",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/open-orders",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/open-orders/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		ObjectType:        constants.ObjectTypeOpenOrder,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},

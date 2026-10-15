@@ -336,7 +336,7 @@ func TestCovOperationsCarriers_ServiceLevel_CreateUnderUnknownCarrier404s(t *tes
 func TestCovOperationsCarriers_ServiceLevel_RetrieveRejectsUnknownInclude(t *testing.T) {
 	t.Parallel()
 	path := serviceLevelsPath(SeedCarrierID) + "/" + SeedServiceLevelID
-	status, body, err := apiClient.GetListRaw(path, url.Values{"include[]": {"carrier"}})
+	status, body, err := apiClient.GetListRaw(path, url.Values{"include[]": {"customer"}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "unknown include must be 400, got %d: %s", status, string(body))
 }
@@ -352,7 +352,7 @@ func TestCovOperationsCarriers_ServiceLevel_RetrieveRejectsDeepInclude(t *testin
 func TestCovOperationsCarriers_ServiceLevel_ListRejectsUnknownInclude(t *testing.T) {
 	t.Parallel()
 	basePath := serviceLevelsPath(SeedCarrierID)
-	status, body, err := apiClient.GetListRaw(basePath, url.Values{"include[]": {"carrier"}})
+	status, body, err := apiClient.GetListRaw(basePath, url.Values{"include[]": {"customer"}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "unknown include on list must be 400, got %d: %s", status, string(body))
 }

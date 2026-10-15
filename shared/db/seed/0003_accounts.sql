@@ -47,6 +47,8 @@ INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, carrier_
     ('crop_01seedground000000', 'fedex_ground', 'Ground Shipping', 'fedex_ground', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('crop_01seedexpress00000', 'fedex_express', 'Express Shipping', 'fedex_express', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
+UPDATE carrier SET default_carrier_option_id = 'crop_01seedground000000' WHERE id = 'delivery' AND default_carrier_option_id IS NULL;
+
 -- Default payment term (system-level, no account)
 INSERT IGNORE INTO payment_term (id, name, account_id, created_at, updated_at) VALUES
     ('pytm_01seeddefault00000', 'Due on Receipt', NULL, NOW(), NOW());

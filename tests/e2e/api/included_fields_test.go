@@ -18,14 +18,14 @@ import (
 func assertCarrierFieldsPopulated(t *testing.T, carrier map[string]any, prefix string) {
 	t.Helper()
 	assert.NotEmpty(t, jsonField(carrier, "id"), prefix+".id must not be empty")
-	assert.NotEmpty(t, jsonField(carrier, "customer_portal_visibility"), prefix+".customer_portal_visibility must not be empty")
+	assert.NotEmpty(t, jsonField(carrier, "portal_visibility"), prefix+".portal_visibility must not be empty")
 }
 
 // assertServiceLevelFieldsPopulated checks that a ServiceLevel sub-resource has no empty enum fields.
 func assertServiceLevelFieldsPopulated(t *testing.T, sl map[string]any, prefix string) {
 	t.Helper()
 	assert.NotEmpty(t, jsonField(sl, "id"), prefix+".id must not be empty")
-	assert.NotEmpty(t, jsonField(sl, "customer_portal_visibility"), prefix+".customer_portal_visibility must not be empty")
+	assert.NotEmpty(t, jsonField(sl, "portal_visibility"), prefix+".portal_visibility must not be empty")
 }
 
 // assertPaymentTermFieldsPopulated checks that a PaymentTerm sub-resource has no empty enum fields.

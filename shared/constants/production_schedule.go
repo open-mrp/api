@@ -608,16 +608,14 @@ func (c *ScheduleDiffChange) StringPtr() *string {
 
 // ItemLotSource names which rule in the precedence chain produced an item's lot.
 //
-// The chain is ordered most specific first, and the source is reported alongside the lot so a planner can see why a SKU is being made in sixties rather than having to work it out from four places it might have come from.
+// The chain is ordered most specific first, and the source is reported alongside the lot so a planner can see why a SKU is being made in sixties rather than having to work it out from the places it might have come from.
 type ItemLotSource string
 
 const (
 	// ItemLotSourceItemOverride indicates a lot size set on the item itself.
 	ItemLotSourceItemOverride ItemLotSource = "item_override"
-	// ItemLotSourceProductLine indicates the convention of the line the item sells under.
-	ItemLotSourceProductLine ItemLotSource = "product_line"
-	// ItemLotSourceDownstreamProductLine indicates a lot inherited from the finished goods an intermediate item becomes.
-	ItemLotSourceDownstreamProductLine ItemLotSource = "downstream_product_line"
+	// ItemLotSourceItemCategory indicates the lot of the item's category.
+	ItemLotSourceItemCategory ItemLotSource = "item_category"
 	// ItemLotSourceAccountDefault indicates the account-wide fallback lot size.
 	ItemLotSourceAccountDefault ItemLotSource = "account_default"
 	// ItemLotSourceNone indicates no rule supplied a lot.
@@ -626,8 +624,7 @@ const (
 
 func (s ItemLotSource) IsValid() bool {
 	switch s {
-	case ItemLotSourceItemOverride, ItemLotSourceProductLine,
-		ItemLotSourceDownstreamProductLine, ItemLotSourceAccountDefault, ItemLotSourceNone:
+	case ItemLotSourceItemOverride, ItemLotSourceItemCategory, ItemLotSourceAccountDefault, ItemLotSourceNone:
 		return true
 	default:
 		return false
@@ -637,8 +634,7 @@ func (s ItemLotSource) IsValid() bool {
 func (ItemLotSource) EnumValues() []string {
 	return []string{
 		string(ItemLotSourceItemOverride),
-		string(ItemLotSourceProductLine),
-		string(ItemLotSourceDownstreamProductLine),
+		string(ItemLotSourceItemCategory),
 		string(ItemLotSourceAccountDefault),
 		string(ItemLotSourceNone),
 	}

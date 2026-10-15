@@ -1588,3 +1588,68 @@ func (q *Queries) GetStepConsumptionItems(ctx context.Context, productionStepIds
 	}
 	return items, nil
 }
+
+const listItemCategoryLotsForItems = `-- name: ListItemCategoryLotsForItems :many
+SELECT
+    i.id AS item_id,
+    ic.id AS item_category_id,
+    q.value AS default_lot_size_value,
+    q.unit_id AS default_lot_size_unit_id
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN quantity q ON q.id = ic.default_lot_size_id
+WHERE i.account_id = ?
+AND i.id IN (/*SLICE:item_ids*/?)
+`
+
+type ListItemCategoryLotsForItemsParams struct {
+	AccountID string
+	ItemIds   []string
+}
+
+type ListItemCategoryLotsForItemsRow struct {
+	ItemID               string
+	ItemCategoryID       string
+	DefaultLotSizeValue  string
+	DefaultLotSizeUnitID string
+}
+
+// ListItemCategoryLotsForItems reads the lot of each item's category, for items whose category has one.
+func (q *Queries) ListItemCategoryLotsForItems(ctx context.Context, arg ListItemCategoryLotsForItemsParams) ([]ListItemCategoryLotsForItemsRow, error) {
+	query := listItemCategoryLotsForItems
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemCategoryLotsForItemsRow
+	for rows.Next() {
+		var i ListItemCategoryLotsForItemsRow
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.ItemCategoryID,
+			&i.DefaultLotSizeValue,
+			&i.DefaultLotSizeUnitID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

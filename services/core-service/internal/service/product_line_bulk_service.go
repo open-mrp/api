@@ -45,7 +45,9 @@ func validateBulkUpsertProductLineRows(rows []domain.UpsertProductLineParams) *a
 func resolveBulkUpsertProductLineRows(ctx context.Context, repos domain.RepoFactory, accountID string, rows []domain.UpsertProductLineParams) ([]domain.ResolvedUpsertProductLineRow, *apierror.APIError) {
 	ugIdentifiers := make([]*domain.ObjectIdentifier, len(rows))
 	for i := range rows {
-		ugIdentifiers[i] = &rows[i].UnitGroup
+		if rows[i].UnitGroup.ID != "" || rows[i].UnitGroup.Name != "" {
+			ugIdentifiers[i] = &rows[i].UnitGroup
+		}
 	}
 	ugRepo := repos.NewUnitGroupRepo()
 	ugIDByIdentifier, apiErr := resolveObjectIdentifiers(
@@ -134,9 +136,10 @@ func upsertProductLineInTx(txCtx context.Context, txRepos domain.RepoFactory, ac
 		created, apiErr := txRepo.Create(ctx, newID, domain.CreateProductLineParams{
 			AccountID:        accountID,
 			Name:             row.Name,
-			UnitGroupID:      row.UnitGroupID,
+			UnitGroupID:      optionalString(row.UnitGroupID),
 			CommissionPolicy: row.CommissionPolicy,
 			FreightPolicy:    row.FreightPolicy,
+			Status:           constants.ArchiveStatusActive,
 		})
 		if apiErr != nil {
 			return "", apiErr
@@ -164,7 +167,7 @@ func upsertProductLineInTx(txCtx context.Context, txRepos domain.RepoFactory, ac
 		AccountID:        accountID,
 		ProductLineID:    old.ID,
 		Name:             &row.Name,
-		UnitGroupID:      &row.UnitGroupID,
+		UnitGroupID:      optionalString(row.UnitGroupID),
 		CommissionPolicy: &row.CommissionPolicy,
 		FreightPolicy:    &row.FreightPolicy,
 	})
@@ -263,4 +266,12 @@ func (s *productLineSvcImpl) ExportProductLines(ctx context.Context, params doma
 // renders the file an accepted export recorded
 func (s *productLineSvcImpl) BuildExportProductLines(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
 	return exportBuilder(s.repos, s.exportSpec())(ctx, accountID, filters)
+}
+
+// optionalString is nil for an empty string.
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

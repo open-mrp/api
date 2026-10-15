@@ -185,7 +185,7 @@ func TestStateTransition_PartialUpdatePreservesFields(t *testing.T) {
 	name := uniqueName("e2e-state-pres")
 	presPayload := validCustomerBody(name)
 	presPayload["note"] = "original note"
-	presPayload["commission_policy"] = "commission_exempt"
+	presPayload["commission_policy"] = "exempt"
 	created := createAndCleanup(t, customersPath, presPayload)
 	id := jsonField(created, "id")
 	originalNumber := jsonField(created, "number")
@@ -200,7 +200,7 @@ func TestStateTransition_PartialUpdatePreservesFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(updated, "name"), "name should be preserved")
 	assert.Equal(t, originalNumber, jsonField(updated, "number"), "number should be preserved")
-	assert.Equal(t, "commission_exempt", jsonField(updated, "commission_policy"), "commission_policy should be preserved")
+	assert.Equal(t, "exempt", jsonField(updated, "commission_policy"), "commission_policy should be preserved")
 	assert.Equal(t, "updated note", jsonField(updated, "note"), "note should be updated")
 }
 

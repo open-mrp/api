@@ -31,7 +31,7 @@ func TestCovCatalogProductLines_CreateInvalidCommissionPolicy(t *testing.T) {
 		"name":              uniqueName("e2e-cov-pdln-badcp"),
 		"unit_group_id":     SeedUnitGroupID,
 		"commission_policy": "bogus_policy",
-		"freight_policy":    "billed_freight",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 422, status, "invalid commission_policy should return 422: %s", string(body))
@@ -44,7 +44,7 @@ func TestCovCatalogProductLines_CreateInvalidFreightPolicy(t *testing.T) {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-cov-pdln-badfp"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
+		"commission_policy": "applied",
 		"freight_policy":    "bogus_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -92,8 +92,8 @@ func TestCovCatalogProductLines_CreateNameTooLong(t *testing.T) {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              string(longName),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 422, status, "name > 255 chars should return 400: %s", string(body))
@@ -108,8 +108,8 @@ func TestCovCatalogProductLines_CreateDuplicateNameConflict(t *testing.T) {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              SeedProductLineName,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status, "creating a product line with a duplicate name should return 409: %s", string(body))
@@ -152,8 +152,8 @@ func TestCovCatalogProductLines_CreateNonexistentUnitGroupID(t *testing.T) {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-cov-pdln-badug"),
 		"unit_group_id":     "ungp_000000000000",
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 404, status,
@@ -249,8 +249,8 @@ func covCatalogProductLinesCreate(t *testing.T, name string) string {
 	status, body, err := apiClient.Post(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

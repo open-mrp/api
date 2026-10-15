@@ -112,7 +112,7 @@ func nullShippingTermType(isFreightExempt, isCarrierRate gosql.NullBool) *consta
 
 func nullCommissionPolicy(ns gosql.NullString) *constants.CommissionPolicy {
 	if ns.Valid {
-		cp := constants.CommissionPolicy(ns.String)
+		cp := constants.CommissionPolicyFromStatusCode(ns.String)
 		return &cp
 	}
 	return nil
@@ -120,7 +120,7 @@ func nullCommissionPolicy(ns gosql.NullString) *constants.CommissionPolicy {
 
 func nullFreightPolicy(ns gosql.NullString) *constants.FreightPolicy {
 	if ns.Valid {
-		fp := constants.FreightPolicy(ns.String)
+		fp := constants.FreightPolicyFromStatusCode(ns.String)
 		return &fp
 	}
 	return nil
@@ -187,8 +187,8 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
 		IsParentAccount:                    row.IsParentAccount,
-		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		CommissionPolicy:                   constants.CommissionPolicyFromStatusCode(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicyFromStatusCode(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
@@ -300,8 +300,8 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
 		IsParentAccount:                    row.IsParentAccount,
-		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		CommissionPolicy:                   constants.CommissionPolicyFromStatusCode(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicyFromStatusCode(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
@@ -481,9 +481,9 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 				IncludePaymentTermFilter:      includePaymentTermFilter,
 				PaymentTermIds:                ensureNullStringSlice(params.PaymentTermIDs),
 				IncludeCommissionStatusFilter: includeCommissionPolicyFilter,
-				CommissionStatusCodes:         ensureNullStringSlice(params.CommissionPolicyCodes),
+				CommissionStatusCodes:         ensureNullStringSlice(commissionStatusCodes(params.CommissionPolicyCodes)),
 				IncludeFreightStatusFilter:    includeFreightPolicyFilter,
-				FreightStatusCodes:            ensureNullStringSlice(params.FreightPolicyCodes),
+				FreightStatusCodes:            ensureNullStringSlice(freightStatusCodes(params.FreightPolicyCodes)),
 				IncludeCarrierFilter:          includeCarrierFilter,
 				CarrierIds:                    ensureNullStringSlice(params.CarrierIDs),
 				IncludeCarrierOptionFilter:    includeServiceLevelFilter,
@@ -534,9 +534,9 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 			IncludePaymentTermFilter:      includePaymentTermFilter,
 			PaymentTermIds:                ensureNullStringSlice(params.PaymentTermIDs),
 			IncludeCommissionStatusFilter: includeCommissionPolicyFilter,
-			CommissionStatusCodes:         ensureNullStringSlice(params.CommissionPolicyCodes),
+			CommissionStatusCodes:         ensureNullStringSlice(commissionStatusCodes(params.CommissionPolicyCodes)),
 			IncludeFreightStatusFilter:    includeFreightPolicyFilter,
-			FreightStatusCodes:            ensureNullStringSlice(params.FreightPolicyCodes),
+			FreightStatusCodes:            ensureNullStringSlice(freightStatusCodes(params.FreightPolicyCodes)),
 			IncludeCarrierFilter:          includeCarrierFilter,
 			CarrierIds:                    ensureNullStringSlice(params.CarrierIDs),
 			IncludeCarrierOptionFilter:    includeServiceLevelFilter,
@@ -587,9 +587,9 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		IncludePaymentTermFilter:      includePaymentTermFilter,
 		PaymentTermIds:                ensureNullStringSlice(params.PaymentTermIDs),
 		IncludeCommissionStatusFilter: includeCommissionPolicyFilter,
-		CommissionStatusCodes:         ensureNullStringSlice(params.CommissionPolicyCodes),
+		CommissionStatusCodes:         ensureNullStringSlice(commissionStatusCodes(params.CommissionPolicyCodes)),
 		IncludeFreightStatusFilter:    includeFreightPolicyFilter,
-		FreightStatusCodes:            ensureNullStringSlice(params.FreightPolicyCodes),
+		FreightStatusCodes:            ensureNullStringSlice(freightStatusCodes(params.FreightPolicyCodes)),
 		IncludeCarrierFilter:          includeCarrierFilter,
 		CarrierIds:                    ensureNullStringSlice(params.CarrierIDs),
 		IncludeCarrierOptionFilter:    includeServiceLevelFilter,
@@ -658,8 +658,8 @@ func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, owner
 			c.PriceGroups = append(c.PriceGroups, domain.CustomerAccountGroup{
 				ID:               row.ID,
 				Name:             row.Name,
-				CommissionPolicy: constants.CommissionPolicy(row.CommissionStatusCode),
-				FreightPolicy:    constants.FreightPolicy(row.FreightStatusCode),
+				CommissionPolicy: constants.CommissionPolicyFromStatusCode(row.CommissionStatusCode),
+				FreightPolicy:    constants.FreightPolicyFromStatusCode(row.FreightStatusCode),
 				Type:             constants.AccountGroupType(row.AccountGroupTypeCode),
 				CreatedAt:        row.CreatedAt,
 				UpdatedAt:        row.UpdatedAt,
@@ -717,8 +717,8 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 			priceGroups[i] = domain.CustomerAccountGroup{
 				ID:               pg.ID,
 				Name:             pg.Name,
-				CommissionPolicy: constants.CommissionPolicy(pg.CommissionStatusCode),
-				FreightPolicy:    constants.FreightPolicy(pg.FreightStatusCode),
+				CommissionPolicy: constants.CommissionPolicyFromStatusCode(pg.CommissionStatusCode),
+				FreightPolicy:    constants.FreightPolicyFromStatusCode(pg.FreightStatusCode),
 				Type:             constants.AccountGroupType(pg.AccountGroupTypeCode),
 				CreatedAt:        pg.CreatedAt,
 				UpdatedAt:        pg.UpdatedAt,
@@ -831,8 +831,8 @@ func customerFromRow(row sqlc.GetCustomerRow, incs []string) *domain.Customer {
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
 		IsParentAccount:                    row.IsParentAccount,
-		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		CommissionPolicy:                   constants.CommissionPolicyFromStatusCode(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicyFromStatusCode(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
@@ -1005,13 +1005,13 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 	}
 
 	// Determine commission and freight status codes.
-	commissionStatus := string(constants.CommissionPolicyApplied)
+	commissionStatus := constants.CommissionPolicyApplied.StatusCode()
 	if params.CommissionPolicy != nil {
-		commissionStatus = string(*params.CommissionPolicy)
+		commissionStatus = params.CommissionPolicy.StatusCode()
 	}
-	freightStatus := string(constants.FreightPolicyBilled)
+	freightStatus := constants.FreightPolicyBilled.StatusCode()
 	if params.FreightPolicy != nil {
-		freightStatus = string(*params.FreightPolicy)
+		freightStatus = params.FreightPolicy.StatusCode()
 	}
 
 	// Determine status code.
@@ -1072,12 +1072,12 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 	// Map commission/freight policy to status codes.
 	var commissionStatus gosql.NullString
 	if params.CommissionPolicy != nil {
-		commissionStatus = gosql.NullString{String: string(*params.CommissionPolicy), Valid: true}
+		commissionStatus = gosql.NullString{String: params.CommissionPolicy.StatusCode(), Valid: true}
 	}
 
 	var freightStatus gosql.NullString
 	if params.FreightPolicy != nil {
-		freightStatus = gosql.NullString{String: string(*params.FreightPolicy), Valid: true}
+		freightStatus = gosql.NullString{String: params.FreightPolicy.StatusCode(), Valid: true}
 	}
 
 	err := r.queries.UpdateCustomer(ctx, sqlc.UpdateCustomerParams{
@@ -1921,3 +1921,30 @@ func (r *customerRepoImpl) IsCommissionExempt(ctx context.Context, ownerAccountI
 }
 
 // toNullString is defined in unit_repository.go
+
+// commissionStatusCodes turns commission policy filter values into the codes stored on the row.
+func commissionStatusCodes(policies []string) []string {
+	out := make([]string, len(policies))
+	for i, p := range policies {
+		out[i] = constants.CommissionPolicyFromStatusCode(p).StatusCode()
+	}
+	return out
+}
+
+// freightStatusCodes turns freight policy filter values into the codes stored on the row.
+func freightStatusCodes(policies []string) []string {
+	out := make([]string, len(policies))
+	for i, p := range policies {
+		out[i] = constants.FreightPolicyFromStatusCode(p).StatusCode()
+	}
+	return out
+}
+
+// commissionPolicyPtr reads a nullable stored commission status code as a policy.
+func commissionPolicyPtr(ns gosql.NullString) *string {
+	if !ns.Valid {
+		return nil
+	}
+	s := string(constants.CommissionPolicyFromStatusCode(ns.String))
+	return &s
+}

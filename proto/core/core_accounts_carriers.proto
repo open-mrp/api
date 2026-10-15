@@ -523,6 +523,9 @@ message ItemCategoryInfo {
   google.protobuf.Timestamp updated_at = 8;
   repeated ItemCategoryPropertyInfo properties = 9;
   optional ItemCategoryUnitGroupInfo unit_group = 10;
+  // The lot the category's items are made in: a value and its unit, both set or both unset.
+  optional string default_lot_size_value = 11;
+  optional string default_lot_size_unit_id = 12;
 }
 message ItemCategoryPropertyInfo {
   string id = 1;
@@ -623,7 +626,8 @@ message GetItemLotDefaultResponse {
   double quantity = 2;
   optional string unit_id = 3;
   string source = 4;
-  optional string product_line_id = 5;
+  reserved 5;
+  optional string item_category_id = 6;
 }
 
 message GetItemInventoryRequest {

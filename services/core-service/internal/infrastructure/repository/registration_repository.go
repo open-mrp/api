@@ -316,7 +316,7 @@ func (r *registrationRepoImpl) CreateSystemProducts(ctx context.Context, account
 	err = r.queries.CreateProductLine(ctx, sqlc.CreateProductLineParams{
 		ID: shipLineID, Name: "Shipping",
 		Description: sql.NullString{String: "Freight charges", Valid: true},
-		AccountID:   acctID, UnitGroupID: eachGroupID,
+		AccountID:   acctID, UnitGroupID: sql.NullString{String: eachGroupID, Valid: true},
 		IsCommissionExempt: true, IsFreightExempt: true,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -330,7 +330,7 @@ func (r *registrationRepoImpl) CreateSystemProducts(ctx context.Context, account
 	err = r.queries.CreateProductLine(ctx, sqlc.CreateProductLineParams{
 		ID: creditLineID, Name: "Credit",
 		Description: sql.NullString{String: "Credit adjustments", Valid: true},
-		AccountID:   acctID, UnitGroupID: eachGroupID,
+		AccountID:   acctID, UnitGroupID: sql.NullString{String: eachGroupID, Valid: true},
 		IsCommissionExempt: true, IsFreightExempt: true,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

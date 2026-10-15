@@ -271,8 +271,8 @@ func TestCustomerPortalAccess_CannotCreateProductLine(t *testing.T) {
 	status, body, err := client.Post("/v1/catalog/product-lines", map[string]any{
 		"name":              uniqueName("e2e-cust-pl"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 403, status, "customer should not be able to create product lines: %s", string(body))

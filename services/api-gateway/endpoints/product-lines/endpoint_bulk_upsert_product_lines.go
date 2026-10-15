@@ -12,25 +12,19 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
 // UpsertProductLineInput is the input for a single product line in a bulk upsert operation.
 type UpsertProductLineInput struct {
-	// Display name of the product line, matched case-insensitively against existing lines.
-	// A row matching a system product line fails — system lines cannot be modified.
+	// Display name, such as `Outdoor`. Matches an existing line by name (case-insensitive). A row matching a system line fails.
 	Name string `json:"name" validate:"required,max=255"`
-	// Unit group to associate with this product line, referenced by `id` or `name`.
-	UnitGroup apirequest.ObjectIdentifier `json:"unit_group" validate:"required"`
-	// Default commission policy for products in this product line.
-	//
-	// - `commission_exempt`: no commission applies to these products.
-	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
+	// Whether sales of this line's products earn commission: `applied` or `exempt`.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Default freight policy for products in this product line.
-	//
-	// - `free_freight`: these products do not incur a freight charge.
-	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
+	// Whether this line's products add a freight charge: `billed` or `free`.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
+	// Unit group the line's products are priced in, by `id` or `name`.
+	UnitGroup field.Optional[apirequest.ObjectIdentifier] `json:"unit_group,omitzero" visibility:"internal"`
 }
 
 // BulkUpsertProductLinesRequest is the request to bulk upsert product lines.
@@ -43,7 +37,6 @@ var sampleBulkUpsertProductLinesRequest = &BulkUpsertProductLinesRequest{
 	ProductLines: []UpsertProductLineInput{
 		{
 			Name:             apiresource.SampleProductLineName,
-			UnitGroup:        apirequest.ObjectIdentifier{ID: apiresource.SampleUnitGroupID},
 			CommissionPolicy: constants.CommissionPolicyExempt,
 			FreightPolicy:    constants.FreightPolicyBilled,
 		},
@@ -54,8 +47,9 @@ func (*BulkUpsertProductLinesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertProductLinesRequest)
 }
 
-// Creates or updates multiple product lines for the account, matched by name
-// (case-insensitive), then writes asynchronously — 202 with a job to poll.
+// Creates or updates product lines in bulk.
+//
+// Rows are matched to existing lines by `name` (case-insensitive); a row matching a system line fails. The work runs in the background; the response is an async job to poll.
 type BulkUpsertProductLinesEndpoint struct{}
 
 func (e *BulkUpsertProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductLinesRequest, *apiresource.AsyncJob] {
@@ -63,12 +57,11 @@ func (e *BulkUpsertProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Bulk Upsert Product Lines",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/product-lines/actions/bulk-upsert",
+		Route:             productLinesBulkUpsertRoute,
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionCreate}, {Domain: types.PermissionDomainProductLines, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

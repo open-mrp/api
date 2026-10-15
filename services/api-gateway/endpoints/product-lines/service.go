@@ -10,9 +10,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -74,6 +76,9 @@ func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProd
 		Limit:  req.Limit,
 		Query:  req.Query,
 	}
+	for _, status := range req.Statuses {
+		pbReq.Statuses = append(pbReq.Statuses, string(status))
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductLinesResponse, error) {
@@ -108,16 +113,12 @@ func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrievePr
 func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 	pbReq := &pb.CreateProductLineRequest{
 		Name:             req.Name,
-		UnitGroupId:      req.UnitGroupID,
+		Description:      req.Description.Ptr(),
+		UnitGroupId:      req.UnitGroupID.Ptr(),
 		CommissionPolicy: string(req.CommissionPolicy),
 		FreightPolicy:    string(req.FreightPolicy),
-	}
-	if policy, ok := req.FulfillmentPolicy.Value(); ok {
-		code := string(policy)
-		pbReq.FulfillmentPolicyCode = &code
-	}
-	if lot, ok := req.DefaultLot.Value(); ok {
-		pbReq.DefaultLot = &pb.QuantityPatch{Value: &lot.Value, UnitId: &lot.UnitID}
+		Supply:           req.Supply.Ptr().StringPtr(),
+		Status:           req.Status.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.create", domain.ServiceName,
@@ -134,20 +135,15 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 
 func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 	pbReq := &pb.UpdateProductLineRequest{
-		Id:          req.ProductLineID,
-		Name:        req.Name.Ptr(),
-		UnitGroupId: req.UnitGroupID.Ptr(),
+		Id:               req.ProductLineID,
+		Name:             req.Name.Ptr(),
+		Description:      fieldpb.StringClearableToProto(req.Description),
+		UnitGroupId:      req.UnitGroupID.Ptr(),
+		CommissionPolicy: req.CommissionPolicy.Ptr().StringPtr(),
+		FreightPolicy:    req.FreightPolicy.Ptr().StringPtr(),
+		Supply:           fieldpb.EnumClearableToProto(req.Supply),
+		Status:           req.Status.Ptr().StringPtr(),
 	}
-	if v, ok := req.CommissionPolicy.Value(); ok {
-		s := string(v)
-		pbReq.CommissionPolicy = &s
-	}
-	if v, ok := req.FreightPolicy.Value(); ok {
-		s := string(v)
-		pbReq.FreightPolicy = &s
-	}
-	pbReq.DefaultLot = apirequest.QuantityFieldToProto(req.DefaultLot)
-	pbReq.FulfillmentPolicyCode = fieldpb.EnumClearableToProto(req.FulfillmentPolicy)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductLineResponse, error) {
@@ -183,9 +179,11 @@ func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *Bu
 	for i, pl := range req.ProductLines {
 		inputs[i] = &pb.BulkUpsertProductLineInput{
 			Name:             pl.Name,
-			UnitGroup:        apirequest.ObjectIdentifierToProto(pl.UnitGroup),
 			CommissionPolicy: string(pl.CommissionPolicy),
 			FreightPolicy:    string(pl.FreightPolicy),
+		}
+		if ug, ok := pl.UnitGroup.Value(); ok {
+			inputs[i].UnitGroup = apirequest.ObjectIdentifierToProto(ug)
 		}
 	}
 
@@ -216,4 +214,17 @@ func loadProductLineByID(ctx context.Context, id string) (*apiresource.ProductLi
 		return nil, apierror.NewNotFoundError("Product line not found.")
 	}
 	return v.(*apiresource.ProductLine), nil
+}
+
+const (
+	productLinesRoute           = "/v1/catalog/product-lines"
+	productLineRoute            = "/v1/catalog/product-lines/{id}"
+	productLinesBulkUpsertRoute = "/v1/catalog/product-lines/actions/bulk-upsert"
+)
+
+func productLineIncludes() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+		ObjectType: constants.ObjectTypeProductLine,
+		Fields:     []string{"owner", "owner.account", "unit_group"},
+	})
 }

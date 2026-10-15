@@ -437,7 +437,7 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 		}
 		// A hand-added campaign runs in the same lots as a solved one. Without this it would release to the floor as a single undifferentiated batch, however large.
 		//
-		// Resolved through the item's own lot chain rather than straight off the account default, so a line whose product line knits in sixties is planned in sixties. Falling to the account default here was how a campaign could be released in a lot size nobody had configured for that item.
+		// Resolved through the item's own lot chain rather than straight off the account default, so an item whose category knits in sixties is planned in sixties. Falling to the account default here was how a campaign could be released in a lot size nobody had configured for that item.
 		itemUnitID, apiErr := txSvc.itemCountingUnitID(txCtx, accountID, params.ItemID)
 		if apiErr != nil {
 			return apiErr

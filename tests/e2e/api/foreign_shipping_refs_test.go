@@ -192,7 +192,7 @@ func TestForeignShippingRefs_SalesOrderCreateTakesASystemOrOwnCarrier(t *testing
 func setupFreightExemptOrderCustomer(t *testing.T) string {
 	t.Helper()
 	body := validCustomerBody(uniqueName("e2e-so-exempt-cust"))
-	body["freight_policy"] = "free_freight"
+	body["freight_policy"] = "free"
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, resp)

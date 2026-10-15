@@ -9,26 +9,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The fulfillment policy chain above the item: a product line's convention, and
-// the account default underneath it.
+// The fulfillment policy chain above the item: a product line's default supply, and
+// the account default underneath it. A line that supplies from stock is planned make
+// to stock; one that makes for the order is planned make to order.
 //
 // The chain is read through the recommendation list, which reports each SKU's
 // current policy — the same resolution a solve applies. Asserting on the stored
 // value alone would prove the field round-trips without proving anything reads it.
 
-// createProductLineWithPolicy creates a product line, optionally with a
-// fulfillment policy, and removes it afterwards.
-func createProductLineWithPolicy(t *testing.T, prefix, policy string) string {
+// createProductLineWithSupply creates a product line, optionally with a default
+// supply, and removes it afterwards.
+func createProductLineWithSupply(t *testing.T, prefix, supply string) string {
 	t.Helper()
 
 	body := map[string]any{
 		"name":              uniqueName(prefix),
-		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	}
-	if policy != "" {
-		body["fulfillment_policy"] = policy
+	if supply != "" {
+		body["supply"] = supply
 	}
 
 	created := createAndCleanup(t, productLinesPath, body)
@@ -60,25 +60,25 @@ func createSellableItemInLine(t *testing.T, sku, productLineID string) string {
 	return itemID
 }
 
-// A line's policy has to survive create, update and clearing, since it is the rule
+// A line's supply has to survive create, update and clearing, since it is the rule
 // every SKU in the line falls back to.
-func TestProductLinePolicy_RoundTripsAndClears(t *testing.T) {
+func TestProductLineSupply_RoundTripsAndClears(t *testing.T) {
 	t.Parallel()
 
-	lineID := createProductLineWithPolicy(t, "e2e-pdln-policy", "make_to_order")
+	lineID := createProductLineWithSupply(t, "e2e-pdln-policy", "make")
 
 	status, body, err := apiClient.GetListRaw(productLinesPath+"/"+lineID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, "make_to_order", jsonField(parseJSON(body), "fulfillment_policy"),
-		"a policy set at creation must be readable back")
+	assert.Equal(t, "make", jsonField(parseJSON(body), "supply"),
+		"a supply set at creation must be readable back")
 
 	patchStatus, patchBody, err := apiClient.Patch(productLinesPath+"/"+lineID,
-		map[string]any{"fulfillment_policy": "make_to_stock"}, newIdempotencyKey())
+		map[string]any{"supply": "stock"}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, patchStatus, 500, "updating the policy must not 5xx: %s", string(patchBody))
 	requireStatus(t, 200, patchStatus, patchBody)
-	assert.Equal(t, "make_to_stock", jsonField(parseJSON(patchBody), "fulfillment_policy"))
+	assert.Equal(t, "stock", jsonField(parseJSON(patchBody), "supply"))
 
 	// An unrelated edit must not disturb it, or every rename would reset how a whole
 	// line is built.
@@ -86,41 +86,40 @@ func TestProductLinePolicy_RoundTripsAndClears(t *testing.T) {
 		map[string]any{"name": uniqueName("e2e-pdln-policy-renamed")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, renameStatus, renameBody)
-	assert.Equal(t, "make_to_stock", jsonField(parseJSON(renameBody), "fulfillment_policy"),
-		"omitting the policy on an update must leave it alone")
+	assert.Equal(t, "stock", jsonField(parseJSON(renameBody), "supply"),
+		"omitting the supply on an update must leave it alone")
 
 	clearStatus, clearBody, err := apiClient.Patch(productLinesPath+"/"+lineID,
-		map[string]any{"fulfillment_policy": nil}, newIdempotencyKey())
+		map[string]any{"supply": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, clearStatus, 500, "clearing the policy must not 5xx: %s", string(clearBody))
 	requireStatus(t, 200, clearStatus, clearBody)
-	assert.Nil(t, parseJSON(clearBody)["fulfillment_policy"],
-		"a cleared policy returns the line's products to the account default")
+	assert.Nil(t, parseJSON(clearBody)["supply"],
+		"a cleared supply returns the line's products to the account default")
 }
 
 // A line with no policy is the normal case, and it must read as null rather than as
 // a guess at what the account default happens to be today.
-func TestProductLinePolicy_DefaultsToNull(t *testing.T) {
+func TestProductLineSupply_DefaultsToNull(t *testing.T) {
 	t.Parallel()
 
-	lineID := createProductLineWithPolicy(t, "e2e-pdln-nopolicy", "")
+	lineID := createProductLineWithSupply(t, "e2e-pdln-nopolicy", "")
 
 	status, body, err := apiClient.GetListRaw(productLinesPath+"/"+lineID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Nil(t, parseJSON(body)["fulfillment_policy"])
+	assert.Nil(t, parseJSON(body)["supply"])
 }
 
-func TestProductLinePolicy_RejectsUnknownValues(t *testing.T) {
+func TestProductLineSupply_RejectsUnknownValues(t *testing.T) {
 	t.Parallel()
 
 	t.Run("on create", func(t *testing.T) {
 		status, body, err := apiClient.Post(productLinesPath, map[string]any{
-			"name":               uniqueName("e2e-pdln-badpolicy"),
-			"unit_group_id":      SeedUnitGroupID,
-			"commission_policy":  "commission_applied",
-			"freight_policy":     "billed_freight",
-			"fulfillment_policy": "make_to_vibes",
+			"name":              uniqueName("e2e-pdln-badpolicy"),
+			"commission_policy": "applied",
+			"freight_policy":    "billed",
+			"supply":            "make_to_vibes",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
@@ -128,10 +127,10 @@ func TestProductLinePolicy_RejectsUnknownValues(t *testing.T) {
 	})
 
 	t.Run("on update", func(t *testing.T) {
-		lineID := createProductLineWithPolicy(t, "e2e-pdln-badupdate", "")
+		lineID := createProductLineWithSupply(t, "e2e-pdln-badupdate", "")
 
 		status, body, err := apiClient.Patch(productLinesPath+"/"+lineID,
-			map[string]any{"fulfillment_policy": "make_to_vibes"}, newIdempotencyKey())
+			map[string]any{"supply": "make_to_vibes"}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
 		assert.Equal(t, 422, status, "body: %s", string(body))
@@ -144,7 +143,7 @@ func TestProductLinePolicy_RejectsUnknownValues(t *testing.T) {
 func TestFulfillmentPolicy_ItemOverrideBeatsProductLine(t *testing.T) {
 	t.Parallel()
 
-	lineID := createProductLineWithPolicy(t, "e2e-chain-line", "make_to_order")
+	lineID := createProductLineWithSupply(t, "e2e-chain-line", "make")
 	itemID := createSellableItemInLine(t, uniqueName("e2e-chain"), lineID)
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
 
@@ -174,12 +173,12 @@ func TestFulfillmentPolicy_ItemOverrideBeatsProductLine(t *testing.T) {
 		"removing the override returns the item to its line, not to the account default")
 }
 
-// Clearing the policy on the line propagates to the SKUs in it, which is what makes
+// Clearing the supply on the line propagates to the SKUs in it, which is what makes
 // the line a useful place to set one at all.
 func TestFulfillmentPolicy_ClearingTheLineFallsThroughToTheAccount(t *testing.T) {
 	t.Parallel()
 
-	lineID := createProductLineWithPolicy(t, "e2e-chain-clear-line", "make_to_order")
+	lineID := createProductLineWithSupply(t, "e2e-chain-clear-line", "make")
 	itemID := createSellableItemInLine(t, uniqueName("e2e-chain-clear"), lineID)
 
 	before := findRecommendation(t, itemID)
@@ -187,7 +186,7 @@ func TestFulfillmentPolicy_ClearingTheLineFallsThroughToTheAccount(t *testing.T)
 	require.Equal(t, "make_to_order", jsonField(before, "current_policy"))
 
 	status, body, err := apiClient.Patch(productLinesPath+"/"+lineID,
-		map[string]any{"fulfillment_policy": nil}, newIdempotencyKey())
+		map[string]any{"supply": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

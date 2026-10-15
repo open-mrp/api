@@ -68,7 +68,7 @@ func ItemCategoriesFromProto(ctx context.Context, categories []*pb.ItemCategoryI
 }
 
 func itemCategoryFromProto(ic *pb.ItemCategoryInfo) *apiresource.ItemCategory {
-	return &apiresource.ItemCategory{
+	out := &apiresource.ItemCategory{
 		ID:        ic.Id,
 		Object:    constants.ObjectTypeItemCategory,
 		Name:      ic.Name,
@@ -76,6 +76,10 @@ func itemCategoryFromProto(ic *pb.ItemCategoryInfo) *apiresource.ItemCategory {
 		CreatedAt: grpcutil.TimestampToTime(ic.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(ic.UpdatedAt),
 	}
+	if ic.DefaultLotSizeValue != nil && ic.GetDefaultLotSizeUnitId() != "" {
+		out.DefaultLotSize = apiresource.NewQuantity(apiresource.NormalizeQuantityValue(*ic.DefaultLotSizeValue, ""), *ic.DefaultLotSizeUnitId)
+	}
+	return out
 }
 
 // CategoryPropertiesListPath is the properties list narrowed to one category, where a category's embedded

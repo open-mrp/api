@@ -331,8 +331,8 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		"email":                   "audit-update@e2e.openmrp.ai",
 		"phone":                   "555-AUDIT",
 		"url":                     "https://audit.e2e.openmrp.ai",
-		"commission_policy":       "commission_applied",
-		"freight_policy":          "free_freight",
+		"commission_policy":       "applied",
+		"freight_policy":          "free",
 		"carrier_billing_type":    "third_party",
 		"carrier_billing_account": "NEW-ACCT",
 		"default_payment_term_id": SeedDefaultPaymentTermID,
@@ -371,13 +371,13 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	// Verify enum/policy field changes.
 	commChange, ok := changeForField(changes, "commission_policy")
 	require.True(t, ok, "should include commission_policy change")
-	assert.Equal(t, "commission_exempt", jsonField(commChange, "old_value"))
-	assert.Equal(t, "commission_applied", jsonField(commChange, "new_value"))
+	assert.Equal(t, "exempt", jsonField(commChange, "old_value"))
+	assert.Equal(t, "applied", jsonField(commChange, "new_value"))
 
 	freightChange, ok := changeForField(changes, "freight_policy")
 	require.True(t, ok, "should include freight_policy change")
-	assert.Equal(t, "billed_freight", jsonField(freightChange, "old_value"))
-	assert.Equal(t, "free_freight", jsonField(freightChange, "new_value"))
+	assert.Equal(t, "billed", jsonField(freightChange, "old_value"))
+	assert.Equal(t, "free", jsonField(freightChange, "new_value"))
 
 	cbtChange, ok := changeForField(changes, "carrier_billing_type")
 	require.True(t, ok, "should include carrier_billing_type change")
@@ -855,8 +855,8 @@ func TestProductLines_AuditEvents(t *testing.T) {
 	created := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-pdln-audit"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 	id := jsonField(created, "id")
 
@@ -876,8 +876,8 @@ func TestProductLines_RequestLogs(t *testing.T) {
 	createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-pdln-rlog"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 
 	expectRequestLog(t, "POST", "201", productLinesPath)

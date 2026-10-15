@@ -498,3 +498,16 @@ WHERE b.account_id = sqlc.arg('account_id')
   AND b.scanned_at IS NOT NULL
 ORDER BY b.scanned_at DESC, b.id DESC
 LIMIT ?;
+
+-- ListItemCategoryLotsForItems reads the lot of each item's category, for items whose category has one.
+-- name: ListItemCategoryLotsForItems :many
+SELECT
+    i.id AS item_id,
+    ic.id AS item_category_id,
+    q.value AS default_lot_size_value,
+    q.unit_id AS default_lot_size_unit_id
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN quantity q ON q.id = ic.default_lot_size_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.id IN (sqlc.slice('item_ids'));

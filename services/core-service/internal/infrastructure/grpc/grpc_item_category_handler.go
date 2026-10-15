@@ -5,7 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/field"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,6 +26,8 @@ func itemCategoryFullToProto(ic *domain.ItemCategoryFull) *pb.ItemCategoryInfo {
 		Notes:                ic.Notes,
 		CreatedAt:            timestamppb.New(ic.CreatedAt),
 		UpdatedAt:            timestamppb.New(ic.UpdatedAt),
+		DefaultLotSizeValue:  ic.DefaultLotSizeValue,
+		DefaultLotSizeUnitId: ic.DefaultLotSizeUnitID,
 	}
 
 	if ic.AccountID != nil {
@@ -144,6 +148,9 @@ func (h *gRPCHandler) CreateItemCategory(ctx context.Context, req *pb.CreateItem
 		PropertyIDs:          req.PropertyIds,
 		Includes:             req.Includes,
 	}
+	if lot := req.DefaultLotSize; lot != nil {
+		params.DefaultLotSize = &domain.LotQuantityInput{Value: lot.Value, UnitID: lot.UnitId}
+	}
 
 	itemCategory, apiErr := h.itemCategorySvc.CreateItemCategory(ctx, params)
 	if apiErr != nil {
@@ -172,6 +179,11 @@ func (h *gRPCHandler) UpdateItemCategory(ctx context.Context, req *pb.UpdateItem
 	if req.SetPropertyIds {
 		ids := req.PropertyIds
 		params.PropertyIDs = &ids
+	}
+	if q := fieldpb.QuantityClearableFromProto(req.DefaultLotSize); q.IsClear() {
+		params.DefaultLotSize = field.Clear[domain.LotQuantityInput]()
+	} else if v, ok := q.Value(); ok {
+		params.DefaultLotSize = field.Set(domain.LotQuantityInput{Value: v.Value, UnitID: v.UnitID})
 	}
 
 	itemCategory, apiErr := h.itemCategorySvc.UpdateItemCategory(ctx, params)

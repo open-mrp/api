@@ -29,16 +29,16 @@ type CreateAccountGroupRequest struct {
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// How sales commission applies to accounts in this group.
 	//
-	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
-	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
+	// - `applied`: sales commission is calculated on orders from accounts in this group.
+	// - `exempt`: orders from accounts in this group are exempt from commission.
 	//
 	// Leave this out and the group is created commission-exempt, so orders from its accounts earn no sales commission until you change it.
-	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"commission_exempt"`
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"exempt"`
 	// How freight charges apply to orders from accounts in this group.
 	//
-	// - `free_freight`: customers within this group will not have to pay for freight.
-	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
-	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
+	// - `free`: customers within this group will not have to pay for freight.
+	// - `billed`: freight will be applied to any order within this account group, unless overridden elsewhere.
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed"`
 	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own.
 	DefaultLeadTimeDays field.Optional[int32] `json:"default_lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
 	// Free-form description of the account group.

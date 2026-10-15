@@ -12,35 +12,31 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Request to get a product line.
+// Request to retrieve a product line.
 type RetrieveProductLineRequest struct {
 	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 }
 
-// Returns a single product line by ID.
+// Retrieves a product line.
 //
-// Both the product lines your account owns and the shared system lines can be retrieved.
+// Works for your account's lines and for system lines.
 type RetrieveProductLineEndpoint struct{}
 
 func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine] {
 	return (&apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Retrieve Product Line",
 		Method:            http.MethodGet,
-		Route:             "/v1/catalog/product-lines/{id}",
+		Route:             productLineRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).GetProductLine
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot"},
-		}),
+		IncludeConfig: productLineIncludes(),
 	})
 }

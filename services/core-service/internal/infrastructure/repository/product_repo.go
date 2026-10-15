@@ -393,7 +393,7 @@ func stitchProductLines(ctx context.Context, queries *sqlc.Queries, products []*
 			Notes:            plNotes,
 			CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
 			FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-			UnitGroupID:      row.UnitGroupID,
+			UnitGroupID:      row.UnitGroupID.String,
 			AccountID:        plAccountID,
 			CreatedAt:        row.CreatedAt,
 			UpdatedAt:        row.UpdatedAt,

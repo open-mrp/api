@@ -41,7 +41,7 @@ type PolicyResolutionInput struct {
 //
 // The chain, most specific first: an explicit item override, the item's own product line, the lines of what it becomes, then the account default.
 //
-// The downstream step exists for the same reason it exists for lot sizes: greige is not sold, carries no product line of its own, and has to inherit from the finished goods it becomes. It differs in one way, and the difference is the whole design. A greige item is built to order only when **every** finished good it feeds is built to order — one stocked sibling means the greige is still forecast-driven, because that sibling's buffer has to come from somewhere. This is what makes a two-value enum sufficient: the pooled greige buffer shrinks in proportion to how much of its family went make-to-order, with no third policy to name.
+// The downstream step exists because greige is not sold, carries no product line of its own, and has to inherit from the finished goods it becomes. A greige item is built to order only when **every** finished good it feeds is built to order — one stocked sibling means the greige is still forecast-driven, because that sibling's buffer has to come from somewhere. This is what makes a two-value enum sufficient: the pooled greige buffer shrinks in proportion to how much of its family went make-to-order, with no third policy to name.
 func ResolveFulfillmentPolicy(itemID string, in PolicyResolutionInput) FulfillmentResolution {
 	accountDefault := in.AccountDefault
 	if accountDefault == "" {

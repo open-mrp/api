@@ -100,8 +100,8 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 				return createdPath(t, productLinesPath, map[string]any{
 					"name":              uniqueName("e2e-dscope-pl"),
 					"unit_group_id":     SeedUnitGroupID,
-					"commission_policy": "commission_applied",
-					"freight_policy":    "billed_freight",
+					"commission_policy": "applied",
+					"freight_policy":    "billed",
 				})
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-pl")},

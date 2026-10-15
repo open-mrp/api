@@ -175,8 +175,8 @@ func (m *itemSvcImpl) GetItemLotDefault(ctx context.Context, req *RetrieveItemLo
 		Quantity: resp.Quantity,
 		Source:   constants.ItemLotSource(resp.Source),
 	}
-	if resp.ProductLineId != nil && *resp.ProductLineId != "" {
-		lot.ProductLine = apiresource.NewEntity(*resp.ProductLineId, constants.ObjectTypeProductLine, nil, nil)
+	if resp.ItemCategoryId != nil && *resp.ItemCategoryId != "" {
+		lot.ItemCategory = apiresource.NewEntity(*resp.ItemCategoryId, constants.ObjectTypeItemCategory, nil, nil)
 	}
 	// The unit id is loader-side metadata rather than a public field: the `unit` include
 	// resolves it into the nested sub-resource, keyed by the item the lot was resolved for.

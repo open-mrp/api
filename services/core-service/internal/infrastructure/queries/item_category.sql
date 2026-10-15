@@ -274,3 +274,26 @@ AND (
 )
 ORDER BY ic.created_at DESC, ic.id DESC
 LIMIT ?;
+
+-- A category's lot is a quantity row. Edits point the category at a new row rather than rewriting the old one, since
+-- categories given their lot by data migration share their product line's row.
+
+-- name: ListItemCategoryDefaultLotSizes :many
+SELECT
+    ic.id AS item_category_id,
+    q.value,
+    q.unit_id
+FROM item_category ic
+JOIN quantity q ON q.id = ic.default_lot_size_id
+WHERE ic.id IN (sqlc.slice('ids'));
+
+-- name: InsertDefaultLotSizeQuantity :exec
+INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));
+
+-- name: SetItemCategoryDefaultLotSize :execresult
+UPDATE item_category SET
+    default_lot_size_id = sqlc.narg('default_lot_size_id'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');

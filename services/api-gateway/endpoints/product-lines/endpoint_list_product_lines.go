@@ -17,15 +17,15 @@ import (
 // Request to list product lines.
 type ListProductLinesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return lines with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 }
 
-// Returns a paginated list of product lines, newest first.
+// Returns a list of product lines.
 //
-// Covers both the product lines your account owns and the shared system lines. The `q` search term is matched against the product line name.
+// Includes your account's lines and the system lines every account shares. Lines are sorted by creation date, newest first.
 type ListProductLinesEndpoint struct{}
 
 func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]] {
@@ -33,19 +33,15 @@ func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Title:             "List Product Lines",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/product-lines",
+		Route:             productLinesRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
 			return svc.(ProductLineSvc).ListProductLines
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot"},
-		}),
+		IncludeConfig: productLineIncludes(),
 	})
 }

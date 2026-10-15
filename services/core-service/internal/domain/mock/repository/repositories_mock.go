@@ -7670,36 +7670,6 @@ func (mr *MockProductLineRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockProductLineRepo)(nil).GetByIDs), ctx, accountID, ids)
 }
 
-// GetDownstreamProductLineLot mocks base method.
-func (m *MockProductLineRepo) GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDownstreamProductLineLot", ctx, accountID, itemID)
-	ret0, _ := ret[0].(*domain.ProductLineLotDefault)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetDownstreamProductLineLot indicates an expected call of GetDownstreamProductLineLot.
-func (mr *MockProductLineRepoMockRecorder) GetDownstreamProductLineLot(ctx, accountID, itemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDownstreamProductLineLot", reflect.TypeOf((*MockProductLineRepo)(nil).GetDownstreamProductLineLot), ctx, accountID, itemID)
-}
-
-// GetFlowProductLineLot mocks base method.
-func (m *MockProductLineRepo) GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFlowProductLineLot", ctx, accountID, itemID, maxDepth)
-	ret0, _ := ret[0].(*domain.ProductLineLotDefault)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetFlowProductLineLot indicates an expected call of GetFlowProductLineLot.
-func (mr *MockProductLineRepoMockRecorder) GetFlowProductLineLot(ctx, accountID, itemID, maxDepth any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFlowProductLineLot", reflect.TypeOf((*MockProductLineRepo)(nil).GetFlowProductLineLot), ctx, accountID, itemID, maxDepth)
-}
-
 // GetItemLotOverride mocks base method.
 func (m *MockProductLineRepo) GetItemLotOverride(ctx context.Context, accountID, itemID string) (float64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7713,21 +7683,6 @@ func (m *MockProductLineRepo) GetItemLotOverride(ctx context.Context, accountID,
 func (mr *MockProductLineRepoMockRecorder) GetItemLotOverride(ctx, accountID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemLotOverride", reflect.TypeOf((*MockProductLineRepo)(nil).GetItemLotOverride), ctx, accountID, itemID)
-}
-
-// GetProductLineLotForItem mocks base method.
-func (m *MockProductLineRepo) GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductLineLotForItem", ctx, accountID, itemID)
-	ret0, _ := ret[0].(*domain.ProductLineLotDefault)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetProductLineLotForItem indicates an expected call of GetProductLineLotForItem.
-func (mr *MockProductLineRepoMockRecorder) GetProductLineLotForItem(ctx, accountID, itemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductLineLotForItem", reflect.TypeOf((*MockProductLineRepo)(nil).GetProductLineLotForItem), ctx, accountID, itemID)
 }
 
 // GetUnitGroup mocks base method.
@@ -7758,21 +7713,6 @@ func (m *MockProductLineRepo) GetUnitGroups(ctx context.Context, accountID strin
 func (mr *MockProductLineRepoMockRecorder) GetUnitGroups(ctx, accountID, unitGroupIDs, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroups", reflect.TypeOf((*MockProductLineRepo)(nil).GetUnitGroups), ctx, accountID, unitGroupIDs, includes)
-}
-
-// IsUnitInGroup mocks base method.
-func (m *MockProductLineRepo) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsUnitInGroup", ctx, unitGroupID, unitID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// IsUnitInGroup indicates an expected call of IsUnitInGroup.
-func (mr *MockProductLineRepoMockRecorder) IsUnitInGroup(ctx, unitGroupID, unitID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUnitInGroup", reflect.TypeOf((*MockProductLineRepo)(nil).IsUnitInGroup), ctx, unitGroupID, unitID)
 }
 
 // List mocks base method.
@@ -8092,6 +8032,20 @@ func (m *MockItemCategoryRepo) ReplaceProperties(ctx context.Context, itemCatego
 func (mr *MockItemCategoryRepoMockRecorder) ReplaceProperties(ctx, itemCategoryID, propertyIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceProperties", reflect.TypeOf((*MockItemCategoryRepo)(nil).ReplaceProperties), ctx, itemCategoryID, propertyIDs)
+}
+
+// SetDefaultLotSize mocks base method.
+func (m *MockItemCategoryRepo) SetDefaultLotSize(ctx context.Context, accountID, itemCategoryID string, lot *domain.LotQuantityInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDefaultLotSize", ctx, accountID, itemCategoryID, lot)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetDefaultLotSize indicates an expected call of SetDefaultLotSize.
+func (mr *MockItemCategoryRepoMockRecorder) SetDefaultLotSize(ctx, accountID, itemCategoryID, lot any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultLotSize", reflect.TypeOf((*MockItemCategoryRepo)(nil).SetDefaultLotSize), ctx, accountID, itemCategoryID, lot)
 }
 
 // Update mocks base method.
@@ -13008,19 +12962,19 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) ListDeliveryOutcomes(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeliveryOutcomes", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListDeliveryOutcomes), ctx, accountID, start, end, filters)
 }
 
-// ListItemProductLines mocks base method.
-func (m *MockProductionScheduleInputRepo) ListItemProductLines(ctx context.Context, accountID string, itemIDs []string) ([]domain.ItemProductLineRow, *apierror.APIError) {
+// ListItemCategoryLots mocks base method.
+func (m *MockProductionScheduleInputRepo) ListItemCategoryLots(ctx context.Context, accountID string, itemIDs []string) (map[string]scheduling.CategoryLot, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListItemProductLines", ctx, accountID, itemIDs)
-	ret0, _ := ret[0].([]domain.ItemProductLineRow)
+	ret := m.ctrl.Call(m, "ListItemCategoryLots", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].(map[string]scheduling.CategoryLot)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// ListItemProductLines indicates an expected call of ListItemProductLines.
-func (mr *MockProductionScheduleInputRepoMockRecorder) ListItemProductLines(ctx, accountID, itemIDs any) *gomock.Call {
+// ListItemCategoryLots indicates an expected call of ListItemCategoryLots.
+func (mr *MockProductionScheduleInputRepoMockRecorder) ListItemCategoryLots(ctx, accountID, itemIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemProductLines", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListItemProductLines), ctx, accountID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemCategoryLots", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListItemCategoryLots), ctx, accountID, itemIDs)
 }
 
 // ListProductLineFulfillmentPolicies mocks base method.
@@ -13036,21 +12990,6 @@ func (m *MockProductionScheduleInputRepo) ListProductLineFulfillmentPolicies(ctx
 func (mr *MockProductionScheduleInputRepoMockRecorder) ListProductLineFulfillmentPolicies(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductLineFulfillmentPolicies", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListProductLineFulfillmentPolicies), ctx, accountID)
-}
-
-// ListProductLineLotDefaults mocks base method.
-func (m *MockProductionScheduleInputRepo) ListProductLineLotDefaults(ctx context.Context, accountID string) ([]scheduling.ProductLineLot, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListProductLineLotDefaults", ctx, accountID)
-	ret0, _ := ret[0].([]scheduling.ProductLineLot)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListProductLineLotDefaults indicates an expected call of ListProductLineLotDefaults.
-func (mr *MockProductionScheduleInputRepoMockRecorder) ListProductLineLotDefaults(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductLineLotDefaults", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListProductLineLotDefaults), ctx, accountID)
 }
 
 // ListScheduleItemSettings mocks base method.

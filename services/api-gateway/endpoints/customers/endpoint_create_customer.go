@@ -40,16 +40,16 @@ type CreateCustomerRequest struct {
 	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero" default:"normal"`
 	// How sales commission applies to this customer's orders.
 	//
-	// - `commission_exempt`: this customer's orders are exempt from sales commission.
-	// - `commission_applied`: sales commission is calculated on this customer's orders.
-	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"commission_exempt"`
+	// - `exempt`: this customer's orders are exempt from sales commission.
+	// - `applied`: sales commission is calculated on this customer's orders.
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"exempt"`
 	// Whether this customer is billed for freight on their orders.
 	//
-	// - `free_freight`: the customer is not billed for freight.
-	// - `billed_freight`: freight is billed to the customer.
+	// - `free`: the customer is not billed for freight.
+	// - `billed`: freight is billed to the customer.
 	//
-	// Freight is also waived when the customer's type group, one of its price groups, or a product line the ordered products belong to is `free_freight`.
-	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
+	// Freight is also waived when the customer's type group, one of its price groups, or a product line the ordered products belong to is `free`.
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed"`
 	// Calendar days between an order being issued and it being due to ship.
 	//
 	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the parent account's lead time, then the customer's account group lead time, then the account default.

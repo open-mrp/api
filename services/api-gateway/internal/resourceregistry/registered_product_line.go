@@ -28,9 +28,6 @@ func init() {
 				ExtractRefs: extractUnitGroupRefsFromProductLine,
 				Populate:    populateUnitGroupOnProductLine,
 			},
-			valueShapeSub(constants.ObjectTypeProductLine, "default_lot", func(p any) string { return p.(*apiresource.ProductLine).ID }, func(p, v any) {
-				p.(*apiresource.ProductLine).DefaultLot = v.(*apiresource.Quantity)
-			}),
 		},
 	})
 }

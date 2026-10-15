@@ -8,130 +8,55 @@ import (
 )
 
 const (
-	sockLine   = "pdln_socks"
-	sleeveLine = "pdln_sleeves"
-	pairs      = "un_pairs"
-	eaches     = "un_eaches"
+	sockCategory   = "ic_socks"
+	sleeveCategory = "ic_sleeves"
+	pairs          = "un_pairs"
+	eaches         = "un_eaches"
 )
 
 func baseLotInput() LotResolutionInput {
 	return LotResolutionInput{
 		ItemOverrides:     map[string]float64{},
-		ProductLineByItem: map[string]string{},
-		LotByProductLine: map[string]ProductLineLot{
-			sockLine:   {ProductLineID: sockLine, Quantity: 60, UnitID: pairs},
-			sleeveLine: {ProductLineID: sleeveLine, Quantity: 60, UnitID: eaches},
-		},
-		DownstreamByItem: map[string][]FinishedGood{},
-		AccountLotUnits:  60,
-		UnitByItem:       map[string]string{},
+		CategoryLotByItem: map[string]CategoryLot{},
+		AccountLotUnits:   60,
+		UnitByItem:        map[string]string{},
 	}
 }
 
-// The distinction the whole feature exists to draw: the same 60 means pairs for socks and
-// eaches for armsleeves, and the unit is what separates them.
-func TestResolveLotDefault_UnitComesFromTheProductLine(t *testing.T) {
+// The same 60 means pairs for socks and eaches for armsleeves, and the category's unit is what separates them.
+func TestResolveLotDefault_UnitComesFromTheCategory(t *testing.T) {
 	t.Parallel()
 
 	in := baseLotInput()
-	in.ProductLineByItem["it_sock"] = sockLine
-	in.ProductLineByItem["it_sleeve"] = sleeveLine
+	in.CategoryLotByItem["it_sock"] = CategoryLot{ItemCategoryID: sockCategory, Quantity: 60, UnitID: pairs}
+	in.CategoryLotByItem["it_sleeve"] = CategoryLot{ItemCategoryID: sleeveCategory, Quantity: 60, UnitID: eaches}
 
 	sock, ok := ResolveLotDefault("it_sock", in)
 	require.True(t, ok)
 	assert.Equal(t, float64(60), sock.Quantity)
 	assert.Equal(t, pairs, sock.UnitID)
-	assert.Equal(t, LotSourceProductLine, sock.Source)
+	assert.Equal(t, LotSourceItemCategory, sock.Source)
+	assert.Equal(t, sockCategory, sock.ItemCategoryID)
 
 	sleeve, ok := ResolveLotDefault("it_sleeve", in)
 	require.True(t, ok)
-	assert.Equal(t, float64(60), sleeve.Quantity)
 	assert.Equal(t, eaches, sleeve.UnitID)
-}
-
-// Greige is not sold, so it has no product line of its own. It takes its lot from what it
-// becomes, which is the case the plan actually runs on.
-func TestResolveLotDefault_GreigeInheritsFromWhatItBecomes(t *testing.T) {
-	t.Parallel()
-
-	in := baseLotInput()
-	in.UnitByItem["it_greige"] = eaches
-	in.DownstreamByItem["it_greige"] = []FinishedGood{
-		{ItemID: "it_sock_a", ProductLineID: sockLine, Monthly: []MonthlyDemand{{Quantity: 500}}},
-	}
-
-	lot, ok := ResolveLotDefault("it_greige", in)
-	require.True(t, ok)
-	assert.Equal(t, pairs, lot.UnitID,
-		"sock greige must be counted in pairs, not in the item's own unit")
-	assert.Equal(t, LotSourceDownstreamProductLine, lot.Source)
-	assert.Equal(t, sockLine, lot.ProductLineID)
-}
-
-func TestResolveLotDefault_CompetingLinesAreDecidedByDemand(t *testing.T) {
-	t.Parallel()
-
-	in := baseLotInput()
-	in.DownstreamByItem["it_greige"] = []FinishedGood{
-		{ItemID: "it_sleeve_a", ProductLineID: sleeveLine, Monthly: []MonthlyDemand{{Quantity: 100}}},
-		{ItemID: "it_sock_a", ProductLineID: sockLine, Monthly: []MonthlyDemand{{Quantity: 900}}},
-	}
-
-	lot, ok := ResolveLotDefault("it_greige", in)
-	require.True(t, ok)
-	assert.Equal(t, pairs, lot.UnitID,
-		"a greige that mostly becomes socks is knitted in the sock line's doff")
-}
-
-// The leveling is deterministic and the lot must not be the thing that makes it wobble.
-func TestResolveLotDefault_TiesResolveTheSameWayEveryTime(t *testing.T) {
-	t.Parallel()
-
-	in := baseLotInput()
-	in.DownstreamByItem["it_greige"] = []FinishedGood{
-		{ItemID: "it_sleeve_a", ProductLineID: sleeveLine, Monthly: []MonthlyDemand{{Quantity: 500}}},
-		{ItemID: "it_sock_a", ProductLineID: sockLine, Monthly: []MonthlyDemand{{Quantity: 500}}},
-	}
-
-	first, ok := ResolveLotDefault("it_greige", in)
-	require.True(t, ok)
-	for i := 0; i < 50; i++ {
-		again, ok := ResolveLotDefault("it_greige", in)
-		require.True(t, ok)
-		assert.Equal(t, first.ProductLineID, again.ProductLineID)
-		assert.Equal(t, first.UnitID, again.UnitID)
-	}
-}
-
-// A brand-new SKU with no demand history still counts toward its line, or it would be
-// invisible to the choice for as long as it takes to accumulate orders.
-func TestResolveLotDefault_LineWithNoDemandStillVotes(t *testing.T) {
-	t.Parallel()
-
-	in := baseLotInput()
-	in.DownstreamByItem["it_greige"] = []FinishedGood{
-		{ItemID: "it_sock_new", ProductLineID: sockLine},
-	}
-
-	lot, ok := ResolveLotDefault("it_greige", in)
-	require.True(t, ok)
-	assert.Equal(t, sockLine, lot.ProductLineID)
 }
 
 func TestResolveLotDefault_ItemOverrideWins(t *testing.T) {
 	t.Parallel()
 
 	in := baseLotInput()
-	in.ProductLineByItem["it_sock"] = sockLine
-	in.UnitByItem["it_sock"] = pairs
+	in.CategoryLotByItem["it_sock"] = CategoryLot{ItemCategoryID: sockCategory, Quantity: 60, UnitID: pairs}
 	in.ItemOverrides["it_sock"] = 120
+	in.UnitByItem["it_sock"] = eaches
 
 	lot, ok := ResolveLotDefault("it_sock", in)
 	require.True(t, ok)
 	assert.Equal(t, float64(120), lot.Quantity)
+	assert.Equal(t, eaches, lot.UnitID)
 	assert.Equal(t, LotSourceItemOverride, lot.Source)
-	// An override changes how big a lot is, not what it is counted in.
-	assert.Equal(t, pairs, lot.UnitID)
+	assert.Empty(t, lot.ItemCategoryID)
 }
 
 func TestResolveLotDefault_FallsBackToTheAccountDefault(t *testing.T) {
@@ -147,21 +72,15 @@ func TestResolveLotDefault_FallsBackToTheAccountDefault(t *testing.T) {
 	assert.Equal(t, LotSourceAccountDefault, lot.Source)
 }
 
-// A downstream line with no lot configured must not shadow the account default, or
-// configuring one line would silently unlot everything that feeds a different one.
-func TestResolveLotDefault_UnconfiguredDownstreamLineIsSkipped(t *testing.T) {
+func TestResolveLotDefault_ZeroCategoryLotIsSkipped(t *testing.T) {
 	t.Parallel()
 
 	in := baseLotInput()
-	in.UnitByItem["it_greige"] = eaches
-	in.DownstreamByItem["it_greige"] = []FinishedGood{
-		{ItemID: "it_other", ProductLineID: "pdln_unconfigured", Monthly: []MonthlyDemand{{Quantity: 900}}},
-	}
+	in.CategoryLotByItem["it_sock"] = CategoryLot{ItemCategoryID: sockCategory, Quantity: 0, UnitID: pairs}
 
-	lot, ok := ResolveLotDefault("it_greige", in)
+	lot, ok := ResolveLotDefault("it_sock", in)
 	require.True(t, ok)
 	assert.Equal(t, LotSourceAccountDefault, lot.Source)
-	assert.Equal(t, eaches, lot.UnitID)
 }
 
 func TestResolveLotDefault_NoLotAtAll(t *testing.T) {
@@ -171,5 +90,5 @@ func TestResolveLotDefault_NoLotAtAll(t *testing.T) {
 	in.AccountLotUnits = 0
 
 	_, ok := ResolveLotDefault("it_orphan", in)
-	assert.False(t, ok, "an item with no rule anywhere is planned unlotted, not guessed at")
+	assert.False(t, ok)
 }

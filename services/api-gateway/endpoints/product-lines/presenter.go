@@ -20,17 +20,13 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 		Object:           constants.ObjectTypeProductLine,
 		Name:             pl.Name,
 		Description:      pl.Description,
-		Notes:            pl.Notes,
+		Status:           constants.ArchiveStatus(pl.Status),
 		CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
+		Supply:           SupplyFromProto(pl.Supply),
 		Owner:            apiresource.NewOwnerWithAccount(pl.AccountId, ownerAccount),
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
-	}
-
-	if pl.FulfillmentPolicyCode != nil && *pl.FulfillmentPolicyCode != "" {
-		policy := constants.FulfillmentPolicy(*pl.FulfillmentPolicyCode)
-		result.FulfillmentPolicy = &policy
 	}
 
 	if pl.UnitGroup != nil {
@@ -105,4 +101,13 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 	}
 
 	return result
+}
+
+// SupplyFromProto reads a line's optional supply; empty means none.
+func SupplyFromProto(s *string) *constants.Supply {
+	if s == nil || *s == "" {
+		return nil
+	}
+	supply := constants.Supply(*s)
+	return &supply
 }

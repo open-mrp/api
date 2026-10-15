@@ -15,6 +15,7 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
+	"github.com/shopspring/decimal"
 )
 
 var itemCategorySvcTracer = tracing.GetTracer("core-service.item_category_service")
@@ -412,6 +413,10 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := validateDefaultLotSize(ctx, s.repos, params.UnitGroupID, params.DefaultLotSize); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -435,6 +440,14 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 			created, apiErr := txRepo.Create(txCtx, categoryID, params)
 			if apiErr != nil {
 				return apiErr
+			}
+			if params.DefaultLotSize != nil {
+				if apiErr := txRepo.SetDefaultLotSize(txCtx, params.AccountID, created.ID, params.DefaultLotSize); apiErr != nil {
+					return apiErr
+				}
+				if created, apiErr = txRepo.Get(txCtx, domain.GetItemCategoryParams{AccountID: params.AccountID, ItemCategoryID: created.ID}); apiErr != nil {
+					return apiErr
+				}
 			}
 			if len(params.PropertyIDs) > 0 {
 				if apiErr := txRepo.ReplaceProperties(txCtx, created.ID, params.PropertyIDs); apiErr != nil {
@@ -547,9 +560,25 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 				}
 			}
 
+			lot := params.DefaultLotSize.ValuePtr()
+			if params.DefaultLotSize.WasProvided() {
+				if apiErr := validateDefaultLotSize(txCtx, txSvc.repos, old.UnitGroupID, lot); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
+			}
+			// After the update, which reports a missing category: in the same millisecond a second write changes no row.
+			if params.DefaultLotSize.WasProvided() {
+				if apiErr := txRepo.SetDefaultLotSize(txCtx, params.AccountID, params.ItemCategoryID, lot); apiErr != nil {
+					return apiErr
+				}
+				if updated, apiErr = txRepo.Get(txCtx, domain.GetItemCategoryParams{AccountID: params.AccountID, ItemCategoryID: params.ItemCategoryID}); apiErr != nil {
+					return apiErr
+				}
 			}
 			if params.PropertyIDs != nil {
 				if apiErr := txRepo.ReplaceProperties(txCtx, params.ItemCategoryID, *params.PropertyIDs); apiErr != nil {
@@ -1171,6 +1200,34 @@ func requirePropertiesInAccount(ctx context.Context, repo domain.PropertyRepo, a
 		if _, ok := have[id]; !ok {
 			return apierror.NewFieldError(fmt.Sprintf("property_ids[%d]", i), apierror.CodeInvalidFormat, fmt.Sprintf("Property %q was not found.", id))
 		}
+	}
+	return nil
+}
+
+// validateDefaultLotSize rejects a lot a category can't express: it needs a positive value, and a unit of the same
+// dimension as the category's items, so 60 pairs of a counted sock is a lot and 60 kilograms of it is not.
+func validateDefaultLotSize(ctx context.Context, repos domain.RepoFactory, unitGroupID string, lot *domain.LotQuantityInput) *apierror.APIError {
+	if lot == nil {
+		return nil
+	}
+	value, err := decimal.NewFromString(lot.Value)
+	if err != nil || !value.IsPositive() {
+		return apierror.NewFieldError("default_lot_size.value", apierror.CodeInvalidFormat, "The default lot size must be greater than zero.")
+	}
+	group, apiErr := repos.NewItemCategoryRepo().GetUnitGroup(ctx, unitGroupID, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+	dimensions, apiErr := repos.NewUnitRepo().GetDimensionCodes(ctx, []string{lot.UnitID, group.BaseUnitID})
+	if apiErr != nil {
+		return apiErr
+	}
+	unitDimension, ok := dimensions[lot.UnitID]
+	if !ok {
+		return apierror.NewFieldError("default_lot_size.unit_id", apierror.CodeInvalidFormat, "No unit with this ID exists.")
+	}
+	if unitDimension != dimensions[group.BaseUnitID] {
+		return apierror.NewFieldError("default_lot_size.unit_id", apierror.CodeInvalidFormat, "The default lot size must be counted in a unit of the same kind as the category's items.")
 	}
 	return nil
 }

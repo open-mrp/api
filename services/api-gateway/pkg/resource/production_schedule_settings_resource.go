@@ -102,7 +102,7 @@ type ProductionScheduleSettings struct {
 	CapacityHeadroomPct float64 `json:"capacity_headroom_pct"`
 	// Units in a default production lot.
 	//
-	// The last resort in the lot-size chain: a lot set on the item, on its product line, or on the finished goods an intermediate item becomes all take precedence.
+	// The last resort in the lot-size chain: a lot set on the item or on its category takes precedence.
 	DefaultLotUnits float64 `json:"default_lot_units"`
 
 	// Calendar days between an order being issued and it being due to ship.
@@ -232,7 +232,7 @@ type ProductionScheduleItemSetting struct {
 	//
 	// An excluded item is left out of the plan entirely: no campaigns, no policy, no capacity.
 	ParticipationStatus constants.ParticipationStatus `json:"participation_status" validate:"required"`
-	// Units in one production lot for this item, overriding the lot its product line would supply.
+	// Units in one production lot for this item, overriding the lot its category would supply.
 	LotMultipleUnits *float64 `json:"lot_multiple_units"`
 	// How this item is produced.
 	//

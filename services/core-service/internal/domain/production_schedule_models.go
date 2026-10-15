@@ -265,12 +265,6 @@ type ProductLineItemRow struct {
 	ItemID        string
 }
 
-// ItemProductLineRow maps one item to the product line it sells under.
-type ItemProductLineRow struct {
-	ItemID        string
-	ProductLineID string
-}
-
 // ProductionScheduleSettingsRow is the merchant's stored planning assumptions as one raw row, before code defaults are merged in by the service.
 type ProductionScheduleSettingsRow struct {
 	PlanningHorizonWeeks           int

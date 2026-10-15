@@ -22,7 +22,7 @@ type RetrieveItemLotDefaultRequest struct {
 //
 // A lot is a doff, a pallet, a batch: the quantity production is issued in. The unit is what makes it meaningful, since 60 pairs and 60 eaches are different lots, so `quantity` should never be read without `unit`.
 //
-// Resolved through the same chain the production schedule uses, most specific first: a per-item override, then the item's own product line, then the product lines of the finished goods it becomes, then the account-wide default. `source` names which rule applied. Intermediate items like greige are not sold and have no product line of their own, which is why they inherit from what they become.
+// Resolved through the same chain the production schedule uses, most specific first: a per-item override, then the item's category, then the account-wide default. `source` names which rule applied.
 //
 // `quantity` is `0` when nothing in the chain supplies a lot. That means the item has no lot convention, not that its lot is zero.
 type RetrieveItemLotDefaultEndpoint struct{}

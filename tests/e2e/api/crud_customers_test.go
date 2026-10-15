@@ -85,7 +85,7 @@ func TestCustomers_CreateResponseShape(t *testing.T) {
 	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 	assert.Equal(t, "normal", jsonField(got, "status"))
 	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
+	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -115,8 +115,8 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 		"phone":                    "555-000-1234",
 		"url":                      "https://e2e.openmrp.ai",
 		"status":                   "normal",
-		"commission_policy":        "commission_exempt",
-		"freight_policy":           "free_freight",
+		"commission_policy":        "exempt",
+		"freight_policy":           "free",
 		"default_carrier_id":       SeedCarrierID,
 		"default_payment_term_id":  SeedPaymentTermID,
 		"default_shipping_term_id": SeedShippingTermID,
@@ -150,7 +150,7 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 	assert.Equal(t, "normal", jsonField(got, "status"))
 	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
+	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
 	assert.Equal(t, "Test customer note", jsonField(got, "note"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -175,8 +175,8 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"phone":                    "555-000-1234",
 			"url":                      "https://create.e2e.openmrp.ai",
 			"status":                   "normal",
-			"commission_policy":        "commission_exempt",
-			"freight_policy":           "free_freight",
+			"commission_policy":        "exempt",
+			"freight_policy":           "free",
 			"default_carrier_id":       SeedCarrierID,
 			"default_payment_term_id":  SeedPaymentTermID,
 			"default_shipping_term_id": SeedShippingTermID,
@@ -216,7 +216,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.NotEmpty(t, jsonField(got, "number"))
 	assert.Equal(t, "normal", jsonField(got, "status"))
 	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
+	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -254,7 +254,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	fp := jsonObject(got, "freight_preferences")
 	require.NotNil(t, fp, "freight_preferences should be expanded")
 	assert.Equal(t, "customer_freight_preferences", jsonField(fp, "object"))
-	assert.Equal(t, "free_freight", jsonField(fp, "status"))
+	assert.Equal(t, "free", jsonField(fp, "status"))
 	assert.Equal(t, "third_party", jsonField(fp, "billing_type"))
 	assert.Equal(t, "ACCT-12345", jsonField(fp, "billing_account"))
 
@@ -297,8 +297,8 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"email":                   updatedName + "@e2e-test.openmrp.ai",
 			"phone":                   "555-999-8888",
 			"url":                     "https://update.e2e.openmrp.ai",
-			"commission_policy":       "commission_applied",
-			"freight_policy":          "billed_freight",
+			"commission_policy":       "applied",
+			"freight_policy":          "billed",
 			"default_payment_term_id": SeedDefaultPaymentTermID,
 			"carrier_billing_type":    "sender",
 			"carrier_billing_account": "ACCT-99999",
@@ -323,7 +323,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, "Updated note", jsonField(updated, "note"))
-	assert.Equal(t, "commission_applied", jsonField(updated, "commission_policy"))
+	assert.Equal(t, "applied", jsonField(updated, "commission_policy"))
 
 	// Preserved top-level fields
 	assert.Equal(t, "normal", jsonField(updated, "status"), "status should be preserved")
@@ -360,7 +360,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	// Updated freight_preferences
 	updFp := jsonObject(updated, "freight_preferences")
 	require.NotNil(t, updFp)
-	assert.Equal(t, "billed_freight", jsonField(updFp, "status"))
+	assert.Equal(t, "billed", jsonField(updFp, "status"))
 	assert.Equal(t, "sender", jsonField(updFp, "billing_type"))
 	assert.Equal(t, "ACCT-99999", jsonField(updFp, "billing_account"))
 
@@ -445,7 +445,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, updatedName, jsonField(cleared, "name"), "name should be preserved")
 	assert.NotEmpty(t, jsonField(cleared, "number"), "number should be preserved")
 	assert.Equal(t, "normal", jsonField(cleared, "status"), "status should be preserved")
-	assert.Equal(t, "commission_applied", jsonField(cleared, "commission_policy"), "commission_policy should be preserved")
+	assert.Equal(t, "applied", jsonField(cleared, "commission_policy"), "commission_policy should be preserved")
 
 	// ── Verify cleared state survives an unrelated update ──
 
@@ -655,7 +655,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
 		"note":              "multi-field update",
 		"phone":             "555-999-8888",
-		"commission_policy": "commission_exempt",
+		"commission_policy": "exempt",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -663,7 +663,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
 	assert.Equal(t, "multi-field update", jsonField(patched, "note"))
-	assert.Equal(t, "commission_exempt", jsonField(patched, "commission_policy"))
+	assert.Equal(t, "exempt", jsonField(patched, "commission_policy"))
 
 	apiClient.Delete(customersPath + "/" + id)
 }
@@ -1066,7 +1066,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 		assert.Equal(t, "normal", jsonField(got, "status"))
 		assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
+		assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
 		assertNilField(t, got, "note")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -1122,8 +1122,8 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		createPayload["email"] = name + "@e2e-test.openmrp.ai"
 		createPayload["phone"] = "555-000-1234"
 		createPayload["url"] = "https://original.e2e.openmrp.ai"
-		createPayload["commission_policy"] = "commission_exempt"
-		createPayload["freight_policy"] = "free_freight"
+		createPayload["commission_policy"] = "exempt"
+		createPayload["freight_policy"] = "free"
 		createPayload["default_priority"] = SeedPriorityCode
 		createPayload["default_sales_rep_id"] = SeedAccountUserID
 		createPayload["carrier_billing_type"] = "third_party"
@@ -1163,7 +1163,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		assert.Equal(t, origNumber, jsonField(got, "number"), "number should be preserved")
 		assert.Equal(t, "normal", jsonField(got, "status"), "status should be preserved")
 		assert.Equal(t, "standalone", jsonField(got, "relationship_type"), "relationship_type should be preserved")
-		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"), "commission_policy should be preserved")
+		assert.Equal(t, "exempt", jsonField(got, "commission_policy"), "commission_policy should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -1194,7 +1194,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		// Preserved freight_preferences
 		fp := jsonObject(got, "freight_preferences")
 		require.NotNil(t, fp)
-		assert.Equal(t, "free_freight", jsonField(fp, "status"), "freight status should be preserved")
+		assert.Equal(t, "free", jsonField(fp, "status"), "freight status should be preserved")
 		assert.Equal(t, "third_party", jsonField(fp, "billing_type"), "billing_type should be preserved")
 		assert.Equal(t, "ACCT-ORIG", jsonField(fp, "billing_account"), "billing_account should be preserved")
 		carrier := jsonObject(fp, "carrier")

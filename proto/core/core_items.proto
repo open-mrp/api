@@ -10,6 +10,7 @@ import "core/core_identity_context.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
 import "core/value_shapes.proto";
+import "core/core_patch.proto";
 option go_package = "shared/proto/core;core";
 
 message GetItemInventoryResponse {
@@ -475,6 +476,7 @@ message CreateItemCategoryRequest {
   string unit_group_id = 3;
   repeated string includes = 4;
   repeated string property_ids = 5;
+  optional QuantityInput default_lot_size = 6;
 }
 message CreateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;
@@ -487,6 +489,7 @@ message UpdateItemCategoryRequest {
   // When set, property_ids replaces the category's properties.
   bool set_property_ids = 5;
   repeated string property_ids = 6;
+  optional QuantityPatch default_lot_size = 7;
 }
 message UpdateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;

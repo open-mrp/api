@@ -396,24 +396,24 @@ Docstrings
 Endpoints: list, create, retrieve, update, delete, bulk upsert. Internal export out of scope.
 
 Resource
-- [ ] Remove `unit_group` / `unit_group_id` (create, update, bulk) and the include key.
-- [ ] `commission_policy`: `commission_applied | commission_exempt` → `applied | exempt`; `freight_policy`: `billed_freight | free_freight` → `billed | free`. Shared enums: also customers, account groups, account-group/customer product-line access.
-- [ ] `default_lot_size` is a `Quantity` value: not expandable (remove `default_lot_size` / `default_lot.unit` include keys); still `null` for portal users.
-- [ ] Remove `notes` (see "Notes → instructions"; commentary is the `note` resource, AI A6). `description` becomes writable: optional on create, `field.Clearable` on update; visible to portal users.
+- [ ] Remove `unit_group` / `unit_group_id` (create, update, bulk) and the include key. *(CAT2: internal and optional (a line without one prices in its category's group) until ITM2 retires unit groups; the include key still lists.)*
+- [x] `commission_policy`: `commission_applied | commission_exempt` → `applied | exempt`; `freight_policy`: `billed_freight | free_freight` → `billed | free`. Shared enums: also customers, account groups, account-group/customer product-line access.
+- [x] `default_lot_size` is a `Quantity` value: not expandable (remove `default_lot_size` / `default_lot.unit` include keys); still `null` for portal users. *(CAT2: per Q3 it lives on item categories; product lines no longer carry a lot.)*
+- [x] Remove `notes` (see "Notes → instructions"; commentary is the `note` resource, AI A6). `description` becomes writable: optional on create, `field.Clearable` on update; visible to portal users.
 - [ ] ~~Read-only `type` (L4)~~ **superseded by the items review**: shipping/credit become order line types, so the reserved lines and system products go away. No `type` field.
-- [ ] Keep `status: active | archived` (create/update, `statuses[]`); archived lines can't be assigned to new products or granted to customers.
+- [x] Keep `status: active | archived` (create/update, `statuses[]`); archived lines can't be assigned to new products or granted to customers.
 
 `default_lot_size` rule
-- [ ] Unit must share the dimension of the stocking unit of every product currently in the line (one indexed query at write). At planning, convert to each product's stocking unit; a product in another dimension skips the line's lot and falls back (line it feeds into → account default). Moving a product into the line doesn't re-check.
+- [x] Unit must share the dimension of the stocking unit of every product currently in the line (one indexed query at write). At planning, convert to each product's stocking unit; a product in another dimension skips the line's lot and falls back (line it feeds into → account default). Moving a product into the line doesn't re-check. *(CAT2: applied to `item_category.default_lot_size` per Q3: the unit's dimension must match the category unit group's base unit; the chain is item → category → account, with no downstream step.)*
 
 Delete
-- [ ] 409 `resource_in_use` if referenced by `product`, a price-list rule's product-line scope, `product_line_target`, or `territory`. `account_group_product_line`, `account_relation_product_line` rows for the line are removed with it. Returns the stub.
+- [x] 409 `resource_in_use` if referenced by `product`, a price-list rule's product-line scope, `product_line_target`, or `territory`. `account_group_product_line`, `account_relation_product_line` rows for the line are removed with it. Returns the stub.
 
 Data cleanup
-- [ ] Delete the reserved lines (4 system: Shipping, Service, Credit, Tax; 29 per-account Credit/Shipping copies) once shipping/credit products are migrated to order line types and the one service product moves to a standard line.
+- [ ] Delete the reserved lines (4 system: Shipping, Service, Credit, Tax; 29 per-account Credit/Shipping copies) once shipping/credit products are migrated to order line types and the one service product moves to a standard line. *(CAT2: left to SO2, which migrates the shipping/credit system products and their order lines; registration still creates the per-account Shipping/Credit copies until then. The update/delete guards on the reserved IDs stay until the rows are gone.)*
 
 List
-- [ ] `q`: substring on `name`. Drop FULLTEXT `product_line_name_idx`, `product_line_description_idx`, `product_line_name_description_idx`.
+- [x] `q`: substring on `name`. Drop FULLTEXT `product_line_name_idx`, `product_line_description_idx`, `product_line_name_description_idx`.
 
 Docstrings
 
@@ -558,7 +558,7 @@ Endpoints: list, create, retrieve, update, delete. Product-line access for group
 - [ ] Add `price_lists` (expandable List; request `price_list_ids`), applying to every customer in the group.
 - [ ] `default_lead_time_days` → `defaults.lead_time` (mirrors `customer.defaults.lead_time_days`).
 - [ ] Drop group-level receive calendar and fulfillment policy from the inheritance chains (columns `receive_calendar_id`, `fulfillment_policy_code` are unexposed and unused: 0 rows). Customer chains become: customer → account default. Update the customer docstrings to drop the group step for those two fields.
-- [ ] Policies take the L1 values (`applied | exempt`, `billed | free`).
+- [x] Policies take the L1 values (`applied | exempt`, `billed | free`).
 - [ ] Delete: 409 `resource_in_use` (today a validation error) while the group is any customer's `group`, or backs product-line access or a registration flow. Price list assignments are removed with the group. Returns the stub. No `status`.
 - [ ] `q`: substring on `name` or `description` (documented).
 
@@ -1337,7 +1337,7 @@ These are decisions where our design differs from common ERP practice. They supe
   - Location `type` gains `site`, a top-level location with an `address` (a plant, warehouse or 3PL). Every account has one default site (`settings`), created from today's top-level location.
   - Nullable, expandable `site` on sales orders (ship-from; defaults to the account's default site), shipments and picks (from the order), purchase orders and receiving (receive-at), jobs and work orders (where made), and inventory levels (filter `site_ids[]`).
   - Additive multi-site later; a single-site account never sets it.
-- [ ] **Q3 Commercial vs physical grouping.**
+- [x] **Q3 Commercial vs physical grouping.**
   - **Product lines** hold commercial policy: customer access, portal visibility default, commission and freight policy, sales targets and territories, price-list scope, and `supply` default (O3).
   - **Item categories** hold physical grouping: item `type`, properties and attributes, and production defaults. `default_lot_size` moves from product lines to categories (lot-size defaults inherit item → category → account).
   - Attributes stay as the shared descriptive layer used by both, e.g. in price-list scopes. Docstrings for each resource state its job in one line.
@@ -1654,6 +1654,9 @@ Product lines
 - `notes` removed; `description` now editable.
 - Reserved Shipping/Service/Credit/Tax lines disappear (no more hiding them by name). New `status`.
 - Delete blocked while products, price-list rules, sales targets or territories use the line (409).
+- Archived lines can't be assigned to new products or granted to customers/groups (422 `resource_archived`); `statuses[]` list filter.
+- `fulfillment_policy` → `supply` (`stock | make | buy`); `unit_group_id` is optional on create (internal).
+- Item categories gain `default_lot_size` (Quantity, internal); the item lot default's `source` values are `item_override | item_category | account_default` and it names `item_category` instead of `product_line` (preview.9 sees `product_line: null`).
 
 Properties & attributes
 - Deleting a property or attribute in use now fails (409) instead of stripping it from items; new `status` on attributes.

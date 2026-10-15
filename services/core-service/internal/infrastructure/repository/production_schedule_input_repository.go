@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/tracing"
@@ -555,56 +556,33 @@ func (r *productionScheduleInputRepoImpl) GetItemsForProductLines(
 	return out, nil
 }
 
-// ListProductLineLotDefaults returns every product line in the account that has a lot convention. The query inner-joins the lot quantity, so every row carries a full one.
-func (r *productionScheduleInputRepoImpl) ListProductLineLotDefaults(
-	ctx context.Context,
-	accountID string,
-) ([]scheduling.ProductLineLot, *apierror.APIError) {
-	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_product_line_lot_defaults")
-	defer span.End()
-
-	rows, err := r.queries.ListProductLineLotDefaults(ctx, gosql.NullString{String: accountID, Valid: true})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	var out []scheduling.ProductLineLot
-	for _, line := range rows {
-		out = append(out, scheduling.ProductLineLot{
-			ProductLineID: line.ID,
-			Quantity:      decimalToFloat64(line.DefaultLotValue),
-			UnitID:        line.DefaultLotUnitID,
-		})
-	}
-	return out, nil
-}
-
-// ListItemProductLines maps items to the product line they sell under. Rows carrying no line are dropped.
-func (r *productionScheduleInputRepoImpl) ListItemProductLines(
+// ListItemCategoryLots reads the lot of each item's category. The query inner-joins the lot quantity, so every row
+// carries a full one.
+func (r *productionScheduleInputRepoImpl) ListItemCategoryLots(
 	ctx context.Context,
 	accountID string,
 	itemIDs []string,
-) ([]domain.ItemProductLineRow, *apierror.APIError) {
-	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_item_product_lines")
+) (map[string]scheduling.CategoryLot, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_item_category_lots")
 	defer span.End()
 
-	rows, err := r.queries.ListItemProductLines(ctx, sqlc.ListItemProductLinesParams{
+	out := make(map[string]scheduling.CategoryLot, len(itemIDs))
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.queries.ListItemCategoryLotsForItems(ctx, sqlc.ListItemCategoryLotsForItemsParams{
 		AccountID: accountID,
 		ItemIds:   itemIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	var out []domain.ItemProductLineRow
 	for _, row := range rows {
-		if !row.ProductLineID.Valid {
-			continue
+		out[row.ItemID] = scheduling.CategoryLot{
+			ItemCategoryID: row.ItemCategoryID,
+			Quantity:       decimalToFloat64(row.DefaultLotSizeValue),
+			UnitID:         row.DefaultLotSizeUnitID,
 		}
-		out = append(out, domain.ItemProductLineRow{
-			ItemID:        row.ItemID,
-			ProductLineID: row.ProductLineID.String,
-		})
 	}
 	return out, nil
 }
@@ -730,15 +708,15 @@ func (r *productionScheduleInputRepoImpl) ListProductLineFulfillmentPolicies(
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_product_line_policies")
 	defer span.End()
 
-	rows, err := r.queries.ListProductLineFulfillmentPolicies(ctx, gosql.NullString{String: accountID, Valid: true})
+	rows, err := r.queries.ListProductLineSupplies(ctx, gosql.NullString{String: accountID, Valid: true})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	out := make(map[string]string, len(rows))
 	for _, row := range rows {
-		if row.FulfillmentPolicyCode.Valid && row.FulfillmentPolicyCode.String != "" {
-			out[row.ID] = row.FulfillmentPolicyCode.String
+		if policy, ok := constants.Supply(row.SupplyCode.String).FulfillmentPolicy(); ok {
+			out[row.ID] = string(policy)
 		}
 	}
 	return out, nil

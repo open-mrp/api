@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -26,6 +27,10 @@ type UpdateItemCategoryRequest struct {
 	//
 	// Property names must be unique within the category.
 	PropertyIDs field.Optional[[]string] `json:"property_ids,omitzero" validate:"omitempty,max=100"`
+	// The lot this category's items are made in, such as one doff or one pallet.
+	//
+	// The value must be greater than zero, and the unit of the same kind as the category's items. Send `null` to remove the lot convention.
+	DefaultLotSize field.Clearable[apirequest.QuantityInput] `json:"default_lot_size,omitzero"`
 }
 
 var sampleUpdateItemCategoryRequest = &UpdateItemCategoryRequest{

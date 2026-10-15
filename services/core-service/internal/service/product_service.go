@@ -472,10 +472,14 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 	// Checked before insert so an unknown product_line_id is rejected rather than stored
 	// as a dangling reference the read path then renders as null.
 	if params.ProductLineID != nil && *params.ProductLineID != "" {
-		if _, apiErr := s.repos.NewProductLineRepo().Get(txCtx, domain.GetProductLineParams{
+		line, apiErr := s.repos.NewProductLineRepo().Get(txCtx, domain.GetProductLineParams{
 			AccountID:     params.AccountID,
 			ProductLineID: *params.ProductLineID,
-		}); apiErr != nil {
+		})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if apiErr := domain.RequireAssignable("product_line_id", "product line", line.Status); apiErr != nil {
 			return nil, apiErr
 		}
 	}
@@ -815,8 +819,14 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 
 		// Validate the target product line exists for the account so a nonexistent product_line_id 404s instead of persisting a dangling reference.
 		if params.ProductLineID != "" {
-			if _, apiErr := s.repos.NewProductLineRepo().Get(ctx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: params.ProductLineID}); apiErr != nil {
+			line, apiErr := s.repos.NewProductLineRepo().Get(ctx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: params.ProductLineID})
+			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
+			}
+			if old.ProductLineID == nil || *old.ProductLineID != line.ID {
+				if apiErr := domain.RequireAssignable("product_line_id", "product line", line.Status); apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
 			}
 		}
 

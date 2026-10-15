@@ -5554,6 +5554,9 @@ type ItemCategoryInfo struct {
 	UpdatedAt            *timestamppb.Timestamp      `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Properties           []*ItemCategoryPropertyInfo `protobuf:"bytes,9,rep,name=properties,proto3" json:"properties,omitempty"`
 	UnitGroup            *ItemCategoryUnitGroupInfo  `protobuf:"bytes,10,opt,name=unit_group,json=unitGroup,proto3,oneof" json:"unit_group,omitempty"`
+	// The lot the category's items are made in: a value and its unit, both set or both unset.
+	DefaultLotSizeValue  *string `protobuf:"bytes,11,opt,name=default_lot_size_value,json=defaultLotSizeValue,proto3,oneof" json:"default_lot_size_value,omitempty"`
+	DefaultLotSizeUnitId *string `protobuf:"bytes,12,opt,name=default_lot_size_unit_id,json=defaultLotSizeUnitId,proto3,oneof" json:"default_lot_size_unit_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -5656,6 +5659,20 @@ func (x *ItemCategoryInfo) GetUnitGroup() *ItemCategoryUnitGroupInfo {
 		return x.UnitGroup
 	}
 	return nil
+}
+
+func (x *ItemCategoryInfo) GetDefaultLotSizeValue() string {
+	if x != nil && x.DefaultLotSizeValue != nil {
+		return *x.DefaultLotSizeValue
+	}
+	return ""
+}
+
+func (x *ItemCategoryInfo) GetDefaultLotSizeUnitId() string {
+	if x != nil && x.DefaultLotSizeUnitId != nil {
+		return *x.DefaultLotSizeUnitId
+	}
+	return ""
 }
 
 type ItemCategoryPropertyInfo struct {
@@ -6559,14 +6576,14 @@ func (x *GetItemLotDefaultRequest) GetItemId() string {
 // GetItemLotDefaultResponse is the lot an item is made in. quantity is 0 when nothing in
 // the chain supplies one, so a caller defaults to empty rather than to a guessed size.
 type GetItemLotDefaultResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	Quantity      float64                `protobuf:"fixed64,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	UnitId        *string                `protobuf:"bytes,3,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
-	Source        string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	ProductLineId *string                `protobuf:"bytes,5,opt,name=product_line_id,json=productLineId,proto3,oneof" json:"product_line_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ItemId         string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Quantity       float64                `protobuf:"fixed64,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	UnitId         *string                `protobuf:"bytes,3,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
+	Source         string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	ItemCategoryId *string                `protobuf:"bytes,6,opt,name=item_category_id,json=itemCategoryId,proto3,oneof" json:"item_category_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetItemLotDefaultResponse) Reset() {
@@ -6627,9 +6644,9 @@ func (x *GetItemLotDefaultResponse) GetSource() string {
 	return ""
 }
 
-func (x *GetItemLotDefaultResponse) GetProductLineId() string {
-	if x != nil && x.ProductLineId != nil {
-		return *x.ProductLineId
+func (x *GetItemLotDefaultResponse) GetItemCategoryId() string {
+	if x != nil && x.ItemCategoryId != nil {
+		return *x.ItemCategoryId
 	}
 	return ""
 }
@@ -7191,7 +7208,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"!denominator_unit_offset_numerator\x18\x15 \x01(\tR\x1edenominatorUnitOffsetNumerator\x12M\n" +
 	"#denominator_unit_offset_denominator\x18\x16 \x01(\tR denominatorUnitOffsetDenominator\x12Y\n" +
 	"\x1bdenominator_unit_created_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\x18denominatorUnitCreatedAt\x12Y\n" +
-	"\x1bdenominator_unit_updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\x18denominatorUnitUpdatedAt\"\xf3\x03\n" +
+	"\x1bdenominator_unit_updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\x18denominatorUnitUpdatedAt\"\xa2\x05\n" +
 	"\x10ItemCategoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x125\n" +
@@ -7209,10 +7226,14 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"properties\x12C\n" +
 	"\n" +
 	"unit_group\x18\n" +
-	" \x01(\v2\x1f.core.ItemCategoryUnitGroupInfoH\x02R\tunitGroup\x88\x01\x01B\b\n" +
+	" \x01(\v2\x1f.core.ItemCategoryUnitGroupInfoH\x02R\tunitGroup\x88\x01\x01\x128\n" +
+	"\x16default_lot_size_value\x18\v \x01(\tH\x03R\x13defaultLotSizeValue\x88\x01\x01\x12;\n" +
+	"\x18default_lot_size_unit_id\x18\f \x01(\tH\x04R\x14defaultLotSizeUnitId\x88\x01\x01B\b\n" +
 	"\x06_notesB\r\n" +
 	"\v_account_idB\r\n" +
-	"\v_unit_group\"\xb4\x01\n" +
+	"\v_unit_groupB\x19\n" +
+	"\x17_default_lot_size_valueB\x1b\n" +
+	"\x19_default_lot_size_unit_id\"\xb4\x01\n" +
 	"\x18ItemCategoryPropertyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x129\n" +
@@ -7325,16 +7346,16 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"categories\x12E\n" +
 	"\x14attribute_properties\x18\x03 \x03(\v2\x12.core.PropertyInfoR\x13attributeProperties\"3\n" +
 	"\x18GetItemLotDefaultRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"\xd3\x01\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"\xdc\x01\n" +
 	"\x19GetItemLotDefaultResponse\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x1a\n" +
 	"\bquantity\x18\x02 \x01(\x01R\bquantity\x12\x1c\n" +
 	"\aunit_id\x18\x03 \x01(\tH\x00R\x06unitId\x88\x01\x01\x12\x16\n" +
-	"\x06source\x18\x04 \x01(\tR\x06source\x12+\n" +
-	"\x0fproduct_line_id\x18\x05 \x01(\tH\x01R\rproductLineId\x88\x01\x01B\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source\x12-\n" +
+	"\x10item_category_id\x18\x06 \x01(\tH\x01R\x0eitemCategoryId\x88\x01\x01B\n" +
 	"\n" +
-	"\b_unit_idB\x12\n" +
-	"\x10_product_line_id\")\n" +
+	"\b_unit_idB\x13\n" +
+	"\x11_item_category_idJ\x04\b\x05\x10\x06\")\n" +
 	"\x17GetItemInventoryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02idB\x18Z\x16shared/proto/core;coreb\x06proto3"
 

@@ -285,6 +285,7 @@ var typeRegistry = map[string]any{
 	"TransitEstimateSource":           TransitEstimateSource(""),
 	"ScheduleAtRiskReason":            ScheduleAtRiskReason(""),
 	"FulfillmentPolicy":               FulfillmentPolicy(""),
+	"Supply":                          Supply(""),
 	"FulfillmentPolicySource":         FulfillmentPolicySource(""),
 	"ScheduleLineReason":              ScheduleLineReason(""),
 	"FulfillmentRecommendationReason": FulfillmentRecommendationReason(""),

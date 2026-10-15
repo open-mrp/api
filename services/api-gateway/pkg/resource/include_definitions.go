@@ -603,7 +603,6 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "unit_group", ObjectType: constants.ObjectTypeUnitGroup},
-			{Key: "default_lot", ObjectType: ""},
 		},
 	})
 

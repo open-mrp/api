@@ -257,8 +257,8 @@ func parityProductLine(t *testing.T) string {
 	created := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-parity-pdln"),
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 	return jsonField(created, "id")
 }

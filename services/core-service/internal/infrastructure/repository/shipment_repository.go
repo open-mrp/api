@@ -125,7 +125,7 @@ func mapShipmentRow(row sqlc.GetShipmentRow) *domain.Shipment {
 	shipment.PickNumber = nullStringToPtr(row.PickNumber)
 	shipment.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
 	shipment.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	shipment.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+	shipment.CustomerCommissionPolicy = commissionPolicyPtr(row.CustomerCommissionPolicy)
 	if row.BillingAddressCountry.Valid {
 		shipment.BillingAddressCountry = &row.BillingAddressCountry.String
 	}

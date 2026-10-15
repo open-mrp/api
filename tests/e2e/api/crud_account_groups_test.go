@@ -34,8 +34,8 @@ func TestAccountGroups_CRUD(t *testing.T) {
 	assert.Equal(t, "account_group", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "type_group", jsonField(created, "type"))
-	assert.Equal(t, "commission_exempt", jsonField(created, "commission_policy"))
-	assert.Equal(t, "billed_freight", jsonField(created, "freight_policy"))
+	assert.Equal(t, "exempt", jsonField(created, "commission_policy"))
+	assert.Equal(t, "billed", jsonField(created, "freight_policy"))
 	assertNilField(t, created, "description")
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
@@ -50,15 +50,15 @@ func TestAccountGroups_CRUD(t *testing.T) {
 	newName := uniqueName("e2e-acgrp-upd")
 	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
 		"name":              newName,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "free_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
-	assert.Equal(t, "commission_applied", jsonField(updated, "commission_policy"))
-	assert.Equal(t, "free_freight", jsonField(updated, "freight_policy"))
+	assert.Equal(t, "applied", jsonField(updated, "commission_policy"))
+	assert.Equal(t, "free", jsonField(updated, "freight_policy"))
 	assert.Equal(t, "type_group", jsonField(updated, "type"), "type should be preserved")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
@@ -84,8 +84,8 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 		"name":              name,
 		"type":              "type_group",
 		"description":       "Test description",
-		"commission_policy": "commission_applied",
-		"freight_policy":    "free_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "free",
 	})
 	id := jsonField(got, "id")
 
@@ -93,8 +93,8 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, "type_group", jsonField(got, "type"))
 	assert.Equal(t, "Test description", jsonField(got, "description"))
-	assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"))
-	assert.Equal(t, "free_freight", jsonField(got, "freight_policy"))
+	assert.Equal(t, "applied", jsonField(got, "commission_policy"))
+	assert.Equal(t, "free", jsonField(got, "freight_policy"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -103,8 +103,8 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
 		"name":              updatedName,
 		"description":       "Updated description",
-		"commission_policy": "commission_exempt",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "exempt",
+		"freight_policy":    "billed",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -113,8 +113,8 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, "Updated description", jsonField(updated, "description"))
-	assert.Equal(t, "commission_exempt", jsonField(updated, "commission_policy"))
-	assert.Equal(t, "billed_freight", jsonField(updated, "freight_policy"))
+	assert.Equal(t, "exempt", jsonField(updated, "commission_policy"))
+	assert.Equal(t, "billed", jsonField(updated, "freight_policy"))
 	assert.Equal(t, "type_group", jsonField(updated, "type"), "type should be preserved")
 }
 
@@ -150,8 +150,8 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		assert.NotEmpty(t, jsonField(got, "name"))
 		assert.Equal(t, "type_group", jsonField(got, "type"))
 		assertNilField(t, got, "description")
-		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
-		assert.Equal(t, "billed_freight", jsonField(got, "freight_policy"))
+		assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
+		assert.Equal(t, "billed", jsonField(got, "freight_policy"))
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -179,8 +179,8 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 			"name":              uniqueName("e2e-acgrp-pres"),
 			"type":              "type_group",
 			"description":       "Original desc",
-			"commission_policy": "commission_applied",
-			"freight_policy":    "free_freight",
+			"commission_policy": "applied",
+			"freight_policy":    "free",
 		})
 		id := jsonField(created, "id")
 		origCreatedAt := jsonField(created, "created_at")
@@ -196,8 +196,8 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		assert.Equal(t, newName, jsonField(got, "name"))
 		assert.Equal(t, "type_group", jsonField(got, "type"), "type should be preserved")
 		assert.Equal(t, "Original desc", jsonField(got, "description"), "description should be preserved")
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"), "commission_policy should be preserved")
-		assert.Equal(t, "free_freight", jsonField(got, "freight_policy"), "freight_policy should be preserved")
+		assert.Equal(t, "applied", jsonField(got, "commission_policy"), "commission_policy should be preserved")
+		assert.Equal(t, "free", jsonField(got, "freight_policy"), "freight_policy should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})

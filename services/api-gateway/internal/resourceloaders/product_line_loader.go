@@ -41,11 +41,6 @@ func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apier
 		}
 		meta.Set(constants.ObjectTypeProductLine, pl.Id, "owner_account_id", accountID)
 
-		// The lot is a Quantity built inline and stashed for the default_lot SubField, the same way a customer's credit_limit is. This loader backs both retrieve and list, so a lot mapped only in the presenter would read as null everywhere.
-		if pl.DefaultLot != nil {
-			meta.Set(constants.ObjectTypeProductLine, pl.Id, "default_lot", apiresource.NewQuantity(apiresource.NormalizeQuantityValue(pl.DefaultLot.Value, ""), pl.DefaultLot.UnitId))
-		}
-
 		// Pre-build the UnitGroup from the proto and stash it for the unit_group SubField's Populate. This preserves backward compat: requesting ?include[]=unit_group returns the full UnitGroup with BaseUnit and AssociatedUnits inline.
 		if pl.UnitGroup != nil {
 			ug := buildUnitGroupFromProto(pl.UnitGroup)
@@ -62,15 +57,15 @@ func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
 		Object:           constants.ObjectTypeProductLine,
 		Name:             pl.Name,
 		Description:      pl.Description,
-		Notes:            pl.Notes,
+		Status:           constants.ArchiveStatus(pl.Status),
 		CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
 	}
-	if pl.FulfillmentPolicyCode != nil && *pl.FulfillmentPolicyCode != "" {
-		policy := constants.FulfillmentPolicy(*pl.FulfillmentPolicyCode)
-		out.FulfillmentPolicy = &policy
+	if pl.Supply != nil && *pl.Supply != "" {
+		supply := constants.Supply(*pl.Supply)
+		out.Supply = &supply
 	}
 	return out
 }

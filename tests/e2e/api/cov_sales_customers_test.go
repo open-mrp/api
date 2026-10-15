@@ -360,11 +360,11 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode(t *testing.T) {
 	name := uniqueName("e2e-covcust-freight")
 	cust := covSalesCustomersCreate(t, map[string]any{
 		"name":           name,
-		"freight_policy": "free_freight",
+		"freight_policy": "free",
 	})
 
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"freight_status_codes": {"free_freight"},
+		"freight_status_codes": {"free"},
 		"q":                    {name},
 	})
 	require.NoError(t, err)
@@ -378,13 +378,13 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode_NoResults(t *testing.T)
 	name := uniqueName("e2e-covcust-freight-neg")
 	covSalesCustomersCreate(t, map[string]any{
 		"name":           name,
-		"freight_policy": "free_freight",
+		"freight_policy": "free",
 	})
 
 	// The customer was created with free_freight; filtering for billed_freight
 	// scoped to its unique name must exclude it.
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"freight_status_codes": {"billed_freight"},
+		"freight_status_codes": {"billed"},
 		"q":                    {name},
 	})
 	require.NoError(t, err)

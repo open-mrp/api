@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
@@ -75,7 +76,7 @@ func mapForwardAccountPriceRow(row sqlc.ListAccountPricesForwardRow) *domain.Acc
 		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
 	}
 	if row.RecipientAccountCommissionPolicy.Valid {
-		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+		ap.RecipientAccountCommissionPolicy = string(constants.CommissionPolicyFromStatusCode(row.RecipientAccountCommissionPolicy.String))
 	}
 	return ap
 }
@@ -127,7 +128,7 @@ func mapBackwardAccountPriceRow(row sqlc.ListAccountPricesBackwardRow) *domain.A
 		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
 	}
 	if row.RecipientAccountCommissionPolicy.Valid {
-		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+		ap.RecipientAccountCommissionPolicy = string(constants.CommissionPolicyFromStatusCode(row.RecipientAccountCommissionPolicy.String))
 	}
 	return ap
 }
@@ -179,7 +180,7 @@ func mapGetAccountPriceRow(row sqlc.GetAccountPriceRow) *domain.AccountPrice {
 		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
 	}
 	if row.RecipientAccountCommissionPolicy.Valid {
-		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+		ap.RecipientAccountCommissionPolicy = string(constants.CommissionPolicyFromStatusCode(row.RecipientAccountCommissionPolicy.String))
 	}
 	return ap
 }

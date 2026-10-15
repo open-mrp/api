@@ -19,23 +19,22 @@ type DeleteProductLineRequest struct {
 	ProductLineID string `path:"id" validate:"required"`
 }
 
-// Permanently deletes a product line your account owns.
+// Deletes a product line.
 //
-// The reserved `shipping`, `service`, `credit`, and `tax` lines cannot be deleted, and neither can the shared system lines, which belong to no single account. Deleting a line that was already deleted returns an already-deleted error rather than succeeding silently.
+// Only lines your account created can be deleted, and only while no product, price-list rule, sales target or territory uses them. Archive a line that is in use by setting `status` to `archived`. Customer access to the line is removed with it.
 type DeleteProductLineEndpoint struct{}
 
 func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductLineRequest, *object.Deleted] {
 	return (&apiendpoint.APIEndpoint[*DeleteProductLineRequest, *object.Deleted]{
 		Title:             "Delete Product Line",
 		Method:            http.MethodDelete,
-		Route:             "/v1/catalog/product-lines/{id}",
+		Route:             productLineRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeProductLine,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductLineRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ProductLineSvc).DeleteProductLine, constants.ObjectTypeProductLine, "id")
 		},

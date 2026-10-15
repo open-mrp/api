@@ -3,14 +3,12 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	idgen "github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
@@ -38,112 +36,26 @@ func buildProductLineSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
-func mapProductLineForwardRow(row sqlc.ListProductLinesForwardRow) *domain.ProductLineFull {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
+// mapProductLineRow maps any of the product line row shapes, which all project the same columns.
+func mapProductLineRow(row sqlc.GetProductLineRow) *domain.ProductLineFull {
+	pl := &domain.ProductLineFull{
+		ID:               row.ID,
+		Name:             row.Name,
+		Description:      nullStringToPtr(row.Description),
+		Notes:            nullStringToPtr(row.Notes),
+		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:      row.UnitGroupID.String,
+		Status:           constants.ArchiveStatusFromIsActive(row.IsActive),
+		AccountID:        nullStringToPtr(row.AccountID),
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
 	}
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
+	if row.SupplyCode.Valid && row.SupplyCode.String != "" {
+		supply := constants.Supply(row.SupplyCode.String)
+		pl.Supply = &supply
 	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
-
-	return &domain.ProductLineFull{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Description:           description,
-		Notes:                 notes,
-		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:           row.UnitGroupID,
-		DefaultLotID:          lotID,
-		DefaultLotValue:       lotValue,
-		DefaultLotUnitID:      lotUnitID,
-		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
-		AccountID:             accountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
-}
-
-// lotFieldsOf reads a product line's lot off any of the row shapes that project it. The three move together: a value with no unit cannot say whether 60 means pairs or eaches, so a half-joined row reads as no convention rather than being guessed at.
-func lotFieldsOf(id, value, unitID gosql.NullString) (*string, *string, *string) {
-	if !id.Valid || !value.Valid || !unitID.Valid || unitID.String == "" {
-		return nil, nil, nil
-	}
-	lotID, lotValue, lotUnit := id.String, value.String, unitID.String
-	return &lotID, &lotValue, &lotUnit
-}
-
-func mapProductLineBackwardRow(row sqlc.ListProductLinesBackwardRow) *domain.ProductLineFull {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
-
-	return &domain.ProductLineFull{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Description:           description,
-		Notes:                 notes,
-		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:           row.UnitGroupID,
-		DefaultLotID:          lotID,
-		DefaultLotValue:       lotValue,
-		DefaultLotUnitID:      lotUnitID,
-		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
-		AccountID:             accountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
-}
-
-func mapGetProductLineRow(row sqlc.GetProductLineRow) *domain.ProductLineFull {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
-
-	return &domain.ProductLineFull{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Description:           description,
-		Notes:                 notes,
-		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:           row.UnitGroupID,
-		DefaultLotID:          lotID,
-		DefaultLotValue:       lotValue,
-		DefaultLotUnitID:      lotUnitID,
-		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
-		AccountID:             accountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
+	return pl
 }
 
 func commissionPolicyToNullBool(p *constants.CommissionPolicy) gosql.NullBool {
@@ -195,67 +107,39 @@ func (r *productLineRepoImpl) List(ctx context.Context, params domain.ListProduc
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.list")
 	defer span.End()
 
-	searchQuery := buildProductLineSearchParams(params.Query)
-	accountID := gosql.NullString{String: params.AccountID, Valid: true}
-
+	filter := productLineListFilter{
+		accountID: params.AccountID,
+		search:    buildProductLineSearchParams(params.Query).String,
+		isActive:  params.IsActive,
+		dir:       pagination.DirectionForward,
+		limit:     params.Limit + 1,
+	}
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListProductLinesBackward(ctx, sqlc.ListProductLinesBackwardParams{
-				AccountID:       accountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			items := make([]*domain.ProductLineFull, len(rows))
-			for i, row := range rows {
-				items[i] = mapProductLineBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productLineCreatedAt, productLineID)
-			return &domain.ListProductLinesResult{ProductLines: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListProductLinesForward(ctx, sqlc.ListProductLinesForwardParams{
-			AccountID:       accountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		items := make([]*domain.ProductLineFull, len(rows))
-		for i, row := range rows {
-			items[i] = mapProductLineForwardRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productLineCreatedAt, productLineID)
-		return &domain.ListProductLinesResult{ProductLines: result, PageInfo: pageInfo}, nil
+		filter.dir = cur.Direction
+		filter.cursorCreatedAt = &cur.OccurredAt
+		filter.cursorID = cur.ID
 	}
 
-	rows, err := r.queries.ListProductLinesForward(ctx, sqlc.ListProductLinesForwardParams{
-		AccountID:   accountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
-	})
+	query, args := buildProductLineListQuery(filter)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer rows.Close()
+	scanned, err := scanProductLineListRows(rows)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	items := make([]*domain.ProductLineFull, len(rows))
-	for i, row := range rows {
-		items[i] = mapProductLineForwardRow(row)
+	items := make([]*domain.ProductLineFull, len(scanned))
+	for i, row := range scanned {
+		items[i] = mapProductLineRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productLineCreatedAt, productLineID)
 	return &domain.ListProductLinesResult{ProductLines: result, PageInfo: pageInfo}, nil
@@ -273,41 +157,27 @@ func (r *productLineRepoImpl) Get(ctx context.Context, params domain.GetProductL
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetProductLineRow(row), nil
+	return mapProductLineRow(row), nil
 }
 
 func (r *productLineRepoImpl) Create(ctx context.Context, id string, params domain.CreateProductLineParams) (*domain.ProductLineFull, *apierror.APIError) {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.create")
 	defer span.End()
 
-	// The lot is its own quantity row, written before the line that points at it.
-	lotID := gosql.NullString{}
-	if params.DefaultLot != nil {
-		newID, apiErr := idgen.GenID(idgen.QuantityIDPrefix, nil)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		if err := r.queries.InsertProductLineDefaultLotQuantity(ctx, sqlc.InsertProductLineDefaultLotQuantityParams{
-			ID:     newID,
-			Value:  params.DefaultLot.Value,
-			UnitID: params.DefaultLot.UnitID,
-		}); err != nil {
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-		}
-		lotID = gosql.NullString{String: newID, Valid: true}
+	status := params.Status
+	if status == "" {
+		status = constants.ArchiveStatusActive
 	}
-
 	err := r.queries.InsertProductLine(ctx, sqlc.InsertProductLineParams{
-		ID:                    id,
-		Name:                  params.Name,
-		IsCommissionExempt:    params.CommissionPolicy.ToBool(),
-		IsFreightExempt:       params.FreightPolicy.ToBool(),
-		UnitGroupID:           params.UnitGroupID,
-		DefaultLotID:          lotID,
-		FulfillmentPolicyCode: toNullString(params.FulfillmentPolicyCode),
-		AccountID:             gosql.NullString{String: params.AccountID, Valid: true},
+		ID:                 id,
+		Name:               params.Name,
+		Description:        toNullString(params.Description),
+		IsCommissionExempt: params.CommissionPolicy.ToBool(),
+		IsFreightExempt:    params.FreightPolicy.ToBool(),
+		UnitGroupID:        toNullString(params.UnitGroupID),
+		SupplyCode:         toNullString(params.Supply.StringPtr()),
+		IsActive:           status.IsActive(),
+		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -320,66 +190,27 @@ func (r *productLineRepoImpl) Update(ctx context.Context, params domain.UpdatePr
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.update")
 	defer span.End()
 
-	// The line's existing lot row is updated in place rather than replaced, so nothing pointing at it is orphaned and the id stays stable across edits.
-	existingLotID, err := r.queries.GetProductLineDefaultLotID(ctx, sqlc.GetProductLineDefaultLotIDParams{
-		ID:        params.ProductLineID,
-		AccountID: gosql.NullString{String: params.AccountID, Valid: true},
-	})
-	if err != nil && err != gosql.ErrNoRows {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	isActive := gosql.NullBool{}
+	if params.Status != nil {
+		isActive = gosql.NullBool{Bool: params.Status.IsActive(), Valid: true}
 	}
-
-	lotID := gosql.NullString{}
-	switch {
-	case params.ClearDefaultLot:
-		if existingLotID.Valid {
-			if err := r.queries.DeleteProductLineDefaultLotQuantity(ctx, existingLotID.String); err != nil {
-				if apiErr := db.MapSQLError(err); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
-			}
-		}
-	case params.DefaultLot != nil && existingLotID.Valid:
-		if err := r.queries.UpdateProductLineDefaultLotQuantity(ctx, sqlc.UpdateProductLineDefaultLotQuantityParams{
-			ID:     existingLotID.String,
-			Value:  params.DefaultLot.Value,
-			UnitID: params.DefaultLot.UnitID,
-		}); err != nil {
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-		}
-		lotID = existingLotID
-	case params.DefaultLot != nil:
-		newID, apiErr := idgen.GenID(idgen.QuantityIDPrefix, nil)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		if err := r.queries.InsertProductLineDefaultLotQuantity(ctx, sqlc.InsertProductLineDefaultLotQuantityParams{
-			ID:     newID,
-			Value:  params.DefaultLot.Value,
-			UnitID: params.DefaultLot.UnitID,
-		}); err != nil {
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-		}
-		lotID = gosql.NullString{String: newID, Valid: true}
+	supply := gosql.NullString{}
+	if v, ok := params.Supply.Value(); ok {
+		supply = gosql.NullString{String: string(v), Valid: true}
 	}
 
 	result, err := r.queries.UpdateProductLine(ctx, sqlc.UpdateProductLineParams{
-		ID:                     params.ProductLineID,
-		AccountID:              gosql.NullString{String: params.AccountID, Valid: true},
-		Name:                   toNullString(params.Name),
-		IsCommissionExempt:     commissionPolicyToNullBool(params.CommissionPolicy),
-		IsFreightExempt:        freightPolicyToNullBool(params.FreightPolicy),
-		UnitGroupID:            toNullString(params.UnitGroupID),
-		DefaultLotID:           lotID,
-		ClearDefaultLot:        params.ClearDefaultLot,
-		FulfillmentPolicyCode:  field.StringToNullString(params.FulfillmentPolicyCode),
-		ClearFulfillmentPolicy: params.FulfillmentPolicyCode.IsClear(),
+		ID:                 params.ProductLineID,
+		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
+		Name:               toNullString(params.Name),
+		Description:        field.StringToNullString(params.Description),
+		ClearDescription:   params.Description.IsClear(),
+		IsCommissionExempt: commissionPolicyToNullBool(params.CommissionPolicy),
+		IsFreightExempt:    freightPolicyToNullBool(params.FreightPolicy),
+		UnitGroupID:        toNullString(params.UnitGroupID),
+		SupplyCode:         supply,
+		ClearSupply:        params.Supply.IsClear(),
+		IsActive:           isActive,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -396,6 +227,7 @@ func (r *productLineRepoImpl) Update(ctx context.Context, params domain.UpdatePr
 	return r.Get(ctx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: params.ProductLineID})
 }
 
+// Delete removes the line along with the customer and account-group access granted to it.
 func (r *productLineRepoImpl) Delete(ctx context.Context, params domain.DeleteProductLineParams) *apierror.APIError {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.delete")
 	defer span.End()
@@ -416,6 +248,12 @@ func (r *productLineRepoImpl) Delete(ctx context.Context, params domain.DeletePr
 		return tracing.Trace(span, apierror.NewNotFoundError("Product line not found."))
 	}
 
+	if err := r.queries.DeleteAccountRelationProductLinesForProductLine(ctx, params.ProductLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := r.queries.DeleteAccountGroupProductLinesForProductLine(ctx, params.ProductLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
 	return nil
 }
 
@@ -452,36 +290,9 @@ func (r *productLineRepoImpl) FindByNames(ctx context.Context, accountID string,
 
 	out := make([]*domain.ProductLineFull, len(rows))
 	for i, row := range rows {
-		out[i] = mapFindProductLinesByNamesRow(row)
+		out[i] = mapProductLineRow(sqlc.GetProductLineRow(row))
 	}
 	return out, nil
-}
-
-func mapFindProductLinesByNamesRow(row sqlc.FindProductLinesByNamesRow) *domain.ProductLineFull {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-	return &domain.ProductLineFull{
-		ID:               row.ID,
-		Name:             row.Name,
-		Description:      description,
-		Notes:            notes,
-		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:      row.UnitGroupID,
-		AccountID:        accountID,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
-	}
 }
 
 func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*domain.ProductLineUnitGroup, *apierror.APIError) {
@@ -561,14 +372,16 @@ func (r *productLineRepoImpl) GetByIDs(ctx context.Context, accountID string, id
 	}
 	out := make([]*domain.ProductLineFull, len(rows))
 	for i, row := range rows {
-		out[i] = mapGetProductLinesByIDsScopedRow(row)
+		out[i] = mapProductLineRow(sqlc.GetProductLineRow(row))
 	}
 	// Stitch unit group data — always include base_unit and associated_units so the API gateway's SubField resolver has everything it needs.
 	//
 	// A group the tenant cannot see leaves the line's UnitGroup nil rather than failing the batch: this backs the list loader, so one line pointing at a group scoped to another account would otherwise 404 the entire page.
 	unitGroupIDs := make([]string, 0, len(out))
 	for _, pl := range out {
-		unitGroupIDs = append(unitGroupIDs, pl.UnitGroupID)
+		if pl.UnitGroupID != "" {
+			unitGroupIDs = append(unitGroupIDs, pl.UnitGroupID)
+		}
 	}
 	unitGroups, apiErr := r.GetUnitGroups(ctx, accountID, unitGroupIDs, []string{"unit_group.base_unit", "unit_group.associated_units"})
 	if apiErr != nil {
@@ -665,53 +478,6 @@ func unitGroupIncludeCovers(includes []string, subResource string) bool {
 	return false
 }
 
-func mapGetProductLinesByIDsScopedRow(row sqlc.GetProductLinesByIDsScopedRow) *domain.ProductLineFull {
-	var accountID *string
-	if row.AccountID.Valid {
-		accountID = &row.AccountID.String
-	}
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
-
-	return &domain.ProductLineFull{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Description:           description,
-		Notes:                 notes,
-		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:           row.UnitGroupID,
-		DefaultLotID:          lotID,
-		DefaultLotValue:       lotValue,
-		DefaultLotUnitID:      lotUnitID,
-		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
-		AccountID:             accountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
-}
-
-func (r *productLineRepoImpl) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.is_unit_in_group")
-	defer span.End()
-
-	count, err := r.queries.CountUnitInGroup(ctx, sqlc.CountUnitInGroupParams{
-		UnitID:      unitID,
-		UnitGroupID: unitGroupID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return false, tracing.Trace(span, apiErr)
-	}
-	return count > 0, nil
-}
-
 func (r *productLineRepoImpl) GetItemLotOverride(ctx context.Context, accountID, itemID string) (float64, *apierror.APIError) {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_item_lot_override")
 	defer span.End()
@@ -728,116 +494,4 @@ func (r *productLineRepoImpl) GetItemLotOverride(ctx context.Context, accountID,
 		return 0, tracing.Trace(span, apiErr)
 	}
 	return decimalToFloat64(value), nil
-}
-
-func (r *productLineRepoImpl) GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_lot_for_item")
-	defer span.End()
-
-	row, err := r.queries.GetProductLineForItem(ctx, sqlc.GetProductLineForItemParams{
-		ItemID:    itemID,
-		AccountID: accountID,
-	})
-	if err == gosql.ErrNoRows {
-		// An intermediate item has no product row, so no line of its own.
-		return nil, nil
-	}
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// The query inner-joins the quantity, so a row here always carries a full lot.
-	quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-	if err != nil || quantity <= 0 {
-		return nil, nil
-	}
-	return &domain.ProductLineLotDefault{
-		ProductLineID: row.ID,
-		Quantity:      quantity,
-		UnitID:        row.DefaultLotUnitID,
-	}, nil
-}
-
-func (r *productLineRepoImpl) GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_downstream_lot")
-	defer span.End()
-
-	rows, err := r.queries.ResolveItemLotFromDownstream(ctx, sqlc.ResolveItemLotFromDownstreamParams{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Ordered highest-demand first with the line id breaking ties, so the same item always resolves the same way.
-	for _, row := range rows {
-		quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-		if err != nil || quantity <= 0 {
-			continue
-		}
-		return &domain.ProductLineLotDefault{
-			ProductLineID: row.ProductLineID,
-			Quantity:      quantity,
-			UnitID:        row.DefaultLotUnitID,
-		}, nil
-	}
-	return nil, nil
-}
-
-// GetFlowProductLineLot inherits a lot by walking what an item is configured to become.
-//
-// GetDownstreamProductLineLot answers the same question from the last plan's greige decomposition, which is better — it is demand-weighted — but it only exists once a schedule has been generated and only covers items that plan reached. This is the fallback for everything else: an intermediate item that has never been produced, or an account that has never run the solver. Without it every such item falls through to the account-wide default, which is how a factory that has carefully set 60 pairs on its sock line ends up batching greige in a number nobody chose.
-//
-// Breadth-first, so the nearest thing the item becomes wins over something four steps further on. Within a level the lowest product line id wins, because there is no demand to weigh with and the lot must not be what makes the same item batch differently between two page loads.
-func (r *productLineRepoImpl) GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*domain.ProductLineLotDefault, *apierror.APIError) {
-	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_flow_lot")
-	defer span.End()
-
-	// A production graph can hold rework loops, so the walk both bounds its depth and refuses to revisit an item.
-	visited := map[string]bool{itemID: true}
-	frontier := []string{itemID}
-
-	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
-		next, err := r.queries.ListDownstreamItemsForItems(ctx, sqlc.ListDownstreamItemsForItemsParams{
-			AccountID: accountID,
-			ItemIds:   frontier,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		frontier = frontier[:0]
-		for _, downstreamID := range next {
-			if visited[downstreamID] {
-				continue
-			}
-			visited[downstreamID] = true
-			frontier = append(frontier, downstreamID)
-		}
-		if len(frontier) == 0 {
-			return nil, nil
-		}
-
-		rows, err := r.queries.ListProductLineLotsForItems(ctx, sqlc.ListProductLineLotsForItemsParams{
-			AccountID: accountID,
-			ItemIds:   frontier,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
-			if err != nil || quantity <= 0 {
-				continue
-			}
-			return &domain.ProductLineLotDefault{
-				ProductLineID: row.ProductLineID,
-				Quantity:      quantity,
-				UnitID:        row.DefaultLotUnitID,
-			}, nil
-		}
-	}
-
-	return nil, nil
 }

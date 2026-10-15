@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -394,7 +395,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 
 	stepIDs := map[string]bool{}
-	// The unit each item is actually scanned in, which is what the account-wide lot fallback counts in when no product line supplies one.
+	// The unit each item is actually scanned in, which is what the account-wide lot fallback counts in when no category supplies one.
 	unitByItem := map[string]string{}
 	// The scan unit's ratio to its base unit. Every quantity the solver sees is expressed in the item's scan unit: run rates, lot sizes and costs are all denominated in it (a 60-unit doff is 60 pairs, labor time is per pair), so leaving demand or stock in base units would double every pair-counted number.
 	nativeRatioByItem := map[string]float64{}
@@ -559,8 +560,6 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 
 	// 11. What lot each planned item is made in, resolved once through the whole chain.
-	//
-	// This runs last because it depends on the downstream map built in step 8: greige is not sold and has no product line, so it takes its lot from the finished goods it becomes.
 	lotInput, apiErr := s.loadLotResolutionInput(ctx, repo, params.AccountID, in, unitByItem)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -669,7 +668,7 @@ func (s *productionScheduleSvcImpl) loadFinishingInput(
 		}
 	}
 
-	// The lot a finished good is made in, through the same chain the constraint items use. A finished good is sellable, so its own product line answers in one step where greige needs the downstream walk.
+	// The lot a finished good is made in, through the same chain the constraint items use.
 	lotInput, apiErr := s.loadLotResolutionInput(ctx, repo, params.AccountID, in, finishedUnitID)
 	if apiErr != nil {
 		return apiErr
@@ -683,7 +682,7 @@ func (s *productionScheduleSvcImpl) loadFinishingInput(
 	return nil
 }
 
-// loadLotResolutionInput gathers the product-line lot conventions and the item-to-line mapping the resolution chain needs.
+// loadLotResolutionInput gathers the category lots the resolution chain needs, for every planned item and what it becomes.
 func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 	ctx context.Context,
 	repo domain.ProductionScheduleInputRepo,
@@ -693,25 +692,11 @@ func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 ) (scheduling.LotResolutionInput, *apierror.APIError) {
 	lotInput := scheduling.LotResolutionInput{
 		ItemOverrides:     in.ItemLotUnits,
-		ProductLineByItem: map[string]string{},
-		LotByProductLine:  map[string]scheduling.ProductLineLot{},
-		DownstreamByItem:  in.DownstreamByItem,
+		CategoryLotByItem: map[string]scheduling.CategoryLot{},
 		AccountLotUnits:   in.Settings.DefaultLotUnits,
 		UnitByItem:        unitByItem,
 	}
 
-	lines, apiErr := repo.ListProductLineLotDefaults(ctx, accountID)
-	if apiErr != nil {
-		return lotInput, apiErr
-	}
-	for _, line := range lines {
-		if line.Quantity <= 0 {
-			continue
-		}
-		lotInput.LotByProductLine[line.ProductLineID] = line
-	}
-
-	// A constraint item can itself be sellable, so its own line is checked before the downstream inheritance that greige depends on.
 	itemIDs := make([]string, 0, len(in.OnHandByItem))
 	for itemID := range in.OnHandByItem {
 		itemIDs = append(itemIDs, itemID)
@@ -725,15 +710,13 @@ func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 		return lotInput, nil
 	}
 	sort.Strings(itemIDs)
+	itemIDs = slices.Compact(itemIDs)
 
-	rows, apiErr := repo.ListItemProductLines(ctx, accountID, itemIDs)
+	lots, apiErr := repo.ListItemCategoryLots(ctx, accountID, itemIDs)
 	if apiErr != nil {
 		return lotInput, apiErr
 	}
-	for _, row := range rows {
-		lotInput.ProductLineByItem[row.ItemID] = row.ProductLineID
-	}
-
+	lotInput.CategoryLotByItem = lots
 	return lotInput, nil
 }
 

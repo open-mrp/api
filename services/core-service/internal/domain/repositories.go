@@ -714,17 +714,8 @@ type ProductLineRepo interface {
 	GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
 	GetUnitGroups(ctx context.Context, accountID string, unitGroupIDs []string, includes []string) (map[string]*ProductLineUnitGroup, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ProductLineFull, *apierror.APIError)
-	// IsUnitInGroup reports whether a unit can be used by a line on this unit group. A lot counted in a unit the line cannot express is not a lot anybody can act on.
-	IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError)
-
-	// Lot conventions. These back both the solver's resolution and the one-item lookup a person gets when adding a batch by hand.
+	// GetItemLotOverride reads a per-item lot size set by hand, which outranks the category's lot.
 	GetItemLotOverride(ctx context.Context, accountID, itemID string) (float64, *apierror.APIError)
-	// GetProductLineLotForItem returns the convention of the line an item sells under, or nil for an intermediate item that is not itself sold.
-	GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
-	// GetDownstreamProductLineLot returns the convention an intermediate item inherits from what it becomes, highest-demand line first.
-	GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
-	// GetFlowProductLineLot walks the production flow from an intermediate item to the first thing it becomes that has a lot convention. It answers for an item that has never been produced, which the demand-weighted lookup cannot.
-	GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*ProductLineLotDefault, *apierror.APIError)
 }
 
 type ItemCategoryRepo interface {
@@ -750,6 +741,8 @@ type ItemCategoryRepo interface {
 	GetPropertiesForCategories(ctx context.Context, itemCategoryIDs []string) (map[string][]*ItemCategoryProperty, *apierror.APIError)
 	IsPropertyInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	PropertyExistsByNameInCategory(ctx context.Context, accountID, itemCategoryID, name string, excludePropertyID *string) (bool, *apierror.APIError)
+	// SetDefaultLotSize points the category at a new lot quantity, or clears its lot when lot is nil.
+	SetDefaultLotSize(ctx context.Context, accountID, itemCategoryID string, lot *LotQuantityInput) *apierror.APIError
 }
 
 type IdempotencyKeyRepo interface {
@@ -1286,10 +1279,10 @@ type ProductionScheduleInputRepo interface {
 	// GetItemsForProductLines maps product lines to the items sold under them.
 	GetItemsForProductLines(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineItemRow, *apierror.APIError)
 
-	// ListProductLineLotDefaults returns every product line in the account that has a lot convention.
-	ListProductLineLotDefaults(ctx context.Context, accountID string) ([]scheduling.ProductLineLot, *apierror.APIError)
+	// ListItemCategoryLots returns the lot of each item's category, keyed by item, for items whose category has one.
+	ListItemCategoryLots(ctx context.Context, accountID string, itemIDs []string) (map[string]scheduling.CategoryLot, *apierror.APIError)
 
-	// ListProductLineFulfillmentPolicies returns every product line in the account that sets a fulfillment policy, keyed by line id.
+	// ListProductLineFulfillmentPolicies returns the fulfillment policy each product line's default supply implies, keyed by line id. Lines that buy rather than make have none.
 	ListProductLineFulfillmentPolicies(ctx context.Context, accountID string) (map[string]string, *apierror.APIError)
 
 	// GetAllSellableProducts returns every product in the account, which is the candidate set for a fulfillment recommendation.
@@ -1297,9 +1290,6 @@ type ProductionScheduleInputRepo interface {
 
 	// GetItemUnitCosts returns each item's unit cost, keyed by item id.
 	GetItemUnitCosts(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError)
-
-	// ListItemProductLines maps items to the product line they sell under.
-	ListItemProductLines(ctx context.Context, accountID string, itemIDs []string) ([]ItemProductLineRow, *apierror.APIError)
 
 	// GetAccountScheduleSettings returns the account's stored planning assumptions as one raw row, or nil when the account has never configured scheduling.
 	GetAccountScheduleSettings(ctx context.Context, accountID string) (*ProductionScheduleSettingsRow, *apierror.APIError)

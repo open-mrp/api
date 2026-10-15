@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -47,6 +48,9 @@ type ItemCategoryFull struct {
 	Notes                *string `audit:"notes"`
 	ItemCategoryTypeCode string  `audit:"item_category_type_code"`
 	UnitGroupID          string  `audit:"unit_group_id"`
+	// The lot the category's items are made in, as a value and its unit; both nil when the category has none.
+	DefaultLotSizeValue  *string `audit:"default_lot_size_value"`
+	DefaultLotSizeUnitID *string `audit:"default_lot_size_unit_id"`
 	AccountID            *string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -108,7 +112,9 @@ type CreateItemCategoryParams struct {
 	UnitGroupID string
 	// PropertyIDs are attached to the new category.
 	PropertyIDs []string
-	Includes    []string
+	// DefaultLotSize is the lot the category's items are made in; nil for none.
+	DefaultLotSize *LotQuantityInput
+	Includes       []string
 }
 
 // DefaultItemCategoryUnitGroupID is the system group a category gets when none is named: items in it are
@@ -122,7 +128,9 @@ type UpdateItemCategoryParams struct {
 	Notes          *string
 	// PropertyIDs, when non-nil, replaces the category's properties.
 	PropertyIDs *[]string
-	Includes    []string
+	// DefaultLotSize sets or clears the lot the category's items are made in.
+	DefaultLotSize field.Clearable[LotQuantityInput]
+	Includes       []string
 }
 
 type UpdateItemCategoryWithUnitGroupParams struct {

@@ -11,12 +11,9 @@ import (
 	"github.com/open-mrp/apikit/tracing"
 )
 
-// maxLotInheritanceDepth bounds the walk from an intermediate item to something sellable. It matches the solver's own max_flow_depth default: past that the item being made and the line it is inherited from have little to do with each other.
-const maxLotInheritanceDepth = 10
-
 // GetItemLotDefault answers "how many, counted in what" for one item.
 //
-// This is the same precedence the solver applies, asked one item at a time so a person adding a batch by hand gets the lot the plan would have used. The greige case prefers the greige-to-finished decomposition the last plan recorded — reading what the plan decided keeps the two answers from disagreeing, and it is demand-weighted — and falls back to the configured production flow for anything that plan never reached.
+// This is the same precedence the solver applies, asked one item at a time so a person adding a batch by hand gets the lot the plan would have used.
 func (s *itemSvcImpl) GetItemLotDefault(ctx context.Context, itemID string) (*domain.ItemLotDefault, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_lot_default")
 	defer span.End()
@@ -54,83 +51,47 @@ func (s *itemSvcImpl) GetItemLotDefault(ctx context.Context, itemID string) (*do
 	return result, nil
 }
 
-// resolveItemLotDefault walks the lot precedence chain for one item.
+// resolveItemLotDefault walks the lot precedence chain for one item: a per-item override, the item's category, and the
+// account default.
 //
-// The chain, most specific first: a per-item override, the item's own product line, what the item becomes, and the account default. Shared rather than inlined so the lot a person is offered when adding a batch, and the lot a hand-added campaign is planned at, cannot disagree — a campaign released in sixties and a batch typed in at the account default would put two different-sized doffs of the same thing on the floor.
-//
-// unitID is the item's own counting unit, used by the rules that change how big a lot is without changing what it is counted in.
+// Shared rather than inlined so the lot a person is offered when adding a batch, and the lot a hand-added campaign is
+// planned at, cannot disagree. unitID is the item's own counting unit, used by the rules that change how big a lot is
+// without changing what it is counted in.
 func resolveItemLotDefault(
 	ctx context.Context,
 	repos domain.RepoFactory,
 	accountID, itemID, unitID string,
 ) (*domain.ItemLotDefault, *apierror.APIError) {
-	repo := repos.NewProductLineRepo()
-	result := &domain.ItemLotDefault{ItemID: itemID, UnitID: unitID}
-
-	// 1. A per-item override changes the size but keeps the item's own unit.
-	override, apiErr := repo.GetItemLotOverride(ctx, accountID, itemID)
+	override, apiErr := repos.NewProductLineRepo().GetItemLotOverride(ctx, accountID, itemID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	if override > 0 {
-		result.Quantity = override
-		result.Source = scheduling.LotSourceItemOverride
-		return result, nil
-	}
-
-	// 2. The item's own product line, for anything that is itself sellable.
-	ownLine, apiErr := repo.GetProductLineLotForItem(ctx, accountID, itemID)
+	categoryLots, apiErr := repos.NewProductionScheduleInputRepo().ListItemCategoryLots(ctx, accountID, []string{itemID})
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	if ownLine != nil {
-		result.Quantity = ownLine.Quantity
-		result.UnitID = ownLine.UnitID
-		result.ProductLineID = ownLine.ProductLineID
-		result.Source = scheduling.LotSourceProductLine
-		return result, nil
-	}
-
-	// 3. What the item becomes, as the last plan's greige decomposition recorded it. Greige is not sold and has no line of its own.
-	inherited, apiErr := repo.GetDownstreamProductLineLot(ctx, accountID, itemID)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if inherited != nil {
-		result.Quantity = inherited.Quantity
-		result.UnitID = inherited.UnitID
-		result.ProductLineID = inherited.ProductLineID
-		result.Source = scheduling.LotSourceDownstreamProductLine
-		return result, nil
-	}
-
-	// 3b. What the flow says the item becomes, for anything the last plan did not reach.
-	//
-	// The demand-weighted lookup above only covers items a generated schedule decomposed. An account that has never run the solver, or an intermediate item that has never been produced, would otherwise fall straight past every line convention it has been given and land on the account default.
-	flowInherited, apiErr := repo.GetFlowProductLineLot(ctx, accountID, itemID, maxLotInheritanceDepth)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if flowInherited != nil {
-		result.Quantity = flowInherited.Quantity
-		result.UnitID = flowInherited.UnitID
-		result.ProductLineID = flowInherited.ProductLineID
-		result.Source = scheduling.LotSourceDownstreamProductLine
-		return result, nil
-	}
-
-	// 4. The account default, counted in the item's own unit.
 	settings, apiErr := repos.NewProductionScheduleRepo().GetSettings(ctx, accountID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	if settings != nil && settings.DefaultLotUnits > 0 {
-		result.Quantity = settings.DefaultLotUnits
-		result.Source = scheduling.LotSourceAccountDefault
-		return result, nil
+
+	in := scheduling.LotResolutionInput{
+		ItemOverrides:     map[string]float64{itemID: override},
+		CategoryLotByItem: categoryLots,
+		UnitByItem:        map[string]string{itemID: unitID},
+	}
+	if settings != nil {
+		in.AccountLotUnits = settings.DefaultLotUnits
 	}
 
-	// Nothing anywhere in the chain. The caller gets a unit and no quantity rather than a guessed one, so a form defaults to empty instead of to a number nobody chose.
+	result := &domain.ItemLotDefault{ItemID: itemID, UnitID: unitID}
+	// Nothing anywhere in the chain leaves a unit and no quantity, so a form defaults to empty instead of to a number nobody chose.
+	if lot, ok := scheduling.ResolveLotDefault(itemID, in); ok {
+		result.Quantity = lot.Quantity
+		result.UnitID = lot.UnitID
+		result.Source = lot.Source
+		result.ItemCategoryID = lot.ItemCategoryID
+	}
 	return result, nil
 }
 

@@ -85,7 +85,7 @@ func TestCustomerMerge_OpenOrdersTakeTheTargetsDefaultRep(t *testing.T) {
 
 	target := covSalesCustomersCreate(t, map[string]any{
 		"default_sales_rep_id": SeedAccountUserID,
-		"commission_policy":    "commission_applied",
+		"commission_policy":    "applied",
 	})
 	targetID := jsonField(target, "id")
 	sourceID := setupOrderCustomer(t)
@@ -129,7 +129,7 @@ func TestCustomerMerge_CommissionExemptTargetLeavesOrdersAlone(t *testing.T) {
 
 	target := covSalesCustomersCreate(t, map[string]any{
 		"default_sales_rep_id": SeedAccountUserID,
-		"commission_policy":    "commission_exempt",
+		"commission_policy":    "exempt",
 	})
 	targetID := jsonField(target, "id")
 	sourceID := setupOrderCustomer(t)

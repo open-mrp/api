@@ -97,7 +97,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 	CapacityHeadroomPct float64 `json:"capacity_headroom_pct" validate:"required,gt=0,lte=1"`
 	// Units in a default production lot.
 	//
-	// The last resort in the lot-size chain: a lot set on the item, on its product line, or on the finished goods an intermediate item becomes all take precedence.
+	// The last resort in the lot-size chain: a lot set on the item or on its category takes precedence.
 	DefaultLotUnits float64 `json:"default_lot_units" validate:"required,gt=0"`
 	// Calendar days between an order being issued and it being due to ship.
 	//

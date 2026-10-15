@@ -90,8 +90,8 @@ func createTerritoryProductLine(t *testing.T) (productLineID, name string) {
 	created := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
 	return jsonField(created, "id"), name
 }

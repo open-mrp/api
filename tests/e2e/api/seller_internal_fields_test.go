@@ -20,7 +20,7 @@ import (
 var sellerInternalFields = map[string][]string{
 	"production_run":    {"responsible_user", "batch_count", "batch_summaries"},
 	"item":              {"burn_rate", "notes"},
-	"product_line":      {"default_lot", "fulfillment_policy", "notes", "commission_policy"},
+	"product_line":      {"supply", "commission_policy"},
 	"customer":          {"note", "commission_policy"},
 	"customer_defaults": {"fulfillment_policy"},
 	"account_group":     {"commission_policy"},
@@ -130,25 +130,20 @@ func TestSellerInternal_ItemBurnRateIsWithheldFromPortals(t *testing.T) {
 func TestSellerInternal_ProductLinePlanningIsWithheldFromPortals(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, productLinesPath, map[string]any{
-		"name":               uniqueName("e2e-internal-pdln"),
-		"unit_group_id":      SeedUnitGroupID,
-		"commission_policy":  "commission_applied",
-		"freight_policy":     "billed_freight",
-		"fulfillment_policy": "make_to_order",
-		"default_lot":        map[string]any{"value": "60", "unit_id": SeedPairUnitID},
+		"name":              uniqueName("e2e-internal-pdln"),
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
+		"supply":            "make",
 	})
 	path := productLinesPath + "/" + jsonField(created, "id")
-	include := url.Values{"include": {"default_lot"}}
 
 	for who, client := range map[string]*Client{"admin": apiClient, "product line reader": customRoleClient(t, "product_lines:read")} {
-		line := parseJSON(mustGetAs(t, client, path, include))
-		assert.Equal(t, "make_to_order", jsonField(line, "fulfillment_policy"), who)
-		assert.Equal(t, "60", jsonField(jsonObject(line, "default_lot"), "value"), who)
+		line := parseJSON(mustGetAs(t, client, path, nil))
+		assert.Equal(t, "make", jsonField(line, "supply"), who)
 	}
 	for who, portal := range portalClients(t) {
-		line := parseJSON(mustGetAs(t, portal, path, include))
-		assertNilField(t, line, "fulfillment_policy")
-		assertNilField(t, line, "default_lot")
+		line := parseJSON(mustGetAs(t, portal, path, nil))
+		assertNilField(t, line, "supply")
 		assert.Equal(t, jsonField(created, "name"), jsonField(line, "name"), "%s still reads the product line", who)
 	}
 }
@@ -159,13 +154,9 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 	t.Parallel()
 	line := createAndCleanup(t, productLinesPath, map[string]any{
 		"name":              uniqueName("e2e-internal-notes-pdln"),
-		"unit_group_id":     SeedUnitGroupID,
-		"commission_policy": "commission_applied",
-		"freight_policy":    "billed_freight",
+		"commission_policy": "applied",
+		"freight_policy":    "billed",
 	})
-	// The API takes no product line notes; the seller's team writes them in the dashboard.
-	_, err := authDB(t).Exec("UPDATE product_line SET notes = ? WHERE id = ?", "Renegotiate with the mill before the spring run", jsonField(line, "id"))
-	require.NoError(t, err)
 	product := createAndCleanup(t, productsPath, map[string]any{
 		"sku":               uniqueName("e2e-internal-notes-pd"),
 		"type":              "sale",
@@ -185,14 +176,12 @@ func TestSellerInternal_CatalogNotesAndCommissionAreWithheldFromPortals(t *testi
 
 	for who, client := range map[string]*Client{"admin": apiClient, "catalog reader": customRoleClient(t, "product_lines:read", "items:read")} {
 		got := parseJSON(mustGetAs(t, client, linePath, nil))
-		assert.Equal(t, "Renegotiate with the mill before the spring run", jsonField(got, "notes"), who)
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"), who)
+		assert.Equal(t, "applied", jsonField(got, "commission_policy"), who)
 		assert.Equal(t, "Margin is thin on this one", jsonField(itemOf(client), "notes"), who)
 	}
 
 	for who, portal := range portalClients(t) {
 		got := parseJSON(mustGetAs(t, portal, linePath, nil))
-		assertNilField(t, got, "notes")
 		assertNilField(t, got, "commission_policy")
 		assert.Equal(t, jsonField(line, "name"), jsonField(got, "name"), "%s still reads the product line", who)
 

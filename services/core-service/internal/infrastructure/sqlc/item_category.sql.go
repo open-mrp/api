@@ -588,6 +588,22 @@ func (q *Queries) GetUnitGroupsForCategoriesByIDs(ctx context.Context, ids []str
 	return items, nil
 }
 
+const insertDefaultLotSizeQuantity = `-- name: InsertDefaultLotSizeQuantity :exec
+INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
+VALUES (?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertDefaultLotSizeQuantityParams struct {
+	ID     string
+	Value  string
+	UnitID string
+}
+
+func (q *Queries) InsertDefaultLotSizeQuantity(ctx context.Context, arg InsertDefaultLotSizeQuantityParams) error {
+	_, err := q.db.ExecContext(ctx, insertDefaultLotSizeQuantity, arg.ID, arg.Value, arg.UnitID)
+	return err
+}
+
 const insertItemCategory = `-- name: InsertItemCategory :exec
 INSERT INTO item_category (
     id,
@@ -822,6 +838,58 @@ func (q *Queries) ListItemCategoriesForward(ctx context.Context, arg ListItemCat
 	return items, nil
 }
 
+const listItemCategoryDefaultLotSizes = `-- name: ListItemCategoryDefaultLotSizes :many
+
+SELECT
+    ic.id AS item_category_id,
+    q.value,
+    q.unit_id
+FROM item_category ic
+JOIN quantity q ON q.id = ic.default_lot_size_id
+WHERE ic.id IN (/*SLICE:ids*/?)
+`
+
+type ListItemCategoryDefaultLotSizesRow struct {
+	ItemCategoryID string
+	Value          string
+	UnitID         string
+}
+
+// A category's lot is a quantity row. Edits point the category at a new row rather than rewriting the old one, since
+// categories given their lot by data migration share their product line's row.
+func (q *Queries) ListItemCategoryDefaultLotSizes(ctx context.Context, ids []string) ([]ListItemCategoryDefaultLotSizesRow, error) {
+	query := listItemCategoryDefaultLotSizes
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemCategoryDefaultLotSizesRow
+	for rows.Next() {
+		var i ListItemCategoryDefaultLotSizesRow
+		if err := rows.Scan(&i.ItemCategoryID, &i.Value, &i.UnitID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemCategoryProperties = `-- name: ListItemCategoryProperties :many
 SELECT
     p.id,
@@ -927,6 +995,24 @@ func (q *Queries) ListItemCategoryPropertiesForCategories(ctx context.Context, i
 		return nil, err
 	}
 	return items, nil
+}
+
+const setItemCategoryDefaultLotSize = `-- name: SetItemCategoryDefaultLotSize :execresult
+UPDATE item_category SET
+    default_lot_size_id = ?,
+    updated_at = NOW(3)
+WHERE id = ?
+AND account_id = ?
+`
+
+type SetItemCategoryDefaultLotSizeParams struct {
+	DefaultLotSizeID sql.NullString
+	ID               string
+	AccountID        sql.NullString
+}
+
+func (q *Queries) SetItemCategoryDefaultLotSize(ctx context.Context, arg SetItemCategoryDefaultLotSizeParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, setItemCategoryDefaultLotSize, arg.DefaultLotSizeID, arg.ID, arg.AccountID)
 }
 
 const updateItemCategory = `-- name: UpdateItemCategory :execresult

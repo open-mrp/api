@@ -32,7 +32,7 @@ import (
 func TestCovOperationsLocationTypes_GetByID(t *testing.T) {
 	t.Parallel()
 
-	list, _, err := apiClient.GetList(locationTypesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(locationTypesPath, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "expected at least one seeded location type")
 
@@ -43,7 +43,7 @@ func TestCovOperationsLocationTypes_GetByID(t *testing.T) {
 	require.NotEmpty(t, id)
 	require.NotEmpty(t, code)
 
-	status, body, err := apiClient.GetListRaw(locationTypesPath+"/"+id, nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(locationTypesPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -64,7 +64,7 @@ func TestCovOperationsLocationTypes_GetByID(t *testing.T) {
 func TestCovOperationsLocationTypes_ListSearchByName(t *testing.T) {
 	t.Parallel()
 
-	list, _, err := apiClient.GetList(locationTypesPath, url.Values{"q": {"Building"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(locationTypesPath, url.Values{"q": {"Building"}})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "expected the Building row to match q=Building")
 	for _, item := range list.Data {
@@ -74,7 +74,7 @@ func TestCovOperationsLocationTypes_ListSearchByName(t *testing.T) {
 	}
 
 	// Partial substring match ("uild" is a substring of "Building").
-	subList, _, err := apiClient.GetList(locationTypesPath, url.Values{"q": {"uild"}})
+	subList, _, err := apiClient.WithAPIVersion(preview9Version).GetList(locationTypesPath, url.Values{"q": {"uild"}})
 	require.NoError(t, err)
 	require.NotEmpty(t, subList.Data, "expected a substring query to match the Building row")
 	for _, item := range subList.Data {
@@ -89,7 +89,7 @@ func TestCovOperationsLocationTypes_ListSearchByName(t *testing.T) {
 // storage locations/location-types are not customer-facing.
 func TestCovOperationsLocationTypes_CustomerPortalForbidden_List(t *testing.T) {
 	t.Parallel()
-	client := getCustomerPortalClient()
+	client := getCustomerPortalClient().WithAPIVersion(preview9Version)
 
 	status, body, err := client.GetListRaw(locationTypesPath, nil)
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestCovOperationsLocationTypes_CustomerPortalForbidden_List(t *testing.T) {
 // CheckIsInternalActor() coverage to RetrieveLocationType.
 func TestCovOperationsLocationTypes_CustomerPortalForbidden_Get(t *testing.T) {
 	t.Parallel()
-	client := getCustomerPortalClient()
+	client := getCustomerPortalClient().WithAPIVersion(preview9Version)
 
 	status, body, err := client.GetListRaw(locationTypesPath+"/building", nil)
 	require.NoError(t, err)

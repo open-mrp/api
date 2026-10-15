@@ -70,7 +70,7 @@ func TestPreview9_LinkAndAnnouncementRecords(t *testing.T) {
 	assert.NotContains(t, ann, "related")
 }
 
-func upgradeBody(t *testing.T, ot constants.ObjectType, route string, body map[string]any) map[string]any {
+func upgradeMessagingBody(t *testing.T, ot constants.ObjectType, route string, body map[string]any) map[string]any {
 	t.Helper()
 	return version.TransformEndpointRequest(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, ot, http.MethodPost, route, body)
 }
@@ -78,16 +78,16 @@ func upgradeBody(t *testing.T, ot constants.ObjectType, route string, body map[s
 func TestPreview9_CreateConversationBody(t *testing.T) {
 	t.Parallel()
 
-	dm := upgradeBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
+	dm := upgradeMessagingBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
 		"type": "direct_message", "participant_account_user_ids": []any{"acus_b"}})
 	assert.Equal(t, []any{map[string]any{"account_user_id": "acus_b"}}, dm["participants"])
 	assert.NotContains(t, dm, "type")
 
-	group := upgradeBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
+	group := upgradeMessagingBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
 		"type": "group", "title": "Ops", "participant_account_user_ids": []any{"acus_b"}})
 	assert.Equal(t, []any{map[string]any{"account_user_id": "acus_b", "role": "member"}}, group["participants"], "a one-member group stays a group")
 
-	anchored := upgradeBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
+	anchored := upgradeMessagingBody(t, constants.ObjectTypeConversation, "/v1/messaging/conversations", map[string]any{
 		"type": "group", "participant_account_user_ids": []any{"acus_b", "acus_c"},
 		"participants":        []any{map[string]any{"account_user_id": "acus_c", "role": "admin"}},
 		"topic_resource_type": "sales_order", "topic_resource_id": "so_1"})
@@ -101,13 +101,13 @@ func TestPreview9_CreateConversationBody(t *testing.T) {
 func TestPreview9_SendMessageAndLinkBodies(t *testing.T) {
 	t.Parallel()
 
-	msg := upgradeBody(t, constants.ObjectTypeChatMessage, "/v1/messaging/conversations/{id}/messages", map[string]any{
+	msg := upgradeMessagingBody(t, constants.ObjectTypeChatMessage, "/v1/messaging/conversations/{id}/messages", map[string]any{
 		"body": "see", "link_resource_type": "invoice", "link_resource_id": "inv_1",
 		"attachments": []any{map[string]any{"kind": "resource", "resource_type": "sales_order", "resource_id": "so_1"}}})
 	assert.Equal(t, map[string]any{"type": "invoice", "id": "inv_1"}, msg["record"])
 	assert.Equal(t, map[string]any{"type": "sales_order", "id": "so_1"}, msg["attachments"].([]any)[0].(map[string]any)["record"])
 
-	link := upgradeBody(t, constants.ObjectTypeConversationLink, "/v1/messaging/conversations/{id}/links", map[string]any{
+	link := upgradeMessagingBody(t, constants.ObjectTypeConversationLink, "/v1/messaging/conversations/{id}/links", map[string]any{
 		"resource_type": "customer", "resource_id": "cu_1"})
 	assert.Equal(t, map[string]any{"type": "customer", "id": "cu_1"}, link["record"])
 }

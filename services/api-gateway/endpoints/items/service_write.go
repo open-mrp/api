@@ -9,6 +9,7 @@ import (
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/apiversion"
@@ -54,7 +55,7 @@ func (m *itemSvcImpl) CreateItem(ctx context.Context, req *CreateItemRequest) (*
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return loadItemByID(ctx, resp.Item.Id)
+	return writtenItem(ctx, resp.Item)
 }
 
 func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError) {
@@ -85,7 +86,7 @@ func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return loadItemByID(ctx, resp.Item.Id)
+	return writtenItem(ctx, resp.Item)
 }
 
 func (m *itemSvcImpl) DeleteItem(ctx context.Context, req *DeleteItemRequest) (*apiresource.Item, *apierror.APIError) {
@@ -131,6 +132,20 @@ func (m *itemSvcImpl) BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsR
 		return nil, apiErr
 	}
 	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
+// writtenItem is the item a write saved, read back whole. A caller allowed to write items but not read them still gets
+// the item it saved, as core answered the write with it.
+func writtenItem(ctx context.Context, saved *pb.ItemInfo) (*apiresource.Item, *apierror.APIError) {
+	item, apiErr := loadItemByID(ctx, saved.Id)
+	if apierror.HasCode(apiErr, apierror.CodeInsufficientPermissions) {
+		var categories []*pb.ItemCategoryInfo
+		if saved.Category != nil {
+			categories = []*pb.ItemCategoryInfo{saved.Category}
+		}
+		return resourceloaders.ItemsFromProto(ctx, []*pb.ItemInfo{saved}, categories, nil)[saved.Id].(*apiresource.Item), nil
+	}
+	return item, apiErr
 }
 
 func updateSalesToProto(f field.Optional[UpdateItemSalesInput]) *pb.ItemSalesInput {

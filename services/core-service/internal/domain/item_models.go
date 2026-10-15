@@ -41,8 +41,8 @@ type Item struct {
 	UnitCost  *Rate
 	BurnRate  *Rate
 	// SalesUnitPrice and UnitCostPrice are UnitValue and UnitCost as money per unit, loaded with them.
-	SalesUnitPrice *UnitPrice
-	UnitCostPrice  *UnitPrice
+	SalesUnitPrice *UnitPrice `audit:"unit_price"`
+	UnitCostPrice  *UnitPrice `audit:"unit_cost"`
 	Category       *ItemCategory
 
 	// Many-to-many joined data

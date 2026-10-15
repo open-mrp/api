@@ -24,6 +24,7 @@ type itemWriteRepos struct {
 	attributes *repositorymock.MockAttributeRepo
 	refs       *repositorymock.MockReferenceRepo
 	deleted    *repositorymock.MockDeletedRecordRepo
+	categories *repositorymock.MockItemCategoryRepo
 }
 
 func newItemWriteRepos(t *testing.T) itemWriteRepos {
@@ -35,11 +36,13 @@ func newItemWriteRepos(t *testing.T) itemWriteRepos {
 		attributes: repositorymock.NewMockAttributeRepo(ctrl),
 		refs:       repositorymock.NewMockReferenceRepo(ctrl),
 		deleted:    repositorymock.NewMockDeletedRecordRepo(ctrl),
+		categories: repositorymock.NewMockItemCategoryRepo(ctrl),
 	}
 	r.factory.EXPECT().NewItemRepo().Return(r.items).AnyTimes()
 	r.factory.EXPECT().NewAttributeRepo().Return(r.attributes).AnyTimes()
 	r.factory.EXPECT().NewReferenceRepo().Return(r.refs).AnyTimes()
 	r.factory.EXPECT().NewDeletedRecordRepo().Return(r.deleted).AnyTimes()
+	r.factory.EXPECT().NewItemCategoryRepo().Return(r.categories).AnyTimes()
 	return r
 }
 
@@ -68,6 +71,7 @@ func TestCreateItem_CategoryMustSuitTheType(t *testing.T) {
 
 	r := newItemWriteRepos(t)
 	r.items.EXPECT().CheckSKUExists(gomock.Any(), "ac_1", "SVC-1", "").Return(false, nil)
+	r.categories.EXPECT().GetByIDs(gomock.Any(), "ac_1", []string{"itcg_mat"}).Return([]*domain.ItemCategoryFull{{ID: "itcg_mat"}}, nil)
 	r.items.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "itcg_mat").Return("each", constants.ItemCategoryTypeMaterial.Code(), nil)
 
 	_, apiErr := createItemInTx(context.Background(), r.factory, domain.CreateItemParams{

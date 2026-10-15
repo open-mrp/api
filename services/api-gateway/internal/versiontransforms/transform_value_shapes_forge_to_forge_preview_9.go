@@ -379,5 +379,9 @@ func preview9IncludeKey(route, key string) string {
 	if routeOffers(route, key) {
 		return key
 	}
+	// A value under an expandable parent, such as item.unit_value, still expanded the parent; the value now comes with it.
+	if i := strings.LastIndex(key, "."); i > 0 && routeOffers(route, key[:i]) {
+		return key[:i]
+	}
 	return ""
 }

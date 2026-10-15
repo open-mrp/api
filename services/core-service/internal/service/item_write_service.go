@@ -176,7 +176,7 @@ func createItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Crea
 		return nil, apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("An item with the SKU '%s' already exists.", p.SKU))
 	}
 
-	baseUnitID, apiErr := itemCategoryBaseUnit(ctx, repos, p.Type, p.CategoryID)
+	baseUnitID, apiErr := itemCategoryBaseUnit(ctx, repos, p.AccountID, p.Type, p.CategoryID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -306,7 +306,7 @@ func updateItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Upda
 
 	categoryID := before.ItemCategoryID
 	if p.CategoryID != nil && *p.CategoryID != before.ItemCategoryID {
-		if _, apiErr := itemCategoryBaseUnit(ctx, repos, itemType, *p.CategoryID); apiErr != nil {
+		if _, apiErr := itemCategoryBaseUnit(ctx, repos, p.AccountID, itemType, *p.CategoryID); apiErr != nil {
 			return nil, apiErr
 		}
 		categoryID = *p.CategoryID
@@ -447,7 +447,15 @@ func deleteItemInTx(ctx context.Context, repos domain.RepoFactory, accountID, it
 }
 
 // itemCategoryBaseUnit checks the category exists and suits the item type, and returns its base unit.
-func itemCategoryBaseUnit(ctx context.Context, repos domain.RepoFactory, itemType constants.ItemTypeCode, categoryID string) (string, *apierror.APIError) {
+func itemCategoryBaseUnit(ctx context.Context, repos domain.RepoFactory, accountID string, itemType constants.ItemTypeCode, categoryID string) (string, *apierror.APIError) {
+	// The base unit lookup reads any category by id; only the account's own and the system categories may be used.
+	visible, apiErr := repos.NewItemCategoryRepo().GetByIDs(ctx, accountID, []string{categoryID})
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if len(visible) == 0 {
+		return "", apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "The category does not exist.")
+	}
 	baseUnitID, categoryType, apiErr := repos.NewItemRepo().GetCategoryBaseUnitID(ctx, categoryID)
 	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return "", apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "The category does not exist.")
@@ -668,6 +676,19 @@ func openItemInventory(ctx context.Context, repos domain.RepoFactory, accountID,
 		UnitID:     baseUnitID,
 		ActionType: "user_action",
 	})
+}
+
+// checkItemReadPermission is the permission an internal user needs to read items: items:read in its own account, or
+// customers:read / suppliers:read when it targets one of its customers or suppliers.
+func checkItemReadPermission(identity *types.Identity) *apierror.APIError {
+	switch {
+	case identity.IsTargetCustomerAccount():
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	case identity.IsTargetSupplierAccount():
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	default:
+		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
+	}
 }
 
 // clearableValuePtr is the value a clearable field sets, or nil when it is unset or cleared.

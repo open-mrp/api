@@ -70,6 +70,17 @@ func TestPreview9_ItemStubUntouched(t *testing.T) {
 	assert.Equal(t, map[string]any{"id": "itm_3", "object": "item", "name": "SKU-3"}, got)
 }
 
+// preview.9 included an item's value to get the item; the item still comes, carrying its values.
+func TestPreview9_ItemValueIncludeKeepsTheItem(t *testing.T) {
+	t.Parallel()
+
+	const route = "/v1/test/itm1/materials/{id}"
+	RegisterRouteIncludes(route, []string{"item", "item.category"})
+	q := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeMaterial, route,
+		url.Values{"include[]": {"item.unit_value", "item.burn_rate.numerator_unit", "item.category"}})
+	assert.ElementsMatch(t, []string{"item", "item.category"}, q["include[]"])
+}
+
 func TestPreview9_ItemListFilters(t *testing.T) {
 	t.Parallel()
 

@@ -192,7 +192,7 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 	}
 
 	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, s.mediators(), func() *apierror.APIError {
-		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
+		return checkItemReadPermission(identity)
 	}); apiErr != nil {
 		return nil, apiErr
 	}
@@ -238,7 +238,7 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 	}
 
 	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, s.mediators(), func() *apierror.APIError {
-		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
+		return checkItemReadPermission(identity)
 	}); apiErr != nil {
 		return nil, nil, apiErr
 	}

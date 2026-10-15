@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -29,10 +30,10 @@ func validateBulkUpsertItemRows(rows []domain.UpsertItemParams) *apierror.APIErr
 	skus := make(map[string]struct{}, len(rows))
 	var rowErrs apierror.RowErrors
 	for i, row := range rows {
-		if _, dup := skus[row.SKU]; dup {
+		if _, dup := skus[strings.ToLower(row.SKU)]; dup {
 			rowErrs.AddField(i, "sku", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate SKU %q in request", row.SKU))
 		}
-		skus[row.SKU] = struct{}{}
+		skus[strings.ToLower(row.SKU)] = struct{}{}
 		if !row.Type.IsValid() {
 			rowErrs.AddField(i, "type", apierror.CodeInvalidFormat, "type must be one of material, part, product or service")
 		}
@@ -109,7 +110,7 @@ func (s *itemSvcImpl) writeBulkUpsertItems(txCtx context.Context, txRepos domain
 	}
 	bySKU := make(map[string]*domain.Item, len(existing.Items))
 	for _, item := range existing.Items {
-		bySKU[item.SKU] = item
+		bySKU[strings.ToLower(item.SKU)] = item
 	}
 
 	results := make([]domain.RowResult, 0, len(rows))
@@ -127,7 +128,7 @@ func (s *itemSvcImpl) writeBulkUpsertItems(txCtx context.Context, txRepos domain
 				attributeIDs = attributeIDsForProperties(row.Attributes, attrResolver)
 			}
 
-			if old := bySKU[row.SKU]; old != nil {
+			if old := bySKU[strings.ToLower(row.SKU)]; old != nil {
 				if constants.ItemTypeCode(old.ItemTypeCode) != row.Type {
 					return apierror.NewFieldError("type", apierror.CodeInvalidFormat,
 						fmt.Sprintf("SKU %q is a %s; an item's type can't change", row.SKU, old.ItemTypeCode))

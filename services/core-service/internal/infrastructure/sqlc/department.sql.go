@@ -210,20 +210,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.id = ?
 AND d.account_id = ?
 `
@@ -234,23 +230,21 @@ type GetDepartmentParams struct {
 }
 
 type GetDepartmentRow struct {
-	ID                   string
-	Name                 string
-	Notes                sql.NullString
-	LocationID           sql.NullString
-	LocationName         sql.NullString
-	LocationTypeCode     sql.NullString
-	AccountID            string
-	LaborRateID          sql.NullString
-	LaborRateValue       sql.NullString
-	LaborRateNumUnitID   sql.NullString
-	LaborRateNumUnitAbbr sql.NullString
-	LaborRateNumUnitType sql.NullString
-	LaborRateDenUnitID   sql.NullString
-	LaborRateDenUnitAbbr sql.NullString
-	LaborRateDenUnitType sql.NullString
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                       string
+	Name                     string
+	Notes                    sql.NullString
+	LocationID               sql.NullString
+	LocationName             sql.NullString
+	LocationTypeCode         sql.NullString
+	AccountID                string
+	LaborRateID              sql.NullString
+	LaborRateAmount          sql.NullString
+	LaborRateCurrency        sql.NullString
+	LaborRatePerUnitID       sql.NullString
+	LegacyLaborRateValue     sql.NullString
+	LegacyLaborRatePerUnitID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (GetDepartmentRow, error) {
@@ -265,13 +259,11 @@ func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (G
 		&i.LocationTypeCode,
 		&i.AccountID,
 		&i.LaborRateID,
-		&i.LaborRateValue,
-		&i.LaborRateNumUnitID,
-		&i.LaborRateNumUnitAbbr,
-		&i.LaborRateNumUnitType,
-		&i.LaborRateDenUnitID,
-		&i.LaborRateDenUnitAbbr,
-		&i.LaborRateDenUnitType,
+		&i.LaborRateAmount,
+		&i.LaborRateCurrency,
+		&i.LaborRatePerUnitID,
+		&i.LegacyLaborRateValue,
+		&i.LegacyLaborRatePerUnitID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -335,19 +327,15 @@ SELECT
     d.location_id,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.id IN (/*SLICE:ids*/?)
 AND d.account_id = ?
 `
@@ -358,21 +346,19 @@ type GetDepartmentsFullByIDsParams struct {
 }
 
 type GetDepartmentsFullByIDsRow struct {
-	ID                   string
-	Name                 string
-	Notes                sql.NullString
-	LocationID           sql.NullString
-	AccountID            string
-	LaborRateID          sql.NullString
-	LaborRateValue       sql.NullString
-	LaborRateNumUnitID   sql.NullString
-	LaborRateNumUnitAbbr sql.NullString
-	LaborRateNumUnitType sql.NullString
-	LaborRateDenUnitID   sql.NullString
-	LaborRateDenUnitAbbr sql.NullString
-	LaborRateDenUnitType sql.NullString
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                       string
+	Name                     string
+	Notes                    sql.NullString
+	LocationID               sql.NullString
+	AccountID                string
+	LaborRateID              sql.NullString
+	LaborRateAmount          sql.NullString
+	LaborRateCurrency        sql.NullString
+	LaborRatePerUnitID       sql.NullString
+	LegacyLaborRateValue     sql.NullString
+	LegacyLaborRatePerUnitID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 func (q *Queries) GetDepartmentsFullByIDs(ctx context.Context, arg GetDepartmentsFullByIDsParams) ([]GetDepartmentsFullByIDsRow, error) {
@@ -402,13 +388,11 @@ func (q *Queries) GetDepartmentsFullByIDs(ctx context.Context, arg GetDepartment
 			&i.LocationID,
 			&i.AccountID,
 			&i.LaborRateID,
-			&i.LaborRateValue,
-			&i.LaborRateNumUnitID,
-			&i.LaborRateNumUnitAbbr,
-			&i.LaborRateNumUnitType,
-			&i.LaborRateDenUnitID,
-			&i.LaborRateDenUnitAbbr,
-			&i.LaborRateDenUnitType,
+			&i.LaborRateAmount,
+			&i.LaborRateCurrency,
+			&i.LaborRatePerUnitID,
+			&i.LegacyLaborRateValue,
+			&i.LegacyLaborRatePerUnitID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -432,10 +416,16 @@ INSERT INTO department (
     notes,
     location_id,
     labor_rate_id,
+    labor_rate_amount,
+    labor_rate_currency,
+    labor_rate_per_unit_id,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -448,12 +438,15 @@ INSERT INTO department (
 `
 
 type InsertDepartmentParams struct {
-	ID          string
-	Name        string
-	Notes       sql.NullString
-	LocationID  sql.NullString
-	LaborRateID sql.NullString
-	AccountID   string
+	ID                 string
+	Name               string
+	Notes              sql.NullString
+	LocationID         sql.NullString
+	LaborRateID        sql.NullString
+	LaborRateAmount    sql.NullString
+	LaborRateCurrency  sql.NullString
+	LaborRatePerUnitID sql.NullString
+	AccountID          string
 }
 
 func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentParams) error {
@@ -463,6 +456,9 @@ func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentPara
 		arg.Notes,
 		arg.LocationID,
 		arg.LaborRateID,
+		arg.LaborRateAmount,
+		arg.LaborRateCurrency,
+		arg.LaborRatePerUnitID,
 		arg.AccountID,
 	)
 	return err
@@ -513,20 +509,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = ?
 AND (
     ? IS NULL
@@ -549,23 +541,21 @@ type ListDepartmentsBackwardParams struct {
 }
 
 type ListDepartmentsBackwardRow struct {
-	ID                   string
-	Name                 string
-	Notes                sql.NullString
-	LocationID           sql.NullString
-	LocationName         sql.NullString
-	LocationTypeCode     sql.NullString
-	AccountID            string
-	LaborRateID          sql.NullString
-	LaborRateValue       sql.NullString
-	LaborRateNumUnitID   sql.NullString
-	LaborRateNumUnitAbbr sql.NullString
-	LaborRateNumUnitType sql.NullString
-	LaborRateDenUnitID   sql.NullString
-	LaborRateDenUnitAbbr sql.NullString
-	LaborRateDenUnitType sql.NullString
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                       string
+	Name                     string
+	Notes                    sql.NullString
+	LocationID               sql.NullString
+	LocationName             sql.NullString
+	LocationTypeCode         sql.NullString
+	AccountID                string
+	LaborRateID              sql.NullString
+	LaborRateAmount          sql.NullString
+	LaborRateCurrency        sql.NullString
+	LaborRatePerUnitID       sql.NullString
+	LegacyLaborRateValue     sql.NullString
+	LegacyLaborRatePerUnitID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmentsBackwardParams) ([]ListDepartmentsBackwardRow, error) {
@@ -594,13 +584,11 @@ func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmen
 			&i.LocationTypeCode,
 			&i.AccountID,
 			&i.LaborRateID,
-			&i.LaborRateValue,
-			&i.LaborRateNumUnitID,
-			&i.LaborRateNumUnitAbbr,
-			&i.LaborRateNumUnitType,
-			&i.LaborRateDenUnitID,
-			&i.LaborRateDenUnitAbbr,
-			&i.LaborRateDenUnitType,
+			&i.LaborRateAmount,
+			&i.LaborRateCurrency,
+			&i.LaborRatePerUnitID,
+			&i.LegacyLaborRateValue,
+			&i.LegacyLaborRatePerUnitID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -627,20 +615,16 @@ SELECT
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.labor_rate_id,
-    lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id,
-    lrnu.abbreviation AS labor_rate_num_unit_abbr,
-    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id,
-    lrdu.abbreviation AS labor_rate_den_unit_abbr,
-    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    d.labor_rate_amount,
+    d.labor_rate_currency,
+    d.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value,
+    lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
-LEFT JOIN rate lr ON d.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = ?
 AND (
     ? IS NULL
@@ -664,23 +648,21 @@ type ListDepartmentsForwardParams struct {
 }
 
 type ListDepartmentsForwardRow struct {
-	ID                   string
-	Name                 string
-	Notes                sql.NullString
-	LocationID           sql.NullString
-	LocationName         sql.NullString
-	LocationTypeCode     sql.NullString
-	AccountID            string
-	LaborRateID          sql.NullString
-	LaborRateValue       sql.NullString
-	LaborRateNumUnitID   sql.NullString
-	LaborRateNumUnitAbbr sql.NullString
-	LaborRateNumUnitType sql.NullString
-	LaborRateDenUnitID   sql.NullString
-	LaborRateDenUnitAbbr sql.NullString
-	LaborRateDenUnitType sql.NullString
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                       string
+	Name                     string
+	Notes                    sql.NullString
+	LocationID               sql.NullString
+	LocationName             sql.NullString
+	LocationTypeCode         sql.NullString
+	AccountID                string
+	LaborRateID              sql.NullString
+	LaborRateAmount          sql.NullString
+	LaborRateCurrency        sql.NullString
+	LaborRatePerUnitID       sql.NullString
+	LegacyLaborRateValue     sql.NullString
+	LegacyLaborRatePerUnitID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartmentsForwardParams) ([]ListDepartmentsForwardRow, error) {
@@ -710,13 +692,11 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 			&i.LocationTypeCode,
 			&i.AccountID,
 			&i.LaborRateID,
-			&i.LaborRateValue,
-			&i.LaborRateNumUnitID,
-			&i.LaborRateNumUnitAbbr,
-			&i.LaborRateNumUnitType,
-			&i.LaborRateDenUnitID,
-			&i.LaborRateDenUnitAbbr,
-			&i.LaborRateDenUnitType,
+			&i.LaborRateAmount,
+			&i.LaborRateCurrency,
+			&i.LaborRatePerUnitID,
+			&i.LegacyLaborRateValue,
+			&i.LegacyLaborRatePerUnitID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1029,18 +1009,24 @@ UPDATE department SET
     notes = ?,
     location_id = COALESCE(?, location_id),
     labor_rate_id = COALESCE(?, labor_rate_id),
+    labor_rate_amount = COALESCE(?, labor_rate_amount),
+    labor_rate_currency = COALESCE(?, labor_rate_currency),
+    labor_rate_per_unit_id = COALESCE(?, labor_rate_per_unit_id),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateDepartmentParams struct {
-	Name        sql.NullString
-	Notes       sql.NullString
-	LocationID  sql.NullString
-	LaborRateID sql.NullString
-	ID          string
-	AccountID   string
+	Name               sql.NullString
+	Notes              sql.NullString
+	LocationID         sql.NullString
+	LaborRateID        sql.NullString
+	LaborRateAmount    sql.NullString
+	LaborRateCurrency  sql.NullString
+	LaborRatePerUnitID sql.NullString
+	ID                 string
+	AccountID          string
 }
 
 func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (sql.Result, error) {
@@ -1049,6 +1035,9 @@ func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentPara
 		arg.Notes,
 		arg.LocationID,
 		arg.LaborRateID,
+		arg.LaborRateAmount,
+		arg.LaborRateCurrency,
+		arg.LaborRatePerUnitID,
 		arg.ID,
 		arg.AccountID,
 	)

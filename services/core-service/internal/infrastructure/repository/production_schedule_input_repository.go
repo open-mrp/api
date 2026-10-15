@@ -152,11 +152,11 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 		if row.LaborTimeQtyRatioDenominator.Valid {
 			measurement.LaborTime.QuantityRatioDenominator = decimalToFloat64(row.LaborTimeQtyRatioDenominator.String)
 		}
-		if row.LaborRate.Valid {
-			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)
+		if laborRate := moneyAmountOrLegacy(row.LaborRateAmount, row.LegacyLaborRate); laborRate.Valid {
+			measurement.LaborRate = decimalToFloat64(laborRate.String)
 		}
-		if row.OverheadRate.Valid {
-			measurement.OverheadRate = decimalToFloat64(row.OverheadRate.String)
+		if overheadRate := moneyAmountOrLegacy(row.OverheadRateAmount, row.LegacyOverheadRate); overheadRate.Valid {
+			measurement.OverheadRate = decimalToFloat64(overheadRate.String)
 		}
 		if row.RunCreatedAt.Valid {
 			runCreatedAt := row.RunCreatedAt.Time
@@ -262,11 +262,11 @@ func (r *productionScheduleInputRepoImpl) GetFinishingBatchMeasurements(
 		if row.LaborTimeQtyRatioDenominator.Valid {
 			measurement.LaborTime.QuantityRatioDenominator = decimalToFloat64(row.LaborTimeQtyRatioDenominator.String)
 		}
-		if row.LaborRate.Valid {
-			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)
+		if laborRate := moneyAmountOrLegacy(row.LaborRateAmount, row.LegacyLaborRate); laborRate.Valid {
+			measurement.LaborRate = decimalToFloat64(laborRate.String)
 		}
-		if row.OverheadRate.Valid {
-			measurement.OverheadRate = decimalToFloat64(row.OverheadRate.String)
+		if overheadRate := moneyAmountOrLegacy(row.OverheadRateAmount, row.LegacyOverheadRate); overheadRate.Valid {
+			measurement.OverheadRate = decimalToFloat64(overheadRate.String)
 		}
 		if row.RunCreatedAt.Valid {
 			runCreatedAt := row.RunCreatedAt.Time
@@ -675,7 +675,7 @@ func (r *productionScheduleInputRepoImpl) GetConstraintDepartmentLaborRate(
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_constraint_department_labor_rate")
 	defer span.End()
 
-	value, err := r.queries.GetConstraintDepartmentLaborRate(ctx, sqlc.GetConstraintDepartmentLaborRateParams{
+	row, err := r.queries.GetConstraintDepartmentLaborRate(ctx, sqlc.GetConstraintDepartmentLaborRateParams{
 		AccountID:    accountID,
 		DepartmentID: departmentID,
 	})
@@ -685,7 +685,11 @@ func (r *productionScheduleInputRepoImpl) GetConstraintDepartmentLaborRate(
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	rate := decimalToFloat64(value)
+	value := row.LaborRateAmount
+	if !value.Valid {
+		value = row.LegacyLaborRateValue
+	}
+	rate := decimalToFloat64(value.String)
 	return &rate, nil
 }
 

@@ -56,8 +56,10 @@ SELECT
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
     labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
-    labor_rate.value AS labor_rate,
-    overhead_rate.value AS overhead_rate,
+    ps.labor_rate_amount,
+    labor_rate.value AS legacy_labor_rate,
+    ps.overhead_rate_amount,
+    overhead_rate.value AS legacy_overhead_rate,
     pr.created_at AS run_created_at
 FROM batch b
 JOIN _batches_machines bm ON bm.A = b.id
@@ -71,8 +73,9 @@ LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
-LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
-LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+-- A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
+LEFT JOIN rate labor_rate ON labor_rate.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN rate overhead_rate ON overhead_rate.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
 WHERE b.account_id = sqlc.arg('account_id')
   AND b.scanned_at IS NOT NULL
@@ -272,11 +275,13 @@ WHERE s.account_id = sqlc.arg('account_id');
 
 -- GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, when it has one. The department's own rate prices its changeovers; the account-wide setting is only the fallback.
 -- name: GetConstraintDepartmentLaborRate :one
-SELECT r.value
+-- A department written before its money columns reads its legacy rate row instead.
+SELECT d.labor_rate_amount, r.value AS legacy_labor_rate_value
 FROM department d
-JOIN rate r ON r.id = d.labor_rate_id
+LEFT JOIN rate r ON r.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = sqlc.arg('account_id')
-  AND d.id = sqlc.arg('department_id');
+  AND d.id = sqlc.arg('department_id')
+  AND (d.labor_rate_amount IS NOT NULL OR r.id IS NOT NULL);
 
 -- GetOpenOrderRequirements returns the outstanding quantity on every issued, unshipped order line, with the date it is due to ship.
 --
@@ -434,8 +439,10 @@ SELECT
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
     labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
-    labor_rate.value AS labor_rate,
-    overhead_rate.value AS overhead_rate,
+    ps.labor_rate_amount,
+    labor_rate.value AS legacy_labor_rate,
+    ps.overhead_rate_amount,
+    overhead_rate.value AS legacy_overhead_rate,
     pr.created_at AS run_created_at
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
@@ -449,8 +456,9 @@ LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
-LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
-LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+-- A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
+LEFT JOIN rate labor_rate ON labor_rate.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN rate overhead_rate ON overhead_rate.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
 WHERE b.account_id = sqlc.arg('account_id')
   AND b.scanned_at IS NOT NULL

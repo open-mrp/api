@@ -2483,18 +2483,20 @@ SELECT
     CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
     CAST(COALESCE(ltdu.ratio_numerator / ltdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_den_ratio,
     ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    lr.value AS labor_rate_value,
+    ps.labor_rate_amount,
+    lr.value AS legacy_labor_rate_value,
     CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
-    ohr.value AS overhead_rate_value,
+    ps.overhead_rate_amount,
+    ohr.value AS legacy_overhead_rate_value,
     CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio
 FROM production_step ps FORCE INDEX (PRIMARY)
 LEFT JOIN rate lt ON lt.id = ps.labor_time_id
 LEFT JOIN unit ltnu ON ltnu.id = lt.numerator_unit_id
 LEFT JOIN unit ltdu ON ltdu.id = lt.denominator_unit_id
-LEFT JOIN rate lr ON lr.id = ps.labor_rate_id
-LEFT JOIN unit lrdu ON lrdu.id = lr.denominator_unit_id
-LEFT JOIN rate ohr ON ohr.id = ps.overhead_rate_id
-LEFT JOIN unit ohrdu ON ohrdu.id = ohr.denominator_unit_id
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN unit lrdu ON lrdu.id = COALESCE(ps.labor_rate_per_unit_id, lr.denominator_unit_id)
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
+LEFT JOIN unit ohrdu ON ohrdu.id = COALESCE(ps.overhead_rate_per_unit_id, ohr.denominator_unit_id)
 WHERE ps.account_id = ?
   AND ps.id IN (/*SLICE:step_ids*/?)
 `
@@ -2505,21 +2507,24 @@ type ListProductionCostStepsParams struct {
 }
 
 type ListProductionCostStepsRow struct {
-	ID                   string
-	LevelingFactor       string
-	Allowances           string
-	LaborTimeValue       sql.NullString
-	LaborTimeNumRatio    string
-	LaborTimeDenRatio    string
-	LaborTimeDenUnitType sql.NullString
-	LaborRateValue       sql.NullString
-	LaborRateDenRatio    string
-	OverheadRateValue    sql.NullString
-	OverheadRateDenRatio string
+	ID                      string
+	LevelingFactor          string
+	Allowances              string
+	LaborTimeValue          sql.NullString
+	LaborTimeNumRatio       string
+	LaborTimeDenRatio       string
+	LaborTimeDenUnitType    sql.NullString
+	LaborRateAmount         sql.NullString
+	LegacyLaborRateValue    sql.NullString
+	LaborRateDenRatio       string
+	OverheadRateAmount      sql.NullString
+	LegacyOverheadRateValue sql.NullString
+	OverheadRateDenRatio    string
 }
 
 // The terms one run of each step is costed from. Labor time and the rates pricing it are each entered in whatever units suited whoever entered them — seconds a pair against dollars an hour — so every side carries its unit's base ratio.
 // By id: a window names a fraction of the account's steps, so reading all of them by the account key is the slower plan.
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) ListProductionCostSteps(ctx context.Context, arg ListProductionCostStepsParams) ([]ListProductionCostStepsRow, error) {
 	query := listProductionCostSteps
 	var queryParams []interface{}
@@ -2548,9 +2553,11 @@ func (q *Queries) ListProductionCostSteps(ctx context.Context, arg ListProductio
 			&i.LaborTimeNumRatio,
 			&i.LaborTimeDenRatio,
 			&i.LaborTimeDenUnitType,
-			&i.LaborRateValue,
+			&i.LaborRateAmount,
+			&i.LegacyLaborRateValue,
 			&i.LaborRateDenRatio,
-			&i.OverheadRateValue,
+			&i.OverheadRateAmount,
+			&i.LegacyOverheadRateValue,
 			&i.OverheadRateDenRatio,
 		); err != nil {
 			return nil, err

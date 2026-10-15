@@ -275,13 +275,15 @@ SELECT
     pi.sku AS produced_item_sku,
     pq.value AS produced_quantity_value,
     pu.abbreviation AS produced_unit_abbreviation,
-    lr.value AS labor_rate_value,
+    ps.labor_rate_amount,
+    lr.value AS legacy_labor_rate_value,
     lrnu.abbreviation AS labor_rate_currency_unit,
     lrdu.abbreviation AS labor_rate_time_unit,
     lt.value AS labor_time_value,
     ltnu.abbreviation AS labor_time_unit,
     ltdu.abbreviation AS labor_time_per_unit,
-    ohr.value AS overhead_rate_value,
+    ps.overhead_rate_amount,
+    ohr.value AS legacy_overhead_rate_value,
     ohrnu.abbreviation AS overhead_rate_currency_unit,
     ohrdu.abbreviation AS overhead_rate_time_unit,
     ps.created_at,
@@ -295,13 +297,13 @@ LEFT JOIN department d ON ps.department_id = d.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
 LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
 LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN unit lrdu ON lrdu.id = COALESCE(ps.labor_rate_per_unit_id, lr.denominator_unit_id)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
 LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN unit ohrdu ON ohrdu.id = COALESCE(ps.overhead_rate_per_unit_id, ohr.denominator_unit_id)
 WHERE ps.account_id = ?
 AND (
     ? IS NULL
@@ -328,13 +330,15 @@ type ExportProductionStepsRow struct {
 	ProducedItemSku          string
 	ProducedQuantityValue    string
 	ProducedUnitAbbreviation string
-	LaborRateValue           sql.NullString
+	LaborRateAmount          sql.NullString
+	LegacyLaborRateValue     sql.NullString
 	LaborRateCurrencyUnit    sql.NullString
 	LaborRateTimeUnit        sql.NullString
 	LaborTimeValue           sql.NullString
 	LaborTimeUnit            sql.NullString
 	LaborTimePerUnit         sql.NullString
-	OverheadRateValue        sql.NullString
+	OverheadRateAmount       sql.NullString
+	LegacyOverheadRateValue  sql.NullString
 	OverheadRateCurrencyUnit sql.NullString
 	OverheadRateTimeUnit     sql.NullString
 	CreatedAt                time.Time
@@ -343,6 +347,7 @@ type ExportProductionStepsRow struct {
 
 // Unpaginated by design; the caller passes a row cap as the limit. Search uses
 // LIKE rather than the list's fulltext MATCH so a partial name still filters.
+// The export still names each rate's currency by the unit of its legacy rate row, which every step has until CLEAN.
 func (q *Queries) ExportProductionSteps(ctx context.Context, arg ExportProductionStepsParams) ([]ExportProductionStepsRow, error) {
 	rows, err := q.db.QueryContext(ctx, exportProductionSteps,
 		arg.AccountID,
@@ -368,13 +373,15 @@ func (q *Queries) ExportProductionSteps(ctx context.Context, arg ExportProductio
 			&i.ProducedItemSku,
 			&i.ProducedQuantityValue,
 			&i.ProducedUnitAbbreviation,
-			&i.LaborRateValue,
+			&i.LaborRateAmount,
+			&i.LegacyLaborRateValue,
 			&i.LaborRateCurrencyUnit,
 			&i.LaborRateTimeUnit,
 			&i.LaborTimeValue,
 			&i.LaborTimeUnit,
 			&i.LaborTimePerUnit,
-			&i.OverheadRateValue,
+			&i.OverheadRateAmount,
+			&i.LegacyOverheadRateValue,
 			&i.OverheadRateCurrencyUnit,
 			&i.OverheadRateTimeUnit,
 			&i.CreatedAt,
@@ -653,12 +660,10 @@ SELECT
     pu.unit_dimension_code AS produced_unit_type,
     pu.ratio_numerator AS produced_unit_ratio_numerator,
     pu.ratio_denominator AS produced_unit_ratio_denominator,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrdu.id AS labor_rate_den_unit_id,
+    ps.labor_rate_amount, ps.labor_rate_currency, lr.value AS legacy_labor_rate_value, lrdu.id AS labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltdu.id AS labor_time_den_unit_id,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrdu.id AS overhead_rate_den_unit_id,
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ohr.value AS legacy_overhead_rate_value, ohrdu.id AS overhead_rate_per_unit_id,
     -- Base-unit ratios for the labor terms. Labor time is a duration and the rates are priced per duration, and the two are routinely entered in different ones — seconds a piece against dollars an hour — so the cost calculation needs both sides' ratios to bring them onto a common footing.
     CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
     -- Labor time is per some count of output — a piece, or a case of fifty — which need not be the unit the step produces in.
@@ -671,15 +676,13 @@ JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN unit lrdu ON lrdu.id = COALESCE(ps.labor_rate_per_unit_id, lr.denominator_unit_id)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
+LEFT JOIN unit ohrdu ON ohrdu.id = COALESCE(ps.overhead_rate_per_unit_id, ohr.denominator_unit_id)
 WHERE ps.id = ?
 AND ps.account_id = ?
 `
@@ -709,18 +712,18 @@ type GetProductionFlowStepRow struct {
 	ProducedUnitType             string
 	ProducedUnitRatioNumerator   string
 	ProducedUnitRatioDenominator string
-	LaborRateID                  sql.NullString
-	LaborRateValue               sql.NullString
-	LaborRateNumUnitID           sql.NullString
-	LaborRateDenUnitID           sql.NullString
+	LaborRateAmount              sql.NullString
+	LaborRateCurrency            sql.NullString
+	LegacyLaborRateValue         sql.NullString
+	LaborRatePerUnitID           sql.NullString
 	LaborTimeID                  sql.NullString
 	LaborTimeValue               sql.NullString
 	LaborTimeNumUnitID           sql.NullString
 	LaborTimeDenUnitID           sql.NullString
-	OverheadRateID               sql.NullString
-	OverheadRateValue            sql.NullString
-	OverheadRateNumUnitID        sql.NullString
-	OverheadRateDenUnitID        sql.NullString
+	OverheadRateAmount           sql.NullString
+	OverheadRateCurrency         sql.NullString
+	LegacyOverheadRateValue      sql.NullString
+	OverheadRatePerUnitID        sql.NullString
 	LaborTimeNumRatio            string
 	LaborTimeDenRatio            string
 	LaborTimeDenUnitType         sql.NullString
@@ -729,6 +732,7 @@ type GetProductionFlowStepRow struct {
 }
 
 // Fetches a production step with all fields needed for flow display.
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) GetProductionFlowStep(ctx context.Context, arg GetProductionFlowStepParams) (GetProductionFlowStepRow, error) {
 	row := q.db.QueryRowContext(ctx, getProductionFlowStep, arg.ID, arg.AccountID)
 	var i GetProductionFlowStepRow
@@ -752,18 +756,18 @@ func (q *Queries) GetProductionFlowStep(ctx context.Context, arg GetProductionFl
 		&i.ProducedUnitType,
 		&i.ProducedUnitRatioNumerator,
 		&i.ProducedUnitRatioDenominator,
-		&i.LaborRateID,
-		&i.LaborRateValue,
-		&i.LaborRateNumUnitID,
-		&i.LaborRateDenUnitID,
+		&i.LaborRateAmount,
+		&i.LaborRateCurrency,
+		&i.LegacyLaborRateValue,
+		&i.LaborRatePerUnitID,
 		&i.LaborTimeID,
 		&i.LaborTimeValue,
 		&i.LaborTimeNumUnitID,
 		&i.LaborTimeDenUnitID,
-		&i.OverheadRateID,
-		&i.OverheadRateValue,
-		&i.OverheadRateNumUnitID,
-		&i.OverheadRateDenUnitID,
+		&i.OverheadRateAmount,
+		&i.OverheadRateCurrency,
+		&i.LegacyOverheadRateValue,
+		&i.OverheadRatePerUnitID,
 		&i.LaborTimeNumRatio,
 		&i.LaborTimeDenRatio,
 		&i.LaborTimeDenUnitType,
@@ -976,30 +980,24 @@ SELECT
     p.updated_at AS production_updated_at,
     ss.id AS scanning_station_id,
     ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    ps.labor_rate_amount, ps.labor_rate_currency, ps.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value, lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
     ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ps.overhead_rate_per_unit_id,
+    ohr.value AS legacy_overhead_rate_value, ohr.denominator_unit_id AS legacy_overhead_rate_per_unit_id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 WHERE ps.id = ?
 AND ps.account_id = ?
 `
@@ -1010,54 +1008,49 @@ type GetProductionStepFullParams struct {
 }
 
 type GetProductionStepFullRow struct {
-	ID                       string
-	Name                     string
-	Notes                    sql.NullString
-	LevelingFactor           string
-	Allowances               string
-	DepartmentID             sql.NullString
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ProductionID             string
-	ProducedItemID           string
-	ProducedItemSku          string
-	ProducedItemDescription  sql.NullString
-	ProducedItemTypeCode     string
-	ProducedQuantityID       string
-	ProducedQuantityValue    string
-	ProducedUnitID           string
-	ProducedUnitAbbreviation string
-	ProducedUnitType         string
-	ProductionCreatedAt      time.Time
-	ProductionUpdatedAt      time.Time
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	LaborRateID              sql.NullString
-	LaborRateValue           sql.NullString
-	LaborRateNumUnitID       sql.NullString
-	LaborRateNumUnitAbbr     sql.NullString
-	LaborRateNumUnitType     sql.NullString
-	LaborRateDenUnitID       sql.NullString
-	LaborRateDenUnitAbbr     sql.NullString
-	LaborRateDenUnitType     sql.NullString
-	LaborTimeID              sql.NullString
-	LaborTimeValue           sql.NullString
-	LaborTimeNumUnitID       sql.NullString
-	LaborTimeNumUnitAbbr     sql.NullString
-	LaborTimeNumUnitType     sql.NullString
-	LaborTimeDenUnitID       sql.NullString
-	LaborTimeDenUnitAbbr     sql.NullString
-	LaborTimeDenUnitType     sql.NullString
-	OverheadRateID           sql.NullString
-	OverheadRateValue        sql.NullString
-	OverheadRateNumUnitID    sql.NullString
-	OverheadRateNumUnitAbbr  sql.NullString
-	OverheadRateNumUnitType  sql.NullString
-	OverheadRateDenUnitID    sql.NullString
-	OverheadRateDenUnitAbbr  sql.NullString
-	OverheadRateDenUnitType  sql.NullString
+	ID                          string
+	Name                        string
+	Notes                       sql.NullString
+	LevelingFactor              string
+	Allowances                  string
+	DepartmentID                sql.NullString
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	ProductionID                string
+	ProducedItemID              string
+	ProducedItemSku             string
+	ProducedItemDescription     sql.NullString
+	ProducedItemTypeCode        string
+	ProducedQuantityID          string
+	ProducedQuantityValue       string
+	ProducedUnitID              string
+	ProducedUnitAbbreviation    string
+	ProducedUnitType            string
+	ProductionCreatedAt         time.Time
+	ProductionUpdatedAt         time.Time
+	ScanningStationID           sql.NullString
+	ScanningStationName         sql.NullString
+	LaborRateAmount             sql.NullString
+	LaborRateCurrency           sql.NullString
+	LaborRatePerUnitID          sql.NullString
+	LegacyLaborRateValue        sql.NullString
+	LegacyLaborRatePerUnitID    sql.NullString
+	LaborTimeID                 sql.NullString
+	LaborTimeValue              sql.NullString
+	LaborTimeNumUnitID          sql.NullString
+	LaborTimeNumUnitAbbr        sql.NullString
+	LaborTimeNumUnitType        sql.NullString
+	LaborTimeDenUnitID          sql.NullString
+	LaborTimeDenUnitAbbr        sql.NullString
+	LaborTimeDenUnitType        sql.NullString
+	OverheadRateAmount          sql.NullString
+	OverheadRateCurrency        sql.NullString
+	OverheadRatePerUnitID       sql.NullString
+	LegacyOverheadRateValue     sql.NullString
+	LegacyOverheadRatePerUnitID sql.NullString
 }
 
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) GetProductionStepFull(ctx context.Context, arg GetProductionStepFullParams) (GetProductionStepFullRow, error) {
 	row := q.db.QueryRowContext(ctx, getProductionStepFull, arg.ID, arg.AccountID)
 	var i GetProductionStepFullRow
@@ -1084,14 +1077,11 @@ func (q *Queries) GetProductionStepFull(ctx context.Context, arg GetProductionSt
 		&i.ProductionUpdatedAt,
 		&i.ScanningStationID,
 		&i.ScanningStationName,
-		&i.LaborRateID,
-		&i.LaborRateValue,
-		&i.LaborRateNumUnitID,
-		&i.LaborRateNumUnitAbbr,
-		&i.LaborRateNumUnitType,
-		&i.LaborRateDenUnitID,
-		&i.LaborRateDenUnitAbbr,
-		&i.LaborRateDenUnitType,
+		&i.LaborRateAmount,
+		&i.LaborRateCurrency,
+		&i.LaborRatePerUnitID,
+		&i.LegacyLaborRateValue,
+		&i.LegacyLaborRatePerUnitID,
 		&i.LaborTimeID,
 		&i.LaborTimeValue,
 		&i.LaborTimeNumUnitID,
@@ -1100,14 +1090,11 @@ func (q *Queries) GetProductionStepFull(ctx context.Context, arg GetProductionSt
 		&i.LaborTimeDenUnitID,
 		&i.LaborTimeDenUnitAbbr,
 		&i.LaborTimeDenUnitType,
-		&i.OverheadRateID,
-		&i.OverheadRateValue,
-		&i.OverheadRateNumUnitID,
-		&i.OverheadRateNumUnitAbbr,
-		&i.OverheadRateNumUnitType,
-		&i.OverheadRateDenUnitID,
-		&i.OverheadRateDenUnitAbbr,
-		&i.OverheadRateDenUnitType,
+		&i.OverheadRateAmount,
+		&i.OverheadRateCurrency,
+		&i.OverheadRatePerUnitID,
+		&i.LegacyOverheadRateValue,
+		&i.LegacyOverheadRatePerUnitID,
 	)
 	return i, err
 }
@@ -1295,9 +1282,17 @@ const insertProductionStep = `-- name: InsertProductionStep :exec
 INSERT INTO production_step (
     id, name, notes, leveling_factor, allowances,
     labor_rate_id, labor_time_id, overhead_rate_id,
+    labor_rate_amount, labor_rate_currency, labor_rate_per_unit_id,
+    overhead_rate_amount, overhead_rate_currency, overhead_rate_per_unit_id,
     scanning_station_id, department_id, account_id,
     created_at, updated_at
 ) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -1315,17 +1310,23 @@ INSERT INTO production_step (
 `
 
 type InsertProductionStepParams struct {
-	ID                string
-	Name              string
-	Notes             sql.NullString
-	LevelingFactor    string
-	Allowances        string
-	LaborRateID       string
-	LaborTimeID       string
-	OverheadRateID    string
-	ScanningStationID sql.NullString
-	DepartmentID      sql.NullString
-	AccountID         string
+	ID                    string
+	Name                  string
+	Notes                 sql.NullString
+	LevelingFactor        string
+	Allowances            string
+	LaborRateID           string
+	LaborTimeID           string
+	OverheadRateID        string
+	LaborRateAmount       sql.NullString
+	LaborRateCurrency     sql.NullString
+	LaborRatePerUnitID    sql.NullString
+	OverheadRateAmount    sql.NullString
+	OverheadRateCurrency  sql.NullString
+	OverheadRatePerUnitID sql.NullString
+	ScanningStationID     sql.NullString
+	DepartmentID          sql.NullString
+	AccountID             string
 }
 
 func (q *Queries) InsertProductionStep(ctx context.Context, arg InsertProductionStepParams) error {
@@ -1338,6 +1339,12 @@ func (q *Queries) InsertProductionStep(ctx context.Context, arg InsertProduction
 		arg.LaborRateID,
 		arg.LaborTimeID,
 		arg.OverheadRateID,
+		arg.LaborRateAmount,
+		arg.LaborRateCurrency,
+		arg.LaborRatePerUnitID,
+		arg.OverheadRateAmount,
+		arg.OverheadRateCurrency,
+		arg.OverheadRatePerUnitID,
 		arg.ScanningStationID,
 		arg.DepartmentID,
 		arg.AccountID,
@@ -1489,30 +1496,24 @@ SELECT
     p.updated_at AS production_updated_at,
     ss.id AS scanning_station_id,
     ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    ps.labor_rate_amount, ps.labor_rate_currency, ps.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value, lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
     ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ps.overhead_rate_per_unit_id,
+    ohr.value AS legacy_overhead_rate_value, ohr.denominator_unit_id AS legacy_overhead_rate_per_unit_id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 WHERE ps.account_id = ?
 AND ps.id IN (/*SLICE:ids*/?)
 `
@@ -1523,55 +1524,50 @@ type ListProductionStepsByIDsParams struct {
 }
 
 type ListProductionStepsByIDsRow struct {
-	ID                       string
-	Name                     string
-	Notes                    sql.NullString
-	LevelingFactor           string
-	Allowances               string
-	DepartmentID             sql.NullString
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ProductionID             string
-	ProducedItemID           string
-	ProducedItemSku          string
-	ProducedItemDescription  sql.NullString
-	ProducedItemTypeCode     string
-	ProducedQuantityID       string
-	ProducedQuantityValue    string
-	ProducedUnitID           string
-	ProducedUnitAbbreviation string
-	ProducedUnitType         string
-	ProductionCreatedAt      time.Time
-	ProductionUpdatedAt      time.Time
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	LaborRateID              sql.NullString
-	LaborRateValue           sql.NullString
-	LaborRateNumUnitID       sql.NullString
-	LaborRateNumUnitAbbr     sql.NullString
-	LaborRateNumUnitType     sql.NullString
-	LaborRateDenUnitID       sql.NullString
-	LaborRateDenUnitAbbr     sql.NullString
-	LaborRateDenUnitType     sql.NullString
-	LaborTimeID              sql.NullString
-	LaborTimeValue           sql.NullString
-	LaborTimeNumUnitID       sql.NullString
-	LaborTimeNumUnitAbbr     sql.NullString
-	LaborTimeNumUnitType     sql.NullString
-	LaborTimeDenUnitID       sql.NullString
-	LaborTimeDenUnitAbbr     sql.NullString
-	LaborTimeDenUnitType     sql.NullString
-	OverheadRateID           sql.NullString
-	OverheadRateValue        sql.NullString
-	OverheadRateNumUnitID    sql.NullString
-	OverheadRateNumUnitAbbr  sql.NullString
-	OverheadRateNumUnitType  sql.NullString
-	OverheadRateDenUnitID    sql.NullString
-	OverheadRateDenUnitAbbr  sql.NullString
-	OverheadRateDenUnitType  sql.NullString
+	ID                          string
+	Name                        string
+	Notes                       sql.NullString
+	LevelingFactor              string
+	Allowances                  string
+	DepartmentID                sql.NullString
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	ProductionID                string
+	ProducedItemID              string
+	ProducedItemSku             string
+	ProducedItemDescription     sql.NullString
+	ProducedItemTypeCode        string
+	ProducedQuantityID          string
+	ProducedQuantityValue       string
+	ProducedUnitID              string
+	ProducedUnitAbbreviation    string
+	ProducedUnitType            string
+	ProductionCreatedAt         time.Time
+	ProductionUpdatedAt         time.Time
+	ScanningStationID           sql.NullString
+	ScanningStationName         sql.NullString
+	LaborRateAmount             sql.NullString
+	LaborRateCurrency           sql.NullString
+	LaborRatePerUnitID          sql.NullString
+	LegacyLaborRateValue        sql.NullString
+	LegacyLaborRatePerUnitID    sql.NullString
+	LaborTimeID                 sql.NullString
+	LaborTimeValue              sql.NullString
+	LaborTimeNumUnitID          sql.NullString
+	LaborTimeNumUnitAbbr        sql.NullString
+	LaborTimeNumUnitType        sql.NullString
+	LaborTimeDenUnitID          sql.NullString
+	LaborTimeDenUnitAbbr        sql.NullString
+	LaborTimeDenUnitType        sql.NullString
+	OverheadRateAmount          sql.NullString
+	OverheadRateCurrency        sql.NullString
+	OverheadRatePerUnitID       sql.NullString
+	LegacyOverheadRateValue     sql.NullString
+	LegacyOverheadRatePerUnitID sql.NullString
 }
 
 // The list's rows for a page of step IDs, chosen by the page query built in production_step_list_query.go.
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) ListProductionStepsByIDs(ctx context.Context, arg ListProductionStepsByIDsParams) ([]ListProductionStepsByIDsRow, error) {
 	query := listProductionStepsByIDs
 	var queryParams []interface{}
@@ -1615,14 +1611,11 @@ func (q *Queries) ListProductionStepsByIDs(ctx context.Context, arg ListProducti
 			&i.ProductionUpdatedAt,
 			&i.ScanningStationID,
 			&i.ScanningStationName,
-			&i.LaborRateID,
-			&i.LaborRateValue,
-			&i.LaborRateNumUnitID,
-			&i.LaborRateNumUnitAbbr,
-			&i.LaborRateNumUnitType,
-			&i.LaborRateDenUnitID,
-			&i.LaborRateDenUnitAbbr,
-			&i.LaborRateDenUnitType,
+			&i.LaborRateAmount,
+			&i.LaborRateCurrency,
+			&i.LaborRatePerUnitID,
+			&i.LegacyLaborRateValue,
+			&i.LegacyLaborRatePerUnitID,
 			&i.LaborTimeID,
 			&i.LaborTimeValue,
 			&i.LaborTimeNumUnitID,
@@ -1631,14 +1624,11 @@ func (q *Queries) ListProductionStepsByIDs(ctx context.Context, arg ListProducti
 			&i.LaborTimeDenUnitID,
 			&i.LaborTimeDenUnitAbbr,
 			&i.LaborTimeDenUnitType,
-			&i.OverheadRateID,
-			&i.OverheadRateValue,
-			&i.OverheadRateNumUnitID,
-			&i.OverheadRateNumUnitAbbr,
-			&i.OverheadRateNumUnitType,
-			&i.OverheadRateDenUnitID,
-			&i.OverheadRateDenUnitAbbr,
-			&i.OverheadRateDenUnitType,
+			&i.OverheadRateAmount,
+			&i.OverheadRateCurrency,
+			&i.OverheadRatePerUnitID,
+			&i.LegacyOverheadRateValue,
+			&i.LegacyOverheadRatePerUnitID,
 		); err != nil {
 			return nil, err
 		}
@@ -1707,22 +1697,34 @@ UPDATE production_step SET
     labor_rate_id = ?,
     labor_time_id = ?,
     overhead_rate_id = ?,
+    labor_rate_amount = ?,
+    labor_rate_currency = ?,
+    labor_rate_per_unit_id = ?,
+    overhead_rate_amount = ?,
+    overhead_rate_currency = ?,
+    overhead_rate_per_unit_id = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateProductionStepForBulkUpsertParams struct {
-	Name              string
-	Notes             sql.NullString
-	LevelingFactor    string
-	Allowances        string
-	ScanningStationID sql.NullString
-	LaborRateID       string
-	LaborTimeID       string
-	OverheadRateID    string
-	ID                string
-	AccountID         string
+	Name                  string
+	Notes                 sql.NullString
+	LevelingFactor        string
+	Allowances            string
+	ScanningStationID     sql.NullString
+	LaborRateID           string
+	LaborTimeID           string
+	OverheadRateID        string
+	LaborRateAmount       sql.NullString
+	LaborRateCurrency     sql.NullString
+	LaborRatePerUnitID    sql.NullString
+	OverheadRateAmount    sql.NullString
+	OverheadRateCurrency  sql.NullString
+	OverheadRatePerUnitID sql.NullString
+	ID                    string
+	AccountID             string
 }
 
 // Bulk upsert writes the full step row: rates are re-pointed at freshly inserted rate
@@ -1738,6 +1740,12 @@ func (q *Queries) UpdateProductionStepForBulkUpsert(ctx context.Context, arg Upd
 		arg.LaborRateID,
 		arg.LaborTimeID,
 		arg.OverheadRateID,
+		arg.LaborRateAmount,
+		arg.LaborRateCurrency,
+		arg.LaborRatePerUnitID,
+		arg.OverheadRateAmount,
+		arg.OverheadRateCurrency,
+		arg.OverheadRatePerUnitID,
 		arg.ID,
 		arg.AccountID,
 	)

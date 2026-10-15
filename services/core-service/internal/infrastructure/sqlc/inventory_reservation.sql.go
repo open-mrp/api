@@ -149,12 +149,14 @@ SELECT
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
-    uc.value AS unit_cost_value,
-    uc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    uc.denominator_unit_id AS unit_cost_denominator_unit_id
+    ir.unit_cost_amount,
+    ir.unit_cost_currency,
+    ir.unit_cost_per_unit_id,
+    uc.value AS legacy_unit_cost_value,
+    uc.denominator_unit_id AS legacy_unit_cost_per_unit_id
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-JOIN rate uc ON uc.id = ir.unit_cost_id
+LEFT JOIN rate uc ON uc.id = IF(ir.unit_cost_amount IS NULL, ir.unit_cost_id, NULL)
 WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
 AND ir.item_id = ?
 AND ir.status_code = 'available'
@@ -172,13 +174,15 @@ type FindReceiptsForAllocationParams struct {
 }
 
 type FindReceiptsForAllocationRow struct {
-	ID                        string
-	QuantityID                string
-	QuantityValue             string
-	UnitID                    string
-	UnitCostValue             string
-	UnitCostNumeratorUnitID   string
-	UnitCostDenominatorUnitID string
+	ID                      string
+	QuantityID              string
+	QuantityValue           string
+	UnitID                  string
+	UnitCostAmount          sql.NullString
+	UnitCostCurrency        sql.NullString
+	UnitCostPerUnitID       sql.NullString
+	LegacyUnitCostValue     sql.NullString
+	LegacyUnitCostPerUnitID sql.NullString
 }
 
 // FindReceiptsForAllocation lists the receipts an issue may draw from, oldest first.
@@ -194,7 +198,8 @@ type FindReceiptsForAllocationRow struct {
 //
 // The receipt's own unit cost comes back with it. What an allocation cost is the price the stock was
 // received at, not the item's price today, which is the whole reason the cost is copied onto the
-// receipt when it lands.
+// receipt when it lands. A receipt written before its money columns reads its legacy rate row instead;
+// a filled one never looks it up, so the lock takes no rate row with it.
 // Held stock counts as allocatable: consigned goods sit under a holder while another account owns
 // them, and excluding them makes the item look short when it is physically on the shelf.
 // An issue pinned to a location or lot may only draw from stock sitting there; an unpinned issue
@@ -221,9 +226,11 @@ func (q *Queries) FindReceiptsForAllocation(ctx context.Context, arg FindReceipt
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.UnitID,
-			&i.UnitCostValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostAmount,
+			&i.UnitCostCurrency,
+			&i.UnitCostPerUnitID,
+			&i.LegacyUnitCostValue,
+			&i.LegacyUnitCostPerUnitID,
 		); err != nil {
 			return nil, err
 		}
@@ -453,8 +460,15 @@ const insertInventoryAllocation = `-- name: InsertInventoryAllocation :exec
 INSERT INTO inventory_allocation (
     id, inventory_receipt_id, inventory_issue_id,
     quantity_id, unit_cost_id, total_cost_id,
+    unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id,
+    total_cost_amount, total_cost_currency,
     created_at, updated_at
 ) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -473,6 +487,11 @@ type InsertInventoryAllocationParams struct {
 	QuantityID         string
 	UnitCostID         string
 	TotalCostID        string
+	UnitCostAmount     sql.NullString
+	UnitCostCurrency   sql.NullString
+	UnitCostPerUnitID  sql.NullString
+	TotalCostAmount    sql.NullString
+	TotalCostCurrency  sql.NullString
 }
 
 func (q *Queries) InsertInventoryAllocation(ctx context.Context, arg InsertInventoryAllocationParams) error {
@@ -483,6 +502,11 @@ func (q *Queries) InsertInventoryAllocation(ctx context.Context, arg InsertInven
 		arg.QuantityID,
 		arg.UnitCostID,
 		arg.TotalCostID,
+		arg.UnitCostAmount,
+		arg.UnitCostCurrency,
+		arg.UnitCostPerUnitID,
+		arg.TotalCostAmount,
+		arg.TotalCostCurrency,
 	)
 	return err
 }

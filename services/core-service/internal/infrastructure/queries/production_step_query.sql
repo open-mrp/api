@@ -163,30 +163,25 @@ SELECT
     p.updated_at AS production_updated_at,
     ss.id AS scanning_station_id,
     ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    ps.labor_rate_amount, ps.labor_rate_currency, ps.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value, lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
     ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ps.overhead_rate_per_unit_id,
+    ohr.value AS legacy_overhead_rate_value, ohr.denominator_unit_id AS legacy_overhead_rate_per_unit_id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+-- A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 WHERE ps.account_id = sqlc.arg('account_id')
 AND ps.id IN (sqlc.slice('ids'));
 
@@ -214,30 +209,25 @@ SELECT
     p.updated_at AS production_updated_at,
     ss.id AS scanning_station_id,
     ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
+    ps.labor_rate_amount, ps.labor_rate_currency, ps.labor_rate_per_unit_id,
+    lr.value AS legacy_labor_rate_value, lr.denominator_unit_id AS legacy_labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
     ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ps.overhead_rate_per_unit_id,
+    ohr.value AS legacy_overhead_rate_value, ohr.denominator_unit_id AS legacy_overhead_rate_per_unit_id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+-- A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 WHERE ps.id = sqlc.arg('id')
 AND ps.account_id = sqlc.arg('account_id');
 
@@ -263,6 +253,8 @@ WHERE m.production_step_id = sqlc.arg('production_step_id');
 INSERT INTO production_step (
     id, name, notes, leveling_factor, allowances,
     labor_rate_id, labor_time_id, overhead_rate_id,
+    labor_rate_amount, labor_rate_currency, labor_rate_per_unit_id,
+    overhead_rate_amount, overhead_rate_currency, overhead_rate_per_unit_id,
     scanning_station_id, department_id, account_id,
     created_at, updated_at
 ) VALUES (
@@ -274,6 +266,12 @@ INSERT INTO production_step (
     sqlc.arg('labor_rate_id'),
     sqlc.arg('labor_time_id'),
     sqlc.arg('overhead_rate_id'),
+    sqlc.arg('labor_rate_amount'),
+    sqlc.arg('labor_rate_currency'),
+    sqlc.arg('labor_rate_per_unit_id'),
+    sqlc.arg('overhead_rate_amount'),
+    sqlc.arg('overhead_rate_currency'),
+    sqlc.arg('overhead_rate_per_unit_id'),
     sqlc.narg('scanning_station_id'),
     sqlc.narg('department_id'),
     sqlc.arg('account_id'),
@@ -405,6 +403,12 @@ UPDATE production_step SET
     labor_rate_id = sqlc.arg('labor_rate_id'),
     labor_time_id = sqlc.arg('labor_time_id'),
     overhead_rate_id = sqlc.arg('overhead_rate_id'),
+    labor_rate_amount = sqlc.arg('labor_rate_amount'),
+    labor_rate_currency = sqlc.arg('labor_rate_currency'),
+    labor_rate_per_unit_id = sqlc.arg('labor_rate_per_unit_id'),
+    overhead_rate_amount = sqlc.arg('overhead_rate_amount'),
+    overhead_rate_currency = sqlc.arg('overhead_rate_currency'),
+    overhead_rate_per_unit_id = sqlc.arg('overhead_rate_per_unit_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -448,13 +452,15 @@ SELECT
     pi.sku AS produced_item_sku,
     pq.value AS produced_quantity_value,
     pu.abbreviation AS produced_unit_abbreviation,
-    lr.value AS labor_rate_value,
+    ps.labor_rate_amount,
+    lr.value AS legacy_labor_rate_value,
     lrnu.abbreviation AS labor_rate_currency_unit,
     lrdu.abbreviation AS labor_rate_time_unit,
     lt.value AS labor_time_value,
     ltnu.abbreviation AS labor_time_unit,
     ltdu.abbreviation AS labor_time_per_unit,
-    ohr.value AS overhead_rate_value,
+    ps.overhead_rate_amount,
+    ohr.value AS legacy_overhead_rate_value,
     ohrnu.abbreviation AS overhead_rate_currency_unit,
     ohrdu.abbreviation AS overhead_rate_time_unit,
     ps.created_at,
@@ -466,15 +472,16 @@ JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
 LEFT JOIN department d ON ps.department_id = d.id
 LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
+-- The export still names each rate's currency by the unit of its legacy rate row, which every step has until CLEAN.
 LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
 LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN unit lrdu ON lrdu.id = COALESCE(ps.labor_rate_per_unit_id, lr.denominator_unit_id)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
 LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN unit ohrdu ON ohrdu.id = COALESCE(ps.overhead_rate_per_unit_id, ohr.denominator_unit_id)
 WHERE ps.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -514,12 +521,10 @@ SELECT
     pu.unit_dimension_code AS produced_unit_type,
     pu.ratio_numerator AS produced_unit_ratio_numerator,
     pu.ratio_denominator AS produced_unit_ratio_denominator,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrdu.id AS labor_rate_den_unit_id,
+    ps.labor_rate_amount, ps.labor_rate_currency, lr.value AS legacy_labor_rate_value, lrdu.id AS labor_rate_per_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
     ltnu.id AS labor_time_num_unit_id, ltdu.id AS labor_time_den_unit_id,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrdu.id AS overhead_rate_den_unit_id,
+    ps.overhead_rate_amount, ps.overhead_rate_currency, ohr.value AS legacy_overhead_rate_value, ohrdu.id AS overhead_rate_per_unit_id,
     -- Base-unit ratios for the labor terms. Labor time is a duration and the rates are priced per duration, and the two are routinely entered in different ones — seconds a piece against dollars an hour — so the cost calculation needs both sides' ratios to bring them onto a common footing.
     CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
     -- Labor time is per some count of output — a piece, or a case of fifty — which need not be the unit the step produces in.
@@ -532,14 +537,13 @@ JOIN production p ON p.production_step_id = ps.id
 JOIN item pi ON p.item_id = pi.id
 JOIN quantity pq ON p.quantity_id = pq.id
 JOIN unit pu ON pq.unit_id = pu.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+-- A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
+LEFT JOIN rate lr ON lr.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN unit lrdu ON lrdu.id = COALESCE(ps.labor_rate_per_unit_id, lr.denominator_unit_id)
 LEFT JOIN rate lt ON ps.labor_time_id = lt.id
 LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
 LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+LEFT JOIN rate ohr ON ohr.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
+LEFT JOIN unit ohrdu ON ohrdu.id = COALESCE(ps.overhead_rate_per_unit_id, ohr.denominator_unit_id)
 WHERE ps.id = sqlc.arg('id')
 AND ps.account_id = sqlc.arg('account_id');

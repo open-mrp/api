@@ -1,7 +1,7 @@
 -- name: InsertInventoryReceipt :exec
 INSERT INTO inventory_receipt (
     id, owner_account_id, holder_account_id, item_id,
-    quantity_id, unit_cost_id, status_code,
+    quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, status_code,
     batch_id, storage_location_id, lot_id,
     received_at, created_at, updated_at
 ) VALUES (
@@ -11,6 +11,9 @@ INSERT INTO inventory_receipt (
     sqlc.arg('item_id'),
     sqlc.arg('quantity_id'),
     sqlc.arg('unit_cost_id'),
+    sqlc.arg('unit_cost_amount'),
+    sqlc.arg('unit_cost_currency'),
+    sqlc.arg('unit_cost_per_unit_id'),
     'available',
     sqlc.narg('batch_id'),
     sqlc.narg('storage_location_id'),

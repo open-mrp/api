@@ -82,6 +82,11 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 		return fmt.Errorf("copy seeded line quantities: %w", err)
 	}
 
+	// Its money is written the same way, as legacy rows only.
+	if err := syncAccountMoneyColumns(ctx, tx, accountID); err != nil {
+		return fmt.Errorf("copy seeded money columns: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit seed tx: %w", err)
 	}

@@ -101,18 +101,21 @@ INSERT INTO inventory_issue (
 --
 -- The receipt's own unit cost comes back with it. What an allocation cost is the price the stock was
 -- received at, not the item's price today, which is the whole reason the cost is copied onto the
--- receipt when it lands.
+-- receipt when it lands. A receipt written before its money columns reads its legacy rate row instead;
+-- a filled one never looks it up, so the lock takes no rate row with it.
 SELECT
     ir.id,
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
-    uc.value AS unit_cost_value,
-    uc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    uc.denominator_unit_id AS unit_cost_denominator_unit_id
+    ir.unit_cost_amount,
+    ir.unit_cost_currency,
+    ir.unit_cost_per_unit_id,
+    uc.value AS legacy_unit_cost_value,
+    uc.denominator_unit_id AS legacy_unit_cost_per_unit_id
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-JOIN rate uc ON uc.id = ir.unit_cost_id
+LEFT JOIN rate uc ON uc.id = IF(ir.unit_cost_amount IS NULL, ir.unit_cost_id, NULL)
 -- Held stock counts as allocatable: consigned goods sit under a holder while another account owns
 -- them, and excluding them makes the item look short when it is physically on the shelf.
 WHERE (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
@@ -279,6 +282,8 @@ AND ir.status_code = 'available';
 INSERT INTO inventory_allocation (
     id, inventory_receipt_id, inventory_issue_id,
     quantity_id, unit_cost_id, total_cost_id,
+    unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id,
+    total_cost_amount, total_cost_currency,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'),
@@ -287,6 +292,11 @@ INSERT INTO inventory_allocation (
     sqlc.arg('quantity_id'),
     sqlc.arg('unit_cost_id'),
     sqlc.arg('total_cost_id'),
+    sqlc.arg('unit_cost_amount'),
+    sqlc.arg('unit_cost_currency'),
+    sqlc.arg('unit_cost_per_unit_id'),
+    sqlc.arg('total_cost_amount'),
+    sqlc.arg('total_cost_currency'),
     NOW(3),
     NOW(3)
 );

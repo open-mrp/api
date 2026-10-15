@@ -515,7 +515,7 @@ func (r *inventoryReservationRepo) receiptUnitRatios(ctx context.Context, receip
 	unitIDs := make([]string, 0, len(receipts)*2+len(extra))
 	unitIDs = append(unitIDs, extra...)
 	for _, receipt := range receipts {
-		unitIDs = append(unitIDs, receipt.UnitID, receipt.UnitCostDenominatorUnitID)
+		unitIDs = append(unitIDs, receipt.UnitID, receiptUnitCost(receipt).PerUnitID)
 	}
 	return r.unitRatios(ctx, unitIDs)
 }
@@ -535,6 +535,8 @@ func (r *inventoryReservationRepo) receiptUnitRatios(ctx context.Context, receip
 func (r *inventoryReservationRepo) drawFromReceipts(ctx context.Context, issueID string, demand, demandRatio decimal.Decimal, receipts []sqlc.FindReceiptsForAllocationRow, ratios map[string]decimal.Decimal) (decimal.Decimal, *apierror.APIError) {
 	remaining := demand
 	var exhaustedReceiptIDs []string
+	// The unit the legacy cost rows are written in; looked up on the first allocation, after every lock.
+	var legacyCurrencyUnitID string
 
 	for _, receipt := range receipts {
 		if remaining.LessThanOrEqual(decimal.Zero) {
@@ -624,15 +626,23 @@ func (r *inventoryReservationRepo) drawFromReceipts(ctx context.Context, issueID
 
 		// The allocation is costed at what the stock it draws on was received at, copied off the
 		// receipt. Writing zero here left the ledger saying every allocated unit cost nothing.
-		unitCost, parseErr := decimal.NewFromString(receipt.UnitCostValue)
+		receiptCost := receiptUnitCost(receipt)
+		unitCost, parseErr := decimal.NewFromString(receiptCost.Amount)
 		if parseErr != nil {
 			return decimal.Zero, apierror.NewInternalError(parseErr, "Invalid receipt unit cost value.")
+		}
+		if legacyCurrencyUnitID == "" {
+			unitID, err := r.queries.GetCurrencyBaseUnit(ctx)
+			if err != nil {
+				return decimal.Zero, db.MapSQLError(err)
+			}
+			legacyCurrencyUnitID = unitID
 		}
 		if err := r.queries.InsertRateForInventory(ctx, sqlc.InsertRateForInventoryParams{
 			ID:                allocUnitCostID,
 			Value:             unitCost.String(),
-			NumeratorUnitID:   receipt.UnitCostNumeratorUnitID,
-			DenominatorUnitID: receipt.UnitCostDenominatorUnitID,
+			NumeratorUnitID:   legacyCurrencyUnitID,
+			DenominatorUnitID: receiptCost.PerUnitID,
 		}); err != nil {
 			return decimal.Zero, db.MapSQLError(err)
 		}
@@ -643,24 +653,29 @@ func (r *inventoryReservationRepo) drawFromReceipts(ctx context.Context, issueID
 		//
 		// A rate is priced per its denominator unit, so the quantity has to be expressed in that unit
 		// before it is multiplied: $6/lb against 9,071 grams is $54,431 otherwise.
-		costQty := convertMeasure(allocQty, receiptRatio, ratios[receipt.UnitCostDenominatorUnitID])
+		costQty := convertMeasure(allocQty, receiptRatio, ratios[receiptCost.PerUnitID])
+		totalCost := domain.Money{Amount: costQty.Mul(unitCost).String(), Currency: receiptCost.Currency}
 		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 			ID:     allocTotalCostID,
-			Value:  costQty.Mul(unitCost).String(),
-			UnitID: receipt.UnitCostNumeratorUnitID,
+			Value:  totalCost.Amount,
+			UnitID: legacyCurrencyUnitID,
 		}); err != nil {
 			return decimal.Zero, db.MapSQLError(err)
 		}
 
 		// Insert the allocation
-		if err := r.queries.InsertInventoryAllocation(ctx, sqlc.InsertInventoryAllocationParams{
+		allocation := sqlc.InsertInventoryAllocationParams{
 			ID:                 allocationID,
 			InventoryReceiptID: receipt.ID,
 			InventoryIssueID:   issueID,
 			QuantityID:         allocQtyID,
 			UnitCostID:         allocUnitCostID,
 			TotalCostID:        allocTotalCostID,
-		}); err != nil {
+		}
+		allocCost := domain.UnitPrice{Amount: unitCost.String(), Currency: receiptCost.Currency, PerUnitID: receiptCost.PerUnitID}
+		allocation.UnitCostAmount, allocation.UnitCostCurrency, allocation.UnitCostPerUnitID = unitPriceParams(&allocCost)
+		allocation.TotalCostAmount, allocation.TotalCostCurrency = moneyParams(&totalCost)
+		if err := r.queries.InsertInventoryAllocation(ctx, allocation); err != nil {
 			return decimal.Zero, db.MapSQLError(err)
 		}
 
@@ -1009,4 +1024,13 @@ func (r *inventoryReservationRepo) releaseReservedIssues(ctx context.Context, sc
 	}
 
 	return itemIDs, nil
+}
+
+// receiptUnitCost is what a receipt's stock was received at.
+func receiptUnitCost(row sqlc.FindReceiptsForAllocationRow) domain.UnitPrice {
+	if p := unitPriceFromColumns(row.UnitCostAmount, row.UnitCostCurrency, row.UnitCostPerUnitID,
+		row.LegacyUnitCostValue, row.LegacyUnitCostPerUnitID); p != nil {
+		return *p
+	}
+	return domain.UnitPrice{}
 }

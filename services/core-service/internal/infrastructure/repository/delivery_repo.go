@@ -271,7 +271,7 @@ func (r *deliveryRepoImpl) CreateDelivery(ctx context.Context, id, number, sales
 	return nil
 }
 
-func (r *deliveryRepoImpl) CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError {
+func (r *deliveryRepoImpl) CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, unitCost domain.UnitPrice, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError {
 	ctx, span := deliveryRepoTracer.Start(ctx, "repository.delivery.create_line")
 	defer span.End()
 
@@ -292,7 +292,7 @@ func (r *deliveryRepoImpl) CreateDeliveryLine(ctx context.Context, id, deliveryI
 		rejectedAtNull = gosql.NullTime{Time: *rejectedAt, Valid: true}
 	}
 
-	err := r.queries.InsertDeliveryLine(ctx, sqlc.InsertDeliveryLineParams{
+	insert := sqlc.InsertDeliveryLineParams{
 		ID:                   id,
 		DeliveryID:           deliveryID,
 		ReceivingOrderLineID: receivingOrderLineID,
@@ -302,7 +302,9 @@ func (r *deliveryRepoImpl) CreateDeliveryLine(ctx context.Context, id, deliveryI
 		LotID:                lotNull,
 		AcceptedAt:           acceptedAtNull,
 		RejectedAt:           rejectedAtNull,
-	})
+	}
+	insert.UnitCostAmount, insert.UnitCostCurrency, insert.UnitCostPerUnitID = unitPriceParams(&unitCost)
+	err := r.queries.InsertDeliveryLine(ctx, insert)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -336,22 +338,18 @@ func mapDeliveryListRow(row sqlc.GetDeliveriesByIDsRow) *domain.DeliverySummary 
 
 func mapDeliveryLineRow(row sqlc.ListDeliveryLinesRow) *domain.DeliveryLine {
 	line := &domain.DeliveryLine{
-		ID:                                  row.ID,
-		QuantityID:                          row.QuantityID,
-		QuantityValue:                       row.QuantityValue,
-		QuantityUnitID:                      row.QuantityUnitID,
-		QuantityUnitAbbreviation:            row.QuantityUnitAbbreviation,
-		OrderLineID:                         row.OrderLineID,
-		UnitCostID:                          row.UnitCostID,
-		UnitCostValue:                       row.UnitCostValue,
-		UnitCostNumeratorUnitID:             row.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitID:           row.UnitCostDenominatorUnitID,
-		UnitCostNumeratorUnitAbbreviation:   row.UnitCostNumeratorUnitAbbreviation,
-		UnitCostDenominatorUnitAbbreviation: row.UnitCostDenominatorUnitAbbreviation,
-		UnitCostCreatedAt:                   row.UnitCostCreatedAt,
-		UnitCostUpdatedAt:                   row.UnitCostUpdatedAt,
-		CreatedAt:                           row.CreatedAt,
-		UpdatedAt:                           row.UpdatedAt,
+		ID:                       row.ID,
+		QuantityID:               row.QuantityID,
+		QuantityValue:            row.QuantityValue,
+		QuantityUnitID:           row.QuantityUnitID,
+		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
+		OrderLineID:              row.OrderLineID,
+		CreatedAt:                row.CreatedAt,
+		UpdatedAt:                row.UpdatedAt,
+	}
+	if unitCost := unitPriceFromColumns(row.UnitCostAmount, row.UnitCostCurrency, row.UnitCostPerUnitID,
+		row.LegacyUnitCostValue, row.LegacyUnitCostPerUnitID); unitCost != nil {
+		line.UnitCost = *unitCost
 	}
 
 	if row.AcceptedAt.Valid {

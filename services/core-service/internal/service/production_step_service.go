@@ -194,27 +194,29 @@ func (s *productionStepSvcImpl) CreateProductionStep(ctx context.Context, params
 			txRepo := txSvc.repos.NewProductionStepRepo()
 			txUnitRepo := txSvc.repos.NewUnitRepo()
 
-			// Validate cost-typed rates: numerator must be currency, denominator must not. labor_time is a time-per-unit rate (not money), so it's exempt.
-			if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+			// The cost rates must be priced per a unit that is not a currency. labor_time is a time-per-unit rate (not money), so it's exempt.
+			legacyLaborRate, apiErr := validatedLegacyCurrencyPrice(txCtx, txUnitRepo, params.LaborRate, "labor_rate")
+			if apiErr != nil {
 				return apiErr
 			}
-			if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.OverheadRate.NumeratorUnitID, params.OverheadRate.DenominatorUnitID, "overhead_rate"); apiErr != nil {
+			legacyOverheadRate, apiErr := validatedLegacyCurrencyPrice(txCtx, txUnitRepo, params.OverheadRate, "overhead_rate")
+			if apiErr != nil {
 				return apiErr
 			}
 
 			// Insert rates.
-			if apiErr := txRepo.InsertRate(txCtx, laborRateID, params.LaborRate); apiErr != nil {
+			if apiErr := txRepo.InsertRate(txCtx, laborRateID, legacyLaborRate); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txRepo.InsertRate(txCtx, laborTimeID, params.LaborTime); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txRepo.InsertRate(txCtx, overheadRateID, params.OverheadRate); apiErr != nil {
+			if apiErr := txRepo.InsertRate(txCtx, overheadRateID, legacyOverheadRate); apiErr != nil {
 				return apiErr
 			}
 
 			// Insert the production step.
-			if apiErr := txRepo.InsertStep(txCtx, stepID, params.Name, params.Notes, params.LevelingFactor, params.Allowances, laborRateID, laborTimeID, overheadRateID, params.ScanningStationID, params.DepartmentID, params.AccountID); apiErr != nil {
+			if apiErr := txRepo.InsertStep(txCtx, stepID, params.Name, params.Notes, params.LevelingFactor, params.Allowances, laborRateID, laborTimeID, overheadRateID, params.LaborRate, params.OverheadRate, params.ScanningStationID, params.DepartmentID, params.AccountID); apiErr != nil {
 				return apiErr
 			}
 

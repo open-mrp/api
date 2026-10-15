@@ -694,8 +694,8 @@ func (q *Queries) InsertDelivery(ctx context.Context, arg InsertDeliveryParams) 
 }
 
 const insertDeliveryLine = `-- name: InsertDeliveryLine :exec
-INSERT INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, storage_location_id, lot_id, accepted_at, rejected_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, storage_location_id, lot_id, accepted_at, rejected_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type InsertDeliveryLineParams struct {
@@ -704,6 +704,9 @@ type InsertDeliveryLineParams struct {
 	ReceivingOrderLineID string
 	QuantityID           string
 	UnitCostID           string
+	UnitCostAmount       sql.NullString
+	UnitCostCurrency     sql.NullString
+	UnitCostPerUnitID    sql.NullString
 	StorageLocationID    sql.NullString
 	LotID                sql.NullString
 	AcceptedAt           sql.NullTime
@@ -717,6 +720,9 @@ func (q *Queries) InsertDeliveryLine(ctx context.Context, arg InsertDeliveryLine
 		arg.ReceivingOrderLineID,
 		arg.QuantityID,
 		arg.UnitCostID,
+		arg.UnitCostAmount,
+		arg.UnitCostCurrency,
+		arg.UnitCostPerUnitID,
 		arg.StorageLocationID,
 		arg.LotID,
 		arg.AcceptedAt,
@@ -728,10 +734,13 @@ func (q *Queries) InsertDeliveryLine(ctx context.Context, arg InsertDeliveryLine
 const insertInventoryReceiptForDelivery = `-- name: InsertInventoryReceiptForDelivery :exec
 INSERT INTO inventory_receipt (
     id, owner_account_id, holder_account_id, item_id,
-    quantity_id, unit_cost_id, status_code,
+    quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, status_code,
     storage_location_id, lot_id, order_id,
     received_at, created_at, updated_at
 ) VALUES (
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -754,6 +763,9 @@ type InsertInventoryReceiptForDeliveryParams struct {
 	ItemID            string
 	QuantityID        string
 	UnitCostID        string
+	UnitCostAmount    sql.NullString
+	UnitCostCurrency  sql.NullString
+	UnitCostPerUnitID sql.NullString
 	StorageLocationID sql.NullString
 	LotID             sql.NullString
 	OrderID           sql.NullString
@@ -767,6 +779,9 @@ func (q *Queries) InsertInventoryReceiptForDelivery(ctx context.Context, arg Ins
 		arg.ItemID,
 		arg.QuantityID,
 		arg.UnitCostID,
+		arg.UnitCostAmount,
+		arg.UnitCostCurrency,
+		arg.UnitCostPerUnitID,
 		arg.StorageLocationID,
 		arg.LotID,
 		arg.OrderID,

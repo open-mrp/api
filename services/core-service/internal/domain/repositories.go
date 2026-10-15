@@ -778,7 +778,9 @@ type ConsumptionRepo interface {
 type ProductionStepRepo interface {
 	List(ctx context.Context, params ListProductionStepsParams) (*ListProductionStepsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, id string) (*ProductionStep, *apierror.APIError)
-	InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, scanningStationID, departmentID *string, accountID string) *apierror.APIError
+	// InsertStep writes a step whose labor and overhead rates are laborRate and overheadRate; laborRateID and
+	// overheadRateID are the legacy rate rows holding them too.
+	InsertStep(ctx context.Context, id, name string, notes *string, levelingFactor, allowances, laborRateID, laborTimeID, overheadRateID string, laborRate, overheadRate UnitPrice, scanningStationID, departmentID *string, accountID string) *apierror.APIError
 	Update(ctx context.Context, params UpdateProductionStepParams) *apierror.APIError
 	Delete(ctx context.Context, accountID, id string) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
@@ -1350,7 +1352,7 @@ type DeliveryRepo interface {
 	Get(ctx context.Context, params GetDeliveryParams) (*Delivery, *apierror.APIError)
 	CountByPurchaseOrder(ctx context.Context, accountID, purchaseOrderID string) (int64, *apierror.APIError)
 	CreateDelivery(ctx context.Context, id, number, salesOrderID, accountID, statusCode string, acceptedAt, rejectedAt *time.Time) *apierror.APIError
-	CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError
+	CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, unitCost UnitPrice, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError
 }
 
 type EmailLogRepo interface {
@@ -1598,7 +1600,7 @@ type ReceivingOrderRepo interface {
 	UpsertLot(ctx context.Context, lotID, accountID, itemID, lotNumber string) (string, *apierror.APIError)
 	// LockItemForLedger takes the item's ordering root; ledgerlock.Acquire calls it. See docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
 	LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError
-	InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError
+	InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, unitCost UnitPrice, storageLocationID, lotID, orderID *string) *apierror.APIError
 	MarkPurchaseOrderFulfilled(ctx context.Context, purchaseOrderID, accountID string) *apierror.APIError
 	GetAllocationSumForIssue(ctx context.Context, issueID string) (string, *apierror.APIError)
 	HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)

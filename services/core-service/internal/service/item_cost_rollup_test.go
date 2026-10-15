@@ -81,10 +81,10 @@ func newCostRollupHarness(t *testing.T, stubs rolloutStubs) *costRollupHarness {
 		step.LaborTime = &domain.FlowRate{Value: stubs.laborTime, NumeratorRatio: stubs.laborTimeRatio}
 	}
 	if stubs.laborRate != "" {
-		step.LaborRate = &domain.FlowRate{Value: stubs.laborRate, DenominatorRatio: stubs.laborRateRatio}
+		step.LaborRate = &domain.FlowPrice{UnitPrice: domain.UnitPrice{Amount: stubs.laborRate}, PerUnitRatio: stubs.laborRateRatio}
 	}
 	if stubs.overheadRate != "" {
-		step.OverheadRate = &domain.FlowRate{Value: stubs.overheadRate, DenominatorRatio: stubs.overheadRatio}
+		step.OverheadRate = &domain.FlowPrice{UnitPrice: domain.UnitPrice{Amount: stubs.overheadRate}, PerUnitRatio: stubs.overheadRatio}
 	}
 
 	flowRepo := repositorymock.NewMockProductionFlowRepo(ctrl)

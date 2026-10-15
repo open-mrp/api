@@ -451,10 +451,13 @@ func (q *Queries) InsertInventoryLog(ctx context.Context, arg InsertInventoryLog
 const insertInventoryReceipt = `-- name: InsertInventoryReceipt :exec
 INSERT INTO inventory_receipt (
     id, owner_account_id, holder_account_id, item_id,
-    quantity_id, unit_cost_id, status_code,
+    quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, status_code,
     batch_id, storage_location_id, lot_id,
     received_at, created_at, updated_at
 ) VALUES (
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -478,6 +481,9 @@ type InsertInventoryReceiptParams struct {
 	ItemID            string
 	QuantityID        string
 	UnitCostID        string
+	UnitCostAmount    sql.NullString
+	UnitCostCurrency  sql.NullString
+	UnitCostPerUnitID sql.NullString
 	BatchID           sql.NullString
 	StorageLocationID sql.NullString
 	LotID             sql.NullString
@@ -491,6 +497,9 @@ func (q *Queries) InsertInventoryReceipt(ctx context.Context, arg InsertInventor
 		arg.ItemID,
 		arg.QuantityID,
 		arg.UnitCostID,
+		arg.UnitCostAmount,
+		arg.UnitCostCurrency,
+		arg.UnitCostPerUnitID,
 		arg.BatchID,
 		arg.StorageLocationID,
 		arg.LotID,

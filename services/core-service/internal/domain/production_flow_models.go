@@ -22,11 +22,18 @@ type ProductionFlowStep struct {
 	MachineIDs        []string
 	LevelingFactor    string
 	Allowances        string
-	LaborRate         *FlowRate
+	LaborRate         *FlowPrice
 	LaborTime         *FlowRate
-	OverheadRate      *FlowRate
+	OverheadRate      *FlowPrice
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+}
+
+// FlowPrice is a step's labor or overhead rate, with what its per unit is in its dimension's base unit: the rate is
+// priced per a duration that is rarely the one labor time is entered in.
+type FlowPrice struct {
+	UnitPrice
+	PerUnitRatio string
 }
 
 // FlowRate represents a rate value with numerator and denominator unit references.

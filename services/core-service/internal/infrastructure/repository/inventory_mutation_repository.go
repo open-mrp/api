@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
@@ -91,7 +92,7 @@ func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params doma
 			batchID = sql.NullString{String: *params.BatchID, Valid: true}
 		}
 
-		if err := r.queries.InsertInventoryReceipt(ctx, sqlc.InsertInventoryReceiptParams{
+		insert := sqlc.InsertInventoryReceiptParams{
 			ID:              receiptID,
 			OwnerAccountID:  params.AccountID,
 			HolderAccountID: params.AccountID,
@@ -99,7 +100,9 @@ func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params doma
 			QuantityID:      quantityID,
 			UnitCostID:      rateID,
 			BatchID:         batchID,
-		}); err != nil {
+		}
+		insert.UnitCostAmount, insert.UnitCostCurrency, insert.UnitCostPerUnitID = unitPriceParams(itemUnitCost(costRow))
+		if err := r.queries.InsertInventoryReceipt(ctx, insert); err != nil {
 			return apierror.NewInternalError(err, "Failed to insert inventory receipt.")
 		}
 	} else {
@@ -200,7 +203,7 @@ func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, scop
 		lotID = sql.NullString{String: *params.LotID, Valid: true}
 	}
 
-	if err := r.queries.InsertInventoryReceipt(ctx, sqlc.InsertInventoryReceiptParams{
+	insert := sqlc.InsertInventoryReceiptParams{
 		ID:                receiptID,
 		OwnerAccountID:    ownerAccountID,
 		HolderAccountID:   holderAccountID,
@@ -209,7 +212,9 @@ func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, scop
 		UnitCostID:        rateID,
 		StorageLocationID: locationID,
 		LotID:             lotID,
-	}); err != nil {
+	}
+	insert.UnitCostAmount, insert.UnitCostCurrency, insert.UnitCostPerUnitID = unitPriceParams(itemUnitCost(costRow))
+	if err := r.queries.InsertInventoryReceipt(ctx, insert); err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to insert inventory receipt."))
 	}
 
@@ -706,4 +711,10 @@ func (r *inventoryMutationRepo) CreateRateForInventory(ctx context.Context, rate
 		return apierror.NewInternalError(err, "Failed to insert rate for inventory.")
 	}
 	return nil
+}
+
+// itemUnitCost is an item's unit cost as a price. The item still stores it as a rate in a currency unit, and every
+// currency unit is a dollar.
+func itemUnitCost(row sqlc.GetItemUnitCostRow) *domain.UnitPrice {
+	return &domain.UnitPrice{Amount: row.Value, Currency: constants.CurrencyUSD, PerUnitID: row.DenominatorUnitID}
 }

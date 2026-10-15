@@ -495,13 +495,13 @@ INSERT INTO delivery (id, number, sales_order_id, account_id, delivery_status_co
 VALUES (sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'), sqlc.arg('account_id'), sqlc.arg('delivery_status_code'), sqlc.narg('accepted_at'), sqlc.narg('rejected_at'), NOW(3), NOW(3));
 
 -- name: InsertDeliveryLine :exec
-INSERT INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, storage_location_id, lot_id, accepted_at, rejected_at, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('delivery_id'), sqlc.arg('receiving_order_line_id'), sqlc.arg('quantity_id'), sqlc.arg('unit_cost_id'), sqlc.narg('storage_location_id'), sqlc.narg('lot_id'), sqlc.narg('accepted_at'), sqlc.narg('rejected_at'), NOW(3), NOW(3));
+INSERT INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, storage_location_id, lot_id, accepted_at, rejected_at, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('delivery_id'), sqlc.arg('receiving_order_line_id'), sqlc.arg('quantity_id'), sqlc.arg('unit_cost_id'), sqlc.arg('unit_cost_amount'), sqlc.arg('unit_cost_currency'), sqlc.arg('unit_cost_per_unit_id'), sqlc.narg('storage_location_id'), sqlc.narg('lot_id'), sqlc.narg('accepted_at'), sqlc.narg('rejected_at'), NOW(3), NOW(3));
 
 -- name: InsertInventoryReceiptForDelivery :exec
 INSERT INTO inventory_receipt (
     id, owner_account_id, holder_account_id, item_id,
-    quantity_id, unit_cost_id, status_code,
+    quantity_id, unit_cost_id, unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id, status_code,
     storage_location_id, lot_id, order_id,
     received_at, created_at, updated_at
 ) VALUES (
@@ -511,6 +511,9 @@ INSERT INTO inventory_receipt (
     sqlc.arg('item_id'),
     sqlc.arg('quantity_id'),
     sqlc.arg('unit_cost_id'),
+    sqlc.arg('unit_cost_amount'),
+    sqlc.arg('unit_cost_currency'),
+    sqlc.arg('unit_cost_per_unit_id'),
     'available',
     sqlc.narg('storage_location_id'),
     sqlc.narg('lot_id'),

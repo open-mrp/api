@@ -315,8 +315,10 @@ SELECT
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
     labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
-    labor_rate.value AS labor_rate,
-    overhead_rate.value AS overhead_rate,
+    ps.labor_rate_amount,
+    labor_rate.value AS legacy_labor_rate,
+    ps.overhead_rate_amount,
+    overhead_rate.value AS legacy_overhead_rate,
     pr.created_at AS run_created_at
 FROM batch b
 JOIN _batches_machines bm ON bm.A = b.id
@@ -330,8 +332,8 @@ LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
-LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
-LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+LEFT JOIN rate labor_rate ON labor_rate.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN rate overhead_rate ON overhead_rate.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
 WHERE b.account_id = ?
   AND b.scanned_at IS NOT NULL
@@ -370,14 +372,17 @@ type GetConstraintBatchMeasurementsRow struct {
 	LaborTimeRatioDenominator    sql.NullString
 	LaborTimeQtyRatioNumerator   sql.NullString
 	LaborTimeQtyRatioDenominator sql.NullString
-	LaborRate                    sql.NullString
-	OverheadRate                 sql.NullString
+	LaborRateAmount              sql.NullString
+	LegacyLaborRate              sql.NullString
+	OverheadRateAmount           sql.NullString
+	LegacyOverheadRate           sql.NullString
 	RunCreatedAt                 sql.NullTime
 }
 
 // GetConstraintBatchMeasurements returns one row per historical batch produced on the constraint machines, which is what the run rate, cost, lot count, machine affinity and measured lead time are all derived from.
 //
 // labor_time is a Rate quoted as a time per a quantity, and BOTH halves carry a unit: the numerator sets the time scale (min/hr/sec) and the denominator sets what quantity that time buys (per each, per pair, per case). Both ratio pairs come out so the caller can reach seconds per base unit; converting only the time half counts a pair-rated step twice. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetConstraintBatchMeasurementsParams) ([]GetConstraintBatchMeasurementsRow, error) {
 	query := getConstraintBatchMeasurements
 	var queryParams []interface{}
@@ -420,8 +425,10 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 			&i.LaborTimeRatioDenominator,
 			&i.LaborTimeQtyRatioNumerator,
 			&i.LaborTimeQtyRatioDenominator,
-			&i.LaborRate,
-			&i.OverheadRate,
+			&i.LaborRateAmount,
+			&i.LegacyLaborRate,
+			&i.OverheadRateAmount,
+			&i.LegacyOverheadRate,
 			&i.RunCreatedAt,
 		); err != nil {
 			return nil, err
@@ -438,11 +445,12 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 }
 
 const getConstraintDepartmentLaborRate = `-- name: GetConstraintDepartmentLaborRate :one
-SELECT r.value
+SELECT d.labor_rate_amount, r.value AS legacy_labor_rate_value
 FROM department d
-JOIN rate r ON r.id = d.labor_rate_id
+LEFT JOIN rate r ON r.id = IF(d.labor_rate_amount IS NULL, d.labor_rate_id, NULL)
 WHERE d.account_id = ?
   AND d.id = ?
+  AND (d.labor_rate_amount IS NOT NULL OR r.id IS NOT NULL)
 `
 
 type GetConstraintDepartmentLaborRateParams struct {
@@ -450,12 +458,18 @@ type GetConstraintDepartmentLaborRateParams struct {
 	DepartmentID string
 }
 
+type GetConstraintDepartmentLaborRateRow struct {
+	LaborRateAmount      sql.NullString
+	LegacyLaborRateValue sql.NullString
+}
+
 // GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, when it has one. The department's own rate prices its changeovers; the account-wide setting is only the fallback.
-func (q *Queries) GetConstraintDepartmentLaborRate(ctx context.Context, arg GetConstraintDepartmentLaborRateParams) (string, error) {
+// A department written before its money columns reads its legacy rate row instead.
+func (q *Queries) GetConstraintDepartmentLaborRate(ctx context.Context, arg GetConstraintDepartmentLaborRateParams) (GetConstraintDepartmentLaborRateRow, error) {
 	row := q.db.QueryRowContext(ctx, getConstraintDepartmentLaborRate, arg.AccountID, arg.DepartmentID)
-	var value string
-	err := row.Scan(&value)
-	return value, err
+	var i GetConstraintDepartmentLaborRateRow
+	err := row.Scan(&i.LaborRateAmount, &i.LegacyLaborRateValue)
+	return i, err
 }
 
 const getConstraintDepartmentStepCoverage = `-- name: GetConstraintDepartmentStepCoverage :one
@@ -702,8 +716,10 @@ SELECT
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
     labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
-    labor_rate.value AS labor_rate,
-    overhead_rate.value AS overhead_rate,
+    ps.labor_rate_amount,
+    labor_rate.value AS legacy_labor_rate,
+    ps.overhead_rate_amount,
+    overhead_rate.value AS legacy_overhead_rate,
     pr.created_at AS run_created_at
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
@@ -717,8 +733,8 @@ LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
-LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
-LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+LEFT JOIN rate labor_rate ON labor_rate.id = IF(ps.labor_rate_amount IS NULL, ps.labor_rate_id, NULL)
+LEFT JOIN rate overhead_rate ON overhead_rate.id = IF(ps.overhead_rate_amount IS NULL, ps.overhead_rate_id, NULL)
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
 WHERE b.account_id = ?
   AND b.scanned_at IS NOT NULL
@@ -757,8 +773,10 @@ type GetFinishingBatchMeasurementsRow struct {
 	LaborTimeRatioDenominator    sql.NullString
 	LaborTimeQtyRatioNumerator   sql.NullString
 	LaborTimeQtyRatioDenominator sql.NullString
-	LaborRate                    sql.NullString
-	OverheadRate                 sql.NullString
+	LaborRateAmount              sql.NullString
+	LegacyLaborRate              sql.NullString
+	OverheadRateAmount           sql.NullString
+	LegacyOverheadRate           sql.NullString
 	RunCreatedAt                 sql.NullTime
 }
 
@@ -767,6 +785,7 @@ type GetFinishingBatchMeasurementsRow struct {
 // The mirror of GetConstraintBatchMeasurements, and it excludes constraint-department steps for the same reason that one includes only them: a knitting scan recorded against a finishing machine is not a measurement of finishing, and letting it in would size the department's hours against the wrong operation. The step's own department is also carried out, so a finished good's line can name the room that makes it without a second query.
 //
 // The machine join is a LEFT JOIN, unlike the constraint mirror's inner join: stage two is planned as one department pool, so the run rate is read off the production step's labor time and the machine is only carried for display. Finishing stations (boarding, dyeing, packing) are commonly scanned with no machine recorded; an inner join would silently drop every one of those scans and leave the SKU with no measured rate, which is exactly the failure this avoids. The constraint side keeps the inner join because it plans machine by machine and filters on the machine.
+// A step written before its money columns reads its legacy rate rows; a filled one never looks them up.
 func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFinishingBatchMeasurementsParams) ([]GetFinishingBatchMeasurementsRow, error) {
 	query := getFinishingBatchMeasurements
 	var queryParams []interface{}
@@ -810,8 +829,10 @@ func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFini
 			&i.LaborTimeRatioDenominator,
 			&i.LaborTimeQtyRatioNumerator,
 			&i.LaborTimeQtyRatioDenominator,
-			&i.LaborRate,
-			&i.OverheadRate,
+			&i.LaborRateAmount,
+			&i.LegacyLaborRate,
+			&i.OverheadRateAmount,
+			&i.LegacyOverheadRate,
 			&i.RunCreatedAt,
 		); err != nil {
 			return nil, err

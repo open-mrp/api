@@ -32,7 +32,7 @@ func bulkMachineRow(name string) map[string]any {
 	return map[string]any{
 		"name":          name,
 		"serial_number": uniqueName("sn"),
-		"department":    map[string]any{"name": seedDepartmentName},
+		"work_center":   map[string]any{"name": seedDepartmentName},
 	}
 }
 
@@ -89,7 +89,7 @@ func TestMachines_BulkUpsert_AllCreates(t *testing.T) {
 }
 
 // TestMachines_BulkUpsert_CreateWithAllFields exercises the full create branch:
-// serial number, notes, and case-insensitive department resolution.
+// serial number, status, and case-insensitive work center resolution.
 func TestMachines_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	t.Parallel()
 
@@ -98,21 +98,21 @@ func TestMachines_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	createdIDs, _ := bulkUpsertMachineIDs(t, map[string]any{
 		"name":          name,
 		"serial_number": serial,
-		"notes":         "full machine notes",
-		"department":    map[string]any{"name": "knitting"}, // case-insensitive resolution
+		"status":        "archived",
+		"work_center":   map[string]any{"name": "knitting"}, // case-insensitive resolution
 	})
 	defer cleanupMachineIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
 
-	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+createdIDs[0], url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+createdIDs[0], url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, serial, jsonField(got, "serial_number"))
-	assert.Equal(t, "full machine notes", jsonField(got, "notes"))
-	dept := jsonObject(got, "department")
-	require.NotNil(t, dept, "department should be populated with ?include=department")
+	assert.Equal(t, "archived", jsonField(got, "status"))
+	dept := jsonObject(got, "work_center")
+	require.NotNil(t, dept, "work_center should be populated with ?include=work_center")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 }
 
@@ -148,12 +148,12 @@ func TestMachines_BulkUpsert_RejectsUnknownDepartment(t *testing.T) {
 		map[string]any{
 			"name":          uniqueName("e2e-bup-mach-baddept"),
 			"serial_number": uniqueName("sn"),
-			"department":    map[string]any{"name": uniqueName("no-such-department")},
+			"work_center":   map[string]any{"name": uniqueName("no-such-department")},
 		},
 	)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "machines[1].department")
+	assertErrorParam(t, errObj, "machines[1].work_center")
 }
 
 func TestMachines_BulkUpsert_RejectsDuplicateSerialInRequest(t *testing.T) {
@@ -216,7 +216,7 @@ func TestMachines_BulkUpsert_RejectsNameCollisionAcrossDepartments(t *testing.T)
 	job := bulkUpsertMachinesJob(t, map[string]any{
 		"name":          name,
 		"serial_number": uniqueName("sn-other"),
-		"department":    map[string]any{"name": "Washing"},
+		"work_center":   map[string]any{"name": "Washing"},
 	})
 	assert.Empty(t, jobWrittenResults(job), "the colliding row must not be written")
 	errs := jobErrors(job)
@@ -239,7 +239,7 @@ func TestMachines_BulkUpsert_RejectsSerialCollisionAcrossDepartments(t *testing.
 	job := bulkUpsertMachinesJob(t, map[string]any{
 		"name":          uniqueName("e2e-bup-mach-xdept-new"),
 		"serial_number": serial,
-		"department":    map[string]any{"name": "Washing"},
+		"work_center":   map[string]any{"name": "Washing"},
 	})
 	assert.Empty(t, jobWrittenResults(job), "the colliding row must not be written")
 	errs := jobErrors(job)
@@ -249,7 +249,7 @@ func TestMachines_BulkUpsert_RejectsSerialCollisionAcrossDepartments(t *testing.
 
 // TestMachines_BulkUpsert_RejectsDepartmentMove: a row matching an existing machine by
 // BOTH name and serial number but naming a different department is an illegal department
-// move, recorded as a per-row error keyed to `department`.
+// move, recorded as a per-row error keyed to `work_center`.
 func TestMachines_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 	t.Parallel()
 
@@ -263,12 +263,12 @@ func TestMachines_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 	job := bulkUpsertMachinesJob(t, map[string]any{
 		"name":          name,
 		"serial_number": serial,
-		"department":    map[string]any{"name": "Washing"},
+		"work_center":   map[string]any{"name": "Washing"},
 	})
 	assert.Empty(t, jobWrittenResults(job), "an illegal move must not be written")
 	errs := jobErrors(job)
 	require.Len(t, errs, 1)
-	assert.Equal(t, "department", jsonField(jobRowError(errs[0]), "param"))
+	assert.Equal(t, "work_center", jsonField(jobRowError(errs[0]), "param"))
 }
 
 // TestMachines_BulkUpsert_RejectsAmbiguousNameAndSerial: a row whose name matches one
@@ -288,7 +288,7 @@ func TestMachines_BulkUpsert_RejectsAmbiguousNameAndSerial(t *testing.T) {
 	job := bulkUpsertMachinesJob(t, map[string]any{
 		"name":          nameA,
 		"serial_number": serialB,
-		"department":    map[string]any{"name": seedDepartmentName},
+		"work_center":   map[string]any{"name": seedDepartmentName},
 	})
 	assert.Empty(t, jobWrittenResults(job), "an ambiguous row must not be written")
 	errs := jobErrors(job)
@@ -297,9 +297,9 @@ func TestMachines_BulkUpsert_RejectsAmbiguousNameAndSerial(t *testing.T) {
 }
 
 // TestMachines_BulkUpsert_UpdatesEveryField creates a machine, then upserts the same
-// name (different casing) changing serial number and notes — asserting the match is
-// case-insensitive, the ID is stable, the name adopts the new casing, notes are
-// preserved when omitted, and the department (stated as the machine's current one, as
+// name (different casing) changing serial number and status — asserting the match is
+// case-insensitive, the ID is stable, the name adopts the new casing, the status is
+// preserved when omitted, and the work center (stated as the machine's current one, as
 // updates must) does not change.
 func TestMachines_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	t.Parallel()
@@ -309,8 +309,7 @@ func TestMachines_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	createdIDs, _ := bulkUpsertMachineIDs(t, map[string]any{
 		"name":          name,
 		"serial_number": uniqueName("sn-orig"),
-		"notes":         "original notes",
-		"department":    map[string]any{"name": seedDepartmentName},
+		"work_center":   map[string]any{"name": seedDepartmentName},
 	})
 	defer cleanupMachineIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
@@ -321,34 +320,34 @@ func TestMachines_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	created, updated := bulkUpsertMachineIDs(t, map[string]any{
 		"name":          upper,
 		"serial_number": newSerial,
-		"notes":         "updated notes",
-		"department":    map[string]any{"name": seedDepartmentName}, // must state the machine's current department
+		"status":        "archived",
+		"work_center":   map[string]any{"name": seedDepartmentName}, // must state the machine's current work center
 	})
 	assert.Empty(t, created, "existing name must update, not create")
 	require.Len(t, updated, 1)
 	assert.Equal(t, machineID, updated[0])
 
-	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+machineID, url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+machineID, url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, upper, jsonField(got, "name"), "name adopts the request's casing")
 	assert.Equal(t, newSerial, jsonField(got, "serial_number"))
-	assert.Equal(t, "updated notes", jsonField(got, "notes"))
-	dept := jsonObject(got, "department")
+	assert.Equal(t, "archived", jsonField(got, "status"))
+	dept := jsonObject(got, "work_center")
 	require.NotNil(t, dept)
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"), "department is create-only and must not change on update")
 
-	// Omitted notes are preserved on a subsequent update.
+	// An omitted status is preserved on a subsequent update.
 	bulkUpsertMachineIDs(t, map[string]any{
 		"name":          upper,
 		"serial_number": newSerial,
-		"department":    map[string]any{"name": seedDepartmentName},
+		"work_center":   map[string]any{"name": seedDepartmentName},
 	})
 	getStatus2, getBody2, err := apiClient.GetListRaw(machinesPath+"/"+machineID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
-	assert.Equal(t, "updated notes", jsonField(parseJSON(getBody2), "notes"))
+	assert.Equal(t, "archived", jsonField(parseJSON(getBody2), "status"))
 }
 
 func TestMachines_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
@@ -361,7 +360,6 @@ func TestMachines_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
 	defer cleanupMachineIDs(seedIDs)
 
 	updRow := bulkMachineRow(existingName)
-	updRow["notes"] = "touched"
 	created, updated := bulkUpsertMachineIDs(t, updRow, bulkMachineRow(newName))
 	defer cleanupMachineIDs(created)
 

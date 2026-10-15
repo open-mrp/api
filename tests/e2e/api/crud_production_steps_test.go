@@ -85,7 +85,7 @@ func TestProductionSteps_IncludeDepartmentAndScanningStationHydrated(t *testing.
 
 	dept := jsonObject(got, "department")
 	require.NotNil(t, dept, "department should be present with ?include=department")
-	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.Equal(t, "work_center", jsonField(dept, "object"))
 	assert.NotEmpty(t, jsonField(dept, "id"))
 	assert.Equal(t, "Sewing", jsonField(dept, "name"),
 		"the included department carries its real name, not the hardcoded \"Department\" stub")

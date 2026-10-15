@@ -68,24 +68,6 @@ func TestParts_UpdateClearDescriptionAndNotes(t *testing.T) {
 	assertNilField(t, item, "notes")
 }
 
-func TestScanningStations_UpdateClearNotes(t *testing.T) {
-	t.Parallel()
-	id := SeedScanningStationID
-
-	setStatus, setBody, err := apiClient.Patch("/v1/operations/scanning-stations/"+id, map[string]any{
-		"notes": "station notes to clear",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, setStatus, setBody)
-
-	clearStatus, clearBody, err := apiClient.Patch("/v1/operations/scanning-stations/"+id, map[string]any{
-		"notes": nil,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, clearStatus, clearBody)
-	assert.Nil(t, parseJSON(clearBody)["notes"])
-}
-
 func TestUnitGroups_UpdateClearNotes(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-ug-clear-notes")

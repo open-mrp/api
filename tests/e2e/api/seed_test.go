@@ -595,7 +595,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/carriers/{carrier_id}/service-levels/":               SeedServiceLevelID,
 	"/v1/operations/batches/":                                            SeedBatchID,
 	"/v1/operations/carriers/":                                           SeedCarrierID,
-	"/v1/operations/departments/":                                        SeedDepartmentID,
+	"/v1/operations/work-centers/":                                       SeedDepartmentID,
 	"/v1/operations/machines/":                                           SeedMachineID,
 	"/v1/catalog/materials/":                                             SeedMaterialID,
 	"/v1/catalog/parts/":                                                 SeedPartID,

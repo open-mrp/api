@@ -55,7 +55,7 @@ func createProductionCostPlant(t *testing.T) productionCostPlant {
 	p.emptyDept = jsonField(createAndCleanup(t, departmentsPath, map[string]any{"name": uniqueName("e2e-pcost-empty")}), "id")
 	station := func(dept string) string {
 		return jsonField(createAndCleanup(t, scanningStationsPath, map[string]any{
-			"name": uniqueName("e2e-pcost-station"), "type": "init_batch", "operator_requirement": "none", "department_id": dept,
+			"name": uniqueName("e2e-pcost-station"), "type": "init_batch", "operator_requirement": "none", "work_center_id": dept,
 		}), "id")
 	}
 	p.stationA, p.stationB = station(p.deptA), station(p.deptB)

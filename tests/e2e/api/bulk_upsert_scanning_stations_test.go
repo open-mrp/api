@@ -30,7 +30,7 @@ func bulkStationRow(name string) map[string]any {
 		"name":                 name,
 		"type":                 "init_batch",
 		"operator_requirement": "none",
-		"department":           map[string]any{"name": seedDepartmentName},
+		"work_center":          map[string]any{"name": seedDepartmentName},
 	}
 }
 
@@ -87,7 +87,7 @@ func TestScanningStations_BulkUpsert_AllCreates(t *testing.T) {
 }
 
 // TestScanningStations_BulkUpsert_CreateWithAllFields exercises the full create branch:
-// notes, type, operator requirement, label codes, and case-insensitive department
+// type, operator requirement, label codes, and case-insensitive work center
 // resolution.
 func TestScanningStations_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	t.Parallel()
@@ -95,28 +95,26 @@ func TestScanningStations_BulkUpsert_CreateWithAllFields(t *testing.T) {
 	name := uniqueName("e2e-bup-stn-full")
 	createdIDs, _ := bulkUpsertScanningStationIDs(t, map[string]any{
 		"name":                 name,
-		"notes":                "full station notes",
 		"type":                 "move_batch",
 		"operator_requirement": "material_check",
 		"label_size":           "1x1",
 		"label_type":           "tag",
-		"department":           map[string]any{"name": "knitting"}, // by name, case-insensitive
+		"work_center":          map[string]any{"name": "knitting"}, // by name, case-insensitive
 	})
 	defer cleanupScanningStationIDs(createdIDs)
 	require.Len(t, createdIDs, 1)
 
-	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+createdIDs[0], url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+createdIDs[0], url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "full station notes", jsonField(got, "notes"))
 	assert.Equal(t, "move_batch", jsonField(got, "type"))
 	assert.Equal(t, "material_check", jsonField(got, "operator_requirement"))
 	assert.Equal(t, "1x1", jsonField(got, "label_size"))
 	assert.Equal(t, "tag", jsonField(got, "label_type"))
-	dept := jsonObject(got, "department")
-	require.NotNil(t, dept, "department should be populated with ?include=department")
+	dept := jsonObject(got, "work_center")
+	require.NotNil(t, dept, "work_center should be populated with ?include=work_center")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 }
 
@@ -158,19 +156,19 @@ func TestScanningStations_BulkUpsert_RejectsUnknownDepartment(t *testing.T) {
 	t.Parallel()
 
 	badRow := bulkStationRow(uniqueName("e2e-bup-stn-baddept"))
-	badRow["department"] = map[string]any{"name": uniqueName("no-such-department")}
+	badRow["work_center"] = map[string]any{"name": uniqueName("no-such-department")}
 	status, body := bulkUpsertScanningStations(t,
 		bulkStationRow(uniqueName("e2e-bup-stn-ok")),
 		badRow,
 	)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "scanning_stations[1].department")
+	assertErrorParam(t, errObj, "scanning_stations[1].work_center")
 }
 
 // TestScanningStations_BulkUpsert_RejectsDepartmentMove: the department is immutable. The check
 // needs the existing row, so it runs in the execute phase: the job completes and the row lands
-// in `errors`, keyed to `department`.
+// in `errors`, keyed to `work_center`.
 func TestScanningStations_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 	t.Parallel()
 
@@ -179,12 +177,12 @@ func TestScanningStations_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 	defer cleanupScanningStationIDs(seedIDs)
 
 	row := bulkStationRow(name)
-	row["department"] = map[string]any{"name": "Washing"}
+	row["work_center"] = map[string]any{"name": "Washing"}
 	job := bulkUpsertScanningStationsJob(t, row)
 	assert.Empty(t, jobWrittenResults(job), "an immutable-department move must not be written")
 	errs := jobErrors(job)
 	require.Len(t, errs, 1)
-	assert.Equal(t, "department", jsonField(jobRowError(errs[0]), "param"))
+	assert.Equal(t, "work_center", jsonField(jobRowError(errs[0]), "param"))
 }
 
 // TestScanningStations_BulkUpsert_RejectsTypeChange: the type is immutable. Like the department
@@ -206,9 +204,9 @@ func TestScanningStations_BulkUpsert_RejectsTypeChange(t *testing.T) {
 }
 
 // TestScanningStations_BulkUpsert_UpdatesEveryField creates a station, then upserts the
-// same name (different casing) changing notes, operator requirement, and label codes —
+// same name (different casing) changing operator requirement and label codes —
 // asserting the match is case-insensitive, the ID is stable, the name adopts the new
-// casing, notes and label codes are preserved when omitted, and the type and
+// casing, label codes are preserved when omitted, and the type and
 // department (stated as the station's current ones, as updates must) do not change.
 func TestScanningStations_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	t.Parallel()
@@ -216,7 +214,6 @@ func TestScanningStations_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	name := uniqueName("e2e-bup-stn-upd")
 
 	createRow := bulkStationRow(name)
-	createRow["notes"] = "original notes"
 	createRow["label_size"] = "1x1"
 	createRow["label_type"] = "tag"
 	createdIDs, _ := bulkUpsertScanningStationIDs(t, createRow)
@@ -226,7 +223,6 @@ func TestScanningStations_BulkUpsert_UpdatesEveryField(t *testing.T) {
 
 	upper := strings.ToUpper(name)
 	updRow := bulkStationRow(upper)
-	updRow["notes"] = "updated notes"
 	updRow["operator_requirement"] = "material_check"
 	updRow["label_size"] = "2x4"
 	updRow["label_type"] = "traveler"
@@ -235,21 +231,20 @@ func TestScanningStations_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	require.Len(t, updated, 1)
 	assert.Equal(t, stationID, updated[0])
 
-	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+stationID, url.Values{"include": {"department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(scanningStationsPath+"/"+stationID, url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, upper, jsonField(got, "name"), "name adopts the request's casing")
-	assert.Equal(t, "updated notes", jsonField(got, "notes"))
 	assert.Equal(t, "material_check", jsonField(got, "operator_requirement"))
 	assert.Equal(t, "2x4", jsonField(got, "label_size"))
 	assert.Equal(t, "traveler", jsonField(got, "label_type"))
 	assert.Equal(t, "init_batch", jsonField(got, "type"), "type is immutable and must not change")
-	dept := jsonObject(got, "department")
+	dept := jsonObject(got, "work_center")
 	require.NotNil(t, dept)
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"), "department is create-only and must not change on update")
 
-	// Omitted notes and label codes are preserved on a subsequent update.
+	// Omitted label codes are preserved on a subsequent update.
 	reRow := bulkStationRow(upper)
 	reRow["operator_requirement"] = "material_check"
 	bulkUpsertScanningStationIDs(t, reRow)
@@ -257,7 +252,6 @@ func TestScanningStations_BulkUpsert_UpdatesEveryField(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
 	got2 := parseJSON(getBody2)
-	assert.Equal(t, "updated notes", jsonField(got2, "notes"))
 	assert.Equal(t, "2x4", jsonField(got2, "label_size"))
 	assert.Equal(t, "traveler", jsonField(got2, "label_type"))
 
@@ -286,7 +280,6 @@ func TestScanningStations_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
 	defer cleanupScanningStationIDs(seeded)
 
 	updRow := bulkStationRow(existingName)
-	updRow["notes"] = "touched"
 	created, updated := bulkUpsertScanningStationIDs(t, updRow, bulkStationRow(newName))
 	defer cleanupScanningStationIDs(created)
 

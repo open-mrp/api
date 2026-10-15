@@ -759,6 +759,9 @@ func protoCustomerAddressInputToCreateParams(input *pb.CreateCustomerAddressInpu
 }
 
 func relationshipTypes(in []string) []constants.CustomerRelationshipType {
+	if len(in) == 0 {
+		return nil
+	}
 	out := make([]constants.CustomerRelationshipType, len(in))
 	for i, v := range in {
 		out[i] = constants.CustomerRelationshipType(v)

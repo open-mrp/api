@@ -170,7 +170,7 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 	dockID := jsonField(parseJSON(body), "id")
 	t.Cleanup(func() { _, _, _ = asCustomer.Delete(addressesPath + "/" + dockID) })
 
-	const include = "defaults,defaults.payment_term,freight_preferences,freight_preferences.service_level,bill_to_address,ship_to_address"
+	const include = "defaults.payment_term,defaults.service_level,defaults.receive_calendar,defaults.bill_to_address,defaults.ship_to_address"
 	status, body, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{
 		"bill_to_address_id":  dockID,
 		"ship_to_address_id":  dockID,
@@ -181,14 +181,14 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 
 	_, set := dashCustomersRead(t, apiClient, customerID, include)
 	defaults := jsonObject(set, "defaults")
-	freight := jsonObject(set, "freight_preferences")
+	billing := jsonObject(set, "carrier_billing")
 	require.NotNil(t, defaults)
-	require.NotNil(t, freight)
+	require.NotNil(t, billing)
 	assert.Equal(t, "9", leadTimeValue(defaults))
-	assert.Equal(t, calendarID, jsonField(defaults, "receive_calendar_id"))
-	assert.Equal(t, "make_to_order", jsonField(defaults, "fulfillment_policy"))
-	assert.Equal(t, SeedServiceLevelID, jsonField(jsonObject(freight, "service_level"), "id"))
-	assert.Equal(t, "DC-ACCT-1", jsonField(freight, "billing_account"))
+	assert.Equal(t, calendarID, jsonField(jsonObject(defaults, "receive_calendar"), "id"))
+	assert.Equal(t, "make", jsonField(defaults, "supply"))
+	assert.Equal(t, SeedServiceLevelID, jsonField(jsonObject(defaults, "service_level"), "id"))
+	assert.Equal(t, "DC-ACCT-1", jsonField(billing, "account_number"))
 	assert.Equal(t, dockID, jsonField(jsonObject(jsonObject(set, "defaults"), "bill_to_address"), "id"))
 	assert.Equal(t, dockID, jsonField(jsonObject(jsonObject(set, "defaults"), "ship_to_address"), "id"))
 
@@ -207,17 +207,17 @@ func TestDashCustomers_UpdateClearsEveryClearableDefault(t *testing.T) {
 
 	for label, got := range map[string]map[string]any{"the response": parseJSON(body), "a later read": reread} {
 		defaults := jsonObject(got, "defaults")
-		freight := jsonObject(got, "freight_preferences")
+		billing := jsonObject(got, "carrier_billing")
 		require.NotNil(t, defaults, label)
-		require.NotNil(t, freight, label)
+		require.NotNil(t, billing, label)
 		assert.Nil(t, jsonObject(defaults, "lead_time"), label)
-		assert.Nil(t, defaults["receive_calendar_id"], label)
-		assert.Nil(t, defaults["fulfillment_policy"], label)
-		assert.Nil(t, freight["service_level"], label)
-		assert.Nil(t, freight["billing_account"], label)
+		assert.Nil(t, defaults["receive_calendar"], label)
+		assert.Nil(t, defaults["supply"], label)
+		assert.Nil(t, defaults["service_level"], label)
+		assert.Nil(t, billing["account_number"], label)
 		assert.Nil(t, jsonObject(got, "defaults")["bill_to_address"], label)
 		assert.Nil(t, jsonObject(got, "defaults")["ship_to_address"], label)
-		assert.Equal(t, "third_party", jsonField(freight, "billing_type"), "%s keeps the billing type that was not sent", label)
+		assert.Equal(t, "third_party", jsonField(billing, "type"), "%s keeps the billing type that was not sent", label)
 		assert.Equal(t, SeedPaymentTermID, jsonField(jsonObject(defaults, "payment_term"), "id"), "%s keeps the payment term", label)
 	}
 }
@@ -231,16 +231,16 @@ func TestDashCustomers_AnEditKeepsTheReceiveCalendar(t *testing.T) {
 	t.Cleanup(func() {
 		_, _, _ = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"receive_calendar_id": nil}), newIdempotencyKey())
 	})
-	_, created := dashCustomersRead(t, apiClient, customerID, "defaults")
-	require.Equal(t, calendarID, jsonField(jsonObject(created, "defaults"), "receive_calendar_id"))
+	_, created := dashCustomersRead(t, apiClient, customerID, "defaults.receive_calendar")
+	require.Equal(t, calendarID, jsonField(jsonObject(jsonObject(created, "defaults"), "receive_calendar"), "id"))
 
-	status, body, err := apiClient.Patch(customersPath+"/"+customerID+"?include=", forgeCustomerWrite(map[string]any{"note": "e2e unrelated edit"}), newIdempotencyKey())
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID+"?include=defaults.receive_calendar", forgeCustomerWrite(map[string]any{"note": "e2e unrelated edit"}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, calendarID, jsonField(jsonObject(parseJSON(body), "defaults"), "receive_calendar_id"), "the edit response keeps the calendar")
-	_, got := dashCustomersRead(t, apiClient, customerID, "defaults")
+	assert.Equal(t, calendarID, jsonField(jsonObject(jsonObject(parseJSON(body), "defaults"), "receive_calendar"), "id"), "the edit response keeps the calendar")
+	_, got := dashCustomersRead(t, apiClient, customerID, "defaults.receive_calendar")
 	defaults := jsonObject(got, "defaults")
-	assert.Equal(t, calendarID, jsonField(defaults, "receive_calendar_id"), "a later read keeps the calendar")
+	assert.Equal(t, calendarID, jsonField(jsonObject(defaults, "receive_calendar"), "id"), "a later read keeps the calendar")
 	assert.Equal(t, "4", leadTimeValue(defaults))
 }
 
@@ -260,20 +260,20 @@ func TestDashCustomers_UpdateRejectsInvalidValues(t *testing.T) {
 		{"blank name", map[string]any{"name": ""}, "name"},
 		{"null number", map[string]any{"number": nil}, "number"},
 		{"blank number", map[string]any{"number": ""}, "number"},
-		{"null status", map[string]any{"status": nil}, "status"},
+		{"null standing", map[string]any{"standing": nil}, "standing"},
+		{"unknown standing", map[string]any{"standing": "bogus"}, "standing"},
 		{"unknown status", map[string]any{"status": "bogus"}, "status"},
-		{"unknown priority", map[string]any{"default_priority": "bogus"}, "default_priority"},
-		{"unknown fulfillment policy", map[string]any{"fulfillment_policy": "bogus"}, "fulfillment_policy"},
-		{"unknown carrier billing type", map[string]any{"carrier_billing_type": "bogus"}, "carrier_billing_type"},
-		{"null carrier", map[string]any{"default_carrier_id": nil}, "default_carrier_id"},
-		{"null payment term", map[string]any{"default_payment_term_id": nil}, "default_payment_term_id"},
-		{"null shipping term", map[string]any{"default_shipping_term_id": nil}, "default_shipping_term_id"},
-		{"null type group", map[string]any{"customer_type_group_id": nil}, "customer_type_group_id"},
-		{"null price groups", map[string]any{"customer_price_group_ids": nil}, "customer_price_group_ids"},
-		{"negative lead time", map[string]any{"lead_time_days": -1}, "lead_time_days"},
-		{"lead time over ten years", map[string]any{"lead_time_days": 3651}, "lead_time_days"},
-		{"lead time as text", map[string]any{"lead_time_days": "7"}, "lead_time_days"},
-		{"email over 255 characters", map[string]any{"email": strings.Repeat("a", 256)}, "email"},
+		{"unknown supply", map[string]any{"defaults": map[string]any{"supply": "bogus"}}, "defaults.supply"},
+		{"unknown carrier billing type", map[string]any{"carrier_billing": map[string]any{"type": "bogus"}}, "carrier_billing.type"},
+		{"null carrier", map[string]any{"defaults": map[string]any{"carrier_id": nil}}, "defaults.carrier_id"},
+		{"null payment term", map[string]any{"defaults": map[string]any{"payment_term_id": nil}}, "defaults.payment_term_id"},
+		{"null shipping term", map[string]any{"defaults": map[string]any{"shipping_term_id": nil}}, "defaults.shipping_term_id"},
+		{"null group", map[string]any{"group_id": nil}, "group_id"},
+		{"null price groups", map[string]any{"price_group_ids": nil}, "price_group_ids"},
+		{"negative lead time", map[string]any{"defaults": map[string]any{"lead_time": map[string]any{"value": "-1", "unit_id": "day"}}}, "defaults.lead_time.value"},
+		{"lead time over ten years", map[string]any{"defaults": map[string]any{"lead_time": map[string]any{"value": "3651", "unit_id": "day"}}}, "defaults.lead_time.value"},
+		{"lead time in hours", map[string]any{"defaults": map[string]any{"lead_time": map[string]any{"value": "7", "unit_id": SeedUnitID}}}, "defaults.lead_time.unit_id"},
+		{"email over 255 characters", map[string]any{"contact": map[string]any{"email": strings.Repeat("a", 256)}}, "contact.email"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -287,7 +287,7 @@ func TestDashCustomers_UpdateRejectsInvalidValues(t *testing.T) {
 	after := dashCustomersRequireExists(t, customerID)
 	assert.Equal(t, jsonField(before, "name"), jsonField(after, "name"), "the refused edits changed nothing")
 	assert.Equal(t, jsonField(before, "number"), jsonField(after, "number"))
-	assert.Equal(t, jsonField(before, "status"), jsonField(after, "status"))
+	assert.Equal(t, jsonField(before, "standing"), jsonField(after, "standing"))
 }
 
 // The customer table holds bare ids with no foreign keys, so an edit naming a carrier, term, group,
@@ -303,14 +303,14 @@ func TestDashCustomers_UpdateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 		body  map[string]any
 		param string
 	}{
-		{"unknown carrier", map[string]any{"default_carrier_id": mustGenID(t, id.CarrierIDPrefix)}, "default_carrier_id"},
-		{"unknown payment term", map[string]any{"default_payment_term_id": mustGenID(t, id.PaymentTermIDPrefix)}, "default_payment_term_id"},
-		{"unknown shipping term", map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "default_shipping_term_id"},
-		{"unknown service level", map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "default_service_level_id"},
-		{"unknown receive calendar", map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "receive_calendar_id"},
-		{"another tenant's type group", map[string]any{"customer_type_group_id": foreignType}, "customer_type_group_id"},
-		{"another tenant's pricing group", map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "customer_price_group_ids"},
-		{"another tenant's sales rep", map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "default_sales_rep_id"},
+		{"unknown carrier", map[string]any{"default_carrier_id": mustGenID(t, id.CarrierIDPrefix)}, "defaults.carrier_id"},
+		{"unknown payment term", map[string]any{"default_payment_term_id": mustGenID(t, id.PaymentTermIDPrefix)}, "defaults.payment_term_id"},
+		{"unknown shipping term", map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "defaults.shipping_term_id"},
+		{"unknown service level", map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "defaults.service_level_id"},
+		{"unknown receive calendar", map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "defaults.receive_calendar_id"},
+		{"another tenant's type group", map[string]any{"customer_type_group_id": foreignType}, "group_id"},
+		{"another tenant's pricing group", map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "price_group_ids"},
+		{"another tenant's sales rep", map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "defaults.sales_rep_id"},
 	}
 	client := dashCustomersNoRetry(apiClient)
 	for _, tc := range cases {
@@ -321,7 +321,7 @@ func TestDashCustomers_UpdateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 			require.NoError(t, err)
 			dashCustomersRefused(t, status, body, tc.param)
 
-			status, got := dashCustomersRead(t, client, customerID, "type,price_groups,defaults.payment_term,freight_preferences.carrier,credit_limit")
+			status, got := dashCustomersRead(t, client, customerID, "group,price_groups,defaults.payment_term,defaults.carrier")
 			require.Equal(t, 200, status, "the customer is still readable")
 			assert.Equal(t, SeedCustomerGroupID, jsonField(jsonObject(got, "group"), "id"), "the type group is unchanged")
 			assert.Empty(t, jsonArray(jsonObject(got, "price_groups"), "data"), "no price group was linked")
@@ -361,16 +361,16 @@ func TestDashCustomers_CreateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 		extra  map[string]any
 		param  string
 	}{
-		{"unknown carrier", apiClient, SeedAccountID, map[string]any{"default_carrier_id": mustGenID(t, id.CarrierIDPrefix)}, "default_carrier_id"},
-		{"unknown payment term", apiClient, SeedAccountID, map[string]any{"default_payment_term_id": mustGenID(t, id.PaymentTermIDPrefix)}, "default_payment_term_id"},
-		{"unknown shipping term", apiClient, SeedAccountID, map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "default_shipping_term_id"},
-		{"unknown service level", apiClient, SeedAccountID, map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "default_service_level_id"},
-		{"unknown receive calendar", apiClient, SeedAccountID, map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "receive_calendar_id"},
-		{"another tenant's type group", apiClient, SeedAccountID, map[string]any{"customer_type_group_id": foreignType}, "customer_type_group_id"},
-		{"another tenant's pricing group", apiClient, SeedAccountID, map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "customer_price_group_ids"},
-		{"another tenant's sales rep", apiClient, SeedAccountID, map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "default_sales_rep_id"},
+		{"unknown carrier", apiClient, SeedAccountID, map[string]any{"default_carrier_id": mustGenID(t, id.CarrierIDPrefix)}, "defaults.carrier_id"},
+		{"unknown payment term", apiClient, SeedAccountID, map[string]any{"default_payment_term_id": mustGenID(t, id.PaymentTermIDPrefix)}, "defaults.payment_term_id"},
+		{"unknown shipping term", apiClient, SeedAccountID, map[string]any{"default_shipping_term_id": mustGenID(t, id.ShippingTermIDPrefix)}, "defaults.shipping_term_id"},
+		{"unknown service level", apiClient, SeedAccountID, map[string]any{"default_service_level_id": mustGenID(t, id.ServiceLevelIDPrefix)}, "defaults.service_level_id"},
+		{"unknown receive calendar", apiClient, SeedAccountID, map[string]any{"receive_calendar_id": mustGenID(t, id.OperatingCalendarIDPrefix)}, "defaults.receive_calendar_id"},
+		{"another tenant's type group", apiClient, SeedAccountID, map[string]any{"customer_type_group_id": foreignType}, "group_id"},
+		{"another tenant's pricing group", apiClient, SeedAccountID, map[string]any{"customer_price_group_ids": []string{foreignPricing}}, "price_group_ids"},
+		{"another tenant's sales rep", apiClient, SeedAccountID, map[string]any{"default_sales_rep_id": SeedTenantBAccountUserID}, "defaults.sales_rep_id"},
 		// Tenant B names its own type group, but validCustomerBody's payment term and carrier are SeedAccountID's.
-		{"this account's terms used by another tenant", other, SeedTenantBAccountID, map[string]any{"customer_type_group_id": foreignType}, "default_"},
+		{"this account's terms used by another tenant", other, SeedTenantBAccountID, map[string]any{"customer_type_group_id": foreignType}, "defaults."},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -379,7 +379,7 @@ func TestDashCustomers_CreateRefusesReferencesTheAccountDoesNotHave(t *testing.T
 			for k, v := range tc.extra {
 				body[k] = v
 			}
-			status, resp, err := dashCustomersNoRetry(tc.client).Post(customersPath, body, newIdempotencyKey())
+			status, resp, err := dashCustomersNoRetry(tc.client).Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 			require.NoError(t, err)
 			dashCustomersDeleteNamed(t, tc.client, tc.owner, name)
 			dashCustomersRefused(t, status, resp, tc.param)
@@ -475,7 +475,9 @@ func TestDashCustomers_MergeNeedsUpdateAndDeleteTogether(t *testing.T) {
 	status, body, err := customRoleClient(t, "customers:read", "customers:update", "customers:delete").Post(dashCustomersMergePath(targetID),
 		map[string]any{"source_customer_ids": []string{sourceID}}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	requireStatus(t, 202, status, body)
+	job := pollJobUntilTerminal(t, jsonField(parseJSON(body), "id"))
+	require.Equal(t, "completed", jsonField(job, "status"), "%v", job)
 	status, _ = dashCustomersRead(t, apiClient, sourceID, "")
 	assert.Equal(t, 404, status, "the merged source is gone")
 }
@@ -602,9 +604,7 @@ func TestDashCustomers_MergeMovesTheSourcesOrdersToTheTarget(t *testing.T) {
 	orderID := jsonField(parseJSON(body), "id")
 	deleteOrder(t, orderID)
 
-	status, body, err = apiClient.Post(dashCustomersMergePath(targetID), map[string]any{"source_customer_ids": []string{sourceID}}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	mergeCustomers(t, targetID, sourceID)
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(customerAccessPath + "/" + targetID) })
 
 	order := retrieveSalesOrder(t, orderID, "customer")
@@ -802,7 +802,7 @@ func TestDashCustomers_RegisteringANewCustomer(t *testing.T) {
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
 	assert.Len(t, dashCustomersCustomerIDsNamed(t, name), 1, "a replay registers nobody twice")
 
-	status, got := dashCustomersRead(t, apiClient, customerID, "contact_info,type,defaults.payment_term,defaults.shipping_term,bill_to_address,ship_to_address")
+	status, got := dashCustomersRead(t, apiClient, customerID, "group,defaults.payment_term,defaults.shipping_term,defaults.bill_to_address,defaults.ship_to_address")
 	require.Equal(t, 200, status)
 	assert.NotEmpty(t, jsonField(got, "number"), "the seller numbers the new customer")
 	contact := jsonObject(got, "contact")
@@ -1255,7 +1255,7 @@ func TestDashCustomers_ProductLineAccessCarriesTheRealRecords(t *testing.T) {
 	created := parseJSON(body)
 	customer := jsonObject(created, "customer")
 	assert.Equal(t, "customer", jsonField(customer, "object"))
-	assert.Equal(t, "normal", jsonField(customer, "status"))
+	assert.Equal(t, "normal", jsonField(customer, "standing"))
 	assert.NotEqual(t, dashCustomersZeroTime, jsonField(customer, "created_at"))
 	lines := jsonArray(jsonObject(created, "product_lines"), "data")
 	require.Len(t, lines, 1)

@@ -252,7 +252,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	updateChanges := jsonListData(updatedEvent, "changes")
 	require.NotEmpty(t, updateChanges, "update audit event should include changes")
 
-	noteUpdateChange, ok := changeForField(updateChanges, "note")
+	noteUpdateChange, ok := changeForField(updateChanges, "instructions")
 	require.True(t, ok, "update audit event should include a note change")
 	assertNilField(t, noteUpdateChange, "old_value")
 	assert.Equal(t, note, jsonField(noteUpdateChange, "new_value"))
@@ -357,7 +357,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		field string
 		value string
 	}{
-		{"note", "audit update note"},
+		{"instructions", "audit update note"},
 		{"email", "audit-update@e2e.openmrp.ai"},
 		{"phone", "555-AUDIT"},
 		{"url", "https://audit.e2e.openmrp.ai"},
@@ -472,7 +472,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		field    string
 		oldValue string
 	}{
-		{"note", "clear-test note"},
+		{"instructions", "clear-test note"},
 		{"email", "clear-test@e2e.openmrp.ai"},
 		{"phone", "555-CLEAR"},
 		{"url", "https://clear-test.e2e.openmrp.ai"},

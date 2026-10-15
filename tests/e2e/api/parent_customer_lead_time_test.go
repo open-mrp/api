@@ -60,7 +60,7 @@ func TestParentCustomerLeadTime_ReachesAChildThatHasNoneOfItsOwn(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildInheritsID, "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"),
+	assert.Equal(t, "13", leadTimeValue(resolved),
 		"a child with no lead time of its own is committed to its parent's")
 	assert.Equal(t, "parent_customer", jsonField(resolved, "source"))
 
@@ -91,7 +91,7 @@ func TestParentCustomerLeadTime_ChildOverridesIt(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildOverridesID, "parent_customer")
 
-	assert.Equal(t, "5", jsonField(resolved, "days"))
+	assert.Equal(t, "5", leadTimeValue(resolved))
 	assert.Equal(t, "customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"],
 		"a child that sets its own lead time inherited nothing, even though it has a parent")
@@ -105,7 +105,7 @@ func TestParentCustomerLeadTime_OutranksTheAccountGroup(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildGroupedID, "account_group", "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"))
+	assert.Equal(t, "13", leadTimeValue(resolved))
 	assert.Equal(t, "parent_customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["account_group"],
 		"the group did not decide, so it must not be named even when asked for")
@@ -121,7 +121,7 @@ func TestParentCustomerLeadTime_SilentParentFallsThroughToTheGroup(t *testing.T)
 
 	resolved := resolveLeadTime(t, leadTimeChildOfSilentParentID, "account_group", "parent_customer")
 
-	assert.Equal(t, "21", jsonField(resolved, "days"))
+	assert.Equal(t, "21", leadTimeValue(resolved))
 	assert.Equal(t, "account_group", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"],
 		"the parent did not decide, so it must not be named even when asked for")
@@ -208,7 +208,7 @@ func TestParentCustomerLeadTime_ParentResolvesItsOwn(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeParentAccountID, "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"))
+	assert.Equal(t, "13", leadTimeValue(resolved))
 	assert.Equal(t, "customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"], "a head office has no parent to inherit from")
 }

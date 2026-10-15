@@ -587,7 +587,10 @@ func forgeCustomerWrite(body map[string]any) map[string]any {
 			delete(out, from)
 		}
 	}
-	rename("status", "standing")
+	switch out["status"] {
+	case "normal", "preferred", "hold_shipment", "hold_all":
+		rename("status", "standing")
+	}
 	rename("note", "instructions")
 	rename("customer_type_group_id", "group_id")
 	rename("customer_price_group_ids", "price_group_ids")
@@ -743,7 +746,7 @@ func createAndCleanupP9(t *testing.T, path string, body map[string]any) map[stri
 // Returns the parsed response body. Fails the test if creation fails.
 func createAndCleanup(t *testing.T, path string, body map[string]any) map[string]any {
 	t.Helper()
-	switch path {
+	switch strings.SplitN(path, "?", 2)[0] {
 	case customersPath:
 		body = forgeCustomerWrite(body)
 	case accountGroupsPath:

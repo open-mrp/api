@@ -31,18 +31,18 @@ func TestCustomers_DefaultAddressMustBeTheCustomers(t *testing.T) {
 	elsewhere := addressOn(t, apiClient, other, uniqueName("e2e-other-dock"))
 	path := customersPath + "/" + customerID
 
-	status, body, err := apiClient.Patch(path, map[string]any{"bill_to_address_id": own, "ship_to_address_id": own}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(path, map[string]any{"defaults": map[string]any{"bill_to_address_id": own, "ship_to_address_id": own}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	for _, param := range []string{"bill_to_address_id", "ship_to_address_id"} {
-		status, body, err = apiClient.Patch(path, map[string]any{param: elsewhere}, newIdempotencyKey())
+		status, body, err = apiClient.Patch(path, map[string]any{"defaults": map[string]any{param: elsewhere}}, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.Equal(t, 404, status, "another customer's address: %s", body)
-		assert.Equal(t, param, errorParam(body))
+		assert.Equal(t, "defaults."+param, errorParam(body))
 	}
 
-	status, body, err = apiClient.GetListRaw(path, map[string][]string{"include[]": {"bill_to_address", "ship_to_address"}})
+	status, body, err = apiClient.GetListRaw(path, map[string][]string{"include[]": {"defaults.bill_to_address", "defaults.ship_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
@@ -55,7 +55,7 @@ func TestCustomers_DefaultAddressMustBeTheCustomers(t *testing.T) {
 	assert.Zero(t, linked, "the other address was not linked to this customer")
 
 	// Re-saving an unchanged default is fine, whatever else changes.
-	status, body, err = apiClient.Patch(path, map[string]any{"bill_to_address_id": own, "note": "e2e note"}, newIdempotencyKey())
+	status, body, err = apiClient.Patch(path, map[string]any{"defaults": map[string]any{"bill_to_address_id": own}, "instructions": "e2e note"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }

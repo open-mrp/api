@@ -109,54 +109,42 @@ func TestAccountUsers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 func TestCustomers_IncludeParentAccountNullWhenAbsent(t *testing.T) {
 	t.Parallel()
-	// Default seeded customer typically has no parent_account; the include should return null.
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_account"}})
+	// Default seeded customer typically has no parent; the include should return null.
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_customer"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["parent_account"]
-	assert.True(t, ok, "parent_account key should be present with ?include=parent_account")
+	_, ok := got["parent_customer"]
+	assert.True(t, ok, "parent_customer key should be present with ?include=parent_customer")
 }
 
 func TestCustomers_IncludeChildAccounts(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"child_accounts"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"child_customers"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	// child_accounts key must be present with ?include=child_accounts. When a
+	// child_customers key must be present with ?include=child_customers. When a
 	// customer has no children, this may be a list with empty data, or null.
-	_, ok := got["child_accounts"]
-	assert.True(t, ok, "child_accounts key should be present with ?include=child_accounts")
-	if ca := jsonObject(got, "child_accounts"); ca != nil {
+	_, ok := got["child_customers"]
+	assert.True(t, ok, "child_customers key should be present with ?include=child_customers")
+	if ca := jsonObject(got, "child_customers"); ca != nil {
 		assert.Equal(t, "list", jsonField(ca, "object"))
 	}
 }
 
-func TestCustomers_IncludeDefaultsPriority(t *testing.T) {
+func TestCustomers_IncludeFreightPreferencesServiceLevel(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.priority"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.service_level"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	defaults := jsonObject(parseJSON(body), "defaults")
 	require.NotNil(t, defaults)
-	_, ok := defaults["priority"]
-	assert.True(t, ok, "defaults.priority key should be present with ?include=defaults.priority")
-}
-
-func TestCustomers_IncludeFreightPreferencesServiceLevel(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences.service_level"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	fp := jsonObject(parseJSON(body), "freight_preferences")
-	require.NotNil(t, fp)
-	_, ok := fp["service_level"]
-	assert.True(t, ok, "freight_preferences.service_level key should be present with ?include=freight_preferences.service_level")
+	_, ok := defaults["service_level"]
+	assert.True(t, ok, "defaults.service_level key should be present with ?include=defaults.service_level")
 }
 
 // Static lists — SalesOrderStatus, AdjustmentType

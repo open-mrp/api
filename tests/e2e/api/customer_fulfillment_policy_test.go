@@ -20,7 +20,7 @@ func customerDefaultsPolicy(m map[string]any) string {
 	if defaults == nil {
 		return ""
 	}
-	return jsonField(defaults, "fulfillment_policy")
+	return jsonField(defaults, "supply")
 }
 
 func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
@@ -30,14 +30,14 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 	body["fulfillment_policy"] = "make_to_order"
 	created := createAndCleanup(t, customersPath+"?include=", body)
 	id := jsonField(created, "id")
-	assert.Equal(t, "make_to_order", customerDefaultsPolicy(created),
+	assert.Equal(t, "make", customerDefaultsPolicy(created),
 		"the policy set on create should come back on defaults")
 
 	// It has to persist, not only echo from the write.
 	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {""}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
-	assert.Equal(t, "make_to_order", customerDefaultsPolicy(parseJSON(getBody)))
+	assert.Equal(t, "make", customerDefaultsPolicy(parseJSON(getBody)))
 
 	// Switching to make-to-stock puts the customer's demand back into the forecast.
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id+"?include=", forgeCustomerWrite(map[string]any{
@@ -45,7 +45,7 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
-	assert.Equal(t, "make_to_stock", customerDefaultsPolicy(parseJSON(patchBody)))
+	assert.Equal(t, "stock", customerDefaultsPolicy(parseJSON(patchBody)))
 
 	// An update that omits the field must not wipe it: unset means "leave alone", not "clear".
 	preserveStatus, preserveBody, err := apiClient.Patch(customersPath+"/"+id+"?include=", forgeCustomerWrite(map[string]any{
@@ -53,7 +53,7 @@ func TestFulfillmentPolicy_CustomerRoundTrips(t *testing.T) {
 	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, preserveStatus, preserveBody)
-	assert.Equal(t, "make_to_stock", customerDefaultsPolicy(parseJSON(preserveBody)),
+	assert.Equal(t, "stock", customerDefaultsPolicy(parseJSON(preserveBody)),
 		"an update that omits fulfillment_policy must preserve it")
 
 	// Clearing it returns the customer to inheriting its group, then the default.

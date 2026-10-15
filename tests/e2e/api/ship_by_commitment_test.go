@@ -272,7 +272,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 
 		got := parseJSON(body)
 		assert.Equal(t, "customer_lead_time", jsonField(got, "object"))
-		assert.Equal(t, "5", jsonField(got, "days"))
+		assert.Equal(t, "5", leadTimeValue(got))
 		assert.Equal(t, "customer", jsonField(got, "source"))
 		assert.Nil(t, got["account_group"], "the group did not decide, so it should not be named")
 	})
@@ -287,7 +287,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 		requireStatus(t, 200, status, body)
 
 		got := parseJSON(body)
-		assert.Equal(t, "21", jsonField(got, "days"))
+		assert.Equal(t, "21", leadTimeValue(got))
 		assert.Equal(t, "account_group", jsonField(got, "source"))
 		group, ok := got["account_group"].(map[string]any)
 		require.True(t, ok, "the group that decided should be named: %s", string(body))
@@ -304,7 +304,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 
 		got := parseJSON(body)
 		assert.Equal(t, "account", jsonField(got, "source"))
-		assert.NotEmpty(t, jsonField(got, "days"))
+		assert.NotEmpty(t, leadTimeValue(got))
 	})
 
 	t.Run("unknown customer", func(t *testing.T) {
@@ -335,7 +335,7 @@ func TestCustomerLeadTime_ClearingReturnsCustomerToItsGroup(t *testing.T) {
 
 	got := parseJSON(getBody)
 	assert.Equal(t, "account_group", jsonField(got, "source"))
-	assert.Equal(t, "21", jsonField(got, "days"))
+	assert.Equal(t, "21", leadTimeValue(got))
 }
 
 // Omitting the field on an update must not be read as clearing it — that would wipe
@@ -357,7 +357,7 @@ func TestCustomerLeadTime_OmittingOnUpdatePreservesIt(t *testing.T) {
 
 	got := parseJSON(getBody)
 	assert.Equal(t, "customer", jsonField(got, "source"))
-	assert.Equal(t, "12", jsonField(got, "days"))
+	assert.Equal(t, "12", leadTimeValue(got))
 }
 
 // Zero is a real commitment — ship same day — and must not be mistaken for "unset"
@@ -374,7 +374,7 @@ func TestCustomerLeadTime_ZeroIsSameDayNotUnset(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Equal(t, "customer", jsonField(got, "source"))
-	assert.Equal(t, "0", jsonField(got, "days"))
+	assert.Equal(t, "0", leadTimeValue(got))
 }
 
 func TestSalesOrders_ShipByFilters(t *testing.T) {

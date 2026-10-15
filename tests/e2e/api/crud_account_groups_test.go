@@ -165,13 +165,15 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		assert.True(t, status == 400 || status == 422,
 			"Missing name should return 400 or 422, got %d: %s", status, string(body))
 
-		// Missing type
+		// Groups classify customers, so a group sent without a type is a type group.
 		status, body, err = apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 			"name": uniqueName("e2e-acgrp-notype"),
 		}), newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
-			"Missing type should return 400 or 422, got %d: %s", status, string(body))
+		requireStatus(t, 201, status, body)
+		untyped := parseJSON(body)
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(accountGroupsPath + "/" + jsonField(untyped, "id")) })
+		assert.Equal(t, "type_group", jsonField(untyped, "type"))
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {

@@ -339,7 +339,7 @@ func TestCovSalesAccountGroups_DeleteNotFound(t *testing.T) {
 
 // TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist asserts that
 // deleting an account group still referenced by customer records fails with
-// 400 validation_failed (not a 5xx), and that the group is not deleted.
+// 409 resource_in_use (not a 5xx), and that the group is not deleted.
 // Uses the stable seeded SeedCustomerGroupID, which multiple seeded customer
 // rows reference as their customer_type_group_id FK — it must never actually
 // be deleted by this or any other test.
@@ -348,8 +348,8 @@ func TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist(t *testing.T) {
 
 	status, body, err := apiClient.Delete(accountGroupsPath + "/" + SeedCustomerGroupID)
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
 
 	// Confirm the group still exists (was not deleted despite the error).
 	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+SeedCustomerGroupID, nil)

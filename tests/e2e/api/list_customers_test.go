@@ -50,7 +50,7 @@ func TestListCustomers_SearchNoResults(t *testing.T) {
 func TestListCustomers_FilterByCustomerGroup_NoResults(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"customer_group_ids": {"acgp_00000000000000000000000000"},
+		"group_ids": {"acgp_00000000000000000000000000"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Nonsense customer group filter should return empty data")
@@ -59,7 +59,7 @@ func TestListCustomers_FilterByCustomerGroup_NoResults(t *testing.T) {
 func TestListCustomers_FilterByCustomerGroup(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"customer_group_ids": {SeedCustomerGroupID},
+		"group_ids": {SeedCustomerGroupID},
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Filter by customer group should return at least 1 result")

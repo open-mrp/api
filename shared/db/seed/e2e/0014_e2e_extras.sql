@@ -2030,3 +2030,23 @@ INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, produ
 -- Machine whose item set only the PUT include coverage replaces, so no schedule test sees it change.
 INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, created_at, updated_at) VALUES
     ('mc_01seed_putinc_items0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'PUT Include Items Machine', 'PUTINC-ITEMS', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW());
+
+-- A read-only customer whose defaults and recipients are filled, so the customer's receive calendar and
+-- notification recipient includes resolve real rows. No order uses it, so its calendar commits nothing.
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
+    ('ac_01e2ecustrecip00001', 'E2E Customer With Recipients', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, default_carrier_id, account_group_id, receive_calendar_id, created_at, updated_at) VALUES
+    ('acre_01e2ecustrecip0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2ecustrecip00001', 'customer', 'E2E-RECIPIENTS-1', 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'delivery', 'acgp_01k0a413mjeth8pe1g70t0thax', 'occd_01e2erecvcal00000', NOW(), NOW());
+
+INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, product_line_id, created_at, updated_at) VALUES
+    ('acrepdln_01e2ecustrcp1', 'acre_01e2ecustrecip0001', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+
+INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, created_at, updated_at) VALUES
+    ('us_01e2ecustrecip00001', 'E2E Recipient', 'e2e-recipient@e2e-test.openmrp.ai', 'e2e-recipient@e2e-test.openmrp.ai', NULL, NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO account_user (id, user_id, account_id, role_id, created_at, updated_at) VALUES
+    ('acus_01e2ecustrecip0001', 'us_01e2ecustrecip00001', 'ac_01e2ecustrecip00001', 'rl_7vafmsquekgt', NOW(), NOW());
+
+INSERT IGNORE INTO account_relation_notification_preference (id, account_relation_id, recipient_account_user_id, notification_type_code, created_at, updated_at) VALUES
+    ('arnp_01e2ecustrecip0001', 'acre_01e2ecustrecip0001', 'acus_01e2ecustrecip0001', 'invoice', NOW(), NOW());

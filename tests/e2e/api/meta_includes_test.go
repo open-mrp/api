@@ -367,6 +367,15 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{
 			"address": {"id": SeedLocationParentID},
 		},
 	},
+	// Only a customer seeded with them has a receive calendar and notification recipients; the seeded
+	// customer the other includes read has neither. Both are read-only.
+	"retrieve-customer": {
+		pathValuesByInclude: map[string]map[string]string{
+			"defaults.receive_calendar":            {"id": "ac_01e2ecustrecip00001"},
+			"notification_recipients":              {"id": "ac_01e2ecustrecip00001"},
+			"notification_recipients.account_user": {"id": "ac_01e2ecustrecip00001"},
+		},
+	},
 	"retrieve-customer-lead-time": {
 		pathValuesByInclude: map[string]map[string]string{
 			"parent_customer": {"id": "ac_01e2eltchild000001"},

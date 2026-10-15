@@ -95,24 +95,6 @@ func mapAddressRow(
 	return addr
 }
 
-func mapForwardAddressRow(row sqlc.ListAddressesForwardRow) *domain.Address {
-	return mapAddressRow(
-		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
-		row.CreatedAt, row.UpdatedAt,
-		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
-	)
-}
-
-func mapBackwardAddressRow(row sqlc.ListAddressesBackwardRow) *domain.Address {
-	return mapAddressRow(
-		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
-		row.CreatedAt, row.UpdatedAt,
-		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
-	)
-}
-
 func mapGetAddressRow(row sqlc.GetAddressRow) *domain.Address {
 	return mapAddressRow(
 		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
@@ -142,74 +124,26 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 	ctx, span := addressRepoTracer.Start(ctx, "repository.address.list")
 	defer span.End()
 
-	searchQuery := buildAddressSearchParams(params.Query)
-	dropShip := gosql.NullBool{}
-	if params.DropShip != nil {
-		dropShip = gosql.NullBool{Bool: *params.DropShip, Valid: true}
-	}
+	dir := pagination.DirectionForward
+	var cursor *pagination.StringCursor
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListAddressesBackward(ctx, sqlc.ListAddressesBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				DropShip:        dropShip,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			addresses := make([]*domain.Address, len(rows))
-			for i, row := range rows {
-				addresses[i] = mapBackwardAddressRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(addresses, params.Limit, cursorDir, addressCreatedAt, addressID)
-			return &domain.ListAddressesResult{Addresses: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListAddressesForward(ctx, sqlc.ListAddressesForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			DropShip:        dropShip,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		addresses := make([]*domain.Address, len(rows))
-		for i, row := range rows {
-			addresses[i] = mapForwardAddressRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(addresses, params.Limit, cursorDir, addressCreatedAt, addressID)
-		return &domain.ListAddressesResult{Addresses: result, PageInfo: pageInfo}, nil
+		cursor, cursorDir, dir = &cur, &cur.Direction, cur.Direction
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListAddressesForward(ctx, sqlc.ListAddressesForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		DropShip:    dropShip,
-		Limit:       params.Limit + 1,
-	})
+	query, args := buildAddressListQuery(params, dir, cursor, params.Limit+1)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	addresses := make([]*domain.Address, len(rows))
-	for i, row := range rows {
-		addresses[i] = mapForwardAddressRow(row)
+	defer func() { _ = rows.Close() }()
+	addresses, err := scanAddressListRows(rows)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 	result, pageInfo := pagination.BuildPageString(addresses, params.Limit, cursorDir, addressCreatedAt, addressID)
 	return &domain.ListAddressesResult{Addresses: result, PageInfo: pageInfo}, nil

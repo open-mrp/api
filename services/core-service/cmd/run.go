@@ -850,6 +850,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.ShipShipment, shipmentSvc.ExecuteShipShipment),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.MergeCustomers, customerSvc.ExecuteMergeCustomers),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {

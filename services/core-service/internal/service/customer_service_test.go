@@ -101,7 +101,7 @@ func TestUpdateCustomer_KeepsTheReceiveCalendarItWasNotSent(t *testing.T) {
 
 	_, apiErr := s.svc.UpdateCustomer(customerInternalCtx("ac_seller"), domain.UpdateCustomerParams{
 		CustomerAccountID: "ac_buyer",
-		Note:              field.Set("unrelated edit"),
+		Instructions:      field.Set("unrelated edit"),
 	})
 
 	require.Nil(t, apiErr)
@@ -118,11 +118,24 @@ func TestDeleteCustomer_OnlyTheOwnerLearnsACustomerWasDeleted(t *testing.T) {
 		s := newCustomerSvcSetup(t)
 		customer := &domain.Customer{ID: "ac_buyer"}
 		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(customer, nil)
-		s.salesOrders.EXPECT().CountSalesOrdersForBuyerAccounts(gomock.Any(), "ac_seller", []string{"ac_buyer"}).Return(int64(0), nil)
+		s.customers.EXPECT().GetRelationID(gomock.Any(), "ac_seller", "ac_buyer").Return("acre_buyer", nil)
+		s.customers.EXPECT().InUseBy(gomock.Any(), "ac_seller", "ac_buyer", "acre_buyer").Return(nil, nil)
 		s.deleted.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, "ac_buyer", "ac_seller", customer).Return(nil)
 		s.customers.EXPECT().Delete(gomock.Any(), "ac_seller", "ac_buyer").Return(nil)
 
 		require.Nil(t, s.svc.DeleteCustomer(customerInternalCtx("ac_seller"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"}))
+	})
+
+	t.Run("a customer still in use is refused and kept", func(t *testing.T) {
+		s := newCustomerSvcSetup(t)
+		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(&domain.Customer{ID: "ac_buyer"}, nil)
+		s.customers.EXPECT().GetRelationID(gomock.Any(), "ac_seller", "ac_buyer").Return("acre_buyer", nil)
+		s.customers.EXPECT().InUseBy(gomock.Any(), "ac_seller", "ac_buyer", "acre_buyer").Return([]string{"sales orders", "child customers"}, nil)
+
+		apiErr := s.svc.DeleteCustomer(customerInternalCtx("ac_seller"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.CodeResourceInUse, apiErr.Code)
+		assert.Contains(t, apiErr.PublicMessage, "sales orders and child customers")
 	})
 
 	t.Run("the owner deleting it again is told it is gone", func(t *testing.T) {
@@ -270,7 +283,7 @@ func TestUpdateCustomer_TakesANewCarrierWithItsServiceLevelClearedAndLeavesAnUnt
 		owned  string
 	}{
 		{"new carrier, level cleared", domain.UpdateCustomerParams{DefaultCarrierID: new("cr_new"), DefaultServiceLevelID: field.Clear[string]()}, "cr_new"},
-		{"pair untouched", domain.UpdateCustomerParams{Note: field.Set("unrelated edit")}, ""},
+		{"pair untouched", domain.UpdateCustomerParams{Instructions: field.Set("unrelated edit")}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := newCustomerSvcSetup(t)

@@ -468,7 +468,6 @@ LEFT JOIN account_relation
     ON account_relation.owner_account_id = ?
     AND account_relation.counterparty_account_id = ?
     AND account_relation.account_relation_role_code = 'customer'
-LEFT JOIN account_group ON account_group.id = account_relation.account_group_id
 LEFT JOIN account_production_schedule_setting
     ON account_production_schedule_setting.account_id = ?
 WHERE operating_calendar.account_id = ?
@@ -477,14 +476,12 @@ AND operating_calendar.deleted_at IS NULL
 AND (
     operating_calendar.id = address.receive_calendar_id
     OR operating_calendar.id = account_relation.receive_calendar_id
-    OR operating_calendar.id = account_group.receive_calendar_id
     OR operating_calendar.id = account_production_schedule_setting.receive_calendar_id
     OR operating_calendar.is_default = TRUE
 )
 ORDER BY
     (operating_calendar.id = address.receive_calendar_id) DESC,
     (operating_calendar.id = account_relation.receive_calendar_id) DESC,
-    (operating_calendar.id = account_group.receive_calendar_id) DESC,
     (operating_calendar.id = account_production_schedule_setting.receive_calendar_id) DESC,
     operating_calendar.is_default DESC
 LIMIT 1
@@ -500,8 +497,8 @@ type ResolveReceiveCalendarRow struct {
 	OperatingCalendar OperatingCalendar
 }
 
-// Resolves the receiving calendar for one order's destination, walking address -> customer -> customer's group -> account default -> the account's default receive calendar.
-// One query rather than four reads: the chain is four LEFT JOINs off the address, and the ORDER BY expresses the precedence so the caller never has to know it. Mirrors GetCustomerLeadTimeChain, which resolves the sibling lead-time chain the same way.
+// Resolves the receiving calendar for one order's destination, walking address -> customer -> account default -> the account's default receive calendar.
+// One query rather than three reads: the chain is three LEFT JOINs off the address, and the ORDER BY expresses the precedence so the caller never has to know it. Mirrors GetCustomerLeadTimeChain, which resolves the sibling lead-time chain the same way.
 func (q *Queries) ResolveReceiveCalendar(ctx context.Context, arg ResolveReceiveCalendarParams) (ResolveReceiveCalendarRow, error) {
 	row := q.db.QueryRowContext(ctx, resolveReceiveCalendar,
 		arg.AddressID,

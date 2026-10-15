@@ -30,20 +30,65 @@ func optStringToFreightPolicy(s *string) *constants.FreightPolicy {
 	return &v
 }
 
-func optStringToFulfillmentPolicy(s *string) *constants.FulfillmentPolicy {
+func optStringToSupply(s *string) *constants.Supply {
 	if s == nil || *s == "" {
 		return nil
 	}
-	v := constants.FulfillmentPolicy(*s)
+	v := constants.Supply(*s)
 	return &v
 }
 
-func fulfillmentPolicyToStringPtr(p *constants.FulfillmentPolicy) *string {
-	if p == nil {
+func optStringToArchiveStatus(s *string) *constants.ArchiveStatus {
+	if s == nil || *s == "" {
 		return nil
 	}
-	s := string(*p)
-	return &s
+	v := constants.ArchiveStatus(*s)
+	return &v
+}
+
+// customerRecipientsToProto is a customer's notification recipients as documents per account user. A stored type
+// that isn't a customer document (a purchase-order submission) is left out.
+func customerRecipientsToProto(recipients []domain.NotificationRecipient) []*pb.CustomerRecipientProto {
+	out := make([]*pb.CustomerRecipientProto, 0, len(recipients))
+	for _, r := range recipients {
+		if r.AccountUser == nil {
+			continue
+		}
+		var docs []string
+		for _, code := range r.NotificationTypeCodes {
+			if doc, ok := constants.AccountRelationNotificationType(code).RecipientDocument(); ok {
+				docs = append(docs, string(doc))
+			}
+		}
+		if len(docs) == 0 {
+			continue
+		}
+		rec := &pb.CustomerRecipientProto{
+			AccountUserId:        r.AccountUser.ID,
+			Documents:            docs,
+			AccountUserStatus:    string(r.AccountUser.StatusCode),
+			AccountUserCreatedAt: timestamppb.New(r.AccountUser.CreatedAt),
+			AccountUserUpdatedAt: timestamppb.New(r.AccountUser.UpdatedAt),
+		}
+		if r.AccountUser.LastUsedAt != nil {
+			rec.AccountUserLastUsedAt = timestamppb.New(*r.AccountUser.LastUsedAt)
+		}
+		out = append(out, rec)
+	}
+	return out
+}
+
+// recipientInputsFromProto turns requested recipients' documents into the notification types a relation stores.
+func recipientInputsFromProto(in []*pb.EmailRecipient) []domain.NotificationRecipientInput {
+	out := make([]domain.NotificationRecipientInput, len(in))
+	for i, r := range in {
+		codes := make([]string, len(r.Documents))
+		for j, doc := range r.Documents {
+			codes[j] = string(constants.RecipientDocument(doc).NotificationType())
+		}
+		out[i] = domain.NotificationRecipientInput{AccountUserID: r.AccountUserId, NotificationTypeCodes: codes}
+	}
+	return out
 }
 
 func customerAddressToProto(addr *domain.CustomerAddress) *pb.CustomerAddressProto {
@@ -85,19 +130,23 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		IsParentAccount:       c.IsParentAccount,
 		CommissionPolicy:      string(c.CommissionPolicy),
 		FreightPolicy:         string(c.FreightPolicy),
-		Note:                  c.Note,
+		Instructions:          c.Instructions,
 		Email:                 c.Email,
 		Phone:                 c.Phone,
 		Url:                   c.URL,
 		CarrierBillingAccount: c.CarrierBillingAccount,
-		AcceptsInvoiceEmails:  c.AcceptsInvoiceEmails,
 		BillToAddress:         customerAddressToProto(c.BillToAddress),
 		ShipToAddress:         customerAddressToProto(c.ShipToAddress),
 		CreatedAt:             timestamppb.New(c.CreatedAt),
 		UpdatedAt:             timestamppb.New(c.UpdatedAt),
 		DefaultLeadTimeDays:   c.DefaultLeadTimeDays,
 		ReceiveCalendarId:     c.ReceiveCalendarID,
-		FulfillmentPolicyCode: fulfillmentPolicyToStringPtr(c.FulfillmentPolicy),
+		Supply:                c.Supply.StringPtr(),
+		ArchiveStatus:         string(c.ArchiveStatus),
+	}
+	if c.NotificationRecipients != nil {
+		p.NotificationRecipients = customerRecipientsToProto(c.NotificationRecipients)
+		p.HasNotificationRecipients = true
 	}
 
 	if c.CarrierBillingType != nil {
@@ -179,17 +228,6 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 			st.UpdatedAt = timestamppb.New(*c.DefaultShippingTermUpdatedAt)
 		}
 		p.DefaultShippingTerm = st
-	}
-
-	if c.DefaultPriorityCode != nil {
-		priority := &pb.CustomerPriorityProto{
-			Code: string(*c.DefaultPriorityCode),
-			Name: *c.DefaultPriorityName,
-		}
-		if c.DefaultPriorityID != nil {
-			priority.Id = *c.DefaultPriorityID
-		}
-		p.DefaultPriority = priority
 	}
 
 	if c.DefaultSalesRepID != nil && *c.DefaultSalesRepID != "" {
@@ -325,6 +363,9 @@ func (h *gRPCHandler) ListCustomers(ctx context.Context, req *pb.ListCustomersRe
 	params.CarrierIDs = req.CarrierIds
 	params.ServiceLevelIDs = req.ServiceLevelIds
 	params.Includes = req.Includes
+	params.IsActive = constants.IsActiveFilter(archiveStatuses(req.Statuses))
+	params.RelationshipTypes = relationshipTypes(req.RelationshipTypes)
+	params.Created = createdRangeFromProto(req.Created)
 
 	result, apiErr := h.customerSvc.ListCustomers(ctx, params)
 	if apiErr != nil {
@@ -398,7 +439,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 	params := domain.CreateCustomerParams{
 		Name:                  req.Name,
 		Number:                req.Number,
-		Note:                  req.Note,
+		Instructions:          req.Instructions,
 		Email:                 req.Email,
 		Phone:                 req.Phone,
 		URL:                   req.Url,
@@ -407,18 +448,21 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		FreightPolicy:         optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:   req.DefaultLeadTimeDays,
 		ReceiveCalendarID:     req.ReceiveCalendarId,
-		FulfillmentPolicy:     optStringToFulfillmentPolicy(req.FulfillmentPolicyCode),
+		Supply:                optStringToSupply(req.Supply),
+		ParentCustomerID:      req.ParentCustomerId,
 		DefaultCarrierID:      req.DefaultCarrierId,
 		DefaultServiceLevelID: req.DefaultServiceLevelId,
 		DefaultPaymentTermID:  req.DefaultPaymentTermId,
 		DefaultShippingTermID: req.DefaultShippingTermId,
-		DefaultPriorityCode:   req.DefaultPriorityCode,
 		DefaultSalesRepID:     req.DefaultSalesRepId,
 		CustomerPriceGroupIDs: req.CustomerPriceGroupIds,
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
 		Includes:              req.Includes,
+	}
+	if status := optStringToArchiveStatus(req.ArchiveStatus); status != nil {
+		params.ArchiveStatus = *status
 	}
 
 	if req.BillToAddress != nil {
@@ -460,7 +504,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerAccountID:        req.Id,
 		Name:                     req.Name,
 		Number:                   req.Number,
-		Note:                     fieldpb.StringClearableFromProto(req.Note),
+		Instructions:             fieldpb.StringClearableFromProto(req.Instructions),
 		Email:                    fieldpb.StringClearableFromProto(req.Email),
 		Phone:                    fieldpb.StringClearableFromProto(req.Phone),
 		URL:                      fieldpb.StringClearableFromProto(req.Url),
@@ -469,12 +513,13 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:      fieldpb.Int32ClearableFromProto(req.DefaultLeadTimeDays),
 		ReceiveCalendarID:        fieldpb.StringClearableFromProto(req.ReceiveCalendarId),
-		FulfillmentPolicy:        fieldpb.EnumClearableFromProto[constants.FulfillmentPolicy](req.FulfillmentPolicyCode),
+		Supply:                   fieldpb.EnumClearableFromProto[constants.Supply](req.Supply),
+		ParentCustomerID:         fieldpb.StringClearableFromProto(req.ParentCustomerId),
+		ArchiveStatus:            optStringToArchiveStatus(req.ArchiveStatus),
 		DefaultCarrierID:         req.DefaultCarrierId,
 		DefaultServiceLevelID:    fieldpb.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
 		DefaultShippingTermID:    req.DefaultShippingTermId,
-		DefaultPriorityCode:      req.DefaultPriorityCode,
 		DefaultSalesRepID:        fieldpb.StringClearableFromProto(req.DefaultSalesRepId),
 		BillToAddressID:          fieldpb.StringClearableFromProto(req.BillToAddressId),
 		ShipToAddressID:          fieldpb.StringClearableFromProto(req.ShipToAddressId),
@@ -485,6 +530,10 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CarrierBillingAccount:    fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
 		CreditLimit:              money.fieldPatch("credit_limit", req.CreditLimit),
 		Includes:                 req.Includes,
+	}
+	if req.HasNotificationRecipients {
+		params.NotificationRecipients = recipientInputsFromProto(req.NotificationRecipients)
+		params.HasNotificationRecipients = true
 	}
 
 	if apiErr := money.err(); apiErr != nil {
@@ -635,18 +684,15 @@ func (h *gRPCHandler) MergeCustomers(ctx context.Context, req *pb.MergeCustomers
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	customer, apiErr := h.customerSvc.MergeCustomers(ctx, domain.MergeCustomersParams{
+	job, apiErr := h.customerSvc.MergeCustomers(ctx, domain.MergeCustomersParams{
 		TargetCustomerID:  req.TargetCustomerId,
 		SourceCustomerIDs: req.SourceCustomerIds,
-		Includes:          req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.MergeCustomersResponse{
-		Customer: customerToProto(customer),
-	}, nil
+	return &pb.MergeCustomersResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) ExportCustomers(ctx context.Context, req *pb.ExportCustomersRequest) (*pb.ExportCustomersResponse, error) {
@@ -673,6 +719,9 @@ func (h *gRPCHandler) ExportCustomers(ctx context.Context, req *pb.ExportCustome
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
+		IsActive:              constants.IsActiveFilter(archiveStatuses(req.Statuses)),
+		RelationshipTypes:     relationshipTypes(req.RelationshipTypes),
+		Created:               createdRangeFromProto(req.Created),
 	}
 	if req.StartDate != nil {
 		t := req.StartDate.AsTime()
@@ -707,4 +756,12 @@ func protoCustomerAddressInputToCreateParams(input *pb.CreateCustomerAddressInpu
 		PostalCode:  input.PostalCode,
 		Country:     input.Country,
 	}
+}
+
+func relationshipTypes(in []string) []constants.CustomerRelationshipType {
+	out := make([]constants.CustomerRelationshipType, len(in))
+	for i, v := range in {
+		out[i] = constants.CustomerRelationshipType(v)
+	}
+	return out
 }

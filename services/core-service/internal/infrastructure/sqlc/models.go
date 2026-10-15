@@ -312,6 +312,9 @@ type AccountRelation struct {
 	CarrierBillingType       sql.NullString
 	CreditLimitAmount        sql.NullString
 	CreditLimitCurrency      sql.NullString
+	Instructions             sql.NullString
+	SupplyCode               sql.NullString
+	IsActive                 bool
 }
 
 type AccountRelationNotificationPreference struct {

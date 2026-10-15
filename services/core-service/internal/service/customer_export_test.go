@@ -101,12 +101,11 @@ func fullCustomer() *domain.Customer {
 		Status:                  constants.AccountStatusCodeHoldShipment,
 		CommissionPolicy:        constants.CommissionPolicyExempt,
 		FreightPolicy:           constants.FreightPolicyBilled,
-		Note:                    new("Ships Tuesdays"),
+		Instructions:            new("Ships Tuesdays"),
 		Email:                   new("orders@harbor.test"),
 		Phone:                   new("555-0100"),
 		TypeGroupName:           new("Distributors"),
 		DefaultSalesRepName:     new("Pat Lee"),
-		DefaultPriorityName:     new("High"),
 		DefaultPaymentTermName:  new("Net 30"),
 		DefaultShippingTermName: new("FOB Origin"),
 		DefaultCarrierName:      new("Freight Co"),
@@ -151,13 +150,13 @@ func (suite *CustomerExportTestSuite) TestExport_MatchesTheDashboardsFile() {
 	rows := exportedSheetRows(suite.T(), export, customerExportSheet)
 	suite.Require().Len(rows, 3, "a header and two customers")
 	suite.Equal([]string{
-		"Customer Number", "Name", "Email", "Phone", "Status", "Customer Group", "Sales Rep", "Priority",
+		"Customer Number", "Name", "Email", "Phone", "Status", "Customer Group", "Sales Rep",
 		"Payment Term", "Shipping Term", "Carrier", "Default Billing", "Default Shipping", "Contacts",
-		"Commission Exempt", "Freight Exempt", "Parent Account", "Note", "Created At",
+		"Commission Exempt", "Freight Exempt", "Parent Account", "Instructions", "Created At",
 	}, rows[0])
 
 	suite.Equal([]string{
-		"08841", "Harbor Supply", "orders@harbor.test", "555-0100", "Hold Shipment", "Distributors", "Pat Lee", "High",
+		"08841", "Harbor Supply", "orders@harbor.test", "555-0100", "Hold Shipment", "Distributors", "Pat Lee",
 		"Net 30", "FOB Origin", "Freight Co",
 		"1 Main St, Suite 5, Springfield, IL 62701 US",
 		"9 Dock Rd, Springfield, IL 62702 US",
@@ -167,7 +166,7 @@ func (suite *CustomerExportTestSuite) TestExport_MatchesTheDashboardsFile() {
 
 	// Blank cells mid-row read back as empty strings; the row ends at its last filled column.
 	suite.Equal([]string{
-		"C-12", "Bare Goods", "", "", "Normal", "", "", "",
+		"C-12", "Bare Goods", "", "", "Normal", "", "",
 		"", "", "", "", "", "",
 		"No", "Yes", "No", "", "02/14/2026",
 	}, rows[2])

@@ -899,6 +899,11 @@ type CustomerRepo interface {
 	GetByIDs(ctx context.Context, ownerAccountID string, customerAccountIDs []string) ([]*Customer, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID, brandingID string, params CreateCustomerParams, customerNumber string) (*Customer, *apierror.APIError)
 	Update(ctx context.Context, relationID string, params UpdateCustomerParams) *apierror.APIError
+	// InUseBy names the records that still reference the owner's customer: its sales orders, shipments and child
+	// customers. Empty when nothing does.
+	InUseBy(ctx context.Context, ownerAccountID, customerAccountID, relationID string) ([]string, *apierror.APIError)
+	// IsArchived reports whether the owner's customer is archived; false when it isn't the owner's customer.
+	IsArchived(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError)
 	UpdateName(ctx context.Context, customerAccountID, name string) *apierror.APIError
 	UpdateBranding(ctx context.Context, customerAccountID string, email, phone, url *string) *apierror.APIError
 	Delete(ctx context.Context, ownerAccountID, customerAccountID string) *apierror.APIError

@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_async.proto";
 import "core/value_shapes.proto";
+import "core/primitives.proto";
 option go_package = "shared/proto/core;core";
 
 message GetAccountContextRequest {
@@ -481,18 +482,19 @@ message CustomerProto {
   bool is_parent_account = 6;
   string commission_policy = 7;
   string freight_policy = 8;
-  optional string note = 9;
+  // Your team's standing instructions for this customer's orders.
+  optional string instructions = 9;
   optional string email = 10;
   optional string phone = 11;
   optional string url = 12;
   optional string carrier_billing_type = 13;
   optional string carrier_billing_account = 14;
-  bool accepts_invoice_emails = 15;
+  reserved 15; // formerly accepts_invoice_emails (notification recipients replace it)
   optional CustomerCarrierProto default_carrier = 16;
   optional CustomerServiceLevelProto default_service_level = 17;
   optional CustomerPaymentTermProto default_payment_term = 18;
   optional CustomerShippingTermProto default_shipping_term = 19;
-  optional CustomerPriorityProto default_priority = 20;
+  reserved 20; // formerly default_priority (customers carry no priority)
   optional CustomerUserProto default_sales_rep = 21;
   optional CustomerAddressProto bill_to_address = 22;
   optional CustomerAddressProto ship_to_address = 23;
@@ -508,8 +510,24 @@ message CustomerProto {
   optional int32 default_lead_time_days = 31;
   // The days this customer's dock accepts freight. Sits in the same chain as the lead time above.
   optional string receive_calendar_id = 32;
-  // make_to_order marks the customer make-to-order: their history is kept out of the production-schedule forecast. Empty inherits the account group's policy, then make-to-stock.
-  optional string fulfillment_policy_code = 33;
+  reserved 33; // formerly fulfillment_policy_code (supply replaces it)
+  // stock, make or buy: where this customer's order lines are supplied from when nothing more specific says.
+  optional string supply = 35;
+  // active or archived: whether the customer can receive new orders.
+  string archive_status = 36;
+  // The customer's notification recipients, set only when has_notification_recipients.
+  repeated CustomerRecipientProto notification_recipients = 37;
+  bool has_notification_recipients = 38;
+}
+// One person who receives a customer's documents, with the account user details the response shows.
+// documents are constants.RecipientDocument values.
+message CustomerRecipientProto {
+  string account_user_id = 1;
+  repeated string documents = 2;
+  string account_user_status = 3;
+  optional google.protobuf.Timestamp account_user_last_used_at = 4;
+  google.protobuf.Timestamp account_user_created_at = 5;
+  google.protobuf.Timestamp account_user_updated_at = 6;
 }
 message CustomerCarrierProto {
   string id = 1;
@@ -608,6 +626,11 @@ message ListCustomersRequest {
   optional google.protobuf.Timestamp start_date = 18;
   optional google.protobuf.Timestamp end_date = 19;
   repeated string includes = 20;
+  // active or archived.
+  repeated string statuses = 21;
+  // standalone, parent or child.
+  repeated string relationship_types = 22;
+  CreatedRange created = 23;
 }
 message ListCustomersResponse {
   repeated CustomerProto customers = 1;
@@ -643,7 +666,7 @@ message CreateCustomerAddressInput {
 message CreateCustomerRequest {
   string name = 1;
   optional string number = 2;
-  optional string note = 3;
+  optional string instructions = 3;
   optional string email = 4;
   optional string phone = 5;
   optional string url = 6;
@@ -655,7 +678,7 @@ message CreateCustomerRequest {
   optional string default_service_level_id = 12;
   optional string default_payment_term_id = 13;
   optional string default_shipping_term_id = 14;
-  optional string default_priority_code = 15;
+  reserved 15; // formerly default_priority_code
   optional string default_sales_rep_id = 16;
   optional string bill_to_address_id = 17;
   optional string ship_to_address_id = 18;
@@ -669,8 +692,12 @@ message CreateCustomerRequest {
   repeated string includes = 27;
   optional int32 default_lead_time_days = 28;
   optional string receive_calendar_id = 29;
-  optional string fulfillment_policy_code = 30;
+  reserved 30; // formerly fulfillment_policy_code
   Money credit_limit = 31;
+  optional string supply = 32;
+  // active or archived; empty is active.
+  optional string archive_status = 33;
+  optional string parent_customer_id = 34;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -679,7 +706,7 @@ message UpdateCustomerRequest {
   string id = 1;
   optional string name = 2;
   optional string number = 3;
-  optional StringPatch note = 4;
+  optional StringPatch instructions = 4;
   optional StringPatch email = 5;
   optional StringPatch phone = 6;
   optional StringPatch url = 7;
@@ -691,7 +718,7 @@ message UpdateCustomerRequest {
   optional StringPatch default_service_level_id = 13;
   optional string default_payment_term_id = 14;
   optional string default_shipping_term_id = 15;
-  optional string default_priority_code = 16;
+  reserved 16; // formerly default_priority_code
   optional StringPatch default_sales_rep_id = 17;
   optional StringPatch bill_to_address_id = 18;
   optional StringPatch ship_to_address_id = 19;
@@ -705,7 +732,13 @@ message UpdateCustomerRequest {
   repeated string includes = 26;
   optional Int32Patch default_lead_time_days = 27;
   StringPatch receive_calendar_id = 30;
-  StringPatch fulfillment_policy_code = 31;
+  reserved 31; // formerly fulfillment_policy_code
+  StringPatch supply = 33;
+  optional string archive_status = 34;
+  StringPatch parent_customer_id = 35;
+  // Replaces the customer's notification recipients when has_notification_recipients.
+  repeated EmailRecipient notification_recipients = 36;
+  bool has_notification_recipients = 37;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;
@@ -749,7 +782,8 @@ message MergeCustomersRequest {
   repeated string includes = 3;
 }
 message MergeCustomersResponse {
-  CustomerProto customer = 1;
+  reserved 1; // formerly the merged customer; the merge now runs as a job
+  JobInfo job = 2;
 }
 // ListCustomersRequest's filters, without its paging or includes.
 message ExportCustomersRequest {
@@ -770,6 +804,9 @@ message ExportCustomersRequest {
   optional string postal_code = 15;
   optional google.protobuf.Timestamp start_date = 16;
   optional google.protobuf.Timestamp end_date = 17;
+  repeated string statuses = 18;
+  repeated string relationship_types = 19;
+  CreatedRange created = 20;
 }
 message ExportCustomersResponse {
   JobInfo job = 1;

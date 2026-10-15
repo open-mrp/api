@@ -292,14 +292,14 @@ func (r *accountGroupRepoImpl) CheckAccountGroupNotInUse(ctx context.Context, ac
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check account group usage in customer records."))
 	}
-	if accountGroup.AccountGroupTypeCode == string(constants.AccountGroupTypeTypeGroup) && customerCount > 0 {
-		return apierror.NewValidationError(
+	if customerCount > 0 {
+		return apierror.NewInUseError(
 			fmt.Sprintf(
-				"Cannot delete account group '%s'. %d customer %s %s on it as %s customer type.",
+				"Cannot delete account group '%s'. %d %s %s it as %s group.",
 				accountGroup.Name,
 				customerCount,
-				textutil.Pluralize(int(customerCount), "record", "records"),
-				textutil.Pluralize(int(customerCount), "relies", "rely"),
+				textutil.Pluralize(int(customerCount), "customer", "customers"),
+				textutil.Pluralize(int(customerCount), "has", "have"),
 				textutil.Pluralize(int(customerCount), "its", "their"),
 			),
 		)
@@ -310,7 +310,7 @@ func (r *accountGroupRepoImpl) CheckAccountGroupNotInUse(ctx context.Context, ac
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check account group usage in account group product lines."))
 	}
 	if productLineCount > 0 {
-		return apierror.NewValidationError(
+		return apierror.NewInUseError(
 			fmt.Sprintf(
 				"Cannot delete account group '%s'. %d product line access %s %s on it.",
 				accountGroup.Name,
@@ -326,7 +326,7 @@ func (r *accountGroupRepoImpl) CheckAccountGroupNotInUse(ctx context.Context, ac
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check account group usage in account group quantity discounts."))
 	}
 	if quantityDiscountCount > 0 {
-		return apierror.NewValidationError(
+		return apierror.NewInUseError(
 			fmt.Sprintf(
 				"Cannot delete account group '%s'. %d volume discount %s %s on it.",
 				accountGroup.Name,
@@ -342,7 +342,7 @@ func (r *accountGroupRepoImpl) CheckAccountGroupNotInUse(ctx context.Context, ac
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check account group usage in account relation price groups."))
 	}
 	if accountGroup.AccountGroupTypeCode != string(constants.AccountGroupTypePricingGroup) && pricingAssignmentCount > 0 {
-		return apierror.NewValidationError(
+		return apierror.NewInUseError(
 			fmt.Sprintf(
 				"Cannot delete account group '%s'. %d pricing %s %s on it.",
 				accountGroup.Name,
@@ -361,7 +361,7 @@ func (r *accountGroupRepoImpl) CheckAccountGroupNotInUse(ctx context.Context, ac
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check account group usage in registration flows."))
 	}
 	if registrationFlowCount > 0 {
-		return apierror.NewValidationError(
+		return apierror.NewInUseError(
 			fmt.Sprintf("Cannot delete account group '%s'. It is connected to an active registration flow.", accountGroup.Name),
 		)
 	}

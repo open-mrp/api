@@ -433,13 +433,17 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 	// For customer-portal creates, fold the customer's saved note into the order note (matches Dashboard: [customer.note, data.note] joined).
 	if identity.IsCustomerUser() {
-		if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil); apiErr == nil && customer != nil && customer.Note != nil && *customer.Note != "" {
-			folded := *customer.Note
+		if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil); apiErr == nil && customer != nil && customer.Instructions != nil && *customer.Instructions != "" {
+			folded := *customer.Instructions
 			if params.Note != nil && *params.Note != "" {
-				folded = *customer.Note + "\n\n" + *params.Note
+				folded = *customer.Instructions + "\n\n" + *params.Note
 			}
 			params.Note = &folded
 		}
+	}
+
+	if apiErr := checkCustomerTakesOrders(ctx, s.repos, params.AccountID, params.BuyerAccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Enforce the account's invoice-count plan limit before creating the order (matches Dashboard's canCreateInvoice guard). Sandboxes are exempt.
@@ -2377,11 +2381,15 @@ func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domai
 func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFactory, params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) *apierror.APIError {
 	buyerAccountID := existing.BuyerAccountID
 	if params.BuyerAccountID != nil && *params.BuyerAccountID != existing.BuyerAccountID {
-		if _, apiErr := repos.NewCustomerRepo().Get(ctx, params.AccountID, *params.BuyerAccountID, nil); apiErr != nil {
+		customer, apiErr := repos.NewCustomerRepo().Get(ctx, params.AccountID, *params.BuyerAccountID, nil)
+		if apiErr != nil {
 			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return apierror.NewNotFoundError("No customer found with the provided ID.").WithParam("customer_id")
 			}
 			return apiErr
+		}
+		if customer.ArchiveStatus == constants.ArchiveStatusArchived {
+			return domain.RequireAssignable("customer_id", "customer", customer.ArchiveStatus)
 		}
 		buyerAccountID = *params.BuyerAccountID
 	}
@@ -4009,4 +4017,14 @@ func attachSalesOrderContacts(ctx context.Context, repo domain.SalesOrderRepo, o
 		}
 	}
 	return nil
+}
+
+// checkCustomerTakesOrders refuses a new order for an archived customer. A buyer that isn't one of the account's
+// customers is left to the order's own checks.
+func checkCustomerTakesOrders(ctx context.Context, repos domain.RepoFactory, accountID, buyerAccountID string) *apierror.APIError {
+	archived, apiErr := repos.NewCustomerRepo().IsArchived(ctx, accountID, buyerAccountID)
+	if apiErr != nil || !archived {
+		return apiErr
+	}
+	return domain.RequireAssignable("customer_id", "customer", constants.ArchiveStatusArchived)
 }

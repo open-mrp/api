@@ -40,7 +40,46 @@ JOIN (
 SET ic.default_lot_size_id = pick.default_lot_id
 WHERE ic.account_id IS NOT NULL AND ic.default_lot_size_id IS NULL;
 
+-- Items whose line lot differs from their category's keep it as a per-item override, so no plan changes size. The old
+-- lot is defined as the vote above defines it; an intermediate fed into lines that disagree has no single old lot and
+-- takes its category's. Values are compared, not rows: lines often hold equal lots in separate quantity rows. The
+-- override is a bare size in the item's own unit, which is what the solver always counted a line lot in. An existing
+-- override is kept. The id is derived from the item so a re-run updates nothing.
+INSERT INTO `production_schedule_item_setting` (`id`, `account_id`, `item_id`, `lot_multiple_units`, `created_at`, `updated_at`)
+SELECT CONCAT('pnscitsd_', SUBSTRING(MD5(CONCAT('lot:', i.id)), 1, 12)), i.account_id, i.id, old.value, NOW(3), NOW(3)
+FROM (
+  SELECT p.item_id, q.value, q.unit_id
+  FROM `product_line` pl
+  JOIN `quantity` q ON q.id = pl.default_lot_id
+  JOIN `product` p ON p.product_line_id = pl.id
+  WHERE pl.default_lot_id IS NOT NULL
+  UNION ALL
+  SELECT gi.id, MIN(q.value), MIN(q.unit_id)
+  FROM `product_line` pl
+  JOIN `quantity` q ON q.id = pl.default_lot_id
+  JOIN `product` p ON p.product_line_id = pl.id
+  JOIN `production` pr ON pr.item_id = p.item_id
+  JOIN `consumption` c ON c.production_step_id = pr.production_step_id
+  JOIN `item` gi ON gi.id = c.item_id
+  LEFT JOIN `product` gp ON gp.item_id = gi.id
+  WHERE pl.default_lot_id IS NOT NULL AND gp.product_line_id IS NULL
+  GROUP BY gi.id
+  HAVING COUNT(DISTINCT q.value, q.unit_id) = 1
+) old
+JOIN `item` i ON i.id = old.item_id
+LEFT JOIN `item_category` ic ON ic.id = i.item_category_id
+LEFT JOIN `quantity` cq ON cq.id = ic.default_lot_size_id
+WHERE i.deleted_at IS NULL
+  AND (cq.id IS NULL OR cq.value <> old.value OR cq.unit_id <> old.unit_id)
+ON DUPLICATE KEY UPDATE
+  `updated_at` = IF(`production_schedule_item_setting`.`lot_multiple_units` > 0,
+    `production_schedule_item_setting`.`updated_at`, VALUES(`updated_at`)),
+  `lot_multiple_units` = IF(`production_schedule_item_setting`.`lot_multiple_units` > 0,
+    `production_schedule_item_setting`.`lot_multiple_units`, VALUES(`lot_multiple_units`));
+
 -- +goose Down
 
+DELETE FROM `production_schedule_item_setting`
+WHERE `id` LIKE 'pnscitsd\_%' AND `id` = CONCAT('pnscitsd_', SUBSTRING(MD5(CONCAT('lot:', `item_id`)), 1, 12));
 UPDATE `item_category` SET `default_lot_size_id` = NULL WHERE `default_lot_size_id` IS NOT NULL;
 UPDATE `product_line` SET `supply_code` = NULL WHERE `supply_code` IS NOT NULL;

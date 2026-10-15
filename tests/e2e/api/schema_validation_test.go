@@ -159,7 +159,7 @@ func TestSchemaValidation_CreateAndGetResponseKeysMatch(t *testing.T) {
 
 	// Test with customers — a well-defined CRUD resource.
 	name := uniqueName("e2e-schema-keys")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 
@@ -198,9 +198,9 @@ func TestSchemaValidation_UpdateResponseKeysMatchGet(t *testing.T) {
 	id := jsonField(created, "id")
 
 	// PATCH.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "schema test",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -363,8 +363,12 @@ func TestSchemaValidation_IncludeFieldsPopulated(t *testing.T) {
 	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-schema-inc")))
 	id := jsonField(created, "id")
 
-	// Verify expandable fields are null without include.
-	expandableFields := []string{"contact_info", "defaults", "freight_preferences", "type", "notification_preferences"}
+	// Sections are always present and carry no object; related records are null until included.
+	for _, section := range []string{"contact", "carrier_billing", "defaults"} {
+		require.NotNil(t, jsonObject(created, section), "%s is always present", section)
+		assert.NotContains(t, jsonObject(created, section), "object", "%s is a section, not a resource", section)
+	}
+	expandableFields := []string{"group", "parent_customer", "notification_recipients"}
 	for _, field := range expandableFields {
 		assert.Nil(t, created[field], "%s should be null without ?include", field)
 	}

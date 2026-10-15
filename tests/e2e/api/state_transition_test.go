@@ -22,15 +22,15 @@ func TestStateTransition_CustomerStatus_NormalToHoldShipment(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-cust")))
 	id := jsonField(created, "id")
-	assert.Equal(t, "normal", jsonField(created, "status"))
+	assert.Equal(t, "normal", jsonField(created, "standing"))
 
 	// Transition to hold_shipment.
-	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"status": "hold_shipment",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, "hold_shipment", jsonField(parseJSON(body), "status"))
+	assert.Equal(t, "hold_shipment", jsonField(parseJSON(body), "standing"))
 }
 
 func TestStateTransition_CustomerStatus_HoldShipmentBackToNormal(t *testing.T) {
@@ -39,19 +39,19 @@ func TestStateTransition_CustomerStatus_HoldShipmentBackToNormal(t *testing.T) {
 	id := jsonField(created, "id")
 
 	// Hold.
-	s1, b1, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	s1, b1, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"status": "hold_shipment",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, s1, b1)
 
 	// Resume.
-	s2, b2, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	s2, b2, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"status": "normal",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, s2, b2)
-	assert.Equal(t, "normal", jsonField(parseJSON(b2), "status"))
+	assert.Equal(t, "normal", jsonField(parseJSON(b2), "standing"))
 }
 
 func TestStateTransition_CustomerStatus_InvalidTransition(t *testing.T) {
@@ -59,9 +59,9 @@ func TestStateTransition_CustomerStatus_InvalidTransition(t *testing.T) {
 	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-inv")))
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"status": "totally_fake_status",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Invalid status transition should return 400 or 422, got %d: %s", status, string(body))
@@ -191,9 +191,9 @@ func TestStateTransition_PartialUpdatePreservesFields(t *testing.T) {
 	originalNumber := jsonField(created, "number")
 
 	// Update only the note.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "updated note",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -201,7 +201,7 @@ func TestStateTransition_PartialUpdatePreservesFields(t *testing.T) {
 	assert.Equal(t, name, jsonField(updated, "name"), "name should be preserved")
 	assert.Equal(t, originalNumber, jsonField(updated, "number"), "number should be preserved")
 	assert.Equal(t, "exempt", jsonField(updated, "commission_policy"), "commission_policy should be preserved")
-	assert.Equal(t, "updated note", jsonField(updated, "note"), "note should be updated")
+	assert.Equal(t, "updated note", jsonField(updated, "instructions"), "note should be updated")
 }
 
 // ──────────────────────────────────────────────
@@ -241,9 +241,9 @@ func TestStateTransition_IDIsImmutable(t *testing.T) {
 	originalID := jsonField(created, "id")
 
 	// Update and verify ID doesn't change.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+originalID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+originalID, forgeCustomerWrite(map[string]any{
 		"note": "test immutability",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	assert.Equal(t, originalID, jsonField(parseJSON(patchBody), "id"), "ID must be immutable across updates")
@@ -256,9 +256,9 @@ func TestStateTransition_NumberIsImmutable(t *testing.T) {
 	id := jsonField(created, "id")
 	originalNumber := jsonField(created, "number")
 
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "test number immutability",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	assert.Equal(t, originalNumber, jsonField(parseJSON(patchBody), "number"), "number must be immutable across updates")

@@ -86,13 +86,13 @@ func TestForgePaymentTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_payment_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.payment_term_id")
 
 	customerID := dashCustomersNew(t, "e2e-forge-pt-cust", nil)
 	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"default_payment_term_id": archivedID}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_payment_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.payment_term_id")
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["payment_term_id"] = archivedID
@@ -293,7 +293,7 @@ func TestForgeShippingTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_shipping_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.shipping_term_id")
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["shipping_term_id"] = archivedID

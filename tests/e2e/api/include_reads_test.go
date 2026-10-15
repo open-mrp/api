@@ -177,7 +177,7 @@ func TestIncludeReads_CustomerReaderGetsCarrierAndSalesRepUser(t *testing.T) {
 	reader := customRoleClient(t, "customers:read")
 
 	requireSameIncludes(t, reader, customersPath+"/"+SeedCustomerAccountID,
-		"freight_preferences.carrier", "freight_preferences.service_level", "defaults.sales_rep", "defaults.sales_rep.user", "parent_account")
+		"defaults.carrier", "defaults.service_level", "defaults.sales_rep", "defaults.sales_rep.user", "parent_customer")
 
 	requireRefusedRead(t, reader, carriersPath+"/"+SeedCarrierID)
 	requireRefusedRead(t, reader, "/v1/identity/users/"+SeedUserID)
@@ -255,7 +255,7 @@ func TestIncludeReads_CustomerInvoicesShowTheParentAccount(t *testing.T) {
 	got := listedRow(t, reader, path, url.Values{"q": {jsonField(want, "number")}}, jsonField(want, "id"), includes...)
 	assertSameIncludes(t, want, got, path, includes...)
 
-	requireRefusedRead(t, reader, accountsPath+"/"+jsonField(jsonObject(want, "parent_customer"), "id"))
+	requireRefusedRead(t, reader, accountsPath+"/"+jsonField(jsonObject(want, "parent_account"), "id"))
 }
 
 func TestIncludeReads_ProductionStepReaderGetsItemsMachinesStationAndDepartment(t *testing.T) {
@@ -341,11 +341,11 @@ func TestIncludeReads_WriteIncludesNeedOnlyTheWritePermission(t *testing.T) {
 	customerDefaults(body)["sales_rep_id"] = SeedAccountUserID
 	customerID := jsonField(createAndCleanup(t, customersPath, body), "id")
 	path := customersPath + "/" + customerID
-	includes := []string{"freight_preferences.carrier", "defaults.sales_rep", "defaults.sales_rep.user"}
+	includes := []string{"defaults.carrier", "defaults.sales_rep", "defaults.sales_rep.user"}
 	params := includeParams(includes, nil)
 
 	updater := customRoleClient(t, "customers:update")
-	status, raw, err := updater.Patch(path+"?"+params.Encode(), map[string]any{"note": "e2e include write"}, newIdempotencyKey())
+	status, raw, err := updater.Patch(path+"?"+params.Encode(), map[string]any{"instructions": "e2e include write"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	want := parseJSON(mustGetAs(t, apiClient, path, params))
@@ -353,10 +353,10 @@ func TestIncludeReads_WriteIncludesNeedOnlyTheWritePermission(t *testing.T) {
 	assertSameIncludes(t, want, parseJSON(raw), "the patched customer", includes...)
 
 	reader := customRoleClient(t, "customers:read")
-	status, raw, err = reader.Patch(path+"?"+params.Encode(), map[string]any{"note": "e2e read-only write"}, newIdempotencyKey())
+	status, raw, err = reader.Patch(path+"?"+params.Encode(), map[string]any{"instructions": "e2e read-only write"}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Equal(t, http.StatusForbidden, status, "a reader may not write, includes or not: %s", string(raw))
-	assert.Equal(t, "e2e include write", jsonField(parseJSON(mustGetAs(t, apiClient, path, nil)), "note"), "the refused write changed nothing")
+	assert.Equal(t, "e2e include write", jsonField(parseJSON(mustGetAs(t, apiClient, path, nil)), "instructions"), "the refused write changed nothing")
 }
 
 // --- Customer portal ---
@@ -373,7 +373,7 @@ func TestIncludeReads_PortalBuyerGetsEveryIncludeOnItsOwnOrder(t *testing.T) {
 		[]string{"lines.quantity_ordered"}, []string{"lines.quantity_ordered.unit"})
 
 	requireSameIncludes(t, portal, customersPath+"/"+SeedCustomerAccountID,
-		"freight_preferences.carrier", "defaults.sales_rep", "defaults.sales_rep.user")
+		"defaults.carrier", "defaults.sales_rep", "defaults.sales_rep.user")
 }
 
 // Includes never widen what the buyer may request: another buyer's order and the seller's own records stay out of reach.

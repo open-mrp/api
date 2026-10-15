@@ -67,7 +67,7 @@ func TestConcurrency_ParallelCreateSameIdempotencyKey(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			status, body, err := apiClient.Post(customersPath, validCustomerBody(name), idemKey)
+			status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), idemKey)
 			statuses[idx] = status
 			bodies[idx] = body
 			errs[idx] = err
@@ -116,7 +116,7 @@ func TestConcurrency_ParallelCreateDifferentResources(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-conc-burst")), newIdempotencyKey())
+			status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(uniqueName("e2e-conc-burst"))), newIdempotencyKey())
 			statuses[idx] = status
 			bodies[idx] = body
 			errs[idx] = err

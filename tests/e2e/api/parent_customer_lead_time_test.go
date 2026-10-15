@@ -170,7 +170,7 @@ func TestParentCustomerLeadTime_SettingItOnTheParentReachesChildren(t *testing.T
 	setCustomerLeadTime(t, leadTimeMutableParentAccountID, ptrInt(9))
 
 	after := resolveLeadTime(t, leadTimeMutableChildAccountID, "parent_customer")
-	assert.Equal(t, "9", jsonField(after, "days"),
+	assert.Equal(t, "9", leadTimeValue(after),
 		"a lead time set on the head office commits its locations")
 	assert.Equal(t, "parent_customer", jsonField(after, "source"))
 
@@ -181,7 +181,7 @@ func TestParentCustomerLeadTime_SettingItOnTheParentReachesChildren(t *testing.T
 	setCustomerLeadTime(t, leadTimeMutableParentAccountID, nil)
 
 	cleared := resolveLeadTime(t, leadTimeMutableChildAccountID)
-	assert.Equal(t, "21", jsonField(cleared, "days"))
+	assert.Equal(t, "21", leadTimeValue(cleared))
 	assert.Equal(t, "account_group", jsonField(cleared, "source"),
 		"with the parent's lead time gone the child falls back to its group")
 }
@@ -227,7 +227,7 @@ func TestParentCustomerLeadTime_IsNotCopiedOntoTheChild(t *testing.T) {
 	require.True(t, ok, "a customer carries its ordering defaults: %s", string(body))
 	assert.Nil(t, jsonObject(defaults, "lead_time"), "the child sets nothing of its own")
 
-	assert.Equal(t, "13", jsonField(resolveLeadTime(t, leadTimeChildInheritsID), "days"),
+	assert.Equal(t, "13", leadTimeValue(resolveLeadTime(t, leadTimeChildInheritsID)),
 		"while still being committed to its parent's lead time")
 }
 

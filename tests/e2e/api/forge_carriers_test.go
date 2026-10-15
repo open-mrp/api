@@ -136,7 +136,7 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_carrier_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.carrier_id")
 
 	// A customer already on the carrier keeps it after the carrier is archived.
 	live := forgeCarrier(t, nil)
@@ -285,7 +285,7 @@ func TestForgeServiceLevels_ArchivedCantBeNewlyAssigned(t *testing.T) {
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_service_level_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.service_level_id")
 }
 
 func TestForgeServiceLevels_DeleteInUse(t *testing.T) {

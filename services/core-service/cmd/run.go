@@ -956,6 +956,22 @@ func Run(
 		return err
 	}
 	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+
+	// Money is copying onto the columns of the rows that own it. These fill the rows written before the
+	// columns existed, one table at a time per pod holding its lease, paced.
+	if !cfg.MoneyColumnBackfillDisabled {
+		for _, b := range repository.NewMoneyColumnBackfills(sqlc.New(reportDB), queries) {
+			runner, err := backfill.New(&backfill.Config{
+				Name:     b.Name,
+				Batch:    b.Batch,
+				Progress: repository.NewBackfillProgressRepo(queries),
+			})
+			if err != nil {
+				return err
+			}
+			go runner.Keep(ctx, leaseSvc, backfillRetryInterval)
+		}
+	}
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventSalesFactQueue,
 		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,

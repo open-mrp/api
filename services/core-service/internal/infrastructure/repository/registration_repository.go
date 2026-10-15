@@ -440,6 +440,9 @@ func (r *registrationRepoImpl) CreateSystemProducts(ctx context.Context, account
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), shipItemID, creditItemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	// 8. Products: shipping, credit
 	shipProductID, genErr := id.GenID(id.ProductIDPrefix, nil)

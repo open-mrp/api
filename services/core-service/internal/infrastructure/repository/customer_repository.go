@@ -1053,6 +1053,11 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, customerNumberDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if params.CreditLimitID != nil {
+		if apiErr := db.MapSQLError(syncCreditLimit(ctx, r.queries.DB(), relationID)); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	return r.Get(ctx, params.OwnerAccountID, accountID, nil)
 }
@@ -1098,6 +1103,9 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		CreditLimitID:            stringToNullString(params.CreditLimitID),
 	})
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, customerNumberDuplicateKeyMapping); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncCreditLimit(ctx, r.queries.DB(), relationID)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

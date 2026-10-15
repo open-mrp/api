@@ -72,6 +72,9 @@ func (r *rateRepoImpl) Update(ctx context.Context, params domain.UpdateRateParam
 	if rowsAffected == 0 {
 		return nil, tracing.Trace(span, apierror.NewNotFoundError("Rate not found."))
 	}
+	if apiErr := db.MapSQLError(syncItemMoneyByRate(ctx, r.queries.DB(), params.RateID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return r.Get(ctx, params.RateID)
 }

@@ -35,21 +35,21 @@ func (b *LineCopyBackfill) Batch(ctx context.Context, m *backfill.Meter, cursor 
 	in := "IN (" + placeholders(len(ids)) + ")"
 	args := stringsToAny(ids)
 	for _, step := range []struct {
-		t     lineCopyTable
+		t     copyTable
 		where string
 	}{
 		{orderLineCopies, "sol.id " + in},
 		{invoiceLineCopies, "il.sales_order_line_id " + in},
 		{pickLineCopies, "pl.sales_order_line_id " + in},
 	} {
-		var rows []lineCopyRow
+		var rows []copyRow
 		if err := m.Time(func() (err error) {
-			rows, err = readLineCopies(ctx, b.read, step.t, step.where+" AND "+step.t.uncopiedWhere(step.t.alias), args...)
+			rows, err = readCopies(ctx, b.read, step.t, step.where+" AND "+step.t.uncopiedWhere(step.t.alias), args...)
 			return err
 		}); err != nil {
 			return cursor, 0, false, err
 		}
-		if err := m.Time(func() error { return fillLineCopies(ctx, b.write, step.t, rows) }); err != nil {
+		if err := m.Time(func() error { return fillCopies(ctx, b.write, step.t, rows) }); err != nil {
 			return cursor, 0, false, err
 		}
 	}

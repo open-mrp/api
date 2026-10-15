@@ -557,6 +557,8 @@ SET
     sc.shippo_transaction_id = NULL,
     sc.shipping_label_url = NULL,
     fa.value = '0',
+    sc.freight_amount = '0',
+    sc.freight_currency = 'usd',
     sc.updated_at = NOW(3)
 WHERE sc.shipment_id = ?
 `

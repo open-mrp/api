@@ -607,6 +607,9 @@ func (r *materialRepoImpl) InsertItem(ctx context.Context, params domain.InsertM
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), params.ItemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }

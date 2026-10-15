@@ -573,6 +573,9 @@ func (r *shippingTermRepoImpl) Create(ctx context.Context, id string, params dom
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncShippingTermMoney(ctx, r.queries.DB(), id)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: id, Includes: params.Includes})
 }
@@ -611,6 +614,9 @@ func (r *shippingTermRepoImpl) Update(ctx context.Context, params domain.UpdateS
 	}
 	if rowsAffected == 0 {
 		return nil, tracing.Trace(span, apierror.NewNotFoundError("Shipping term not found."))
+	}
+	if apiErr := db.MapSQLError(syncShippingTermMoney(ctx, r.queries.DB(), params.ShippingTermID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: params.ShippingTermID, Includes: params.Includes})

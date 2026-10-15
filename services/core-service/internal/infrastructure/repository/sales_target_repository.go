@@ -171,6 +171,9 @@ func (r *salesTargetRepoImpl) Create(ctx context.Context, id string, params doma
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncTargetAmount(ctx, r.queries.DB(), id)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }
@@ -217,6 +220,9 @@ func (r *salesTargetRepoImpl) UpdateQuantity(ctx context.Context, id, value, uni
 		UnitID: unitID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncTargetAmountByQuantity(ctx, r.queries.DB(), id)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

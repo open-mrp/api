@@ -81,6 +81,9 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 	if err := syncAccountOrderCopies(ctx, tx, accountID); err != nil {
 		return fmt.Errorf("copy seeded line quantities: %w", err)
 	}
+	if err := syncAccountMoneyCopies(ctx, tx, accountID); err != nil {
+		return fmt.Errorf("copy seeded money: %w", err)
+	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit seed tx: %w", err)

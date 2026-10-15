@@ -62,6 +62,9 @@ func (r *quantityRepoImpl) Update(ctx context.Context, params domain.UpdateQuant
 	if rowsAffected == 0 {
 		return nil, tracing.Trace(span, apierror.NewNotFoundError("Quantity not found."))
 	}
+	if apiErr := db.MapSQLError(syncShippingCaseFreightByQuantity(ctx, r.queries.DB(), params.QuantityID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return r.Get(ctx, params.QuantityID)
 }

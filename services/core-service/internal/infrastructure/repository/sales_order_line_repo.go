@@ -164,6 +164,15 @@ func costCopy(hasCost bool, v *string) gosql.NullString {
 	return gosql.NullString{String: *v, Valid: true}
 }
 
+// currencyCopy is a new line's copy of its cost's currency: every amount is usd, and a line with no cost
+// has none.
+func currencyCopy(hasCost bool) gosql.NullString {
+	if !hasCost {
+		return gosql.NullString{}
+	}
+	return gosql.NullString{String: string(constants.CurrencyUSD), Valid: true}
+}
+
 func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain.CreateSalesOrderLineParams) *apierror.APIError {
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.create_many")
 	defer span.End()
@@ -175,15 +184,15 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	const (
 		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
 		rateTuple     = "(?, ?, ?, ?, NOW(3), NOW(3))"
-		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
 	)
+	lineTuple := "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
 
 	quantityTuples := make([]string, 0, len(params))
 	quantityArgs := make([]any, 0, len(params)*3)
 	rateTuples := make([]string, 0, len(params)*2)
 	rateArgs := make([]any, 0, len(params)*2*4)
 	lineTuples := make([]string, 0, len(params))
-	lineArgs := make([]any, 0, len(params)*19)
+	lineArgs := make([]any, 0, len(params)*21)
 
 	for i, p := range params {
 		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
@@ -236,6 +245,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 			p.UnitPriceValue, p.UnitPriceNumeratorUnitID, p.UnitPriceDenominatorUnitID,
 			costCopy(unitCostID.Valid, p.UnitCostValue), costCopy(unitCostID.Valid, p.UnitCostNumeratorUnitID),
 			costCopy(unitCostID.Valid, p.UnitCostDenominatorUnitID),
+			string(constants.CurrencyUSD), currencyCopy(unitCostID.Valid),
 		)
 	}
 
@@ -255,6 +265,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 
 	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, " +
 		"quantity_value, quantity_unit_id, unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id, unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id, " +
+		"unit_price_currency, unit_cost_currency, " +
 		"created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
 	_, err = dbtx.ExecContext(ctx, lineSQL, lineArgs...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

@@ -85,6 +85,7 @@ INSERT INTO sales_order_line (
     quantity_value, quantity_unit_id,
     unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id,
     unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id,
+    unit_price_currency, unit_cost_currency,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
@@ -94,6 +95,9 @@ INSERT INTO sales_order_line (
     sqlc.arg('quantity_value'), sqlc.arg('quantity_unit_id'),
     sqlc.arg('unit_price_value'), sqlc.arg('unit_price_numerator_unit_id'), sqlc.arg('unit_price_denominator_unit_id'),
     sqlc.narg('unit_cost_value'), sqlc.narg('unit_cost_numerator_unit_id'), sqlc.narg('unit_cost_denominator_unit_id'),
+    -- Every amount is usd; a line with no cost has no cost currency.
+    'usd',
+    CASE WHEN sqlc.narg('unit_cost_value') IS NULL THEN NULL ELSE 'usd' END,
     NOW(3), NOW(3)
 );
 

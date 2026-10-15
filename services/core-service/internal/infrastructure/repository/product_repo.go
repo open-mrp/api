@@ -194,6 +194,8 @@ func mapProductFullFindRow(row sqlc.FindProductsBySKUsRow) *domain.ProductFull {
 			UpdatedAt:        row.ProductLineUpdatedAt.Time,
 		}
 	}
+	product.Item.SalesUnitPrice = storedRatePrice(product.Item.UnitValue, row.SalesUnitPriceCurrency)
+	product.Item.UnitCostPrice = storedRatePrice(product.Item.UnitCost, row.UnitCostCurrency)
 
 	return product
 }
@@ -813,6 +815,9 @@ func (r *productRepoImpl) InsertItem(ctx context.Context, params domain.InsertPr
 		AccountID:      params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), params.ItemID)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

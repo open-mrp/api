@@ -55,6 +55,8 @@ SELECT
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
+    st.flat_rate_currency,
+    st.minimum_order_value_currency,
     st.created_at,
     st.updated_at,
     fr.id AS flat_rate_quantity_id,
@@ -111,6 +113,8 @@ type GetShippingTermRow struct {
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
+	FlatRateCurrency                  sql.NullString
+	MinimumOrderValueCurrency         sql.NullString
 	CreatedAt                         time.Time
 	UpdatedAt                         time.Time
 	FlatRateQuantityID                sql.NullString
@@ -158,6 +162,8 @@ func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams
 		&i.AccountID,
 		&i.FlatRateID,
 		&i.MinimumOrderID,
+		&i.FlatRateCurrency,
+		&i.MinimumOrderValueCurrency,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.FlatRateQuantityID,
@@ -205,6 +211,8 @@ SELECT
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
+    st.flat_rate_currency,
+    st.minimum_order_value_currency,
     st.created_at,
     st.updated_at,
     fr.id AS flat_rate_quantity_id,
@@ -261,6 +269,8 @@ type GetShippingTermsByIDsRow struct {
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
+	FlatRateCurrency                  sql.NullString
+	MinimumOrderValueCurrency         sql.NullString
 	CreatedAt                         time.Time
 	UpdatedAt                         time.Time
 	FlatRateQuantityID                sql.NullString
@@ -325,6 +335,8 @@ func (q *Queries) GetShippingTermsByIDs(ctx context.Context, arg GetShippingTerm
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
+			&i.FlatRateCurrency,
+			&i.MinimumOrderValueCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FlatRateQuantityID,
@@ -546,6 +558,8 @@ SELECT
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
+    st.flat_rate_currency,
+    st.minimum_order_value_currency,
     st.created_at,
     st.updated_at,
     fr.id AS flat_rate_quantity_id,
@@ -614,6 +628,8 @@ type ListShippingTermsBackwardRow struct {
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
+	FlatRateCurrency                  sql.NullString
+	MinimumOrderValueCurrency         sql.NullString
 	CreatedAt                         time.Time
 	UpdatedAt                         time.Time
 	FlatRateQuantityID                sql.NullString
@@ -675,6 +691,8 @@ func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippin
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
+			&i.FlatRateCurrency,
+			&i.MinimumOrderValueCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FlatRateQuantityID,
@@ -732,6 +750,8 @@ SELECT
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
+    st.flat_rate_currency,
+    st.minimum_order_value_currency,
     st.created_at,
     st.updated_at,
     fr.id AS flat_rate_quantity_id,
@@ -801,6 +821,8 @@ type ListShippingTermsForwardRow struct {
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
+	FlatRateCurrency                  sql.NullString
+	MinimumOrderValueCurrency         sql.NullString
 	CreatedAt                         time.Time
 	UpdatedAt                         time.Time
 	FlatRateQuantityID                sql.NullString
@@ -863,6 +885,8 @@ func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShipping
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
+			&i.FlatRateCurrency,
+			&i.MinimumOrderValueCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FlatRateQuantityID,

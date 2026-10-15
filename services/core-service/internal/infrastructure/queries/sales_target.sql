@@ -1,7 +1,7 @@
 -- name: ListSalesTargets :many
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       q.value AS amount_value, t.currency AS amount_currency, q.unit_id AS amount_unit_id,
        u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
        u.unit_dimension_code AS amount_unit_type,
        u.ratio_numerator AS amount_unit_ratio_numerator,
@@ -35,7 +35,7 @@ AND (
 -- name: GetSalesTarget :one
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       q.value AS amount_value, t.currency AS amount_currency, q.unit_id AS amount_unit_id,
        u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
        u.unit_dimension_code AS amount_unit_type,
        u.ratio_numerator AS amount_unit_ratio_numerator,

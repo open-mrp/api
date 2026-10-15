@@ -24,6 +24,7 @@ SELECT
     -- Freight amount
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
@@ -108,6 +109,8 @@ SET
     sc.shippo_transaction_id = NULL,
     sc.shipping_label_url = NULL,
     fa.value = '0',
+    sc.freight_amount = '0',
+    sc.freight_currency = 'usd',
     sc.updated_at = NOW(3)
 WHERE sc.shipment_id = sqlc.arg('shipment_id');
 
@@ -137,6 +140,7 @@ SELECT
     sc.updated_at,
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,

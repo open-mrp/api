@@ -698,6 +698,25 @@ func TestVitessSmoke(t *testing.T) {
 		}
 	})
 
+	// Money copies: each table's backfill, the writers' sync, and the drift check.
+	t.Run("money copies", func(t *testing.T) {
+		for _, b := range NewMoneyColumnBackfills(q, q) {
+			cursor := ""
+			for {
+				next, _, done, err := b.Batch(ctx, &backfill.Meter{}, cursor, 200)
+				check(b.Name, err)
+				if done || err != nil {
+					break
+				}
+				cursor = next
+			}
+		}
+		check("syncItemMoney", syncItemMoney(ctx, pool, ids("SELECT id FROM item LIMIT 5")...))
+		check("syncAccountMoneyCopies", syncAccountMoneyCopies(ctx, pool, account))
+		_, err := MoneyColumnDrift(ctx, pool)
+		check("MoneyColumnDrift", err)
+	})
+
 	// Line copies: the backfill's bulk fill, the writers' sync, and the reports read from the copies through
 	// the covering keys they force.
 	t.Run("line copies", func(t *testing.T) {

@@ -961,11 +961,12 @@ func Run(
 	}
 	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 
-	// Operations money moved onto its owning rows (migration 00088), which every write now fills alongside the legacy
-	// quantity and rate rows. These copy the legacy rows into the columns of rows written before, one paced backfill per
-	// table. They wait out the rollout first, so the pass also corrects rows the previous release's pods changed in
-	// place while it ran. MONEY_COLUMN_BACKFILL=off stops them; reads fall back to the legacy rows meanwhile.
-	if getenv("MONEY_COLUMN_BACKFILL") != "off" {
+	// Money is copying onto the columns of the rows that own it (00088 operations, 00089 commercial). These fill
+	// the rows written before the columns existed, one paced backfill per table per pod holding its lease.
+	// MONEY_COLUMN_BACKFILL_DISABLED=true stops them; reads keep working from the legacy rows meanwhile.
+	if !cfg.MoneyColumnBackfillDisabled {
+		// Operations tables wait out the rollout first, so the pass also corrects rows the previous release's pods
+		// changed in place while it ran.
 		for _, table := range repository.MoneyColumnTables {
 			moneyBackfill, err := backfill.New(&backfill.Config{
 				Name:     table.BackfillName(),
@@ -983,6 +984,17 @@ func Run(
 				}
 				moneyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 			}()
+		}
+		for _, b := range repository.NewMoneyCopyBackfills(sqlc.New(reportDB), queries) {
+			runner, err := backfill.New(&backfill.Config{
+				Name:     b.Name,
+				Batch:    b.Batch,
+				Progress: repository.NewBackfillProgressRepo(queries),
+			})
+			if err != nil {
+				return err
+			}
+			go runner.Keep(ctx, leaseSvc, backfillRetryInterval)
 		}
 	}
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{

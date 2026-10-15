@@ -45,6 +45,7 @@ const (
 	envVercelProjectID            = "VERCEL_PROJECT_ID"
 	envVercelTeamID               = "VERCEL_TEAM_ID"
 	envAccountMarketingBlurbs     = "ACCOUNT_MARKETING_BLURBS"
+	envMoneyColumnBackfillOff     = "MONEY_COLUMN_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -136,6 +137,10 @@ type config struct {
 	// {"ac_123":"A family owned company making widgets since 1975."}. An account absent from the map
 	// gets no footer panel. Kept in configuration so no customer id or customer copy lives in source.
 	AccountMarketingBlurbs string
+
+	// MoneyColumnBackfillDisabled (optional; default: false) stops the backfills that copy money onto its
+	// owning rows' columns ("true" to stop them), in case they ever weigh on the database.
+	MoneyColumnBackfillDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -155,31 +160,32 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:                       port,
-		DBURL:                      env.GetEnv(envDBURL, getenv),
-		DBReplicaURL:               cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
-		RabbitMQURI:                cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		RedisURL:                   env.GetEnv(envRedisURL, getenv),
-		PlatformMode:               platformMode,
-		CursorHMACKey:              []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		GoogleMapsAPIKey:           env.GetEnv(envGoogleMapsAPIKey, getenv),
-		IntegrationEncryptionKey:   env.GetEnv(envIntegrationEncryptionKey, getenv),
-		IntegrationEncryptionKeyID: env.GetEnv(envIntegrationEncryptionKeyID, getenv),
-		AWSRegion:                  env.GetEnv(envAWSRegion, getenv),
-		AccountPhotosBucket:        env.GetEnv(envAccountPhotosBucket, getenv),
-		AssetCDNBaseURL:            env.GetEnv(envAssetCDNBaseURL, getenv),
-		UserPhotosBucket:           env.GetEnv(envUserPhotosBucket, getenv),
-		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
-		ExportsBucket:              env.GetEnv(envExportsBucket, getenv),
-		PayloadsBucket:             env.GetEnv(envPayloadsBucket, getenv),
-		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
-		PortalURL:                  cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
-		OperatorEmail:              cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
-		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
-		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
-		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),
-		VercelTeamID:               env.GetEnv(envVercelTeamID, getenv),
-		AccountMarketingBlurbs:     env.GetEnv(envAccountMarketingBlurbs, getenv),
+		Port:                        port,
+		DBURL:                       env.GetEnv(envDBURL, getenv),
+		DBReplicaURL:                cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
+		RabbitMQURI:                 cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		RedisURL:                    env.GetEnv(envRedisURL, getenv),
+		PlatformMode:                platformMode,
+		CursorHMACKey:               []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		GoogleMapsAPIKey:            env.GetEnv(envGoogleMapsAPIKey, getenv),
+		IntegrationEncryptionKey:    env.GetEnv(envIntegrationEncryptionKey, getenv),
+		IntegrationEncryptionKeyID:  env.GetEnv(envIntegrationEncryptionKeyID, getenv),
+		AWSRegion:                   env.GetEnv(envAWSRegion, getenv),
+		AccountPhotosBucket:         env.GetEnv(envAccountPhotosBucket, getenv),
+		AssetCDNBaseURL:             env.GetEnv(envAssetCDNBaseURL, getenv),
+		UserPhotosBucket:            env.GetEnv(envUserPhotosBucket, getenv),
+		ShippingLabelsBucket:        env.GetEnv(envShippingLabelsBucket, getenv),
+		ExportsBucket:               env.GetEnv(envExportsBucket, getenv),
+		PayloadsBucket:              env.GetEnv(envPayloadsBucket, getenv),
+		FrontendURL:                 env.GetEnv(envFrontendURL, getenv),
+		PortalURL:                   cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
+		OperatorEmail:               cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
+		AuthServiceURL:              env.GetEnv(envAuthServiceURL, getenv),
+		VercelAPIToken:              env.GetEnv(envVercelAPIToken, getenv),
+		VercelProjectID:             env.GetEnv(envVercelProjectID, getenv),
+		VercelTeamID:                env.GetEnv(envVercelTeamID, getenv),
+		AccountMarketingBlurbs:      env.GetEnv(envAccountMarketingBlurbs, getenv),
+		MoneyColumnBackfillDisabled: env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
 	}
 }
 

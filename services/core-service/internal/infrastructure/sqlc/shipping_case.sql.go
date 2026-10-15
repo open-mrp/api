@@ -122,6 +122,7 @@ SELECT
     -- Freight amount
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
@@ -186,6 +187,7 @@ type GetShippingCaseRow struct {
 	UpdatedAt                          time.Time
 	FreightAmountID                    string
 	FreightAmountValue                 string
+	FreightAmountCurrency              sql.NullString
 	FreightAmountUnitID                string
 	FreightAmountUnitName              string
 	FreightAmountUnitAbbreviation      string
@@ -237,6 +239,7 @@ func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams
 		&i.UpdatedAt,
 		&i.FreightAmountID,
 		&i.FreightAmountValue,
+		&i.FreightAmountCurrency,
 		&i.FreightAmountUnitID,
 		&i.FreightAmountUnitName,
 		&i.FreightAmountUnitAbbreviation,
@@ -301,6 +304,7 @@ SELECT
     sc.updated_at,
     fa.id AS freight_amount_id,
     fa.value AS freight_amount_value,
+    sc.freight_currency AS freight_amount_currency,
     fa.unit_id AS freight_amount_unit_id,
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
@@ -351,6 +355,7 @@ type ListShippingCasesByShipmentRow struct {
 	UpdatedAt                          time.Time
 	FreightAmountID                    string
 	FreightAmountValue                 string
+	FreightAmountCurrency              sql.NullString
 	FreightAmountUnitID                string
 	FreightAmountUnitName              string
 	FreightAmountUnitAbbreviation      string
@@ -409,6 +414,7 @@ func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID st
 			&i.UpdatedAt,
 			&i.FreightAmountID,
 			&i.FreightAmountValue,
+			&i.FreightAmountCurrency,
 			&i.FreightAmountUnitID,
 			&i.FreightAmountUnitName,
 			&i.FreightAmountUnitAbbreviation,
@@ -557,6 +563,8 @@ SET
     sc.shippo_transaction_id = NULL,
     sc.shipping_label_url = NULL,
     fa.value = '0',
+    sc.freight_amount = '0',
+    sc.freight_currency = 'usd',
     sc.updated_at = NOW(3)
 WHERE sc.shipment_id = ?
 `

@@ -286,9 +286,11 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, products []*
 			product.Item.Attributes = item.Attributes
 			if item.UnitValue != nil {
 				product.Item.UnitValue = item.UnitValue
+				product.Item.SalesUnitPrice = item.SalesUnitPrice
 			}
 			if item.UnitCost != nil {
 				product.Item.UnitCost = item.UnitCost
+				product.Item.UnitCostPrice = item.UnitCostPrice
 			}
 			if item.BurnRate != nil {
 				product.Item.BurnRate = item.BurnRate

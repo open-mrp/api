@@ -292,14 +292,16 @@ func mapForwardShippingTermRow(row sqlc.ListShippingTermsForwardRow) *domain.Shi
 		accountID = &row.AccountID.String
 	}
 	return &domain.ShippingTerm{
-		ID:                row.ID,
-		Name:              row.Name,
-		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromForwardRow(row)),
-		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromForwardRow(row)),
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromForwardRow(row)),
+		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromForwardRow(row)),
+		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
+		MinimumOrderAmount: storedMoneyPtr(row.MinimumOrderValue, row.MinimumOrderValueCurrency),
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -309,14 +311,16 @@ func mapBackwardShippingTermRow(row sqlc.ListShippingTermsBackwardRow) *domain.S
 		accountID = &row.AccountID.String
 	}
 	return &domain.ShippingTerm{
-		ID:                row.ID,
-		Name:              row.Name,
-		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromBackwardRow(row)),
-		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromBackwardRow(row)),
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromBackwardRow(row)),
+		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromBackwardRow(row)),
+		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
+		MinimumOrderAmount: storedMoneyPtr(row.MinimumOrderValue, row.MinimumOrderValueCurrency),
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -326,14 +330,16 @@ func mapGetShippingTermRow(row sqlc.GetShippingTermRow) *domain.ShippingTerm {
 		accountID = &row.AccountID.String
 	}
 	return &domain.ShippingTerm{
-		ID:                row.ID,
-		Name:              row.Name,
-		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromGetRow(row)),
-		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromGetRow(row)),
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromGetRow(row)),
+		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromGetRow(row)),
+		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
+		MinimumOrderAmount: storedMoneyPtr(row.MinimumOrderValue, row.MinimumOrderValueCurrency),
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -385,14 +391,16 @@ func mapByIDsShippingTermRow(row sqlc.GetShippingTermsByIDsRow) *domain.Shipping
 		accountID = &row.AccountID.String
 	}
 	return &domain.ShippingTerm{
-		ID:                row.ID,
-		Name:              row.Name,
-		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromByIDsRow(row)),
-		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromByIDsRow(row)),
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromByIDsRow(row)),
+		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromByIDsRow(row)),
+		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
+		MinimumOrderAmount: storedMoneyPtr(row.MinimumOrderValue, row.MinimumOrderValueCurrency),
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -573,6 +581,9 @@ func (r *shippingTermRepoImpl) Create(ctx context.Context, id string, params dom
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncShippingTermMoney(ctx, r.queries.DB(), id)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: id, Includes: params.Includes})
 }
@@ -611,6 +622,9 @@ func (r *shippingTermRepoImpl) Update(ctx context.Context, params domain.UpdateS
 	}
 	if rowsAffected == 0 {
 		return nil, tracing.Trace(span, apierror.NewNotFoundError("Shipping term not found."))
+	}
+	if apiErr := db.MapSQLError(syncShippingTermMoney(ctx, r.queries.DB(), params.ShippingTermID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: params.ShippingTermID, Includes: params.Includes})

@@ -58,6 +58,7 @@ INSERT INTO sales_order_line (
     quantity_value, quantity_unit_id,
     unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id,
     unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id,
+    unit_price_currency, unit_cost_currency,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?,
@@ -67,6 +68,9 @@ INSERT INTO sales_order_line (
     ?, ?,
     ?, ?, ?,
     ?, ?, ?,
+    -- Every amount is usd; a line with no cost has no cost currency.
+    'usd',
+    CASE WHEN ? IS NULL THEN NULL ELSE 'usd' END,
     NOW(3), NOW(3)
 )
 `
@@ -115,6 +119,7 @@ func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrder
 		arg.UnitCostValue,
 		arg.UnitCostNumeratorUnitID,
 		arg.UnitCostDenominatorUnitID,
+		arg.UnitCostValue,
 	)
 	return err
 }
@@ -305,6 +310,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    sol.unit_price_currency,
+    sol.unit_cost_currency,
     -- Product type
     p.product_type_code AS product_type_code,
     -- Timestamps
@@ -359,6 +366,8 @@ type GetSalesOrderLineRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	UnitPriceCurrency                    sql.NullString
+	UnitCostCurrency                     sql.NullString
 	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
@@ -402,6 +411,8 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 		&i.UnitCostNumeratorUnitAbbreviation,
 		&i.UnitCostDenominatorUnitID,
 		&i.UnitCostDenominatorUnitAbbreviation,
+		&i.UnitPriceCurrency,
+		&i.UnitCostCurrency,
 		&i.ProductTypeCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,

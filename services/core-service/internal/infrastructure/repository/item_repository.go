@@ -167,12 +167,29 @@ func stitchItemRates(ctx context.Context, queries *sqlc.Queries, items []*domain
 		rateMap[row.ID] = mapRateRow(row)
 	}
 
+	currencies := map[string]sqlc.GetItemMoneyCurrenciesByIDsRow{}
+	if wantUnitValue || wantUnitCost {
+		itemIDs := make([]string, len(items))
+		for i, item := range items {
+			itemIDs[i] = item.ID
+		}
+		rows, err := queries.GetItemMoneyCurrenciesByIDs(ctx, itemIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, row := range rows {
+			currencies[row.ID] = row
+		}
+	}
+
 	for _, item := range items {
 		if wantUnitValue {
 			item.UnitValue = rateMap[item.UnitValueID]
+			item.SalesUnitPrice = storedRatePrice(item.UnitValue, currencies[item.ID].SalesUnitPriceCurrency)
 		}
 		if wantUnitCost {
 			item.UnitCost = rateMap[item.UnitCostID]
+			item.UnitCostPrice = storedRatePrice(item.UnitCost, currencies[item.ID].UnitCostCurrency)
 		}
 		if wantBurnRate {
 			item.BurnRate = rateMap[item.BurnRateID]
@@ -676,6 +693,9 @@ func (r *itemRepoImpl) UpdateUnitCost(ctx context.Context, accountID, itemID str
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), itemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	err = r.queries.ClearItemDirtyFlag(ctx, sqlc.ClearItemDirtyFlagParams{
 		ItemID:    itemID,
@@ -971,6 +991,10 @@ func (r *itemRepoImpl) UpdateRateUnits(ctx context.Context, accountID, itemID, n
 		return tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), itemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	return nil
 }
 
@@ -1084,6 +1108,9 @@ func (r *itemRepoImpl) UpdateRateValue(ctx context.Context, rateID, value string
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncItemMoneyByRate(ctx, r.queries.DB(), rateID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 
@@ -1098,6 +1125,9 @@ func (r *itemRepoImpl) UpdateRate(ctx context.Context, rateID string, params dom
 		DenominatorUnitID: gosql.NullString{String: params.DenominatorUnitID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncItemMoneyByRate(ctx, r.queries.DB(), rateID)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil

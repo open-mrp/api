@@ -937,6 +937,9 @@ func (r *pickRepoImpl) CreateShippingCase(ctx context.Context, params domain.Cre
 	}); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
+	if apiErr := db.MapSQLError(syncShippingCaseFreight(ctx, r.queries.DB(), params.ID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 

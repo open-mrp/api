@@ -30,7 +30,10 @@ type Item struct {
 	UnitValue *Rate
 	UnitCost  *Rate
 	BurnRate  *Rate
-	Category  *ItemCategory
+	// SalesUnitPrice and UnitCostPrice are UnitValue and UnitCost as money per unit, loaded with them.
+	SalesUnitPrice *UnitPrice
+	UnitCostPrice  *UnitPrice
+	Category       *ItemCategory
 
 	// Many-to-many joined data
 	Attributes []*ItemAttribute `audit:"attributes"`

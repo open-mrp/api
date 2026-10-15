@@ -570,6 +570,9 @@ func (r *partRepoImpl) InsertItem(ctx context.Context, itemID string, params dom
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncItemMoney(ctx, r.queries.DB(), itemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }

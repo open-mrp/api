@@ -779,6 +779,12 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 	}
 
 	line.SalesOrderID = row.SalesOrderID
+	line.UnitPrice = storedUnitPrice(row.UnitPriceValue, row.UnitPriceCurrency, row.UnitPriceDenominatorUnitID)
+	if row.UnitCostValue.Valid && row.UnitCostDenominatorUnitID.Valid {
+		cost := storedUnitPrice(row.UnitCostValue.String, row.UnitCostCurrency, row.UnitCostDenominatorUnitID.String)
+		line.UnitCost = &cost
+	}
+
 	return line
 }
 

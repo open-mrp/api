@@ -313,6 +313,8 @@ SELECT
     i.unit_value_id,
     i.unit_cost_id,
     i.burn_rate_id,
+    i.sales_unit_price_currency,
+    i.unit_cost_currency,
     i.account_id,
     i.is_dirty,
     i.created_at AS item_created_at,

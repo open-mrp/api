@@ -154,6 +154,7 @@ func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*do
 			UnitPriceNumUnit:                row.UnitPriceNumeratorUnitID,
 			UnitPriceDenUnit:                row.UnitPriceDenominatorUnitID,
 			UnitPriceDenUnitAbbr:            row.UnitPriceDenominatorUnitAbbreviation,
+			UnitPrice:                       storedUnitPrice(row.UnitPriceValue, row.UnitPriceCurrency, row.UnitPriceDenominatorUnitID),
 			PricingQuantityRatioNumerator:   sqlValueToString(row.PricingQuantityRatioNumerator),
 			PricingQuantityRatioDenominator: sqlValueToString(row.PricingQuantityRatioDenominator),
 			PricingPriceRatioNumerator:      sqlValueToString(row.PricingPriceRatioNumerator),

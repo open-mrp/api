@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -44,7 +45,7 @@ func (q *Queries) CountSalesTargets(ctx context.Context, arg CountSalesTargetsPa
 const getSalesTarget = `-- name: GetSalesTarget :one
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       q.value AS amount_value, t.currency AS amount_currency, q.unit_id AS amount_unit_id,
        u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
        u.unit_dimension_code AS amount_unit_type,
        u.ratio_numerator AS amount_unit_ratio_numerator,
@@ -68,6 +69,7 @@ type GetSalesTargetRow struct {
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	AmountValue                 string
+	AmountCurrency              sql.NullString
 	AmountUnitID                string
 	AmountUnitName              string
 	AmountUnitAbbreviation      string
@@ -93,6 +95,7 @@ func (q *Queries) GetSalesTarget(ctx context.Context, id string) (GetSalesTarget
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.AmountValue,
+		&i.AmountCurrency,
 		&i.AmountUnitID,
 		&i.AmountUnitName,
 		&i.AmountUnitAbbreviation,
@@ -136,7 +139,7 @@ func (q *Queries) InsertSalesTarget(ctx context.Context, arg InsertSalesTargetPa
 const listSalesTargets = `-- name: ListSalesTargets :many
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       q.value AS amount_value, t.currency AS amount_currency, q.unit_id AS amount_unit_id,
        u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
        u.unit_dimension_code AS amount_unit_type,
        u.ratio_numerator AS amount_unit_ratio_numerator,
@@ -175,6 +178,7 @@ type ListSalesTargetsRow struct {
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	AmountValue                 string
+	AmountCurrency              sql.NullString
 	AmountUnitID                string
 	AmountUnitName              string
 	AmountUnitAbbreviation      string
@@ -214,6 +218,7 @@ func (q *Queries) ListSalesTargets(ctx context.Context, arg ListSalesTargetsPara
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.AmountValue,
+			&i.AmountCurrency,
 			&i.AmountUnitID,
 			&i.AmountUnitName,
 			&i.AmountUnitAbbreviation,

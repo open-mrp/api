@@ -324,10 +324,8 @@ func purchaseOrderLineToProto(l *domain.PurchaseOrderLine) *pb.PurchaseOrderLine
 		info.DeliveryLines = append(info.DeliveryLines, d)
 	}
 
-	info.UnitPrice = unitPriceToProto(l.UnitPriceValue, l.UnitPriceDenominatorUnitID)
-	if l.UnitCostValue != nil && l.UnitCostDenominatorUnitID != nil {
-		info.UnitCost = unitPriceToProto(*l.UnitCostValue, *l.UnitCostDenominatorUnitID)
-	}
+	info.UnitPrice = l.UnitPrice.ToProto()
+	info.UnitCost = domain.UnitPricePtrToProto(l.UnitCost)
 
 	return info
 }

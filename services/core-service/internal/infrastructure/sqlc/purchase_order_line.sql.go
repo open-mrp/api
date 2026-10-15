@@ -164,6 +164,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    sol.unit_price_currency,
+    sol.unit_cost_currency,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -217,6 +219,8 @@ type GetPurchaseOrderLineRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	UnitPriceCurrency                    sql.NullString
+	UnitCostCurrency                     sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -255,6 +259,8 @@ func (q *Queries) GetPurchaseOrderLine(ctx context.Context, arg GetPurchaseOrder
 		&i.UnitCostNumeratorUnitAbbreviation,
 		&i.UnitCostDenominatorUnitID,
 		&i.UnitCostDenominatorUnitAbbreviation,
+		&i.UnitPriceCurrency,
+		&i.UnitCostCurrency,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

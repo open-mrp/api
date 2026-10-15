@@ -60,6 +60,7 @@ func (r *salesTargetRepoImpl) List(ctx context.Context, params domain.ListSalesT
 			AmountID:     row.AmountID,
 			AmountValue:  row.AmountValue,
 			AmountUnitID: row.AmountUnitID,
+			Amount:       storedMoney(row.AmountValue, row.AmountCurrency),
 
 			AmountUnitName:              row.AmountUnitName,
 			AmountUnitAbbreviation:      row.AmountUnitAbbreviation,
@@ -99,6 +100,7 @@ func (r *salesTargetRepoImpl) Get(ctx context.Context, targetID string) (*domain
 		AmountID:     row.AmountID,
 		AmountValue:  row.AmountValue,
 		AmountUnitID: row.AmountUnitID,
+		Amount:       storedMoney(row.AmountValue, row.AmountCurrency),
 
 		AmountUnitName:              row.AmountUnitName,
 		AmountUnitAbbreviation:      row.AmountUnitAbbreviation,
@@ -171,6 +173,9 @@ func (r *salesTargetRepoImpl) Create(ctx context.Context, id string, params doma
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncTargetAmount(ctx, r.queries.DB(), id)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }
@@ -217,6 +222,9 @@ func (r *salesTargetRepoImpl) UpdateQuantity(ctx context.Context, id, value, uni
 		UnitID: unitID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncTargetAmountByQuantity(ctx, r.queries.DB(), id)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

@@ -131,7 +131,7 @@ func salesTargetToProto(t *domain.SalesTarget) *pb.SalesTargetProto {
 		AmountValue:  t.AmountValue,
 		AmountUnitId: t.AmountUnitID,
 		AmountId:     t.AmountID,
-		Amount:       moneyToProto(t.AmountValue),
+		Amount:       t.Amount.ToProto(),
 		CreatedAt:    t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:    t.UpdatedAt.Format(time.RFC3339),
 

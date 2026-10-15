@@ -28,6 +28,8 @@ type ShippingCase struct {
 	FreightAmountUnitOffsetDenominator string
 	FreightAmountUnitCreatedAt         time.Time
 	FreightAmountUnitUpdatedAt         time.Time
+	// FreightAmount is the freight charge as money.
+	FreightAmount Money `audit:"-"`
 	// Freight weight quantity
 	FreightWeightID                    string
 	FreightWeightValue                 string `audit:"freight_weight_value"`

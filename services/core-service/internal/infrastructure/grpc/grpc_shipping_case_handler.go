@@ -38,7 +38,7 @@ func shippingCaseToProto(sc *domain.ShippingCase) *pb.ShippingCaseInfo {
 		CreatedAt:                          timestamppb.New(sc.CreatedAt),
 		UpdatedAt:                          timestamppb.New(sc.UpdatedAt),
 		FreightAmountId:                    sc.FreightAmountID,
-		FreightAmount:                      freightAmountToProto(sc.FreightAmountID, sc.FreightAmountValue),
+		FreightAmount:                      freightAmountToProto(sc),
 		FreightAmountValue:                 sc.FreightAmountValue,
 		FreightAmountUnitId:                sc.FreightAmountUnitID,
 		FreightAmountUnitName:              sc.FreightAmountUnitName,
@@ -179,9 +179,9 @@ func (h *shippingCaseGRPCHandler) GetShippingCaseLabel(ctx context.Context, req 
 }
 
 // freightAmountToProto presents a case's freight charge, or nil when the case has none.
-func freightAmountToProto(id, value string) *pb.Money {
-	if id == "" {
+func freightAmountToProto(sc *domain.ShippingCase) *pb.Money {
+	if sc.FreightAmountID == "" {
 		return nil
 	}
-	return moneyToProto(value)
+	return sc.FreightAmount.ToProto()
 }

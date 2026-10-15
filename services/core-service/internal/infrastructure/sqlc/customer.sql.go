@@ -755,6 +755,7 @@ SELECT
     sa.updated_at AS default_shipping_address_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
+    ar.credit_limit_currency,
     clu.id AS credit_limit_unit_id,
     clu.abbreviation AS credit_limit_unit_abbreviation,
     clu.name AS credit_limit_unit_name,
@@ -883,6 +884,7 @@ type GetCustomerRow struct {
 	DefaultShippingAddressUpdatedAt       sql.NullTime
 	CreditLimitID                         sql.NullString
 	CreditLimitValue                      sql.NullString
+	CreditLimitCurrency                   sql.NullString
 	CreditLimitUnitID                     sql.NullString
 	CreditLimitUnitAbbreviation           sql.NullString
 	CreditLimitUnitName                   sql.NullString
@@ -987,6 +989,7 @@ func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCu
 		&i.DefaultShippingAddressUpdatedAt,
 		&i.CreditLimitID,
 		&i.CreditLimitValue,
+		&i.CreditLimitCurrency,
 		&i.CreditLimitUnitID,
 		&i.CreditLimitUnitAbbreviation,
 		&i.CreditLimitUnitName,
@@ -1239,6 +1242,7 @@ SELECT
     sa.updated_at AS default_shipping_address_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
+    ar.credit_limit_currency,
     clu.id AS credit_limit_unit_id,
     clu.abbreviation AS credit_limit_unit_abbreviation,
     clu.name AS credit_limit_unit_name,
@@ -1367,6 +1371,7 @@ type GetCustomersByIDsRow struct {
 	DefaultShippingAddressUpdatedAt       sql.NullTime
 	CreditLimitID                         sql.NullString
 	CreditLimitValue                      sql.NullString
+	CreditLimitCurrency                   sql.NullString
 	CreditLimitUnitID                     sql.NullString
 	CreditLimitUnitAbbreviation           sql.NullString
 	CreditLimitUnitName                   sql.NullString
@@ -1490,6 +1495,7 @@ func (q *Queries) GetCustomersByIDs(ctx context.Context, arg GetCustomersByIDsPa
 			&i.DefaultShippingAddressUpdatedAt,
 			&i.CreditLimitID,
 			&i.CreditLimitValue,
+			&i.CreditLimitCurrency,
 			&i.CreditLimitUnitID,
 			&i.CreditLimitUnitAbbreviation,
 			&i.CreditLimitUnitName,
@@ -2183,6 +2189,7 @@ SELECT STRAIGHT_JOIN
     par.updated_at AS parent_account_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
+    ar.credit_limit_currency,
     clu.id AS credit_limit_unit_id,
     clu.abbreviation AS credit_limit_unit_abbreviation,
     clu.name AS credit_limit_unit_name,
@@ -2445,6 +2452,7 @@ type ListCustomersBackwardRow struct {
 	ParentAccountUpdatedAt                sql.NullTime
 	CreditLimitID                         sql.NullString
 	CreditLimitValue                      sql.NullString
+	CreditLimitCurrency                   sql.NullString
 	CreditLimitUnitID                     sql.NullString
 	CreditLimitUnitAbbreviation           sql.NullString
 	CreditLimitUnitName                   sql.NullString
@@ -2691,6 +2699,7 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 			&i.ParentAccountUpdatedAt,
 			&i.CreditLimitID,
 			&i.CreditLimitValue,
+			&i.CreditLimitCurrency,
 			&i.CreditLimitUnitID,
 			&i.CreditLimitUnitAbbreviation,
 			&i.CreditLimitUnitName,
@@ -2805,6 +2814,7 @@ SELECT STRAIGHT_JOIN
     par.updated_at AS parent_account_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
+    ar.credit_limit_currency,
     clu.id AS credit_limit_unit_id,
     clu.abbreviation AS credit_limit_unit_abbreviation,
     clu.name AS credit_limit_unit_name,
@@ -3068,6 +3078,7 @@ type ListCustomersForwardRow struct {
 	ParentAccountUpdatedAt                sql.NullTime
 	CreditLimitID                         sql.NullString
 	CreditLimitValue                      sql.NullString
+	CreditLimitCurrency                   sql.NullString
 	CreditLimitUnitID                     sql.NullString
 	CreditLimitUnitAbbreviation           sql.NullString
 	CreditLimitUnitName                   sql.NullString
@@ -3315,6 +3326,7 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 			&i.ParentAccountUpdatedAt,
 			&i.CreditLimitID,
 			&i.CreditLimitValue,
+			&i.CreditLimitCurrency,
 			&i.CreditLimitUnitID,
 			&i.CreditLimitUnitAbbreviation,
 			&i.CreditLimitUnitName,

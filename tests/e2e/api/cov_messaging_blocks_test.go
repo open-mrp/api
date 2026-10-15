@@ -140,7 +140,7 @@ func TestCovMessagingBlocks_CreateListDeleteAllFields(t *testing.T) {
 
 		nestedDept := jsonObject(blockedUser, "department")
 		require.NotNil(t, nestedDept, "blocked_user.department should be populated with ?include=blocked_user.department")
-		assertObjectField(t, nestedDept, "department")
+		assertObjectField(t, nestedDept, "work_center")
 	}
 	assert.True(t, foundNested, "created block should appear in the nested-include list")
 

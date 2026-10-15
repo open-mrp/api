@@ -224,7 +224,7 @@ func TestScanningStations_GetByID_IncludeDepartment(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
-	dept := jsonObject(parseJSON(getBody), "department")
+	dept := jsonObject(parseJSON(getBody), "work_center")
 	require.NotNil(t, dept, "department should be present with ?include=work_center")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	assert.Equal(t, "work_center", jsonField(dept, "object"))

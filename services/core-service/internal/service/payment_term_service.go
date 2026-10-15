@@ -167,6 +167,9 @@ func (s *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, params domai
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if params.Status == "" {
+		params.Status = constants.ArchiveStatusActive
+	}
 
 	meds := s.mediators()
 
@@ -352,6 +355,9 @@ func (s *paymentTermSvcImpl) DeletePaymentTerm(ctx context.Context, paymentTermI
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *paymentTermSvcImpl) *apierror.APIError {
+		if apiErr := domain.PaymentTermReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), paymentTerm.ID); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePaymentTerm, paymentTerm.ID, accountID, paymentTerm); apiErr != nil {
 			return apiErr
 		}

@@ -116,8 +116,8 @@ func registrationFlowAdminCtx(accountID string) context.Context {
 // A flow's terms are offered to registrants of this account, so another account's term is refused before anything is written.
 func TestCreateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
 	s := newRegistrationSvcSetup(t)
-	s.paymentTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"pytm_own"}).Return([]*domain.PaymentTerm{{ID: "pytm_own"}}, nil)
-	s.shippingTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"prepaid", "shtm_other"}).Return([]*domain.ShippingTerm{{ID: "prepaid"}}, nil)
+	s.paymentTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"pytm_own"}).Return([]*domain.PaymentTerm{{ID: "pytm_own", Status: constants.ArchiveStatusActive}}, nil)
+	s.shippingTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"prepaid", "shtm_other"}).Return([]*domain.ShippingTerm{{ID: "prepaid", Status: constants.ArchiveStatusActive}}, nil)
 
 	_, apiErr := s.svc.CreateRegistrationFlow(registrationFlowAdminCtx("ac_seller"), domain.CreateRegistrationFlowParams{
 		Name:            "Wholesale",

@@ -3356,9 +3356,10 @@ type ListUnitsRequest struct {
 	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query  *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Type   *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`
 	// Only units belonging to at least one of these groups are returned.
-	UnitGroupIds  []string `protobuf:"bytes,5,rep,name=unit_group_ids,json=unitGroupIds,proto3" json:"unit_group_ids,omitempty"`
+	UnitGroupIds []string `protobuf:"bytes,5,rep,name=unit_group_ids,json=unitGroupIds,proto3" json:"unit_group_ids,omitempty"`
+	// Only units in one of these dimensions are returned; empty returns every dimension.
+	Dimensions    []string `protobuf:"bytes,6,rep,name=dimensions,proto3" json:"dimensions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3414,16 +3415,16 @@ func (x *ListUnitsRequest) GetQuery() string {
 	return ""
 }
 
-func (x *ListUnitsRequest) GetType() string {
-	if x != nil && x.Type != nil {
-		return *x.Type
-	}
-	return ""
-}
-
 func (x *ListUnitsRequest) GetUnitGroupIds() []string {
 	if x != nil {
 		return x.UnitGroupIds
+	}
+	return nil
+}
+
+func (x *ListUnitsRequest) GetDimensions() []string {
+	if x != nil {
+		return x.Dimensions
 	}
 	return nil
 }
@@ -11487,16 +11488,17 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"$GetAccountByStripeCustomerIDResponse\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
-	"\tplan_code\x18\x02 \x01(\tR\bplanCode\"\xbd\x01\n" +
+	"\tplan_code\x18\x02 \x01(\tR\bplanCode\"\xc1\x01\n" +
 	"\x10ListUnitsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x17\n" +
-	"\x04type\x18\x04 \x01(\tH\x02R\x04type\x88\x01\x01\x12$\n" +
-	"\x0eunit_group_ids\x18\x05 \x03(\tR\funitGroupIdsB\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12$\n" +
+	"\x0eunit_group_ids\x18\x05 \x03(\tR\funitGroupIds\x12\x1e\n" +
+	"\n" +
+	"dimensions\x18\x06 \x03(\tR\n" +
+	"dimensionsB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_queryB\a\n" +
-	"\x05_type\"f\n" +
+	"\x06_queryJ\x04\b\x04\x10\x05\"f\n" +
 	"\x11ListUnitsResponse\x12$\n" +
 	"\x05units\x18\x01 \x03(\v2\x0e.core.UnitInfoR\x05units\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"9\n" +

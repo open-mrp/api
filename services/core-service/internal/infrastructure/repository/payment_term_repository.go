@@ -39,14 +39,10 @@ func mapPaymentTermRow(row sqlc.PaymentTerm) *domain.PaymentTerm {
 	if row.AccountID.Valid {
 		accountID = &row.AccountID.String
 	}
-	status := constants.PaymentTermStatusInactive
-	if row.IsActive {
-		status = constants.PaymentTermStatusActive
-	}
 	return &domain.PaymentTerm{
 		ID:        row.ID,
 		Name:      row.Name,
-		Status:    status,
+		Status:    constants.ArchiveStatusFromIsActive(row.IsActive),
 		AccountID: accountID,
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
@@ -59,6 +55,7 @@ func (r *paymentTermRepoImpl) List(ctx context.Context, params domain.ListPaymen
 
 	searchQuery := buildPaymentTermSearchParams(params.Query)
 	accountID := gosql.NullString{String: params.AccountID, Valid: true}
+	isActive := toNullBool(params.IsActive)
 
 	var cursorDir *pagination.Direction
 
@@ -73,6 +70,7 @@ func (r *paymentTermRepoImpl) List(ctx context.Context, params domain.ListPaymen
 			rows, err := r.queries.ListPaymentTermsBackward(ctx, sqlc.ListPaymentTermsBackwardParams{
 				AccountID:       accountID,
 				SearchQuery:     searchQuery,
+				IsActive:        isActive,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,
@@ -92,6 +90,7 @@ func (r *paymentTermRepoImpl) List(ctx context.Context, params domain.ListPaymen
 		rows, err := r.queries.ListPaymentTermsForward(ctx, sqlc.ListPaymentTermsForwardParams{
 			AccountID:       accountID,
 			SearchQuery:     searchQuery,
+			IsActive:        isActive,
 			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
 			Limit:           params.Limit + 1,
@@ -111,6 +110,7 @@ func (r *paymentTermRepoImpl) List(ctx context.Context, params domain.ListPaymen
 	rows, err := r.queries.ListPaymentTermsForward(ctx, sqlc.ListPaymentTermsForwardParams{
 		AccountID:   accountID,
 		SearchQuery: searchQuery,
+		IsActive:    isActive,
 		Limit:       params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -168,6 +168,7 @@ func (r *paymentTermRepoImpl) Create(ctx context.Context, id string, params doma
 	err := r.queries.InsertPaymentTerm(ctx, sqlc.InsertPaymentTermParams{
 		ID:        id,
 		Name:      params.Name,
+		IsActive:  params.Status != constants.ArchiveStatusArchived,
 		AccountID: gosql.NullString{String: params.AccountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -185,6 +186,7 @@ func (r *paymentTermRepoImpl) Update(ctx context.Context, params domain.UpdatePa
 		ID:        params.PaymentTermID,
 		AccountID: gosql.NullString{String: params.AccountID, Valid: true},
 		Name:      toNullString(params.Name),
+		IsActive:  archiveStatusToNullBool(params.Status),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -237,4 +239,12 @@ func (r *paymentTermRepoImpl) ExistsByName(ctx context.Context, accountID, name 
 		return false, tracing.Trace(span, apiErr)
 	}
 	return count > 0, nil
+}
+
+// archiveStatusToNullBool is an optional status as the is_active column holds it; nil leaves the column alone.
+func archiveStatusToNullBool(s *constants.ArchiveStatus) gosql.NullBool {
+	if s == nil {
+		return gosql.NullBool{}
+	}
+	return gosql.NullBool{Bool: s.IsActive(), Valid: true}
 }

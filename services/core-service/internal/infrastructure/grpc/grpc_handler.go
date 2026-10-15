@@ -824,7 +824,7 @@ func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (
 		Cursor:       req.Cursor,
 		Limit:        req.Limit,
 		Query:        req.Query,
-		Type:         req.Type,
+		Dimensions:   req.Dimensions,
 		UnitGroupIDs: req.UnitGroupIds,
 	}
 
@@ -1131,9 +1131,10 @@ func (h *gRPCHandler) ListPaymentTerms(ctx context.Context, req *pb.ListPaymentT
 	}
 
 	params := domain.ListPaymentTermsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		IsActive: req.IsActive,
 	}
 
 	result, apiErr := h.paymentTermSvc.ListPaymentTerms(ctx, params)
@@ -1196,7 +1197,8 @@ func (h *gRPCHandler) CreatePaymentTerm(ctx context.Context, req *pb.CreatePayme
 	defer finalizeIdempotency()
 
 	params := domain.CreatePaymentTermParams{
-		Name: req.Name,
+		Name:   req.Name,
+		Status: constants.ArchiveStatus(req.GetStatus()),
 	}
 
 	paymentTerm, apiErr := h.paymentTermSvc.CreatePaymentTerm(ctx, params)
@@ -1220,6 +1222,7 @@ func (h *gRPCHandler) UpdatePaymentTerm(ctx context.Context, req *pb.UpdatePayme
 	params := domain.UpdatePaymentTermParams{
 		PaymentTermID: req.Id,
 		Name:          req.Name,
+		Status:        archiveStatusPtr(req.Status),
 	}
 
 	paymentTerm, apiErr := h.paymentTermSvc.UpdatePaymentTerm(ctx, params)
@@ -1280,6 +1283,7 @@ func shippingTermToProto(st *domain.ShippingTerm) *pb.ShippingTermInfo {
 		Id:                        st.ID,
 		Name:                      st.Name,
 		Type:                      string(st.Type),
+		Status:                    string(st.Status),
 		FlatRate:                  domain.MoneyPtrToProto(st.FlatRateAmount),
 		MinimumOrderValue:         domain.MoneyPtrToProto(st.MinimumOrderAmount),
 		FreeShippingServiceLevels: pbLevels,
@@ -1298,6 +1302,7 @@ func (h *gRPCHandler) ListShippingTerms(ctx context.Context, req *pb.ListShippin
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
+		IsActive: req.IsActive,
 		Includes: req.Includes,
 	}
 
@@ -1353,8 +1358,9 @@ func (h *gRPCHandler) CreateShippingTerm(ctx context.Context, req *pb.CreateShip
 	params := domain.CreateShippingTermParams{
 		Name:                        req.Name,
 		Type:                        constants.ShippingTermType(req.Type),
+		Status:                      constants.ArchiveStatus(req.GetStatus()),
 		FlatRate:                    money.quantity("flat_rate", req.FlatRate),
-		MinimumOrderValue:           money.quantity("minimum_order_value", req.MinimumOrderValue),
+		MinimumOrderValue:           money.quantity("free_shipping.minimum_order_value", req.MinimumOrderValue),
 		FreeShippingServiceLevelIDs: req.FreeShippingServiceLevelIds,
 		Includes:                    req.Includes,
 	}
@@ -1386,8 +1392,9 @@ func (h *gRPCHandler) UpdateShippingTerm(ctx context.Context, req *pb.UpdateShip
 	params := domain.UpdateShippingTermParams{
 		ShippingTermID:              req.Id,
 		Name:                        req.Name,
+		Status:                      archiveStatusPtr(req.Status),
 		FlatRate:                    money.patch("flat_rate", req.FlatRate),
-		MinimumOrderValue:           money.patch("minimum_order_value", req.MinimumOrderValue),
+		MinimumOrderValue:           money.patch("free_shipping.minimum_order_value", req.MinimumOrderValue),
 		FreeShippingServiceLevelIDs: stringListPatchToSliceField(req.FreeShippingServiceLevelIds),
 		Includes:                    req.Includes,
 	}

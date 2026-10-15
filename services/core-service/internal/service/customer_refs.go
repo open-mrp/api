@@ -178,6 +178,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 		}
 		for _, term := range terms {
 			found[term.ID] = true
+			archived[term.ID] = !term.Status.IsActive()
 		}
 	case customerRefShippingTerm:
 		terms, apiErr := repos.NewShippingTermRepo().GetByIDs(ctx, accountID, ids)
@@ -186,6 +187,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 		}
 		for _, term := range terms {
 			found[term.ID] = true
+			archived[term.ID] = !term.Status.IsActive()
 		}
 	case customerRefAccountGroup:
 		groups, apiErr := repos.NewAccountGroupRepo().GetByIDs(ctx, accountID, ids)

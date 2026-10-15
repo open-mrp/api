@@ -29,6 +29,15 @@ func attributeToProto(a *domain.Attribute) *pb.AttributeInfo {
 }
 
 // archiveStatusIsActive is the is_active a request's optional status sets; nil leaves it unset.
+// archiveStatusPtr is an optional request status as the domain takes it.
+func archiveStatusPtr(status *string) *constants.ArchiveStatus {
+	if status == nil {
+		return nil
+	}
+	s := constants.ArchiveStatus(*status)
+	return &s
+}
+
 func archiveStatusIsActive(status *string) *bool {
 	if status == nil {
 		return nil

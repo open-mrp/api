@@ -38,22 +38,22 @@ func buildShippingTermSearchParams(query *string) gosql.NullString {
 // shippingTermTypeFromBooleans maps DB booleans to the domain ShippingTermType.
 func shippingTermTypeFromBooleans(isFreightExempt, isCarrierRate bool) constants.ShippingTermType {
 	if isFreightExempt {
-		return constants.ShippingTermTypeFreeFreight
+		return constants.ShippingTermTypeFree
 	}
 	if isCarrierRate {
-		return constants.ShippingTermTypeCarrierRateFreight
+		return constants.ShippingTermTypeCarrierRate
 	}
-	return constants.ShippingTermTypeFlatRateFreight
+	return constants.ShippingTermTypeFlatRate
 }
 
 // shippingTermTypeToBooleans maps a ShippingTermType to DB booleans (isFreightExempt, isCarrierRate).
 func shippingTermTypeToBooleans(t constants.ShippingTermType) (bool, bool) {
 	switch t {
-	case constants.ShippingTermTypeFreeFreight:
+	case constants.ShippingTermTypeFree:
 		return true, false
-	case constants.ShippingTermTypeCarrierRateFreight:
+	case constants.ShippingTermTypeCarrierRate:
 		return false, true
-	default: // flat_rate_freight
+	default: // flat_rate
 		return false, false
 	}
 }
@@ -276,6 +276,7 @@ func mapForwardShippingTermRow(row sqlc.ListShippingTermsForwardRow) *domain.Shi
 		ID:                 row.ID,
 		Name:               row.Name,
 		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		Status:             constants.ArchiveStatusFromIsActive(row.IsActive),
 		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromForwardRow(row)),
 		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromForwardRow(row)),
 		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
@@ -295,6 +296,7 @@ func mapBackwardShippingTermRow(row sqlc.ListShippingTermsBackwardRow) *domain.S
 		ID:                 row.ID,
 		Name:               row.Name,
 		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		Status:             constants.ArchiveStatusFromIsActive(row.IsActive),
 		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromBackwardRow(row)),
 		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromBackwardRow(row)),
 		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
@@ -314,6 +316,7 @@ func mapGetShippingTermRow(row sqlc.GetShippingTermRow) *domain.ShippingTerm {
 		ID:                 row.ID,
 		Name:               row.Name,
 		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		Status:             constants.ArchiveStatusFromIsActive(row.IsActive),
 		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromGetRow(row)),
 		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromGetRow(row)),
 		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
@@ -375,6 +378,7 @@ func mapByIDsShippingTermRow(row sqlc.GetShippingTermsByIDsRow) *domain.Shipping
 		ID:                 row.ID,
 		Name:               row.Name,
 		Type:               shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		Status:             constants.ArchiveStatusFromIsActive(row.IsActive),
 		FlatRate:           mapShippingTermQuantityFromCols(flatRateColsFromByIDsRow(row)),
 		MinimumOrderValue:  mapShippingTermQuantityFromCols(minimumOrderColsFromByIDsRow(row)),
 		FlatRateAmount:     storedMoneyPtr(row.FlatRateValue, row.FlatRateCurrency),
@@ -431,6 +435,7 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 
 	searchQuery := buildShippingTermSearchParams(params.Query)
 	accountID := gosql.NullString{String: params.AccountID, Valid: true}
+	isActive := toNullBool(params.IsActive)
 
 	var cursorDir *pagination.Direction
 
@@ -445,6 +450,7 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 			rows, err := r.queries.ListShippingTermsBackward(ctx, sqlc.ListShippingTermsBackwardParams{
 				AccountID:       accountID,
 				SearchQuery:     searchQuery,
+				IsActive:        isActive,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,
@@ -471,6 +477,7 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 		rows, err := r.queries.ListShippingTermsForward(ctx, sqlc.ListShippingTermsForwardParams{
 			AccountID:       accountID,
 			SearchQuery:     searchQuery,
+			IsActive:        isActive,
 			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
 			Limit:           params.Limit + 1,
@@ -497,6 +504,7 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 	rows, err := r.queries.ListShippingTermsForward(ctx, sqlc.ListShippingTermsForwardParams{
 		AccountID:   accountID,
 		SearchQuery: searchQuery,
+		IsActive:    isActive,
 		Limit:       params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -550,6 +558,7 @@ func (r *shippingTermRepoImpl) Create(ctx context.Context, id string, params dom
 		Name:            params.Name,
 		IsFreightExempt: isFreightExempt,
 		IsCarrierRate:   isCarrierRate,
+		IsActive:        params.Status != constants.ArchiveStatusArchived,
 		AccountID:       gosql.NullString{String: params.AccountID, Valid: true},
 	}
 	if params.FlatRateID != nil {
@@ -585,6 +594,7 @@ func (r *shippingTermRepoImpl) Update(ctx context.Context, params domain.UpdateS
 		Name:            toNullString(params.Name),
 		IsFreightExempt: isFreightExempt,
 		IsCarrierRate:   isCarrierRate,
+		IsActive:        archiveStatusToNullBool(params.Status),
 	}
 	if params.FlatRateID != nil {
 		updateParams.FlatRateID = gosql.NullString{String: *params.FlatRateID, Valid: true}
@@ -699,4 +709,19 @@ func (r *shippingTermRepoImpl) DeleteFreeShippingRulesByShippingTermID(ctx conte
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
+}
+
+func (r *shippingTermRepoImpl) ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError) {
+	ctx, span := shippingTermRepoTracer.Start(ctx, "repository.shipping_term.exists_by_name")
+	defer span.End()
+
+	count, err := r.queries.CountShippingTermsByName(ctx, sqlc.CountShippingTermsByNameParams{
+		Name:      name,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+		ExcludeID: toNullString(excludeID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return count > 0, nil
 }

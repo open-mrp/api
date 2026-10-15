@@ -723,9 +723,9 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(a
 		Return(&domain.ServiceLevel{IsActive: true}, nil).AnyTimes()
 	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	suite.shippingTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
-		Return(&domain.ShippingTerm{}, nil).AnyTimes()
+		Return(&domain.ShippingTerm{Status: constants.ArchiveStatusActive}, nil).AnyTimes()
 	suite.paymentTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
-		Return(&domain.PaymentTerm{}, nil).AnyTimes()
+		Return(&domain.PaymentTerm{Status: constants.ArchiveStatusActive}, nil).AnyTimes()
 	suite.carrierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&domain.Carrier{}, nil).AnyTimes()
 	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), accountID, gomock.Any()).

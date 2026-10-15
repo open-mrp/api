@@ -14,10 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 )
 
-var paymentTermProbes = []domain.ReferenceProbe{
-	{Label: "customers", Table: "account_relation", Column: "payment_term_id"},
-	{Label: "sales orders", Table: "sales_order", Column: "payment_term_id"},
-}
+var paymentTermProbes = domain.PaymentTermReferences.Probes
 
 func TestReferenceRepo_InUseBy(t *testing.T) {
 	pool := testDB(t)
@@ -94,7 +91,7 @@ func probeIsIndexed(t *testing.T, pool *sql.DB, p domain.ReferenceProbe) bool {
 // reference check stays fast however large the referencing table grows.
 func TestReferenceProbes_AreIndexed(t *testing.T) {
 	pool := testDB(t)
-	for _, refs := range append(domain.RegisteredReferences(), domain.References{Noun: "payment term", Probes: paymentTermProbes}) {
+	for _, refs := range domain.RegisteredReferences() {
 		for _, p := range refs.Probes {
 			t.Run(refs.Noun+"/"+p.Table+"."+p.Column, func(t *testing.T) {
 				assert.True(t, probeIsIndexed(t, pool, p), "probe %+v must use an index", p)

@@ -24,6 +24,7 @@ type ShippingTerm struct {
 	ID                string
 	Name              string                     `audit:"name"`
 	Type              constants.ShippingTermType `audit:"type"`
+	Status            constants.ArchiveStatus    `audit:"status"`
 	FlatRate          *Quantity                  `audit:"flat_rate"`
 	MinimumOrderValue *Quantity                  `audit:"minimum_order_value"`
 	// FlatRateAmount and MinimumOrderAmount are FlatRate and MinimumOrderValue as money.
@@ -46,7 +47,9 @@ type ListShippingTermsParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
-	Includes  []string
+	// IsActive narrows to active (true) or archived (false) terms; nil returns both.
+	IsActive *bool
+	Includes []string
 }
 
 type ListShippingTermsResult struct {
@@ -64,6 +67,7 @@ type CreateShippingTermParams struct {
 	AccountID                   string
 	Name                        string
 	Type                        constants.ShippingTermType
+	Status                      constants.ArchiveStatus
 	FlatRate                    *QuantityInput
 	MinimumOrderValue           *QuantityInput
 	FreeShippingServiceLevelIDs []string
@@ -77,6 +81,7 @@ type UpdateShippingTermParams struct {
 	ShippingTermID              string
 	Name                        *string
 	Type                        *constants.ShippingTermType
+	Status                      *constants.ArchiveStatus
 	FlatRate                    field.Clearable[QuantityInput]
 	MinimumOrderValue           field.Clearable[QuantityInput]
 	FreeShippingServiceLevelIDs field.Clearable[[]string]
@@ -89,3 +94,13 @@ type DeleteShippingTermParams struct {
 	AccountID      string
 	ShippingTermID string
 }
+
+// ShippingTermReferences blocks deleting a shipping term a customer or order still uses.
+var ShippingTermReferences = RegisterReferences(References{
+	Noun:       "shipping term",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "customers", Table: "account_relation", Column: "shipping_term_id"},
+		{Label: "sales orders", Table: "sales_order", Column: "shipping_term_id"},
+	},
+})

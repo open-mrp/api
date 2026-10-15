@@ -254,6 +254,8 @@ message ListPaymentTermsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  // Narrows to active (true) or archived (false) terms; unset returns both.
+  optional bool is_active = 4;
 }
 message ListPaymentTermsResponse {
   repeated PaymentTermInfo payment_terms = 1;
@@ -267,6 +269,8 @@ message GetPaymentTermResponse {
 }
 message CreatePaymentTermRequest {
   string name = 1;
+  // active | archived; unset is active.
+  optional string status = 2;
 }
 message CreatePaymentTermResponse {
   PaymentTermInfo payment_term = 1;
@@ -274,6 +278,8 @@ message CreatePaymentTermResponse {
 message UpdatePaymentTermRequest {
   string id = 1;
   optional string name = 2;
+  // active | archived.
+  optional string status = 3;
 }
 message UpdatePaymentTermResponse {
   PaymentTermInfo payment_term = 1;
@@ -311,12 +317,16 @@ message ShippingTermInfo {
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
   optional string account_id = 9;
+  // active | archived.
+  string status = 12;
 }
 message ListShippingTermsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  // Narrows to active (true) or archived (false) terms; unset returns both.
+  optional bool is_active = 5;
 }
 message ListShippingTermsResponse {
   repeated ShippingTermInfo shipping_terms = 1;
@@ -342,6 +352,8 @@ message CreateShippingTermRequest {
   Money minimum_order_value = 8;
   repeated string free_shipping_service_level_ids = 5;
   repeated string includes = 6;
+  // active | archived; unset is active.
+  optional string status = 9;
 }
 message CreateShippingTermResponse {
   ShippingTermInfo shipping_term = 1;
@@ -356,6 +368,8 @@ message UpdateShippingTermRequest {
   MoneyPatch minimum_order_value = 9;
   optional StringListPatch free_shipping_service_level_ids = 6;
   repeated string includes = 7;
+  // active | archived.
+  optional string status = 10;
 }
 message UpdateShippingTermResponse {
   ShippingTermInfo shipping_term = 1;

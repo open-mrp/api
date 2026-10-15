@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -186,6 +187,9 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if params.Status == "" {
+		params.Status = constants.ArchiveStatusActive
+	}
 
 	meds := s.mediators()
 
@@ -206,6 +210,17 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 		var result *domain.ShippingTerm
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingTermSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewShippingTermRepo()
+
+			if apiErr := checkShippingTermCharges(params.Type, params.FlatRate != nil, params.MinimumOrderValue != nil, len(params.FreeShippingServiceLevelIDs) > 0); apiErr != nil {
+				return apiErr
+			}
+			exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, params.Name, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if exists {
+				return apierror.NewExistsError("name", "A shipping term with this name already exists.")
+			}
 
 			// Validate related references exist before persisting so a bogus unit_id or service level id is rejected instead of being silently dropped on read.
 			if params.FlatRate != nil {
@@ -347,6 +362,19 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 			}
 			if shippingTerm.AccountID == nil {
 				return apierror.NewAuthorizationError("Default shipping term cannot be updated.")
+			}
+
+			if apiErr := applyShippingTermTypeChange(&params, shippingTerm); apiErr != nil {
+				return apiErr
+			}
+			if params.Name != nil {
+				exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.ShippingTermID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if exists {
+					return apierror.NewExistsError("name", "A shipping term with this name already exists.")
+				}
 			}
 
 			// Validate related references exist before persisting so a bogus unit_id or service level id is rejected instead of being silently dropped on read.
@@ -523,6 +551,9 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingTermSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewShippingTermRepo()
 
+		if apiErr := domain.ShippingTermReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), shippingTerm.ID); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShippingTerm, shippingTerm.ID, accountID, shippingTerm); apiErr != nil {
 			return apiErr
 		}
@@ -572,4 +603,59 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	}
 
 	return nil
+}
+
+// checkShippingTermCharges holds a term's charges to its type: a flat rate exactly when the type is flat_rate, no free
+// shipping on a free term, and a free-shipping service level list only beside a minimum order value.
+func checkShippingTermCharges(t constants.ShippingTermType, hasFlatRate, hasMinimumOrderValue, hasServiceLevels bool) *apierror.APIError {
+	switch {
+	case t == constants.ShippingTermTypeFlatRate && !hasFlatRate:
+		return apierror.NewMissingFieldError("flat_rate", "`flat_rate` is required when `type` is `flat_rate`.")
+	case t != constants.ShippingTermTypeFlatRate && hasFlatRate:
+		return apierror.NewFieldError("flat_rate", apierror.CodeInvalidFormat, "`flat_rate` is only allowed when `type` is `flat_rate`.")
+	case t == constants.ShippingTermTypeFree && (hasMinimumOrderValue || hasServiceLevels):
+		return apierror.NewFieldError("free_shipping", apierror.CodeInvalidFormat, "`free_shipping` isn't allowed when `type` is `free`.")
+	case hasServiceLevels && !hasMinimumOrderValue:
+		return apierror.NewMissingFieldError("free_shipping.minimum_order_value", "Free shipping needs a `minimum_order_value`.")
+	}
+	return nil
+}
+
+// applyShippingTermTypeChange checks an update against the term it changes. Moving off flat_rate clears the flat rate
+// and moving to free clears free shipping, unless the request sets them; moving to flat_rate needs the flat rate in
+// the same request.
+func applyShippingTermTypeChange(params *domain.UpdateShippingTermParams, held *domain.ShippingTerm) *apierror.APIError {
+	next := held.Type
+	if params.Type != nil {
+		next = *params.Type
+	}
+	changed := next != held.Type
+
+	if changed && next == constants.ShippingTermTypeFlatRate && !params.FlatRate.IsSet() {
+		return apierror.NewMissingFieldError("flat_rate", "`flat_rate` is required when changing `type` to `flat_rate`.")
+	}
+	if changed && next != constants.ShippingTermTypeFlatRate && params.FlatRate.IsUnset() && held.FlatRate != nil {
+		params.FlatRate = field.Clear[domain.QuantityInput]()
+	}
+	if changed && next == constants.ShippingTermTypeFree {
+		if params.MinimumOrderValue.IsUnset() && held.MinimumOrderValue != nil {
+			params.MinimumOrderValue = field.Clear[domain.QuantityInput]()
+		}
+		if params.FreeShippingServiceLevelIDs.IsUnset() && len(held.FreeShippingServiceLevelIDs) > 0 {
+			params.FreeShippingServiceLevelIDs = field.Clear[[]string]()
+		}
+	}
+
+	hasFlatRate := params.FlatRate.IsSet() || (params.FlatRate.IsUnset() && held.FlatRate != nil)
+	hasMinimum := params.MinimumOrderValue.IsSet() || (params.MinimumOrderValue.IsUnset() && held.MinimumOrderValue != nil)
+	hasLevels := len(held.FreeShippingServiceLevelIDs) > 0
+	if params.FreeShippingServiceLevelIDs.WasProvided() {
+		ids, _ := params.FreeShippingServiceLevelIDs.Value()
+		hasLevels = len(ids) > 0
+	}
+	// Free shipping a free term already holds is only refused when this request sets it.
+	if next == constants.ShippingTermTypeFree && !params.MinimumOrderValue.IsSet() && !params.FreeShippingServiceLevelIDs.IsSet() {
+		hasMinimum, hasLevels = false, false
+	}
+	return checkShippingTermCharges(next, hasFlatRate, hasMinimum, hasLevels)
 }

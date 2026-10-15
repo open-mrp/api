@@ -468,13 +468,13 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 		invoice.PaymentTerm = &domain.PaymentTerm{
 			ID:        row.PaymentTermID.String,
 			Name:      row.PaymentTermName.String,
-			Status:    constants.PaymentTermStatusInactive,
+			Status:    constants.ArchiveStatusArchived,
 			AccountID: nullStringToPtr(row.PaymentTermAccountID),
 			CreatedAt: row.PaymentTermCreatedAt.Time,
 			UpdatedAt: row.PaymentTermUpdatedAt.Time,
 		}
 		if row.PaymentTermIsActive.Bool {
-			invoice.PaymentTerm.Status = constants.PaymentTermStatusActive
+			invoice.PaymentTerm.Status = constants.ArchiveStatusActive
 		}
 	}
 

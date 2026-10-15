@@ -2331,13 +2331,21 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 		return apiErr
 	}
 	if params.ShippingTermID != nil && *params.ShippingTermID != "" {
-		if _, apiErr := s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: *params.ShippingTermID}); apiErr != nil {
+		term, apiErr := s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: *params.ShippingTermID})
+		if apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Shipping term not found.", "shipping_term_id")
+		}
+		if apiErr := domain.RequireAssignable("shipping_term_id", "shipping term", term.Status); apiErr != nil {
+			return apiErr
 		}
 	}
 	if params.PaymentTermID != nil && *params.PaymentTermID != "" {
-		if _, apiErr := s.repos.NewPaymentTermRepo().Get(ctx, domain.GetPaymentTermParams{AccountID: params.AccountID, PaymentTermID: *params.PaymentTermID}); apiErr != nil {
+		term, apiErr := s.repos.NewPaymentTermRepo().Get(ctx, domain.GetPaymentTermParams{AccountID: params.AccountID, PaymentTermID: *params.PaymentTermID})
+		if apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Payment term not found.", "payment_term_id")
+		}
+		if apiErr := domain.RequireAssignable("payment_term_id", "payment term", term.Status); apiErr != nil {
+			return apiErr
 		}
 	}
 	if params.SalesRepID != nil && *params.SalesRepID != "" {

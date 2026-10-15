@@ -112,7 +112,6 @@ func (m *ItemTypeCode) StringPtr() *string              { return stringPtrEnum(m
 func (m *InventoryActionType) StringPtr() *string       { return stringPtrEnum(m) }
 func (o *InventoryUpdateOperation) StringPtr() *string  { return stringPtrEnum(o) }
 func (m *PriorityCode) StringPtr() *string              { return stringPtrEnum(m) }
-func (s *PaymentTermStatus) StringPtr() *string         { return stringPtrEnum(s) }
 func (s *SupplierMaterialStatus) StringPtr() *string    { return stringPtrEnum(s) }
 func (m *OwnerType) StringPtr() *string                 { return stringPtrEnum(m) }
 func (m *CustomerPortalVisibility) StringPtr() *string  { return stringPtrEnum(m) }
@@ -152,3 +151,6 @@ func (c *AgentToolCategory) StringPtr() *string        { return stringPtrEnum(c)
 func (t *BatchLotType) StringPtr() *string             { return stringPtrEnum(t) }
 func (t *MeasureOwnerType) StringPtr() *string         { return stringPtrEnum(t) }
 func (t *ConversationAssigneeType) StringPtr() *string { return stringPtrEnum(t) }
+
+func (s *ServiceLevelScope) StringPtr() *string { return stringPtrEnum(s) }
+func (d *UnitDimension) StringPtr() *string     { return stringPtrEnum(d) }

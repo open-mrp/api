@@ -13,31 +13,31 @@ import (
 	apiexample "github.com/open-mrp/apikit/example"
 )
 
-// UpsertUnitInput is the input for a single unit in a bulk upsert operation.
+// One unit to create or update, matched to an existing unit by `abbreviation`.
 type UpsertUnitInput struct {
-	// Display name of the unit (e.g. "Gram"). A row matching a system unit fails — system
-	// units cannot be modified.
+	// Display name, such as `Kilogram`.
+	//
+	// Unique (case-insensitive) among your account's units and the system units; a name another unit has fails the row with `resource_exists`.
 	Name string `json:"name" validate:"required,max=255"`
-	// Short abbreviation for the unit (e.g. "g"). Also used for matching — see `name`.
-	Abbreviation string `json:"abbreviation" validate:"required,max=191"`
-	// Unit dimension code. Create-only — a row that changes an existing unit's dimension fails.
-	Type constants.UnitType `json:"type" validate:"required"`
-	// Conversion ratio numerator relative to the base unit, as a decimal string.
+	// Short label, such as `kg`. Matches the row to an existing unit (case-insensitive).
+	//
+	// A row matching a system unit fails, since system units can't be updated.
+	Abbreviation string `json:"abbreviation" validate:"required,max=32"`
+	// What the unit measures. A row that changes an existing unit's dimension fails.
+	Dimension constants.UnitDimension `json:"dimension" validate:"required"`
+	// The ratio that converts a value in this unit to its dimension's base unit.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit, as a decimal string.
+	// The ratio that converts a value in this unit to its dimension's base unit. Can't be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
-	// Conversion offset numerator, as a decimal string.
+	// An offset added after the ratio, for scales with different zero points, such as temperature.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator, as a decimal string.
+	// An offset added after the ratio, for scales with different zero points. Can't be zero.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
-	// Whether the unit is its dimension's base unit. Bulk upsert never creates a base unit
-	// and rejects a change to an existing one.
-	IsBaseUnit bool `json:"is_base_unit"`
 }
 
 // BulkUpsertUnitsRequest is the request to bulk upsert units.
 type BulkUpsertUnitsRequest struct {
-	// Units to create or update, matched by name or abbreviation within the account.
+	// Units to create or update, at most 1,000.
 	Units []UpsertUnitInput `json:"units" validate:"required,min=1,max=1000,dive"`
 }
 
@@ -46,12 +46,11 @@ var sampleBulkUpsertUnitsRequest = &BulkUpsertUnitsRequest{
 		{
 			Name:              apiresource.SampleUnitName,
 			Abbreviation:      apiresource.SampleUnitAbbreviation,
-			Type:              constants.UnitTypeMass,
+			Dimension:         constants.UnitDimensionMass,
 			RatioNumerator:    "1000",
 			RatioDenominator:  "1",
 			OffsetNumerator:   "0",
 			OffsetDenominator: "1",
-			IsBaseUnit:        false,
 		},
 	},
 }
@@ -60,8 +59,9 @@ func (*BulkUpsertUnitsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkUpsertUnitsRequest)
 }
 
-// Creates or updates multiple units of measure for the account, matched by name or
-// abbreviation, then writes asynchronously — 202 with a job to poll.
+// Creates or updates units in bulk.
+//
+// Each row is matched to an existing unit by `abbreviation` (case-insensitive). Unmatched rows create new units. The work runs in the background; the response is an async job to poll.
 type BulkUpsertUnitsEndpoint struct{}
 
 func (e *BulkUpsertUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertUnitsRequest, *apiresource.AsyncJob] {
@@ -74,7 +74,6 @@ func (e *BulkUpsertUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUp
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionCreate}, {Domain: types.PermissionDomainUnits, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAsyncJob,

@@ -272,7 +272,12 @@ func init() {
 		ObjectType: constants.ObjectTypeShippingTerm,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
-			{Key: "free_shipping_service_levels", ObjectType: constants.ObjectTypeServiceLevel},
+			{
+				Key: "free_shipping",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "service_levels", ObjectType: constants.ObjectTypeServiceLevel},
+				},
+			},
 		},
 	})
 

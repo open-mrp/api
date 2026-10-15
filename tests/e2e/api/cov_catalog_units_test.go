@@ -24,7 +24,7 @@ func covCatalogUnitsCreateBody(name, abbreviation string) map[string]any {
 	return map[string]any{
 		"name":               name,
 		"abbreviation":       abbreviation,
-		"type":               "mass",
+		"dimension":          "mass",
 		"ratio_numerator":    "5",
 		"ratio_denominator":  "2",
 		"offset_numerator":   "1",
@@ -63,7 +63,7 @@ func TestCovCatalogUnits_CRUD(t *testing.T) {
 	assert.Equal(t, "unit", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, abbr, jsonField(created, "abbreviation"))
-	assert.Equal(t, "mass", jsonField(created, "type"))
+	assert.Equal(t, "mass", jsonField(created, "dimension"))
 
 	// Get
 	getStatus, getBody, err := apiClient.GetListRaw(unitsPath+"/"+id, nil)
@@ -108,7 +108,7 @@ func TestCovCatalogUnits_CreateAndUpdateAllFields(t *testing.T) {
 	createResp, err := apiClient.PostFull(unitsPath+"?include=owner", map[string]any{
 		"name":               name,
 		"abbreviation":       abbr,
-		"type":               "length",
+		"dimension":          "length",
 		"ratio_numerator":    "7",
 		"ratio_denominator":  "4",
 		"offset_numerator":   "2",
@@ -128,12 +128,13 @@ func TestCovCatalogUnits_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, id, jsonField(got, "id"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, abbr, jsonField(got, "abbreviation"))
-	assert.Equal(t, "length", jsonField(got, "type"))
+	assert.Equal(t, "length", jsonField(got, "dimension"))
 	assert.Equal(t, "7", jsonField(got, "ratio_numerator"))
 	assert.Equal(t, "4", jsonField(got, "ratio_denominator"))
 	assert.Equal(t, "2", jsonField(got, "offset_numerator"))
 	assert.Equal(t, "9", jsonField(got, "offset_denominator"))
-	assert.Equal(t, false, got["is_base_unit"], "account-created units always have is_base_unit=false")
+	assert.NotContains(t, got, "is_base_unit")
+	assert.NotContains(t, got, "type")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -159,10 +160,10 @@ func TestCovCatalogUnits_CreateAndUpdateAllFields(t *testing.T) {
 
 	// Fields not touched by the patch should be preserved.
 	assert.Equal(t, abbr, jsonField(updated, "abbreviation"), "abbreviation should be preserved")
-	assert.Equal(t, "length", jsonField(updated, "type"), "type should be preserved (not updatable)")
+	assert.Equal(t, "length", jsonField(updated, "dimension"), "dimension should be preserved (not updatable)")
 	assert.Equal(t, "2", jsonField(updated, "offset_numerator"), "offset_numerator should be preserved")
 	assert.Equal(t, "9", jsonField(updated, "offset_denominator"), "offset_denominator should be preserved")
-	assert.Equal(t, false, updated["is_base_unit"])
+	assert.NotContains(t, updated, "is_base_unit")
 
 	updOwner := jsonObject(updated, "owner")
 	require.NotNil(t, updOwner, "owner should still be present with ?include=owner")
@@ -212,10 +213,7 @@ func TestCovCatalogUnits_OmittedFields(t *testing.T) {
 		id := jsonField(created, "id")
 		defer apiClient.Delete(unitsPath + "/" + id)
 
-		// Every create field is required; there is nothing optional to omit
-		// besides the always-server-derived is_base_unit, which must default
-		// to false for account-created units.
-		assert.Equal(t, false, created["is_base_unit"])
+		// Every create field is required; there is nothing optional to omit.
 		assertNilField(t, created, "owner")
 	})
 
@@ -228,7 +226,7 @@ func TestCovCatalogUnits_OmittedFields(t *testing.T) {
 		}{
 			{"name", "name", "missing_field"},
 			{"abbreviation", "abbreviation", "missing_field"},
-			{"type", "type", "missing_field"},
+			{"dimension", "dimension", "missing_field"},
 			{"ratio_numerator", "ratio_numerator", "missing_field"},
 			{"ratio_denominator", "ratio_denominator", "missing_field"},
 			{"offset_numerator", "offset_numerator", "missing_field"},
@@ -267,7 +265,7 @@ func TestCovCatalogUnits_OmittedFields(t *testing.T) {
 		patched := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(patched, "name"))
 		assert.Equal(t, abbr, jsonField(patched, "abbreviation"), "abbreviation should be preserved when omitted from patch")
-		assert.Equal(t, "mass", jsonField(patched, "type"), "type should be preserved when omitted from patch")
+		assert.Equal(t, "mass", jsonField(patched, "dimension"), "dimension should be preserved when omitted from patch")
 		assert.Equal(t, "5", jsonField(patched, "ratio_numerator"), "ratio_numerator should be preserved when omitted from patch")
 		assert.Equal(t, "2", jsonField(patched, "ratio_denominator"), "ratio_denominator should be preserved when omitted from patch")
 		assert.Equal(t, "1", jsonField(patched, "offset_numerator"), "offset_numerator should be preserved when omitted from patch")
@@ -339,16 +337,16 @@ func TestCovCatalogUnits_CreateBlankStringFields(t *testing.T) {
 	}
 }
 
-func TestCovCatalogUnits_CreateInvalidTypeEnum(t *testing.T) {
+func TestCovCatalogUnits_CreateCurrencyDimensionRejected(t *testing.T) {
 	t.Parallel()
 	body := covCatalogUnitsCreateBody(uniqueName("e2e-cov-unit-badtype"), uniqueName("e2ecubadtype"))
-	body["type"] = "bogus_type"
+	body["dimension"] = "currency"
 
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "type")
+	assertErrorParam(t, errObj, "dimension")
 }
 
 func TestCovCatalogUnits_CreateZeroRatioDenominator(t *testing.T) {
@@ -619,18 +617,18 @@ func TestCovCatalogUnits_DeleteAlreadyDeleted(t *testing.T) {
 // validator read only the `json` tag, so every query-only field fell back to its Go name.
 func TestCovCatalogUnits_ListInvalidTypeFilter(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(unitsPath, url.Values{"type": {"not_a_type"}})
+	status, body, err := apiClient.GetListRaw(unitsPath, url.Values{"dimensions[]": {"currency"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "type")
+	assertErrorParam(t, errObj, "dimensions")
 }
 
 // TestCovCatalogUnits_ListUnitGroupIDsNonexistent verifies a nonexistent
 // unit_group_ids value simply yields an empty match rather than an error.
 func TestCovCatalogUnits_ListUnitGroupIDsNonexistent(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(unitsPath, url.Values{"unit_group_ids": {"ungp_nonexistent00000000"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(unitsPath, url.Values{"unit_group_ids": {"ungp_nonexistent00000000"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data)
 }
@@ -641,7 +639,7 @@ func TestCovCatalogUnits_ListUnitGroupIDsNonexistent(t *testing.T) {
 // units/unit_group_ids entry — this just confirms the single-value case).
 func TestCovCatalogUnits_ListUnitGroupIDsSeeded(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(unitsPath, url.Values{"unit_group_ids": {SeedUnitGroupID}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(unitsPath, url.Values{"unit_group_ids": {SeedUnitGroupID}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 unit in the seeded unit group")
 
@@ -679,7 +677,8 @@ func TestCovCatalogUnits_DeleteBaseUnitOfAGroupConflicts(t *testing.T) {
 	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
-	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
+	assert.Contains(t, jsonField(errObj, "message"), "unit groups")
 
 	status, body, err = apiClient.GetListRaw(unitsPath+"/"+unitID, nil)
 	require.NoError(t, err)
@@ -692,6 +691,7 @@ func TestCovCatalogUnits_DeleteBaseUnitOfAGroupConflicts(t *testing.T) {
 	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{"id": unitID, "object": "unit", "deleted": true}, parseJSON(body))
 }
 
 // A quantity converts and displays through its unit, so a unit anything is recorded in cannot be
@@ -716,10 +716,12 @@ func TestCovCatalogUnits_DeleteUnitInUseConflicts(t *testing.T) {
 	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
-	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
+	assert.Contains(t, jsonField(errObj, "message"), "quantities")
 
 	removeQuantity()
 	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{"id": unitID, "object": "unit", "deleted": true}, parseJSON(body))
 }

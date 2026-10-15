@@ -8,8 +8,10 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/apiversion"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
@@ -48,6 +50,9 @@ func NewPrioritySvc(config *PrioritySvcConfig) PrioritySvc {
 }
 
 func (m *prioritySvcImpl) ListPriorities(ctx context.Context, req *ListPrioritiesRequest) (*apiresource.List[apiresource.Priority], *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListPrioritiesRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
@@ -83,6 +88,9 @@ func (m *prioritySvcImpl) ListPriorities(ctx context.Context, req *ListPrioritie
 // resource with LoadMeta — even though Priority has no FK info today, this
 // keeps every endpoint going through the same loader path.
 func (m *prioritySvcImpl) GetPriority(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {
+	if apiErr := requirePreview9(ctx); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetPriorityRequest{Identifier: req.PriorityID}
 	resp, apiErr := grpcutil.CallRPC(ctx, prioritySvcTracer, "service.priorities.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPriorityResponse, error) {
@@ -100,4 +108,12 @@ func (m *prioritySvcImpl) GetPriority(ctx context.Context, req *RetrievePriority
 		return nil, apierror.NewNotFoundError("Priority not found.")
 	}
 	return v.(*apiresource.Priority), nil
+}
+
+// requirePreview9 answers 404 to anyone but a 1.0.forge-preview.9 caller, for routes 1.0.forge removed.
+func requirePreview9(ctx context.Context) *apierror.APIError {
+	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok && v.Equal(apiversion.V1_0_Forge_Preview9) {
+		return nil
+	}
+	return apierror.NewNotFoundError("This route was removed in 1.0.forge. Priority is gone; a customer's lead time and an order's commitment set its ship-by date.")
 }

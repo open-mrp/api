@@ -1279,12 +1279,12 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 			}
 
 			// Shipping term is free freight.
-			if shippingTerm.Type == constants.ShippingTermTypeFreeFreight {
+			if shippingTerm.Type == constants.ShippingTermTypeFree {
 				return 0, nil
 			}
 
 			// Shipping term has a flat rate.
-			if shippingTerm.Type == constants.ShippingTermTypeFlatRateFreight && shippingTerm.FlatRate != nil {
+			if shippingTerm.Type == constants.ShippingTermTypeFlatRate && shippingTerm.FlatRate != nil {
 				flatRate, err := strconv.ParseFloat(shippingTerm.FlatRate.Value, 64)
 				if err != nil {
 					return 0, apierror.NewInternalError(err, "Failed to parse flat rate value.")
@@ -1487,7 +1487,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 				return nil, tracing.Trace(span, apiErr)
 			}
 
-			if shippingTerm.Type == constants.ShippingTermTypeFreeFreight {
+			if shippingTerm.Type == constants.ShippingTermTypeFree {
 				return freightExemptResult, nil
 			}
 		}
@@ -1517,7 +1517,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	}
 
 	// A flat rate only applies when the term is not a carrier-rate term (mirrors Dashboard's `!isCarrierRate && !!flatRate`); a carrier-rate term keeps live carrier rates even if a stray flat-rate value is stored.
-	hasFlatRate := flatRateValue != nil && shippingTerm != nil && shippingTerm.Type != constants.ShippingTermTypeCarrierRateFreight
+	hasFlatRate := flatRateValue != nil && shippingTerm != nil && shippingTerm.Type != constants.ShippingTermTypeCarrierRate
 	hasMinimumOrder := minimumOrderValue != nil
 	isMinimumOrderMet := hasMinimumOrder && params.OrderTotal != nil && *params.OrderTotal > *minimumOrderValue
 	hasFreeShippingRules := len(freeShippingOptionIDs) > 0

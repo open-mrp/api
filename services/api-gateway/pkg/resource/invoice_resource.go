@@ -156,7 +156,7 @@ var SampleInvoiceLine = &InvoiceLine{
 	Object: constants.ObjectTypeInvoiceLine,
 	Quantity: &Quantity{
 		Value: "100.000000000000000000000000000000",
-		Unit:  newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
+		Unit:  newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitDimensionMass),
 	},
 	UnitPrice: SampleUnitPrice,
 	OrderLine: SampleSalesOrderLine,
@@ -200,7 +200,7 @@ var SampleInvoiceAllocation = &InvoiceAllocation{
 	Note:        &sampleInvoiceAllocationNote,
 	Amount: &Quantity{
 		Value: "500.000000000000000000000000000000",
-		Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		Unit:  SampleCurrencyUnit,
 	},
 	Settlement: &AllocationSettlement{ID: SampleSettlementID, Object: constants.ObjectTypeSettlement, Number: "1"},
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),

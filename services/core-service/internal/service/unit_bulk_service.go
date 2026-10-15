@@ -242,9 +242,9 @@ func (s *unitSvcImpl) BuildExportUnits(ctx context.Context, accountID string, fi
 	return exportBuilder(s.repos, s.exportSpec())(ctx, accountID, filters)
 }
 
-// writeBulkUpsertUnits is the engine's Write hook: in one transaction it matches each row
-// against existing units by name or abbreviation (dual-key), rejects a row whose name and
-// abbreviation point at two different units, enforces IsBaseUnit immutability, and upserts.
+// writeBulkUpsertUnits is the engine's Write hook: in one transaction it matches each row to
+// an existing unit by abbreviation (case-insensitive), refuses a row whose name another unit
+// already has, and upserts.
 func writeBulkUpsertUnits(txCtx context.Context, txRepos domain.RepoFactory, sp db.SavepointRunner, accountID string, rows []domain.UpsertUnitParams) (BulkWriteResult, *apierror.APIError) {
 	names := make([]string, len(rows))
 	abbreviations := make([]string, len(rows))
@@ -278,23 +278,11 @@ func writeBulkUpsertUnits(txCtx context.Context, txRepos domain.RepoFactory, sp 
 		// Each row upserts inside its own savepoint: a row that conflicts, violates
 		// immutability, or fails to write rolls back only itself, and the batch continues.
 		rowErr := sp.Run(txCtx, func(spCtx context.Context) *apierror.APIError {
-			// A row's name and abbreviation must not point at two different existing units.
-			nameUnit := unitsByName[names[i]]
-			abbrUnit := unitsByAbbr[abbreviations[i]]
-			if nameUnit != nil && abbrUnit != nil && nameUnit.ID != abbrUnit.ID {
-				return apierror.NewConflictErrorWithParam("name, abbreviation", fmt.Sprintf(
-					"The name %q matches existing unit %q (%s) and the abbreviation %q matches a different existing unit %q (%s).",
-					unit.Name, nameUnit.Name, nameUnit.Abbreviation,
-					unit.Abbreviation, abbrUnit.Name, abbrUnit.Abbreviation,
+			oldUnit := unitsByAbbr[abbreviations[i]]
+			if nameUnit := unitsByName[names[i]]; nameUnit != nil && (oldUnit == nil || nameUnit.ID != oldUnit.ID) {
+				return apierror.NewExistsError("name", fmt.Sprintf(
+					"A unit named %q already exists, with the abbreviation %q.", nameUnit.Name, nameUnit.Abbreviation,
 				))
-			}
-
-			oldUnit := nameUnit
-			if oldUnit == nil {
-				oldUnit = abbrUnit
-			}
-			if oldUnit != nil && unit.IsBaseUnit != oldUnit.IsBaseUnit {
-				return apierror.NewValidationError("IsBaseUnit is immutable and cannot be changed on an existing unit.")
 			}
 
 			id, apiErr := upsertUnitInTx(spCtx, txRepos, accountID, domain.UpsertUnitTxParams{Unit: &unit, OldUnit: oldUnit})

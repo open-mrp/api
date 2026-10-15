@@ -26,6 +26,8 @@ type ListPrioritiesRequest struct {
 // Lists the priority levels that can be set on a sales order or purchase order.
 //
 // The levels are platform-provided and the same for every account, so the result is small and stable enough to cache. Results are ordered newest first rather than by urgency.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type ListPrioritiesEndpoint struct{}
 
 func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]] {
@@ -35,10 +37,8 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPriorities, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePriority,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPrioritiesRequest) (*apiresource.List[apiresource.Priority], *apierror.APIError) {
 			return svc.(PrioritySvc).ListPriorities

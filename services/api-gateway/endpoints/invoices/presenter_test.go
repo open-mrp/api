@@ -2,8 +2,9 @@ package invoiceep
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"testing"
+
+	"github.com/open-mrp/apikit/include"
 
 	// Registers the invoice definitions whose sub-fields these tests resolve.
 	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
@@ -144,7 +145,7 @@ func TestInvoicePresenterEmbedsBillingAddressAndPaymentTerm(t *testing.T) {
 	require.NotNil(t, inv.PaymentTerm)
 	assert.Equal(t, "pytm_01abc", inv.PaymentTerm.ID)
 	assert.Equal(t, "Net 30", inv.PaymentTerm.Name)
-	assert.Equal(t, constants.PaymentTermStatusActive, inv.PaymentTerm.Status)
+	assert.Equal(t, constants.ArchiveStatusActive, inv.PaymentTerm.Status)
 	assert.Nil(t, inv.PaymentTerm.Owner, "the owner is its own include")
 }
 

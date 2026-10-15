@@ -985,9 +985,9 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 			pt.Name = *info.PaymentTermName
 		}
 		if info.PaymentTermIsActive != nil && *info.PaymentTermIsActive {
-			pt.Status = constants.PaymentTermStatusActive
+			pt.Status = constants.ArchiveStatusActive
 		} else {
-			pt.Status = constants.PaymentTermStatusInactive
+			pt.Status = constants.ArchiveStatusArchived
 		}
 		if info.PaymentTermCreatedAt != nil {
 			pt.CreatedAt = info.PaymentTermCreatedAt.AsTime()

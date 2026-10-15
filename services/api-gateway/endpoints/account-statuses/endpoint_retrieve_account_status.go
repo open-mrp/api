@@ -19,6 +19,8 @@ type RetrieveAccountStatusRequest struct {
 }
 
 // Returns a single account status, looked up by either its ID or its code.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type RetrieveAccountStatusEndpoint struct{}
 
 func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountStatusRequest, *apiresource.AccountStatus] {
@@ -28,9 +30,7 @@ func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeAccountStatus,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError) {
 			return svc.(AccountStatusSvc).GetAccountStatus

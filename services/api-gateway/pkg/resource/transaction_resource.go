@@ -123,7 +123,7 @@ var SampleTransactionDetail = &TransactionDetail{
 	Number: "1",
 	Amount: &Quantity{
 		Value: "500.000000000000000000000000000000",
-		Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		Unit:  SampleCurrencyUnit,
 	},
 	Customer:          nil,
 	ResponsibleUser:   SampleAccountUser,
@@ -138,7 +138,7 @@ var SampleTransactionDetail = &TransactionDetail{
 		Object: constants.ObjectTypeTransactionAllocation,
 		Amount: &Quantity{
 			Value: "500.000000000000000000000000000000",
-			Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+			Unit:  SampleCurrencyUnit,
 		},
 		Invoice: &AllocationInvoice{
 			ID:     SampleInvoiceID,
@@ -200,7 +200,7 @@ var SampleTransactionSummary = &TransactionSummary{
 	Number: "1",
 	Amount: &Quantity{
 		Value: "500.000000000000000000000000000000",
-		Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		Unit:  SampleCurrencyUnit,
 	},
 	Customer:          nil,
 	TransactionType:   SampleTransactionType,

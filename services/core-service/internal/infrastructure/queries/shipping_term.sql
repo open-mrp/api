@@ -4,6 +4,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -53,6 +54,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR st.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR st.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR st.created_at < sqlc.narg('cursor_created_at')
@@ -67,6 +69,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -116,6 +119,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR st.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR st.is_active = sqlc.narg('is_active'))
 AND (
     st.created_at > sqlc.arg('cursor_created_at')
     OR (st.created_at = sqlc.arg('cursor_created_at') AND st.id > sqlc.arg('cursor_id'))
@@ -129,6 +133,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -182,6 +187,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -235,6 +241,7 @@ INSERT INTO shipping_term (
     name,
     is_freight_exempt,
     is_carrier_rate,
+    is_active,
     account_id,
     flat_rate_id,
     minimum_order_id,
@@ -245,6 +252,7 @@ INSERT INTO shipping_term (
     sqlc.arg('name'),
     sqlc.arg('is_freight_exempt'),
     sqlc.arg('is_carrier_rate'),
+    sqlc.arg('is_active'),
     sqlc.narg('account_id'),
     sqlc.narg('flat_rate_id'),
     sqlc.narg('minimum_order_id'),
@@ -257,11 +265,17 @@ UPDATE shipping_term SET
     name = COALESCE(sqlc.narg('name'), name),
     is_freight_exempt = COALESCE(sqlc.narg('is_freight_exempt'), is_freight_exempt),
     is_carrier_rate = COALESCE(sqlc.narg('is_carrier_rate'), is_carrier_rate),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
     flat_rate_id = sqlc.narg('flat_rate_id'),
     minimum_order_id = sqlc.narg('minimum_order_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
+
+-- name: CountShippingTermsByName :one
+SELECT COUNT(*) FROM shipping_term
+WHERE name = sqlc.arg('name') AND (account_id = sqlc.arg('account_id') OR account_id IS NULL)
+AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: DeleteShippingTerm :execresult
 DELETE FROM shipping_term

@@ -1,20 +1,20 @@
 package constants
 
-// ShippingTermType represents the freight pricing model for a shipping term.
+// ShippingTermType is how a shipping term charges freight.
 type ShippingTermType string
 
 const (
-	// ShippingTermTypeFreeFreight indicates no shipping cost to the buyer.
-	ShippingTermTypeFreeFreight ShippingTermType = "free_freight"
-	// ShippingTermTypeFlatRateFreight indicates a fixed shipping cost regardless of order details.
-	ShippingTermTypeFlatRateFreight ShippingTermType = "flat_rate_freight"
-	// ShippingTermTypeCarrierRateFreight indicates shipping cost is determined by the carrier's rate.
-	ShippingTermTypeCarrierRateFreight ShippingTermType = "carrier_rate_freight"
+	// ShippingTermTypeFree never charges freight.
+	ShippingTermTypeFree ShippingTermType = "free"
+	// ShippingTermTypeFlatRate charges the term's flat rate on every order.
+	ShippingTermTypeFlatRate ShippingTermType = "flat_rate"
+	// ShippingTermTypeCarrierRate charges the carrier's quoted rate for the order's service level.
+	ShippingTermTypeCarrierRate ShippingTermType = "carrier_rate"
 )
 
 func (m ShippingTermType) IsValid() bool {
 	switch m {
-	case ShippingTermTypeFreeFreight, ShippingTermTypeFlatRateFreight, ShippingTermTypeCarrierRateFreight:
+	case ShippingTermTypeFree, ShippingTermTypeFlatRate, ShippingTermTypeCarrierRate:
 		return true
 	default:
 		return false
@@ -22,9 +22,5 @@ func (m ShippingTermType) IsValid() bool {
 }
 
 func (m ShippingTermType) EnumValues() []string {
-	return []string{
-		string(ShippingTermTypeFreeFreight),
-		string(ShippingTermTypeFlatRateFreight),
-		string(ShippingTermTypeCarrierRateFreight),
-	}
+	return []string{string(ShippingTermTypeFree), string(ShippingTermTypeFlatRate), string(ShippingTermTypeCarrierRate)}
 }

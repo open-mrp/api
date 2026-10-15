@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -47,7 +48,7 @@ func PaymentTermFromProto(pt *pb.PaymentTermInfo) *apiresource.PaymentTerm {
 		ID:        pt.Id,
 		Object:    constants.ObjectTypePaymentTerm,
 		Name:      pt.Name,
-		Status:    constants.PaymentTermStatus(pt.Status),
+		Status:    constants.ArchiveStatus(pt.Status),
 		CreatedAt: grpcutil.TimestampToTime(pt.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(pt.UpdatedAt),
 	}

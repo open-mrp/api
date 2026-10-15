@@ -26,7 +26,7 @@ type ListUnitsParams struct {
 	Cursor       *string
 	Limit        int32
 	Query        *string
-	Type         *string
+	Dimensions   []string
 	UnitGroupIDs []string
 }
 
@@ -110,3 +110,15 @@ type ValidateUnitsResult struct {
 type UpsertUnitResult struct {
 	Unit *Unit
 }
+
+// UnitReferences blocks deleting a unit that a recorded value is stated in, or that a unit group converts through.
+var UnitReferences = RegisterReferences(References{
+	Noun: "unit",
+	Probes: []ReferenceProbe{
+		{Label: "quantities", Table: "quantity", Column: "unit_id"},
+		{Label: "rates", Table: "rate", Column: "numerator_unit_id"},
+		{Label: "rates", Table: "rate", Column: "denominator_unit_id"},
+		{Label: "demand overrides", Table: "demand_override", Column: "unit_id"},
+		{Label: "unit groups", Table: "unit_group", Column: "base_unit_id"},
+	},
+})

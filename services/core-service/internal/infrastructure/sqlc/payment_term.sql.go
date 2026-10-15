@@ -148,10 +148,12 @@ const insertPaymentTerm = `-- name: InsertPaymentTerm :exec
 INSERT INTO payment_term (
     id,
     name,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -163,11 +165,17 @@ INSERT INTO payment_term (
 type InsertPaymentTermParams struct {
 	ID        string
 	Name      string
+	IsActive  bool
 	AccountID sql.NullString
 }
 
 func (q *Queries) InsertPaymentTerm(ctx context.Context, arg InsertPaymentTermParams) error {
-	_, err := q.db.ExecContext(ctx, insertPaymentTerm, arg.ID, arg.Name, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, insertPaymentTerm,
+		arg.ID,
+		arg.Name,
+		arg.IsActive,
+		arg.AccountID,
+	)
 	return err
 }
 
@@ -185,6 +193,7 @@ AND (
     ? IS NULL
     OR payment_term.name LIKE ?
 )
+AND (? IS NULL OR payment_term.is_active = ?)
 AND (
     payment_term.created_at > ?
     OR (payment_term.created_at = ? AND payment_term.id > ?)
@@ -196,6 +205,7 @@ LIMIT ?
 type ListPaymentTermsBackwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
@@ -206,6 +216,8 @@ func (q *Queries) ListPaymentTermsBackward(ctx context.Context, arg ListPaymentT
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -253,6 +265,7 @@ AND (
     ? IS NULL
     OR payment_term.name LIKE ?
 )
+AND (? IS NULL OR payment_term.is_active = ?)
 AND (
     ? IS NULL
     OR payment_term.created_at < ?
@@ -265,6 +278,7 @@ LIMIT ?
 type ListPaymentTermsForwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullString
 	Limit           int32
@@ -275,6 +289,8 @@ func (q *Queries) ListPaymentTermsForward(ctx context.Context, arg ListPaymentTe
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -312,6 +328,7 @@ func (q *Queries) ListPaymentTermsForward(ctx context.Context, arg ListPaymentTe
 const updatePaymentTerm = `-- name: UpdatePaymentTerm :execresult
 UPDATE payment_term SET
     name = COALESCE(?, name),
+    is_active = COALESCE(?, is_active),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -319,10 +336,16 @@ AND account_id = ?
 
 type UpdatePaymentTermParams struct {
 	Name      sql.NullString
+	IsActive  sql.NullBool
 	ID        string
 	AccountID sql.NullString
 }
 
 func (q *Queries) UpdatePaymentTerm(ctx context.Context, arg UpdatePaymentTermParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, updatePaymentTerm, arg.Name, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updatePaymentTerm,
+		arg.Name,
+		arg.IsActive,
+		arg.ID,
+		arg.AccountID,
+	)
 }

@@ -49,14 +49,29 @@ func LoadShippingTerms(ctx context.Context, ids []string) (map[string]any, *apie
 
 func shippingTermFromProto(st *pb.ShippingTermInfo) *apiresource.ShippingTerm {
 	return &apiresource.ShippingTerm{
-		ID:                st.Id,
-		Object:            constants.ObjectTypeShippingTerm,
-		Name:              st.Name,
-		Type:              constants.ShippingTermType(st.Type),
-		FlatRate:          MoneyFromProto(st.FlatRate),
-		MinimumOrderValue: MoneyFromProto(st.MinimumOrderValue),
-		CreatedAt:         grpcutil.TimestampToTime(st.CreatedAt),
-		UpdatedAt:         grpcutil.TimestampToTime(st.UpdatedAt),
+		ID:           st.Id,
+		Object:       constants.ObjectTypeShippingTerm,
+		Name:         st.Name,
+		Type:         constants.ShippingTermType(st.Type),
+		Status:       constants.ArchiveStatus(st.Status),
+		FlatRate:     MoneyFromProto(st.FlatRate),
+		FreeShipping: freeShippingFromProto(st),
+		CreatedAt:    grpcutil.TimestampToTime(st.CreatedAt),
+		UpdatedAt:    grpcutil.TimestampToTime(st.UpdatedAt),
 	}
+}
+
+// freeShippingFromProto is a term's free shipping, or nil when it has no minimum order value: service levels listed
+// without one never waive freight.
+func freeShippingFromProto(st *pb.ShippingTermInfo) *apiresource.ShippingTermFreeShipping {
+	minimum := MoneyFromProto(st.MinimumOrderValue)
+	if minimum == nil {
+		return nil
+	}
+	scope := constants.ServiceLevelScopeAll
+	if len(st.FreeShippingServiceLevels) > 0 {
+		scope = constants.ServiceLevelScopeSelected
+	}
+	return &apiresource.ShippingTermFreeShipping{MinimumOrderValue: *minimum, ServiceLevelScope: scope}
 }
 

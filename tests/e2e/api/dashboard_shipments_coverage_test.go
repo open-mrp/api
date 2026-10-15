@@ -993,13 +993,13 @@ func TestDashShipments_RateShopAppliesFreightTerms(t *testing.T) {
 
 	t.Run("free-freight term", func(t *testing.T) {
 		t.Parallel()
-		assertExempt(t, rateShop(t, dashShipmentsTermCustomer(t, map[string]any{"type": "free_freight"}), 10))
+		assertExempt(t, rateShop(t, dashShipmentsTermCustomer(t, map[string]any{"type": "free"}), 10))
 	})
 
 	t.Run("flat-rate term", func(t *testing.T) {
 		t.Parallel()
 		got := rateShop(t, dashShipmentsTermCustomer(t, map[string]any{
-			"type": "flat_rate_freight", "flat_rate": dashShipmentsDollars("15"),
+			"type": "flat_rate", "flat_rate": dashShipmentsDollars("15"),
 		}), 10)
 		assert.Equal(t, "flat_rate", jsonField(got, "exemption_type"))
 		assert.Equal(t, 15.0, got["flat_rate"])
@@ -1011,9 +1011,11 @@ func TestDashShipments_RateShopAppliesFreightTerms(t *testing.T) {
 	t.Run("minimum order frees the listed service levels", func(t *testing.T) {
 		t.Parallel()
 		customerID := dashShipmentsTermCustomer(t, map[string]any{
-			"type": "flat_rate_freight", "flat_rate": dashShipmentsDollars("15"),
-			"minimum_order_value":             dashShipmentsDollars("100"),
-			"free_shipping_service_level_ids": []string{SeedServiceLevelID},
+			"type": "flat_rate", "flat_rate": dashShipmentsDollars("15"),
+			"free_shipping": map[string]any{
+				"minimum_order_value": dashShipmentsDollars("100"),
+				"service_level_ids":   []string{SeedServiceLevelID},
+			},
 		})
 
 		atThreshold := rateShop(t, customerID, 100)

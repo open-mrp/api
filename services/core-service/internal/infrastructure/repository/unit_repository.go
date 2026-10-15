@@ -36,11 +36,12 @@ func NewUnitRepo(queries *sqlc.Queries) domain.UnitRepo {
 func unitCreatedAt(u *domain.Unit) time.Time { return u.CreatedAt }
 func unitID(u *domain.Unit) string           { return u.ID }
 
-func buildDimensionFilter(t *string) gosql.NullString {
-	if t == nil || *t == "" {
+// buildUnitSearch is q as a substring LIKE on name or abbreviation; empty means no search.
+func buildUnitSearch(q *string) gosql.NullString {
+	if q == nil || *q == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: *t, Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*q) + "%", Valid: true}
 }
 
 func mapForwardRow(row sqlc.ListUnitsForwardRow) *domain.Unit {
@@ -158,8 +159,12 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.list")
 	defer span.End()
 
-	ft := db.NewFulltextSearch(params.Query)
-	dimensionFilter := buildDimensionFilter(params.Type)
+	likeQuery := buildUnitSearch(params.Query)
+	includeDimensionFilter := len(params.Dimensions) > 0
+	dimensions := params.Dimensions
+	if dimensions == nil {
+		dimensions = []string{}
+	}
 	includeGroupFilter := len(params.UnitGroupIDs) > 0
 	accountID := gosql.NullString{String: params.AccountID, Valid: true}
 
@@ -181,11 +186,11 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListUnitsBackward(ctx, sqlc.ListUnitsBackwardParams{
 				AccountID:              accountID,
-				UnitDimensionCode:      dimensionFilter,
+				IncludeDimensionFilter: includeDimensionFilter,
+				UnitDimensionCodes:     dimensions,
 				IncludeUnitGroupFilter: includeGroupFilter,
 				UnitGroupIds:           unitGroupIDs,
-				SearchQuery:            ft.Fulltext,
-				LikeQuery:              ft.Like,
+				LikeQuery:              likeQuery,
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -204,11 +209,11 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 		// Forward
 		rows, err := r.queries.ListUnitsForward(ctx, sqlc.ListUnitsForwardParams{
 			AccountID:              accountID,
-			UnitDimensionCode:      dimensionFilter,
+			IncludeDimensionFilter: includeDimensionFilter,
+			UnitDimensionCodes:     dimensions,
 			IncludeUnitGroupFilter: includeGroupFilter,
 			UnitGroupIds:           unitGroupIDs,
-			SearchQuery:            ft.Fulltext,
-			LikeQuery:              ft.Like,
+			LikeQuery:              likeQuery,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
@@ -227,11 +232,11 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	// No cursor — first page
 	rows, err := r.queries.ListUnitsForward(ctx, sqlc.ListUnitsForwardParams{
 		AccountID:              accountID,
-		UnitDimensionCode:      dimensionFilter,
+		IncludeDimensionFilter: includeDimensionFilter,
+		UnitDimensionCodes:     dimensions,
 		IncludeUnitGroupFilter: includeGroupFilter,
 		UnitGroupIds:           unitGroupIDs,
-		SearchQuery:            ft.Fulltext,
-		LikeQuery:              ft.Like,
+		LikeQuery:              likeQuery,
 		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -442,33 +447,6 @@ func (r *unitRepoImpl) FindByAbbreviations(ctx context.Context, accountID string
 		})
 	}
 	return out, nil
-}
-
-func (r *unitRepoImpl) IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError) {
-	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.is_base_unit")
-	defer span.End()
-
-	isBase, err := r.queries.IsUnitABaseUnit(ctx, unitID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return false, tracing.Trace(span, apiErr)
-	}
-	return isBase, nil
-}
-
-func (r *unitRepoImpl) IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError) {
-	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.is_referenced")
-	defer span.End()
-
-	referenced, err := r.queries.IsUnitReferenced(ctx, sqlc.IsUnitReferencedParams{
-		QuantityUnitID:    unitID,
-		NumeratorUnitID:   unitID,
-		DenominatorUnitID: unitID,
-		OverrideUnitID:    gosql.NullString{String: unitID, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return false, tracing.Trace(span, apiErr)
-	}
-	return referenced.Valid && referenced.Bool, nil
 }
 
 func (r *unitRepoImpl) Delete(ctx context.Context, params domain.DeleteUnitParams) *apierror.APIError {

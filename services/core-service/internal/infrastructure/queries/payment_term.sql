@@ -12,6 +12,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR payment_term.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR payment_term.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR payment_term.created_at < sqlc.narg('cursor_created_at')
@@ -34,6 +35,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR payment_term.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR payment_term.is_active = sqlc.narg('is_active'))
 AND (
     payment_term.created_at > sqlc.arg('cursor_created_at')
     OR (payment_term.created_at = sqlc.arg('cursor_created_at') AND payment_term.id > sqlc.arg('cursor_id'))
@@ -57,12 +59,14 @@ AND (payment_term.account_id = sqlc.arg('account_id') OR payment_term.account_id
 INSERT INTO payment_term (
     id,
     name,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
     sqlc.arg('id'),
     sqlc.arg('name'),
+    sqlc.arg('is_active'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -71,6 +75,7 @@ INSERT INTO payment_term (
 -- name: UpdatePaymentTerm :execresult
 UPDATE payment_term SET
     name = COALESCE(sqlc.narg('name'), name),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

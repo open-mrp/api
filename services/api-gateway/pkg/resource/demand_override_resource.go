@@ -129,7 +129,7 @@ var SampleDemandOverride = &DemandOverride{
 	PeriodEndsAt:   timeutil.TimestampToTime(sampleDemandOverridePeriodEnd),
 	Adjustment:     constants.DemandOverrideAdjustmentDeltaUnits,
 	Value:          5000,
-	Unit:           newSampleUnit("Pair", "pr", constants.UnitTypeQuantity),
+	Unit:           newSampleUnit("Pair", "pr", constants.UnitDimensionQuantity),
 	Reason:         &sampleDemandOverrideReason,
 	Note:           &sampleDemandOverrideNote,
 	CreatedBy:      SampleActor,

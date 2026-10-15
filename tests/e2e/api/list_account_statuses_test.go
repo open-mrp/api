@@ -17,7 +17,7 @@ const accountStatusesPath = "/v1/sales/account-statuses"
 
 func TestListAccountStatuses_ReturnsSeededData(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, nil)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 4, "Should have at least 4 seeded account statuses")
 
@@ -33,7 +33,7 @@ func TestListAccountStatuses_ReturnsSeededData(t *testing.T) {
 
 func TestListAccountStatuses_ResponseShape(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "list", list.Object)
 	assert.NotNil(t, list.Data)
@@ -45,7 +45,7 @@ func TestListAccountStatuses_ResponseShape(t *testing.T) {
 
 func TestListAccountStatuses_ItemFields(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -65,7 +65,7 @@ func TestListAccountStatuses_ItemFields(t *testing.T) {
 
 func TestListAccountStatuses_LimitParam(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "limit=1 should return exactly 1 item")
 	assert.True(t, list.PageInfo.HasNextPage(), "Should have a next page with limit=1 and 4+ account statuses")
@@ -75,7 +75,7 @@ func TestListAccountStatuses_PaginationCursor(t *testing.T) {
 	t.Parallel()
 
 	// Page 1
-	page1, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
+	page1, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL, "Page 1 should have next_page_url")
@@ -84,7 +84,7 @@ func TestListAccountStatuses_PaginationCursor(t *testing.T) {
 	assert.NotEmpty(t, page1ID)
 
 	// Page 2
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	page2, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
 
@@ -96,20 +96,20 @@ func TestListAccountStatuses_PaginationCursor(t *testing.T) {
 func TestListAccountStatuses_PrevPageURL(t *testing.T) {
 	t.Parallel()
 
-	page1, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
+	page1, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page1ID := DataItemField(page1.Data[0], "id")
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	page2, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
 	assert.True(t, page2.PageInfo.HasPrevPage(), "Page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
-	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
+	backToPage1, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	require.Len(t, backToPage1.Data, 1)
 
@@ -121,7 +121,7 @@ func TestListAccountStatuses_PrevPageURL(t *testing.T) {
 
 func TestListAccountStatuses_SearchByName(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"q": {"Hold"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"q": {"Hold"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Hold' should return at least 1 result")
 
@@ -136,7 +136,7 @@ func TestListAccountStatuses_SearchByName(t *testing.T) {
 
 func TestListAccountStatuses_SearchCaseInsensitive(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"q": {"preferred"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"q": {"preferred"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Case-insensitive search for 'preferred' should return at least 1 result")
 
@@ -151,7 +151,7 @@ func TestListAccountStatuses_SearchCaseInsensitive(t *testing.T) {
 
 func TestListAccountStatuses_SearchNoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"q": {"zzzznotanaccountstatus99999"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"q": {"zzzznotanaccountstatus99999"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Nonsense search should return empty data")
 }
@@ -160,7 +160,7 @@ func TestListAccountStatuses_SearchNoResults(t *testing.T) {
 
 func TestGetAccountStatus_ByID(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountStatusesPath+"/"+SeedAccountStatusID, nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/"+SeedAccountStatusID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -175,7 +175,7 @@ func TestGetAccountStatus_ByID(t *testing.T) {
 
 func TestGetAccountStatus_ByCode(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountStatusesPath+"/"+SeedAccountStatusCode, nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/"+SeedAccountStatusCode, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -189,7 +189,7 @@ func TestGetAccountStatus_ByCode(t *testing.T) {
 func TestGetAccountStatus_AllFields(t *testing.T) {
 	t.Parallel()
 
-	list, _, err := apiClient.GetList(accountStatusesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -197,7 +197,7 @@ func TestGetAccountStatus_AllFields(t *testing.T) {
 		id := DataItemField(item, "id")
 		require.NotEmpty(t, id)
 
-		status, body, err := apiClient.GetListRaw(accountStatusesPath+"/"+id, nil)
+		status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/"+id, nil)
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 
@@ -216,7 +216,7 @@ func TestGetAccountStatus_AllFields(t *testing.T) {
 
 func TestGetAccountStatus_NotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountStatusesPath+"/acss_00000000000000000000", nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/acss_00000000000000000000", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 
@@ -226,14 +226,14 @@ func TestGetAccountStatus_NotFound(t *testing.T) {
 
 func TestGetAccountStatus_InvalidID(t *testing.T) {
 	t.Parallel()
-	status, _, err := apiClient.GetListRaw(accountStatusesPath+"/not-a-valid-id", nil)
+	status, _, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/not-a-valid-id", nil)
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 404, "Invalid ID should return 400 or 404, got %d", status)
 }
 
 func TestGetAccountStatus_UnknownCode(t *testing.T) {
 	t.Parallel()
-	status, _, err := apiClient.GetListRaw(accountStatusesPath+"/not_a_real_code", nil)
+	status, _, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(accountStatusesPath+"/not_a_real_code", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "Unknown code should return 404")
 }
@@ -244,7 +244,7 @@ func TestGetAccountStatus_UnknownCode(t *testing.T) {
 
 func TestListAccountStatuses_OwnerNullWithoutInclude(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -256,7 +256,7 @@ func TestListAccountStatuses_OwnerNullWithoutInclude(t *testing.T) {
 
 func TestListAccountStatuses_IncludeOwner(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"include": {"owner"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(accountStatusesPath, url.Values{"include": {"owner"}})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 

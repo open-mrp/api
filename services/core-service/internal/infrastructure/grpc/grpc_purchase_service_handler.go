@@ -192,11 +192,11 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 		isCarrierRate := o.ShippingTermIsCarrierRate != nil && *o.ShippingTermIsCarrierRate
 		var stType string
 		if isFreightExempt {
-			stType = "free_freight"
+			stType = string(constants.ShippingTermTypeFree)
 		} else if isCarrierRate {
-			stType = "carrier_rate_freight"
+			stType = string(constants.ShippingTermTypeCarrierRate)
 		} else {
-			stType = "flat_rate_freight"
+			stType = string(constants.ShippingTermTypeFlatRate)
 		}
 		info.ShippingTermType = &stType
 	}

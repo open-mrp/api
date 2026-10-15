@@ -12,6 +12,30 @@ import (
 	"time"
 )
 
+const countShippingTermsByName = `-- name: CountShippingTermsByName :one
+SELECT COUNT(*) FROM shipping_term
+WHERE name = ? AND (account_id = ? OR account_id IS NULL)
+AND (? IS NULL OR id != ?)
+`
+
+type CountShippingTermsByNameParams struct {
+	Name      string
+	AccountID sql.NullString
+	ExcludeID sql.NullString
+}
+
+func (q *Queries) CountShippingTermsByName(ctx context.Context, arg CountShippingTermsByNameParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countShippingTermsByName,
+		arg.Name,
+		arg.AccountID,
+		arg.ExcludeID,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteFreeShippingRulesByShippingTermID = `-- name: DeleteFreeShippingRulesByShippingTermID :exec
 DELETE FROM shipping_term_free_shipping_rule
 WHERE shipping_term_id = ?
@@ -52,6 +76,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -110,6 +135,7 @@ type GetShippingTermRow struct {
 	Name                              string
 	IsFreightExempt                   bool
 	IsCarrierRate                     bool
+	IsActive                          bool
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
@@ -159,6 +185,7 @@ func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams
 		&i.Name,
 		&i.IsFreightExempt,
 		&i.IsCarrierRate,
+		&i.IsActive,
 		&i.AccountID,
 		&i.FlatRateID,
 		&i.MinimumOrderID,
@@ -208,6 +235,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -266,6 +294,7 @@ type GetShippingTermsByIDsRow struct {
 	Name                              string
 	IsFreightExempt                   bool
 	IsCarrierRate                     bool
+	IsActive                          bool
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
@@ -332,6 +361,7 @@ func (q *Queries) GetShippingTermsByIDs(ctx context.Context, arg GetShippingTerm
 			&i.Name,
 			&i.IsFreightExempt,
 			&i.IsCarrierRate,
+			&i.IsActive,
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
@@ -443,12 +473,14 @@ INSERT INTO shipping_term (
     name,
     is_freight_exempt,
     is_carrier_rate,
+    is_active,
     account_id,
     flat_rate_id,
     minimum_order_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -466,6 +498,7 @@ type InsertShippingTermParams struct {
 	Name            string
 	IsFreightExempt bool
 	IsCarrierRate   bool
+	IsActive        bool
 	AccountID       sql.NullString
 	FlatRateID      sql.NullString
 	MinimumOrderID  sql.NullString
@@ -477,6 +510,7 @@ func (q *Queries) InsertShippingTerm(ctx context.Context, arg InsertShippingTerm
 		arg.Name,
 		arg.IsFreightExempt,
 		arg.IsCarrierRate,
+		arg.IsActive,
 		arg.AccountID,
 		arg.FlatRateID,
 		arg.MinimumOrderID,
@@ -559,6 +593,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -608,6 +643,7 @@ AND (
     ? IS NULL
     OR st.name LIKE ?
 )
+AND (? IS NULL OR st.is_active = ?)
 AND (
     st.created_at > ?
     OR (st.created_at = ? AND st.id > ?)
@@ -619,6 +655,7 @@ LIMIT ?
 type ListShippingTermsBackwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
@@ -629,6 +666,7 @@ type ListShippingTermsBackwardRow struct {
 	Name                              string
 	IsFreightExempt                   bool
 	IsCarrierRate                     bool
+	IsActive                          bool
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
@@ -675,6 +713,8 @@ func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippin
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -692,6 +732,7 @@ func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippin
 			&i.Name,
 			&i.IsFreightExempt,
 			&i.IsCarrierRate,
+			&i.IsActive,
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
@@ -751,6 +792,7 @@ SELECT
     st.name,
     st.is_freight_exempt,
     st.is_carrier_rate,
+    st.is_active,
     st.account_id,
     st.flat_rate_id,
     st.minimum_order_id,
@@ -800,6 +842,7 @@ AND (
     ? IS NULL
     OR st.name LIKE ?
 )
+AND (? IS NULL OR st.is_active = ?)
 AND (
     ? IS NULL
     OR st.created_at < ?
@@ -812,6 +855,7 @@ LIMIT ?
 type ListShippingTermsForwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullString
 	Limit           int32
@@ -822,6 +866,7 @@ type ListShippingTermsForwardRow struct {
 	Name                              string
 	IsFreightExempt                   bool
 	IsCarrierRate                     bool
+	IsActive                          bool
 	AccountID                         sql.NullString
 	FlatRateID                        sql.NullString
 	MinimumOrderID                    sql.NullString
@@ -868,6 +913,8 @@ func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShipping
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -886,6 +933,7 @@ func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShipping
 			&i.Name,
 			&i.IsFreightExempt,
 			&i.IsCarrierRate,
+			&i.IsActive,
 			&i.AccountID,
 			&i.FlatRateID,
 			&i.MinimumOrderID,
@@ -962,6 +1010,7 @@ UPDATE shipping_term SET
     name = COALESCE(?, name),
     is_freight_exempt = COALESCE(?, is_freight_exempt),
     is_carrier_rate = COALESCE(?, is_carrier_rate),
+    is_active = COALESCE(?, is_active),
     flat_rate_id = ?,
     minimum_order_id = ?,
     updated_at = NOW(3)
@@ -973,6 +1022,7 @@ type UpdateShippingTermParams struct {
 	Name            sql.NullString
 	IsFreightExempt sql.NullBool
 	IsCarrierRate   sql.NullBool
+	IsActive        sql.NullBool
 	FlatRateID      sql.NullString
 	MinimumOrderID  sql.NullString
 	ID              string
@@ -984,6 +1034,7 @@ func (q *Queries) UpdateShippingTerm(ctx context.Context, arg UpdateShippingTerm
 		arg.Name,
 		arg.IsFreightExempt,
 		arg.IsCarrierRate,
+		arg.IsActive,
 		arg.FlatRateID,
 		arg.MinimumOrderID,
 		arg.ID,

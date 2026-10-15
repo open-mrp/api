@@ -11,14 +11,19 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
 // Request to create a payment term.
 type CreatePaymentTermRequest struct {
-	// Display name (e.g. `Net 30`).
+	// Display name, such as `Net 30`.
 	//
-	// Must be unique among the payment terms visible to your account, including system defaults.
+	// Unique (case-insensitive) among your account's terms and the system defaults.
 	Name string `json:"name" validate:"required,max=255"`
+	// Initial status.
+	//
+	// Defaults to `active`; create as `archived` to set a term up before offering it.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleCreatePaymentTermRequest = &CreatePaymentTermRequest{
@@ -31,7 +36,7 @@ func (*CreatePaymentTermRequest) SchemaExample() any {
 
 // Creates a payment term.
 //
-// The new term is owned by your account and starts with status `active`.
+// The new term belongs to your account.
 type CreatePaymentTermEndpoint struct{}
 
 func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm] {
@@ -44,7 +49,6 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).CreatePaymentTerm

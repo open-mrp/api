@@ -2399,10 +2399,12 @@ func (x *PaymentTermInfo) GetAccountId() string {
 }
 
 type ListPaymentTermsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query  *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Narrows to active (true) or archived (false) terms; unset returns both.
+	IsActive      *bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2456,6 +2458,13 @@ func (x *ListPaymentTermsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListPaymentTermsRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
 }
 
 type ListPaymentTermsResponse struct {
@@ -2599,8 +2608,10 @@ func (x *GetPaymentTermResponse) GetPaymentTerm() *PaymentTermInfo {
 }
 
 type CreatePaymentTermRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// active | archived; unset is active.
+	Status        *string `protobuf:"bytes,2,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2638,6 +2649,13 @@ func (*CreatePaymentTermRequest) Descriptor() ([]byte, []int) {
 func (x *CreatePaymentTermRequest) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *CreatePaymentTermRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return ""
 }
@@ -2687,9 +2705,11 @@ func (x *CreatePaymentTermResponse) GetPaymentTerm() *PaymentTermInfo {
 }
 
 type UpdatePaymentTermRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// active | archived.
+	Status        *string `protobuf:"bytes,3,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2734,6 +2754,13 @@ func (x *UpdatePaymentTermRequest) GetId() string {
 func (x *UpdatePaymentTermRequest) GetName() string {
 	if x != nil && x.Name != nil {
 		return *x.Name
+	}
+	return ""
+}
+
+func (x *UpdatePaymentTermRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return ""
 }
@@ -3034,8 +3061,10 @@ type ShippingTermInfo struct {
 	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	AccountId                 *string                `protobuf:"bytes,9,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// active | archived.
+	Status        string `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ShippingTermInfo) Reset() {
@@ -3131,12 +3160,21 @@ func (x *ShippingTermInfo) GetAccountId() string {
 	return ""
 }
 
+func (x *ShippingTermInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 type ListShippingTermsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Cursor   *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit    int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query    *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Narrows to active (true) or archived (false) terms; unset returns both.
+	IsActive      *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3197,6 +3235,13 @@ func (x *ListShippingTermsRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *ListShippingTermsRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
 }
 
 type ListShippingTermsResponse struct {
@@ -3407,8 +3452,10 @@ type CreateShippingTermRequest struct {
 	MinimumOrderValue           *Money                 `protobuf:"bytes,8,opt,name=minimum_order_value,json=minimumOrderValue,proto3" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevelIds []string               `protobuf:"bytes,5,rep,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3" json:"free_shipping_service_level_ids,omitempty"`
 	Includes                    []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// active | archived; unset is active.
+	Status        *string `protobuf:"bytes,9,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateShippingTermRequest) Reset() {
@@ -3483,6 +3530,13 @@ func (x *CreateShippingTermRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreateShippingTermRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
 type CreateShippingTermResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ShippingTerm  *ShippingTermInfo      `protobuf:"bytes,1,opt,name=shipping_term,json=shippingTerm,proto3" json:"shipping_term,omitempty"`
@@ -3536,8 +3590,10 @@ type UpdateShippingTermRequest struct {
 	MinimumOrderValue           *MoneyPatch            `protobuf:"bytes,9,opt,name=minimum_order_value,json=minimumOrderValue,proto3" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevelIds *StringListPatch       `protobuf:"bytes,6,opt,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3,oneof" json:"free_shipping_service_level_ids,omitempty"`
 	Includes                    []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// active | archived.
+	Status        *string `protobuf:"bytes,10,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateShippingTermRequest) Reset() {
@@ -3617,6 +3673,13 @@ func (x *UpdateShippingTermRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateShippingTermRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
 }
 
 type UpdateShippingTermResponse struct {
@@ -8972,28 +9035,35 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
 	"\n" +
 	"account_id\x18\x06 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"|\n" +
+	"\v_account_id\"\xac\x01\n" +
 	"\x17ListPaymentTermsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\x83\x01\n" +
+	"\x06_queryB\f\n" +
+	"\n" +
+	"_is_active\"\x83\x01\n" +
 	"\x18ListPaymentTermsResponse\x12:\n" +
 	"\rpayment_terms\x18\x01 \x03(\v2\x15.core.PaymentTermInfoR\fpaymentTerms\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"'\n" +
 	"\x15GetPaymentTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"R\n" +
 	"\x16GetPaymentTermResponse\x128\n" +
-	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\".\n" +
+	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\"V\n" +
 	"\x18CreatePaymentTermRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"U\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
+	"\x06status\x18\x02 \x01(\tH\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_status\"U\n" +
 	"\x19CreatePaymentTermResponse\x128\n" +
-	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\"L\n" +
+	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\"t\n" +
 	"\x18UpdatePaymentTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01B\a\n" +
-	"\x05_name\"U\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\x03 \x01(\tH\x01R\x06status\x88\x01\x01B\a\n" +
+	"\x05_nameB\t\n" +
+	"\a_status\"U\n" +
 	"\x19UpdatePaymentTermResponse\x128\n" +
 	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\"*\n" +
 	"\x18DeletePaymentTermRequest\x12\x0e\n" +
@@ -9015,7 +9085,7 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\tunit_name\x18\b \x01(\tR\bunitName\x124\n" +
 	"\vunit_detail\x18\t \x01(\v2\x0e.core.UnitInfoH\x00R\n" +
 	"unitDetail\x88\x01\x01B\x0e\n" +
-	"\f_unit_detail\"\xbf\x03\n" +
+	"\f_unit_detail\"\xd7\x03\n" +
 	"\x10ShippingTermInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -9029,15 +9099,19 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
 	"\n" +
-	"account_id\x18\t \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_idJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"\x99\x01\n" +
+	"account_id\x18\t \x01(\tH\x00R\taccountId\x88\x01\x01\x12\x16\n" +
+	"\x06status\x18\f \x01(\tR\x06statusB\r\n" +
+	"\v_account_idJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"\xc9\x01\n" +
 	"\x18ListShippingTermsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12 \n" +
+	"\tis_active\x18\x05 \x01(\bH\x02R\bisActive\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\x87\x01\n" +
+	"\x06_queryB\f\n" +
+	"\n" +
+	"_is_active\"\x87\x01\n" +
 	"\x19ListShippingTermsResponse\x12=\n" +
 	"\x0eshipping_terms\x18\x01 \x03(\v2\x16.core.ShippingTermInfoR\rshippingTerms\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"D\n" +
@@ -9048,16 +9122,18 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\">\n" +
 	"\rQuantityInput\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x17\n" +
-	"\aunit_id\x18\x02 \x01(\tR\x06unitId\"\x98\x02\n" +
+	"\aunit_id\x18\x02 \x01(\tR\x06unitId\"\xc0\x02\n" +
 	"\x19CreateShippingTermRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12(\n" +
 	"\tflat_rate\x18\a \x01(\v2\v.core.MoneyR\bflatRate\x12;\n" +
 	"\x13minimum_order_value\x18\b \x01(\v2\v.core.MoneyR\x11minimumOrderValue\x12D\n" +
 	"\x1ffree_shipping_service_level_ids\x18\x05 \x03(\tR\x1bfreeShippingServiceLevelIds\x12\x1a\n" +
-	"\bincludes\x18\x06 \x03(\tR\bincludesJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05\"Y\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06status\x18\t \x01(\tH\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_statusJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05\"Y\n" +
 	"\x1aCreateShippingTermResponse\x12;\n" +
-	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\x8e\x03\n" +
+	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\xb6\x03\n" +
 	"\x19UpdateShippingTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
@@ -9065,10 +9141,13 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\tflat_rate\x18\b \x01(\v2\x10.core.MoneyPatchR\bflatRate\x12@\n" +
 	"\x13minimum_order_value\x18\t \x01(\v2\x10.core.MoneyPatchR\x11minimumOrderValue\x12`\n" +
 	"\x1ffree_shipping_service_level_ids\x18\x06 \x01(\v2\x15.core.StringListPatchH\x02R\x1bfreeShippingServiceLevelIds\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06status\x18\n" +
+	" \x01(\tH\x03R\x06status\x88\x01\x01B\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_typeB\"\n" +
-	" _free_shipping_service_level_idsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"Y\n" +
+	" _free_shipping_service_level_idsB\t\n" +
+	"\a_statusJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"Y\n" +
 	"\x1aUpdateShippingTermResponse\x12;\n" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"+\n" +
 	"\x19DeleteShippingTermRequest\x12\x0e\n" +
@@ -9916,10 +9995,12 @@ func file_core_core_analytics_proto_init() {
 	file_core_core_analytics_proto_msgTypes[29].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[31].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[32].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[36].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[38].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[43].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[44].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[45].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[50].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[52].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[57].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[58].OneofWrappers = []any{}

@@ -140,12 +140,11 @@ func reportUnit(u *pb.UnitInfo) *apiresource.Unit {
 		Object:            constants.ObjectTypeUnit,
 		Name:              u.GetName(),
 		Abbreviation:      u.GetAbbreviation(),
-		Type:              constants.UnitType(u.GetType()),
+		Dimension:         constants.UnitDimension(u.GetType()),
 		RatioNumerator:    db.TrimDecimal(u.GetRatioNumerator()),
 		RatioDenominator:  db.TrimDecimal(u.GetRatioDenominator()),
 		OffsetNumerator:   db.TrimDecimal(u.GetOffsetNumerator()),
 		OffsetDenominator: db.TrimDecimal(u.GetOffsetDenominator()),
-		IsBaseUnit:        u.GetIsBaseUnit(),
 		CreatedAt:         grpcutil.TimestampToTime(u.GetCreatedAt()),
 		UpdatedAt:         grpcutil.TimestampToTime(u.GetUpdatedAt()),
 	}

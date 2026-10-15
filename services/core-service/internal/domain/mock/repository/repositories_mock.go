@@ -2876,36 +2876,6 @@ func (mr *MockUnitRepoMockRecorder) GetFreightWeightUnitID(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFreightWeightUnitID", reflect.TypeOf((*MockUnitRepo)(nil).GetFreightWeightUnitID), ctx)
 }
 
-// IsBaseUnit mocks base method.
-func (m *MockUnitRepo) IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsBaseUnit", ctx, unitID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// IsBaseUnit indicates an expected call of IsBaseUnit.
-func (mr *MockUnitRepoMockRecorder) IsBaseUnit(ctx, unitID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBaseUnit", reflect.TypeOf((*MockUnitRepo)(nil).IsBaseUnit), ctx, unitID)
-}
-
-// IsReferenced mocks base method.
-func (m *MockUnitRepo) IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsReferenced", ctx, unitID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// IsReferenced indicates an expected call of IsReferenced.
-func (mr *MockUnitRepoMockRecorder) IsReferenced(ctx, unitID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReferenced", reflect.TypeOf((*MockUnitRepo)(nil).IsReferenced), ctx, unitID)
-}
-
 // IsUnitInGroup mocks base method.
 func (m *MockUnitRepo) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3449,6 +3419,21 @@ func (m *MockShippingTermRepo) DeleteQuantity(ctx context.Context, id string) *a
 func (mr *MockShippingTermRepoMockRecorder) DeleteQuantity(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteQuantity", reflect.TypeOf((*MockShippingTermRepo)(nil).DeleteQuantity), ctx, id)
+}
+
+// ExistsByName mocks base method.
+func (m *MockShippingTermRepo) ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistsByName", ctx, accountID, name, excludeID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExistsByName indicates an expected call of ExistsByName.
+func (mr *MockShippingTermRepoMockRecorder) ExistsByName(ctx, accountID, name, excludeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByName", reflect.TypeOf((*MockShippingTermRepo)(nil).ExistsByName), ctx, accountID, name, excludeID)
 }
 
 // Get mocks base method.

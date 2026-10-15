@@ -2513,6 +2513,7 @@ type ShippingTerm struct {
 	FlatRateCurrency          sql.NullString
 	MinimumOrderValueAmount   sql.NullString
 	MinimumOrderValueCurrency sql.NullString
+	IsActive                  bool
 }
 
 type ShippingTermFreeShippingRule struct {

@@ -20,18 +20,18 @@ import (
 // TestProperties_IncludeAttributes) are NOT duplicated here.
 // ──────────────────────────────────────────────
 
-// ShippingTerm — positive test for free_shipping_service_levels (negative exists already)
+// ShippingTerm — positive test for free_shipping.service_levels (negative exists already)
 
 func TestShippingTerms_IncludeFreeShippingServiceLevels(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedShippingTermID, url.Values{"include": {"free_shipping_service_levels"}})
+	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedShippingTermID, url.Values{"include": {"free_shipping.service_levels"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["free_shipping_service_levels"]
-	assert.True(t, ok, "free_shipping_service_levels key should be present with include")
-	if sls := jsonObject(got, "free_shipping_service_levels"); sls != nil {
+	if fs := jsonObject(got, "free_shipping"); fs != nil {
+		sls := jsonObject(fs, "service_levels")
+		require.NotNil(t, sls, "free_shipping.service_levels should be present with include")
 		assert.Equal(t, "list", jsonField(sls, "object"))
 	}
 }
@@ -40,7 +40,7 @@ func TestShippingTerms_IncludeFreeShippingServiceLevels(t *testing.T) {
 
 func TestPriorities_IncludeOwner(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+SeedPriorityID, url.Values{"include": {"owner"}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+SeedPriorityID, url.Values{"include": {"owner"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -51,7 +51,7 @@ func TestPriorities_IncludeOwner(t *testing.T) {
 
 func TestPriorities_OwnerNullWithoutInclude(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+SeedPriorityID, nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+SeedPriorityID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Nil(t, parseJSON(body)["owner"], "owner should be null without ?include=owner")

@@ -341,7 +341,7 @@ func TestAnalyticsProductionCosts_CostsEveryBatchByDepartmentAndCategory(t *test
 	assert.Equal(t, "unit", jsonField(currency, "object"))
 	assert.Equal(t, "$", jsonField(currency, "abbreviation"))
 	assert.Equal(t, "hour", jsonField(timeUnit, "id"))
-	assert.Equal(t, "time", jsonField(timeUnit, "type"))
+	assert.Equal(t, "time", jsonField(timeUnit, "dimension"))
 
 	totals := jsonObject(got, "totals")
 	assert.Equal(t, "production_cost_totals", jsonField(totals, "object"))

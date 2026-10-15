@@ -18,9 +18,9 @@ type RetrievePaymentTermRequest struct {
 	PaymentTermID string `path:"id" validate:"required"`
 }
 
-// Returns a payment term by ID.
+// Retrieves a payment term.
 //
-// Both payment terms created by your account and OpenMRP-provided system defaults can be retrieved.
+// Works for your account's terms and for system defaults.
 type RetrievePaymentTermEndpoint struct{}
 
 func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm] {
@@ -33,7 +33,6 @@ func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).GetPaymentTerm

@@ -316,9 +316,11 @@ message ListUnitsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
-  optional string type = 4;
+  reserved 4;
   // Only units belonging to at least one of these groups are returned.
   repeated string unit_group_ids = 5;
+  // Only units in one of these dimensions are returned; empty returns every dimension.
+  repeated string dimensions = 6;
 }
 message ListUnitsResponse {
   repeated UnitInfo units = 1;

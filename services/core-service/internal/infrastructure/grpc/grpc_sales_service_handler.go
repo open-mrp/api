@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadatapb"
@@ -422,11 +423,11 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		isCarrierRate := o.ShippingTermIsCarrierRate != nil && *o.ShippingTermIsCarrierRate
 		var stType string
 		if isFreightExempt {
-			stType = "free_freight"
+			stType = string(constants.ShippingTermTypeFree)
 		} else if isCarrierRate {
-			stType = "carrier_rate_freight"
+			stType = string(constants.ShippingTermTypeCarrierRate)
 		} else {
-			stType = "flat_rate_freight"
+			stType = string(constants.ShippingTermTypeFlatRate)
 		}
 		info.ShippingTermType = &stType
 	}

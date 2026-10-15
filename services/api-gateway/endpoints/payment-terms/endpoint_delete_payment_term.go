@@ -21,7 +21,7 @@ type DeletePaymentTermRequest struct {
 
 // Deletes a payment term.
 //
-// Only payment terms created by your account can be deleted; system-owned default terms cannot be.
+// Only terms your account created can be deleted, and only while no customer or sales order uses them. Archive a term that is in use by setting `status` to `archived`.
 type DeletePaymentTermEndpoint struct{}
 
 func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePaymentTermRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePaymentTermRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(PaymentTermSvc).DeletePaymentTerm, constants.ObjectTypePaymentTerm, "id")
 		},

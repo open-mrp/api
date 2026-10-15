@@ -279,10 +279,6 @@ type UnitRepo interface {
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError
-	// IsBaseUnit reports whether any unit group converts through this unit.
-	IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError)
-	// IsReferenced reports whether any quantity, rate, or demand override is recorded in this unit.
-	IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError)
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ExistsByAbbreviation(ctx context.Context, accountID, abbreviation string, excludeID *string) (bool, *apierror.APIError)
 	FindByAbbreviations(ctx context.Context, accountID string, abbreviations []string) ([]*Unit, *apierror.APIError)
@@ -333,6 +329,7 @@ type ShippingTermRepo interface {
 	DeleteQuantity(ctx context.Context, id string) *apierror.APIError
 	InsertFreeShippingRule(ctx context.Context, id, shippingTermID, serviceLevelID string) *apierror.APIError
 	DeleteFreeShippingRulesByShippingTermID(ctx context.Context, shippingTermID string) *apierror.APIError
+	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 }
 
 type AccountGroupRepo interface {

@@ -251,6 +251,8 @@ var excludedPaths = []string{
 	"/v1/auth/registration-sessions",                   // requires Stripe + cookie auth
 	"/v1/identity/me/tenancy/customer-accounts",        // requires customer actor auth
 	"/v1/sales/customers/{id}/notification-recipients", // derived from the customer's account-user notification prefs; the API-key harness seeds none. Covered by the dedicated notification-recipients test.
+	"/v1/sales/priorities",                             // 1.0.forge-preview.9 only; covered by list_priorities_test.go
+	"/v1/sales/account-statuses",                       // 1.0.forge-preview.9 only; covered by list_account_statuses_test.go
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

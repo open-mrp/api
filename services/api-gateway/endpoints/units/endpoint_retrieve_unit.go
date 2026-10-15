@@ -18,7 +18,9 @@ type RetrieveUnitRequest struct {
 	UnitID string `path:"id" validate:"required"`
 }
 
-// Returns a unit by ID, including both account-owned and global system units.
+// Retrieves a unit.
+//
+// Works for your account's units and for system units.
 type RetrieveUnitEndpoint struct{}
 
 func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitRequest, *apiresource.Unit] {
@@ -31,7 +33,6 @@ func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).GetUnit

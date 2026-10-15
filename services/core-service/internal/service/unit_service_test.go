@@ -52,6 +52,7 @@ type UnitSvcTestSuite struct {
 	unitSvc           domain.UnitSvc
 	unitRepo          *repositorymock.MockUnitRepo
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
+	referenceRepo     *repositorymock.MockReferenceRepo
 	repoFactory       *factorymock.MockRepoFactory
 	mediatorFactory   *factorymock.MockMediatorFactory
 	idempotencyMed    *mediatormock.MockIdempotencyMed
@@ -62,7 +63,9 @@ func (suite *UnitSvcTestSuite) SetupSuite() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.unitRepo = repositorymock.NewMockUnitRepo(suite.ctrl)
 	suite.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(suite.ctrl)
+	suite.referenceRepo = repositorymock.NewMockReferenceRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(suite.referenceRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewUnitRepo().Return(suite.unitRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
@@ -527,13 +530,9 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
 		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
 		Times(1)
-	suite.unitRepo.EXPECT().
-		IsBaseUnit(gomock.Any(), "un_abc123").
-		Return(false, nil).
-		Times(1)
-	suite.unitRepo.EXPECT().
-		IsReferenced(gomock.Any(), "un_abc123").
-		Return(false, nil).
+	suite.referenceRepo.EXPECT().
+		InUseBy(gomock.Any(), "un_abc123", domain.UnitReferences.Probes).
+		Return(nil, nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_abc123", "ac_test123", gomock.Any()).
@@ -549,46 +548,24 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 	suite.Nil(err)
 }
 
-// A unit group converts every quantity in it through its base unit, so that unit stays until the group lets go of it.
-func (suite *UnitSvcTestSuite) TestDeleteUnit_BaseUnitOfAGroupConflicts() {
+// A unit a value is stated in, or a unit group converts through, stays until nothing uses it.
+func (suite *UnitSvcTestSuite) TestDeleteUnit_InUse() {
 	ctx := internalIdentityCtx("ac_test123")
 
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
 		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
 		Times(1)
-	suite.unitRepo.EXPECT().
-		IsBaseUnit(gomock.Any(), "un_abc123").
-		Return(true, nil).
+	suite.referenceRepo.EXPECT().
+		InUseBy(gomock.Any(), "un_abc123", domain.UnitReferences.Probes).
+		Return([]string{"quantities", "unit groups"}, nil).
 		Times(1)
 
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.CodeResourceConflict, err.Code)
-}
-
-// Quantities and prices convert and display through their unit, so a unit any of them names stays.
-func (suite *UnitSvcTestSuite) TestDeleteUnit_ReferencedUnitConflicts() {
-	ctx := internalIdentityCtx("ac_test123")
-
-	suite.unitRepo.EXPECT().
-		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
-		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
-		Times(1)
-	suite.unitRepo.EXPECT().
-		IsBaseUnit(gomock.Any(), "un_abc123").
-		Return(false, nil).
-		Times(1)
-	suite.unitRepo.EXPECT().
-		IsReferenced(gomock.Any(), "un_abc123").
-		Return(true, nil).
-		Times(1)
-
-	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
-
-	suite.NotNil(err)
-	suite.Equal(apierror.CodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceInUse, err.Code)
+	suite.Equal("This unit can't be deleted while quantities and unit groups use it.", err.PublicMessage)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_MissingIdentity() {
@@ -776,8 +753,8 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_DuplicateAbbreviationInReques
 // --- writeBulkUpsertUnits (the engine's Write hook, exercised directly) ---
 //
 // The accept phase and job plumbing are covered by the engine's own test; these rows
-// prove the units-specific write logic: dual-key matching, conflict detection,
-// IsBaseUnit immutability, dimension immutability, and the created/updated split.
+// prove the units-specific write logic: matching on abbreviation, name collisions,
+// dimension immutability, and the created/updated split.
 
 // writeUnits runs the Write hook against the suite's mocked repo factory and returns the
 // created/updated ids (from results) and the per-row failures (from errors). apiErr is
@@ -828,8 +805,8 @@ func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_NameAndAbbrBelongToDiffe
 		}, nil).
 		Times(1)
 
-	// "Gram" matches un_1 by name; "kg" matches un_2 by abbreviation — different units. The
-	// conflicting row fails on its own and is recorded in errors; the batch does not error.
+	// "kg" matches un_2, and renaming it "Gram" collides with un_1. The row fails on its own
+	// and is recorded in errors; the batch does not error.
 	created, updated, rowErrs, err := suite.writeUnits(domain.UpsertUnitParams{Name: "Gram", Abbreviation: "kg"})
 
 	suite.Nil(err)
@@ -837,6 +814,26 @@ func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_NameAndAbbrBelongToDiffe
 	suite.Empty(updated)
 	suite.Len(rowErrs, 1)
 	suite.Equal(0, rowErrIndex(rowErrs[0]))
+	suite.Equal(string(apierror.CodeResourceExists), string(rowErrs[0].Error.Code))
+}
+
+// A row is matched on its abbreviation only: an unmatched abbreviation creates, so a name another unit holds collides.
+func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_NameTakenByUnmatchedRow() {
+	accountID := "ac_test123"
+	suite.unitRepo.EXPECT().
+		FindByAbbreviationsOrNames(gomock.Any(), "ac_test123", gomock.Any(), gomock.Any()).
+		Return([]*domain.Unit{
+			{ID: "un_1", Name: "Gram", Abbreviation: "g", AccountID: &accountID},
+		}, nil).
+		Times(1)
+
+	created, updated, rowErrs, err := suite.writeUnits(domain.UpsertUnitParams{Name: "gram", Abbreviation: "gr"})
+
+	suite.Nil(err)
+	suite.Empty(created)
+	suite.Empty(updated)
+	suite.Len(rowErrs, 1)
+	suite.Equal(string(apierror.CodeResourceExists), string(rowErrs[0].Error.Code))
 }
 
 func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_CreateAlwaysSetsIsBaseUnitFalse() {

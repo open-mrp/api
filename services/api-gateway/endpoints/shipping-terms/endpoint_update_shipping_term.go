@@ -15,49 +15,52 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update a shipping term.
-//
-// Fields left out of the request keep their current values. Send an explicit JSON `null` for `flat_rate`, `minimum_order_value`, or `free_shipping_service_level_ids` to clear the stored value.
+// Request to update a shipping term.
 type UpdateShippingTermRequest struct {
 	// Shipping term ID.
 	ShippingTermID string `path:"id" validate:"required"`
-	// Human-readable name for the shipping term, used to identify it when assigning shipping terms to customers and orders.
+	// Display name, such as `Free over $500`.
+	//
+	// Unique (case-insensitive) among your account's terms and the system defaults.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Freight pricing model applied by this shipping term.
+	// How freight is charged.
 	//
-	// - `free_freight`: the buyer is never charged for shipping.
-	// - `flat_rate_freight`: the buyer is charged the fixed amount in `flat_rate`, regardless of what the carrier would have charged.
-	// - `carrier_rate_freight`: the buyer is charged the rate the carrier quotes for the order's carrier and service level.
+	// Changing it away from `flat_rate` clears `flat_rate`; changing it to `flat_rate` requires `flat_rate` in the same request. Changing it to `free` clears `free_shipping`.
 	Type field.Optional[constants.ShippingTermType] `json:"type,omitzero"`
-	// Fixed shipping charge applied to orders.
+	// Whether the term can be assigned to customers and sales orders.
 	//
-	// Used only when `type` is `flat_rate_freight`. Clearing it leaves a `flat_rate_freight` term falling through to the carrier's quoted rate.
+	// `archived` terms stay attached to the records already using them.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Freight charged on every order.
+	//
+	// Required while `type` is `flat_rate`, and not allowed otherwise.
 	FlatRate field.Clearable[apirequest.MoneyInput] `json:"flat_rate,omitzero"`
-	// Order total a buyer must exceed for this term's free-shipping rules to apply.
+	// Waives freight on orders over a minimum value.
 	//
-	// Clearing it removes the free-shipping threshold, so orders are charged according to `type` regardless of their total.
-	MinimumOrderValue field.Clearable[apirequest.MoneyInput] `json:"minimum_order_value,omitzero"`
-	// IDs of the service levels that ship for free once an order exceeds `minimum_order_value`.
-	//
-	// Replaces the whole list rather than adding to it, and clearing it lets every service level ship free above the threshold. The request is rejected if any ID is not a service level available to your account.
-	FreeShippingServiceLevelIDs field.Clearable[[]string] `json:"free_shipping_service_level_ids,omitzero"`
+	// Replaced as a whole. Send `null` to remove the threshold. Not allowed when `type` is `free`.
+	FreeShipping field.Clearable[ShippingTermFreeShippingInput] `json:"free_shipping,omitzero"`
+	// The free-shipping threshold as 1.0.forge-preview.9 sent it.
+	MinimumOrderValue field.Clearable[apirequest.MoneyInput] `json:"minimum_order_value,omitzero" visibility:"internal"`
+	// The free-shipping service levels as 1.0.forge-preview.9 sent them.
+	FreeShippingServiceLevelIDs field.Clearable[[]string] `json:"free_shipping_service_level_ids,omitzero" visibility:"internal"`
 }
 
 var sampleUpdateShippingTermRequest = &UpdateShippingTermRequest{
-	Name:                        field.Some("Collect"),
-	Type:                        field.Some(constants.ShippingTermTypeFlatRateFreight),
-	FlatRate:                    field.Set(apirequest.MoneyInput{Amount: "15.00", Currency: "usd"}),
-	MinimumOrderValue:           field.Set(apirequest.MoneyInput{Amount: "500.00", Currency: "usd"}),
-	FreeShippingServiceLevelIDs: field.Set([]string{apiresource.SampleServiceLevelID}),
+	Name:     field.Some("Flat $15"),
+	Type:     field.Some(constants.ShippingTermTypeFlatRate),
+	FlatRate: field.Set(apirequest.MoneyInput{Amount: "15.00", Currency: "usd"}),
+	FreeShipping: field.Set(ShippingTermFreeShippingInput{
+		MinimumOrderValue: apirequest.MoneyInput{Amount: "500.00", Currency: "usd"},
+	}),
 }
 
 func (*UpdateShippingTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateShippingTermRequest)
 }
 
-// Partially updates a shipping term owned by your account.
+// Updates a shipping term.
 //
-// System-provided default shipping terms cannot be updated. Changes affect freight quoted after the update; freight already recorded on existing orders is not recalculated.
+// Only fields you send are changed. System defaults can't be updated. Freight already recorded on orders isn't recalculated.
 type UpdateShippingTermEndpoint struct{}
 
 func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm] {
@@ -70,11 +73,10 @@ func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping.service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).UpdateShippingTerm

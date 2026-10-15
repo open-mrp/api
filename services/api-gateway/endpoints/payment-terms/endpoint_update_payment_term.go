@@ -18,10 +18,14 @@ import (
 type UpdatePaymentTermRequest struct {
 	// Payment term ID.
 	PaymentTermID string `path:"id" validate:"required"`
-	// New display name for the payment term.
+	// Display name, such as `Net 30`.
 	//
-	// Must be unique among the payment terms visible to your account, including system defaults.
+	// Unique (case-insensitive) among your account's terms and the system defaults.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
+	// Whether the term can be assigned to customers and sales orders.
+	//
+	// `archived` terms stay attached to the records already using them.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleUpdatePaymentTermRequest = &UpdatePaymentTermRequest{
@@ -32,9 +36,9 @@ func (*UpdatePaymentTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePaymentTermRequest)
 }
 
-// Partially updates a payment term.
+// Updates a payment term.
 //
-// Only payment terms created by your account can be updated; system-owned default terms cannot be.
+// Only fields you send are changed. System defaults can't be updated.
 type UpdatePaymentTermEndpoint struct{}
 
 func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm] {
@@ -47,7 +51,6 @@ func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).UpdatePaymentTerm

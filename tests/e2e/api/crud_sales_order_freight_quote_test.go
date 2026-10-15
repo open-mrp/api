@@ -23,7 +23,7 @@ func assertFullyPresentedUnit(t *testing.T, unit map[string]any, label string) {
 	// conversion fields — these are exactly what was missing.
 	assert.NotEmpty(t, jsonField(unit, "name"), "%s.name is present (fully presented unit)", label)
 	assert.NotEmpty(t, jsonField(unit, "abbreviation"), "%s.abbreviation is present", label)
-	assert.NotEmpty(t, jsonField(unit, "type"), "%s.type is present", label)
+	assert.NotEmpty(t, jsonField(unit, "dimension"), "%s.dimension is present", label)
 	assert.Contains(t, unit, "ratio_numerator", "%s carries conversion fields", label)
 	assert.Contains(t, unit, "ratio_denominator", "%s carries conversion fields", label)
 }

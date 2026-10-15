@@ -1014,7 +1014,7 @@ func TestShippingTerms_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, shippingTermsPath, map[string]any{
 		"name": uniqueName("e2e-shipterm-audit"),
-		"type": "free_freight",
+		"type": "free",
 	})
 	id := jsonField(created, "id")
 
@@ -1033,7 +1033,7 @@ func TestShippingTerms_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, shippingTermsPath, map[string]any{
 		"name": uniqueName("e2e-shipterm-rlog"),
-		"type": "free_freight",
+		"type": "free",
 	})
 
 	expectRequestLog(t, "POST", "201", shippingTermsPath)

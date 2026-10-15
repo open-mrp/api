@@ -40,7 +40,7 @@ func createTenantBShippingRefs(t *testing.T) tenantBShippingRefs {
 	refs.serviceLevelID = create(serviceLevelsPath(refs.carrierID), map[string]any{
 		"name": uniqueName("e2e-foreign-sl"), "code": uniqueName("e2e-foreign-sl-code"),
 	})
-	refs.shippingTermID = create(shippingTermsPath, map[string]any{"name": uniqueName("e2e-foreign-shipterm"), "type": "free_freight"})
+	refs.shippingTermID = create(shippingTermsPath, map[string]any{"name": uniqueName("e2e-foreign-shipterm"), "type": "free"})
 	t.Cleanup(func() { _, _, _ = tenantB.Delete(shippingTermsPath + "/" + refs.shippingTermID) })
 	refs.paymentTermID = create(paymentTermsPath, map[string]any{"name": uniqueName("e2e-foreign-payterm")})
 	t.Cleanup(func() { _, _, _ = tenantB.Delete(paymentTermsPath + "/" + refs.paymentTermID) })

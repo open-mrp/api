@@ -36,7 +36,7 @@ func assertUnitHydrated(t *testing.T, unit map[string]any, where string) {
 	assert.NotEmpty(t, jsonField(unit, "id"), "%s.id", where)
 	assert.NotEmpty(t, jsonField(unit, "name"), "%s.name — a unit resolved from an id has a name", where)
 	assert.NotEmpty(t, jsonField(unit, "abbreviation"), "%s.abbreviation — this is what a screen prints", where)
-	assert.NotEmpty(t, jsonField(unit, "type"), "%s.type", where)
+	assert.NotEmpty(t, jsonField(unit, "dimension"), "%s.dimension", where)
 	assert.NotEmpty(t, jsonField(unit, "ratio_numerator"), "%s.ratio_numerator", where)
 	assert.NotEmpty(t, jsonField(unit, "ratio_denominator"), "%s.ratio_denominator", where)
 	assertValidTimestamp(t, jsonField(unit, "created_at"), where+".created_at")
@@ -125,7 +125,7 @@ func TestItemCosts_UnitsAreResolvedWithoutAnInclude(t *testing.T) {
 
 	assertUnitHydrated(t, jsonObject(costs, "numerator_unit"), "numerator_unit")
 	assertUnitHydrated(t, jsonObject(costs, "denominator_unit"), "denominator_unit")
-	assert.Equal(t, "currency", jsonField(jsonObject(costs, "numerator_unit"), "type"),
+	assert.Equal(t, "currency", jsonField(jsonObject(costs, "numerator_unit"), "dimension"),
 		"the numerator is the currency the costs are priced in")
 }
 
@@ -543,7 +543,7 @@ func assertAllocationAmountsCarryTheirUnit(t *testing.T, path, objectType string
 
 		amount := jsonObject(allocation, "amount")
 		assertQuantityHydrated(t, amount, "allocations.amount")
-		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "type"),
+		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "dimension"),
 			"an allocation is counted in a currency")
 	}
 }
@@ -769,7 +769,7 @@ func TestSettlements_AllocationTransactionAmountCarriesItsUnit(t *testing.T) {
 		require.True(t, ok)
 		amount := jsonObject(jsonObject(allocation, "transaction"), "amount")
 		assertQuantityHydrated(t, amount, "allocations.transaction.amount")
-		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "type"),
+		assert.Equal(t, "currency", jsonField(jsonObject(amount, "unit"), "dimension"),
 			"a transaction is counted in a currency")
 	}
 }

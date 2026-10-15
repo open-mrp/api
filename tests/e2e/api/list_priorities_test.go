@@ -17,7 +17,7 @@ const prioritiesPath = "/v1/sales/priorities"
 
 func TestListPriorities_ReturnsSeededData(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, nil)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 3, "Should have at least 3 seeded priorities (low, normal, high)")
 
@@ -32,7 +32,7 @@ func TestListPriorities_ReturnsSeededData(t *testing.T) {
 
 func TestListPriorities_ResponseShape(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "list", list.Object)
 	assert.NotNil(t, list.Data)
@@ -44,7 +44,7 @@ func TestListPriorities_ResponseShape(t *testing.T) {
 
 func TestListPriorities_ItemFields(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -64,7 +64,7 @@ func TestListPriorities_ItemFields(t *testing.T) {
 
 func TestListPriorities_LimitParam(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "limit=1 should return exactly 1 item")
 	assert.True(t, list.PageInfo.HasNextPage(), "Should have a next page with limit=1 and 3+ priorities")
@@ -74,7 +74,7 @@ func TestListPriorities_PaginationCursor(t *testing.T) {
 	t.Parallel()
 
 	// Page 1
-	page1, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
+	page1, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL, "Page 1 should have next_page_url")
@@ -83,7 +83,7 @@ func TestListPriorities_PaginationCursor(t *testing.T) {
 	assert.NotEmpty(t, page1ID)
 
 	// Page 2
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	page2, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
 
@@ -96,7 +96,7 @@ func TestListPriorities_PrevPageURL(t *testing.T) {
 	t.Parallel()
 
 	// Get page 1 with limit=1
-	page1, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
+	page1, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL)
@@ -104,14 +104,14 @@ func TestListPriorities_PrevPageURL(t *testing.T) {
 	page1ID := DataItemField(page1.Data[0], "id")
 
 	// Get page 2
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	page2, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requirePageLen(t, page2.Data, 1)
 	assert.True(t, page2.PageInfo.HasPrevPage(), "Page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
 	// Navigate back to page 1
-	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
+	backToPage1, _, err := apiClient.WithAPIVersion(preview9Version).GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	require.Len(t, backToPage1.Data, 1)
 
@@ -123,7 +123,7 @@ func TestListPriorities_PrevPageURL(t *testing.T) {
 
 func TestListPriorities_SearchByName(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"q": {"High"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"q": {"High"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'High' should return at least 1 result")
 
@@ -138,7 +138,7 @@ func TestListPriorities_SearchByName(t *testing.T) {
 
 func TestListPriorities_SearchCaseInsensitive(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"q": {"high"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"q": {"high"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Case-insensitive search for 'high' should return at least 1 result")
 
@@ -153,7 +153,7 @@ func TestListPriorities_SearchCaseInsensitive(t *testing.T) {
 
 func TestListPriorities_SearchNoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"q": {"zzzznotapriority99999"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"q": {"zzzznotapriority99999"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Nonsense search should return empty data")
 }
@@ -162,7 +162,7 @@ func TestListPriorities_SearchNoResults(t *testing.T) {
 
 func TestGetPriority_ByID(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+SeedPriorityID, nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+SeedPriorityID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -179,7 +179,7 @@ func TestGetPriority_AllFields(t *testing.T) {
 	t.Parallel()
 
 	// Fetch all priorities and verify each one has all fields populated
-	list, _, err := apiClient.GetList(prioritiesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -187,7 +187,7 @@ func TestGetPriority_AllFields(t *testing.T) {
 		id := DataItemField(item, "id")
 		require.NotEmpty(t, id)
 
-		status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+id, nil)
+		status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+id, nil)
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 
@@ -206,7 +206,7 @@ func TestGetPriority_AllFields(t *testing.T) {
 
 func TestGetPriority_NotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath+"/pi_00000000000000000000", nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/pi_00000000000000000000", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 
@@ -216,7 +216,18 @@ func TestGetPriority_NotFound(t *testing.T) {
 
 func TestGetPriority_InvalidID(t *testing.T) {
 	t.Parallel()
-	status, _, err := apiClient.GetListRaw(prioritiesPath+"/not-a-valid-id", nil)
+	status, _, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/not-a-valid-id", nil)
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 404, "Invalid ID should return 400 or 404, got %d", status)
+}
+
+// --- Removed in 1.0.forge ---
+
+func TestPrioritiesAndAccountStatuses_RemovedInForge(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{prioritiesPath, prioritiesPath + "/" + SeedPriorityID, accountStatusesPath} {
+		status, body, err := apiClient.GetListRaw(path, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 404, status, "%s is kept for preview.9 callers only: %s", path, body)
+	}
 }

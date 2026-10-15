@@ -85,7 +85,7 @@ func assertMeasure(t *testing.T, obj map[string]any, field, value, unitAbbr, uni
 	unit := jsonObject(q, "unit")
 	require.NotNil(t, unit, field)
 	assert.Equal(t, unitAbbr, jsonField(unit, "abbreviation"), field)
-	assert.Equal(t, unitType, jsonField(unit, "type"), field)
+	assert.Equal(t, unitType, jsonField(unit, "dimension"), field)
 }
 
 // assertCostPerUnit checks a unit price: the amount in dollars, per a unit given by abbreviation and type.
@@ -98,7 +98,7 @@ func assertCostPerUnit(t *testing.T, obj map[string]any, field, amount, perUnitA
 	perUnit := jsonObject(price, "per_unit")
 	require.NotNil(t, perUnit, "%s carries the unit it is per", field)
 	assert.Equal(t, perUnitAbbr, jsonField(perUnit, "abbreviation"), field)
-	assert.Equal(t, perUnitType, jsonField(perUnit, "type"), field)
+	assert.Equal(t, perUnitType, jsonField(perUnit, "dimension"), field)
 }
 
 // allocateAgainst draws value of unitID against the item's only available receipt, the way a fulfilled issue

@@ -244,12 +244,16 @@ var includeHydrationKnownGaps = map[string]map[string]string{
 	"order_discount": {"order_count": "computed aggregate; reference include leaves it 0"},
 	"shipment":       {"case_count": "computed aggregate; reference include leaves it 0"},
 	"sales_order":    {"line_count": "computed aggregate; reference include leaves it 0"},
+	"shipping_term": {
+		"status":        "inline stub on customers and orders; CUS, SO1 and PO switch to loaded references",
+		"free_shipping": "inline stub on customers and orders; CUS, SO1 and PO switch to loaded references",
+		"flat_rate":     "inline stub on customers and orders; CUS, SO1 and PO switch to loaded references",
+	},
 	"unit": {
 		"ratio_numerator":    "value-object stub: freight unit is embedded with normalized ratios",
 		"ratio_denominator":  "value-object stub: freight unit is embedded with normalized ratios",
 		"offset_numerator":   "value-object stub: freight unit is embedded with normalized ratios",
 		"offset_denominator": "value-object stub: freight unit is embedded with normalized ratios",
-		"is_base_unit":       "value-object stub: freight unit is embedded with normalized ratios",
 	},
 }
 

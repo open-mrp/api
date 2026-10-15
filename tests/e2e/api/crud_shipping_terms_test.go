@@ -115,7 +115,7 @@ func TestShippingTerms_CRUD(t *testing.T) {
 	// Create
 	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -126,7 +126,7 @@ func TestShippingTerms_CRUD(t *testing.T) {
 	assert.NotEmpty(t, id)
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "free_freight", jsonField(created, "type"))
+	assert.Equal(t, "free", jsonField(created, "type"))
 
 	// Get
 	getStatus, getBody, err := apiClient.GetListRaw(shippingTermsPath+"/"+id, nil)
@@ -178,7 +178,7 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 	name := uniqueName("e2e-st-allf")
 	createResp, err := apiClient.PostFull(shippingTermsPath+"", map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "9.99",
 			"currency": "usd",
@@ -195,10 +195,10 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 
 	assert.Equal(t, "shipping_term", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "flat_rate_freight", jsonField(got, "type"))
-	assertNilField(t, got, "minimum_order_value")
+	assert.Equal(t, "flat_rate", jsonField(got, "type"))
+	assert.Equal(t, "active", jsonField(got, "status"))
+	assertNilField(t, got, "free_shipping")
 	assertNilField(t, got, "owner")
-	assertNilField(t, got, "free_shipping_service_levels")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -219,7 +219,8 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "flat_rate_freight", jsonField(updated, "type"), "type should be preserved")
+	assert.Equal(t, "flat_rate", jsonField(updated, "type"), "type should be preserved")
+	assert.Equal(t, "active", jsonField(updated, "status"), "status should be preserved")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
@@ -231,7 +232,7 @@ func TestShippingTerms_CreateResponseShape(t *testing.T) {
 	name := uniqueName("e2e-shipterm-shape")
 	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "carrier_rate_freight",
+		"type": "carrier_rate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -242,7 +243,7 @@ func TestShippingTerms_CreateResponseShape(t *testing.T) {
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "shipping_term", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "carrier_rate_freight", jsonField(created, "type"))
+	assert.Equal(t, "carrier_rate", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
@@ -254,7 +255,7 @@ func TestShippingTerms_CreateWithFlatRate(t *testing.T) {
 	name := uniqueName("e2e-shipterm-flat")
 	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "9.99",
 			"currency": "usd",
@@ -267,7 +268,7 @@ func TestShippingTerms_CreateWithFlatRate(t *testing.T) {
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
 	assertCreatedLocation(t, createResp.Header, id)
-	assert.Equal(t, "flat_rate_freight", jsonField(created, "type"))
+	assert.Equal(t, "flat_rate", jsonField(created, "type"))
 
 	flatRate := jsonObject(created, "flat_rate")
 	require.NotNil(t, flatRate, "flat_rate should be populated when provided")
@@ -279,7 +280,7 @@ func TestShippingTerms_CreateWithFlatRate(t *testing.T) {
 func TestShippingTerms_CreateValidation_MissingName(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -305,7 +306,7 @@ func TestShippingTerms_CreateIdempotent(t *testing.T) {
 
 	status1, body1, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
@@ -313,7 +314,7 @@ func TestShippingTerms_CreateIdempotent(t *testing.T) {
 
 	status2, body2, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
@@ -327,7 +328,7 @@ func TestShippingTerms_UpdateIdempotent(t *testing.T) {
 	name := uniqueName("e2e-shipterm-idem-upd")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -367,7 +368,7 @@ func TestShippingTerms_UpdateOnlyName(t *testing.T) {
 	name := uniqueName("e2e-shipterm-pname")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "carrier_rate_freight",
+		"type": "carrier_rate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -383,7 +384,7 @@ func TestShippingTerms_UpdateOnlyName(t *testing.T) {
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(patched, "name"))
-	assert.Equal(t, "carrier_rate_freight", jsonField(patched, "type"), "type should be preserved when only name is updated")
+	assert.Equal(t, "carrier_rate", jsonField(patched, "type"), "type should be preserved when only name is updated")
 
 	apiClient.Delete(shippingTermsPath + "/" + id)
 }
@@ -393,7 +394,7 @@ func TestShippingTerms_UpdateOnlyType(t *testing.T) {
 	name := uniqueName("e2e-shipterm-ptype")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -401,13 +402,13 @@ func TestShippingTerms_UpdateOnlyType(t *testing.T) {
 
 	// Patch only the type — name should be preserved
 	patchStatus, patchBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
-		"type": "flat_rate_freight",
+		"type": "carrier_rate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
-	assert.Equal(t, "flat_rate_freight", jsonField(patched, "type"))
+	assert.Equal(t, "carrier_rate", jsonField(patched, "type"))
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved when only type is updated")
 
 	apiClient.Delete(shippingTermsPath + "/" + id)
@@ -418,14 +419,20 @@ func TestShippingTerms_UpdateAddFlatRate(t *testing.T) {
 	name := uniqueName("e2e-shipterm-addflat")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "carrier_rate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	// Add flat rate via patch
+	// Changing to flat_rate needs the flat rate in the same request.
+	missingStatus, missingBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{"type": "flat_rate"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, missingStatus, missingBody)
+	assertErrorParam(t, requireErrorResponse(t, missingBody, "missing_field", "invalid_request_error"), "flat_rate")
+
 	patchStatus, patchBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "15.00",
 			"currency": "usd",
@@ -436,7 +443,7 @@ func TestShippingTerms_UpdateAddFlatRate(t *testing.T) {
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
-	assert.Equal(t, "flat_rate_freight", jsonField(patched, "type"), "type should be preserved")
+	assert.Equal(t, "flat_rate", jsonField(patched, "type"))
 	flatRate := jsonObject(patched, "flat_rate")
 	require.NotNil(t, flatRate, "flat_rate should be set after patch")
 	assertShippingMoney(t, flatRate, "15.00", "flat_rate")
@@ -449,7 +456,7 @@ func TestShippingTerms_UpdateClearFlatRate(t *testing.T) {
 	name := uniqueName("e2e-shipterm-clrflat")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "10.00",
 			"currency": "usd",
@@ -461,16 +468,24 @@ func TestShippingTerms_UpdateClearFlatRate(t *testing.T) {
 	id := jsonField(created, "id")
 	require.NotNil(t, jsonObject(created, "flat_rate"), "flat_rate should be set after create")
 
-	// Send explicit null to clear flat rate
-	patchStatus, patchBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
+	// A flat_rate term can't lose its flat rate.
+	clearStatus, clearBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
 		"flat_rate": nil,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, clearStatus, clearBody)
+	assertErrorParam(t, requireErrorResponse(t, clearBody, "missing_field", "invalid_request_error"), "flat_rate")
+
+	// Moving off flat_rate clears it.
+	patchStatus, patchBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
+		"type": "carrier_rate",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
-	assert.Nil(t, patched["flat_rate"], "flat_rate should be cleared after sending null")
+	assert.Nil(t, patched["flat_rate"], "flat_rate should be cleared with the type change")
 
 	apiClient.Delete(shippingTermsPath + "/" + id)
 }
@@ -480,7 +495,7 @@ func TestShippingTerms_UpdatePreservesFlatRate(t *testing.T) {
 	name := uniqueName("e2e-shipterm-keepflat")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "20.00",
 			"currency": "usd",
@@ -512,7 +527,7 @@ func TestShippingTerms_UpdateEmptyBodyRejected(t *testing.T) {
 	name := uniqueName("e2e-shipterm-empty")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -541,7 +556,7 @@ func TestShippingTerms_DeleteAlreadyDeletedFails(t *testing.T) {
 	name := uniqueName("e2e-shipterm-deldel")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -570,7 +585,9 @@ func TestShippingTerms_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Nil(t, got["owner"], "owner should be null without ?include=owner")
-	assert.Nil(t, got["free_shipping_service_levels"], "free_shipping_service_levels should be null without ?include=free_shipping_service_levels")
+	if fs := jsonObject(got, "free_shipping"); fs != nil {
+		assert.Nil(t, fs["service_levels"], "free_shipping.service_levels should be null without its include")
+	}
 
 	// Test on List
 	list, _, err := apiClient.GetList(shippingTermsPath, nil)
@@ -580,7 +597,9 @@ func TestShippingTerms_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		assert.Nil(t, m["owner"], "owner should be null on list items without ?include=owner")
-		assert.Nil(t, m["free_shipping_service_levels"], "free_shipping_service_levels should be null on list items without ?include=free_shipping_service_levels")
+		if fs := jsonObject(m, "free_shipping"); fs != nil {
+			assert.Nil(t, fs["service_levels"], "free_shipping.service_levels should be null on list items without its include")
+		}
 	}
 }
 
@@ -595,7 +614,7 @@ func TestShippingTerms_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-st-omit")
 		status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 			"name": name,
-			"type": "free_freight",
+			"type": "free",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -607,11 +626,11 @@ func TestShippingTerms_OmittedFields(t *testing.T) {
 
 		assertObjectField(t, got, "shipping_term")
 		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, "free_freight", jsonField(got, "type"))
+		assert.Equal(t, "free", jsonField(got, "type"))
+		assert.Equal(t, "active", jsonField(got, "status"), "status defaults to active")
 		assertNilField(t, got, "flat_rate")
-		assertNilField(t, got, "minimum_order_value")
+		assertNilField(t, got, "free_shipping")
 		assertNilField(t, got, "owner")
-		assertNilField(t, got, "free_shipping_service_levels")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -620,7 +639,7 @@ func TestShippingTerms_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-st-pres")
 		createStatus, createBody, err := apiClient.Post(shippingTermsPath+"", map[string]any{
 			"name": name,
-			"type": "flat_rate_freight",
+			"type": "flat_rate",
 			"flat_rate": map[string]any{
 				"amount":   "25.00",
 				"currency": "usd",
@@ -645,7 +664,7 @@ func TestShippingTerms_OmittedFields(t *testing.T) {
 
 		got := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(got, "name"))
-		assert.Equal(t, "flat_rate_freight", jsonField(got, "type"), "type should be preserved")
+		assert.Equal(t, "flat_rate", jsonField(got, "type"), "type should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 

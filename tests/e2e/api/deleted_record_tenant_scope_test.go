@@ -291,7 +291,7 @@ func TestDeletedRecordScope_Shipping(t *testing.T) {
 		{
 			name: "shipping term",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, shippingTermsPath, map[string]any{"name": uniqueName("e2e-dscope-st"), "type": "free_freight"})
+				return createdPath(t, shippingTermsPath, map[string]any{"name": uniqueName("e2e-dscope-st"), "type": "free"})
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-st")},
 		},

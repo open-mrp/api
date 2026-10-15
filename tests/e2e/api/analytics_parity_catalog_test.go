@@ -70,7 +70,7 @@ func TestAnalyticsParityWeeksOfSales_StockAndSalesInTheLinesBaseUnit(t *testing.
 		require.NotNil(t, unit, field)
 		assert.Equal(t, SeedUnitID, jsonField(unit, "id"), field)
 		assert.Equal(t, "pr", jsonField(unit, "abbreviation"), field)
-		assert.Equal(t, "quantity", jsonField(unit, "type"), field)
+		assert.Equal(t, "quantity", jsonField(unit, "dimension"), field)
 		v, err := strconv.ParseFloat(jsonField(q, "value"), 64)
 		require.NoError(t, err, field)
 		return v

@@ -20,12 +20,11 @@ func upsertUnitInput(name, abbr, unitType string) map[string]any {
 	return map[string]any{
 		"name":               name,
 		"abbreviation":       abbr,
-		"type":               unitType,
+		"dimension":          unitType,
 		"ratio_numerator":    "1",
 		"ratio_denominator":  "1",
 		"offset_numerator":   "0",
 		"offset_denominator": "1",
-		"is_base_unit":       false,
 	}
 }
 
@@ -108,7 +107,9 @@ func TestUnits_ListResponseShape(t *testing.T) {
 		assert.NotEmpty(t, jsonField(m, "id"))
 		assert.NotEmpty(t, jsonField(m, "name"))
 		assert.NotEmpty(t, jsonField(m, "abbreviation"))
-		assert.NotEmpty(t, jsonField(m, "type"))
+		assert.NotEmpty(t, jsonField(m, "dimension"))
+		assert.NotEqual(t, "currency", jsonField(m, "dimension"), "currency units are not listed")
+		assert.NotContains(t, m, "is_base_unit")
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
 	}
@@ -169,15 +170,15 @@ func TestUnits_ListSearchNoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data)
 }
 
-func TestUnits_ListFilterByType(t *testing.T) {
+func TestUnits_ListFilterByDimensions(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(unitsPath, url.Values{"type": {"quantity"}})
+	list, _, err := apiClient.GetList(unitsPath, url.Values{"dimensions[]": {"quantity"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 quantity unit")
 
 	for _, item := range list.Data {
 		m := parseJSON(item)
-		assert.Equal(t, "quantity", jsonField(m, "type"), "All results should have type=quantity")
+		assert.Equal(t, "quantity", jsonField(m, "dimension"), "All results should have dimension=quantity")
 	}
 }
 
@@ -283,12 +284,11 @@ func TestUnits_BulkUpsert_AllUpdates(t *testing.T) {
 	created, updated := bulkUpsertUnits(t, map[string]any{
 		"name":               name,
 		"abbreviation":       abbr,
-		"type":               "quantity",
+		"dimension":          "quantity",
 		"ratio_numerator":    "12",
 		"ratio_denominator":  "1",
 		"offset_numerator":   "0",
 		"offset_denominator": "1",
-		"is_base_unit":       false,
 	})
 
 	assert.Empty(t, created, "no creates expected")
@@ -460,12 +460,11 @@ func TestUnits_BulkUpsert_ZeroRatioDenominator(t *testing.T) {
 			map[string]any{
 				"name":               uniqueName("e2e-bu"),
 				"abbreviation":       uniqueName("ebu"),
-				"type":               "quantity",
+				"dimension":          "quantity",
 				"ratio_numerator":    "1",
 				"ratio_denominator":  "0",
 				"offset_numerator":   "0",
 				"offset_denominator": "1",
-				"is_base_unit":       false,
 			},
 		},
 	}, newIdempotencyKey())
@@ -483,12 +482,11 @@ func TestUnits_BulkUpsert_ZeroOffsetDenominator(t *testing.T) {
 			map[string]any{
 				"name":               uniqueName("e2e-bu"),
 				"abbreviation":       uniqueName("ebu"),
-				"type":               "quantity",
+				"dimension":          "quantity",
 				"ratio_numerator":    "1",
 				"ratio_denominator":  "1",
 				"offset_numerator":   "0",
 				"offset_denominator": "0",
-				"is_base_unit":       false,
 			},
 		},
 	}, newIdempotencyKey())
@@ -499,38 +497,39 @@ func TestUnits_BulkUpsert_ZeroOffsetDenominator(t *testing.T) {
 	assertErrorParam(t, errObj, "units[0].offset_denominator")
 }
 
-func TestUnits_BulkUpsert_NameAndAbbrConflict(t *testing.T) {
+// Rows match on abbreviation only: a row whose abbreviation matches no unit creates one, so a name another unit has
+// fails that row with resource_exists.
+func TestUnits_BulkUpsert_NameTakenByAnotherUnit(t *testing.T) {
 	t.Parallel()
 
 	name1, abbr1 := uniqueName("e2e-bu"), uniqueName("ebu")
 	name2, abbr2 := uniqueName("e2e-bu"), uniqueName("ebu")
 
-	// Create two distinct units
 	seeded, _ := bulkUpsertUnits(t,
 		upsertUnitInput(name1, abbr1, "quantity"),
 		upsertUnitInput(name2, abbr2, "quantity"),
 	)
 	defer cleanupUnitIDs(seeded)
 
-	// A row whose name matches unit1 but whose abbreviation matches unit2 crosses two
-	// existing units — a conflict decidable only against live rows, so it is accepted
-	// (202) and recorded as a per-row failure on the otherwise-completed job.
-	job := bulkUpsertUnitsJob(t, map[string]any{
-		"name":               name1,
-		"abbreviation":       abbr2, // crosses into the other unit
-		"type":               "quantity",
-		"ratio_numerator":    "1",
-		"ratio_denominator":  "1",
-		"offset_numerator":   "0",
-		"offset_denominator": "1",
-		"is_base_unit":       false,
-	})
-
+	// abbr2 matches unit2; renaming it to unit1's name collides.
+	job := bulkUpsertUnitsJob(t, upsertUnitInput(name1, abbr2, "quantity"))
 	rowErrs := jobErrors(job)
-	require.Len(t, rowErrs, 1, "the conflicting row is recorded in errors")
-	msg := jobRowErrorMessage(rowErrs[0])
-	assert.Contains(t, msg, name1)
-	assert.Contains(t, msg, abbr2)
+	require.Len(t, rowErrs, 1, "the colliding row is recorded in errors")
+	assert.Equal(t, "resource_exists", jsonField(jobRowError(rowErrs[0]), "code"))
+	assert.Contains(t, jobRowErrorMessage(rowErrs[0]), name1)
+
+	// A new abbreviation with unit1's name (any case) creates nothing and collides too.
+	job = bulkUpsertUnitsJob(t, upsertUnitInput(strings.ToUpper(name1), uniqueName("ebu"), "quantity"))
+	rowErrs = jobErrors(job)
+	require.Len(t, rowErrs, 1)
+	assert.Equal(t, "resource_exists", jsonField(jobRowError(rowErrs[0]), "code"))
+
+	// The abbreviation matches case-insensitively and updates the unit it names.
+	job = bulkUpsertUnitsJob(t, upsertUnitInput(name2+"-renamed", strings.ToUpper(abbr2), "quantity"))
+	assert.Empty(t, jobErrors(job))
+	_, updated := jobResultIDs(job)
+	require.Len(t, updated, 1)
+	assert.Equal(t, seeded[1], updated[0])
 }
 
 func TestUnits_BulkUpsert_DimensionCodeImmutable(t *testing.T) {
@@ -551,31 +550,14 @@ func TestUnits_BulkUpsert_DimensionCodeImmutable(t *testing.T) {
 	assert.Contains(t, msg, "immutable")
 }
 
-func TestUnits_BulkUpsert_IsBaseUnitImmutable(t *testing.T) {
+func TestUnits_BulkUpsert_AbbreviationMaxLength(t *testing.T) {
 	t.Parallel()
-
-	name, abbr := uniqueName("e2e-bu"), uniqueName("ebu")
-
-	// Create with is_base_unit=false
-	seeded, _ := bulkUpsertUnits(t, upsertUnitInput(name, abbr, "quantity"))
-	defer cleanupUnitIDs(seeded)
-
-	// Flipping is_base_unit is rejected against the existing row: accepted (202),
-	// recorded as a per-row failure on the completed job.
-	job := bulkUpsertUnitsJob(t, map[string]any{
-		"name":               name,
-		"abbreviation":       abbr,
-		"type":               "quantity",
-		"ratio_numerator":    "1",
-		"ratio_denominator":  "1",
-		"offset_numerator":   "0",
-		"offset_denominator": "1",
-		"is_base_unit":       true,
-	})
-	rowErrs := jobErrors(job)
-	require.Len(t, rowErrs, 1)
-	msg := jobRowErrorMessage(rowErrs[0])
-	assert.Contains(t, msg, "IsBaseUnit")
+	status, body, err := apiClient.Post(unitsBulkUpsertPath, map[string]any{
+		"units": []any{upsertUnitInput(uniqueName("e2e-bu"), strings.Repeat("a", 33), "quantity")},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "units[0].abbreviation")
 }
 
 // Partial success: a batch mixing a valid new unit with a row that fails against an

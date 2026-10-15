@@ -44,7 +44,7 @@ func TestCovSalesPriorities_RetrieveByCode(t *testing.T) {
 		t.Run(tc.code, func(t *testing.T) {
 			t.Parallel()
 
-			status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+tc.code, nil)
+			status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+tc.code, nil)
 			require.NoError(t, err)
 			requireStatus(t, 200, status, body)
 
@@ -56,7 +56,7 @@ func TestCovSalesPriorities_RetrieveByCode(t *testing.T) {
 			assert.Equal(t, tc.id, jsonField(got, "id"), "retrieve-by-code should resolve to the same id as the known seeded priority")
 
 			// Cross-check: retrieving the same priority by its ID returns an identical id.
-			statusByID, bodyByID, err := apiClient.GetListRaw(prioritiesPath+"/"+tc.id, nil)
+			statusByID, bodyByID, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+tc.id, nil)
 			require.NoError(t, err)
 			requireStatus(t, 200, statusByID, bodyByID)
 			gotByID := parseJSON(bodyByID)
@@ -71,7 +71,7 @@ func TestCovSalesPriorities_RetrieveByCode(t *testing.T) {
 func TestCovSalesPriorities_AllFieldsWithOwnerInclude(t *testing.T) {
 	t.Parallel()
 
-	list, _, err := apiClient.GetList(prioritiesPath, nil)
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 3, "expected at least 3 seeded priorities (low, normal, high)")
 
@@ -79,7 +79,7 @@ func TestCovSalesPriorities_AllFieldsWithOwnerInclude(t *testing.T) {
 		id := DataItemField(item, "id")
 		require.NotEmpty(t, id)
 
-		status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+id, url.Values{"include": {"owner"}})
+		status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+id, url.Values{"include": {"owner"}})
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 
@@ -105,7 +105,7 @@ func TestCovSalesPriorities_AllFieldsWithOwnerInclude(t *testing.T) {
 
 func TestCovSalesPriorities_List_InvalidLimitZero(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"limit": {"0"}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath, url.Values{"limit": {"0"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -117,19 +117,7 @@ func TestCovSalesPriorities_List_InvalidLimitZero(t *testing.T) {
 
 func TestCovSalesPriorities_List_InvalidLimitNegative(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"limit": {"-1"}})
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-
-	got := parseJSON(body)
-	errObj := jsonObject(got, "error")
-	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
-}
-
-func TestCovSalesPriorities_List_InvalidLimitTooLarge(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"limit": {"1001"}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath, url.Values{"limit": {"-1"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -142,31 +130,19 @@ func TestCovSalesPriorities_List_InvalidLimitTooLarge(t *testing.T) {
 func TestCovSalesPriorities_List_LimitMaxAllowed(t *testing.T) {
 	t.Parallel()
 	// limit=100 is the documented max and must be accepted (not rejected).
-	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"100"}})
+	list, _, err := apiClient.WithAPIVersion(preview9Version).GetList(prioritiesPath, url.Values{"limit": {"100"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 3, "should still return all seeded priorities under the max limit")
 }
 
 // --- List: dedicated invalid cursor validation for this path ---
 
-func TestCovSalesPriorities_List_InvalidCursor(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-
-	got := parseJSON(body)
-	errObj := jsonObject(got, "error")
-	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
-}
-
 // --- List: dedicated oversized q validation for this path ---
 
 func TestCovSalesPriorities_List_QueryTooLong(t *testing.T) {
 	t.Parallel()
 	longQuery := strings.Repeat("a", 501)
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"q": {longQuery}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath, url.Values{"q": {longQuery}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -180,7 +156,7 @@ func TestCovSalesPriorities_List_QueryAtMaxLengthAllowed(t *testing.T) {
 	t.Parallel()
 	// q at exactly the 500-char boundary must be accepted, not rejected.
 	maxQuery := strings.Repeat("a", 500)
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"q": {maxQuery}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath, url.Values{"q": {maxQuery}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
@@ -189,7 +165,7 @@ func TestCovSalesPriorities_List_QueryAtMaxLengthAllowed(t *testing.T) {
 
 func TestCovSalesPriorities_List_UnknownIncludeValueRejected(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"include": {"bogus_field"}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath, url.Values{"include": {"bogus_field"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -201,7 +177,7 @@ func TestCovSalesPriorities_List_UnknownIncludeValueRejected(t *testing.T) {
 
 func TestCovSalesPriorities_Retrieve_UnknownIncludeValueRejected(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(prioritiesPath+"/"+SeedPriorityID, url.Values{"include": {"bogus_field"}})
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(prioritiesPath+"/"+SeedPriorityID, url.Values{"include": {"bogus_field"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 

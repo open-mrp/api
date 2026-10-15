@@ -15,27 +15,27 @@ import (
 // the coverage already present in crud_shipping_terms_test.go and
 // crud_partial_includes_test.go — see TASK-operations_shipping-terms.md.
 
-// --- allFields: minimum_order_value, free_shipping_service_levels contents, owner.account ---
+// --- allFields: free_shipping contents, owner.account ---
 
 func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing.T) {
 	t.Parallel()
 
-	includeParams := "?include=free_shipping_service_levels,owner,owner.account"
+	includeParams := "?include=free_shipping.service_levels,owner,owner.account"
 
-	// ── CREATE with flat_rate, minimum_order_value, and free_shipping_service_level_ids all set ──
+	// ── CREATE with flat_rate, free_shipping and status all set ──
 	name := covOperationsShippingTermsUniqueName("allf-pop")
 	createResp, err := apiClient.PostFull(shippingTermsPath+includeParams, map[string]any{
 		"name": name,
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "9.99",
 			"currency": "usd",
 		},
-		"minimum_order_value": map[string]any{
-			"amount":   "100.00",
-			"currency": "usd",
+		"free_shipping": map[string]any{
+			"minimum_order_value": map[string]any{"amount": "100.00", "currency": "usd"},
+			"service_level_ids":   []string{SeedServiceLevelID},
 		},
-		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
+		"status": "archived",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -48,7 +48,8 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 
 	assertObjectField(t, got, "shipping_term")
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "flat_rate_freight", jsonField(got, "type"))
+	assert.Equal(t, "flat_rate", jsonField(got, "type"))
+	assert.Equal(t, "archived", jsonField(got, "status"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -63,17 +64,19 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 	assertObjectField(t, ownerAccount, "account")
 
 	assertShippingMoney(t, jsonObject(got, "flat_rate"), "9.99", "flat_rate after create")
-	assertShippingMoney(t, jsonObject(got, "minimum_order_value"), "100.00", "minimum_order_value after create")
+	freeShipping := jsonObject(got, "free_shipping")
+	require.NotNil(t, freeShipping)
+	assertShippingMoney(t, jsonObject(freeShipping, "minimum_order_value"), "100.00", "free_shipping.minimum_order_value after create")
+	assert.Equal(t, "selected", jsonField(freeShipping, "service_level_scope"))
 
-	// free_shipping_service_levels contents
-	freeLevels := jsonListData(got, "free_shipping_service_levels")
+	freeLevels := jsonListData(freeShipping, "service_levels")
 	require.Len(t, freeLevels, 1, "free_shipping_service_levels should contain exactly the assigned service level")
 	firstLevel, ok := freeLevels[0].(map[string]any)
 	require.True(t, ok, "free_shipping_service_levels item should decode as an object")
 	assert.Equal(t, SeedServiceLevelID, jsonField(firstLevel, "id"))
 	assertObjectField(t, firstLevel, "service_level")
 
-	// ── UPDATE: change flat_rate/minimum_order_value values, keep same service level ──
+	// ── UPDATE: change flat_rate and the threshold, drop the service levels, reactivate ──
 	updatedName := covOperationsShippingTermsUniqueName("allf-pop-u")
 	patchResp, err := apiClient.PatchFull(shippingTermsPath+"/"+id+includeParams, map[string]any{
 		"name": updatedName,
@@ -81,11 +84,10 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 			"amount":   "19.99",
 			"currency": "usd",
 		},
-		"minimum_order_value": map[string]any{
-			"amount":   "200.00",
-			"currency": "usd",
+		"free_shipping": map[string]any{
+			"minimum_order_value": map[string]any{"amount": "200.00", "currency": "usd"},
 		},
-		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
+		"status": "active",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchResp.StatusCode, patchResp.Body)
@@ -93,16 +95,15 @@ func TestCovOperationsShippingTerms_CreateAndUpdateAllFieldsPopulated(t *testing
 	updated := parseJSON(patchResp.Body)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "flat_rate_freight", jsonField(updated, "type"), "type should be preserved")
+	assert.Equal(t, "flat_rate", jsonField(updated, "type"), "type should be preserved")
+	assert.Equal(t, "active", jsonField(updated, "status"))
 
 	assertShippingMoney(t, jsonObject(updated, "flat_rate"), "19.99", "flat_rate after update")
-	assertShippingMoney(t, jsonObject(updated, "minimum_order_value"), "200.00", "minimum_order_value after update")
-
-	updFreeLevels := jsonListData(updated, "free_shipping_service_levels")
-	require.Len(t, updFreeLevels, 1, "free_shipping_service_levels should still contain the assigned service level after update")
-	updFirstLevel, ok := updFreeLevels[0].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, SeedServiceLevelID, jsonField(updFirstLevel, "id"))
+	updFreeShipping := jsonObject(updated, "free_shipping")
+	require.NotNil(t, updFreeShipping)
+	assertShippingMoney(t, jsonObject(updFreeShipping, "minimum_order_value"), "200.00", "free_shipping.minimum_order_value after update")
+	assert.Equal(t, "all", jsonField(updFreeShipping, "service_level_scope"), "free_shipping is replaced as a whole")
+	assert.Empty(t, jsonListData(updFreeShipping, "service_levels"))
 }
 
 // --- expandable: owner.account nested include against a real account-owned seed row ---
@@ -124,7 +125,7 @@ func TestCovOperationsShippingTerms_IncludeOwnerAccount(t *testing.T) {
 	assertObjectField(t, account, "account")
 }
 
-// --- money: the seeded term's flat_rate and minimum_order_value are always present as Money ---
+// --- money: the seeded term's flat_rate and free-shipping threshold are always present as Money ---
 
 func TestCovOperationsShippingTerms_FlatRateAndMinimumOrderValueAreMoney(t *testing.T) {
 	t.Parallel()
@@ -133,8 +134,10 @@ func TestCovOperationsShippingTerms_FlatRateAndMinimumOrderValueAreMoney(t *test
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	for _, field := range []string{"flat_rate", "minimum_order_value"} {
-		money := jsonObject(got, field)
+	for field, money := range map[string]map[string]any{
+		"flat_rate":                         jsonObject(got, "flat_rate"),
+		"free_shipping.minimum_order_value": jsonObject(jsonObject(got, "free_shipping"), "minimum_order_value"),
+	} {
 		require.NotNil(t, money, "seeded custom shipping term should have %s set", field)
 		assertValueShapeBare(t, money, field)
 		assert.NotEmpty(t, jsonField(money, "amount"), "%s.amount", field)
@@ -148,29 +151,32 @@ func TestCovOperationsShippingTerms_FlatRateAndMinimumOrderValueAreMoney(t *test
 	assert.Equal(t, 400, status, string(body))
 }
 
-// --- expandable: free_shipping_service_levels contents against seeded populated list ---
+// --- expandable: free_shipping.service_levels contents against seeded populated list ---
 
 func TestCovOperationsShippingTerms_IncludeFreeShippingServiceLevelsContents(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedCustomShippingTermID, url.Values{"include": {"free_shipping_service_levels"}})
+	status, body, err := apiClient.GetListRaw(shippingTermsPath+"/"+SeedCustomShippingTermID, url.Values{"include": {"free_shipping.service_levels"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	levels := jsonListData(got, "free_shipping_service_levels")
+	freeShipping := jsonObject(got, "free_shipping")
+	require.NotNil(t, freeShipping)
+	assert.Equal(t, "selected", jsonField(freeShipping, "service_level_scope"))
+	levels := jsonListData(freeShipping, "service_levels")
 	require.GreaterOrEqual(t, len(levels), 1, "seeded custom shipping term should have at least one free shipping service level")
 
 	found := false
 	for _, item := range levels {
 		m, ok := item.(map[string]any)
-		require.True(t, ok, "free_shipping_service_levels item should decode as an object")
+		require.True(t, ok, "service_levels item should decode as an object")
 		assertObjectField(t, m, "service_level")
 		assert.NotEmpty(t, jsonField(m, "id"))
 		if jsonField(m, "id") == SeedServiceLevelID {
 			found = true
 		}
 	}
-	assert.True(t, found, "expected free_shipping_service_levels to contain SeedServiceLevelID=%s", SeedServiceLevelID)
+	assert.True(t, found, "expected free_shipping.service_levels to contain SeedServiceLevelID=%s", SeedServiceLevelID)
 }
 
 // --- validation: invalid type enum, oversized name, malformed MoneyInput ---
@@ -191,7 +197,7 @@ func TestCovOperationsShippingTerms_CreateValidation_NameTooLong(t *testing.T) {
 	longName := covOperationsShippingTermsRepeat("a", 300)
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": longName,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -203,7 +209,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingAmount(t *te
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-noval"),
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"currency": "usd",
 		},
@@ -224,7 +230,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingCurrency(t *
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-nounit"),
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount": "9.99",
 		},
@@ -245,7 +251,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnsupportedCurrency
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": covOperationsShippingTermsUniqueName("flatrate-fkunit"),
-		"type": "flat_rate_freight",
+		"type": "flat_rate",
 		"flat_rate": map[string]any{
 			"amount":   "9.99",
 			"currency": "eur",
@@ -262,13 +268,16 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnsupportedCurrency
 	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "flat_rate.currency")
 }
 
-// A free_shipping_service_level_ids entry naming a service level that does not exist is rejected, rather than silently dropped from the created term.
+// A free_shipping.service_level_ids entry naming a service level that does not exist is rejected, rather than silently dropped from the created term.
 func TestCovOperationsShippingTerms_CreateValidation_FreeShippingServiceLevelUnknownID(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
-		"name":                            covOperationsShippingTermsUniqueName("svclvl-fk"),
-		"type":                            "free_freight",
-		"free_shipping_service_level_ids": []string{"crop_00000000000000000"},
+		"name": covOperationsShippingTermsUniqueName("svclvl-fk"),
+		"type": "carrier_rate",
+		"free_shipping": map[string]any{
+			"minimum_order_value": map[string]any{"amount": "1.00", "currency": "usd"},
+			"service_level_ids":   []string{"crop_00000000000000000"},
+		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	if status >= 200 && status < 300 {
@@ -278,7 +287,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FreeShippingServiceLevelUnk
 		}
 	}
 	assert.True(t, status == 400 || status == 404 || status == 422,
-		"free_shipping_service_level_ids with a non-existent ID should return 400, 404, or 422, got %d: %s", status, string(body))
+		"free_shipping.service_level_ids with a non-existent ID should return 400, 404, or 422, got %d: %s", status, string(body))
 }
 
 // --- validation: PATCH explicit null on non-clearable fields ---
@@ -288,7 +297,7 @@ func TestCovOperationsShippingTerms_UpdateValidation_NullNameRejected(t *testing
 	name := covOperationsShippingTermsUniqueName("nullname")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -307,7 +316,7 @@ func TestCovOperationsShippingTerms_UpdateValidation_NullTypeRejected(t *testing
 	name := covOperationsShippingTermsUniqueName("nulltype")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
+		"type": "free",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -321,19 +330,18 @@ func TestCovOperationsShippingTerms_UpdateValidation_NullTypeRejected(t *testing
 	assert.Equal(t, 422, patchStatus, "explicit null on non-clearable 'type' should return 422, got body: %s", string(patchBody))
 }
 
-// --- update: clearing minimum_order_value and free_shipping_service_level_ids via explicit null ---
+// --- update: clearing free_shipping via explicit null ---
 
-func TestCovOperationsShippingTerms_UpdateClearMinimumOrderValueAndServiceLevels(t *testing.T) {
+func TestCovOperationsShippingTerms_UpdateClearFreeShipping(t *testing.T) {
 	t.Parallel()
 	name := covOperationsShippingTermsUniqueName("clearboth")
 	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
 		"name": name,
-		"type": "free_freight",
-		"minimum_order_value": map[string]any{
-			"amount":   "50.00",
-			"currency": "usd",
+		"type": "carrier_rate",
+		"free_shipping": map[string]any{
+			"minimum_order_value": map[string]any{"amount": "50.00", "currency": "usd"},
+			"service_level_ids":   []string{SeedServiceLevelID},
 		},
-		"free_shipping_service_level_ids": []string{SeedServiceLevelID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -341,19 +349,17 @@ func TestCovOperationsShippingTerms_UpdateClearMinimumOrderValueAndServiceLevels
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(shippingTermsPath + "/" + id)
-	require.NotNil(t, jsonObject(created, "minimum_order_value"), "minimum_order_value should be set after create")
+	require.NotNil(t, jsonObject(created, "free_shipping"), "free_shipping should be set after create")
 
 	patchStatus, patchBody, err := apiClient.Patch(shippingTermsPath+"/"+id, map[string]any{
-		"minimum_order_value":             nil,
-		"free_shipping_service_level_ids": nil,
+		"free_shipping": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
-	assert.Nil(t, patched["minimum_order_value"], "minimum_order_value should be cleared after sending null")
-	assert.Nil(t, patched["free_shipping_service_levels"], "free_shipping_service_levels should be null without ?include, regardless of clear")
+	assertNilField(t, patched, "free_shipping")
 }
 
 // --- helpers local to this file ---

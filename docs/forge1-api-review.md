@@ -60,30 +60,30 @@ These came out of a single resource review but apply everywhere. Implement once 
 Endpoints: list, create, retrieve, update, delete. Namespace `finance` stays.
 
 Resource
-- [ ] `status` enum: `active | archived` (rename `inactive`; DB `is_active` mapping unchanged).
-- [ ] `owner` stays expandable (`null` unless `include[]=owner`).
-- [ ] Docstrings per the table below.
+- [x] `status` enum: `active | archived` (rename `inactive`; DB `is_active` mapping unchanged).
+- [x] `owner` stays expandable (`null` unless `include[]=owner`).
+- [x] Docstrings per the table below.
 
 Create
-- [ ] Add `status` (`field.Optional[constants.PaymentTermStatus]`, default `active`).
+- [x] Add `status` (`field.Optional[constants.PaymentTermStatus]`, default `active`).
 
 Update
-- [ ] Add `status` (`field.Optional[constants.PaymentTermStatus]`).
+- [x] Add `status` (`field.Optional[constants.PaymentTermStatus]`).
 
 List
-- [ ] Add `statuses[]` filter; omitted = all statuses.
-- [ ] `q`: case-insensitive substring match on `name` (`LIKE '%q%'`, kept — table is bounded per tenant).
-- [ ] Limit default 25 / max 100 (cross-cutting).
+- [x] Add `statuses[]` filter; omitted = all statuses.
+- [x] `q`: case-insensitive substring match on `name` (`LIKE '%q%'`, kept — table is bounded per tenant).
+- [x] Limit default 25 / max 100 (cross-cutting).
 
 Delete
-- [ ] 409 `resource_in_use` when referenced by `account_relation.payment_term_id` (customers) or `sales_order.payment_term_id`. Both have indexes; two `EXISTS` probes.
-- [ ] Return `{id, object: "payment_term", deleted: true}`.
+- [x] 409 `resource_in_use` when referenced by `account_relation.payment_term_id` (customers) or `sales_order.payment_term_id`. Both have indexes; two `EXISTS` probes.
+- [x] Return `{id, object: "payment_term", deleted: true}`.
 
 Referencing endpoints
-- [ ] Customer create/update and sales order create/update reject an archived payment term.
+- [x] Customer create/update and sales order create/update reject an archived payment term.
 
 Schema
-- [ ] Drop unused `FULLTEXT payment_term_name_idx`.
+- [x] Drop unused `FULLTEXT payment_term_name_idx`.
 
 Deferred
 - `days_until_due` / due-date math — the real feature is more involved; not part of forge.1.
@@ -111,31 +111,31 @@ Docstrings
 Endpoints: list, create, retrieve, update, delete. Namespace `operations` stays.
 
 Resource
-- [ ] Add `status: active | archived` (new `is_active` column, schema migration), settable on create and update; `statuses[]` list filter.
-- [ ] `type` enum values: `free | flat_rate | carrier_rate` (were `free_freight | flat_rate_freight | carrier_rate_freight`).
-- [ ] Replace top-level `minimum_order_value` + `free_shipping_service_levels` with `free_shipping`: `null` or `{ minimum_order_value: Money, service_level_scope: all | selected, service_levels: expandable List }`.
-- [ ] Include keys become `free_shipping.service_levels`, `owner`, `owner.account` (money needs no unit include).
-- [ ] `flat_rate` and `free_shipping.minimum_order_value` are `Money`.
-- [ ] Quantities lose `id` (cross-cutting).
+- [x] Add `status: active | archived` (new `is_active` column, schema migration), settable on create and update; `statuses[]` list filter.
+- [x] `type` enum values: `free | flat_rate | carrier_rate` (were `free_freight | flat_rate_freight | carrier_rate_freight`).
+- [x] Replace top-level `minimum_order_value` + `free_shipping_service_levels` with `free_shipping`: `null` or `{ minimum_order_value: Money, service_level_scope: all | selected, service_levels: expandable List }`.
+- [x] Include keys become `free_shipping.service_levels`, `owner`, `owner.account` (money needs no unit include).
+- [x] `flat_rate` and `free_shipping.minimum_order_value` are `Money`.
+- [x] Quantities lose `id` (cross-cutting).
 
 Create / update
-- [ ] `flat_rate` (`Money`) required when `type = flat_rate`, rejected otherwise (422). On update, changing `type` away from `flat_rate` clears it; changing to `flat_rate` requires it in the same request.
-- [ ] `free_shipping` request: `{ minimum_order_value: Money (required), service_level_ids?: [] }` (omitted = all). `field.Clearable` on update, replaced as a whole. Rejected when `type = free`.
-- [ ] `name` unique (case-insensitive) among the account's terms and system defaults → 409 `resource_exists`.
-- [ ] Add `status` on create (default `active`) and update.
+- [x] `flat_rate` (`Money`) required when `type = flat_rate`, rejected otherwise (422). On update, changing `type` away from `flat_rate` clears it; changing to `flat_rate` requires it in the same request.
+- [x] `free_shipping` request: `{ minimum_order_value: Money (required), service_level_ids?: [] }` (omitted = all). `field.Clearable` on update, replaced as a whole. Rejected when `type = free`.
+- [x] `name` unique (case-insensitive) among the account's terms and system defaults → 409 `resource_exists`.
+- [x] Add `status` on create (default `active`) and update.
 
 List
-- [ ] `q`: case-insensitive substring match on `name`. `statuses[]` filter.
+- [x] `q`: case-insensitive substring match on `name`. `statuses[]` filter.
 
 Delete
-- [ ] 409 `resource_in_use` when referenced by `account_relation.shipping_term_id` or `sales_order.shipping_term_id` (both indexed).
-- [ ] Return `{id, object: "shipping_term", deleted: true}`.
+- [x] 409 `resource_in_use` when referenced by `account_relation.shipping_term_id` or `sales_order.shipping_term_id` (both indexed).
+- [x] Return `{id, object: "shipping_term", deleted: true}`.
 
 Referencing endpoints
-- [ ] Customer and sales order create/update reject an archived shipping term.
+- [x] Customer and sales order create/update reject an archived shipping term.
 
 Schema
-- [ ] Add `shipping_term.is_active`. Drop unused `FULLTEXT shipping_term_name_idx`.
+- [x] Add `shipping_term.is_active`. Drop unused `FULLTEXT shipping_term_name_idx`.
 
 Docstrings
 
@@ -164,27 +164,27 @@ Docstrings
 Endpoints: list, create, retrieve, update, delete, bulk upsert (public). `actions/export` and `actions/validate` are internal and out of scope.
 
 Resource
-- [ ] `type` → `dimension`; values `quantity | time | mass | volume | length | temperature | area` (`currency` removed — see money).
-- [ ] Remove `is_base_unit` (response and bulk upsert input).
-- [ ] No `status`. Units aren't archived; availability is controlled elsewhere (see unit groups review).
+- [x] `type` → `dimension`; values `quantity | time | mass | volume | length | temperature | area` (`currency` removed — see money).
+- [x] Remove `is_base_unit` (response and bulk upsert input).
+- [x] No `status`. Units aren't archived; availability is controlled elsewhere (see unit groups review).
 
 Create / update
-- [ ] `abbreviation` max length 32 on create, update and bulk upsert.
-- [ ] Reject `dimension: currency`.
+- [x] `abbreviation` max length 32 on create, update and bulk upsert.
+- [x] Reject `dimension: currency`.
 
 List
-- [ ] `type` → `dimensions[]`. `unit_group_ids[]` removed (unit groups retired).
-- [ ] `q`: case-insensitive substring on `name` or `abbreviation` (`LIKE '%q%'` for every length; drop the `MATCH` path).
+- [x] `type` → `dimensions[]`. `unit_group_ids[]` removed (unit groups retired).
+- [x] `q`: case-insensitive substring on `name` or `abbreviation` (`LIKE '%q%'` for every length; drop the `MATCH` path).
 
 Delete
-- [ ] In use (quantity, rate, or demand adjustment) → 409 `resource_in_use` (today `resource_conflict`).
-- [ ] Return `{id, object: "unit", deleted: true}`.
+- [x] In use (quantity, rate, or demand adjustment) → 409 `resource_in_use` (today `resource_conflict`).
+- [x] Return `{id, object: "unit", deleted: true}`.
 
 Bulk upsert
-- [ ] Match rows on `abbreviation` only (case-insensitive); unmatched rows create; a name collision → `resource_exists` on that row. Max stays 1000.
+- [x] Match rows on `abbreviation` only (case-insensitive); unmatched rows create; a name collision → `resource_exists` on that row. Max stays 1000.
 
 Schema
-- [ ] Drop `FULLTEXT unit_name_idx`, `unit_abbreviation_idx`, `unit_name_abbreviation_idx`.
+- [x] Drop `FULLTEXT unit_name_idx`, `unit_abbreviation_idx`, `unit_name_abbreviation_idx`.
 
 Docstrings
 
@@ -578,7 +578,7 @@ Docstrings
 
 ## Fixed lookups (E1) ✅ decided
 
-- [ ] Remove `GET /v1/sales/account-statuses[/{id}]` (replaced by the customer `standing` enum) and `GET /v1/sales/priorities[/{id}]`.
+- [x] Remove `GET /v1/sales/account-statuses[/{id}]` (replaced by the customer `standing` enum) and `GET /v1/sales/priorities[/{id}]`.
 - [ ] **Priority removed (decided 2026-10-08).** `priority` is dropped from customers (`defaults.priority`), sales orders and purchase orders, with no enum replacement. It only labeled records (shown on picks, shipments, invoices, the acknowledgment PDF and the customer export); nothing scheduled or sorted by it. "Ship this customer's orders in 1 day" is the customer's `defaults.lead_time`, and an order's urgency is its `commitment` (`promised_at`, `lead_time_override`, `ship_by_override_date`, giving a ship-by date). Documents and lists show the ship-by date where they showed priority. The `priority` table and columns are dropped after the migration.
 - [ ] Revisit in their domain reviews: `/v1/sales/sales-order-statuses`, `/v1/finance/adjustment-types`, `/v1/finance/transaction-methods`, `/v1/finance/transaction-types`, `/v1/operations/demand-override-types`, `/v1/operations/machine-downtime-reasons`, `/v1/operations/schedule-deviation-types`, `/v1/operations/location-types[/{id}]`, `/v1/operations/machine-status`. Remove each unless accounts can add values.
 
@@ -1463,6 +1463,8 @@ Shipping terms
 - `type` values `free_freight | flat_rate_freight | carrier_rate_freight` → `free | flat_rate | carrier_rate`.
 - Response `minimum_order_value` + `free_shipping_service_levels` → `free_shipping {minimum_order_value, service_level_scope, service_levels}`. Request `minimum_order_value` + `free_shipping_service_level_ids` → `free_shipping {minimum_order_value, service_level_ids}`. Include key `free_shipping_service_levels` → `free_shipping.service_levels`.
 - `flat_rate` required exactly when `type = flat_rate`; free shipping rejected on `free` terms; names must be unique.
+- Changing `type` away from `flat_rate` clears the flat rate, and changing it to `free` clears free shipping; a `flat_rate` term's flat rate can't be cleared. Free-shipping service levels without a minimum order value are rejected (422). Holds on preview.9 too.
+- Deleting a term a customer or order uses fails with 409 `resource_in_use` (preview.9 too).
 - New `status`; create and update accept it; list accepts `statuses[]`.
 
 Unit groups
@@ -1682,7 +1684,9 @@ Units
 - `type` → `dimension`; list filter `type` → `dimensions[]`; `currency` is no longer a dimension, so currency units disappear from lists.
 - `is_base_unit` removed.
 - Bulk upsert matches on `abbreviation` only, and rows no longer send `is_base_unit`.
-- `abbreviation` has a max length.
+- `abbreviation` has a max length (32).
+- Retrieving a currency unit (`dollar` and per-account copies) is 404.
+- A bulk-upsert row whose name another unit has fails that row with `resource_exists` (was matched by name and updated).
 
 ## Private integrations
 

@@ -137,36 +137,11 @@ func nullAccountUserStatus(ns gosql.NullString) *constants.AccountUserStatus {
 	return nil
 }
 
-func timeToNullTime(t *time.Time) gosql.NullTime {
-	if t == nil {
-		return gosql.NullTime{}
-	}
-	return gosql.NullTime{Time: *t, Valid: true}
-}
-
 func stringToNullString(s *string) gosql.NullString {
 	if s == nil || *s == "" {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: *s, Valid: true}
-}
-
-func ensureNullStringSlice(ids []string) []gosql.NullString {
-	if len(ids) == 0 {
-		return []gosql.NullString{{}}
-	}
-	result := make([]gosql.NullString, len(ids))
-	for i, id := range ids {
-		result[i] = gosql.NullString{String: id, Valid: true}
-	}
-	return result
-}
-
-func ensureStringSlice(ids []string) []string {
-	if len(ids) == 0 {
-		return []string{""}
-	}
-	return ids
 }
 
 func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomersParams) (*domain.ListCustomersResult, *apierror.APIError) {

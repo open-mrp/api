@@ -587,20 +587,20 @@ Docstrings
 Endpoints after: `GET/POST /v1/core/addresses`, `GET/PATCH/DELETE /v1/core/addresses/{id}`, `POST /v1/core/addresses/actions/validate`, `POST /v1/sales/contacts/actions/find-by-email`. Internal: `GET /v1/core/addresses/suggestions` (was public), `GET /v1/core/addresses/details/{id}`.
 
 Address
-- [ ] Flat shape, one vocabulary: `{ id, object, name, type, line_1, line_2, city, state, postal_code, country, phone, email, receive_calendar, created_at, updated_at }`. Remove the nested `geolocation` object (and its `id`/`object`); `street_line_1/2` → `line_1/2`, `locality` → `city`. Same names on create, update, validate and every embedded address. The `geolocation` table stays behind it as storage (24,037 addresses / 22,335 geolocations).
-- [ ] `country`: uppercase ISO 3166-1 alpha-2, validated (422). All prod rows already comply. `state`: free text, documented as the two-letter code in the US and Canada.
-- [ ] Move CRUD from `/v1/sales/addresses` to `/v1/core/addresses` (one namespace with validation).
-- [ ] `receive_calendar_id` → expandable `receive_calendar`; chain: address → customer → account (group step dropped per G2).
-- [ ] Delete: 409 `resource_in_use` when an order, invoice or shipment, or any customer/supplier `defaults.*_address`, uses it; returns the stub. No `status`.
-- [ ] List: `type` → `types[]`; `q`: substring on `name`, `line_1`, `line_2`, `city`, `state`, `postal_code`, `country` (≤ ~1,200 rows per account; EDI address matching relies on it).
-- [ ] Validate request takes the address field names (`address_line_1` → `line_1`, etc.).
-- [ ] `GET /v1/core/addresses/suggestions` becomes internal (paid Google Places proxy).
+- [x] Flat shape, one vocabulary: `{ id, object, name, type, line_1, line_2, city, state, postal_code, country, phone, email, receive_calendar, created_at, updated_at }`. Remove the nested `geolocation` object (and its `id`/`object`); `street_line_1/2` → `line_1/2`, `locality` → `city`. Same names on create, update, validate and every embedded address. The `geolocation` table stays behind it as storage (24,037 addresses / 22,335 geolocations).
+- [x] `country`: uppercase ISO 3166-1 alpha-2, validated (422). All prod rows already comply. `state`: free text, documented as the two-letter code in the US and Canada.
+- [x] Move CRUD from `/v1/sales/addresses` to `/v1/core/addresses` (one namespace with validation).
+- [x] `receive_calendar_id` → expandable `receive_calendar`; chain: address → customer → account (group step dropped per G2). *(ADR: `receive_calendar` and the request's `receive_calendar_id` are `visibility:"internal"`, since operating calendars are internal for forge.1.)*
+- [x] Delete: 409 `resource_in_use` when an order, invoice or shipment, or any customer/supplier `defaults.*_address`, uses it; returns the stub. No `status`.
+- [x] List: `type` → `types[]`; `q`: substring on `name`, `line_1`, `line_2`, `city`, `state`, `postal_code`, `country` (≤ ~1,200 rows per account; EDI address matching relies on it).
+- [x] Validate request takes the address field names (`address_line_1` → `line_1`, etc.).
+- [x] `GET /v1/core/addresses/suggestions` becomes internal (paid Google Places proxy).
 
 Documents snapshot their address (AD7, option A)
-- [ ] Sales orders, invoices and shipments (and purchase orders / receiving where they carry addresses) embed the address as a value with the address fields, copied at document creation; they keep an expandable `address` reference only as the source. Editing an address affects future documents only. Today `sales_order.billing_address_id` / `shipping_address_id`, `invoice.billing_address_id`, `shipment.shipping_address_id` reference the live row, so edits rewrite history. Backfill snapshots from current rows (already-edited history can't be recovered). Exact shape is settled in the sales orders / invoices / shipments reviews.
+- [ ] Sales orders, invoices and shipments (and purchase orders / receiving where they carry addresses) embed the address as a value with the address fields, copied at document creation; they keep an expandable `address` reference only as the source. Editing an address affects future documents only. Today `sales_order.billing_address_id` / `shipping_address_id`, `invoice.billing_address_id`, `shipment.shipping_address_id` reference the live row, so edits rewrite history. Backfill snapshots from current rows (already-edited history can't be recovered). Exact shape is settled in the sales orders / invoices / shipments reviews. *(ADR delivered the helpers; each document unit adds its own snapshot: core `AddressMed.Snapshot` (saved `address_id` or inline fields, not-found on `<param>.address_id`), `AddressSnapshot.Clone` (a shipment or invoice copying its order's), gateway `resourceloaders.StashAddressSnapshot` + `resourceregistry.AddressSnapshotSub` for the `<snapshot>.address` include, and `repository.NewAddressSnapshotBackfill` from F2.)*
 
 Contacts
-- [ ] Keep `POST /v1/sales/contacts/actions/find-by-email` (email stays out of the URL); `relationships[]` filter stays. Contact shape reviewed with account users; contacts get no portal access or email unless invited (Q1).
+- [x] Keep `POST /v1/sales/contacts/actions/find-by-email` (email stays out of the URL); `relationships[]` filter stays. Contact shape reviewed with account users; contacts get no portal access or email unless invited (Q1). *(ADR: the route is internal for forge.1; its matches already name the account user (`account_user` include). Portal access and invites are IDN1's.)*
 
 Docstrings
 
@@ -1516,6 +1516,10 @@ Addresses
 - List filter `type` → `types[]`.
 - Address autocomplete (`/suggestions`) is internal-only (dashboard may keep using it).
 - Documents embed their address snapshot; show the document's own copy, not the live address.
+- `receive_calendar_id` → expandable `receive_calendar` (internal; send `?include[]=receive_calendar`). Requests keep `receive_calendar_id`.
+- Validate is `POST /v1/core/addresses/actions/validate` (was PUT); its `components` return `line_1` / `line_2`.
+- Deleting an address in use is 409 `resource_in_use` (was 422), now also while a customer or supplier defaults to it or a location uses it.
+- Every inline address in a request (customer and supplier create, sales/purchase order create and update, account update, shipment rate estimates, customer registration) takes `line_1`, `line_2`, `city`; `country` must be an uppercase ISO code.
 
 Pricing
 - Account prices, volume discounts and pricing account groups are replaced by **price lists** (`/v1/sales/price-lists` + `/rules`): new screens for lists and rules (fixed, percent of base, tiered). Customer `price_groups` → `price_lists`; account groups gain `price_lists` and lose `type`.

@@ -17,15 +17,15 @@ import (
 // Request to list payment terms.
 type ListPaymentTermsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return payment terms with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 }
 
-// Returns a paginated list of payment terms.
+// Returns a list of payment terms.
 //
-// The list includes both payment terms created by your account and OpenMRP-provided system defaults.
+// Includes the terms your account created and the system defaults every account shares. Terms are sorted by creation date, newest first.
 type ListPaymentTermsEndpoint struct{}
 
 func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]] {
@@ -38,7 +38,6 @@ func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPaymentTermsRequest) (*apiresource.List[apiresource.PaymentTerm], *apierror.APIError) {
 			return svc.(PaymentTermSvc).ListPaymentTerms

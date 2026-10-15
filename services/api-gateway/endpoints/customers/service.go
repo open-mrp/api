@@ -716,9 +716,9 @@ func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
 	}
 
 	if c.DefaultPaymentTerm != nil {
-		ptStatus := constants.PaymentTermStatusInactive
+		ptStatus := constants.ArchiveStatusArchived
 		if c.DefaultPaymentTerm.IsActive {
-			ptStatus = constants.PaymentTermStatusActive
+			ptStatus = constants.ArchiveStatusActive
 		}
 		pt := &apiresource.PaymentTerm{
 			ID:     c.DefaultPaymentTerm.Id,

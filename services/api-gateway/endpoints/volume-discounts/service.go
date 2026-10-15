@@ -352,7 +352,7 @@ func stashVolumeDiscountMeta(ctx context.Context, meta *include.LoadMeta, d *pb.
 			Object:            constants.ObjectTypeUnit,
 			Name:              u.Name,
 			Abbreviation:      u.Abbreviation,
-			Type:              constants.UnitType(u.Type),
+			Dimension:         constants.UnitDimension(u.Type),
 			RatioNumerator:    u.RatioNumerator,
 			RatioDenominator:  u.RatioDenominator,
 			OffsetNumerator:   u.OffsetNumerator,

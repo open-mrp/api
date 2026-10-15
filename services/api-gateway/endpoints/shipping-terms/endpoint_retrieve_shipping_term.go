@@ -18,7 +18,9 @@ type RetrieveShippingTermRequest struct {
 	ShippingTermID string `path:"id" validate:"required"`
 }
 
-// Returns a shipping term by ID.
+// Retrieves a shipping term.
+//
+// Works for your account's terms and for system defaults.
 type RetrieveShippingTermEndpoint struct{}
 
 func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm] {
@@ -31,11 +33,10 @@ func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping.service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).GetShippingTerm

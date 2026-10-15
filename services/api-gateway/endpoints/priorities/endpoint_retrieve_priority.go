@@ -23,6 +23,8 @@ type RetrievePriorityRequest struct {
 // Retrieves a single priority level by ID or by code.
 //
 // Looking one up by code is usually more convenient, because other resources refer to a priority by code rather than by ID.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has no such route.
 type RetrievePriorityEndpoint struct{}
 
 func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority] {
@@ -32,10 +34,8 @@ func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPriorities, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePriority,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {
 			return svc.(PrioritySvc).GetPriority

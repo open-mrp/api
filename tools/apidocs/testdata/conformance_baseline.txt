@@ -84,8 +84,6 @@ public_docstrings PATCH /v1/catalog/product-lines/{id}
 public_docstrings PATCH /v1/catalog/products/{id}
 public_docstrings PATCH /v1/catalog/unit-groups/{id}
 public_docstrings PATCH /v1/catalog/unit-groups/{unit_group_id}/units/{id}
-public_docstrings PATCH /v1/catalog/units/{id}
-public_docstrings PATCH /v1/finance/payment-terms/{id}
 public_docstrings PATCH /v1/identity/account-users/{id}
 
 
@@ -94,7 +92,6 @@ public_docstrings PATCH /v1/operations/locations/{id}
 public_docstrings PATCH /v1/operations/machines/{id}
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
 public_docstrings PATCH /v1/operations/scanning-stations/{id}
-public_docstrings PATCH /v1/operations/shipping-terms/{id}
 public_docstrings PATCH /v1/sales/account-groups/{id}
 public_docstrings PATCH /v1/sales/account-prices/{id}
 public_docstrings PATCH /v1/sales/addresses/{id}
@@ -147,7 +144,6 @@ search_documented GET /v1/catalog/product-lines
 search_documented GET /v1/catalog/product-types
 search_documented GET /v1/catalog/products
 search_documented GET /v1/catalog/unit-groups
-search_documented GET /v1/catalog/units
 search_documented GET /v1/core/audit-events
 search_documented GET /v1/core/email-logs
 search_documented GET /v1/core/request-logs
@@ -158,7 +154,6 @@ search_documented GET /v1/finance/accounts/{account_id}/transactions
 search_documented GET /v1/finance/adjustment-types
 search_documented GET /v1/finance/invoices
 search_documented GET /v1/finance/open-credits
-search_documented GET /v1/finance/payment-terms
 search_documented GET /v1/finance/receivables
 search_documented GET /v1/finance/receivables/accounts/{account_id}
 search_documented GET /v1/finance/settlements
@@ -198,7 +193,6 @@ search_documented GET /v1/operations/scanning-stations
 search_documented GET /v1/operations/scanning-stations/{id}/batches
 search_documented GET /v1/operations/shipments
 search_documented GET /v1/operations/shipments/{shipment_id}/lines
-search_documented GET /v1/operations/shipping-terms
 search_documented GET /v1/operations/suppliers
 search_documented GET /v1/operations/suppliers/{supplier_id}/materials
 search_documented GET /v1/sales/account-groups

@@ -19,9 +19,9 @@ type DeleteUnitRequest struct {
 	UnitID string `path:"id" validate:"required"`
 }
 
-// Deletes a unit owned by your account.
+// Deletes a unit.
 //
-// The unit is also removed from every unit group it belongs to. System units, which are shared across all accounts, cannot be deleted, and neither can a unit that is a unit group's base unit — change the group's base unit or delete the group first — or one that any quantity or price is recorded in.
+// Only units your account created can be deleted, and only while no quantity, rate or price is recorded in it.
 type DeleteUnitEndpoint struct{}
 
 func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(UnitSvc).DeleteUnit, constants.ObjectTypeUnit, "id")
 		},

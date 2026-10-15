@@ -17,17 +17,17 @@ import (
 // Request to list units.
 type ListUnitsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name` or `abbreviation`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter by unit dimension.
-	Type *constants.UnitType `query:"type"`
-	// Return only units that belong to at least one of the given unit groups.
-	UnitGroupIDs []string `query:"unit_group_ids"`
+	// Only return units in one of these dimensions.
+	Dimensions []constants.UnitDimension `query:"dimensions"`
+	// Units in one of these unit groups, as 1.0.forge-preview.9 filtered them.
+	UnitGroupIDs []string `query:"unit_group_ids" visibility:"internal"`
 }
 
-// Returns a paginated list of units for the current account, including both account-owned and global system units.
+// Returns a list of units.
+//
+// Includes the units your account created and the system units every account shares. Units are sorted by creation date, newest first.
 type ListUnitsEndpoint struct{}
 
 func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsRequest, *apiresource.List[apiresource.Unit]] {
@@ -40,7 +40,6 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
 			return svc.(UnitSvc).ListUnits

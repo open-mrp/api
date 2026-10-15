@@ -14,31 +14,31 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update a unit.
+// Request to update a unit.
 type UpdateUnitRequest struct {
 	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
-	// Display name of the unit.
+	// Display name, such as `Kilogram`.
 	//
-	// Must be unique within the account.
+	// Unique (case-insensitive) among your account's units and the system units.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Short abbreviation for the unit.
+	// Short label, such as `kg`.
 	//
-	// Must be unique within the account.
-	Abbreviation field.Optional[string] `json:"abbreviation,omitzero" validate:"omitempty"`
-	// Numerator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	// Unique (case-insensitive) among your account's units and the system units.
+	Abbreviation field.Optional[string] `json:"abbreviation,omitzero" validate:"omitempty,max=32"`
+	// The ratio that converts a value in this unit to its dimension's base unit.
 	//
-	// A quantity is converted with `value × (ratio_numerator / ratio_denominator) + (offset_numerator / offset_denominator)`.
+	// A value converts as `value × ratio_numerator ÷ ratio_denominator + offset_numerator ÷ offset_denominator`.
 	RatioNumerator field.Optional[string] `json:"ratio_numerator,omitzero" validate:"omitempty,decimal" format:"decimal"`
-	// Denominator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	// The ratio that converts a value in this unit to its dimension's base unit.
 	//
-	// Must not be zero.
+	// The denominator can't be zero.
 	RatioDenominator field.Optional[string] `json:"ratio_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
-	// Numerator of the conversion offset, applied after the ratio for scales that do not share a zero point, such as temperature.
+	// An offset added after the ratio, for scales with different zero points, such as temperature.
 	OffsetNumerator field.Optional[string] `json:"offset_numerator,omitzero" validate:"omitempty,decimal" format:"decimal"`
-	// Denominator of the conversion offset.
+	// An offset added after the ratio, for scales with different zero points, such as temperature.
 	//
-	// Must not be zero.
+	// The denominator can't be zero.
 	OffsetDenominator field.Optional[string] `json:"offset_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
 }
 
@@ -55,9 +55,9 @@ func (*UpdateUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitRequest)
 }
 
-// Partially updates a unit owned by your account.
+// Updates a unit.
 //
-// System units cannot be modified, and a unit's dimension is fixed once it is created.
+// Only fields you send are changed. System units can't be updated, and `dimension` can't change after creation.
 type UpdateUnitEndpoint struct{}
 
 func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit] {
@@ -70,7 +70,6 @@ func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).UpdateUnit

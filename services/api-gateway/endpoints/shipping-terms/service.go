@@ -9,9 +9,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -55,9 +57,10 @@ func NewShippingTermSvc(config *ShippingTermSvcConfig) ShippingTermSvc {
 
 func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError) {
 	pbReq := &pb.ListShippingTermsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		IsActive: constants.IsActiveFilter(req.Statuses),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.list", domain.ServiceName,
@@ -91,12 +94,20 @@ func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *Retrieve
 }
 
 func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
+	if apiErr := exclusiveFreeShipping(req.FreeShipping.IsSet(), req.MinimumOrderValue.IsSet() || len(req.FreeShippingServiceLevelIDs) > 0); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreateShippingTermRequest{
 		Name:                        req.Name,
 		Type:                        string(req.Type),
+		Status:                      archiveStatusPtr(req.Status),
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
 		FlatRate:                    apirequest.OptionalMoneyToProto(req.FlatRate),
 		MinimumOrderValue:           apirequest.OptionalMoneyToProto(req.MinimumOrderValue),
+	}
+	if fs, ok := req.FreeShipping.Value(); ok {
+		pbReq.MinimumOrderValue = fs.MinimumOrderValue.ToProto()
+		pbReq.FreeShippingServiceLevelIds = fs.ServiceLevelIDs
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.create", domain.ServiceName,
@@ -112,9 +123,13 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 }
 
 func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
+	if apiErr := exclusiveFreeShipping(req.FreeShipping.WasProvided(), req.MinimumOrderValue.WasProvided() || req.FreeShippingServiceLevelIDs.WasProvided()); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdateShippingTermRequest{
-		Id:   req.ShippingTermID,
-		Name: req.Name.Ptr(),
+		Id:     req.ShippingTermID,
+		Name:   req.Name.Ptr(),
+		Status: archiveStatusPtr(req.Status),
 	}
 	if t, ok := req.Type.Value(); ok {
 		ts := string(t)
@@ -123,6 +138,19 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 	pbReq.FlatRate = apirequest.MoneyFieldToProto(req.FlatRate)
 	pbReq.MinimumOrderValue = apirequest.MoneyFieldToProto(req.MinimumOrderValue)
 	pbReq.FreeShippingServiceLevelIds = fieldpb.StringListSliceClearableToProto(req.FreeShippingServiceLevelIDs)
+	switch {
+	case req.FreeShipping.IsClear():
+		pbReq.MinimumOrderValue = apirequest.MoneyFieldToProto(field.Clear[apirequest.MoneyInput]())
+		pbReq.FreeShippingServiceLevelIds = fieldpb.StringListSliceClearableToProto(field.Clear[[]string]())
+	case req.FreeShipping.IsSet():
+		fs, _ := req.FreeShipping.Value()
+		pbReq.MinimumOrderValue = apirequest.MoneyFieldToProto(field.Set(fs.MinimumOrderValue))
+		levels := field.Clear[[]string]()
+		if len(fs.ServiceLevelIDs) > 0 {
+			levels = field.Set(fs.ServiceLevelIDs)
+		}
+		pbReq.FreeShippingServiceLevelIds = fieldpb.StringListSliceClearableToProto(levels)
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShippingTermResponse, error) {
@@ -163,4 +191,22 @@ func loadShippingTermByID(ctx context.Context, id string) (*apiresource.Shipping
 		return nil, apierror.NewNotFoundError("Shipping term not found.")
 	}
 	return v.(*apiresource.ShippingTerm), nil
+}
+
+// exclusiveFreeShipping refuses free_shipping sent beside the separate threshold fields preview.9 callers send.
+func exclusiveFreeShipping(section, legacy bool) *apierror.APIError {
+	if section && legacy {
+		return apierror.NewFieldError("free_shipping", apierror.CodeInvalidFormat, "Send free shipping in `free_shipping` only.")
+	}
+	return nil
+}
+
+// archiveStatusPtr is a request's optional status as core takes it.
+func archiveStatusPtr(status field.Optional[constants.ArchiveStatus]) *string {
+	v, ok := status.Value()
+	if !ok {
+		return nil
+	}
+	s := string(v)
+	return &s
 }

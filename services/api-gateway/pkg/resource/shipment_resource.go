@@ -248,7 +248,7 @@ var sampleShippingCaseDetail = ShippingCaseDetail{
 	FreightAmount:  &Money{Amount: "12.50", Currency: constants.CurrencyUSD},
 	FreightWeight: &Quantity{
 		Value: "5.000000000000000000000000000000",
-		Unit:  newSampleUnit("Pound", "lb", constants.UnitTypeMass),
+		Unit:  newSampleUnit("Pound", "lb", constants.UnitDimensionMass),
 	},
 	Carrier:   SampleCarrier,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),

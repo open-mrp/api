@@ -9,6 +9,7 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -68,17 +69,16 @@ func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) 
 }
 
 func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
-	var unitType *string
-	if req.Type != nil {
-		s := string(*req.Type)
-		unitType = &s
+	dimensions := make([]string, len(req.Dimensions))
+	for i, d := range req.Dimensions {
+		dimensions[i] = string(d)
 	}
 
 	pbReq := &pb.ListUnitsRequest{
 		Cursor:       req.Cursor,
 		Limit:        req.Limit,
 		Query:        req.Query,
-		Type:         unitType,
+		Dimensions:   dimensions,
 		UnitGroupIds: req.UnitGroupIDs,
 	}
 
@@ -109,14 +109,22 @@ func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*ap
 }
 
 func (m *unitSvcImpl) GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {
-	return loadUnitByID(ctx, req.UnitID)
+	unit, apiErr := loadUnitByID(ctx, req.UnitID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	// Money carries a currency, not a unit, so the legacy currency units are not units callers see.
+	if string(unit.Dimension) == string(constants.UnitTypeCurrency) {
+		return nil, apierror.NewNotFoundError("Unit not found.")
+	}
+	return unit, nil
 }
 
 func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 	pbReq := &pb.CreateUnitRequest{
 		Name:              req.Name,
 		Abbreviation:      req.Abbreviation,
-		Type:              string(req.Type),
+		Type:              string(req.Dimension),
 		RatioNumerator:    req.RatioNumerator,
 		RatioDenominator:  req.RatioDenominator,
 		OffsetNumerator:   req.OffsetNumerator,
@@ -165,12 +173,11 @@ func (m *unitSvcImpl) BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsR
 		units = append(units, &pb.BulkUpsertUnitInput{
 			Name:              u.Name,
 			Abbreviation:      u.Abbreviation,
-			Type:              string(u.Type),
+			Type:              string(u.Dimension),
 			RatioNumerator:    u.RatioNumerator,
 			RatioDenominator:  u.RatioDenominator,
 			OffsetNumerator:   u.OffsetNumerator,
 			OffsetDenominator: u.OffsetDenominator,
-			IsBaseUnit:        u.IsBaseUnit,
 		})
 	}
 

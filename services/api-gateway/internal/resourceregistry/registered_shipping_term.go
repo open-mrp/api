@@ -23,7 +23,7 @@ func init() {
 				Populate:    populateOwnerAccountOnShippingTerm,
 			},
 			{
-				Key:         "free_shipping_service_levels",
+				Key:         "free_shipping.service_levels",
 				Target:      constants.ObjectTypeServiceLevel,
 				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractFreeShippingServiceLevelIDsFromShippingTerm,
@@ -74,6 +74,9 @@ func extractFreeShippingServiceLevelIDsFromShippingTerm(ctx context.Context, par
 
 func populateFreeShippingServiceLevelsOnShippingTerm(ctx context.Context, parent any, loaded map[string]any) {
 	st := parent.(*apiresource.ShippingTerm)
+	if st.FreeShipping == nil {
+		return
+	}
 	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeShippingTerm, st.ID, "free_shipping_service_level_ids")
 
@@ -83,5 +86,5 @@ func populateFreeShippingServiceLevelsOnShippingTerm(ctx context.Context, parent
 			items = append(items, *(v.(*apiresource.ServiceLevel)))
 		}
 	}
-	st.FreeShippingServiceLevels = apiresource.NewList(items, apiresource.PageInfo{})
+	st.FreeShipping.ServiceLevels = apiresource.NewList(items, apiresource.PageInfo{})
 }

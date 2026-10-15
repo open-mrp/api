@@ -8,8 +8,10 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -49,7 +51,7 @@ func NewPaymentTermSvc(config *PaymentTermSvcConfig) PaymentTermSvc {
 }
 
 func (m *paymentTermSvcImpl) ListPaymentTerms(ctx context.Context, req *ListPaymentTermsRequest) (*apiresource.List[apiresource.PaymentTerm], *apierror.APIError) {
-	pbReq := &pb.ListPaymentTermsRequest{Cursor: req.Cursor, Limit: req.Limit, Query: req.Query}
+	pbReq := &pb.ListPaymentTermsRequest{Cursor: req.Cursor, Limit: req.Limit, Query: req.Query, IsActive: constants.IsActiveFilter(req.Statuses)}
 	resp, apiErr := grpcutil.CallRPC(ctx, paymentTermSvcTracer, "service.payment_terms.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPaymentTermsResponse, error) {
 			return m.coreClient.ListPaymentTerms(ctx, pbReq, opts...)
@@ -81,7 +83,7 @@ func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *RetrievePa
 func (m *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, paymentTermSvcTracer, "service.payment_terms.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreatePaymentTermResponse, error) {
-			return m.coreClient.CreatePaymentTerm(ctx, &pb.CreatePaymentTermRequest{Name: req.Name}, opts...)
+			return m.coreClient.CreatePaymentTerm(ctx, &pb.CreatePaymentTermRequest{Name: req.Name, Status: archiveStatusPtr(req.Status)}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
@@ -92,7 +94,7 @@ func (m *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, req *CreateP
 func (m *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, req *UpdatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, paymentTermSvcTracer, "service.payment_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdatePaymentTermResponse, error) {
-			return m.coreClient.UpdatePaymentTerm(ctx, &pb.UpdatePaymentTermRequest{Id: req.PaymentTermID, Name: req.Name.Ptr()}, opts...)
+			return m.coreClient.UpdatePaymentTerm(ctx, &pb.UpdatePaymentTermRequest{Id: req.PaymentTermID, Name: req.Name.Ptr(), Status: archiveStatusPtr(req.Status)}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
@@ -123,4 +125,14 @@ func loadPaymentTermByID(ctx context.Context, id string) (*apiresource.PaymentTe
 		return nil, apierror.NewNotFoundError("Payment term not found.")
 	}
 	return v.(*apiresource.PaymentTerm), nil
+}
+
+// archiveStatusPtr is a request's optional status as core takes it.
+func archiveStatusPtr(status field.Optional[constants.ArchiveStatus]) *string {
+	v, ok := status.Value()
+	if !ok {
+		return nil
+	}
+	s := string(v)
+	return &s
 }

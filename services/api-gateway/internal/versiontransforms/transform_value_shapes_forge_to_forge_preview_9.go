@@ -162,7 +162,7 @@ func preview9AnalyticsRate(m map[string]any) map[string]any {
 func displayIn(value string, unit any) string {
 	u, _ := unit.(map[string]any)
 	abbr, _ := u["abbreviation"].(string)
-	if dim, _ := u["type"].(string); dim == "currency" {
+	if dim, _ := u["type"].(string); dim == "currency" || u["dimension"] == "currency" {
 		return abbr + decimalfmt.Display(value, true)
 	}
 	if abbr == "" {

@@ -106,7 +106,7 @@ func NormalizeRateValue(value string) string {
 	return decimalfmt.Rate(value)
 }
 
-var sampleHourUnit = newSampleUnit("Hour", "hr", constants.UnitTypeTime)
+var sampleHourUnit = newSampleUnit("Hour", "hr", constants.UnitDimensionTime)
 
 var SampleMoney = &Money{Amount: "1234.56", Currency: constants.CurrencyUSD}
 

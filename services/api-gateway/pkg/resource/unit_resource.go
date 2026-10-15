@@ -12,45 +12,47 @@ const SampleUnitID = "un_82bd37dae5po"
 const SampleUnitName = "Kilogram"
 const SampleUnitAbbreviation = "kg"
 
-// Unit of measurement used for conversions and product quantities.
+// A unit of measure that quantities and rates are stated in, such as `kg` or `ea`.
 type Unit struct {
 	// Unit ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit"`
-	// Display name of the unit (e.g. "Gram", "Kilogram").
+	// Display name, such as `Kilogram`.
+	//
+	// Unique (case-insensitive) among your account's units and the system units.
 	Name string `json:"name" validate:"required"`
-	// Short abbreviation for the unit (e.g. "g", "kg").
+	// Short label, such as `kg`.
+	//
+	// Unique (case-insensitive) among your account's units and the system units.
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// The dimension this unit measures, such as mass, volume, or currency.
+	// What the unit measures.
 	//
-	// A unit can only be converted to another unit of the same dimension. The `quantity` dimension is for discrete countable items rather than a physical measure.
-	Type constants.UnitType `json:"type" validate:"required"`
-	// Numerator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	// Values convert only between units of the same dimension. `quantity` is for countable things, such as each, pair or case.
+	Dimension constants.UnitDimension `json:"dimension" validate:"required"`
+	// The ratio that converts a value in this unit to its dimension's base unit.
 	//
-	// A quantity is converted with `value × (ratio_numerator / ratio_denominator) + (offset_numerator / offset_denominator)`, so a kilogram in a gram-based dimension has a numerator of `1000` and a denominator of `1`.
+	// A value converts as `value × ratio_numerator ÷ ratio_denominator + offset_numerator ÷ offset_denominator`. A kilogram, with grams as the base, is `1000` / `1`. The denominator can't be zero.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Denominator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	// The ratio that converts a value in this unit to its dimension's base unit.
 	//
-	// Cannot be zero.
+	// A value converts as `value × ratio_numerator ÷ ratio_denominator + offset_numerator ÷ offset_denominator`. A kilogram, with grams as the base, is `1000` / `1`. The denominator can't be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
-	// Numerator of the conversion offset, applied after the ratio for scales that do not share a zero point, such as temperature.
+	// An offset added after the ratio, for scales with different zero points, such as temperature.
 	//
-	// Zero for units that convert by ratio alone.
+	// `0` / `1` for units with no offset. The denominator can't be zero.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Denominator of the conversion offset applied after the ratio.
+	// An offset added after the ratio, for scales with different zero points, such as temperature.
 	//
-	// Never zero; a unit with no offset carries a numerator of `0` over a denominator of `1`.
+	// `0` / `1` for units with no offset. The denominator can't be zero.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
-	// Whether this is the base unit for its dimension.
+	// Who owns this unit.
 	//
-	// Every other unit's conversion ratio is expressed relative to the base unit. Base units are platform-defined; units created through the API are never base units.
-	IsBaseUnit bool `json:"is_base_unit"`
-	// Owner of this resource.
+	// `system` units are shared by every account and are read-only; `account` units belong to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this unit was created.
+	// Time the unit was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this unit was last updated.
+	// Time the unit was last changed.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -59,40 +61,38 @@ var SampleUnit = &Unit{
 	Object:            constants.ObjectTypeUnit,
 	Name:              SampleUnitName,
 	Abbreviation:      SampleUnitAbbreviation,
-	Type:              constants.UnitTypeMass,
+	Dimension:         constants.UnitDimensionMass,
 	RatioNumerator:    "1000",
 	RatioDenominator:  "1",
 	OffsetNumerator:   "0",
 	OffsetDenominator: "1",
-	IsBaseUnit:        false,
 	Owner:             SampleOwnerSystem,
 	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-// SampleCurrencyUnit is a fully presented US Dollar unit for embedding in rate examples as a numerator (price) unit.
-var SampleCurrencyUnit = newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency)
+// SampleCurrencyUnit is the dollar unit the retiring transaction, settlement and cost resources still state money in.
+var SampleCurrencyUnit = newSampleUnit("US Dollar", "$", constants.UnitDimension(constants.UnitTypeCurrency))
 
 // SampleEachUnit is a fully presented discrete-count unit for embedding in rate examples as a per-each denominator.
-var SampleEachUnit = newSampleUnit("Each", "ea", constants.UnitTypeQuantity)
+var SampleEachUnit = newSampleUnit("Each", "ea", constants.UnitDimensionQuantity)
 
 func (*Unit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnit)
 }
 
 // newSampleUnit builds a complete sample Unit for embedding in other resources' examples. The conversion fields default to an identity base unit and the audit fields to the shared sample timestamps, so every embedded unit is a fully populated, schema-valid example (the exact ratio is immaterial for a nested reference). Use this instead of a partial &Unit{...} literal, which would leave required fields empty in the generated example.
-func newSampleUnit(name, abbreviation string, unitType constants.UnitType) *Unit {
+func newSampleUnit(name, abbreviation string, dimension constants.UnitDimension) *Unit {
 	return &Unit{
 		ID:                SampleUnitID,
 		Object:            constants.ObjectTypeUnit,
 		Name:              name,
 		Abbreviation:      abbreviation,
-		Type:              unitType,
+		Dimension:         dimension,
 		RatioNumerator:    "1",
 		RatioDenominator:  "1",
 		OffsetNumerator:   "0",
 		OffsetDenominator: "1",
-		IsBaseUnit:        true,
 		Owner:             SampleOwnerSystem,
 		CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 		UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

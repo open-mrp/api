@@ -142,7 +142,7 @@ var SampleTransactionAllocation2 = &TransactionAllocation{
 	Object: constants.ObjectTypeTransactionAllocation,
 	Amount: &Quantity{
 		Value: "500.000000000000000000000000000000",
-		Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		Unit:  SampleCurrencyUnit,
 	},
 	Note:        &sampleTransactionAllocation2Note,
 	Transaction: SampleTransactionDetail,

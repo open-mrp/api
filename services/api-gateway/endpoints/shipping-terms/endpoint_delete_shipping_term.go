@@ -19,9 +19,9 @@ type DeleteShippingTermRequest struct {
 	ShippingTermID string `path:"id" validate:"required"`
 }
 
-// Deletes a shipping term owned by your account.
+// Deletes a shipping term.
 //
-// System-provided default shipping terms cannot be deleted. The term's free-shipping service level rules, flat rate and minimum order value go with it, and deleting a term that has already been deleted returns an error rather than succeeding again.
+// Only terms your account created can be deleted, and only while no customer or sales order uses them. Archive a term that is in use by setting `status` to `archived`.
 type DeleteShippingTermEndpoint struct{}
 
 func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShippingTermRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ShippingTermSvc).DeleteShippingTerm, constants.ObjectTypeShippingTerm, "id")
 		},

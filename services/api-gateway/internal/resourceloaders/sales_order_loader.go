@@ -190,9 +190,9 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 		if info.PaymentTermName != nil {
 			pt.Name = *info.PaymentTermName
 		}
-		pt.Status = constants.PaymentTermStatusInactive
+		pt.Status = constants.ArchiveStatusArchived
 		if info.PaymentTermIsActive != nil && *info.PaymentTermIsActive {
-			pt.Status = constants.PaymentTermStatusActive
+			pt.Status = constants.ArchiveStatusActive
 		}
 		if info.PaymentTermCreatedAt != nil {
 			pt.CreatedAt = info.PaymentTermCreatedAt.AsTime()

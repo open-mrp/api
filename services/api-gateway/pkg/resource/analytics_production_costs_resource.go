@@ -171,7 +171,7 @@ var SampleAnalyzeProductionCostsResponse = &AnalyzeProductionCostsResponse{
 	StartsAt:             SampleAnalyticsPeriodStart,
 	EndsAt:               SampleAnalyticsPeriodEnd,
 	CurrencyUnit:         SampleCurrencyUnit,
-	TimeUnit:             newSampleUnit("Hour", "hr", constants.UnitTypeTime),
+	TimeUnit:             newSampleUnit("Hour", "hr", constants.UnitDimensionTime),
 	Totals:               SampleProductionCostTotals,
 	Departments:          NewList([]ProductionCostDepartment{*SampleProductionCostDepartment}, PageInfo{}),
 	Categories:           NewList([]ProductionCostCategory{*SampleProductionCostCategory}, PageInfo{}),

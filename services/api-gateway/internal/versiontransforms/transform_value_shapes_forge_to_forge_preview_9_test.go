@@ -1,6 +1,7 @@
 package versiontransforms
 
 import (
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -12,9 +13,12 @@ import (
 )
 
 const (
-	kgJSON   = `{"id":"un_kg","object":"unit","name":"Kilogram","abbreviation":"kg","type":"mass"}`
-	hrJSON   = `{"id":"un_hr","object":"unit","name":"Hour","abbreviation":"hr","type":"time"}`
-	pairJSON = `{"id":"un_pr","object":"unit","name":"Pair","abbreviation":"pr","type":"quantity"}`
+	kgJSON   = `{"id":"un_kg","object":"unit","name":"Kilogram","abbreviation":"kg","dimension":"mass"}`
+	hrJSON   = `{"id":"un_hr","object":"unit","name":"Hour","abbreviation":"hr","dimension":"time"}`
+	pairJSON = `{"id":"un_pr","object":"unit","name":"Pair","abbreviation":"pr","dimension":"quantity"}`
+
+	// kgPreview9JSON is kgJSON as preview.9 callers see it.
+	kgPreview9JSON = `{"id":"un_kg","object":"unit","name":"Kilogram","abbreviation":"kg","type":"mass","is_base_unit":false}`
 )
 
 func field(m map[string]any, path ...string) map[string]any {
@@ -63,9 +67,9 @@ func TestPreview9_QuantityGetsItsObjectAndDisplay(t *testing.T) {
 	t.Parallel()
 
 	got := downgrade(t, constants.ObjectTypeBatch, `{"id":"bt_1","object":"batch","quantity":{"value":"1200","unit":`+kgJSON+`}}`)
-	assert.Equal(t, map[string]any{"object": "quantity", "value": "1200", "display_value": "1,200 kg", "unit": decode(t, kgJSON)}, got["quantity"])
+	assert.Equal(t, map[string]any{"object": "quantity", "value": "1200", "display_value": "1,200 kg", "unit": decode(t, kgPreview9JSON)}, got["quantity"])
 
-	got = downgrade(t, constants.ObjectTypeTransaction, `{"id":"tx_1","object":"transaction","amount":{"value":"500.00","unit":{"id":"dollar","object":"unit","abbreviation":"$","type":"currency"}}}`)
+	got = downgrade(t, constants.ObjectTypeTransaction, `{"id":"tx_1","object":"transaction","amount":{"value":"500.00","unit":{"id":"dollar","object":"unit","abbreviation":"$","dimension":"currency"}}}`)
 	assert.Equal(t, "$500.00", field(got, "amount")["display_value"], "a quantity in a currency unit reads as money")
 }
 
@@ -111,8 +115,8 @@ func TestPreview9_OnlyValueShapesAreRewritten(t *testing.T) {
 	t.Parallel()
 
 	body := `{"id":"x_1","object":"thing","metadata":{"value":"a","unit":"b"},"totals":{"object":"sales_order_stage_total","amount":"1.00","completion":0.5},
-		"unit":` + kgJSON + `,"amount_and_more":{"amount":"1","currency":"usd","extra":true}}`
-	assert.Equal(t, decode(t, body), downgrade(t, "", body))
+		"unit":%s,"amount_and_more":{"amount":"1","currency":"usd","extra":true}}`
+	assert.Equal(t, decode(t, fmt.Sprintf(body, kgPreview9JSON)), downgrade(t, "", fmt.Sprintf(body, kgJSON)))
 }
 
 func upgrade(t *testing.T, body string) map[string]any {

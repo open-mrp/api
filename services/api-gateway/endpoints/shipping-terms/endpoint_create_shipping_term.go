@@ -15,45 +15,58 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
+// When a shipping term waives freight.
+type ShippingTermFreeShippingInput struct {
+	// Order total that must be exceeded for freight to be waived.
+	MinimumOrderValue apirequest.MoneyInput `json:"minimum_order_value" validate:"required"`
+	// Service levels that qualify for free freight. Omit to waive freight on every service level.
+	ServiceLevelIDs []string `json:"service_level_ids,omitzero"`
+}
+
 // Request to create a shipping term.
 type CreateShippingTermRequest struct {
-	// Human-readable name for the shipping term, used to identify it when assigning shipping terms to customers and orders.
+	// Display name, such as `Free over $500`.
+	//
+	// Unique (case-insensitive) among your account's terms and the system defaults.
 	Name string `json:"name" validate:"required,max=255"`
-	// Freight pricing model applied by this shipping term.
+	// How freight is charged.
 	//
-	// - `free_freight`: the buyer is never charged for shipping.
-	// - `flat_rate_freight`: the buyer is charged the fixed amount in `flat_rate`, regardless of what the carrier would have charged.
-	// - `carrier_rate_freight`: the buyer is charged the rate the carrier quotes for the order's carrier and service level.
+	// `free`: never charged. `flat_rate`: charged `flat_rate` on every order. `carrier_rate`: charged the carrier's quoted rate for the order's service level.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
-	// Fixed shipping charge applied to orders.
+	// Initial status.
 	//
-	// Used only when `type` is `flat_rate_freight`. A `flat_rate_freight` term created without a flat rate falls through to the carrier's quoted rate.
+	// Defaults to `active`; create as `archived` to set a term up before offering it.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Freight charged on every order.
+	//
+	// Required when `type` is `flat_rate`, and not allowed otherwise.
 	FlatRate field.Optional[apirequest.MoneyInput] `json:"flat_rate,omitzero"`
-	// Order total a buyer must exceed for this term's free-shipping rules to apply.
+	// Waives freight on orders over a minimum value.
 	//
-	// Above this total, freight is free for the service levels in `free_shipping_service_level_ids`.
-	MinimumOrderValue field.Optional[apirequest.MoneyInput] `json:"minimum_order_value,omitzero"`
-	// IDs of the service levels that ship for free once an order exceeds `minimum_order_value`.
-	//
-	// Leave this empty to let every service level ship free above the threshold. The request is rejected if any ID is not a service level available to your account.
-	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitzero"`
+	// Omit for no threshold. Not allowed when `type` is `free`.
+	FreeShipping field.Optional[ShippingTermFreeShippingInput] `json:"free_shipping,omitzero"`
+	// The free-shipping threshold as 1.0.forge-preview.9 sent it.
+	MinimumOrderValue field.Optional[apirequest.MoneyInput] `json:"minimum_order_value,omitzero" visibility:"internal"`
+	// The free-shipping service levels as 1.0.forge-preview.9 sent them.
+	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitzero" visibility:"internal"`
 }
 
 var sampleCreateShippingTermRequest = &CreateShippingTermRequest{
-	Name:                        "Prepaid",
-	Type:                        constants.ShippingTermTypeFlatRateFreight,
-	FlatRate:                    field.Some(apirequest.MoneyInput{Amount: "15.00", Currency: "usd"}),
-	MinimumOrderValue:           field.Some(apirequest.MoneyInput{Amount: "500.00", Currency: "usd"}),
-	FreeShippingServiceLevelIDs: []string{apiresource.SampleServiceLevelID},
+	Name: "Free over $500",
+	Type: constants.ShippingTermTypeCarrierRate,
+	FreeShipping: field.Some(ShippingTermFreeShippingInput{
+		MinimumOrderValue: apirequest.MoneyInput{Amount: "500.00", Currency: "usd"},
+		ServiceLevelIDs:   []string{apiresource.SampleServiceLevelID},
+	}),
 }
 
 func (*CreateShippingTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateShippingTermRequest)
 }
 
-// Creates a shipping term owned by your account.
+// Creates a shipping term.
 //
-// The new term takes effect on freight quoting once it is assigned as a customer's default shipping term.
+// The new term belongs to your account. It affects freight quotes once it's assigned to a customer or sales order.
 type CreateShippingTermEndpoint struct{}
 
 func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm] {
@@ -66,11 +79,10 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "owner.account", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "free_shipping.service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).CreateShippingTerm

@@ -9,57 +9,71 @@ import (
 )
 
 const SampleShippingTermID = "shtm_c5gxy05whw6r"
-const SampleShippingTermName = "Prepaid"
+const SampleShippingTermName = "Free over $500"
 
-// A named freight pricing rule that decides what a buyer pays for shipping.
-//
-// A customer's default shipping term is evaluated whenever freight is quoted for one of their orders. Freight exemptions on the customer, its type group, or any of its price groups are checked first and zero the freight charge before the shipping term is considered.
+// How freight is charged on orders, assigned to customers and sales orders.
 type ShippingTerm struct {
 	// Shipping term ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_term"`
-	// Human-readable name for the shipping term, used to identify it when assigning shipping terms to customers and orders.
+	// Display name, such as `Free over $500`.
+	//
+	// Unique (case-insensitive) among your account's terms and the system defaults.
 	Name string `json:"name" validate:"required"`
-	// Freight pricing model applied by this shipping term.
+	// How freight is charged.
 	//
-	// - `free_freight`: the buyer is never charged for shipping.
-	// - `flat_rate_freight`: the buyer is charged the fixed amount in `flat_rate`, regardless of what the carrier would have charged.
-	// - `carrier_rate_freight`: the buyer is charged the rate the carrier quotes for the order's carrier and service level.
+	// `free`: never charged. `flat_rate`: charged `flat_rate` on every order. `carrier_rate`: charged the carrier's quoted rate for the order's service level.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
-	// Provenance of this shipping term.
+	// Whether the term can be assigned to customers and sales orders.
 	//
-	// System-owned shipping terms are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned shipping terms are custom to your account.
-	Owner *Owner `json:"owner" expandable:"true"`
-	// Fixed shipping charge applied to the order.
+	// `archived` terms stay attached to the records already using them.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// Freight charged on every order.
 	//
-	// Used only when `type` is `flat_rate_freight`; ignored for other freight pricing models. A `flat_rate_freight` term with no flat rate falls through to the carrier's quoted rate.
+	// Present only when `type` is `flat_rate`.
 	FlatRate *Money `json:"flat_rate"`
-	// Order total a buyer must exceed for this term's free-shipping rules to apply.
+	// Waives freight on orders over a minimum value.
 	//
-	// Above this total, freight is free for the service levels in `free_shipping_service_levels`.
-	MinimumOrderValue *Money `json:"minimum_order_value"`
-	// Service levels that ship for free once an order exceeds `minimum_order_value`.
+	// `null` when the term has no threshold. Not allowed when `type` is `free`.
+	FreeShipping *ShippingTermFreeShipping `json:"free_shipping"`
+	// Who owns this shipping term.
 	//
-	// When this list is empty, every service level ships free above the threshold. When it is not empty, an order that picks a service level outside the list is not shipped free even above the threshold.
-	FreeShippingServiceLevels *List[ServiceLevel] `json:"free_shipping_service_levels" expandable:"true"`
-	// When this shipping term was created.
+	// `system` terms are shared defaults and are read-only; `account` terms belong to your account.
+	Owner *Owner `json:"owner" expandable:"true"`
+	// Time the shipping term was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this shipping term was last updated.
+	// Time the shipping term was last changed.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// When a shipping term waives freight.
+type ShippingTermFreeShipping struct {
+	// Order total that must be exceeded for freight to be waived.
+	MinimumOrderValue Money `json:"minimum_order_value" validate:"required"`
+	// Which service levels qualify for free freight.
+	//
+	// `all`: every service level. `selected`: only the levels in `service_levels`.
+	ServiceLevelScope constants.ServiceLevelScope `json:"service_level_scope" validate:"required"`
+	// Service levels that qualify for free freight when `service_level_scope` is `selected`. Empty when it is `all`.
+	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
+}
+
 var SampleShippingTerm = &ShippingTerm{
-	ID:                        SampleShippingTermID,
-	Object:                    constants.ObjectTypeShippingTerm,
-	Name:                      SampleShippingTermName,
-	Type:                      constants.ShippingTermTypeCarrierRateFreight,
-	Owner:                     SampleOwnerSystem,
-	FlatRate:                  nil,
-	MinimumOrderValue:         nil,
-	FreeShippingServiceLevels: NewList([]ServiceLevel{}, PageInfo{}),
-	CreatedAt:                 timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:                 timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:       SampleShippingTermID,
+	Object:   constants.ObjectTypeShippingTerm,
+	Name:     SampleShippingTermName,
+	Type:     constants.ShippingTermTypeCarrierRate,
+	Status:   constants.ArchiveStatusActive,
+	Owner:    SampleOwnerSystem,
+	FlatRate: nil,
+	FreeShipping: &ShippingTermFreeShipping{
+		MinimumOrderValue: Money{Amount: "500.00", Currency: "usd"},
+		ServiceLevelScope: constants.ServiceLevelScopeAll,
+		ServiceLevels:     NewList([]ServiceLevel{}, PageInfo{}),
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ShippingTerm) SchemaExample() any {

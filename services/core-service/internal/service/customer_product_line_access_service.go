@@ -221,6 +221,10 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 				return apierror.NewConflictErrorWithParam("customer_id", "Product line access for this customer already exists.")
 			}
 
+			if apiErr := requireGrantableProductLines(txCtx, txSvc.repos, params.AccountID, params.ProductLineIDs, nil); apiErr != nil {
+				return apiErr
+			}
+
 			created, apiErr := txRepo.Create(txCtx, params)
 			if apiErr != nil {
 				return apiErr
@@ -301,6 +305,10 @@ func (s *customerProductLineAccessSvcImpl) UpdateCustomerProductLineAccess(ctx c
 
 			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.CustomerID)
 			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := requireGrantableProductLines(txCtx, txSvc.repos, params.AccountID, params.ProductLineIDs, old.ProductLines); apiErr != nil {
 				return apiErr
 			}
 
@@ -403,5 +411,33 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+// requireGrantableProductLines rejects granting an archived product line. Lines already granted (keep) stay
+// grantable, so archiving a line never blocks editing the rest of a grant.
+func requireGrantableProductLines(ctx context.Context, repos domain.RepoFactory, accountID string, ids []string, keep []domain.ProductLineInfo) *apierror.APIError {
+	granted := make(map[string]bool, len(keep))
+	for _, pl := range keep {
+		granted[pl.ID] = true
+	}
+	var newIDs []string
+	for _, id := range ids {
+		if !granted[id] {
+			newIDs = append(newIDs, id)
+		}
+	}
+	if len(newIDs) == 0 {
+		return nil
+	}
+	lines, apiErr := repos.NewProductLineRepo().GetByIDs(ctx, accountID, newIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, pl := range lines {
+		if apiErr := domain.RequireAssignable("product_line_ids", "product line", pl.Status); apiErr != nil {
+			return apiErr
+		}
+	}
 	return nil
 }

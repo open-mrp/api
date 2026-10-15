@@ -203,6 +203,10 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 				return apierror.NewConflictErrorWithParam("account_group_id", "Product line access for this account group already exists.")
 			}
 
+			if apiErr := requireGrantableProductLines(txCtx, txSvc.repos, params.AccountID, params.ProductLineIDs, nil); apiErr != nil {
+				return apiErr
+			}
+
 			created, apiErr := txRepo.Create(txCtx, params)
 			if apiErr != nil {
 				return apiErr
@@ -279,6 +283,10 @@ func (s *accountGroupProductLineAccessSvcImpl) UpdateAccountGroupProductLineAcce
 
 			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.AccountGroupID)
 			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := requireGrantableProductLines(txCtx, txSvc.repos, params.AccountID, params.ProductLineIDs, old.ProductLines); apiErr != nil {
 				return apiErr
 			}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -134,6 +133,9 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 	if slices.Contains(params.Includes, "unit_group") {
 		// A group the tenant cannot see leaves that line's unit_group unpopulated rather than failing the page.
 		for _, pl := range result.ProductLines {
+			if pl.UnitGroupID == "" {
+				continue
+			}
 			unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, pl.UnitGroupID, params.Includes)
 			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return nil, tracing.Trace(span, apiErr)
@@ -187,7 +189,7 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if slices.Contains(params.Includes, "unit_group") {
+	if slices.Contains(params.Includes, "unit_group") && productLine.UnitGroupID != "" {
 		// The line itself was found, so a group the tenant cannot see leaves unit_group unpopulated rather than reporting the line as missing.
 		unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, productLine.UnitGroupID, params.Includes)
 		if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
@@ -199,48 +201,13 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	return productLine, nil
 }
 
-// validateLotDefault rejects a lot convention the line cannot express.
-//
-// Both halves move together — a size without a unit cannot say whether 60 means pairs or eaches — and the unit has to belong to the line's unit group, or the lot is counted in something no product in the line is measured in.
-func validateLotDefault(
-	ctx context.Context,
-	repo domain.ProductLineRepo,
-	unitGroupID string,
-	lot *domain.LotQuantityInput,
-) *apierror.APIError {
-	if lot == nil {
-		return nil
-	}
-	if lot.UnitID == "" {
-		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "A default lot needs a unit as well as a value.")
-	}
-
-	value, err := strconv.ParseFloat(lot.Value, 64)
-	if err != nil {
-		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot value must be a number.")
-	}
-	if value <= 0 {
-		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot value must be greater than zero.")
-	}
-
-	inGroup, apiErr := repo.IsUnitInGroup(ctx, unitGroupID, lot.UnitID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !inGroup {
-		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot unit must belong to this product line's unit group.")
-	}
-	return nil
-}
-
 // CreateProductLine creates a new product line.
 //
 // Business logic:
 // 1. Rejects a name already used by another line visible to the account.
-// 2. Validates the referenced unit group exists (scoped to the account).
-// 3. Validates the default lot, when supplied, carries both a value and a unit belonging to the line's unit group.
-// 4. Creates the line (and its lot quantity row) idempotently inside a transaction.
-// 5. Publishes an audit event for the creation in the same transaction.
+// 2. Validates the referenced unit group, when given, exists (scoped to the account).
+// 3. Creates the line idempotently inside a transaction; it starts active unless status says otherwise.
+// 4. Publishes an audit event for the creation in the same transaction.
 func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domain.CreateProductLineParams) (*domain.ProductLineFull, *apierror.APIError) {
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.create")
 	defer span.End()
@@ -293,12 +260,12 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 			}
 
 			// Validate the referenced unit group exists before persisting so a bogus unit_group_id is rejected and the tx rolls back instead of committing a dangling reference.
-			if _, apiErr := txRepo.GetUnitGroup(txCtx, params.AccountID, params.UnitGroupID, nil); apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := validateLotDefault(txCtx, txRepo, params.UnitGroupID, params.DefaultLot); apiErr != nil {
-				return apiErr
+			if params.UnitGroupID != nil && *params.UnitGroupID != "" {
+				if _, apiErr := txRepo.GetUnitGroup(txCtx, params.AccountID, *params.UnitGroupID, nil); apiErr != nil {
+					return apiErr
+				}
+			} else {
+				params.UnitGroupID = nil
 			}
 
 			created, apiErr := txRepo.Create(txCtx, productLineID, params)
@@ -306,7 +273,7 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 				return apiErr
 			}
 
-			if slices.Contains(params.Includes, "unit_group") {
+			if slices.Contains(params.Includes, "unit_group") && created.UnitGroupID != "" {
 				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, params.AccountID, created.UnitGroupID, params.Includes)
 				if apiErr != nil {
 					return apiErr
@@ -348,9 +315,8 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 // 1. Rejects edits to system-default product lines.
 // 2. Rejects a name already used by another line visible to the account.
 // 3. Validates the referenced unit group, when changed, exists (scoped to the account).
-// 4. Validates the default lot against the unit group the line will have after the edit.
-// 5. Applies the update (including lot set/edit/clear) idempotently inside a transaction.
-// 6. Publishes an audit event with the computed field changes in the same transaction.
+// 4. Applies the update idempotently inside a transaction.
+// 5. Publishes an audit event with the computed field changes in the same transaction.
 func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domain.UpdateProductLineParams) (*domain.ProductLineFull, *apierror.APIError) {
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.update")
 	defer span.End()
@@ -418,23 +384,12 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 				}
 			}
 
-			// Checked against the group the line will have after this edit, not the one it had before: moving a line to a new unit group and setting its lot in the same request must be judged as a whole.
-			if !params.ClearDefaultLot {
-				unitGroupID := old.UnitGroupID
-				if params.UnitGroupID != nil && *params.UnitGroupID != "" {
-					unitGroupID = *params.UnitGroupID
-				}
-				if apiErr := validateLotDefault(txCtx, txRepo, unitGroupID, params.DefaultLot); apiErr != nil {
-					return apiErr
-				}
-			}
-
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 
-			if slices.Contains(params.Includes, "unit_group") {
+			if slices.Contains(params.Includes, "unit_group") && updated.UnitGroupID != "" {
 				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, params.AccountID, updated.UnitGroupID, params.Includes)
 				if apiErr != nil {
 					return apiErr
@@ -475,8 +430,9 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 // Business logic:
 // 1. Rejects deletion of system-default product lines.
 // 2. Returns an already-deleted error when a tombstone exists for the line.
-// 3. Records a deleted-record tombstone and deletes the line in one transaction.
-// 4. Publishes an audit event for the deletion in the same transaction.
+// 3. Rejects with resource_in_use while a product, price, sales target or territory uses the line.
+// 4. Records a deleted-record tombstone and deletes the line, with its customer and account-group access, in one transaction.
+// 5. Publishes an audit event for the deletion in the same transaction.
 func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineID string) *apierror.APIError {
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.delete")
 	defer span.End()
@@ -517,6 +473,10 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productLineSvcImpl) *apierror.APIError {
+		if apiErr := domain.ProductLineReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), productLine.ID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProductLine, productLine.ID, accountID, productLine); apiErr != nil {
 			return apiErr
 		}

@@ -34,16 +34,14 @@ type ProductLineFull struct {
 	Notes            *string                    `audit:"notes"`
 	CommissionPolicy constants.CommissionPolicy `audit:"commission_policy"`
 	FreightPolicy    constants.FreightPolicy    `audit:"freight_policy"`
-	UnitGroupID      string                     `audit:"unit_group_id"`
-	// The lot products in this line are made in, carried as a quantity so the number and its unit stay one value: 60 pairs and 60 eaches are different lots, and a size on its own cannot say which. Flattened here the way credit_limit is on a customer.
-	DefaultLotID     *string `audit:"default_lot_id"`
-	DefaultLotValue  *string `audit:"default_lot_value"`
-	DefaultLotUnitID *string `audit:"default_lot_unit_id"`
-	// How products in this line are produced when they do not say for themselves; nil falls through to the account default.
-	FulfillmentPolicyCode *string `audit:"fulfillment_policy_code"`
-	AccountID             *string
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	// UnitGroupID is empty for a line whose products are measured in their category's group.
+	UnitGroupID string `audit:"unit_group_id"`
+	// Supply is where the line's products come from when they don't say for themselves; nil falls through to the account default.
+	Supply    *constants.Supply       `audit:"supply"`
+	Status    constants.ArchiveStatus `audit:"status"`
+	AccountID *string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
 	// Expandable sub-resources (populated via includes)
 	UnitGroup *ProductLineUnitGroup
@@ -69,7 +67,9 @@ type ListProductLinesParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
-	Includes  []string
+	// IsActive narrows to active (true) or archived (false) lines; nil returns both.
+	IsActive *bool
+	Includes []string
 }
 
 // carries an export's filters — the list params without pagination, plus the cap
@@ -92,28 +92,28 @@ type GetProductLineParams struct {
 }
 
 type CreateProductLineParams struct {
-	AccountID             string
-	Name                  string
-	UnitGroupID           string
-	CommissionPolicy      constants.CommissionPolicy
-	FreightPolicy         constants.FreightPolicy
-	DefaultLot            *LotQuantityInput
-	Includes              []string
-	FulfillmentPolicyCode *string
+	AccountID        string
+	Name             string
+	Description      *string
+	UnitGroupID      *string
+	CommissionPolicy constants.CommissionPolicy
+	FreightPolicy    constants.FreightPolicy
+	Supply           *constants.Supply
+	Status           constants.ArchiveStatus
+	Includes         []string
 }
 
 type UpdateProductLineParams struct {
 	AccountID        string
 	ProductLineID    string
 	Name             *string
+	Description      field.Clearable[string]
 	CommissionPolicy *constants.CommissionPolicy
 	FreightPolicy    *constants.FreightPolicy
 	UnitGroupID      *string
-	DefaultLot       *LotQuantityInput
-	// ClearDefaultLot removes the line's lot convention entirely.
-	ClearDefaultLot       bool
-	Includes              []string
-	FulfillmentPolicyCode field.Clearable[string]
+	Supply           field.Clearable[constants.Supply]
+	Status           *constants.ArchiveStatus
+	Includes         []string
 }
 
 type DeleteProductLineParams struct {
@@ -123,7 +123,8 @@ type DeleteProductLineParams struct {
 
 // UpsertProductLineParams holds the fields for a single product line in a bulk upsert.
 type UpsertProductLineParams struct {
-	Name             string
+	Name string
+	// UnitGroup is optional; a zero identifier leaves the line without a unit group.
 	UnitGroup        ObjectIdentifier
 	CommissionPolicy constants.CommissionPolicy
 	FreightPolicy    constants.FreightPolicy
@@ -171,3 +172,16 @@ type LotQuantityInput struct {
 	Value  string
 	UnitID string
 }
+
+// ProductLineReferences blocks deleting a line that products, prices, sales targets or territories still use.
+var ProductLineReferences = RegisterReferences(References{
+	Noun:       "product line",
+	Archivable: true,
+	Probes: []ReferenceProbe{
+		{Label: "products", Table: "product", Column: "product_line_id"},
+		{Label: "account prices", Table: "account_price", Column: "product_line_id"},
+		{Label: "volume discounts", Table: "_product_lines_quantity_discounts", Column: "A"},
+		{Label: "sales targets", Table: "product_line_target", Column: "product_line_id"},
+		{Label: "territories", Table: "territory", Column: "product_line_id"},
+	},
+})

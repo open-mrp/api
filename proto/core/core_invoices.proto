@@ -499,23 +499,19 @@ message ProductLineInfo {
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   optional ItemCategoryUnitGroupInfo unit_group = 11;
-  // The lot products in this line are made in, as a quantity: the number and its unit are
-  // one value, since 60 pairs and 60 eaches are different lots.
-  optional ProductLineDefaultLotInfo default_lot = 12;
-  // How products in this line are produced when they do not say for themselves.
-  optional string fulfillment_policy_code = 13;
+  reserved 12, 13;
+  // Where the line's products come from when they don't say for themselves: stock | make | buy.
+  optional string supply = 14;
+  // active | archived.
+  string status = 15;
 }
 
-message ProductLineDefaultLotInfo {
-  string id = 1;
-  string value = 2;
-  string unit_id = 3;
-}
 message ListProductLinesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  repeated string statuses = 5;
 }
 message ListProductLinesResponse {
   repeated ProductLineInfo product_lines = 1;
@@ -536,12 +532,14 @@ message GetProductLineResponse {
 }
 message CreateProductLineRequest {
   string name = 1;
-  string unit_group_id = 2;
+  optional string unit_group_id = 2;
   string commission_policy = 3;
   string freight_policy = 4;
   repeated string includes = 5;
-  optional QuantityPatch default_lot = 6;
-  optional string fulfillment_policy_code = 7;
+  reserved 6, 7;
+  optional string description = 8;
+  optional string supply = 9;
+  optional string status = 10;
 }
 message CreateProductLineResponse {
   ProductLineInfo product_line = 1;
@@ -553,8 +551,10 @@ message UpdateProductLineRequest {
   optional string freight_policy = 4;
   optional string unit_group_id = 5;
   repeated string includes = 6;
-  optional QuantityPatch default_lot = 7;
-  optional StringPatch fulfillment_policy_code = 8;
+  reserved 7, 8;
+  optional StringPatch description = 9;
+  optional StringPatch supply = 10;
+  optional string status = 11;
 }
 message UpdateProductLineResponse {
   ProductLineInfo product_line = 1;

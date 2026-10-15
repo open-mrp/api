@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
-	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,49 +16,45 @@ import (
 
 // Request to create a product line.
 type CreateProductLineRequest struct {
-	// Display name of the product line.
+	// Display name, such as `Outdoor`.
 	//
-	// Must be unique among the product lines visible to your account, including the shared system lines; a duplicate name returns a conflict error.
+	// Unique (case-insensitive) among your account's lines and the system lines.
 	Name string `json:"name" validate:"required,max=255"`
-	// ID of the unit group to associate with this product line.
+	// Description of the line, shown to customers in the portal.
+	Description field.Optional[string] `json:"description,omitzero" validate:"omitempty,max=5000"`
+	// Whether the line can be newly assigned: `active` or `archived`. Defaults to `active`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Whether sales of this line's products earn commission: `applied` or `exempt`.
 	//
-	// The unit group determines the set of units available to products in this product line. It must be a unit group your account owns or one of the shared system unit groups.
-	UnitGroupID string `json:"unit_group_id" validate:"required"`
-	// Default commission policy for products in this product line.
-	//
-	// - `commission_exempt`: no commission applies to these products.
-	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
+	// A customer's or account group's policy can override it.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// The lot products in this line are made in — a doff, a pallet.
+	// Whether this line's products add a freight charge: `billed` or `free`.
 	//
-	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to the unit group given by `unit_group_id`. The value must be greater than zero. Leave this out for a line with no lot convention, and planning falls back to the lot of the line an item feeds into, and then to the account-wide default lot size.
-	DefaultLot field.Optional[apirequest.QuantityInput] `json:"default_lot,omitzero"`
-	// How products in this line are produced when they do not say for themselves.
-	//
-	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
-	// - `make_to_order`: built only against orders already on the book, holding no buffer.
-	FulfillmentPolicy field.Optional[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
-	// Default freight policy for products in this product line.
-	//
-	// - `free_freight`: these products do not incur a freight charge.
-	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
+	// A customer's or account group's policy can override it.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
+	// Where this line's items come from when they don't say for themselves: `stock`, `make` or `buy`.
+	//
+	// Omit it to use the account default.
+	Supply field.Optional[constants.Supply] `json:"supply,omitzero"`
+	// Unit group the line's products are priced in. Omit it to price them in their category's group.
+	UnitGroupID field.Optional[string] `json:"unit_group_id,omitzero" visibility:"internal"`
 }
 
 var sampleCreateProductLineRequest = &CreateProductLineRequest{
 	Name:             apiresource.SampleProductLineName,
-	UnitGroupID:      apiresource.SampleUnitGroupID,
+	Description:      field.Some("Bolts, screws, and anchors for heavy industrial assembly."),
 	CommissionPolicy: constants.CommissionPolicyExempt,
 	FreightPolicy:    constants.FreightPolicyBilled,
+	Supply:           field.Some(constants.SupplyStock),
 }
 
 func (*CreateProductLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductLineRequest)
 }
 
-// Creates a product line owned by your account.
+// Creates a product line.
 //
-// The new line starts with no products; assign products to it by setting their product line. Customers and account groups can only be granted access to lines your account owns, so this is the starting point for scoping a customer's catalog.
+// The new line belongs to your account and starts with no products. Set a product's line to add it. Customers and account groups can only be granted lines your account owns.
 type CreateProductLineEndpoint struct{}
 
 func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine] {
@@ -67,22 +62,18 @@ func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Product Line",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/product-lines",
+		Route:             productLinesRoute,
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).CreateProductLine
 		},
 		LocationFunc: func(resp *apiresource.ProductLine) string {
-			return "/v1/catalog/product-lines/" + resp.ID
+			return productLinesRoute + "/" + resp.ID
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot"},
-		}),
+		IncludeConfig: productLineIncludes(),
 	})
 }

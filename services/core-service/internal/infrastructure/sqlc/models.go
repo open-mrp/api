@@ -1165,6 +1165,7 @@ type ItemCategory struct {
 	AccountID            sql.NullString
 	ItemCategoryTypeCode string
 	UnitGroupID          string
+	DefaultLotSizeID     sql.NullString
 }
 
 type ItemCategoryType struct {
@@ -1675,11 +1676,13 @@ type ProductLine struct {
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 	AccountID             sql.NullString
-	UnitGroupID           string
 	IsCommissionExempt    bool
 	IsFreightExempt       bool
 	DefaultLotID          sql.NullString
 	FulfillmentPolicyCode sql.NullString
+	IsActive              bool
+	SupplyCode            sql.NullString
+	UnitGroupID           sql.NullString
 }
 
 type ProductLineTarget struct {

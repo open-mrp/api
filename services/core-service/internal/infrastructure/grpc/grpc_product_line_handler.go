@@ -13,28 +13,21 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// lotInputFromPatch reads a lot off a QuantityPatch. A clear carries no value, and a patch missing either half is not a lot the service can act on, so both cases yield nil and the clear flag is read separately.
-func lotInputFromPatch(patch *pb.QuantityPatch) *domain.LotQuantityInput {
-	if patch == nil || patch.Clear || patch.Value == nil || patch.UnitId == nil {
-		return nil
-	}
-	return &domain.LotQuantityInput{Value: *patch.Value, UnitID: *patch.UnitId}
-}
-
 func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 	if pl == nil {
 		return nil
 	}
 
 	info := &pb.ProductLineInfo{
-		Id:                    pl.ID,
-		Name:                  pl.Name,
-		CommissionPolicy:      string(pl.CommissionPolicy),
-		FreightPolicy:         string(pl.FreightPolicy),
-		UnitGroupId:           pl.UnitGroupID,
-		CreatedAt:             timestamppb.New(pl.CreatedAt),
-		UpdatedAt:             timestamppb.New(pl.UpdatedAt),
-		FulfillmentPolicyCode: pl.FulfillmentPolicyCode,
+		Id:               pl.ID,
+		Name:             pl.Name,
+		CommissionPolicy: string(pl.CommissionPolicy),
+		FreightPolicy:    string(pl.FreightPolicy),
+		UnitGroupId:      pl.UnitGroupID,
+		CreatedAt:        timestamppb.New(pl.CreatedAt),
+		UpdatedAt:        timestamppb.New(pl.UpdatedAt),
+		Supply:           pl.Supply.StringPtr(),
+		Status:           string(pl.Status),
 	}
 
 	if pl.Description != nil {
@@ -47,15 +40,6 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 
 	if pl.AccountID != nil {
 		info.AccountId = pl.AccountID
-	}
-
-	// All three or none: a value without a unit cannot say whether 60 means pairs or eaches, so a half-joined lot is not serialized at all.
-	if pl.DefaultLotID != nil && pl.DefaultLotValue != nil && pl.DefaultLotUnitID != nil {
-		info.DefaultLot = &pb.ProductLineDefaultLotInfo{
-			Id:     *pl.DefaultLotID,
-			Value:  *pl.DefaultLotValue,
-			UnitId: *pl.DefaultLotUnitID,
-		}
 	}
 
 	if pl.UnitGroup != nil {
@@ -104,6 +88,7 @@ func (h *gRPCHandler) ListProductLines(ctx context.Context, req *pb.ListProductL
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
+		IsActive: constants.IsActiveFilter(archiveStatuses(req.Statuses)),
 		Includes: req.Includes,
 	}
 
@@ -156,13 +141,16 @@ func (h *gRPCHandler) CreateProductLine(ctx context.Context, req *pb.CreateProdu
 
 	params := domain.CreateProductLineParams{
 		Name:             req.Name,
+		Description:      req.Description,
 		UnitGroupID:      req.UnitGroupId,
 		CommissionPolicy: constants.CommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:    constants.FreightPolicy(req.FreightPolicy),
+		Status:           constants.ArchiveStatus(req.GetStatus()),
 		Includes:         req.Includes,
-
-		DefaultLot:            lotInputFromPatch(req.DefaultLot),
-		FulfillmentPolicyCode: req.FulfillmentPolicyCode,
+	}
+	if req.Supply != nil {
+		supply := constants.Supply(*req.Supply)
+		params.Supply = &supply
 	}
 
 	productLine, apiErr := h.productLineSvc.CreateProductLine(ctx, params)
@@ -186,12 +174,14 @@ func (h *gRPCHandler) UpdateProductLine(ctx context.Context, req *pb.UpdateProdu
 	params := domain.UpdateProductLineParams{
 		ProductLineID: req.Id,
 		Name:          req.Name,
+		Description:   fieldpb.StringClearableFromProto(req.Description),
 		UnitGroupID:   req.UnitGroupId,
+		Supply:        fieldpb.EnumClearableFromProto[constants.Supply](req.Supply),
 		Includes:      req.Includes,
-
-		DefaultLot:            lotInputFromPatch(req.DefaultLot),
-		ClearDefaultLot:       req.DefaultLot != nil && req.DefaultLot.Clear,
-		FulfillmentPolicyCode: fieldpb.StringClearableFromProto(req.FulfillmentPolicyCode),
+	}
+	if req.Status != nil {
+		status := constants.ArchiveStatus(*req.Status)
+		params.Status = &status
 	}
 	if req.CommissionPolicy != nil {
 		cp := constants.CommissionPolicy(*req.CommissionPolicy)
@@ -266,4 +256,12 @@ func (h *gRPCHandler) BulkUpsertProductLines(ctx context.Context, req *pb.BulkUp
 	}
 
 	return &pb.BulkUpsertProductLinesResponse{Job: jobToProto(job)}, nil
+}
+
+func archiveStatuses(values []string) []constants.ArchiveStatus {
+	out := make([]constants.ArchiveStatus, len(values))
+	for i, v := range values {
+		out[i] = constants.ArchiveStatus(v)
+	}
+	return out
 }

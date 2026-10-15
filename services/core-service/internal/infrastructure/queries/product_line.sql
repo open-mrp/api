@@ -7,23 +7,20 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL)
--- Residual: free-text search is a substring match on the name, so it cannot use the
--- FULLTEXT index (which does word matching). The set is already bounded to the tenant's
--- (plus global) product lines, which number in the dozens.
+-- Residual: search is a substring match on the name, and the status filter has no index of its own. The set is
+-- already bounded to the tenant's (plus global) product lines, which number in the dozens.
 AND (
     sqlc.narg('search_query') IS NULL
     OR pl.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR pl.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR pl.created_at < sqlc.narg('cursor_created_at')
@@ -41,23 +38,18 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL)
--- Residual: free-text search is a substring match on the name, so it cannot use the
--- FULLTEXT index (which does word matching). The set is already bounded to the tenant's
--- (plus global) product lines, which number in the dozens.
 AND (
     sqlc.narg('search_query') IS NULL
     OR pl.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR pl.is_active = sqlc.narg('is_active'))
 AND (
     pl.created_at > sqlc.arg('cursor_created_at')
     OR (pl.created_at = sqlc.arg('cursor_created_at') AND pl.id > sqlc.arg('cursor_id'))
@@ -74,15 +66,12 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id IN (sqlc.slice('ids'));
 
 -- name: GetProductLinesByIDsScoped :many
@@ -94,15 +83,12 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id IN (sqlc.slice('ids'))
 AND (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
 
@@ -115,15 +101,12 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id = sqlc.arg('id')
 AND (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
 
@@ -131,22 +114,24 @@ AND (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
 INSERT INTO product_line (
     id,
     name,
+    description,
     is_commission_exempt,
     is_freight_exempt,
     unit_group_id,
-    default_lot_id,
-    fulfillment_policy_code,
+    supply_code,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
     sqlc.arg('id'),
     sqlc.arg('name'),
+    sqlc.narg('description'),
     sqlc.arg('is_commission_exempt'),
     sqlc.arg('is_freight_exempt'),
-    sqlc.arg('unit_group_id'),
-    sqlc.narg('default_lot_id'),
-    sqlc.narg('fulfillment_policy_code'),
+    sqlc.narg('unit_group_id'),
+    sqlc.narg('supply_code'),
+    sqlc.arg('is_active'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -155,13 +140,12 @@ INSERT INTO product_line (
 -- name: UpdateProductLine :execresult
 UPDATE product_line SET
     name = COALESCE(sqlc.narg('name'), name),
+    description = IF(sqlc.arg('clear_description'), NULL, COALESCE(sqlc.narg('description'), description)),
     is_commission_exempt = COALESCE(sqlc.narg('is_commission_exempt'), is_commission_exempt),
     is_freight_exempt = COALESCE(sqlc.narg('is_freight_exempt'), is_freight_exempt),
     unit_group_id = COALESCE(sqlc.narg('unit_group_id'), unit_group_id),
-    -- Clearable rather than COALESCE-merged: removing a line's lot convention is a real edit, and a merge would make it unexpressible.
-    default_lot_id = IF(sqlc.arg('clear_default_lot'), NULL, COALESCE(sqlc.narg('default_lot_id'), default_lot_id)),
-    -- Clearable for the same reason: returning a line to the account default is a real edit.
-    fulfillment_policy_code = IF(sqlc.arg('clear_fulfillment_policy'), NULL, COALESCE(sqlc.narg('fulfillment_policy_code'), fulfillment_policy_code)),
+    supply_code = IF(sqlc.arg('clear_supply'), NULL, COALESCE(sqlc.narg('supply_code'), supply_code)),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -170,6 +154,14 @@ AND account_id = sqlc.arg('account_id');
 DELETE FROM product_line
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
+
+-- Customer and account-group access to a line goes with the line.
+
+-- name: DeleteAccountRelationProductLinesForProductLine :exec
+DELETE FROM account_relation_product_line WHERE product_line_id = sqlc.arg('product_line_id');
+
+-- name: DeleteAccountGroupProductLinesForProductLine :exec
+DELETE FROM account_group_product_line WHERE product_line_id = sqlc.arg('product_line_id');
 
 -- name: CountProductLinesByName :one
 SELECT COUNT(*) FROM product_line
@@ -189,6 +181,8 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at

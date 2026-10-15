@@ -1050,7 +1050,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
 	// before the update is applied.
 	s.productLineRepo.EXPECT().
 		Get(gomock.Any(), domain.GetProductLineParams{AccountID: "ac_test123", ProductLineID: "pl_new"}).
-		Return(&domain.ProductLineFull{ID: "pl_new"}, nil).
+		Return(&domain.ProductLineFull{ID: "pl_new", Status: constants.ArchiveStatusActive}, nil).
 		Times(1)
 	s.productRepo.EXPECT().
 		ChangeProductLine(gomock.Any(), gomock.AssignableToTypeOf(domain.ChangeProductProductLineParams{})).

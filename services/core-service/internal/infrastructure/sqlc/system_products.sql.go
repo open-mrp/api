@@ -108,7 +108,7 @@ type CreateProductLineParams struct {
 	Name               string
 	Description        sql.NullString
 	AccountID          sql.NullString
-	UnitGroupID        string
+	UnitGroupID        sql.NullString
 	IsCommissionExempt bool
 	IsFreightExempt    bool
 }

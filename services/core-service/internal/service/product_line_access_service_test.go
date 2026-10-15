@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
@@ -23,8 +24,9 @@ type ProductLineAccessSvcTestSuite struct {
 	customerSvc domain.CustomerProductLineAccessSvc
 	groupSvc    domain.AccountGroupProductLineAccessSvc
 
-	customerRepo *repositorymock.MockCustomerProductLineAccessRepo
-	groupRepo    *repositorymock.MockAccountGroupProductLineAccessRepo
+	customerRepo    *repositorymock.MockCustomerProductLineAccessRepo
+	groupRepo       *repositorymock.MockAccountGroupProductLineAccessRepo
+	productLineRepo *repositorymock.MockProductLineRepo
 
 	ctrl *gomock.Controller
 }
@@ -37,6 +39,16 @@ func (suite *ProductLineAccessSvcTestSuite) SetupTest() {
 	repoFactory := factorymock.NewMockRepoFactory(suite.ctrl)
 	repoFactory.EXPECT().NewCustomerProductLineAccessRepo().Return(suite.customerRepo).AnyTimes()
 	repoFactory.EXPECT().NewAccountGroupProductLineAccessRepo().Return(suite.groupRepo).AnyTimes()
+	suite.productLineRepo = repositorymock.NewMockProductLineRepo(suite.ctrl)
+	suite.productLineRepo.EXPECT().GetByIDs(gomock.Any(), productLineAccessTestAccount, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, ids []string) ([]*domain.ProductLineFull, *apierror.APIError) {
+			lines := make([]*domain.ProductLineFull, len(ids))
+			for i, id := range ids {
+				lines[i] = &domain.ProductLineFull{ID: id, Status: constants.ArchiveStatusActive}
+			}
+			return lines, nil
+		}).AnyTimes()
+	repoFactory.EXPECT().NewProductLineRepo().Return(suite.productLineRepo).AnyTimes()
 	repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	idempotencyMed := mediatormock.NewMockIdempotencyMed(suite.ctrl)
@@ -133,4 +145,19 @@ func (suite *ProductLineAccessSvcTestSuite) TestAGroupEditNamingALineTwiceGrants
 	})
 
 	suite.Nil(apiErr)
+}
+
+func (suite *ProductLineAccessSvcTestSuite) TestGrantingAnArchivedLineIsRefused() {
+	suite.productLineRepo = repositorymock.NewMockProductLineRepo(suite.ctrl)
+	repos := factorymock.NewMockRepoFactory(suite.ctrl)
+	repos.EXPECT().NewProductLineRepo().Return(suite.productLineRepo).AnyTimes()
+	suite.productLineRepo.EXPECT().GetByIDs(gomock.Any(), productLineAccessTestAccount, []string{"pdln_archived"}).
+		Return([]*domain.ProductLineFull{{ID: "pdln_archived", Status: constants.ArchiveStatusArchived}}, nil)
+
+	apiErr := requireGrantableProductLines(context.Background(), repos, productLineAccessTestAccount,
+		[]string{"pdln_kept", "pdln_archived"}, []domain.ProductLineInfo{{ID: "pdln_kept"}})
+
+	suite.Require().NotNil(apiErr)
+	suite.Equal("resource_archived", string(apiErr.Code))
+	suite.Equal("product_line_ids", apiErr.Param)
 }

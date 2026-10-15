@@ -36,6 +36,26 @@ func (q *Queries) CountProductLinesByName(ctx context.Context, arg CountProductL
 	return count, err
 }
 
+const deleteAccountGroupProductLinesForProductLine = `-- name: DeleteAccountGroupProductLinesForProductLine :exec
+DELETE FROM account_group_product_line WHERE product_line_id = ?
+`
+
+func (q *Queries) DeleteAccountGroupProductLinesForProductLine(ctx context.Context, productLineID string) error {
+	_, err := q.db.ExecContext(ctx, deleteAccountGroupProductLinesForProductLine, productLineID)
+	return err
+}
+
+const deleteAccountRelationProductLinesForProductLine = `-- name: DeleteAccountRelationProductLinesForProductLine :exec
+
+DELETE FROM account_relation_product_line WHERE product_line_id = ?
+`
+
+// Customer and account-group access to a line goes with the line.
+func (q *Queries) DeleteAccountRelationProductLinesForProductLine(ctx context.Context, productLineID string) error {
+	_, err := q.db.ExecContext(ctx, deleteAccountRelationProductLinesForProductLine, productLineID)
+	return err
+}
+
 const deleteProductLine = `-- name: DeleteProductLine :execresult
 DELETE FROM product_line
 WHERE id = ?
@@ -143,6 +163,8 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
@@ -163,7 +185,9 @@ type FindProductLinesByNamesRow struct {
 	Notes              sql.NullString
 	IsCommissionExempt bool
 	IsFreightExempt    bool
-	UnitGroupID        string
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
 	AccountID          sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -201,6 +225,8 @@ func (q *Queries) FindProductLinesByNames(ctx context.Context, arg FindProductLi
 			&i.IsCommissionExempt,
 			&i.IsFreightExempt,
 			&i.UnitGroupID,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -247,15 +273,12 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id = ?
 AND (pl.account_id = ? OR pl.account_id IS NULL)
 `
@@ -266,20 +289,18 @@ type GetProductLineParams struct {
 }
 
 type GetProductLineRow struct {
-	ID                    string
-	Name                  string
-	Description           sql.NullString
-	Notes                 sql.NullString
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	FulfillmentPolicyCode sql.NullString
-	DefaultLotID          sql.NullString
-	DefaultLotValue       sql.NullString
-	DefaultLotUnitID      sql.NullString
-	AccountID             sql.NullString
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) GetProductLine(ctx context.Context, arg GetProductLineParams) (GetProductLineRow, error) {
@@ -293,10 +314,8 @@ func (q *Queries) GetProductLine(ctx context.Context, arg GetProductLineParams) 
 		&i.IsCommissionExempt,
 		&i.IsFreightExempt,
 		&i.UnitGroupID,
-		&i.FulfillmentPolicyCode,
-		&i.DefaultLotID,
-		&i.DefaultLotValue,
-		&i.DefaultLotUnitID,
+		&i.SupplyCode,
+		&i.IsActive,
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -364,33 +383,28 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id IN (/*SLICE:ids*/?)
 `
 
 type GetProductLinesByIDsRow struct {
-	ID                    string
-	Name                  string
-	Description           sql.NullString
-	Notes                 sql.NullString
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	FulfillmentPolicyCode sql.NullString
-	DefaultLotID          sql.NullString
-	DefaultLotValue       sql.NullString
-	DefaultLotUnitID      sql.NullString
-	AccountID             sql.NullString
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) GetProductLinesByIDs(ctx context.Context, ids []string) ([]GetProductLinesByIDsRow, error) {
@@ -420,10 +434,8 @@ func (q *Queries) GetProductLinesByIDs(ctx context.Context, ids []string) ([]Get
 			&i.IsCommissionExempt,
 			&i.IsFreightExempt,
 			&i.UnitGroupID,
-			&i.FulfillmentPolicyCode,
-			&i.DefaultLotID,
-			&i.DefaultLotValue,
-			&i.DefaultLotUnitID,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -450,15 +462,12 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE pl.id IN (/*SLICE:ids*/?)
 AND (pl.account_id = ? OR pl.account_id IS NULL)
 `
@@ -469,20 +478,18 @@ type GetProductLinesByIDsScopedParams struct {
 }
 
 type GetProductLinesByIDsScopedRow struct {
-	ID                    string
-	Name                  string
-	Description           sql.NullString
-	Notes                 sql.NullString
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	FulfillmentPolicyCode sql.NullString
-	DefaultLotID          sql.NullString
-	DefaultLotValue       sql.NullString
-	DefaultLotUnitID      sql.NullString
-	AccountID             sql.NullString
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) GetProductLinesByIDsScoped(ctx context.Context, arg GetProductLinesByIDsScopedParams) ([]GetProductLinesByIDsScopedRow, error) {
@@ -513,10 +520,8 @@ func (q *Queries) GetProductLinesByIDsScoped(ctx context.Context, arg GetProduct
 			&i.IsCommissionExempt,
 			&i.IsFreightExempt,
 			&i.UnitGroupID,
-			&i.FulfillmentPolicyCode,
-			&i.DefaultLotID,
-			&i.DefaultLotValue,
-			&i.DefaultLotUnitID,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -648,15 +653,17 @@ const insertProductLine = `-- name: InsertProductLine :exec
 INSERT INTO product_line (
     id,
     name,
+    description,
     is_commission_exempt,
     is_freight_exempt,
     unit_group_id,
-    default_lot_id,
-    fulfillment_policy_code,
+    supply_code,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -671,25 +678,27 @@ INSERT INTO product_line (
 `
 
 type InsertProductLineParams struct {
-	ID                    string
-	Name                  string
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	DefaultLotID          sql.NullString
-	FulfillmentPolicyCode sql.NullString
-	AccountID             sql.NullString
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
 }
 
 func (q *Queries) InsertProductLine(ctx context.Context, arg InsertProductLineParams) error {
 	_, err := q.db.ExecContext(ctx, insertProductLine,
 		arg.ID,
 		arg.Name,
+		arg.Description,
 		arg.IsCommissionExempt,
 		arg.IsFreightExempt,
 		arg.UnitGroupID,
-		arg.DefaultLotID,
-		arg.FulfillmentPolicyCode,
+		arg.SupplyCode,
+		arg.IsActive,
 		arg.AccountID,
 	)
 	return err
@@ -989,20 +998,18 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE (pl.account_id = ? OR pl.account_id IS NULL)
 AND (
     ? IS NULL
     OR pl.name LIKE ?
 )
+AND (? IS NULL OR pl.is_active = ?)
 AND (
     pl.created_at > ?
     OR (pl.created_at = ? AND pl.id > ?)
@@ -1014,36 +1021,34 @@ LIMIT ?
 type ListProductLinesBackwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
 }
 
 type ListProductLinesBackwardRow struct {
-	ID                    string
-	Name                  string
-	Description           sql.NullString
-	Notes                 sql.NullString
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	FulfillmentPolicyCode sql.NullString
-	DefaultLotID          sql.NullString
-	DefaultLotValue       sql.NullString
-	DefaultLotUnitID      sql.NullString
-	AccountID             sql.NullString
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
-// Residual: free-text search is a substring match on the name, so it cannot use the
-// FULLTEXT index (which does word matching). The set is already bounded to the tenant's
-// (plus global) product lines, which number in the dozens.
 func (q *Queries) ListProductLinesBackward(ctx context.Context, arg ListProductLinesBackwardParams) ([]ListProductLinesBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProductLinesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -1064,10 +1069,8 @@ func (q *Queries) ListProductLinesBackward(ctx context.Context, arg ListProductL
 			&i.IsCommissionExempt,
 			&i.IsFreightExempt,
 			&i.UnitGroupID,
-			&i.FulfillmentPolicyCode,
-			&i.DefaultLotID,
-			&i.DefaultLotValue,
-			&i.DefaultLotUnitID,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1094,20 +1097,18 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
-    pl.fulfillment_policy_code,
-    dlq.id AS default_lot_id,
-    dlq.value AS default_lot_value,
-    dlq.unit_id AS default_lot_unit_id,
+    pl.supply_code,
+    pl.is_active,
     pl.account_id,
     pl.created_at,
     pl.updated_at
 FROM product_line pl
-LEFT JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE (pl.account_id = ? OR pl.account_id IS NULL)
 AND (
     ? IS NULL
     OR pl.name LIKE ?
 )
+AND (? IS NULL OR pl.is_active = ?)
 AND (
     ? IS NULL
     OR pl.created_at < ?
@@ -1120,36 +1121,36 @@ LIMIT ?
 type ListProductLinesForwardParams struct {
 	AccountID       sql.NullString
 	SearchQuery     sql.NullString
+	IsActive        sql.NullBool
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullString
 	Limit           int32
 }
 
 type ListProductLinesForwardRow struct {
-	ID                    string
-	Name                  string
-	Description           sql.NullString
-	Notes                 sql.NullString
-	IsCommissionExempt    bool
-	IsFreightExempt       bool
-	UnitGroupID           string
-	FulfillmentPolicyCode sql.NullString
-	DefaultLotID          sql.NullString
-	DefaultLotValue       sql.NullString
-	DefaultLotUnitID      sql.NullString
-	AccountID             sql.NullString
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        sql.NullString
+	SupplyCode         sql.NullString
+	IsActive           bool
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
-// Residual: free-text search is a substring match on the name, so it cannot use the
-// FULLTEXT index (which does word matching). The set is already bounded to the tenant's
-// (plus global) product lines, which number in the dozens.
+// Residual: search is a substring match on the name, and the status filter has no index of its own. The set is
+// already bounded to the tenant's (plus global) product lines, which number in the dozens.
 func (q *Queries) ListProductLinesForward(ctx context.Context, arg ListProductLinesForwardParams) ([]ListProductLinesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProductLinesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.IsActive,
+		arg.IsActive,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -1171,10 +1172,8 @@ func (q *Queries) ListProductLinesForward(ctx context.Context, arg ListProductLi
 			&i.IsCommissionExempt,
 			&i.IsFreightExempt,
 			&i.UnitGroupID,
-			&i.FulfillmentPolicyCode,
-			&i.DefaultLotID,
-			&i.DefaultLotValue,
-			&i.DefaultLotUnitID,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1261,41 +1260,42 @@ func (q *Queries) ResolveItemLotFromDownstream(ctx context.Context, arg ResolveI
 const updateProductLine = `-- name: UpdateProductLine :execresult
 UPDATE product_line SET
     name = COALESCE(?, name),
+    description = IF(?, NULL, COALESCE(?, description)),
     is_commission_exempt = COALESCE(?, is_commission_exempt),
     is_freight_exempt = COALESCE(?, is_freight_exempt),
     unit_group_id = COALESCE(?, unit_group_id),
-    -- Clearable rather than COALESCE-merged: removing a line's lot convention is a real edit, and a merge would make it unexpressible.
-    default_lot_id = IF(?, NULL, COALESCE(?, default_lot_id)),
-    -- Clearable for the same reason: returning a line to the account default is a real edit.
-    fulfillment_policy_code = IF(?, NULL, COALESCE(?, fulfillment_policy_code)),
+    supply_code = IF(?, NULL, COALESCE(?, supply_code)),
+    is_active = COALESCE(?, is_active),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateProductLineParams struct {
-	Name                   sql.NullString
-	IsCommissionExempt     sql.NullBool
-	IsFreightExempt        sql.NullBool
-	UnitGroupID            sql.NullString
-	ClearDefaultLot        interface{}
-	DefaultLotID           interface{}
-	ClearFulfillmentPolicy interface{}
-	FulfillmentPolicyCode  interface{}
-	ID                     string
-	AccountID              sql.NullString
+	Name               sql.NullString
+	ClearDescription   interface{}
+	Description        interface{}
+	IsCommissionExempt sql.NullBool
+	IsFreightExempt    sql.NullBool
+	UnitGroupID        sql.NullString
+	ClearSupply        interface{}
+	SupplyCode         interface{}
+	IsActive           sql.NullBool
+	ID                 string
+	AccountID          sql.NullString
 }
 
 func (q *Queries) UpdateProductLine(ctx context.Context, arg UpdateProductLineParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateProductLine,
 		arg.Name,
+		arg.ClearDescription,
+		arg.Description,
 		arg.IsCommissionExempt,
 		arg.IsFreightExempt,
 		arg.UnitGroupID,
-		arg.ClearDefaultLot,
-		arg.DefaultLotID,
-		arg.ClearFulfillmentPolicy,
-		arg.FulfillmentPolicyCode,
+		arg.ClearSupply,
+		arg.SupplyCode,
+		arg.IsActive,
 		arg.ID,
 		arg.AccountID,
 	)

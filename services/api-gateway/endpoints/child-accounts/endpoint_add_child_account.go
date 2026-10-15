@@ -23,6 +23,8 @@ type AddChildAccountRequest struct {
 // Both the parent and the child must already be accounts you have a customer relationship with, and the child must be one you manage on its behalf — an account that runs its own OpenMRP subscription, or that also trades with other sellers, is rejected with an authorization error.
 //
 // This call is idempotent: linking an account that is already a child of the target account succeeds without changes. Circular relationships (making an account a child of its own child) are rejected with a conflict error. An account has at most one parent, so linking a child that already sits under a different parent moves it.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets a customer's `parent_customer_id` with Update Customer.
 type AddChildAccountEndpoint struct{}
 
 func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount] {
@@ -34,7 +36,6 @@ func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChi
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeChildAccount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},

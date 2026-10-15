@@ -14,11 +14,13 @@ const (
 	JobTypePackPick JobType = "pack_pick"
 	// Dispatches a packed shipment: buys labels, marks it shipped, and raises its invoice.
 	JobTypeShipShipment JobType = "ship_shipment"
+	// Merges customers into one: their records move to the target and the sources are deleted.
+	JobTypeMergeCustomers JobType = "merge_customers"
 )
 
 func (m JobType) IsValid() bool {
 	switch m {
-	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport, JobTypePackPick, JobTypeShipShipment:
+	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport, JobTypePackPick, JobTypeShipShipment, JobTypeMergeCustomers:
 		return true
 	default:
 		return false
@@ -32,5 +34,6 @@ func (m JobType) EnumValues() []string {
 		string(JobTypeExport),
 		string(JobTypePackPick),
 		string(JobTypeShipShipment),
+		string(JobTypeMergeCustomers),
 	}
 }

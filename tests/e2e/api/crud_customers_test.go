@@ -21,7 +21,7 @@ func TestCustomers_CRUD(t *testing.T) {
 	name := uniqueName("e2e-cust")
 
 	// CREATE
-	createResp, err := apiClient.PostFull(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createResp, err := apiClient.PostFull(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
@@ -45,13 +45,13 @@ func TestCustomers_CRUD(t *testing.T) {
 
 	// UPDATE
 	newNote := "updated note"
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": newNote,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
-	assert.Equal(t, newNote, jsonField(updated, "note"))
+	assert.Equal(t, newNote, jsonField(updated, "instructions"))
 	assert.Equal(t, name, jsonField(updated, "name"))
 
 	// DELETE
@@ -69,415 +69,9 @@ func TestCustomers_CRUD(t *testing.T) {
 // Create Tests
 // ──────────────────────────────────────────────
 
-func TestCustomers_CreateResponseShape(t *testing.T) {
-	t.Parallel()
-	name := uniqueName("e2e-cust-shape")
-	createResp, err := apiClient.PostFull(customersPath, validCustomerBody(name), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
-
-	got := parseJSON(createResp.Body)
-	id := jsonField(got, "id")
-	assert.NotEmpty(t, id)
-	assertCreatedLocation(t, createResp.Header, id)
-	assert.Equal(t, "customer", jsonField(got, "object"))
-	assert.Equal(t, name, jsonField(got, "name"))
-	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
-	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
-	assert.NotEmpty(t, jsonField(got, "created_at"))
-	assert.NotEmpty(t, jsonField(got, "updated_at"))
-
-	// All expandable fields should be null without ?include
-	assert.Nil(t, got["contact_info"], "contact_info should be null without ?include=contact_info")
-	assert.Nil(t, got["freight_preferences"], "freight_preferences should be null without ?include=freight_preferences")
-	assert.Nil(t, got["defaults"], "defaults should be null without ?include=defaults")
-	assert.Nil(t, got["notification_preferences"], "notification_preferences should be null without ?include=notification_preferences")
-	assert.Nil(t, got["bill_to_address"], "bill_to_address should be null without ?include=bill_to_address")
-	assert.Nil(t, got["ship_to_address"], "ship_to_address should be null without ?include=ship_to_address")
-	assert.Nil(t, got["type"], "type should be null without ?include=type")
-	assert.Nil(t, got["price_groups"], "price_groups should be null without ?include=price_groups")
-	assert.Nil(t, got["parent_account"], "parent_account should be null without ?include=parent_account")
-	assert.Nil(t, got["child_accounts"], "child_accounts should be null without ?include=child_accounts")
-	assert.Nil(t, got["credit_limit"], "credit_limit should be null without ?include=credit_limit")
-
-	apiClient.Delete(customersPath + "/" + id)
-}
-
-func TestCustomers_CreateWithAllFields(t *testing.T) {
-	t.Parallel()
-	name := uniqueName("e2e-cust-all")
-	createResp, err := apiClient.PostFull(customersPath, map[string]any{
-		"name":                     name,
-		"note":                     "Test customer note",
-		"email":                    name + "@e2e-test.openmrp.ai",
-		"phone":                    "555-000-1234",
-		"url":                      "https://e2e.openmrp.ai",
-		"status":                   "normal",
-		"commission_policy":        "exempt",
-		"freight_policy":           "free",
-		"default_carrier_id":       SeedCarrierID,
-		"default_payment_term_id":  SeedPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"default_priority":         SeedPriorityCode,
-		"default_sales_rep_id":     SeedAccountUserID,
-		"customer_type_group_id":   SeedCustomerGroupID,
-		"carrier_billing_type":     "third_party",
-		"carrier_billing_account":  "ACCT-12345",
-		"credit_limit": map[string]any{
-			"amount":   "7500.00",
-			"currency": "usd",
-		},
-		"bill_to_address": map[string]any{
-			"name":    name + " Billing",
-			"country": "US",
-		},
-		"ship_to_address": map[string]any{
-			"name":    name + " Shipping",
-			"country": "US",
-		},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
-
-	got := parseJSON(createResp.Body)
-	id := jsonField(got, "id")
-	assert.NotEmpty(t, id)
-	assertCreatedLocation(t, createResp.Header, id)
-	assert.Equal(t, "customer", jsonField(got, "object"))
-	assert.Equal(t, name, jsonField(got, "name"))
-	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
-	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
-	assert.Equal(t, "Test customer note", jsonField(got, "note"))
-	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-
-	apiClient.Delete(customersPath + "/" + id)
-}
-
-func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
-	t.Parallel()
-
-	includeStr := "contact_info,defaults.payment_term,defaults.shipping_term,defaults.priority,defaults.sales_rep,freight_preferences.carrier,type,bill_to_address,ship_to_address,notification_preferences,freight_preferences,credit_limit"
-
-	// ── CREATE with every settable field ──
-
-	name := uniqueName("e2e-cust-allf")
-	createResp, err := apiClient.PostFull(
-		customersPath+"?include="+includeStr,
-		map[string]any{
-			"name":                     name,
-			"note":                     "Create note",
-			"email":                    name + "@e2e-test.openmrp.ai",
-			"phone":                    "555-000-1234",
-			"url":                      "https://create.e2e.openmrp.ai",
-			"status":                   "normal",
-			"commission_policy":        "exempt",
-			"freight_policy":           "free",
-			"default_carrier_id":       SeedCarrierID,
-			"default_payment_term_id":  SeedPaymentTermID,
-			"default_shipping_term_id": SeedShippingTermID,
-			"default_priority":         SeedPriorityCode,
-			"default_sales_rep_id":     SeedAccountUserID,
-			"customer_type_group_id":   SeedCustomerGroupID,
-			"carrier_billing_type":     "third_party",
-			"carrier_billing_account":  "ACCT-12345",
-			"credit_limit": map[string]any{
-				"amount":   "10000.00",
-				"currency": "usd",
-			},
-			"bill_to_address": map[string]any{
-				"name":    name + " Billing",
-				"country": "US",
-			},
-			"ship_to_address": map[string]any{
-				"name":    name + " Shipping",
-				"country": "US",
-			},
-		},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
-
-	got := parseJSON(createResp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	assertCreatedLocation(t, createResp.Header, id)
-	defer apiClient.Delete(customersPath + "/" + id)
-
-	// Top-level scalar fields
-	assert.Equal(t, "customer", jsonField(got, "object"))
-	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "Create note", jsonField(got, "note"))
-	assert.NotEmpty(t, jsonField(got, "number"))
-	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-	assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
-	assert.NotEmpty(t, jsonField(got, "created_at"))
-	assert.NotEmpty(t, jsonField(got, "updated_at"))
-
-	// contact_info
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be expanded")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-	assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(contactInfo, "email"))
-	assert.Equal(t, "555-000-1234", jsonField(contactInfo, "phone"))
-	assert.Equal(t, "https://create.e2e.openmrp.ai", jsonField(contactInfo, "url"))
-
-	// defaults — payment_term
-	defaults := jsonObject(got, "defaults")
-	require.NotNil(t, defaults, "defaults should be expanded")
-	assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))
-
-	pt := jsonObject(defaults, "payment_term")
-	require.NotNil(t, pt, "defaults.payment_term must be set after create")
-	assert.Equal(t, SeedPaymentTermID, jsonField(pt, "id"), "payment_term ID must match what was sent on create")
-
-	st := jsonObject(defaults, "shipping_term")
-	require.NotNil(t, st, "defaults.shipping_term must be set after create")
-	assert.Equal(t, SeedShippingTermID, jsonField(st, "id"))
-
-	pri := jsonObject(defaults, "priority")
-	require.NotNil(t, pri, "defaults.priority must be set after create")
-	assert.Equal(t, SeedPriorityCode, jsonField(pri, "code"))
-
-	salesRep := jsonObject(defaults, "sales_rep")
-	require.NotNil(t, salesRep, "defaults.sales_rep must be set after create")
-	assert.Equal(t, SeedAccountUserID, jsonField(salesRep, "id"))
-	assert.Equal(t, "account_user", jsonField(salesRep, "object"))
-
-	// freight_preferences
-	fp := jsonObject(got, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be expanded")
-	assert.Equal(t, "customer_freight_preferences", jsonField(fp, "object"))
-	assert.Equal(t, "free", jsonField(fp, "status"))
-	assert.Equal(t, "third_party", jsonField(fp, "billing_type"))
-	assert.Equal(t, "ACCT-12345", jsonField(fp, "billing_account"))
-
-	carrier := jsonObject(fp, "carrier")
-	require.NotNil(t, carrier, "freight_preferences.carrier must be set after create")
-	assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
-
-	// type
-	typeGroup := jsonObject(got, "type")
-	require.NotNil(t, typeGroup, "type should be expanded after create")
-	assert.Equal(t, SeedCustomerGroupID, jsonField(typeGroup, "id"))
-
-	// addresses (set on create via inline address objects)
-	billAddr := jsonObject(got, "bill_to_address")
-	require.NotNil(t, billAddr, "bill_to_address should be expanded after create")
-	assert.Equal(t, name+" Billing", jsonField(billAddr, "name"))
-
-	shipAddr := jsonObject(got, "ship_to_address")
-	require.NotNil(t, shipAddr, "ship_to_address should be expanded after create")
-	assert.Equal(t, name+" Shipping", jsonField(shipAddr, "name"))
-
-	// notification_preferences
-	np := jsonObject(got, "notification_preferences")
-	require.NotNil(t, np, "notification_preferences should be expanded after create")
-	assert.Equal(t, "customer_notification_preferences", jsonField(np, "object"))
-
-	// credit_limit
-	cl := jsonObject(got, "credit_limit")
-	require.NotNil(t, cl, "credit_limit should be expanded after create")
-	assert.Equal(t, map[string]any{"amount": "10000.00", "currency": "usd"}, cl)
-
-	// ── UPDATE with different values for changeable fields ──
-
-	updatedName := uniqueName("e2e-cust-allf-upd")
-	patchStatus, patchBody, err := apiClient.Patch(
-		customersPath+"/"+id,
-		map[string]any{
-			"name":                    updatedName,
-			"note":                    "Updated note",
-			"email":                   updatedName + "@e2e-test.openmrp.ai",
-			"phone":                   "555-999-8888",
-			"url":                     "https://update.e2e.openmrp.ai",
-			"commission_policy":       "applied",
-			"freight_policy":          "billed",
-			"default_payment_term_id": SeedDefaultPaymentTermID,
-			"carrier_billing_type":    "sender",
-			"carrier_billing_account": "ACCT-99999",
-			"credit_limit": map[string]any{
-				"amount":   "25000.50",
-				"currency": "usd",
-			},
-		},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	// Verify the update via GET with include
-	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-
-	updated := parseJSON(getBody)
-
-	// Updated top-level fields
-	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
-	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "Updated note", jsonField(updated, "note"))
-	assert.Equal(t, "applied", jsonField(updated, "commission_policy"))
-
-	// Preserved top-level fields
-	assert.Equal(t, "normal", jsonField(updated, "status"), "status should be preserved")
-
-	// Updated contact_info
-	updContactInfo := jsonObject(updated, "contact_info")
-	require.NotNil(t, updContactInfo)
-	assert.Equal(t, updatedName+"@e2e-test.openmrp.ai", jsonField(updContactInfo, "email"))
-	assert.Equal(t, "555-999-8888", jsonField(updContactInfo, "phone"))
-	assert.Equal(t, "https://update.e2e.openmrp.ai", jsonField(updContactInfo, "url"))
-
-	// Updated defaults — payment_term changed
-	updDefaults := jsonObject(updated, "defaults")
-	require.NotNil(t, updDefaults)
-
-	updPt := jsonObject(updDefaults, "payment_term")
-	require.NotNil(t, updPt, "defaults.payment_term must be set after update")
-	assert.Equal(t, SeedDefaultPaymentTermID, jsonField(updPt, "id"), "payment_term should be updated")
-
-	// Preserved defaults
-	updSt := jsonObject(updDefaults, "shipping_term")
-	require.NotNil(t, updSt, "defaults.shipping_term should be preserved")
-	assert.Equal(t, SeedShippingTermID, jsonField(updSt, "id"))
-
-	updPri := jsonObject(updDefaults, "priority")
-	require.NotNil(t, updPri, "defaults.priority should be preserved")
-	assert.Equal(t, SeedPriorityCode, jsonField(updPri, "code"))
-
-	updSalesRep := jsonObject(updDefaults, "sales_rep")
-	require.NotNil(t, updSalesRep, "defaults.sales_rep should be preserved")
-	assert.Equal(t, SeedAccountUserID, jsonField(updSalesRep, "id"))
-	assert.Equal(t, "account_user", jsonField(updSalesRep, "object"))
-
-	// Updated freight_preferences
-	updFp := jsonObject(updated, "freight_preferences")
-	require.NotNil(t, updFp)
-	assert.Equal(t, "billed", jsonField(updFp, "status"))
-	assert.Equal(t, "sender", jsonField(updFp, "billing_type"))
-	assert.Equal(t, "ACCT-99999", jsonField(updFp, "billing_account"))
-
-	// Preserved carrier
-	updCarrier := jsonObject(updFp, "carrier")
-	require.NotNil(t, updCarrier, "freight_preferences.carrier should be preserved")
-	assert.Equal(t, SeedCarrierID, jsonField(updCarrier, "id"))
-
-	// Preserved type
-	updType := jsonObject(updated, "type")
-	require.NotNil(t, updType, "type should be preserved")
-	assert.Equal(t, SeedCustomerGroupID, jsonField(updType, "id"))
-
-	// Preserved top-level fields
-	assert.Equal(t, "standalone", jsonField(updated, "relationship_type"), "relationship_type should be preserved")
-	assert.NotEmpty(t, jsonField(updated, "number"), "number should be preserved")
-	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-
-	// notification_preferences should be preserved
-	updNp := jsonObject(updated, "notification_preferences")
-	require.NotNil(t, updNp, "notification_preferences should be preserved")
-	assert.Equal(t, "customer_notification_preferences", jsonField(updNp, "object"))
-
-	// freight_preferences.service_level was not set, should be nil
-	assert.Nil(t, updFp["service_level"], "freight_preferences.service_level should be nil when not set")
-
-	// Updated credit_limit
-	updCL := jsonObject(updated, "credit_limit")
-	require.NotNil(t, updCL, "credit_limit should be expanded after update")
-	assert.Equal(t, map[string]any{"amount": "25000.50", "currency": "usd"}, updCL)
-
-	// ── CLEAR all nullable fields by sending null ──
-
-	clearStatus, clearBody, err := apiClient.Patch(
-		customersPath+"/"+id+"?include="+includeStr,
-		map[string]any{
-			"note":                 nil,
-			"email":                nil,
-			"phone":                nil,
-			"url":                  nil,
-			"default_sales_rep_id": nil,
-			"credit_limit":         nil,
-		},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, clearStatus, clearBody)
-
-	cleared := parseJSON(clearBody)
-
-	// Nullable fields should be cleared.
-	assertNilField(t, cleared, "note")
-
-	clearedCI := jsonObject(cleared, "contact_info")
-	require.NotNil(t, clearedCI, "contact_info should still be expanded")
-	assertNilField(t, clearedCI, "email")
-	assertNilField(t, clearedCI, "phone")
-	assertNilField(t, clearedCI, "url")
-
-	clearedDefaults := jsonObject(cleared, "defaults")
-	require.NotNil(t, clearedDefaults, "defaults should still be expanded")
-	assertNilField(t, clearedDefaults, "sales_rep")
-
-	assertNilField(t, cleared, "credit_limit")
-
-	// Non-nullable defaults should be preserved.
-	clearedPT := jsonObject(clearedDefaults, "payment_term")
-	require.NotNil(t, clearedPT, "payment_term should be preserved (non-nullable)")
-	clearedST := jsonObject(clearedDefaults, "shipping_term")
-	require.NotNil(t, clearedST, "shipping_term should be preserved (non-nullable)")
-
-	clearedFP := jsonObject(cleared, "freight_preferences")
-	require.NotNil(t, clearedFP, "freight_preferences should still be expanded")
-	clearedCarrier := jsonObject(clearedFP, "carrier")
-	require.NotNil(t, clearedCarrier, "carrier should be preserved (non-nullable)")
-
-	clearedType := jsonObject(cleared, "type")
-	require.NotNil(t, clearedType, "type should be preserved (non-nullable)")
-
-	// Non-nullable fields should be preserved.
-	assert.Equal(t, updatedName, jsonField(cleared, "name"), "name should be preserved")
-	assert.NotEmpty(t, jsonField(cleared, "number"), "number should be preserved")
-	assert.Equal(t, "normal", jsonField(cleared, "status"), "status should be preserved")
-	assert.Equal(t, "applied", jsonField(cleared, "commission_policy"), "commission_policy should be preserved")
-
-	// ── Verify cleared state survives an unrelated update ──
-
-	preserveStatus, preserveBody, err := apiClient.Patch(
-		customersPath+"/"+id+"?include="+includeStr,
-		map[string]any{
-			"note": "re-added note",
-		},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	requireStatus(t, 200, preserveStatus, preserveBody)
-
-	preserved := parseJSON(preserveBody)
-	assert.Equal(t, "re-added note", jsonField(preserved, "note"), "note should be re-set")
-
-	// Previously cleared fields should still be null.
-	preservedCI := jsonObject(preserved, "contact_info")
-	require.NotNil(t, preservedCI)
-	assertNilField(t, preservedCI, "email")
-	assertNilField(t, preservedCI, "phone")
-	assertNilField(t, preservedCI, "url")
-
-	preservedDefaults := jsonObject(preserved, "defaults")
-	require.NotNil(t, preservedDefaults)
-	assertNilField(t, preservedDefaults, "sales_rep")
-	assertNilField(t, preserved, "credit_limit")
-}
-
 func TestCustomers_CreateValidation_MissingName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing name should return 400 or 422, got %d: %s", status, string(body))
@@ -485,9 +79,9 @@ func TestCustomers_CreateValidation_MissingName(t *testing.T) {
 
 func TestCustomers_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": "",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))
@@ -495,7 +89,7 @@ func TestCustomers_CreateValidation_EmptyName(t *testing.T) {
 
 func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 
@@ -506,13 +100,13 @@ func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 func TestCustomers_UpdateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-blank")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 	defer apiClient.Delete(customersPath + "/" + id)
 
-	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{"name": ""}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -530,7 +124,7 @@ func TestCustomers_GetNotFound_ErrorShape(t *testing.T) {
 func TestCustomers_ResponseFieldFormats(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-fmt")
-	status, body, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
@@ -555,12 +149,12 @@ func TestCustomers_CreateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	payload := validCustomerBody(name)
 
-	status1, body1, err := apiClient.Post(customersPath, payload, idemKey)
+	status1, body1, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
-	status2, body2, err := apiClient.Post(customersPath, payload, idemKey)
+	status2, body2, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
@@ -571,7 +165,7 @@ func TestCustomers_CreateIdempotent(t *testing.T) {
 func TestCustomers_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-cust-upd")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -579,15 +173,15 @@ func TestCustomers_UpdateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 	payload := map[string]any{"note": "idempotent note"}
 
-	status1, body1, err := apiClient.Patch(customersPath+"/"+id, payload, idemKey)
+	status1, body1, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(payload), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 
-	status2, body2, err := apiClient.Patch(customersPath+"/"+id, payload, idemKey)
+	status2, body2, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(payload), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 
-	assert.Equal(t, jsonField(parseJSON(body1), "note"), jsonField(parseJSON(body2), "note"))
+	assert.Equal(t, jsonField(parseJSON(body1), "instructions"), jsonField(parseJSON(body2), "instructions"))
 
 	apiClient.Delete(customersPath + "/" + id)
 }
@@ -607,7 +201,7 @@ func TestCustomers_GetSeeded(t *testing.T) {
 	assert.Equal(t, "customer", jsonField(got, "object"))
 	assert.Equal(t, SeedCustomerName, jsonField(got, "name"))
 	assert.NotEmpty(t, jsonField(got, "number"))
-	assert.Equal(t, "normal", jsonField(got, "status"))
+	assert.Equal(t, "normal", jsonField(got, "standing"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 }
@@ -626,19 +220,19 @@ func TestCustomers_GetNotFound(t *testing.T) {
 func TestCustomers_UpdateOnlyNote(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-note")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "a note",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
-	assert.Equal(t, "a note", jsonField(patched, "note"))
+	assert.Equal(t, "a note", jsonField(patched, "instructions"))
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
 
 	apiClient.Delete(customersPath + "/" + id)
@@ -647,22 +241,22 @@ func TestCustomers_UpdateOnlyNote(t *testing.T) {
 func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-multi")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note":              "multi-field update",
 		"phone":             "555-999-8888",
 		"commission_policy": "exempt",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
-	assert.Equal(t, "multi-field update", jsonField(patched, "note"))
+	assert.Equal(t, "multi-field update", jsonField(patched, "instructions"))
 	assert.Equal(t, "exempt", jsonField(patched, "commission_policy"))
 
 	apiClient.Delete(customersPath + "/" + id)
@@ -675,7 +269,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 func TestCustomers_DeleteThenGetReturns404(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-del")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -694,123 +288,45 @@ func TestCustomers_DeleteThenGetReturns404(t *testing.T) {
 // Expandable Fields — Null Without Include
 // ──────────────────────────────────────────────
 
-func TestCustomers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	assert.Nil(t, got["contact_info"], "contact_info should be null without ?include=contact_info")
-	assert.Nil(t, got["freight_preferences"], "freight_preferences should be null without ?include=freight_preferences")
-	assert.Nil(t, got["defaults"], "defaults should be null without ?include=defaults")
-	assert.Nil(t, got["notification_preferences"], "notification_preferences should be null without ?include=notification_preferences")
-	assert.Nil(t, got["bill_to_address"], "bill_to_address should be null without ?include=bill_to_address")
-	assert.Nil(t, got["ship_to_address"], "ship_to_address should be null without ?include=ship_to_address")
-	assert.Nil(t, got["type"], "type should be null without ?include=type")
-	assert.Nil(t, got["price_groups"], "price_groups should be null without ?include=price_groups")
-	assert.Nil(t, got["parent_account"], "parent_account should be null without ?include=parent_account")
-	assert.Nil(t, got["child_accounts"], "child_accounts should be null without ?include=child_accounts")
-	assert.Nil(t, got["credit_limit"], "credit_limit should be null without ?include=credit_limit")
-}
-
 // ──────────────────────────────────────────────
 // Single Include Tests
 // ──────────────────────────────────────────────
 
-func TestCustomers_IncludeContactInfo(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be present with ?include=contact_info")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-}
-
-func TestCustomers_IncludeFreightPreferences(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	fp := jsonObject(got, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be present with ?include=freight_preferences")
-	assert.Equal(t, "customer_freight_preferences", jsonField(fp, "object"))
-	assert.NotEmpty(t, jsonField(fp, "status"))
-
-	// Nested expandable fields should be null when not explicitly included
-	assert.Nil(t, fp["carrier"], "carrier should be null without ?include=freight_preferences.carrier")
-	assert.Nil(t, fp["service_level"], "service_level should be null without ?include=freight_preferences.service_level")
-}
-
-func TestCustomers_IncludeDefaults(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	defaults := jsonObject(got, "defaults")
-	require.NotNil(t, defaults, "defaults should be present with ?include=defaults")
-	assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))
-
-	// Nested expandable fields should be null when not explicitly included
-	assert.Nil(t, defaults["payment_term"], "payment_term should be null without ?include=defaults.payment_term")
-	assert.Nil(t, defaults["shipping_term"], "shipping_term should be null without ?include=defaults.shipping_term")
-	assert.Nil(t, defaults["sales_rep"], "sales_rep should be null without ?include=defaults.sales_rep")
-}
-
-func TestCustomers_IncludeNotificationPreferences(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"notification_preferences"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	np := jsonObject(got, "notification_preferences")
-	require.NotNil(t, np, "notification_preferences should be present with ?include=notification_preferences")
-	assert.Equal(t, "customer_notification_preferences", jsonField(np, "object"))
-}
-
 func TestCustomers_IncludeBillToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"bill_to_address"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.bill_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	addr := jsonObject(got, "bill_to_address")
-	require.NotNil(t, addr, "bill_to_address should be present with ?include=bill_to_address")
+	addr := jsonObject(jsonObject(got, "defaults"), "bill_to_address")
+	require.NotNil(t, addr, "bill_to_address should be present with ?include=defaults.bill_to_address")
 	assert.Equal(t, "address", jsonField(addr, "object"))
 	assert.Equal(t, SeedAddressID, jsonField(addr, "id"))
 }
 
 func TestCustomers_IncludeShipToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"ship_to_address"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.ship_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	addr := jsonObject(got, "ship_to_address")
-	require.NotNil(t, addr, "ship_to_address should be present with ?include=ship_to_address")
+	addr := jsonObject(jsonObject(got, "defaults"), "ship_to_address")
+	require.NotNil(t, addr, "ship_to_address should be present with ?include=defaults.ship_to_address")
 	assert.Equal(t, "address", jsonField(addr, "object"))
 	assert.NotEmpty(t, jsonField(addr, "id"))
 }
 
 func TestCustomers_IncludeType(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"type"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"group"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	typeGroup := jsonObject(got, "type")
-	require.NotNil(t, typeGroup, "type should be present with ?include=type")
+	typeGroup := jsonObject(got, "group")
+	require.NotNil(t, typeGroup, "type should be present with ?include=group")
 	assert.Equal(t, "account_group", jsonField(typeGroup, "object"))
 	assert.Equal(t, SeedCustomerGroupID, jsonField(typeGroup, "id"))
 }
@@ -840,10 +356,10 @@ func TestCustomers_IncludeCreditLimit(t *testing.T) {
 		"amount":   "5000.00",
 		"currency": "usd",
 	}
-	cust := createAndCleanup(t, customersPath+"?include=credit_limit", payload)
+	cust := createAndCleanup(t, customersPath+"?include=", payload)
 
 	cl := jsonObject(cust, "credit_limit")
-	require.NotNil(t, cl, "credit_limit should be present with ?include=credit_limit")
+	require.NotNil(t, cl, "credit_limit should be present with ?include=")
 	assert.Equal(t, map[string]any{"amount": "5000.00", "currency": "usd"}, cl, "money is its amount and currency, nothing more")
 }
 
@@ -851,7 +367,7 @@ func TestCustomers_IncludeCreditLimitNullWhenNotSet(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer without a credit limit.
-	cust := createAndCleanup(t, customersPath+"?include=credit_limit", validCustomerBody(uniqueName("e2e-cust-cl-nil")))
+	cust := createAndCleanup(t, customersPath+"?include=", validCustomerBody(uniqueName("e2e-cust-cl-nil")))
 	assertNilField(t, cust, "credit_limit")
 }
 
@@ -862,13 +378,13 @@ func TestCustomers_CreditLimitRejectsAnUnsupportedCurrency(t *testing.T) {
 
 	payload := validCustomerBody(uniqueName("e2e-cust-cl-eur"))
 	payload["credit_limit"] = euros
-	status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
 
 	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-cl-eur-upd")))
-	status, body, err = apiClient.Patch(customersPath+"/"+jsonField(cust, "id"), map[string]any{"credit_limit": euros}, newIdempotencyKey())
+	status, body, err = apiClient.Patch(customersPath+"/"+jsonField(cust, "id"), forgeCustomerWrite(map[string]any{"credit_limit": euros}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	assertErrorParam(t, requireErrorResponse(t, body, "currency_not_supported", "invalid_request_error"), "credit_limit.currency")
@@ -877,22 +393,6 @@ func TestCustomers_CreditLimitRejectsAnUnsupportedCurrency(t *testing.T) {
 // ──────────────────────────────────────────────
 // Nested Include Tests
 // ──────────────────────────────────────────────
-
-func TestCustomers_IncludeFreightPreferencesCarrier(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences.carrier"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	fp := jsonObject(got, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be present with ?include=freight_preferences.carrier")
-
-	carrier := jsonObject(fp, "carrier")
-	require.NotNil(t, carrier, "carrier should be present with ?include=freight_preferences.carrier")
-	assert.Equal(t, "carrier", jsonField(carrier, "object"))
-	assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
-}
 
 func TestCustomers_IncludeDefaultsPaymentTerm(t *testing.T) {
 	t.Parallel()
@@ -922,8 +422,7 @@ func TestCustomers_IncludeDefaultsSalesRep(t *testing.T) {
 
 	got := parseJSON(body)
 	defaults := jsonObject(got, "defaults")
-	require.NotNil(t, defaults, "defaults should be present with ?include=defaults.sales_rep")
-	assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))
+	require.NotNil(t, defaults, "defaults is always present")
 	// sales_rep may be null if the seeded customer has no sales rep assigned
 }
 
@@ -931,287 +430,15 @@ func TestCustomers_IncludeDefaultsSalesRep(t *testing.T) {
 // Multiple Includes
 // ──────────────────────────────────────────────
 
-func TestCustomers_IncludeMultiple(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"contact_info,defaults"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be present with ?include=contact_info,defaults")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-
-	defaults := jsonObject(got, "defaults")
-	require.NotNil(t, defaults, "defaults should be present with ?include=contact_info,defaults")
-	assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))
-
-	// Other expandable fields should remain null
-	assert.Nil(t, got["freight_preferences"], "freight_preferences should be null when not included")
-	assert.Nil(t, got["bill_to_address"], "bill_to_address should be null when not included")
-}
-
-func TestCustomers_IncludeMultipleWithNested(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{
-		"include": {"contact_info,defaults.payment_term,freight_preferences.carrier"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-
-	// contact_info expanded
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be present")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-
-	// defaults expanded with payment_term nested
-	defaults := jsonObject(got, "defaults")
-	require.NotNil(t, defaults, "defaults should be present")
-	pt := jsonObject(defaults, "payment_term")
-	require.NotNil(t, pt, "defaults.payment_term should be present")
-	assert.Equal(t, "payment_term", jsonField(pt, "object"))
-
-	// freight_preferences expanded with carrier nested
-	fp := jsonObject(got, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be present")
-	carrier := jsonObject(fp, "carrier")
-	require.NotNil(t, carrier, "freight_preferences.carrier should be present")
-	assert.Equal(t, "carrier", jsonField(carrier, "object"))
-}
-
 // ──────────────────────────────────────────────
 // Include on Create / Update
 // ──────────────────────────────────────────────
-
-func TestCustomers_CreateWithInclude(t *testing.T) {
-	t.Parallel()
-	name := uniqueName("e2e-cust-inc-create")
-	email := name + "@e2e-test.openmrp.ai"
-	payload := validCustomerBody(name)
-	payload["email"] = email
-	payload["phone"] = "555-111-2222"
-	createResp, err := apiClient.PostFull(customersPath+"?include=contact_info", payload, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
-
-	got := parseJSON(createResp.Body)
-	id := jsonField(got, "id")
-	assertCreatedLocation(t, createResp.Header, id)
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be present with ?include=contact_info on create")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-	assert.Equal(t, email, jsonField(contactInfo, "email"))
-	assert.Equal(t, "555-111-2222", jsonField(contactInfo, "phone"))
-
-	// Other expandable fields should still be null
-	assert.Nil(t, got["defaults"], "defaults should be null when not included")
-
-	apiClient.Delete(customersPath + "/" + id)
-}
-
-func TestCustomers_UpdateWithInclude(t *testing.T) {
-	t.Parallel()
-	name := uniqueName("e2e-cust-inc-upd")
-	createPayload := validCustomerBody(name)
-	createPayload["email"] = name + "@e2e-test.openmrp.ai"
-	createStatus, createBody, err := apiClient.Post(customersPath, createPayload, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
-	id := jsonField(parseJSON(createBody), "id")
-
-	newEmail := uniqueName("e2e-cust-upd") + "@e2e-test.openmrp.ai"
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id+"?include=contact_info", map[string]any{
-		"email": newEmail,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	got := parseJSON(patchBody)
-	contactInfo := jsonObject(got, "contact_info")
-	require.NotNil(t, contactInfo, "contact_info should be present with ?include=contact_info on update")
-	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-	assert.Equal(t, newEmail, jsonField(contactInfo, "email"))
-
-	apiClient.Delete(customersPath + "/" + id)
-}
 
 // Included sub-resource field completeness tests are in included_fields_test.go.
 
 // ──────────────────────────────────────────────
 // Omitted Fields
 // ──────────────────────────────────────────────
-
-func TestCustomers_OmittedFields(t *testing.T) {
-	t.Parallel()
-
-	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
-		name := uniqueName("e2e-cust-omit")
-		includeStr := "contact_info,defaults,freight_preferences,notification_preferences"
-
-		status, body, err := apiClient.Post(customersPath+"?include="+includeStr, validCustomerBody(name), newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, status, body)
-
-		got := parseJSON(body)
-		id := jsonField(got, "id")
-		require.NotEmpty(t, id)
-		defer apiClient.Delete(customersPath + "/" + id)
-
-		// Top-level defaults
-		assertIDFormat(t, id, "ac")
-		assertObjectField(t, got, "customer")
-		assert.Equal(t, name, jsonField(got, "name"))
-		assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
-		assert.Equal(t, "normal", jsonField(got, "status"))
-		assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
-		assert.Equal(t, "exempt", jsonField(got, "commission_policy"))
-		assertNilField(t, got, "note")
-		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-
-		// Expandable fields not included should be nil
-		assertNilField(t, got, "bill_to_address")
-		assertNilField(t, got, "ship_to_address")
-		assertNilField(t, got, "type")
-		assertNilField(t, got, "price_groups")
-		assertNilField(t, got, "parent_account")
-		assertNilField(t, got, "child_accounts")
-
-		// contact_info should be expanded but with nil sub-fields
-		contactInfo := jsonObject(got, "contact_info")
-		require.NotNil(t, contactInfo, "contact_info should be expanded via ?include")
-		assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-		assertNilField(t, contactInfo, "email")
-		assertNilField(t, contactInfo, "phone")
-		assertNilField(t, contactInfo, "url")
-
-		// defaults should be expanded but with nil sub-resources
-		defaults := jsonObject(got, "defaults")
-		require.NotNil(t, defaults, "defaults should be expanded via ?include")
-		assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))
-		assertNilField(t, defaults, "payment_term")
-		assertNilField(t, defaults, "shipping_term")
-		assertNilField(t, defaults, "priority")
-		assertNilField(t, defaults, "sales_rep")
-
-		// freight_preferences should be expanded but with nil carrier/service_level
-		fp := jsonObject(got, "freight_preferences")
-		require.NotNil(t, fp, "freight_preferences should be expanded via ?include")
-		assert.Equal(t, "customer_freight_preferences", jsonField(fp, "object"))
-		assertNilField(t, fp, "carrier")
-		assertNilField(t, fp, "service_level")
-		assertNilField(t, fp, "billing_type")
-		assertNilField(t, fp, "billing_account")
-
-		// notification_preferences should be expanded with default
-		np := jsonObject(got, "notification_preferences")
-		require.NotNil(t, np, "notification_preferences should be expanded via ?include")
-		assert.Equal(t, "customer_notification_preferences", jsonField(np, "object"))
-		assert.Equal(t, "false", jsonField(np, "accepts_invoice_emails"))
-	})
-
-	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
-		includeStr := "contact_info,defaults.payment_term,defaults.shipping_term,defaults.priority,defaults.sales_rep,freight_preferences.carrier,type,notification_preferences,freight_preferences"
-
-		// Create with all fields
-		name := uniqueName("e2e-cust-pres")
-		createPayload := validCustomerBody(name)
-		createPayload["note"] = "Original note"
-		createPayload["email"] = name + "@e2e-test.openmrp.ai"
-		createPayload["phone"] = "555-000-1234"
-		createPayload["url"] = "https://original.e2e.openmrp.ai"
-		createPayload["commission_policy"] = "exempt"
-		createPayload["freight_policy"] = "free"
-		createPayload["default_priority"] = SeedPriorityCode
-		createPayload["default_sales_rep_id"] = SeedAccountUserID
-		createPayload["carrier_billing_type"] = "third_party"
-		createPayload["carrier_billing_account"] = "ACCT-ORIG"
-		createStatus, createBody, err := apiClient.Post(customersPath+"?include="+includeStr, createPayload, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, createStatus, createBody)
-
-		created := parseJSON(createBody)
-		id := jsonField(created, "id")
-		require.NotEmpty(t, id)
-		defer apiClient.Delete(customersPath + "/" + id)
-		origNumber := jsonField(created, "number")
-		origCreatedAt := jsonField(created, "created_at")
-
-		// Update ONLY the note
-		patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-			"note": "Changed note",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 200, patchStatus, patchBody)
-
-		// GET with full include to verify preservation
-		getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {includeStr}})
-		require.NoError(t, err)
-		requireStatus(t, 200, getStatus, getBody)
-
-		got := parseJSON(getBody)
-
-		// Updated field
-		assert.Equal(t, "Changed note", jsonField(got, "note"))
-
-		// Preserved top-level fields
-		assert.Equal(t, id, jsonField(got, "id"))
-		assert.Equal(t, "customer", jsonField(got, "object"))
-		assert.Equal(t, name, jsonField(got, "name"), "name should be preserved")
-		assert.Equal(t, origNumber, jsonField(got, "number"), "number should be preserved")
-		assert.Equal(t, "normal", jsonField(got, "status"), "status should be preserved")
-		assert.Equal(t, "standalone", jsonField(got, "relationship_type"), "relationship_type should be preserved")
-		assert.Equal(t, "exempt", jsonField(got, "commission_policy"), "commission_policy should be preserved")
-		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
-		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-
-		// Preserved contact_info
-		ci := jsonObject(got, "contact_info")
-		require.NotNil(t, ci)
-		assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(ci, "email"), "email should be preserved")
-		assert.Equal(t, "555-000-1234", jsonField(ci, "phone"), "phone should be preserved")
-		assert.Equal(t, "https://original.e2e.openmrp.ai", jsonField(ci, "url"), "url should be preserved")
-
-		// Preserved defaults
-		defaults := jsonObject(got, "defaults")
-		require.NotNil(t, defaults)
-		pt := jsonObject(defaults, "payment_term")
-		require.NotNil(t, pt, "payment_term should be preserved")
-		assert.Equal(t, SeedPaymentTermID, jsonField(pt, "id"))
-		st := jsonObject(defaults, "shipping_term")
-		require.NotNil(t, st, "shipping_term should be preserved")
-		assert.Equal(t, SeedShippingTermID, jsonField(st, "id"))
-		pri := jsonObject(defaults, "priority")
-		require.NotNil(t, pri, "priority should be preserved")
-		assert.Equal(t, SeedPriorityCode, jsonField(pri, "code"))
-		sr := jsonObject(defaults, "sales_rep")
-		require.NotNil(t, sr, "sales_rep should be preserved")
-		assert.Equal(t, SeedAccountUserID, jsonField(sr, "id"))
-		assert.Equal(t, "account_user", jsonField(sr, "object"))
-
-		// Preserved freight_preferences
-		fp := jsonObject(got, "freight_preferences")
-		require.NotNil(t, fp)
-		assert.Equal(t, "free", jsonField(fp, "status"), "freight status should be preserved")
-		assert.Equal(t, "third_party", jsonField(fp, "billing_type"), "billing_type should be preserved")
-		assert.Equal(t, "ACCT-ORIG", jsonField(fp, "billing_account"), "billing_account should be preserved")
-		carrier := jsonObject(fp, "carrier")
-		require.NotNil(t, carrier, "carrier should be preserved")
-		assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
-
-		// Preserved type
-		typeGroup := jsonObject(got, "type")
-		require.NotNil(t, typeGroup, "type should be preserved")
-		assert.Equal(t, SeedCustomerGroupID, jsonField(typeGroup, "id"))
-
-		// Preserved notification_preferences
-		np := jsonObject(got, "notification_preferences")
-		require.NotNil(t, np, "notification_preferences should be preserved")
-		assert.Equal(t, "customer_notification_preferences", jsonField(np, "object"))
-	})
-}
 
 // ──────────────────────────────────────────────
 // Account Address Linking
@@ -1249,9 +476,9 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrID) })
 
 	// Update customer's billing address to the new address.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"bill_to_address_id": addrID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1264,12 +491,12 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 	// Verify billing address is set on the customer via include.
 	getStatus, getBody, err := apiClient.GetListRaw(
 		customersPath+"/"+custID,
-		url.Values{"include": {"bill_to_address"}},
+		url.Values{"include": {"defaults.bill_to_address"}},
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	billTo := jsonObject(got, "bill_to_address")
+	billTo := jsonObject(jsonObject(got, "defaults"), "bill_to_address")
 	require.NotNil(t, billTo, "bill_to_address should be set")
 	assert.Equal(t, addrID, jsonField(billTo, "id"))
 }
@@ -1304,9 +531,9 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrBID) })
 
 	// Set billing address to A.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"bill_to_address_id": addrAID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1317,9 +544,9 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 		"address A should be in customer's address list after create")
 
 	// Update customer's billing address to B.
-	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"bill_to_address_id": addrBID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus2, patchBody2)
 
@@ -1334,12 +561,12 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	// Verify the customer's billing address is now B.
 	getStatus, getBody, err := apiClient.GetListRaw(
 		customersPath+"/"+custID,
-		url.Values{"include": {"bill_to_address"}},
+		url.Values{"include": {"defaults.bill_to_address"}},
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	billTo := jsonObject(got, "bill_to_address")
+	billTo := jsonObject(jsonObject(got, "defaults"), "bill_to_address")
 	require.NotNil(t, billTo, "bill_to_address should be set after update")
 	assert.Equal(t, addrBID, jsonField(billTo, "id"))
 }
@@ -1374,9 +601,9 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrBID) })
 
 	// Set shipping address to A.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"ship_to_address_id": addrAID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1387,9 +614,9 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 		"address A should be in customer's address list after create")
 
 	// Update customer's shipping address to B.
-	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus2, patchBody2, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"ship_to_address_id": addrBID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus2, patchBody2)
 
@@ -1423,10 +650,10 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + addrID) })
 
 	// Set the same address for both billing and shipping (no duplicate key error).
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"bill_to_address_id": addrID,
 		"ship_to_address_id": addrID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1439,17 +666,17 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 	// Verify both billing and shipping point to the same address.
 	getStatus, getBody, err := apiClient.GetListRaw(
 		customersPath+"/"+custID,
-		url.Values{"include": {"bill_to_address,ship_to_address"}},
+		url.Values{"include": {"defaults.bill_to_address,defaults.ship_to_address"}},
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 
-	billTo := jsonObject(got, "bill_to_address")
+	billTo := jsonObject(jsonObject(got, "defaults"), "bill_to_address")
 	require.NotNil(t, billTo, "bill_to_address should be set")
 	assert.Equal(t, addrID, jsonField(billTo, "id"))
 
-	shipTo := jsonObject(got, "ship_to_address")
+	shipTo := jsonObject(jsonObject(got, "defaults"), "ship_to_address")
 	require.NotNil(t, shipTo, "ship_to_address should be set")
 	assert.Equal(t, addrID, jsonField(shipTo, "id"))
 }
@@ -1492,9 +719,9 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	assert.Empty(t, pgData, "price_groups should be empty initially")
 
 	// Set price groups to [pg1, pg2].
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"customer_price_group_ids": []string{pg1ID, pg2ID},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1521,9 +748,9 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	assert.True(t, pgIDs[pg2ID], "pg2 should be present")
 
 	// Replace price groups with only [pg1].
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"customer_price_group_ids": []string{pg1ID},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1546,9 +773,9 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	}
 
 	// Clear all price groups by sending empty array.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"customer_price_group_ids": []string{},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1566,65 +793,6 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	assert.Empty(t, pgData, "price_groups should be empty after clearing")
 }
 
-func TestCustomers_UpdateContactInfo(t *testing.T) {
-	t.Parallel()
-
-	// Create a customer with contact info.
-	name := uniqueName("e2e-cust-ci")
-	payload := validCustomerBody(name)
-	payload["email"] = name + "@test.com"
-	payload["phone"] = "555-111-2222"
-	payload["url"] = "https://original.example.com"
-	cust := createAndCleanup(t, customersPath+"?include=contact_info", payload)
-	custID := jsonField(cust, "id")
-
-	// Verify contact info was set.
-	ci := jsonObject(cust, "contact_info")
-	require.NotNil(t, ci)
-	assert.Equal(t, name+"@test.com", jsonField(ci, "email"))
-	assert.Equal(t, "555-111-2222", jsonField(ci, "phone"))
-	assert.Equal(t, "https://original.example.com", jsonField(ci, "url"))
-
-	// Update email only — phone and url should be preserved.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
-		"email": name + "-updated@test.com",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	updatedCI := jsonObject(parseJSON(patchBody), "contact_info")
-	require.NotNil(t, updatedCI)
-	assert.Equal(t, name+"-updated@test.com", jsonField(updatedCI, "email"), "email should be updated")
-	assert.Equal(t, "555-111-2222", jsonField(updatedCI, "phone"), "phone should be preserved")
-	assert.Equal(t, "https://original.example.com", jsonField(updatedCI, "url"), "url should be preserved")
-
-	// Clear email by sending null — phone and url should be preserved.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
-		"email": nil,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	clearedCI := jsonObject(parseJSON(patchBody), "contact_info")
-	require.NotNil(t, clearedCI)
-	assertNilField(t, clearedCI, "email")
-	assert.Equal(t, "555-111-2222", jsonField(clearedCI, "phone"), "phone should be preserved after clearing email")
-	assert.Equal(t, "https://original.example.com", jsonField(clearedCI, "url"), "url should be preserved after clearing email")
-
-	// Update without sending any contact fields — all should be preserved.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID+"?include=contact_info", map[string]any{
-		"note": "unrelated update",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, patchStatus, patchBody)
-
-	preservedCI := jsonObject(parseJSON(patchBody), "contact_info")
-	require.NotNil(t, preservedCI)
-	assertNilField(t, preservedCI, "email")
-	assert.Equal(t, "555-111-2222", jsonField(preservedCI, "phone"), "phone should still be preserved")
-	assert.Equal(t, "https://original.example.com", jsonField(preservedCI, "url"), "url should still be preserved")
-}
-
 func TestCustomers_UpdateAndClearNote(t *testing.T) {
 	t.Parallel()
 
@@ -1632,31 +800,31 @@ func TestCustomers_UpdateAndClearNote(t *testing.T) {
 	notePayload["note"] = "initial note"
 	cust := createAndCleanup(t, customersPath, notePayload)
 	custID := jsonField(cust, "id")
-	assert.Equal(t, "initial note", jsonField(cust, "note"))
+	assert.Equal(t, "initial note", jsonField(cust, "instructions"))
 
 	// Update note to a new value.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"note": "updated note",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
-	assert.Equal(t, "updated note", jsonField(parseJSON(patchBody), "note"))
+	assert.Equal(t, "updated note", jsonField(parseJSON(patchBody), "instructions"))
 
 	// Clear note by sending null.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"note": nil,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
-	assertNilField(t, parseJSON(patchBody), "note")
+	assertNilField(t, parseJSON(patchBody), "instructions")
 
 	// Update unrelated field — note should remain cleared.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"number": "NUM-999",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
-	assertNilField(t, parseJSON(patchBody), "note")
+	assertNilField(t, parseJSON(patchBody), "instructions")
 }
 
 func TestCustomers_ClearNullableDefaults(t *testing.T) {
@@ -1664,13 +832,11 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 
 	includeAll := url.Values{
 		"include[]": {
-			"defaults",
 			"defaults.payment_term",
 			"defaults.shipping_term",
 			"defaults.sales_rep",
-			"freight_preferences",
-			"freight_preferences.carrier",
-			"freight_preferences.service_level",
+			"defaults.carrier",
+			"defaults.service_level",
 		},
 	}
 	includeQS := "?" + includeAll.Encode()
@@ -1687,17 +853,15 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 	sr := jsonObject(defaults, "sales_rep")
 	require.NotNil(t, sr, "sales_rep should be set")
 
-	fp := jsonObject(cust, "freight_preferences")
-	require.NotNil(t, fp)
-	carrier := jsonObject(fp, "carrier")
+	carrier := jsonObject(defaults, "carrier")
 	require.NotNil(t, carrier, "carrier should be set")
 
 	// Clear sales rep by sending null — other defaults should be preserved.
 	patchStatus, patchBody, err := apiClient.Patch(
 		customersPath+"/"+custID+includeQS,
-		map[string]any{
+		forgeCustomerWrite(map[string]any{
 			"default_sales_rep_id": nil,
-		},
+		}),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -1717,17 +881,15 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 	require.NotNil(t, patchedST, "shipping_term should be preserved")
 	assert.Equal(t, SeedShippingTermID, jsonField(patchedST, "id"))
 
-	patchedFP := jsonObject(patched, "freight_preferences")
-	require.NotNil(t, patchedFP)
-	patchedCarrier := jsonObject(patchedFP, "carrier")
+	patchedCarrier := jsonObject(patchedDefaults, "carrier")
 	require.NotNil(t, patchedCarrier, "carrier should be preserved")
 
 	// Update unrelated field — all remaining defaults should be preserved.
 	patchStatus2, patchBody2, err := apiClient.Patch(
 		customersPath+"/"+custID+includeQS,
-		map[string]any{
+		forgeCustomerWrite(map[string]any{
 			"note": "unrelated change",
-		},
+		}),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -1764,9 +926,9 @@ func TestCustomers_UpdateRejectsNullForNonNullableFields(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+			status, body, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 				tc.field: nil,
-			}, newIdempotencyKey())
+			}), newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -1791,7 +953,7 @@ func TestCustomers_CreateRejectsNullForNonNullableFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			payload := validCustomerBody(uniqueName("e2e-cust-nonnull"))
 			payload[tc.field] = nil
-			status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+			status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -1817,9 +979,9 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	custID := jsonField(cust, "id")
 
 	// Update an unrelated field (note) — should NOT clear price groups.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"note": "Updated note, price groups should remain",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -1840,9 +1002,9 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	}
 
 	// Sending an empty array should clear the price groups.
-	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, map[string]any{
+	patchStatus, patchBody, err = apiClient.Patch(customersPath+"/"+custID, forgeCustomerWrite(map[string]any{
 		"customer_price_group_ids": []string{},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 

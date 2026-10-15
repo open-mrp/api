@@ -19,133 +19,78 @@ import (
 type CreateCustomerRequest struct {
 	// The customer's business name, as shown throughout the app and on documents.
 	Name string `json:"name" validate:"required,max=255"`
-	// Human-readable customer number used to identify the account, distinct from the `id`.
-	//
-	// Must be unique within your account. If omitted, the next sequential number is assigned automatically.
+	// Customer number, unique within your account. If omitted, the next number in your sequence is assigned.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Free-form note about the customer.
-	Note field.Optional[string] `json:"note,omitzero"`
-	// Email address.
-	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,max=255"`
-	// Phone number.
-	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
-	// Website URL.
-	URL field.Optional[string] `json:"url,omitzero" validate:"omitempty,max=255"`
-	// The customer's account standing.
-	//
-	// - `normal`: standard account with no restrictions.
-	// - `preferred`: account flagged for prioritized handling.
-	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
-	// - `hold_all`: all activity for the customer should be held.
-	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero" default:"normal"`
-	// How sales commission applies to this customer's orders.
-	//
-	// - `exempt`: this customer's orders are exempt from sales commission.
-	// - `applied`: sales commission is calculated on this customer's orders.
-	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"exempt"`
-	// Whether this customer is billed for freight on their orders.
-	//
-	// - `free`: the customer is not billed for freight.
-	// - `billed`: freight is billed to the customer.
-	//
-	// Freight is also waived when the customer's type group, one of its price groups, or a product line the ordered products belong to is `free`.
-	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed"`
-	// Calendar days between an order being issued and it being due to ship.
-	//
-	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the parent account's lead time, then the customer's account group lead time, then the account default.
-	LeadTimeDays field.Optional[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
-	// The operating calendar naming the days this customer's dock accepts freight.
-	//
-	// Sits in the same chain as lead_time_days: leaving it unset falls through to the customer's group, then the account default, then Monday to Friday. A promised delivery date is never worked back from a day nobody is there to receive on.
-	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
-	// How this customer's orders are produced.
-	//
-	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
-	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
-	//
-	// Leave unset to inherit the customer's account group policy, then the make-to-stock default.
-	FulfillmentPolicy field.Optional[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
-	// ID of the carrier used on this customer's orders when the order does not specify one.
-	DefaultCarrierID string `json:"default_carrier_id" validate:"required"`
-	// ID of the carrier service level used when an order takes its carrier from this customer's default.
-	DefaultServiceLevelID field.Optional[string] `json:"default_service_level_id,omitzero" validate:"omitempty"`
-	// ID of the payment term used on this customer's orders when the order does not specify one.
-	DefaultPaymentTermID string `json:"default_payment_term_id" validate:"required"`
-	// ID of the shipping term used on this customer's orders when the order does not specify one.
-	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required"`
-	// Priority used to pre-fill new orders for this customer.
-	DefaultPriorityCode field.Optional[constants.PriorityCode] `json:"default_priority,omitzero" default:"normal"`
-	// The ID of the account user to credit as the sales rep on this customer's orders.
-	//
-	// Must be an account user on your own account.
-	DefaultSalesRepID field.Optional[string] `json:"default_sales_rep_id,omitzero" validate:"omitempty"`
-	// IDs of the account groups of type `pricing_group` to assign to this customer, used to apply pricing rules.
-	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitzero"`
-	// ID of the account group of type `type_group` that categorizes this customer (for example "Distributors").
-	CustomerTypeGroupID string `json:"customer_type_group_id" validate:"required"`
-	// Who pays the carrier for shipments.
-	//
-	// - `sender`: the shipper (you) pays the carrier.
-	// - `third_party`: a third party is billed, using `carrier_billing_account`.
-	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" default:"sender"`
-	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
-	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
-	// Maximum credit extended to this customer.
+	// Whether the customer can receive new orders: `active` or `archived`. Defaults to `active`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// The customer's credit standing: `normal`, `hold_shipment` or `hold_all`. Defaults to `normal`.
+	Standing field.Optional[constants.CustomerStanding] `json:"standing,omitzero"`
+	// Your team's standing instructions for this customer's orders.
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
+	// Whether orders from this customer earn sales commission: `applied` or `exempt`. Defaults to `exempt`.
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
+	// Whether this customer is billed for freight: `billed` or `free`. Defaults to `billed`.
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
+	// Credit extended to this customer. Omit for no limit.
 	CreditLimit field.Optional[apirequest.MoneyInput] `json:"credit_limit,omitzero"`
-	// Default billing address, created along with the customer.
+	// How to reach the customer's business.
+	Contact field.Optional[CustomerContactInput] `json:"contact,omitzero"`
+	// Who pays the carrier.
+	CarrierBilling field.Optional[CustomerCarrierBillingInput] `json:"carrier_billing,omitzero"`
+	// Values copied onto a new order for this customer when the order doesn't set them.
+	Defaults CreateCustomerDefaultsInput `json:"defaults" validate:"required"`
+	// ID of the account group that classifies this customer.
+	GroupID string `json:"group_id" validate:"required"`
+	// IDs of the pricing account groups the customer belongs to.
+	PriceGroupIDs []string `json:"price_group_ids,omitzero" visibility:"internal"`
+	// ID of the customer this one belongs to, making it a child customer.
+	ParentCustomerID field.Optional[string] `json:"parent_customer_id,omitzero"`
+	// The customer's first billing address. It becomes `defaults.bill_to_address`.
 	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
-	// Default shipping address, created along with the customer.
-	//
-	// If identical to `bill_to_address`, a single shared address record is created.
+	// The customer's first shipping address. It becomes `defaults.ship_to_address`; one identical to the billing address is saved once.
 	ShipToAddress apirequest.AddressInput `json:"ship_to_address" validate:"required"`
 }
 
-var sampleCreateCustomerNote = "Key enterprise account"
-var sampleCreateCustomerStreetLine1 = "123 Main St"
-var sampleCreateCustomerLocality = "New York"
+var sampleCreateCustomerLine1 = "123 Main St"
+var sampleCreateCustomerCity = "New York"
 var sampleCreateCustomerState = "NY"
 var sampleCreateCustomerPostalCode = "10001"
-var sampleCreateCustomerEmail = "orders@acme.com"
-var sampleCreateCustomerPhone = "555-123-4567"
-var sampleCreateCustomerURL = "https://acme.com"
-var sampleCreateCustomerCarrierBillingAccount = "123456789"
 var sampleCreateCustomerRequest = &CreateCustomerRequest{
-	Name:                  apiresource.SampleCustomerName,
-	Number:                field.Some(apiresource.SampleCustomerNumber),
-	Note:                  field.Some(sampleCreateCustomerNote),
-	Email:                 field.Some(sampleCreateCustomerEmail),
-	Phone:                 field.Some(sampleCreateCustomerPhone),
-	URL:                   field.Some(sampleCreateCustomerURL),
-	StatusCode:            field.Some(constants.AccountStatusCodeNormal),
-	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
-	FreightPolicy:         field.Some(constants.FreightPolicyBilled),
-	FulfillmentPolicy:     field.Some(constants.FulfillmentPolicyMakeToOrder),
-	DefaultCarrierID:      apiresource.SampleCarrierID,
-	DefaultServiceLevelID: field.Some(apiresource.SampleServiceLevelID),
-	DefaultPaymentTermID:  apiresource.SamplePaymentTermID,
-	DefaultShippingTermID: apiresource.SampleShippingTermID,
-	DefaultPriorityCode:   field.Some(constants.PriorityCodeNormal),
-	DefaultSalesRepID:     field.Some(apiresource.SampleAccountUserID),
-	CustomerPriceGroupIDs: []string{apiresource.SampleAccountGroupID},
-	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
-	CarrierBillingType:    field.Some(constants.CarrierBillingTypeSender),
-	CarrierBillingAccount: field.Some(sampleCreateCustomerCarrierBillingAccount),
-	CreditLimit: field.Some(apirequest.MoneyInput{
-		Amount:   "10000.00",
-		Currency: "usd",
+	Name:             apiresource.SampleCustomerName,
+	Number:           field.Some(apiresource.SampleCustomerNumber),
+	Standing:         field.Some(constants.CustomerStandingNormal),
+	Instructions:     field.Some("Send invoices to accounts payable."),
+	CommissionPolicy: field.Some(constants.CommissionPolicyApplied),
+	FreightPolicy:    field.Some(constants.FreightPolicyBilled),
+	CreditLimit:      field.Some(apirequest.MoneyInput{Amount: "10000.00", Currency: "usd"}),
+	Contact: field.Some(CustomerContactInput{
+		Email: field.Set("orders@acme.com"),
+		Phone: field.Set("555-123-4567"),
+		URL:   field.Set("https://acme.com"),
 	}),
+	CarrierBilling: field.Some(CustomerCarrierBillingInput{Type: field.Some(constants.CarrierBillingTypeSender)}),
+	Defaults: CreateCustomerDefaultsInput{
+		CarrierID:      apiresource.SampleCarrierID,
+		ServiceLevelID: field.Some(apiresource.SampleServiceLevelID),
+		PaymentTermID:  apiresource.SamplePaymentTermID,
+		ShippingTermID: apiresource.SampleShippingTermID,
+		SalesRepID:     field.Some(apiresource.SampleAccountUserID),
+		LeadTime:       field.Some(apirequest.QuantityInput{Value: "10", UnitID: apirequest.DayUnitID}),
+		Supply:         field.Some(constants.SupplyStock),
+	},
+	GroupID: apiresource.SampleAccountGroupID,
 	BillToAddress: apirequest.AddressInput{
 		Name:       apiresource.SampleCustomerName,
-		Line1:      field.SomePtr(&sampleCreateCustomerStreetLine1),
-		City:       field.SomePtr(&sampleCreateCustomerLocality),
+		Line1:      field.SomePtr(&sampleCreateCustomerLine1),
+		City:       field.SomePtr(&sampleCreateCustomerCity),
 		State:      field.SomePtr(&sampleCreateCustomerState),
 		PostalCode: field.SomePtr(&sampleCreateCustomerPostalCode),
 		Country:    "US",
 	},
 	ShipToAddress: apirequest.AddressInput{
 		Name:       apiresource.SampleCustomerName,
-		Line1:      field.SomePtr(&sampleCreateCustomerStreetLine1),
-		City:       field.SomePtr(&sampleCreateCustomerLocality),
+		Line1:      field.SomePtr(&sampleCreateCustomerLine1),
+		City:       field.SomePtr(&sampleCreateCustomerCity),
 		State:      field.SomePtr(&sampleCreateCustomerState),
 		PostalCode: field.SomePtr(&sampleCreateCustomerPostalCode),
 		Country:    "US",
@@ -156,9 +101,9 @@ func (*CreateCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCustomerRequest)
 }
 
-// Creates a customer account with its default addresses, fulfillment settings, and order policies.
+// Creates a customer.
 //
-// If `number` is omitted, the next sequential customer number is assigned automatically.
+// Give its first billing and shipping addresses inline. They become the customer's default addresses. If `number` is omitted, the next number in your sequence is assigned.
 type CreateCustomerEndpoint struct{}
 
 func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer] {
@@ -171,7 +116,6 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).CreateCustomer
@@ -181,9 +125,7 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomer,
-			Fields: []string{
-				"bill_to_address", "ship_to_address", "type", "parent_account", "freight_preferences.carrier", "freight_preferences.carrier.service_levels", "freight_preferences.service_level", "defaults.payment_term", "defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.priority", "contact_info", "freight_preferences", "defaults", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
-			},
+			Fields:     customerIncludeFields,
 		}),
 	})
 }

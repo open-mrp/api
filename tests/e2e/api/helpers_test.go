@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -547,12 +548,14 @@ const e2eCurrencyUnitID = "dollar"
 // Tests can override individual fields by writing to the returned map before posting.
 func validCustomerBody(name string) map[string]any {
 	return map[string]any{
-		"name":                     name,
-		"status":                   "normal",
-		"default_carrier_id":       SeedCarrierID,
-		"default_payment_term_id":  SeedPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"customer_type_group_id":   SeedCustomerGroupID,
+		"name":     name,
+		"standing": "normal",
+		"defaults": map[string]any{
+			"carrier_id":       SeedCarrierID,
+			"payment_term_id":  SeedPaymentTermID,
+			"shipping_term_id": SeedShippingTermID,
+		},
+		"group_id": SeedCustomerGroupID,
 		"bill_to_address": map[string]any{
 			"name":    name + " Billing",
 			"country": "US",
@@ -562,6 +565,124 @@ func validCustomerBody(name string) map[string]any {
 			"country": "US",
 		},
 	}
+}
+
+// p9Client is apiClient as a 1.0.forge-preview.9 caller, for the tests that pin what the dashboard (still on
+// preview.9) sends and reads.
+func p9Client() *Client {
+	return apiClient.WithAPIVersion(preview9Version)
+}
+
+// forgeCustomerWrite moves a customer write written with the dashboard's flat names (default_carrier_id,
+// lead_time_days, email, note…) into forge's sections, so a test can state a body the short way. A body already
+// in the forge shape passes through.
+func forgeCustomerWrite(body map[string]any) map[string]any {
+	out := make(map[string]any, len(body))
+	for k, v := range body {
+		out[k] = v
+	}
+	rename := func(from, to string) {
+		if v, ok := out[from]; ok {
+			out[to] = v
+			delete(out, from)
+		}
+	}
+	switch out["status"] {
+	case "normal", "preferred", "hold_shipment", "hold_all":
+		rename("status", "standing")
+	}
+	rename("note", "instructions")
+	rename("customer_type_group_id", "group_id")
+	rename("customer_price_group_ids", "price_group_ids")
+	delete(out, "default_priority")
+	section := func(name string) map[string]any {
+		if m, ok := out[name].(map[string]any); ok {
+			copied := make(map[string]any, len(m))
+			for k, v := range m {
+				copied[k] = v
+			}
+			return copied
+		}
+		return map[string]any{}
+	}
+	moveInto := func(name string, keys map[string]string) {
+		sec, moved := section(name), false
+		for from, to := range keys {
+			if v, ok := out[from]; ok {
+				sec[to] = v
+				delete(out, from)
+				moved = true
+			}
+		}
+		if moved {
+			out[name] = sec
+		}
+	}
+	moveInto("contact", map[string]string{"email": "email", "phone": "phone", "url": "url"})
+	moveInto("carrier_billing", map[string]string{"carrier_billing_type": "type", "carrier_billing_account": "account_number"})
+	if days, ok := out["lead_time_days"]; ok {
+		delete(out, "lead_time_days")
+		if days != nil {
+			days = map[string]any{"value": fmt.Sprint(days), "unit_id": "day"}
+		}
+		out["lead_time"] = days
+	}
+	if policy, ok := out["fulfillment_policy"]; ok {
+		delete(out, "fulfillment_policy")
+		switch policy {
+		case "make_to_stock":
+			policy = "stock"
+		case "make_to_order":
+			policy = "make"
+		}
+		out["supply"] = policy
+	}
+	moveInto("defaults", map[string]string{
+		"default_carrier_id": "carrier_id", "default_service_level_id": "service_level_id",
+		"default_payment_term_id": "payment_term_id", "default_shipping_term_id": "shipping_term_id",
+		"default_sales_rep_id": "sales_rep_id", "bill_to_address_id": "bill_to_address_id",
+		"ship_to_address_id": "ship_to_address_id", "receive_calendar_id": "receive_calendar_id",
+		"lead_time": "lead_time", "supply": "supply",
+	})
+	return out
+}
+
+// forgeGroupWrite moves an account group write's default_lead_time_days into defaults.lead_time.
+func forgeGroupWrite(body map[string]any) map[string]any {
+	days, ok := body["default_lead_time_days"]
+	if !ok {
+		return body
+	}
+	out := make(map[string]any, len(body))
+	for k, v := range body {
+		out[k] = v
+	}
+	delete(out, "default_lead_time_days")
+	if days != nil {
+		days = map[string]any{"value": fmt.Sprint(days), "unit_id": "day"}
+	}
+	out["defaults"] = map[string]any{"lead_time": days}
+	return out
+}
+
+// leadTimeValue is the days of a defaults section's lead_time, or "" when it has none.
+func leadTimeValue(defaults map[string]any) string {
+	return jsonField(jsonObject(defaults, "lead_time"), "value")
+}
+
+// customerDefaults is a customer request body's defaults section, created when the body has none.
+func customerDefaults(body map[string]any) map[string]any {
+	d, ok := body["defaults"].(map[string]any)
+	if !ok {
+		d = map[string]any{}
+		body["defaults"] = d
+	}
+	return d
+}
+
+// dayLeadTime is a lead time of days as requests take it.
+func dayLeadTime(days int) map[string]any {
+	return map[string]any{"value": strconv.Itoa(days), "unit_id": "day"}
 }
 
 // createE2EAddress creates an address (owned by the actor's target account) and
@@ -610,10 +731,27 @@ func minimalSalesOrderCreateBody(t *testing.T, buyerAccountID string) map[string
 	}
 }
 
+// createAndCleanupP9 is createAndCleanup as a preview.9 caller.
+func createAndCleanupP9(t *testing.T, path string, body map[string]any) map[string]any {
+	t.Helper()
+	status, respBody, err := p9Client().Post(path, body, newIdempotencyKey())
+	require.NoError(t, err, "POST %s failed", path)
+	requireStatus(t, 201, status, respBody)
+	created := parseJSON(respBody)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(path + "/" + jsonField(created, "id")) })
+	return created
+}
+
 // createAndCleanup creates a resource via POST and registers t.Cleanup to delete it.
 // Returns the parsed response body. Fails the test if creation fails.
 func createAndCleanup(t *testing.T, path string, body map[string]any) map[string]any {
 	t.Helper()
+	switch strings.SplitN(path, "?", 2)[0] {
+	case customersPath:
+		body = forgeCustomerWrite(body)
+	case accountGroupsPath:
+		body = forgeGroupWrite(body)
+	}
 	status, respBody, err := apiClient.Post(path, body, newIdempotencyKey())
 	require.NoError(t, err, "POST %s failed", path)
 	requireStatus(t, 201, status, respBody)

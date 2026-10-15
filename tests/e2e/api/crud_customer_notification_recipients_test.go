@@ -243,8 +243,8 @@ func TestCustomerNotificationRecipients_UpdateRejectsForeignAccountUser(t *testi
 		"notification_types": []string{"invoice"},
 	}), newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
-		"account user from another account should be rejected, got %d: %s", status, string(body))
+	assert.Equal(t, 404, status, "account user from another account should be refused as not found: %s", string(body))
+	assert.Equal(t, "recipients[0].account_user_id", errorParam(body))
 }
 
 func TestCustomerNotificationRecipients_UpdateRejectsMissingTypes(t *testing.T) {

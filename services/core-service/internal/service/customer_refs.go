@@ -45,15 +45,15 @@ func (r *customerRefs) add(kind customerRefKind, id, held *string, param string)
 // newCustomerRefs lists every reference a customer create stores.
 func newCustomerRefs(params domain.CreateCustomerParams) customerRefs {
 	var refs customerRefs
-	refs.add(customerRefCarrier, params.DefaultCarrierID, nil, "default_carrier_id")
-	refs.add(customerRefServiceLevel, params.DefaultServiceLevelID, nil, "default_service_level_id")
-	refs.add(customerRefPaymentTerm, params.DefaultPaymentTermID, nil, "default_payment_term_id")
-	refs.add(customerRefShippingTerm, params.DefaultShippingTermID, nil, "default_shipping_term_id")
-	refs.add(customerRefReceiveCalendar, params.ReceiveCalendarID, nil, "receive_calendar_id")
-	refs.add(customerRefSalesRep, params.DefaultSalesRepID, nil, "default_sales_rep_id")
-	refs.add(customerRefAccountGroup, params.CustomerTypeGroupID, nil, "customer_type_group_id")
+	refs.add(customerRefCarrier, params.DefaultCarrierID, nil, "defaults.carrier_id")
+	refs.add(customerRefServiceLevel, params.DefaultServiceLevelID, nil, "defaults.service_level_id")
+	refs.add(customerRefPaymentTerm, params.DefaultPaymentTermID, nil, "defaults.payment_term_id")
+	refs.add(customerRefShippingTerm, params.DefaultShippingTermID, nil, "defaults.shipping_term_id")
+	refs.add(customerRefReceiveCalendar, params.ReceiveCalendarID, nil, "defaults.receive_calendar_id")
+	refs.add(customerRefSalesRep, params.DefaultSalesRepID, nil, "defaults.sales_rep_id")
+	refs.add(customerRefAccountGroup, params.CustomerTypeGroupID, nil, "group_id")
 	for _, groupID := range params.CustomerPriceGroupIDs {
-		refs.add(customerRefAccountGroup, &groupID, nil, "customer_price_group_ids")
+		refs.add(customerRefAccountGroup, &groupID, nil, "price_group_ids")
 	}
 	if params.CreditLimitValue != nil {
 		refs.add(customerRefUnit, params.CreditLimitUnitID, nil, "credit_limit.unit_id")
@@ -64,18 +64,18 @@ func newCustomerRefs(params domain.CreateCustomerParams) customerRefs {
 // changedCustomerRefs lists the references an update moves to a different record. One the customer already holds is left alone, so an edit is not refused over a reference it did not change.
 func changedCustomerRefs(params domain.UpdateCustomerParams, old *domain.Customer) customerRefs {
 	var refs customerRefs
-	refs.add(customerRefCarrier, params.DefaultCarrierID, old.DefaultCarrierID, "default_carrier_id")
-	refs.add(customerRefServiceLevel, params.DefaultServiceLevelID.ValuePtr(), old.DefaultServiceLevelID, "default_service_level_id")
-	refs.add(customerRefPaymentTerm, params.DefaultPaymentTermID, old.DefaultPaymentTermID, "default_payment_term_id")
-	refs.add(customerRefShippingTerm, params.DefaultShippingTermID, old.DefaultShippingTermID, "default_shipping_term_id")
-	refs.add(customerRefReceiveCalendar, params.ReceiveCalendarID.ValuePtr(), old.ReceiveCalendarID, "receive_calendar_id")
-	refs.add(customerRefSalesRep, params.DefaultSalesRepID.ValuePtr(), old.DefaultSalesRepID, "default_sales_rep_id")
-	refs.add(customerRefAccountGroup, params.CustomerTypeGroupID, old.TypeGroupID, "customer_type_group_id")
+	refs.add(customerRefCarrier, params.DefaultCarrierID, old.DefaultCarrierID, "defaults.carrier_id")
+	refs.add(customerRefServiceLevel, params.DefaultServiceLevelID.ValuePtr(), old.DefaultServiceLevelID, "defaults.service_level_id")
+	refs.add(customerRefPaymentTerm, params.DefaultPaymentTermID, old.DefaultPaymentTermID, "defaults.payment_term_id")
+	refs.add(customerRefShippingTerm, params.DefaultShippingTermID, old.DefaultShippingTermID, "defaults.shipping_term_id")
+	refs.add(customerRefReceiveCalendar, params.ReceiveCalendarID.ValuePtr(), old.ReceiveCalendarID, "defaults.receive_calendar_id")
+	refs.add(customerRefSalesRep, params.DefaultSalesRepID.ValuePtr(), old.DefaultSalesRepID, "defaults.sales_rep_id")
+	refs.add(customerRefAccountGroup, params.CustomerTypeGroupID, old.TypeGroupID, "group_id")
 	if params.HasCustomerPriceGroupIDs {
 		for _, groupID := range params.CustomerPriceGroupIDs {
 			held := slices.ContainsFunc(old.PriceGroups, func(g domain.CustomerAccountGroup) bool { return g.ID == groupID })
 			if !held {
-				refs.add(customerRefAccountGroup, &groupID, nil, "customer_price_group_ids")
+				refs.add(customerRefAccountGroup, &groupID, nil, "price_group_ids")
 			}
 		}
 	}

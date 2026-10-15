@@ -144,6 +144,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewAddressRepo().Return(suite.addressRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewBatchRepo().Return(suite.batchRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewCustomerRepo().Return(suite.customerRepo).AnyTimes()
+	suite.customerRepo.EXPECT().IsArchived(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewInvoiceRepo().Return(suite.invoiceRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewInventoryReservationRepo().Return(suite.inventoryReservationRepo).AnyTimes()

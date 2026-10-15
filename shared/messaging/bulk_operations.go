@@ -47,6 +47,8 @@ const (
 	PackPick BulkOperation = "pack_pick"
 	// Ships one shipment — not a row batch; same {job_id} payload and consumer as pack.
 	ShipShipment BulkOperation = "ship_shipment"
+	// Merges customers into one — not a row batch; same {job_id} payload and consumer as pack.
+	MergeCustomers BulkOperation = "merge_customers"
 )
 
 // lists every registered bulk operation; the rabbitmq bindings declare a queue per entry
@@ -69,4 +71,5 @@ var BulkOperations = []BulkOperation{
 	BulkResolveHubspotCompanyReviews,
 	PackPick,
 	ShipShipment,
+	MergeCustomers,
 }

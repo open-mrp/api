@@ -573,8 +573,7 @@ SELECT
     ar.default_lead_time_days AS customer_lead_time_days,
     par.default_lead_time_days AS parent_customer_lead_time_days,
     ag.default_lead_time_days AS account_group_lead_time_days,
-    ar.fulfillment_policy_code AS customer_policy,
-    ag.fulfillment_policy_code AS account_group_policy
+    ar.fulfillment_policy_code AS customer_policy
 FROM account_relation ar
 JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
@@ -592,10 +591,9 @@ type GetCustomerFulfillmentProfilesRow struct {
 	ParentCustomerLeadTimeDays sql.NullInt32
 	AccountGroupLeadTimeDays   sql.NullInt32
 	CustomerPolicy             sql.NullString
-	AccountGroupPolicy         sql.NullString
 }
 
-// GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group each falls back to.
+// GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group its lead time falls back to.
 //
 // The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer — including the parent account a child inherits its lead time from.
 func (q *Queries) GetCustomerFulfillmentProfiles(ctx context.Context, accountID string) ([]GetCustomerFulfillmentProfilesRow, error) {
@@ -614,7 +612,6 @@ func (q *Queries) GetCustomerFulfillmentProfiles(ctx context.Context, accountID 
 			&i.ParentCustomerLeadTimeDays,
 			&i.AccountGroupLeadTimeDays,
 			&i.CustomerPolicy,
-			&i.AccountGroupPolicy,
 		); err != nil {
 			return nil, err
 		}
@@ -1216,11 +1213,10 @@ WHERE so.owner_account_id = ?
   AND NOT EXISTS (
       SELECT 1
       FROM account_relation ar
-      LEFT JOIN account_group ag ON ag.id = ar.account_group_id
       WHERE ar.owner_account_id = so.owner_account_id
         AND ar.counterparty_account_id = so.buyer_account_id
         AND ar.account_relation_role_code = 'customer'
-        AND COALESCE(NULLIF(ar.fulfillment_policy_code, ''), ag.fulfillment_policy_code) = 'make_to_order'
+        AND ar.fulfillment_policy_code = 'make_to_order'
   )
 GROUP BY sol.product_id, YEAR(so.issued_at), MONTH(so.issued_at)
 ORDER BY sol.product_id, demand_year, demand_month

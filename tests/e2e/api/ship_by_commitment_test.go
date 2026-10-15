@@ -31,13 +31,13 @@ func leadTimeCustomer(t *testing.T, namePrefix string, leadTimeDays *int, accoun
 
 	body := validCustomerBody(uniqueName(namePrefix))
 	if leadTimeDays != nil {
-		body["lead_time_days"] = *leadTimeDays
+		customerDefaults(body)["lead_time"] = dayLeadTime(*leadTimeDays)
 	}
 	if accountGroupID != "" {
-		body["customer_type_group_id"] = accountGroupID
+		body["group_id"] = accountGroupID
 	}
 
-	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, respBody, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, respBody)
 	customerID := jsonField(parseJSON(respBody), "id")
@@ -242,7 +242,7 @@ func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *tes
 	require.Equal(t, 7, committedRuleDays(t, order))
 
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"lead_time_days": 90}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"lead_time_days": 90}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, patchStatus, 500, "customer update must not 5xx: %s", string(patchBody))
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -272,7 +272,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 
 		got := parseJSON(body)
 		assert.Equal(t, "customer_lead_time", jsonField(got, "object"))
-		assert.Equal(t, "5", jsonField(got, "days"))
+		assert.Equal(t, "5", leadTimeValue(got))
 		assert.Equal(t, "customer", jsonField(got, "source"))
 		assert.Nil(t, got["account_group"], "the group did not decide, so it should not be named")
 	})
@@ -287,7 +287,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 		requireStatus(t, 200, status, body)
 
 		got := parseJSON(body)
-		assert.Equal(t, "21", jsonField(got, "days"))
+		assert.Equal(t, "21", leadTimeValue(got))
 		assert.Equal(t, "account_group", jsonField(got, "source"))
 		group, ok := got["account_group"].(map[string]any)
 		require.True(t, ok, "the group that decided should be named: %s", string(body))
@@ -304,7 +304,7 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 
 		got := parseJSON(body)
 		assert.Equal(t, "account", jsonField(got, "source"))
-		assert.NotEmpty(t, jsonField(got, "days"))
+		assert.NotEmpty(t, leadTimeValue(got))
 	})
 
 	t.Run("unknown customer", func(t *testing.T) {
@@ -324,7 +324,7 @@ func TestCustomerLeadTime_ClearingReturnsCustomerToItsGroup(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-lt-clear-cust", ptrInt(5), groupID)
 
 	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"lead_time_days": nil}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"lead_time_days": nil}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "clearing must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -335,7 +335,7 @@ func TestCustomerLeadTime_ClearingReturnsCustomerToItsGroup(t *testing.T) {
 
 	got := parseJSON(getBody)
 	assert.Equal(t, "account_group", jsonField(got, "source"))
-	assert.Equal(t, "21", jsonField(got, "days"))
+	assert.Equal(t, "21", leadTimeValue(got))
 }
 
 // Omitting the field on an update must not be read as clearing it — that would wipe
@@ -346,7 +346,7 @@ func TestCustomerLeadTime_OmittingOnUpdatePreservesIt(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-lt-preserve", ptrInt(12), "")
 
 	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
-		map[string]any{"note": "unrelated edit"}, newIdempotencyKey())
+		forgeCustomerWrite(map[string]any{"note": "unrelated edit"}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "update must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -357,7 +357,7 @@ func TestCustomerLeadTime_OmittingOnUpdatePreservesIt(t *testing.T) {
 
 	got := parseJSON(getBody)
 	assert.Equal(t, "customer", jsonField(got, "source"))
-	assert.Equal(t, "12", jsonField(got, "days"))
+	assert.Equal(t, "12", leadTimeValue(got))
 }
 
 // Zero is a real commitment — ship same day — and must not be mistaken for "unset"
@@ -374,7 +374,7 @@ func TestCustomerLeadTime_ZeroIsSameDayNotUnset(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Equal(t, "customer", jsonField(got, "source"))
-	assert.Equal(t, "0", jsonField(got, "days"))
+	assert.Equal(t, "0", leadTimeValue(got))
 }
 
 func TestSalesOrders_ShipByFilters(t *testing.T) {

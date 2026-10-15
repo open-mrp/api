@@ -61,7 +61,7 @@ func TestSortingFiltering_FilterByCustomerTypeGroup(t *testing.T) {
 
 	// Filter by that type group.
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"customer_group_ids": {SeedCustomerGroupID},
+		"group_ids": {SeedCustomerGroupID},
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Filter should return at least 1 result")
@@ -113,7 +113,7 @@ func TestSortingFiltering_FilteredPaginationConsistency(t *testing.T) {
 	var ids []string
 	for i := 0; i < 2; i++ {
 		status, body, err := apiClient.Post(customersPath,
-			validCustomerBody(fmt.Sprintf("%s-%d", prefix, i)), newIdempotencyKey())
+			forgeCustomerWrite(validCustomerBody(fmt.Sprintf("%s-%d", prefix, i))), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 		id := jsonField(parseJSON(body), "id")
@@ -200,7 +200,7 @@ func TestSortingFiltering_CustomerStatusFilter(t *testing.T) {
 	id := jsonField(created, "id")
 
 	// Filter by hold_shipment — should include the created customer, and all results must share that status.
-	list, _, err := apiClient.GetList(customersPath, url.Values{"status_codes": {"hold_shipment"}})
+	list, _, err := apiClient.GetList(customersPath, url.Values{"standings": {"hold_shipment"}})
 	require.NoError(t, err)
 
 	found := false
@@ -209,19 +209,19 @@ func TestSortingFiltering_CustomerStatusFilter(t *testing.T) {
 		if DataItemField(item, "id") == id {
 			found = true
 		}
-		assert.Equal(t, "hold_shipment", jsonField(m, "status"),
+		assert.Equal(t, "hold_shipment", jsonField(m, "standing"),
 			"All hold_shipment-filtered results should have status=hold_shipment")
 	}
 	assert.True(t, found, "Customer with hold_shipment status should appear when filtering by that status")
 
 	// Filter by normal — should NOT include the hold_shipment customer, and all results must be normal.
-	normalList, _, err := apiClient.GetList(customersPath, url.Values{"status_codes": {"normal"}})
+	normalList, _, err := apiClient.GetList(customersPath, url.Values{"standings": {"normal"}})
 	require.NoError(t, err)
 	for _, item := range normalList.Data {
 		m := parseJSON(item)
 		assert.NotEqual(t, id, DataItemField(item, "id"),
 			"Customer with hold_shipment status should not appear when filtering by normal")
-		assert.Equal(t, "normal", jsonField(m, "status"),
+		assert.Equal(t, "normal", jsonField(m, "standing"),
 			"All normal-filtered results should have status=normal")
 	}
 }

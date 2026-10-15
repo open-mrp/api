@@ -865,8 +865,10 @@ type CustomerSvc interface {
 	// UpdateCustomer partially updates a customer.
 	UpdateCustomer(ctx context.Context, params UpdateCustomerParams) (*Customer, *apierror.APIError)
 
-	// MergeCustomers merges source customers into a target customer.
-	MergeCustomers(ctx context.Context, params MergeCustomersParams) (*Customer, *apierror.APIError)
+	// MergeCustomers accepts a merge of source customers into a target customer and records it on a job.
+	MergeCustomers(ctx context.Context, params MergeCustomersParams) (*Job, *apierror.APIError)
+	// ExecuteMergeCustomers runs an accepted merge and settles its job.
+	ExecuteMergeCustomers(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// ExportCustomers accepts an export of the customers the list's filters select; the export does its own paging.
 	ExportCustomers(ctx context.Context, filters ListCustomersParams) (*Job, *apierror.APIError)

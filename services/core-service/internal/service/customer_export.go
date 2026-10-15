@@ -36,7 +36,6 @@ var customerExportColumns = []excel.ColumnSpec{
 	{Header: "Status", Key: "status", Width: 12},
 	{Header: "Customer Group", Key: "customerGroup", Width: 20},
 	{Header: "Sales Rep", Key: "salesRep", Width: 20},
-	{Header: "Priority", Key: "priority", Width: 12},
 	{Header: "Payment Term", Key: "paymentTerm", Width: 18},
 	{Header: "Shipping Term", Key: "shippingTerm", Width: 18},
 	{Header: "Carrier", Key: "carrier", Width: 18},
@@ -46,7 +45,7 @@ var customerExportColumns = []excel.ColumnSpec{
 	{Header: "Commission Exempt", Key: "commissionExempt", Width: 18},
 	{Header: "Freight Exempt", Key: "freightExempt", Width: 15},
 	{Header: "Parent Account", Key: "parentAccount", Width: 15},
-	{Header: "Note", Key: "note", Width: 30},
+	{Header: "Instructions", Key: "instructions", Width: 30},
 	{Header: "Created At", Key: "createdAt", Width: 15, NumFmt: customerExportDateFormat},
 }
 
@@ -157,7 +156,6 @@ func projectCustomerExportRow(row customerExportRow) excel.Row {
 		"status":           row.statusName,
 		"customerGroup":    excel.Str(c.TypeGroupName),
 		"salesRep":         excel.Str(c.DefaultSalesRepName),
-		"priority":         excel.Str(c.DefaultPriorityName),
 		"paymentTerm":      excel.Str(c.DefaultPaymentTermName),
 		"shippingTerm":     excel.Str(c.DefaultShippingTermName),
 		"carrier":          excel.Str(c.DefaultCarrierName),
@@ -167,7 +165,7 @@ func projectCustomerExportRow(row customerExportRow) excel.Row {
 		"commissionExempt": yesNo(c.CommissionPolicy.ToBool()),
 		"freightExempt":    yesNo(c.FreightPolicy.ToBool()),
 		"parentAccount":    yesNo(c.ParentAccountID != nil),
-		"note":             excel.Str(c.Note),
+		"instructions":     excel.Str(c.Instructions),
 		"createdAt":        c.CreatedAt,
 	}
 }

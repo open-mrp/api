@@ -4520,6 +4520,20 @@ func (mr *MockCustomerSvcMockRecorder) DeleteCustomer(ctx, params any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomer", reflect.TypeOf((*MockCustomerSvc)(nil).DeleteCustomer), ctx, params)
 }
 
+// ExecuteMergeCustomers mocks base method.
+func (m *MockCustomerSvc) ExecuteMergeCustomers(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteMergeCustomers", ctx, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteMergeCustomers indicates an expected call of ExecuteMergeCustomers.
+func (mr *MockCustomerSvcMockRecorder) ExecuteMergeCustomers(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteMergeCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).ExecuteMergeCustomers), ctx, event)
+}
+
 // ExportCustomers mocks base method.
 func (m *MockCustomerSvc) ExportCustomers(ctx context.Context, filters domain.ListCustomersParams) (*domain.Job, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4611,10 +4625,10 @@ func (mr *MockCustomerSvcMockRecorder) ListCustomers(ctx, params any) *gomock.Ca
 }
 
 // MergeCustomers mocks base method.
-func (m *MockCustomerSvc) MergeCustomers(ctx context.Context, params domain.MergeCustomersParams) (*domain.Customer, *apierror.APIError) {
+func (m *MockCustomerSvc) MergeCustomers(ctx context.Context, params domain.MergeCustomersParams) (*domain.Job, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MergeCustomers", ctx, params)
-	ret0, _ := ret[0].(*domain.Customer)
+	ret0, _ := ret[0].(*domain.Job)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }

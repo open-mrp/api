@@ -667,7 +667,9 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.notes,
+    ar.instructions,
+    ar.supply_code,
+    ar.is_active,
     ar.account_status_code AS status,
     ar.commission_status_code,
     ar.freight_status_code,
@@ -796,7 +798,9 @@ type GetCustomerRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	Notes                                 sql.NullString
+	Instructions                          sql.NullString
+	SupplyCode                            sql.NullString
+	IsActive                              bool
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
 	FreightStatusCode                     sql.NullString
@@ -901,7 +905,9 @@ func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCu
 		&i.AccountID,
 		&i.AccountName,
 		&i.ExternalNumber,
-		&i.Notes,
+		&i.Instructions,
+		&i.SupplyCode,
+		&i.IsActive,
 		&i.Status,
 		&i.CommissionStatusCode,
 		&i.FreightStatusCode,
@@ -1154,7 +1160,9 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.notes,
+    ar.instructions,
+    ar.supply_code,
+    ar.is_active,
     ar.account_status_code AS status,
     ar.commission_status_code,
     ar.freight_status_code,
@@ -1283,7 +1291,9 @@ type GetCustomersByIDsRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	Notes                                 sql.NullString
+	Instructions                          sql.NullString
+	SupplyCode                            sql.NullString
+	IsActive                              bool
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
 	FreightStatusCode                     sql.NullString
@@ -1407,7 +1417,9 @@ func (q *Queries) GetCustomersByIDs(ctx context.Context, arg GetCustomersByIDsPa
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
-			&i.Notes,
+			&i.Instructions,
+			&i.SupplyCode,
+			&i.IsActive,
 			&i.Status,
 			&i.CommissionStatusCode,
 			&i.FreightStatusCode,
@@ -1912,23 +1924,23 @@ func (q *Queries) InsertCustomerCreditLimitQuantity(ctx context.Context, arg Ins
 const insertCustomerRelation = `-- name: InsertCustomerRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    alias, external_number, notes,
+    alias, external_number, instructions, parent_account_relation_id, is_active,
     commission_status_code, freight_status_code,
     default_carrier_id, default_carrier_option_id, default_sales_rep_id,
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
-    credit_limit_id, default_lead_time_days, receive_calendar_id, fulfillment_policy_code,
+    credit_limit_id, default_lead_time_days, receive_calendar_id, fulfillment_policy_code, supply_code,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
-    ?, ?, ?,
+    ?, ?, ?, ?, ?,
     ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
     ?, ?, ?,
     ?, ?,
-    ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -1939,7 +1951,9 @@ type InsertCustomerRelationParams struct {
 	CounterpartyAccountID    string
 	Alias                    sql.NullString
 	ExternalNumber           string
-	Notes                    sql.NullString
+	Instructions             sql.NullString
+	ParentAccountRelationID  sql.NullString
+	IsActive                 bool
 	CommissionStatusCode     sql.NullString
 	FreightStatusCode        sql.NullString
 	DefaultCarrierID         sql.NullString
@@ -1958,6 +1972,7 @@ type InsertCustomerRelationParams struct {
 	DefaultLeadTimeDays      sql.NullInt32
 	ReceiveCalendarID        sql.NullString
 	FulfillmentPolicyCode    sql.NullString
+	SupplyCode               sql.NullString
 }
 
 func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomerRelationParams) error {
@@ -1967,7 +1982,9 @@ func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomer
 		arg.CounterpartyAccountID,
 		arg.Alias,
 		arg.ExternalNumber,
-		arg.Notes,
+		arg.Instructions,
+		arg.ParentAccountRelationID,
+		arg.IsActive,
 		arg.CommissionStatusCode,
 		arg.FreightStatusCode,
 		arg.DefaultCarrierID,
@@ -1986,6 +2003,7 @@ func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomer
 		arg.DefaultLeadTimeDays,
 		arg.ReceiveCalendarID,
 		arg.FulfillmentPolicyCode,
+		arg.SupplyCode,
 	)
 	return err
 }
@@ -2082,1258 +2100,6 @@ func (q *Queries) ListCustomerContacts(ctx context.Context, accountIds []string)
 	for rows.Next() {
 		var i ListCustomerContactsRow
 		if err := rows.Scan(&i.AccountID, &i.Name, &i.Email); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listCustomersBackward = `-- name: ListCustomersBackward :many
-SELECT STRAIGHT_JOIN
-    ar.id AS relation_id,
-    ar.counterparty_account_id AS account_id,
-    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
-    ar.external_number,
-    ar.notes,
-    ar.account_status_code AS status,
-    ar.commission_status_code,
-    ar.freight_status_code,
-    ar.default_lead_time_days,
-    ar.receive_calendar_id,
-    ar.fulfillment_policy_code,
-    ar.carrier_billing_type,
-    ar.carrier_billing_account,
-    ar.stripe_customer_id,
-    ar.stripe_email,
-    ab.support_email AS email,
-    ab.phone_number,
-    ab.website_url,
-    EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id) AS is_parent_account,
-    ar.parent_account_relation_id,
-    pa.name AS parent_account_name,
-    par.counterparty_account_id AS parent_account_id,
-    par.external_number AS parent_account_number,
-    c.id AS default_carrier_id,
-    c.name AS default_carrier_name,
-    c.is_portal_enabled AS default_carrier_is_portal_enabled,
-    c.created_at AS default_carrier_created_at,
-    c.updated_at AS default_carrier_updated_at,
-    co.id AS default_carrier_option_id,
-    co.name AS default_carrier_option_name,
-    co.code AS default_carrier_option_service_level_token,
-    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
-    co.created_at AS default_carrier_option_created_at,
-    co.updated_at AS default_carrier_option_updated_at,
-    pt.id AS payment_term_id,
-    pt.name AS payment_term_name,
-    pt.is_active AS payment_term_is_active,
-    pt.created_at AS payment_term_created_at,
-    pt.updated_at AS payment_term_updated_at,
-    st.id AS shipping_term_id,
-    st.name AS shipping_term_name,
-    st.is_freight_exempt AS shipping_term_is_freight_exempt,
-    st.is_carrier_rate AS shipping_term_is_carrier_rate,
-    st.created_at AS shipping_term_created_at,
-    st.updated_at AS shipping_term_updated_at,
-    p.id AS priority_id,
-    p.code AS priority_code,
-    p.name AS priority_name,
-    sr.id AS default_sales_rep_id,
-    sru.name AS default_sales_rep_name,
-    sr.status_code AS default_sales_rep_status_code,
-    sr.created_at AS default_sales_rep_created_at,
-    sr.updated_at AS default_sales_rep_updated_at,
-    tg.id AS type_group_id,
-    tg.name AS type_group_name,
-    tg.commission_status_code AS type_group_commission_status_code,
-    tg.freight_status_code AS type_group_freight_status_code,
-    tg.account_group_type_code AS type_group_type_code,
-    tg.created_at AS type_group_created_at,
-    tg.updated_at AS type_group_updated_at,
-    ba.id AS default_billing_address_id,
-    ba.name AS default_billing_address_name,
-    ba.phone AS default_billing_address_phone,
-    ba.email AS default_billing_address_email,
-    ba.is_drop_ship AS default_billing_is_drop_ship,
-    bg.id AS default_billing_geolocation_id,
-    bg.street_line_1 AS default_billing_street_line_1,
-    bg.street_line_2 AS default_billing_street_line_2,
-    bg.locality AS default_billing_locality,
-    bg.state AS default_billing_state,
-    bg.postal_code AS default_billing_postal_code,
-    bg.country AS default_billing_country,
-    ba.created_at AS default_billing_address_created_at,
-    ba.updated_at AS default_billing_address_updated_at,
-    sa.id AS default_shipping_address_id,
-    sa.name AS default_shipping_address_name,
-    sa.phone AS default_shipping_address_phone,
-    sa.email AS default_shipping_address_email,
-    sa.is_drop_ship AS default_shipping_is_drop_ship,
-    sg.id AS default_shipping_geolocation_id,
-    sg.street_line_1 AS default_shipping_street_line_1,
-    sg.street_line_2 AS default_shipping_street_line_2,
-    sg.locality AS default_shipping_locality,
-    sg.state AS default_shipping_state,
-    sg.postal_code AS default_shipping_postal_code,
-    sg.country AS default_shipping_country,
-    sa.created_at AS default_shipping_address_created_at,
-    sa.updated_at AS default_shipping_address_updated_at,
-    par.created_at AS parent_account_created_at,
-    par.updated_at AS parent_account_updated_at,
-    clq.id AS credit_limit_id,
-    clq.value AS credit_limit_value,
-    ar.credit_limit_currency,
-    clu.id AS credit_limit_unit_id,
-    clu.abbreviation AS credit_limit_unit_abbreviation,
-    clu.name AS credit_limit_unit_name,
-    clu.unit_dimension_code AS credit_limit_unit_type,
-    ar.created_at,
-    ar.updated_at
-FROM (
-  SELECT STRAIGHT_JOIN ar.id
-  FROM account_relation ar FORCE INDEX (
-      account_relation_owner_role_created_idx,
-      account_relation_owner_role_group_created_idx,
-      account_relation_owner_role_rep_created_idx,
-      account_relation_owner_role_status_created_idx,
-      account_relation_owner_role_carrier_created_idx,
-      account_relation_owner_role_carrier_option_created_idx,
-      account_relation_owner_role_payment_term_created_idx,
-      account_relation_owner_role_shipping_term_created_idx,
-      PRIMARY
-  )
-  INNER JOIN account a ON a.id = ar.counterparty_account_id
-  WHERE ar.owner_account_id = ?
-    AND ar.account_relation_role_code = 'customer'
-    AND (
-      ? IS NULL
-      OR a.name LIKE ?
-      OR ar.alias LIKE ?
-      OR ar.external_number LIKE ?
-      OR ar.notes LIKE ?
-      OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
-    )
-    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
-    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
-    AND (
-      ? = false
-      OR ar.counterparty_account_id IN (/*SLICE:account_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.id IN (/*SLICE:pricing_relation_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.account_status_code IN (/*SLICE:status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
-    )
-    AND (
-      ? = false
-      OR (
-        ? = true
-        AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-      )
-      OR (
-        ? = false
-        AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-      )
-    )
-    AND (
-      (? IS NULL AND ? IS NULL AND ? IS NULL)
-      -- A probe of each customer's few addresses; as a semi-join the planner scans geolocation for each.
-      OR (
-        SELECT STRAIGHT_JOIN 1 FROM account_address aa
-        JOIN address addr ON addr.id = aa.address_id
-        JOIN geolocation g ON g.id = addr.geolocation_id
-        WHERE aa.account_id = ar.counterparty_account_id
-        AND (? IS NULL OR g.locality = ?)
-        AND (? IS NULL OR g.state = ?)
-        AND (? IS NULL OR g.postal_code = ?)
-        LIMIT 1
-      ) IS NOT NULL
-    )
-    AND (? IS NULL OR ar.created_at >= ?)
-    AND (? IS NULL OR ar.created_at <= ?)
-    AND (
-      ar.created_at > ?
-      OR (ar.created_at = ? AND ar.counterparty_account_id > ?)
-    )
-  ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
-  LIMIT ?
-) page
-JOIN account_relation ar ON ar.id = page.id
-INNER JOIN account a ON a.id = ar.counterparty_account_id
-LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
-LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
-LEFT JOIN account pa ON pa.id = par.counterparty_account_id
-LEFT JOIN carrier c ON c.id = ar.default_carrier_id
-LEFT JOIN carrier_option co ON co.id = ar.default_carrier_option_id
-LEFT JOIN payment_term pt ON pt.id = ar.payment_term_id
-LEFT JOIN shipping_term st ON st.id = ar.shipping_term_id
-LEFT JOIN priority p ON p.code = ar.priority_code
-LEFT JOIN account_user sr ON sr.id = ar.default_sales_rep_id
-LEFT JOIN ` + "`" + `user` + "`" + ` sru ON sru.id = sr.user_id
-LEFT JOIN account_group tg ON tg.id = ar.account_group_id AND tg.account_group_type_code = 'type_group'
-LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
-LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
-LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
-LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
-LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
-LEFT JOIN unit clu ON clu.id = clq.unit_id
-ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
-`
-
-type ListCustomersBackwardParams struct {
-	OwnerAccountID                string
-	SearchQuery                   sql.NullString
-	IncludeAccountFilter          interface{}
-	AccountIds                    []string
-	IncludeCustomerGroupFilter    interface{}
-	CustomerGroupIds              []sql.NullString
-	IncludePricingGroupFilter     interface{}
-	PricingRelationIds            []string
-	IncludeSalesRepFilter         interface{}
-	SalesRepIds                   []sql.NullString
-	IncludeStatusFilter           interface{}
-	StatusCodes                   []sql.NullString
-	IncludeShippingTermFilter     interface{}
-	ShippingTermIds               []sql.NullString
-	IncludePaymentTermFilter      interface{}
-	PaymentTermIds                []sql.NullString
-	IncludeCommissionStatusFilter interface{}
-	CommissionStatusCodes         []sql.NullString
-	IncludeFreightStatusFilter    interface{}
-	FreightStatusCodes            []sql.NullString
-	IncludeCarrierFilter          interface{}
-	CarrierIds                    []sql.NullString
-	IncludeCarrierOptionFilter    interface{}
-	CarrierOptionIds              []sql.NullString
-	IncludeParentAccountFilter    interface{}
-	ParentAccountFilterValue      interface{}
-	City                          sql.NullString
-	State                         sql.NullString
-	PostalCode                    sql.NullString
-	StartDate                     sql.NullTime
-	EndDate                       sql.NullTime
-	CursorCreatedAt               time.Time
-	CursorID                      string
-	Limit                         int32
-}
-
-type ListCustomersBackwardRow struct {
-	RelationID                            string
-	AccountID                             string
-	AccountName                           string
-	ExternalNumber                        string
-	Notes                                 sql.NullString
-	Status                                sql.NullString
-	CommissionStatusCode                  sql.NullString
-	FreightStatusCode                     sql.NullString
-	DefaultLeadTimeDays                   sql.NullInt32
-	ReceiveCalendarID                     sql.NullString
-	FulfillmentPolicyCode                 sql.NullString
-	CarrierBillingType                    sql.NullString
-	CarrierBillingAccount                 sql.NullString
-	StripeCustomerID                      sql.NullString
-	StripeEmail                           sql.NullString
-	Email                                 sql.NullString
-	PhoneNumber                           sql.NullString
-	WebsiteUrl                            sql.NullString
-	IsParentAccount                       bool
-	ParentAccountRelationID               sql.NullString
-	ParentAccountName                     sql.NullString
-	ParentAccountID                       sql.NullString
-	ParentAccountNumber                   sql.NullString
-	DefaultCarrierID                      sql.NullString
-	DefaultCarrierName                    sql.NullString
-	DefaultCarrierIsPortalEnabled         sql.NullBool
-	DefaultCarrierCreatedAt               sql.NullTime
-	DefaultCarrierUpdatedAt               sql.NullTime
-	DefaultCarrierOptionID                sql.NullString
-	DefaultCarrierOptionName              sql.NullString
-	DefaultCarrierOptionServiceLevelToken sql.NullString
-	DefaultCarrierOptionIsPortalEnabled   sql.NullBool
-	DefaultCarrierOptionCreatedAt         sql.NullTime
-	DefaultCarrierOptionUpdatedAt         sql.NullTime
-	PaymentTermID                         sql.NullString
-	PaymentTermName                       sql.NullString
-	PaymentTermIsActive                   sql.NullBool
-	PaymentTermCreatedAt                  sql.NullTime
-	PaymentTermUpdatedAt                  sql.NullTime
-	ShippingTermID                        sql.NullString
-	ShippingTermName                      sql.NullString
-	ShippingTermIsFreightExempt           sql.NullBool
-	ShippingTermIsCarrierRate             sql.NullBool
-	ShippingTermCreatedAt                 sql.NullTime
-	ShippingTermUpdatedAt                 sql.NullTime
-	PriorityID                            sql.NullString
-	PriorityCode                          sql.NullString
-	PriorityName                          sql.NullString
-	DefaultSalesRepID                     sql.NullString
-	DefaultSalesRepName                   sql.NullString
-	DefaultSalesRepStatusCode             sql.NullString
-	DefaultSalesRepCreatedAt              sql.NullTime
-	DefaultSalesRepUpdatedAt              sql.NullTime
-	TypeGroupID                           sql.NullString
-	TypeGroupName                         sql.NullString
-	TypeGroupCommissionStatusCode         sql.NullString
-	TypeGroupFreightStatusCode            sql.NullString
-	TypeGroupTypeCode                     sql.NullString
-	TypeGroupCreatedAt                    sql.NullTime
-	TypeGroupUpdatedAt                    sql.NullTime
-	DefaultBillingAddressID               sql.NullString
-	DefaultBillingAddressName             sql.NullString
-	DefaultBillingAddressPhone            sql.NullString
-	DefaultBillingAddressEmail            sql.NullString
-	DefaultBillingIsDropShip              sql.NullBool
-	DefaultBillingGeolocationID           sql.NullString
-	DefaultBillingStreetLine1             sql.NullString
-	DefaultBillingStreetLine2             sql.NullString
-	DefaultBillingLocality                sql.NullString
-	DefaultBillingState                   sql.NullString
-	DefaultBillingPostalCode              sql.NullString
-	DefaultBillingCountry                 sql.NullString
-	DefaultBillingAddressCreatedAt        sql.NullTime
-	DefaultBillingAddressUpdatedAt        sql.NullTime
-	DefaultShippingAddressID              sql.NullString
-	DefaultShippingAddressName            sql.NullString
-	DefaultShippingAddressPhone           sql.NullString
-	DefaultShippingAddressEmail           sql.NullString
-	DefaultShippingIsDropShip             sql.NullBool
-	DefaultShippingGeolocationID          sql.NullString
-	DefaultShippingStreetLine1            sql.NullString
-	DefaultShippingStreetLine2            sql.NullString
-	DefaultShippingLocality               sql.NullString
-	DefaultShippingState                  sql.NullString
-	DefaultShippingPostalCode             sql.NullString
-	DefaultShippingCountry                sql.NullString
-	DefaultShippingAddressCreatedAt       sql.NullTime
-	DefaultShippingAddressUpdatedAt       sql.NullTime
-	ParentAccountCreatedAt                sql.NullTime
-	ParentAccountUpdatedAt                sql.NullTime
-	CreditLimitID                         sql.NullString
-	CreditLimitValue                      sql.NullString
-	CreditLimitCurrency                   sql.NullString
-	CreditLimitUnitID                     sql.NullString
-	CreditLimitUnitAbbreviation           sql.NullString
-	CreditLimitUnitName                   sql.NullString
-	CreditLimitUnitType                   sql.NullString
-	CreatedAt                             time.Time
-	UpdatedAt                             time.Time
-}
-
-// The page is chosen from account_relation alone (and account, which every listed relation has) and
-// joined to its seventeen hydration tables after, so a filter no key serves in list order reads only
-// the relations it examines, not their joins too. STRAIGHT_JOIN keeps account_relation driving.
-// FORCE INDEX holds the page to the keys that yield an owner's customers in list order: the plain
-// one when no filter narrows the set, a filter's own when one does. Left to itself the planner reads
-// account_relation_owner_account_id_counterparty_account_id_ac_key, which pins the owner but not the
-// order, and sorts every customer. PRIMARY is offered too, so a price group's
-// relations (resolved by ListPriceGroupRelationIDs) are read by id rather than found by walking.
-func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBackwardParams) ([]ListCustomersBackwardRow, error) {
-	query := listCustomersBackward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeAccountFilter)
-	if len(arg.AccountIds) > 0 {
-		for _, v := range arg.AccountIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludePricingGroupFilter)
-	if len(arg.PricingRelationIds) > 0 {
-		for _, v := range arg.PricingRelationIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", strings.Repeat(",?", len(arg.PricingRelationIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeStatusFilter)
-	if len(arg.StatusCodes) > 0 {
-		for _, v := range arg.StatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:status_codes*/?", strings.Repeat(",?", len(arg.StatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeShippingTermFilter)
-	if len(arg.ShippingTermIds) > 0 {
-		for _, v := range arg.ShippingTermIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:shipping_term_ids*/?", strings.Repeat(",?", len(arg.ShippingTermIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:shipping_term_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludePaymentTermFilter)
-	if len(arg.PaymentTermIds) > 0 {
-		for _, v := range arg.PaymentTermIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:payment_term_ids*/?", strings.Repeat(",?", len(arg.PaymentTermIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:payment_term_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCommissionStatusFilter)
-	if len(arg.CommissionStatusCodes) > 0 {
-		for _, v := range arg.CommissionStatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:commission_status_codes*/?", strings.Repeat(",?", len(arg.CommissionStatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:commission_status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeFreightStatusFilter)
-	if len(arg.FreightStatusCodes) > 0 {
-		for _, v := range arg.FreightStatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:freight_status_codes*/?", strings.Repeat(",?", len(arg.FreightStatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:freight_status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCarrierFilter)
-	if len(arg.CarrierIds) > 0 {
-		for _, v := range arg.CarrierIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", strings.Repeat(",?", len(arg.CarrierIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCarrierOptionFilter)
-	if len(arg.CarrierOptionIds) > 0 {
-		for _, v := range arg.CarrierOptionIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:carrier_option_ids*/?", strings.Repeat(",?", len(arg.CarrierOptionIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:carrier_option_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeParentAccountFilter)
-	queryParams = append(queryParams, arg.ParentAccountFilterValue)
-	queryParams = append(queryParams, arg.ParentAccountFilterValue)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCustomersBackwardRow
-	for rows.Next() {
-		var i ListCustomersBackwardRow
-		if err := rows.Scan(
-			&i.RelationID,
-			&i.AccountID,
-			&i.AccountName,
-			&i.ExternalNumber,
-			&i.Notes,
-			&i.Status,
-			&i.CommissionStatusCode,
-			&i.FreightStatusCode,
-			&i.DefaultLeadTimeDays,
-			&i.ReceiveCalendarID,
-			&i.FulfillmentPolicyCode,
-			&i.CarrierBillingType,
-			&i.CarrierBillingAccount,
-			&i.StripeCustomerID,
-			&i.StripeEmail,
-			&i.Email,
-			&i.PhoneNumber,
-			&i.WebsiteUrl,
-			&i.IsParentAccount,
-			&i.ParentAccountRelationID,
-			&i.ParentAccountName,
-			&i.ParentAccountID,
-			&i.ParentAccountNumber,
-			&i.DefaultCarrierID,
-			&i.DefaultCarrierName,
-			&i.DefaultCarrierIsPortalEnabled,
-			&i.DefaultCarrierCreatedAt,
-			&i.DefaultCarrierUpdatedAt,
-			&i.DefaultCarrierOptionID,
-			&i.DefaultCarrierOptionName,
-			&i.DefaultCarrierOptionServiceLevelToken,
-			&i.DefaultCarrierOptionIsPortalEnabled,
-			&i.DefaultCarrierOptionCreatedAt,
-			&i.DefaultCarrierOptionUpdatedAt,
-			&i.PaymentTermID,
-			&i.PaymentTermName,
-			&i.PaymentTermIsActive,
-			&i.PaymentTermCreatedAt,
-			&i.PaymentTermUpdatedAt,
-			&i.ShippingTermID,
-			&i.ShippingTermName,
-			&i.ShippingTermIsFreightExempt,
-			&i.ShippingTermIsCarrierRate,
-			&i.ShippingTermCreatedAt,
-			&i.ShippingTermUpdatedAt,
-			&i.PriorityID,
-			&i.PriorityCode,
-			&i.PriorityName,
-			&i.DefaultSalesRepID,
-			&i.DefaultSalesRepName,
-			&i.DefaultSalesRepStatusCode,
-			&i.DefaultSalesRepCreatedAt,
-			&i.DefaultSalesRepUpdatedAt,
-			&i.TypeGroupID,
-			&i.TypeGroupName,
-			&i.TypeGroupCommissionStatusCode,
-			&i.TypeGroupFreightStatusCode,
-			&i.TypeGroupTypeCode,
-			&i.TypeGroupCreatedAt,
-			&i.TypeGroupUpdatedAt,
-			&i.DefaultBillingAddressID,
-			&i.DefaultBillingAddressName,
-			&i.DefaultBillingAddressPhone,
-			&i.DefaultBillingAddressEmail,
-			&i.DefaultBillingIsDropShip,
-			&i.DefaultBillingGeolocationID,
-			&i.DefaultBillingStreetLine1,
-			&i.DefaultBillingStreetLine2,
-			&i.DefaultBillingLocality,
-			&i.DefaultBillingState,
-			&i.DefaultBillingPostalCode,
-			&i.DefaultBillingCountry,
-			&i.DefaultBillingAddressCreatedAt,
-			&i.DefaultBillingAddressUpdatedAt,
-			&i.DefaultShippingAddressID,
-			&i.DefaultShippingAddressName,
-			&i.DefaultShippingAddressPhone,
-			&i.DefaultShippingAddressEmail,
-			&i.DefaultShippingIsDropShip,
-			&i.DefaultShippingGeolocationID,
-			&i.DefaultShippingStreetLine1,
-			&i.DefaultShippingStreetLine2,
-			&i.DefaultShippingLocality,
-			&i.DefaultShippingState,
-			&i.DefaultShippingPostalCode,
-			&i.DefaultShippingCountry,
-			&i.DefaultShippingAddressCreatedAt,
-			&i.DefaultShippingAddressUpdatedAt,
-			&i.ParentAccountCreatedAt,
-			&i.ParentAccountUpdatedAt,
-			&i.CreditLimitID,
-			&i.CreditLimitValue,
-			&i.CreditLimitCurrency,
-			&i.CreditLimitUnitID,
-			&i.CreditLimitUnitAbbreviation,
-			&i.CreditLimitUnitName,
-			&i.CreditLimitUnitType,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listCustomersForward = `-- name: ListCustomersForward :many
-SELECT STRAIGHT_JOIN
-    ar.id AS relation_id,
-    ar.counterparty_account_id AS account_id,
-    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
-    ar.external_number,
-    ar.notes,
-    ar.account_status_code AS status,
-    ar.commission_status_code,
-    ar.freight_status_code,
-    ar.default_lead_time_days,
-    ar.receive_calendar_id,
-    ar.fulfillment_policy_code,
-    ar.carrier_billing_type,
-    ar.carrier_billing_account,
-    ar.stripe_customer_id,
-    ar.stripe_email,
-    ab.support_email AS email,
-    ab.phone_number,
-    ab.website_url,
-    EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id) AS is_parent_account,
-    ar.parent_account_relation_id,
-    pa.name AS parent_account_name,
-    par.counterparty_account_id AS parent_account_id,
-    par.external_number AS parent_account_number,
-    c.id AS default_carrier_id,
-    c.name AS default_carrier_name,
-    c.is_portal_enabled AS default_carrier_is_portal_enabled,
-    c.created_at AS default_carrier_created_at,
-    c.updated_at AS default_carrier_updated_at,
-    co.id AS default_carrier_option_id,
-    co.name AS default_carrier_option_name,
-    co.code AS default_carrier_option_service_level_token,
-    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
-    co.created_at AS default_carrier_option_created_at,
-    co.updated_at AS default_carrier_option_updated_at,
-    pt.id AS payment_term_id,
-    pt.name AS payment_term_name,
-    pt.is_active AS payment_term_is_active,
-    pt.created_at AS payment_term_created_at,
-    pt.updated_at AS payment_term_updated_at,
-    st.id AS shipping_term_id,
-    st.name AS shipping_term_name,
-    st.is_freight_exempt AS shipping_term_is_freight_exempt,
-    st.is_carrier_rate AS shipping_term_is_carrier_rate,
-    st.created_at AS shipping_term_created_at,
-    st.updated_at AS shipping_term_updated_at,
-    p.id AS priority_id,
-    p.code AS priority_code,
-    p.name AS priority_name,
-    sr.id AS default_sales_rep_id,
-    sru.name AS default_sales_rep_name,
-    sr.status_code AS default_sales_rep_status_code,
-    sr.created_at AS default_sales_rep_created_at,
-    sr.updated_at AS default_sales_rep_updated_at,
-    tg.id AS type_group_id,
-    tg.name AS type_group_name,
-    tg.commission_status_code AS type_group_commission_status_code,
-    tg.freight_status_code AS type_group_freight_status_code,
-    tg.account_group_type_code AS type_group_type_code,
-    tg.created_at AS type_group_created_at,
-    tg.updated_at AS type_group_updated_at,
-    ba.id AS default_billing_address_id,
-    ba.name AS default_billing_address_name,
-    ba.phone AS default_billing_address_phone,
-    ba.email AS default_billing_address_email,
-    ba.is_drop_ship AS default_billing_is_drop_ship,
-    bg.id AS default_billing_geolocation_id,
-    bg.street_line_1 AS default_billing_street_line_1,
-    bg.street_line_2 AS default_billing_street_line_2,
-    bg.locality AS default_billing_locality,
-    bg.state AS default_billing_state,
-    bg.postal_code AS default_billing_postal_code,
-    bg.country AS default_billing_country,
-    ba.created_at AS default_billing_address_created_at,
-    ba.updated_at AS default_billing_address_updated_at,
-    sa.id AS default_shipping_address_id,
-    sa.name AS default_shipping_address_name,
-    sa.phone AS default_shipping_address_phone,
-    sa.email AS default_shipping_address_email,
-    sa.is_drop_ship AS default_shipping_is_drop_ship,
-    sg.id AS default_shipping_geolocation_id,
-    sg.street_line_1 AS default_shipping_street_line_1,
-    sg.street_line_2 AS default_shipping_street_line_2,
-    sg.locality AS default_shipping_locality,
-    sg.state AS default_shipping_state,
-    sg.postal_code AS default_shipping_postal_code,
-    sg.country AS default_shipping_country,
-    sa.created_at AS default_shipping_address_created_at,
-    sa.updated_at AS default_shipping_address_updated_at,
-    par.created_at AS parent_account_created_at,
-    par.updated_at AS parent_account_updated_at,
-    clq.id AS credit_limit_id,
-    clq.value AS credit_limit_value,
-    ar.credit_limit_currency,
-    clu.id AS credit_limit_unit_id,
-    clu.abbreviation AS credit_limit_unit_abbreviation,
-    clu.name AS credit_limit_unit_name,
-    clu.unit_dimension_code AS credit_limit_unit_type,
-    ar.created_at,
-    ar.updated_at
-FROM (
-  SELECT STRAIGHT_JOIN ar.id
-  FROM account_relation ar FORCE INDEX (
-      account_relation_owner_role_created_idx,
-      account_relation_owner_role_group_created_idx,
-      account_relation_owner_role_rep_created_idx,
-      account_relation_owner_role_status_created_idx,
-      account_relation_owner_role_carrier_created_idx,
-      account_relation_owner_role_carrier_option_created_idx,
-      account_relation_owner_role_payment_term_created_idx,
-      account_relation_owner_role_shipping_term_created_idx,
-      PRIMARY
-  )
-  INNER JOIN account a ON a.id = ar.counterparty_account_id
-  WHERE ar.owner_account_id = ?
-    AND ar.account_relation_role_code = 'customer'
-    AND (
-      ? IS NULL
-      OR a.name LIKE ?
-      OR ar.alias LIKE ?
-      OR ar.external_number LIKE ?
-      OR ar.notes LIKE ?
-      OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
-    )
-    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
-    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
-    AND (
-      ? = false
-      OR ar.counterparty_account_id IN (/*SLICE:account_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.id IN (/*SLICE:pricing_relation_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.account_status_code IN (/*SLICE:status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
-    )
-    AND (
-      ? = false
-      OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
-    )
-    AND (
-      ? = false
-      OR (
-        ? = true
-        AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-      )
-      OR (
-        ? = false
-        AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-      )
-    )
-    AND (
-      (? IS NULL AND ? IS NULL AND ? IS NULL)
-      -- A probe of each customer's few addresses; as a semi-join the planner scans geolocation for each.
-      OR (
-        SELECT STRAIGHT_JOIN 1 FROM account_address aa
-        JOIN address addr ON addr.id = aa.address_id
-        JOIN geolocation g ON g.id = addr.geolocation_id
-        WHERE aa.account_id = ar.counterparty_account_id
-        AND (? IS NULL OR g.locality = ?)
-        AND (? IS NULL OR g.state = ?)
-        AND (? IS NULL OR g.postal_code = ?)
-        LIMIT 1
-      ) IS NOT NULL
-    )
-    AND (? IS NULL OR ar.created_at >= ?)
-    AND (? IS NULL OR ar.created_at <= ?)
-    AND (
-      ? IS NULL
-      OR ar.created_at < ?
-      OR (ar.created_at = ? AND ar.counterparty_account_id < ?)
-    )
-  ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
-  LIMIT ?
-) page
-JOIN account_relation ar ON ar.id = page.id
-INNER JOIN account a ON a.id = ar.counterparty_account_id
-LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
-LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
-LEFT JOIN account pa ON pa.id = par.counterparty_account_id
-LEFT JOIN carrier c ON c.id = ar.default_carrier_id
-LEFT JOIN carrier_option co ON co.id = ar.default_carrier_option_id
-LEFT JOIN payment_term pt ON pt.id = ar.payment_term_id
-LEFT JOIN shipping_term st ON st.id = ar.shipping_term_id
-LEFT JOIN priority p ON p.code = ar.priority_code
-LEFT JOIN account_user sr ON sr.id = ar.default_sales_rep_id
-LEFT JOIN ` + "`" + `user` + "`" + ` sru ON sru.id = sr.user_id
-LEFT JOIN account_group tg ON tg.id = ar.account_group_id AND tg.account_group_type_code = 'type_group'
-LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
-LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
-LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
-LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
-LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
-LEFT JOIN unit clu ON clu.id = clq.unit_id
-ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
-`
-
-type ListCustomersForwardParams struct {
-	OwnerAccountID                string
-	SearchQuery                   sql.NullString
-	IncludeAccountFilter          interface{}
-	AccountIds                    []string
-	IncludeCustomerGroupFilter    interface{}
-	CustomerGroupIds              []sql.NullString
-	IncludePricingGroupFilter     interface{}
-	PricingRelationIds            []string
-	IncludeSalesRepFilter         interface{}
-	SalesRepIds                   []sql.NullString
-	IncludeStatusFilter           interface{}
-	StatusCodes                   []sql.NullString
-	IncludeShippingTermFilter     interface{}
-	ShippingTermIds               []sql.NullString
-	IncludePaymentTermFilter      interface{}
-	PaymentTermIds                []sql.NullString
-	IncludeCommissionStatusFilter interface{}
-	CommissionStatusCodes         []sql.NullString
-	IncludeFreightStatusFilter    interface{}
-	FreightStatusCodes            []sql.NullString
-	IncludeCarrierFilter          interface{}
-	CarrierIds                    []sql.NullString
-	IncludeCarrierOptionFilter    interface{}
-	CarrierOptionIds              []sql.NullString
-	IncludeParentAccountFilter    interface{}
-	ParentAccountFilterValue      interface{}
-	City                          sql.NullString
-	State                         sql.NullString
-	PostalCode                    sql.NullString
-	StartDate                     sql.NullTime
-	EndDate                       sql.NullTime
-	CursorCreatedAt               sql.NullTime
-	CursorID                      sql.NullString
-	Limit                         int32
-}
-
-type ListCustomersForwardRow struct {
-	RelationID                            string
-	AccountID                             string
-	AccountName                           string
-	ExternalNumber                        string
-	Notes                                 sql.NullString
-	Status                                sql.NullString
-	CommissionStatusCode                  sql.NullString
-	FreightStatusCode                     sql.NullString
-	DefaultLeadTimeDays                   sql.NullInt32
-	ReceiveCalendarID                     sql.NullString
-	FulfillmentPolicyCode                 sql.NullString
-	CarrierBillingType                    sql.NullString
-	CarrierBillingAccount                 sql.NullString
-	StripeCustomerID                      sql.NullString
-	StripeEmail                           sql.NullString
-	Email                                 sql.NullString
-	PhoneNumber                           sql.NullString
-	WebsiteUrl                            sql.NullString
-	IsParentAccount                       bool
-	ParentAccountRelationID               sql.NullString
-	ParentAccountName                     sql.NullString
-	ParentAccountID                       sql.NullString
-	ParentAccountNumber                   sql.NullString
-	DefaultCarrierID                      sql.NullString
-	DefaultCarrierName                    sql.NullString
-	DefaultCarrierIsPortalEnabled         sql.NullBool
-	DefaultCarrierCreatedAt               sql.NullTime
-	DefaultCarrierUpdatedAt               sql.NullTime
-	DefaultCarrierOptionID                sql.NullString
-	DefaultCarrierOptionName              sql.NullString
-	DefaultCarrierOptionServiceLevelToken sql.NullString
-	DefaultCarrierOptionIsPortalEnabled   sql.NullBool
-	DefaultCarrierOptionCreatedAt         sql.NullTime
-	DefaultCarrierOptionUpdatedAt         sql.NullTime
-	PaymentTermID                         sql.NullString
-	PaymentTermName                       sql.NullString
-	PaymentTermIsActive                   sql.NullBool
-	PaymentTermCreatedAt                  sql.NullTime
-	PaymentTermUpdatedAt                  sql.NullTime
-	ShippingTermID                        sql.NullString
-	ShippingTermName                      sql.NullString
-	ShippingTermIsFreightExempt           sql.NullBool
-	ShippingTermIsCarrierRate             sql.NullBool
-	ShippingTermCreatedAt                 sql.NullTime
-	ShippingTermUpdatedAt                 sql.NullTime
-	PriorityID                            sql.NullString
-	PriorityCode                          sql.NullString
-	PriorityName                          sql.NullString
-	DefaultSalesRepID                     sql.NullString
-	DefaultSalesRepName                   sql.NullString
-	DefaultSalesRepStatusCode             sql.NullString
-	DefaultSalesRepCreatedAt              sql.NullTime
-	DefaultSalesRepUpdatedAt              sql.NullTime
-	TypeGroupID                           sql.NullString
-	TypeGroupName                         sql.NullString
-	TypeGroupCommissionStatusCode         sql.NullString
-	TypeGroupFreightStatusCode            sql.NullString
-	TypeGroupTypeCode                     sql.NullString
-	TypeGroupCreatedAt                    sql.NullTime
-	TypeGroupUpdatedAt                    sql.NullTime
-	DefaultBillingAddressID               sql.NullString
-	DefaultBillingAddressName             sql.NullString
-	DefaultBillingAddressPhone            sql.NullString
-	DefaultBillingAddressEmail            sql.NullString
-	DefaultBillingIsDropShip              sql.NullBool
-	DefaultBillingGeolocationID           sql.NullString
-	DefaultBillingStreetLine1             sql.NullString
-	DefaultBillingStreetLine2             sql.NullString
-	DefaultBillingLocality                sql.NullString
-	DefaultBillingState                   sql.NullString
-	DefaultBillingPostalCode              sql.NullString
-	DefaultBillingCountry                 sql.NullString
-	DefaultBillingAddressCreatedAt        sql.NullTime
-	DefaultBillingAddressUpdatedAt        sql.NullTime
-	DefaultShippingAddressID              sql.NullString
-	DefaultShippingAddressName            sql.NullString
-	DefaultShippingAddressPhone           sql.NullString
-	DefaultShippingAddressEmail           sql.NullString
-	DefaultShippingIsDropShip             sql.NullBool
-	DefaultShippingGeolocationID          sql.NullString
-	DefaultShippingStreetLine1            sql.NullString
-	DefaultShippingStreetLine2            sql.NullString
-	DefaultShippingLocality               sql.NullString
-	DefaultShippingState                  sql.NullString
-	DefaultShippingPostalCode             sql.NullString
-	DefaultShippingCountry                sql.NullString
-	DefaultShippingAddressCreatedAt       sql.NullTime
-	DefaultShippingAddressUpdatedAt       sql.NullTime
-	ParentAccountCreatedAt                sql.NullTime
-	ParentAccountUpdatedAt                sql.NullTime
-	CreditLimitID                         sql.NullString
-	CreditLimitValue                      sql.NullString
-	CreditLimitCurrency                   sql.NullString
-	CreditLimitUnitID                     sql.NullString
-	CreditLimitUnitAbbreviation           sql.NullString
-	CreditLimitUnitName                   sql.NullString
-	CreditLimitUnitType                   sql.NullString
-	CreatedAt                             time.Time
-	UpdatedAt                             time.Time
-}
-
-// The page is chosen from account_relation alone (and account, which every listed relation has) and
-// joined to its seventeen hydration tables after, so a filter no key serves in list order reads only
-// the relations it examines, not their joins too. STRAIGHT_JOIN keeps account_relation driving.
-// FORCE INDEX holds the page to the keys that yield an owner's customers in list order: the plain
-// one when no filter narrows the set, a filter's own when one does. Left to itself the planner reads
-// account_relation_owner_account_id_counterparty_account_id_ac_key, which pins the owner but not the
-// order, and sorts every customer. PRIMARY is offered too, so a price group's
-// relations (resolved by ListPriceGroupRelationIDs) are read by id rather than found by walking.
-func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersForwardParams) ([]ListCustomersForwardRow, error) {
-	query := listCustomersForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeAccountFilter)
-	if len(arg.AccountIds) > 0 {
-		for _, v := range arg.AccountIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludePricingGroupFilter)
-	if len(arg.PricingRelationIds) > 0 {
-		for _, v := range arg.PricingRelationIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", strings.Repeat(",?", len(arg.PricingRelationIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeStatusFilter)
-	if len(arg.StatusCodes) > 0 {
-		for _, v := range arg.StatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:status_codes*/?", strings.Repeat(",?", len(arg.StatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeShippingTermFilter)
-	if len(arg.ShippingTermIds) > 0 {
-		for _, v := range arg.ShippingTermIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:shipping_term_ids*/?", strings.Repeat(",?", len(arg.ShippingTermIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:shipping_term_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludePaymentTermFilter)
-	if len(arg.PaymentTermIds) > 0 {
-		for _, v := range arg.PaymentTermIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:payment_term_ids*/?", strings.Repeat(",?", len(arg.PaymentTermIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:payment_term_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCommissionStatusFilter)
-	if len(arg.CommissionStatusCodes) > 0 {
-		for _, v := range arg.CommissionStatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:commission_status_codes*/?", strings.Repeat(",?", len(arg.CommissionStatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:commission_status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeFreightStatusFilter)
-	if len(arg.FreightStatusCodes) > 0 {
-		for _, v := range arg.FreightStatusCodes {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:freight_status_codes*/?", strings.Repeat(",?", len(arg.FreightStatusCodes))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:freight_status_codes*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCarrierFilter)
-	if len(arg.CarrierIds) > 0 {
-		for _, v := range arg.CarrierIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", strings.Repeat(",?", len(arg.CarrierIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCarrierOptionFilter)
-	if len(arg.CarrierOptionIds) > 0 {
-		for _, v := range arg.CarrierOptionIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:carrier_option_ids*/?", strings.Repeat(",?", len(arg.CarrierOptionIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:carrier_option_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeParentAccountFilter)
-	queryParams = append(queryParams, arg.ParentAccountFilterValue)
-	queryParams = append(queryParams, arg.ParentAccountFilterValue)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.City)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.State)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.PostalCode)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCustomersForwardRow
-	for rows.Next() {
-		var i ListCustomersForwardRow
-		if err := rows.Scan(
-			&i.RelationID,
-			&i.AccountID,
-			&i.AccountName,
-			&i.ExternalNumber,
-			&i.Notes,
-			&i.Status,
-			&i.CommissionStatusCode,
-			&i.FreightStatusCode,
-			&i.DefaultLeadTimeDays,
-			&i.ReceiveCalendarID,
-			&i.FulfillmentPolicyCode,
-			&i.CarrierBillingType,
-			&i.CarrierBillingAccount,
-			&i.StripeCustomerID,
-			&i.StripeEmail,
-			&i.Email,
-			&i.PhoneNumber,
-			&i.WebsiteUrl,
-			&i.IsParentAccount,
-			&i.ParentAccountRelationID,
-			&i.ParentAccountName,
-			&i.ParentAccountID,
-			&i.ParentAccountNumber,
-			&i.DefaultCarrierID,
-			&i.DefaultCarrierName,
-			&i.DefaultCarrierIsPortalEnabled,
-			&i.DefaultCarrierCreatedAt,
-			&i.DefaultCarrierUpdatedAt,
-			&i.DefaultCarrierOptionID,
-			&i.DefaultCarrierOptionName,
-			&i.DefaultCarrierOptionServiceLevelToken,
-			&i.DefaultCarrierOptionIsPortalEnabled,
-			&i.DefaultCarrierOptionCreatedAt,
-			&i.DefaultCarrierOptionUpdatedAt,
-			&i.PaymentTermID,
-			&i.PaymentTermName,
-			&i.PaymentTermIsActive,
-			&i.PaymentTermCreatedAt,
-			&i.PaymentTermUpdatedAt,
-			&i.ShippingTermID,
-			&i.ShippingTermName,
-			&i.ShippingTermIsFreightExempt,
-			&i.ShippingTermIsCarrierRate,
-			&i.ShippingTermCreatedAt,
-			&i.ShippingTermUpdatedAt,
-			&i.PriorityID,
-			&i.PriorityCode,
-			&i.PriorityName,
-			&i.DefaultSalesRepID,
-			&i.DefaultSalesRepName,
-			&i.DefaultSalesRepStatusCode,
-			&i.DefaultSalesRepCreatedAt,
-			&i.DefaultSalesRepUpdatedAt,
-			&i.TypeGroupID,
-			&i.TypeGroupName,
-			&i.TypeGroupCommissionStatusCode,
-			&i.TypeGroupFreightStatusCode,
-			&i.TypeGroupTypeCode,
-			&i.TypeGroupCreatedAt,
-			&i.TypeGroupUpdatedAt,
-			&i.DefaultBillingAddressID,
-			&i.DefaultBillingAddressName,
-			&i.DefaultBillingAddressPhone,
-			&i.DefaultBillingAddressEmail,
-			&i.DefaultBillingIsDropShip,
-			&i.DefaultBillingGeolocationID,
-			&i.DefaultBillingStreetLine1,
-			&i.DefaultBillingStreetLine2,
-			&i.DefaultBillingLocality,
-			&i.DefaultBillingState,
-			&i.DefaultBillingPostalCode,
-			&i.DefaultBillingCountry,
-			&i.DefaultBillingAddressCreatedAt,
-			&i.DefaultBillingAddressUpdatedAt,
-			&i.DefaultShippingAddressID,
-			&i.DefaultShippingAddressName,
-			&i.DefaultShippingAddressPhone,
-			&i.DefaultShippingAddressEmail,
-			&i.DefaultShippingIsDropShip,
-			&i.DefaultShippingGeolocationID,
-			&i.DefaultShippingStreetLine1,
-			&i.DefaultShippingStreetLine2,
-			&i.DefaultShippingLocality,
-			&i.DefaultShippingState,
-			&i.DefaultShippingPostalCode,
-			&i.DefaultShippingCountry,
-			&i.DefaultShippingAddressCreatedAt,
-			&i.DefaultShippingAddressUpdatedAt,
-			&i.ParentAccountCreatedAt,
-			&i.ParentAccountUpdatedAt,
-			&i.CreditLimitID,
-			&i.CreditLimitValue,
-			&i.CreditLimitCurrency,
-			&i.CreditLimitUnitID,
-			&i.CreditLimitUnitAbbreviation,
-			&i.CreditLimitUnitName,
-			&i.CreditLimitUnitType,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -4080,8 +2846,9 @@ const updateCustomer = `-- name: UpdateCustomer :exec
 UPDATE account_relation SET
     alias = COALESCE(?, alias),
     external_number = COALESCE(?, external_number),
-    notes = ?,
-    parent_account_relation_id = COALESCE(?, parent_account_relation_id),
+    instructions = ?,
+    parent_account_relation_id = ?,
+    is_active = ?,
     commission_status_code = COALESCE(?, commission_status_code),
     freight_status_code = COALESCE(?, freight_status_code),
     default_carrier_id = ?,
@@ -4102,6 +2869,7 @@ UPDATE account_relation SET
     default_lead_time_days = ?,
     receive_calendar_id = ?,
     fulfillment_policy_code = ?,
+    supply_code = ?,
     updated_at = NOW(3)
 WHERE id = ?
   AND owner_account_id = ?
@@ -4111,8 +2879,9 @@ WHERE id = ?
 type UpdateCustomerParams struct {
 	Alias                    sql.NullString
 	ExternalNumber           sql.NullString
-	Notes                    sql.NullString
+	Instructions             sql.NullString
 	ParentAccountRelationID  sql.NullString
+	IsActive                 bool
 	CommissionStatusCode     sql.NullString
 	FreightStatusCode        sql.NullString
 	DefaultCarrierID         sql.NullString
@@ -4133,6 +2902,7 @@ type UpdateCustomerParams struct {
 	DefaultLeadTimeDays      sql.NullInt32
 	ReceiveCalendarID        sql.NullString
 	FulfillmentPolicyCode    sql.NullString
+	SupplyCode               sql.NullString
 	ID                       string
 	OwnerAccountID           string
 }
@@ -4141,8 +2911,9 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 	_, err := q.db.ExecContext(ctx, updateCustomer,
 		arg.Alias,
 		arg.ExternalNumber,
-		arg.Notes,
+		arg.Instructions,
 		arg.ParentAccountRelationID,
+		arg.IsActive,
 		arg.CommissionStatusCode,
 		arg.FreightStatusCode,
 		arg.DefaultCarrierID,
@@ -4163,6 +2934,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		arg.DefaultLeadTimeDays,
 		arg.ReceiveCalendarID,
 		arg.FulfillmentPolicyCode,
+		arg.SupplyCode,
 		arg.ID,
 		arg.OwnerAccountID,
 	)

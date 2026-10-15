@@ -78,21 +78,21 @@ func TestForgePaymentTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := jsonField(forgePaymentTerm(t, map[string]any{"status": "archived"}), "id")
 
 	body := validCustomerBody(uniqueName("e2e-forge-pt-archcust"))
-	body["default_payment_term_id"] = archivedID
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	customerDefaults(body)["payment_term_id"] = archivedID
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_payment_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.payment_term_id")
 
 	customerID := dashCustomersNew(t, "e2e-forge-pt-cust", nil)
-	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"default_payment_term_id": archivedID}, newIdempotencyKey())
+	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"default_payment_term_id": archivedID}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_payment_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.payment_term_id")
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["payment_term_id"] = archivedID
@@ -120,7 +120,7 @@ func TestForgePaymentTerms_ArchivingKeepsExistingReferences(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	status, body, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"name": uniqueName("e2e-forge-pt-keep-u")}, newIdempotencyKey())
+	status, body, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"name": uniqueName("e2e-forge-pt-keep-u")}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
@@ -137,7 +137,7 @@ func TestForgePaymentTerms_DeleteInUse(t *testing.T) {
 	assert.Contains(t, jsonField(errObj, "message"), "customers")
 	assert.Contains(t, jsonField(errObj, "message"), "archived")
 
-	status, body, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"default_payment_term_id": SeedPaymentTermID}, newIdempotencyKey())
+	status, body, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"default_payment_term_id": SeedPaymentTermID}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -285,15 +285,15 @@ func TestForgeShippingTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := jsonField(forgeShippingTerm(t, map[string]any{"status": "archived"}), "id")
 
 	body := validCustomerBody(uniqueName("e2e-forge-st-archcust"))
-	body["default_shipping_term_id"] = archivedID
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	customerDefaults(body)["shipping_term_id"] = archivedID
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_shipping_term_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.shipping_term_id")
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["shipping_term_id"] = archivedID
@@ -322,7 +322,7 @@ func TestForgeShippingTerms_DeleteInUse(t *testing.T) {
 	requireStatus(t, 409, status, body)
 	assert.Contains(t, jsonField(requireErrorResponse(t, body, "resource_in_use", "invalid_request_error"), "message"), "customers")
 
-	status, body, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"default_shipping_term_id": SeedShippingTermID}, newIdempotencyKey())
+	status, body, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"default_shipping_term_id": SeedShippingTermID}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

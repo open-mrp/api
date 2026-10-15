@@ -88,9 +88,7 @@ public_docstrings PATCH /v1/operations/departments/{id}
 public_docstrings PATCH /v1/operations/machines/{id}
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
 public_docstrings PATCH /v1/operations/scanning-stations/{id}
-public_docstrings PATCH /v1/sales/account-groups/{id}
 public_docstrings PATCH /v1/sales/account-prices/{id}
-public_docstrings PATCH /v1/sales/customers/{id}
 public_docstrings PATCH /v1/sales/order-discounts/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}/lines/{line_id}
@@ -185,12 +183,10 @@ search_documented GET /v1/operations/shipments
 search_documented GET /v1/operations/shipments/{shipment_id}/lines
 search_documented GET /v1/operations/suppliers
 search_documented GET /v1/operations/suppliers/{supplier_id}/materials
-search_documented GET /v1/sales/account-groups
 search_documented GET /v1/sales/account-prices
 search_documented GET /v1/sales/account-statuses
 search_documented GET /v1/sales/account-users/{id}/sales-targets
 search_documented GET /v1/sales/accounts/{account_id}/territories
-search_documented GET /v1/sales/customers
 search_documented GET /v1/sales/order-discounts
 search_documented GET /v1/sales/portal-registration-sessions
 search_documented GET /v1/sales/priorities

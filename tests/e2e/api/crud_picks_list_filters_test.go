@@ -197,11 +197,7 @@ func TestPicksList_CustomerFilterFollowsAMerge(t *testing.T) {
 	_, pickID := issuedOrderAndPick(t, sourceID, nil)
 	require.Equal(t, []string{pickID}, pickIDsFiltered(t, url.Values{"customer_ids": {sourceID}}))
 
-	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
-		"source_customer_ids": []string{sourceID},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	mergeCustomers(t, targetID, sourceID)
 
 	assert.Equal(t, []string{pickID}, pickIDsFiltered(t, url.Values{"customer_ids": {targetID}}),
 		"the merged customer's pick should list under the target")

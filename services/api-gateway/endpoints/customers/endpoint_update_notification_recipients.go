@@ -54,6 +54,8 @@ func (*UpdateNotificationRecipientsRequest) SchemaExample() any {
 // Replaces the account users configured to receive order acknowledgement and invoice emails on this customer's orders.
 //
 // The provided list is the complete set of recipients; any recipient not included is removed. Only the order acknowledgement and invoice notification types can be managed here — purchase-order submission preferences on the same relationship are left untouched, and still appear in the returned recipients.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets the customer's `notification_recipients` with Update Customer.
 type UpdateNotificationRecipientsEndpoint struct{}
 
 func (e *UpdateNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {
@@ -65,7 +67,6 @@ func (e *UpdateNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEnd
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
 			return svc.(CustomerSvc).UpdateNotificationRecipients

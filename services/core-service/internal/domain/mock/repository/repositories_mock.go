@@ -9826,6 +9826,21 @@ func (mr *MockCustomerRepoMockRecorder) GetStripeCustomerID(ctx, ownerAccountID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStripeCustomerID", reflect.TypeOf((*MockCustomerRepo)(nil).GetStripeCustomerID), ctx, ownerAccountID, customerAccountID)
 }
 
+// InUseBy mocks base method.
+func (m *MockCustomerRepo) InUseBy(ctx context.Context, ownerAccountID, customerAccountID, relationID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InUseBy", ctx, ownerAccountID, customerAccountID, relationID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// InUseBy indicates an expected call of InUseBy.
+func (mr *MockCustomerRepoMockRecorder) InUseBy(ctx, ownerAccountID, customerAccountID, relationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InUseBy", reflect.TypeOf((*MockCustomerRepo)(nil).InUseBy), ctx, ownerAccountID, customerAccountID, relationID)
+}
+
 // InsertAccountAddress mocks base method.
 func (m *MockCustomerRepo) InsertAccountAddress(ctx context.Context, id, accountID, addressID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -9866,6 +9881,21 @@ func (m *MockCustomerRepo) InsertPriceGroup(ctx context.Context, id, relationID,
 func (mr *MockCustomerRepoMockRecorder) InsertPriceGroup(ctx, id, relationID, groupID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPriceGroup", reflect.TypeOf((*MockCustomerRepo)(nil).InsertPriceGroup), ctx, id, relationID, groupID)
+}
+
+// IsArchived mocks base method.
+func (m *MockCustomerRepo) IsArchived(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsArchived", ctx, ownerAccountID, customerAccountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsArchived indicates an expected call of IsArchived.
+func (mr *MockCustomerRepoMockRecorder) IsArchived(ctx, ownerAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsArchived", reflect.TypeOf((*MockCustomerRepo)(nil).IsArchived), ctx, ownerAccountID, customerAccountID)
 }
 
 // IsCommissionExempt mocks base method.

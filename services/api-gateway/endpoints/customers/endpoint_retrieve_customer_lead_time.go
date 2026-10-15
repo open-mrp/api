@@ -18,13 +18,9 @@ type RetrieveCustomerLeadTimeRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
-// Returns the ship-by lead time a new order for this customer would be committed to.
+// Retrieves a customer's lead time.
 //
-// Resolved through the same chain the issue path stamps onto an order, most specific first: a lead time set on the customer, then on its parent account, then on the customer's account group, then the account-wide default. `source` names which rule applied, so a form can show where the number came from rather than leaving a rep to guess.
-//
-// A lead time set on a parent account therefore governs every child account under it that has not set its own, which is how a head office's terms are given to its locations without repeating them on each one.
-//
-// This is a preview of a commitment, not the commitment itself. An order takes its own `ship_by_date` when it is issued and keeps it afterwards, so changing a lead time here moves what future orders will promise and leaves promises already made alone.
+// The lead time a new order for the customer would be committed to, and where it came from: the customer's own `defaults.lead_time`, then its parent customer's, then its group's, then your account default. Changing a lead time moves what future orders promise; orders already issued keep their ship-by dates.
 type RetrieveCustomerLeadTimeEndpoint struct{}
 
 func (e *RetrieveCustomerLeadTimeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCustomerLeadTimeRequest, *apiresource.CustomerLeadTime] {
@@ -37,14 +33,13 @@ func (e *RetrieveCustomerLeadTimeEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomerLeadTime,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError) {
 			return svc.(CustomerSvc).GetCustomerLeadTime
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomerLeadTime,
-			Fields:     []string{"account_group", "parent_customer"},
+			Fields:     []string{"customer", "account_group", "parent_customer"},
 		}),
 	})
 }

@@ -16,9 +16,9 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleItemID)
 	case "limit":
 		return int64(25)
-	case "starts_at":
+	case "starts_at", "created_after":
 		return apiresource.SampleFilterStartDateRFC3339
-	case "ends_at":
+	case "ends_at", "created_before":
 		return apiresource.SampleFilterEndDateRFC3339
 	case "ship_by_after", "ship_by_before":
 		return apiresource.SampleFilterDateOnly
@@ -105,6 +105,7 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"attribute_ids":        apiresource.SampleAttributeID,
 		"unit_group_ids":       apiresource.SampleUnitGroupID,
 		"customer_group_ids":   apiresource.SampleAccountGroupID,
+		"group_ids":            apiresource.SampleAccountGroupID,
 		"pricing_group_ids":    apiresource.SampleAccountGroupID,
 		"sales_rep_ids":        apiresource.SampleAccountUserID,
 		"participant_ids":      apiresource.SampleAccountUserID,

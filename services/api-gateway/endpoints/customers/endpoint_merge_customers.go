@@ -15,11 +15,9 @@ import (
 
 // Request to merge source customers into a target customer.
 type MergeCustomersRequest struct {
-	// ID of the target customer that receives the merged records.
+	// ID of the customer the others are merged into.
 	CustomerID string `path:"id" validate:"required"`
-	// IDs of the source customers to merge into the target.
-	//
-	// Sources are deleted after the merge. The list must not contain duplicates or the target customer's ID.
+	// IDs of the customers to merge into this one. They are deleted once merged; no duplicates, and not this customer's ID.
 	SourceCustomerIDs []string `json:"source_customer_ids" validate:"required"`
 }
 
@@ -31,34 +29,28 @@ func (*MergeCustomersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMergeCustomersRequest)
 }
 
-// Merges one or more source customers into a target customer.
+// Merges customers into this one.
 //
-// Sales orders, invoices, shipments, deliveries, and other transaction records from the source customers are reassigned to the target; price groups, product line access, addresses, and users are consolidated without duplicates; child accounts of the sources are re-parented to the target; the source customers are then deleted.
-//
-// The target keeps its own name, number, default addresses, and default settings — none of those are copied over from the sources, and the sources' notification recipients are discarded rather than transferred.
+// Orders, invoices, shipments and deliveries of the source customers move to this customer. Group memberships, product line access, addresses and users are combined; the source customers' own price lists are discarded, and the sources' child customers move under this one. Notification recipients of the sources are discarded. This customer keeps its own name, number and defaults. The source customers are deleted. Runs in the background; the response is a job to poll.
 type MergeCustomersEndpoint struct{}
 
-func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer] {
-	return (&apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer]{
+func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.AsyncJob]{
 		Title:             "Merge Customers",
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers/{id}/actions/merge",
 		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
+		SuccessStatusCode: http.StatusAccepted,
 		Public:            true,
 		AgentTool:         true,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}}, RequireAll: true},
 		// Merging rewrites the target and deletes the sources, so it takes both.
-		Preview:    true,
-		ObjectType: constants.ObjectTypeCustomer,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {
+		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}}, RequireAll: true},
+		ObjectType: constants.ObjectTypeAsyncJob,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeCustomersRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(CustomerSvc).MergeCustomers
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeCustomer,
-			Fields: []string{
-				"bill_to_address", "ship_to_address", "type", "parent_account", "freight_preferences.carrier", "freight_preferences.carrier.service_levels", "freight_preferences.service_level", "defaults.payment_term", "defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.priority", "contact_info", "freight_preferences", "defaults", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
-			},
-		}),
+		LocationFunc: func(resp *apiresource.AsyncJob) string {
+			return "/v1/core/async-jobs/" + resp.ID
+		},
 	})
 }

@@ -3,11 +3,11 @@ package customerep
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -18,51 +18,44 @@ import (
 // Request to list customers.
 type ListCustomersRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	apirequest.CreatedRange
+	// Case-insensitive substring match on `name` or `number`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter by customer type group IDs (the account group of type `type_group` returned in the customer's `type` field).
-	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter to customers that belong to any of these pricing groups.
-	PricingGroupIDs []string `query:"pricing_group_ids"`
-	// Filter to customers whose default sales rep is one of these account users.
+	// Only return customers with any of these statuses: `active` or `archived`.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
+	// Only return customers with any of these standings: `normal`, `hold_shipment` or `hold_all`.
+	Standings []constants.CustomerStanding `query:"standings"`
+	// Only return customers in any of these account groups.
+	GroupIDs []string `query:"group_ids"`
+	// Only return customers in any of these pricing groups.
+	PricingGroupIDs []string `query:"pricing_group_ids" visibility:"internal"`
+	// Only return customers whose default sales rep is one of these account users.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by the customer's account standing.
-	StatusCodes []constants.AccountStatusCode `query:"status_codes"`
-	// Filter by default shipping term IDs.
+	// Only return customers with any of these default shipping terms.
 	ShippingTermIDs []string `query:"shipping_term_ids"`
-	// Filter by default payment term IDs.
+	// Only return customers with any of these default payment terms.
 	PaymentTermIDs []string `query:"payment_term_ids"`
-	// Filter by the commission policy set on the customer itself.
-	//
-	// Policies inherited from the customer's type group or price groups are not considered here.
-	CommissionPolicyCodes []constants.CommissionPolicy `query:"commission_status_codes"`
-	// Filter by the freight policy set on the customer itself.
-	//
-	// Policies inherited from the customer's type group or price groups are not considered here.
-	FreightPolicyCodes []constants.FreightPolicy `query:"freight_status_codes"`
-	// Filter by default carrier IDs.
+	// Only return customers with any of these commission policies set on the customer itself.
+	CommissionPolicies []constants.CommissionPolicy `query:"commission_policies"`
+	// Only return customers with any of these freight policies set on the customer itself.
+	FreightPolicies []constants.FreightPolicy `query:"freight_policies"`
+	// Only return customers with any of these default carriers.
 	CarrierIDs []string `query:"carrier_ids"`
-	// Filter by default service level IDs.
+	// Only return customers with any of these default service levels.
 	ServiceLevelIDs []string `query:"service_level_ids"`
-	// Filter by whether the customer has child accounts.
-	ParentAccountStatus *constants.CustomerParentAccountStatus `query:"parent_account_status"`
-	// Filter to customers with any address in this city (exact match).
-	//
-	// When combined with `state` or `postal_code`, a single address must match all provided values.
+	// Only return customers with any of these relationship types: `standalone`, `parent` or `child`.
+	RelationshipTypes []constants.CustomerRelationshipType `query:"relationship_types"`
+	// Only return customers with at least one address in this city.
 	City *string `query:"city"`
-	// Filter to customers with any address in this state (exact match).
+	// Only return customers with at least one address in this state.
 	State *string `query:"state"`
-	// Filter to customers with any address in this postal code (exact match).
+	// Only return customers with at least one address in this postal code.
 	PostalCode *string `query:"postal_code"`
-	// Filter to customers created at or after this timestamp (inclusive).
-	StartDate *time.Time `query:"starts_at"`
-	// Filter to customers created at or before this timestamp (inclusive).
-	EndDate *time.Time `query:"ends_at"`
 }
 
-// Returns a paginated list of customers for the current account.
+// Returns a list of customers.
+//
+// Sorted by creation date, newest first.
 type ListCustomersEndpoint struct{}
 
 func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]] {
@@ -75,16 +68,13 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
 			return svc.(CustomerSvc).ListCustomers
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomer,
-			Fields: []string{
-				"bill_to_address", "ship_to_address", "type", "parent_account", "freight_preferences.carrier", "freight_preferences.carrier.service_levels", "freight_preferences.service_level", "defaults.payment_term", "defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.priority", "contact_info", "freight_preferences", "defaults", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
-			},
+			Fields:     customerIncludeFields,
 		}),
 	})
 }

@@ -819,11 +819,9 @@ func (r *productionScheduleInputRepoImpl) GetCustomerFulfillmentProfiles(
 			profile.LeadTimeDays = days
 		}
 
-		// The policy chain is the customer's own, then its group's. There is no account-wide customer policy: the account default is about items, not about how people buy.
+		// Only the customer states a policy. There is no group or account-wide customer policy: the account default is about items, not about how people buy.
 		if row.CustomerPolicy.Valid && row.CustomerPolicy.String != "" {
 			profile.FulfillmentPolicyCode = row.CustomerPolicy.String
-		} else if row.AccountGroupPolicy.Valid && row.AccountGroupPolicy.String != "" {
-			profile.FulfillmentPolicyCode = row.AccountGroupPolicy.String
 		}
 
 		out = append(out, profile)

@@ -55,9 +55,9 @@ func TestTenantIsolation_UpdateByID(t *testing.T) {
 	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-iso-patch")))
 	id := jsonField(created, "id")
 
-	statusCode, body, err := clientB.Patch(customersPath+"/"+id, map[string]any{
+	statusCode, body, err := clientB.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "cross-tenant update attempt",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 404, statusCode,
 		"Tenant B should get 404 for PATCH on tenant A's resource: %s", string(body))

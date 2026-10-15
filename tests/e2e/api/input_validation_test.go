@@ -21,7 +21,7 @@ import (
 func TestInputValidation_RequiredField_Customer(t *testing.T) {
 	t.Parallel()
 	// Customer requires "name".
-	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
@@ -68,9 +68,9 @@ func TestInputValidation_RequiredField_Role(t *testing.T) {
 func TestInputValidation_WrongType_NumberForString(t *testing.T) {
 	t.Parallel()
 	// Send a number where a string is expected.
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": 12345,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	// Accept either 400 (strict type checking) or 201 (lenient coercion).
 	// If 201, clean up. The point is it shouldn't 500.
@@ -84,9 +84,9 @@ func TestInputValidation_WrongType_NumberForString(t *testing.T) {
 
 func TestInputValidation_WrongType_ObjectForString(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": map[string]any{"nested": "object"},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Object for string field should return 400 or 422, got %d: %s", status, string(body))
@@ -94,9 +94,9 @@ func TestInputValidation_WrongType_ObjectForString(t *testing.T) {
 
 func TestInputValidation_WrongType_ArrayForString(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": []string{"not", "a", "string"},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Array for string field should return 400 or 422, got %d: %s", status, string(body))
@@ -108,9 +108,9 @@ func TestInputValidation_WrongType_ArrayForString(t *testing.T) {
 
 func TestInputValidation_EmptyStringName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": "",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Empty string name should return 400 or 422, got %d: %s", status, string(body))
@@ -123,7 +123,7 @@ func TestInputValidation_LongStringAccepted(t *testing.T) {
 	payload := validCustomerBody(longName)
 	payload["bill_to_address"] = map[string]any{"name": "Billing", "country": "US"}
 	payload["ship_to_address"] = map[string]any{"name": "Shipping", "country": "US"}
-	status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	apiClient.Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
@@ -133,9 +133,9 @@ func TestInputValidation_ExtremelyLongString_Rejected(t *testing.T) {
 	t.Parallel()
 	// 256+ chars exceeds the varchar(255) column — should be rejected with 400.
 	longName := strings.Repeat("a", 500)
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": longName,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
@@ -146,9 +146,9 @@ func TestInputValidation_UnicodeString(t *testing.T) {
 	// Mixes 3-byte CJK and a 4-byte supplementary-plane code point so the test
 	// exercises the full UTF-8 range, not just ASCII or the BMP.
 	name := uniqueName("e2e-val") + " 日本語テスト 🏭"
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": name,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	// Unicode should be handled gracefully — either accepted or rejected, never 500.
 	assert.NotEqual(t, 500, status,
@@ -165,10 +165,10 @@ func TestInputValidation_UnicodeString(t *testing.T) {
 
 func TestInputValidation_InvalidEnum_StatusCode(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name":   uniqueName("e2e-val-enum"),
 		"status": "totally_invalid_status",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -176,10 +176,10 @@ func TestInputValidation_InvalidEnum_StatusCode(t *testing.T) {
 
 func TestInputValidation_InvalidEnum_CommissionPolicy(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name":              uniqueName("e2e-val-comm"),
 		"commission_policy": "not_a_real_policy",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -187,10 +187,10 @@ func TestInputValidation_InvalidEnum_CommissionPolicy(t *testing.T) {
 
 func TestInputValidation_InvalidEnum_FreightPolicy(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name":           uniqueName("e2e-val-freight"),
 		"freight_policy": "invalid_freight_value",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -198,13 +198,12 @@ func TestInputValidation_InvalidEnum_FreightPolicy(t *testing.T) {
 
 func TestInputValidation_InvalidEnum_CarrierBillingType(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name":                 uniqueName("e2e-val-cbt"),
-		"carrier_billing_type": "not_valid",
-	}, newIdempotencyKey())
+	body := validCustomerBody(uniqueName("e2e-val-cbt"))
+	body["carrier_billing"] = map[string]any{"type": "not_valid"}
+	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireStatus(t, 422, status, resp)
+	assertErrorParam(t, requireErrorResponse(t, resp, "validation_failed", "invalid_request_error"), "carrier_billing.type")
 }
 
 // ──────────────────────────────────────────────
@@ -215,10 +214,10 @@ func TestInputValidation_InvalidIDFormat(t *testing.T) {
 	t.Parallel()
 	// Note: Some foreign key fields may accept invalid IDs without validation
 	// and silently ignore them. This test verifies no 500 occurs.
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name":               uniqueName("e2e-val-badid"),
 		"default_carrier_id": "not-a-valid-id",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.NotEqual(t, 500, status,
 		"Invalid ID format should not cause 500: %s", string(body))
@@ -230,10 +229,10 @@ func TestInputValidation_InvalidIDFormat(t *testing.T) {
 func TestInputValidation_WrongPrefixID(t *testing.T) {
 	t.Parallel()
 	// Use a valid-looking ID but with the wrong prefix (user ID where carrier ID expected).
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name":               uniqueName("e2e-val-wrongpfx"),
 		"default_carrier_id": SeedUserID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	// Should be 400 (validation) or 404 (not found) — never 500 or silently accepted.
 	assert.NotEqual(t, 500, status,
@@ -246,9 +245,9 @@ func TestInputValidation_WrongPrefixID(t *testing.T) {
 
 func TestInputValidation_NullRequiredField(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": nil,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Null required field should return 400 or 422, got %d: %s", status, string(body))
@@ -256,9 +255,9 @@ func TestInputValidation_NullRequiredField(t *testing.T) {
 
 func TestInputValidation_WhitespaceOnlyName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(customersPath, map[string]any{
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(map[string]any{
 		"name": "   ",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	// Whitespace-only names should either be rejected or trimmed.
 	// Accept both 400 and 201 — but never 500.
@@ -285,7 +284,7 @@ func TestInputValidation_ExtraNestedPayload(t *testing.T) {
 		current = inner
 	}
 
-	status, body, err := apiClient.Post(customersPath, nested, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(nested), newIdempotencyKey())
 	require.NoError(t, err)
 	// Should reject unknown fields (400) or accept just name — never 500.
 	assert.NotEqual(t, 500, status,

@@ -16,6 +16,24 @@ func init() {
 		Load: loadCustomerLeadTimes,
 		Subs: []include.SubField{
 			{
+				Key:         "customer",
+				Target:      constants.ObjectTypeCustomer,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs: func(ctx context.Context, parent any) []string {
+					if _, id, ok := customerLeadTimeSubID(ctx, parent, "customer_id"); ok {
+						return []string{id}
+					}
+					return nil
+				},
+				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
+					if lt, id, ok := customerLeadTimeSubID(ctx, parent, "customer_id"); ok {
+						if customer, ok := loaded[id].(*apiresource.Customer); ok {
+							lt.Customer = customer
+						}
+					}
+				},
+			},
+			{
 				Key:         "account_group",
 				Target:      constants.ObjectTypeAccountGroup,
 				Cardinality: include.CardinalityOnePtr,
@@ -37,13 +55,14 @@ func loadCustomerLeadTimes(_ context.Context, _ []string) (map[string]any, *apie
 	return nil, nil
 }
 
-// customerLeadTimeMetaID is the customer the lead time was resolved for, which is what the ids below are keyed by. A resolved lead time has no id of its own.
+// customerLeadTimeMetaID is the customer the lead time was resolved for, which is what the ids below are keyed by. A
+// resolved lead time has no id of its own, and is only ever the body of one request, so it is the only one stashed.
 func customerLeadTimeMetaID(lt *apiresource.CustomerLeadTime) (string, bool) {
-	if lt == nil || lt.Customer == nil {
-		return "", false
-	}
-	return lt.Customer.ID, true
+	return customerLeadTimeKey, lt != nil
 }
+
+// customerLeadTimeKey keys the one lead time a response holds.
+const customerLeadTimeKey = "lead_time"
 
 func customerLeadTimeSubID(ctx context.Context, parent any, key string) (*apiresource.CustomerLeadTime, string, bool) {
 	lt, ok := parent.(*apiresource.CustomerLeadTime)

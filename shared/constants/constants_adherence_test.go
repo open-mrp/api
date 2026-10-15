@@ -286,6 +286,7 @@ var typeRegistry = map[string]any{
 	"ScheduleAtRiskReason":            ScheduleAtRiskReason(""),
 	"FulfillmentPolicy":               FulfillmentPolicy(""),
 	"Supply":                          Supply(""),
+	"CustomerStanding":                CustomerStanding(""),
 	"FulfillmentPolicySource":         FulfillmentPolicySource(""),
 	"ScheduleLineReason":              ScheduleLineReason(""),
 	"FulfillmentRecommendationReason": FulfillmentRecommendationReason(""),

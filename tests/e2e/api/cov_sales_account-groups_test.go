@@ -48,10 +48,10 @@ func TestCovSalesAccountGroups_ListPagination(t *testing.T) {
 	prefix := uniqueName("e2e-covacgp-pg")
 	var ids []string
 	for i := 0; i < 2; i++ {
-		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+		status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 			"name": fmt.Sprintf("%s-%d", prefix, i),
 			"type": "type_group",
-		}, newIdempotencyKey())
+		}), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 		id := jsonField(parseJSON(body), "id")
@@ -81,13 +81,13 @@ func TestCovSalesAccountGroups_UpdateIdempotent(t *testing.T) {
 	newName := uniqueName("e2e-covacgp-idemupd-new")
 	body := map[string]any{"name": newName}
 
-	status1, body1, err := apiClient.Patch(accountGroupsPath+"/"+id, body, idemKey)
+	status1, body1, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(body), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 	got1 := parseJSON(body1)
 	assert.Equal(t, newName, jsonField(got1, "name"))
 
-	status2, body2, err := apiClient.Patch(accountGroupsPath+"/"+id, body, idemKey)
+	status2, body2, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(body), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 	got2 := parseJSON(body2)
@@ -105,10 +105,10 @@ func TestCovSalesAccountGroups_UpdateIdempotent(t *testing.T) {
 // accepted or a 5xx.
 func TestCovSalesAccountGroups_CreateValidation_InvalidTypeEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name": uniqueName("e2e-covacgp-badtype"),
 		"type": "bogus_type",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -120,11 +120,11 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidTypeEnum(t *testing.T) {
 // with 400.
 func TestCovSalesAccountGroups_CreateValidation_InvalidCommissionPolicyEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name":              uniqueName("e2e-covacgp-badcp"),
 		"type":              "type_group",
 		"commission_policy": "not_a_policy",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -136,11 +136,11 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidCommissionPolicyEnum(t *t
 // 400.
 func TestCovSalesAccountGroups_CreateValidation_InvalidFreightPolicyEnum(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name":           uniqueName("e2e-covacgp-badfp"),
 		"type":           "type_group",
 		"freight_policy": "not_a_policy",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -152,10 +152,10 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidFreightPolicyEnum(t *test
 func TestCovSalesAccountGroups_CreateValidation_NameTooLong(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", 256)
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name": longName,
 		"type": "type_group",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -175,10 +175,10 @@ func TestCovSalesAccountGroups_CreateValidation_DuplicateName(t *testing.T) {
 		"type": "type_group",
 	})
 
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name": name,
 		"type": "pricing_group",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
 	errObj := requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
@@ -198,9 +198,9 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidCommissionPolicyEnum(t *t
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"commission_policy": "not_a_policy",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -218,9 +218,9 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidFreightPolicyEnum(t *test
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"freight_policy": "not_a_policy",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -238,9 +238,9 @@ func TestCovSalesAccountGroups_UpdateValidation_NameTooLong(t *testing.T) {
 	id := jsonField(created, "id")
 
 	longName := strings.Repeat("b", 256)
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"name": longName,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -261,9 +261,9 @@ func TestCovSalesAccountGroups_UpdateDescriptionNullClears(t *testing.T) {
 	id := jsonField(created, "id")
 	require.Equal(t, "will be cleared", jsonField(created, "description"))
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"description": nil,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -290,9 +290,9 @@ func TestCovSalesAccountGroups_UpdateTypeFieldRejected(t *testing.T) {
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"type": "type_group",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
@@ -319,9 +319,9 @@ func TestCovSalesAccountGroups_GetNotFound(t *testing.T) {
 
 func TestCovSalesAccountGroups_UpdateNotFound(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Patch(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, map[string]any{
+	status, body, err := apiClient.Patch(accountGroupsPath+"/"+covSalesAccountGroupsFakeID, forgeGroupWrite(map[string]any{
 		"name": uniqueName("e2e-covacgp-notfound"),
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
@@ -339,7 +339,7 @@ func TestCovSalesAccountGroups_DeleteNotFound(t *testing.T) {
 
 // TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist asserts that
 // deleting an account group still referenced by customer records fails with
-// 400 validation_failed (not a 5xx), and that the group is not deleted.
+// 409 resource_in_use (not a 5xx), and that the group is not deleted.
 // Uses the stable seeded SeedCustomerGroupID, which multiple seeded customer
 // rows reference as their customer_type_group_id FK — it must never actually
 // be deleted by this or any other test.
@@ -348,8 +348,8 @@ func TestCovSalesAccountGroups_DeleteConflictWhenCustomersExist(t *testing.T) {
 
 	status, body, err := apiClient.Delete(accountGroupsPath + "/" + SeedCustomerGroupID)
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
 
 	// Confirm the group still exists (was not deleted despite the error).
 	getStatus, getBody, err := apiClient.GetListRaw(accountGroupsPath+"/"+SeedCustomerGroupID, nil)
@@ -372,9 +372,9 @@ func TestCovSalesAccountGroups_TenantIsolation_Update(t *testing.T) {
 	})
 	id := jsonField(created, "id")
 
-	status, body, err := clientB.Patch(accountGroupsPath+"/"+id, map[string]any{
+	status, body, err := clientB.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"name": "cross-tenant update attempt",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 404, status,
 		"Tenant B should get 404 for PATCH on tenant A's account group: %s", string(body))

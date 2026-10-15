@@ -13,17 +13,17 @@ import (
 
 func customerDefaultRouting(t *testing.T, customerID string) (carrierID, serviceLevelID string) {
 	t.Helper()
-	status, got := dashCustomersRead(t, apiClient, customerID, "freight_preferences,freight_preferences.carrier,freight_preferences.service_level")
+	status, got := dashCustomersRead(t, apiClient, customerID, "defaults.carrier,defaults.service_level")
 	require.Equal(t, 200, status)
-	freight := jsonObject(got, "freight_preferences")
-	require.NotNil(t, freight)
-	return jsonField(jsonObject(freight, "carrier"), "id"), jsonField(jsonObject(freight, "service_level"), "id")
+	defaults := jsonObject(got, "defaults")
+	require.NotNil(t, defaults)
+	return jsonField(jsonObject(defaults, "carrier"), "id"), jsonField(jsonObject(defaults, "service_level"), "id")
 }
 
 func assertDefaultServiceLevelOffCarrier(t *testing.T, status int, body []byte, msg string) {
 	t.Helper()
 	if assert.Equal(t, 422, status, "%s: %s", msg, string(body)) {
-		assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "default_service_level_id")
+		assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "defaults.service_level_id")
 	}
 }
 
@@ -32,7 +32,7 @@ func TestCustomerServiceLevelOnCarrier_Create(t *testing.T) {
 
 	body := validCustomerBody(uniqueName("e2e-cust-sl-off"))
 	body["default_service_level_id"] = SeedTransitGroundServiceLevelID
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
@@ -63,7 +63,7 @@ func TestCustomerServiceLevelOnCarrier_Update(t *testing.T) {
 		{"service level alone", map[string]any{"default_service_level_id": SeedTransitGroundServiceLevelID}},
 		{"both", map[string]any{"default_carrier_id": SeedSystemCarrierID, "default_service_level_id": SeedTransitGroundServiceLevelID}},
 	} {
-		status, body, err := apiClient.Patch(path, tc.body, newIdempotencyKey())
+		status, body, err := apiClient.Patch(path, forgeCustomerWrite(tc.body), newIdempotencyKey())
 		require.NoError(t, err)
 		assertDefaultServiceLevelOffCarrier(t, status, body, tc.name)
 		carrier, serviceLevel := customerDefaultRouting(t, customerID)
@@ -73,7 +73,7 @@ func TestCustomerServiceLevelOnCarrier_Update(t *testing.T) {
 
 	patch := func(fields map[string]any) {
 		t.Helper()
-		status, body, err := apiClient.Patch(path, fields, newIdempotencyKey())
+		status, body, err := apiClient.Patch(path, forgeCustomerWrite(fields), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 	}

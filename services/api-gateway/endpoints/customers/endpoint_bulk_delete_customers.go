@@ -40,7 +40,6 @@ func (e *BulkDeleteCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteCustomersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(CustomerSvc).BulkDeleteCustomers

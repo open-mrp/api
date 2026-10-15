@@ -60,7 +60,7 @@ func TestParentCustomerLeadTime_ReachesAChildThatHasNoneOfItsOwn(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildInheritsID, "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"),
+	assert.Equal(t, "13", leadTimeValue(resolved),
 		"a child with no lead time of its own is committed to its parent's")
 	assert.Equal(t, "parent_customer", jsonField(resolved, "source"))
 
@@ -91,7 +91,7 @@ func TestParentCustomerLeadTime_ChildOverridesIt(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildOverridesID, "parent_customer")
 
-	assert.Equal(t, "5", jsonField(resolved, "days"))
+	assert.Equal(t, "5", leadTimeValue(resolved))
 	assert.Equal(t, "customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"],
 		"a child that sets its own lead time inherited nothing, even though it has a parent")
@@ -105,7 +105,7 @@ func TestParentCustomerLeadTime_OutranksTheAccountGroup(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeChildGroupedID, "account_group", "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"))
+	assert.Equal(t, "13", leadTimeValue(resolved))
 	assert.Equal(t, "parent_customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["account_group"],
 		"the group did not decide, so it must not be named even when asked for")
@@ -121,7 +121,7 @@ func TestParentCustomerLeadTime_SilentParentFallsThroughToTheGroup(t *testing.T)
 
 	resolved := resolveLeadTime(t, leadTimeChildOfSilentParentID, "account_group", "parent_customer")
 
-	assert.Equal(t, "21", jsonField(resolved, "days"))
+	assert.Equal(t, "21", leadTimeValue(resolved))
 	assert.Equal(t, "account_group", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"],
 		"the parent did not decide, so it must not be named even when asked for")
@@ -170,7 +170,7 @@ func TestParentCustomerLeadTime_SettingItOnTheParentReachesChildren(t *testing.T
 	setCustomerLeadTime(t, leadTimeMutableParentAccountID, ptrInt(9))
 
 	after := resolveLeadTime(t, leadTimeMutableChildAccountID, "parent_customer")
-	assert.Equal(t, "9", jsonField(after, "days"),
+	assert.Equal(t, "9", leadTimeValue(after),
 		"a lead time set on the head office commits its locations")
 	assert.Equal(t, "parent_customer", jsonField(after, "source"))
 
@@ -181,7 +181,7 @@ func TestParentCustomerLeadTime_SettingItOnTheParentReachesChildren(t *testing.T
 	setCustomerLeadTime(t, leadTimeMutableParentAccountID, nil)
 
 	cleared := resolveLeadTime(t, leadTimeMutableChildAccountID)
-	assert.Equal(t, "21", jsonField(cleared, "days"))
+	assert.Equal(t, "21", leadTimeValue(cleared))
 	assert.Equal(t, "account_group", jsonField(cleared, "source"),
 		"with the parent's lead time gone the child falls back to its group")
 }
@@ -194,7 +194,7 @@ func setCustomerLeadTime(t *testing.T, customerID string, days *int) {
 	if days != nil {
 		body["lead_time_days"] = *days
 	}
-	status, respBody, err := apiClient.Patch(customersPath+"/"+customerID, body, newIdempotencyKey())
+	status, respBody, err := apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "setting a lead time must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)
@@ -208,7 +208,7 @@ func TestParentCustomerLeadTime_ParentResolvesItsOwn(t *testing.T) {
 
 	resolved := resolveLeadTime(t, leadTimeParentAccountID, "parent_customer")
 
-	assert.Equal(t, "13", jsonField(resolved, "days"))
+	assert.Equal(t, "13", leadTimeValue(resolved))
 	assert.Equal(t, "customer", jsonField(resolved, "source"))
 	assert.Nil(t, resolved["parent_customer"], "a head office has no parent to inherit from")
 }
@@ -219,15 +219,15 @@ func TestParentCustomerLeadTime_ParentResolvesItsOwn(t *testing.T) {
 func TestParentCustomerLeadTime_IsNotCopiedOntoTheChild(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=defaults", nil)
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+leadTimeChildInheritsID+"?include=", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	defaults, ok := parseJSON(body)["defaults"].(map[string]any)
 	require.True(t, ok, "a customer carries its ordering defaults: %s", string(body))
-	assert.Nil(t, defaults["lead_time_days"], "the child sets nothing of its own")
+	assert.Nil(t, jsonObject(defaults, "lead_time"), "the child sets nothing of its own")
 
-	assert.Equal(t, "13", jsonField(resolveLeadTime(t, leadTimeChildInheritsID), "days"),
+	assert.Equal(t, "13", leadTimeValue(resolveLeadTime(t, leadTimeChildInheritsID)),
 		"while still being committed to its parent's lead time")
 }
 

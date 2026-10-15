@@ -83,8 +83,8 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "units/unit_group_ids", path: "/v1/catalog/units", param: "unit_group_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/catalog/unit-groups"},
 
 		// --- sales / finance ---
-		{name: "customers/status_codes", path: "/v1/sales/customers", param: "status_codes", valuePath: "status", fromSelf: true},
-		{name: "customers/commission_status_codes", path: "/v1/sales/customers", param: "commission_status_codes", valuePath: "commission_policy", fromSelf: true},
+		{name: "customers/standings", path: "/v1/sales/customers", param: "standings", valuePath: "standing", fromSelf: true},
+		{name: "customers/commission_policies", path: "/v1/sales/customers", param: "commission_policies", valuePath: "commission_policy", fromSelf: true},
 		{name: "customers/sales_rep_ids", path: "/v1/sales/customers", param: "sales_rep_ids", valuePath: "defaults.sales_rep.id", include: "defaults.sales_rep", fromSelf: true},
 		{name: "customers/pricing_group_ids", path: "/v1/sales/customers", param: "pricing_group_ids", valuePath: "price_groups.data[].id", include: "price_groups", fromSelf: true},
 

@@ -20,10 +20,10 @@ func TestAccountGroups_CRUD(t *testing.T) {
 
 	// Create
 	name := uniqueName("e2e-acgrp")
-	createResp, err := apiClient.PostFull(accountGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name": name,
 		"type": "type_group",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
@@ -48,11 +48,11 @@ func TestAccountGroups_CRUD(t *testing.T) {
 
 	// Update
 	newName := uniqueName("e2e-acgrp-upd")
-	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"name":              newName,
 		"commission_policy": "applied",
 		"freight_policy":    "free",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
@@ -100,12 +100,12 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 
 	// Update with different values
 	updatedName := uniqueName("e2e-acgrp-allf-u")
-	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 		"name":              updatedName,
 		"description":       "Updated description",
 		"commission_policy": "exempt",
 		"freight_policy":    "billed",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -123,13 +123,13 @@ func TestAccountGroups_CreateIdempotent(t *testing.T) {
 	name := uniqueName("e2e-idem-acgrp")
 	idemKey := newIdempotencyKey()
 
-	status1, body1, err := apiClient.Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
+	status1, body1, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{"name": name, "type": "type_group"}), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 	t.Cleanup(func() { apiClient.Delete(accountGroupsPath + "/" + id1) })
 
-	status2, body2, err := apiClient.Post(accountGroupsPath, map[string]any{"name": name, "type": "type_group"}, idemKey)
+	status2, body2, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{"name": name, "type": "type_group"}), idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
@@ -158,20 +158,22 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
 		// Missing name
-		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+		status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 			"type": "type_group",
-		}, newIdempotencyKey())
+		}), newIdempotencyKey())
 		require.NoError(t, err)
 		assert.True(t, status == 400 || status == 422,
 			"Missing name should return 400 or 422, got %d: %s", status, string(body))
 
-		// Missing type
-		status, body, err = apiClient.Post(accountGroupsPath, map[string]any{
+		// Groups classify customers, so a group sent without a type is a type group.
+		status, body, err = apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 			"name": uniqueName("e2e-acgrp-notype"),
-		}, newIdempotencyKey())
+		}), newIdempotencyKey())
 		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
-			"Missing type should return 400 or 422, got %d: %s", status, string(body))
+		requireStatus(t, 201, status, body)
+		untyped := parseJSON(body)
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(accountGroupsPath + "/" + jsonField(untyped, "id")) })
+		assert.Equal(t, "type_group", jsonField(untyped, "type"))
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
@@ -186,9 +188,9 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		origCreatedAt := jsonField(created, "created_at")
 
 		newName := uniqueName("e2e-acgrp-pres-u")
-		patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, map[string]any{
+		patchStatus, patchBody, err := apiClient.Patch(accountGroupsPath+"/"+id, forgeGroupWrite(map[string]any{
 			"name": newName,
-		}, newIdempotencyKey())
+		}), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
 
@@ -260,10 +262,10 @@ func TestAccountGroups_List(t *testing.T) {
 
 func TestAccountGroups_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+	status, body, err := apiClient.Post(accountGroupsPath, forgeGroupWrite(map[string]any{
 		"name": "",
 		"type": "type_group",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))

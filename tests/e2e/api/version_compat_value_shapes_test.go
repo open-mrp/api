@@ -36,7 +36,7 @@ func TestVersionCompatValueShapes_CreditLimitIsAQuantityOnPreview9(t *testing.T)
 	assert.Nil(t, limit["unit"], "the currency unit is not part of forge, so preview.9 reads it as not included")
 	assert.NotContains(t, limit, "amount")
 
-	status, raw, err = apiClient.GetListRaw(customersPath+"/"+id, url.Values{"include": {"credit_limit"}})
+	status, raw, err = apiClient.GetListRaw(customersPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	assert.Equal(t, map[string]any{"amount": "5000.00", "currency": "usd"}, parseJSON(raw)["credit_limit"])

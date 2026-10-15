@@ -11,19 +11,23 @@ import (
 
 // Customer represents a full customer record from the database.
 type Customer struct {
-	ID                  string
-	Name                string                      `audit:"name"`
-	Number              string                      `audit:"number"`
-	Status              constants.AccountStatusCode `audit:"status"`
-	IsParentAccount     bool                        `audit:"is_parent_account"`
-	CommissionPolicy    constants.CommissionPolicy  `audit:"commission_policy"`
-	FreightPolicy       constants.FreightPolicy     `audit:"freight_policy"`
-	DefaultLeadTimeDays *int32                      `audit:"default_lead_time_days"`
+	ID     string
+	Name   string `audit:"name"`
+	Number string `audit:"number"`
+	// Status is the customer's credit standing: normal, hold_shipment or hold_all.
+	Status constants.AccountStatusCode `audit:"standing"`
+	// ArchiveStatus is whether the customer can receive new orders.
+	ArchiveStatus       constants.ArchiveStatus    `audit:"status"`
+	IsParentAccount     bool                       `audit:"is_parent_account"`
+	CommissionPolicy    constants.CommissionPolicy `audit:"commission_policy"`
+	FreightPolicy       constants.FreightPolicy    `audit:"freight_policy"`
+	DefaultLeadTimeDays *int32                     `audit:"default_lead_time_days"`
 	// ReceiveCalendarID is the days this customer's dock accepts freight, in the same chain as the lead time above.
 	ReceiveCalendarID *string `audit:"receive_calendar_id"`
-	// FulfillmentPolicy marks the customer make-to-order: when make_to_order, their history is left out of the production-schedule forecast and their orders are built only when placed. Nil inherits the account group's policy, then make-to-stock.
-	FulfillmentPolicy           *constants.FulfillmentPolicy  `audit:"fulfillment_policy_code"`
-	Note                        *string                       `audit:"note"`
+	// Supply is where this customer's orders are supplied from when the order line doesn't say: stock, make or buy. Nil falls through to the item chain.
+	Supply *constants.Supply `audit:"supply"`
+	// Instructions are your team's standing instructions for this customer's orders.
+	Instructions                *string                       `audit:"instructions"`
 	Email                       *string                       `audit:"email"`
 	Phone                       *string                       `audit:"phone"`
 	URL                         *string                       `audit:"url"`
@@ -59,9 +63,6 @@ type Customer struct {
 	DefaultShippingTermType            *constants.ShippingTermType
 	DefaultShippingTermCreatedAt       *time.Time
 	DefaultShippingTermUpdatedAt       *time.Time
-	DefaultPriorityID                  *string
-	DefaultPriorityCode                *constants.PriorityCode `audit:"default_priority_code"`
-	DefaultPriorityName                *string
 	DefaultSalesRepID                  *string `audit:"default_sales_rep_id"`
 	DefaultSalesRepName                *string
 	DefaultSalesRepStatus              *constants.AccountUserStatus
@@ -80,13 +81,16 @@ type Customer struct {
 	TypeGroupUpdatedAt                 *time.Time
 	PriceGroups                        []CustomerAccountGroup `audit:"price_groups"`
 	ParentAccountID                    *string                `audit:"parent_account_id"`
+	ParentAccountRelationID            *string
 	ParentAccountName                  *string
 	ParentAccountNumber                *string
 	ParentAccountCreatedAt             *time.Time
 	ParentAccountUpdatedAt             *time.Time
 	ChildAccounts                      []CustomerChildAccount
-	CreatedAt                          time.Time
-	UpdatedAt                          time.Time
+	// NotificationRecipients are loaded only when asked for.
+	NotificationRecipients []NotificationRecipient `audit:"-"`
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // CustomerChildAccount is the lightweight stub returned when `?include=child_accounts` is requested on a customer resource.
@@ -141,14 +145,18 @@ type CustomerContact struct {
 
 // ListCustomersParams holds the parameters for listing customers.
 type ListCustomersParams struct {
-	AccountID             string
-	Cursor                *string
-	Limit                 int32
-	Query                 *string
-	CustomerGroupIDs      []string
-	PricingGroupIDs       []string
-	SalesRepIDs           []string
-	StatusCodes           []string
+	AccountID        string
+	Cursor           *string
+	Limit            int32
+	Query            *string
+	CustomerGroupIDs []string
+	PricingGroupIDs  []string
+	SalesRepIDs      []string
+	StatusCodes      []string
+	// IsActive narrows to active (true) or archived (false) customers; nil lists both.
+	IsActive *bool
+	// RelationshipTypes narrows to standalone, parent or child customers.
+	RelationshipTypes     []constants.CustomerRelationshipType
 	ShippingTermIDs       []string
 	PaymentTermIDs        []string
 	CommissionPolicyCodes []string
@@ -161,6 +169,7 @@ type ListCustomersParams struct {
 	PostalCode            *string
 	StartDate             *time.Time
 	EndDate               *time.Time
+	Created               CreatedRange
 	Includes              []string
 }
 
@@ -175,21 +184,23 @@ type CreateCustomerParams struct {
 	OwnerAccountID        string
 	Name                  string
 	Number                *string
-	Note                  *string
+	Instructions          *string
 	Email                 *string
 	Phone                 *string
 	URL                   *string
 	StatusCode            *string
+	ArchiveStatus         constants.ArchiveStatus
 	CommissionPolicy      *constants.CommissionPolicy
 	FreightPolicy         *constants.FreightPolicy
 	DefaultLeadTimeDays   *int32
 	ReceiveCalendarID     *string
-	FulfillmentPolicy     *constants.FulfillmentPolicy
+	Supply                *constants.Supply
+	ParentCustomerID      *string
+	ParentRelationID      *string
 	DefaultCarrierID      *string
 	DefaultServiceLevelID *string
 	DefaultPaymentTermID  *string
 	DefaultShippingTermID *string
-	DefaultPriorityCode   *string
 	DefaultSalesRepID     *string
 	BillToAddressID       *string
 	ShipToAddressID       *string
@@ -251,36 +262,42 @@ type AccountUserRef struct {
 
 // UpdateCustomerParams holds the parameters for updating a customer.
 type UpdateCustomerParams struct {
-	OwnerAccountID           string
-	CustomerAccountID        string
-	Name                     *string
-	Number                   *string
-	Note                     field.Clearable[string]
-	Email                    field.Clearable[string]
-	Phone                    field.Clearable[string]
-	URL                      field.Clearable[string]
-	StatusCode               *string
-	CommissionPolicy         *constants.CommissionPolicy
-	FreightPolicy            *constants.FreightPolicy
-	DefaultLeadTimeDays      field.Clearable[int32]
-	ReceiveCalendarID        field.Clearable[string]
-	FulfillmentPolicy        field.Clearable[constants.FulfillmentPolicy]
-	DefaultCarrierID         *string
-	DefaultServiceLevelID    field.Clearable[string]
-	DefaultPaymentTermID     *string
-	DefaultShippingTermID    *string
-	DefaultPriorityCode      *string
-	DefaultSalesRepID        field.Clearable[string]
-	BillToAddressID          field.Clearable[string]
-	ShipToAddressID          field.Clearable[string]
-	CustomerPriceGroupIDs    []string
-	HasCustomerPriceGroupIDs bool
-	CustomerTypeGroupID      *string
-	CarrierBillingType       *string
-	CarrierBillingAccount    field.Clearable[string]
-	CreditLimit              field.Clearable[fieldpb.QuantityInput]
-	CreditLimitID            *string
-	Includes                 []string
+	OwnerAccountID      string
+	CustomerAccountID   string
+	Name                *string
+	Number              *string
+	Instructions        field.Clearable[string]
+	Email               field.Clearable[string]
+	Phone               field.Clearable[string]
+	URL                 field.Clearable[string]
+	StatusCode          *string
+	ArchiveStatus       *constants.ArchiveStatus
+	CommissionPolicy    *constants.CommissionPolicy
+	FreightPolicy       *constants.FreightPolicy
+	DefaultLeadTimeDays field.Clearable[int32]
+	ReceiveCalendarID   field.Clearable[string]
+	Supply              field.Clearable[constants.Supply]
+	ParentCustomerID    field.Clearable[string]
+	// ParentRelationID is the parent's relation once ParentCustomerID is resolved.
+	ParentRelationID *string
+	// NotificationRecipients, when HasNotificationRecipients, replaces the customer's recipients.
+	NotificationRecipients    []NotificationRecipientInput
+	HasNotificationRecipients bool
+	DefaultCarrierID          *string
+	DefaultServiceLevelID     field.Clearable[string]
+	DefaultPaymentTermID      *string
+	DefaultShippingTermID     *string
+	DefaultSalesRepID         field.Clearable[string]
+	BillToAddressID           field.Clearable[string]
+	ShipToAddressID           field.Clearable[string]
+	CustomerPriceGroupIDs     []string
+	HasCustomerPriceGroupIDs  bool
+	CustomerTypeGroupID       *string
+	CarrierBillingType        *string
+	CarrierBillingAccount     field.Clearable[string]
+	CreditLimit               field.Clearable[fieldpb.QuantityInput]
+	CreditLimitID             *string
+	Includes                  []string
 }
 
 // FrequentlyOrderedProduct represents a product frequently ordered by a customer.
@@ -308,4 +325,13 @@ type CustomerLeadTime struct {
 	AccountGroupID *string
 	// ParentCustomerAccountID is set only when the parent account is the rule that won.
 	ParentCustomerAccountID *string
+}
+
+// CustomerInUse words the 409 for deleting a customer that orders, shipments or child customers still reference.
+var CustomerInUse = References{Noun: "customer", Archivable: true}
+
+// MergeCustomersJob is what a customer merge job runs: the sources folded into the target.
+type MergeCustomersJob struct {
+	TargetCustomerID  string
+	SourceCustomerIDs []string
 }

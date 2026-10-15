@@ -25,7 +25,7 @@ func TestCheckCustomerRefs_RefusesAnArchivedCarrierOrServiceLevel(t *testing.T) 
 	}))
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apperr.CodeResourceArchived, apiErr.Code)
-	assert.Equal(t, "default_carrier_id", apiErr.Param)
+	assert.Equal(t, "defaults.carrier_id", apiErr.Param)
 
 	s.carriers.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_seller", []string{"silv_old"}).
 		Return([]*domain.ServiceLevel{{ID: "silv_old", IsActive: false}}, nil)
@@ -34,7 +34,7 @@ func TestCheckCustomerRefs_RefusesAnArchivedCarrierOrServiceLevel(t *testing.T) 
 	}))
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apperr.CodeResourceArchived, apiErr.Code)
-	assert.Equal(t, "default_service_level_id", apiErr.Param)
+	assert.Equal(t, "defaults.service_level_id", apiErr.Param)
 }
 
 // A reference the customer already holds is not re-checked, so archiving a carrier leaves its customers editable.

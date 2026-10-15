@@ -213,9 +213,9 @@ func TestCustomers_AuditEvents(t *testing.T) {
 
 	expectAuditEvent(t, id, "customer", "create")
 
-	_, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	_, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": "audit test update",
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.NotNil(t, patchBody)
 
@@ -226,7 +226,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-cust-audit-chg")
-	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(name)), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -242,9 +242,9 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	assert.Equal(t, name, jsonField(nameCreateChange, "new_value"))
 
 	note := "audit change test note"
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note": note,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -252,7 +252,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	updateChanges := jsonListData(updatedEvent, "changes")
 	require.NotEmpty(t, updateChanges, "update audit event should include changes")
 
-	noteUpdateChange, ok := changeForField(updateChanges, "note")
+	noteUpdateChange, ok := changeForField(updateChanges, "instructions")
 	require.True(t, ok, "update audit event should include a note change")
 	assertNilField(t, noteUpdateChange, "old_value")
 	assert.Equal(t, note, jsonField(noteUpdateChange, "new_value"))
@@ -282,7 +282,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	body["default_priority"] = SeedPriorityCode
 	body["default_sales_rep_id"] = SeedAccountUserID
 
-	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	created := parseJSON(createBody)
@@ -294,13 +294,13 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	// Get initial address IDs.
 	getStatus, getBody, err := apiClient.GetListRaw(
 		customersPath+"/"+id,
-		url.Values{"include": {"bill_to_address,ship_to_address"}},
+		url.Values{"include": {"defaults.bill_to_address,defaults.ship_to_address"}},
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	origBillToID := jsonField(jsonObject(got, "bill_to_address"), "id")
-	origShipToID := jsonField(jsonObject(got, "ship_to_address"), "id")
+	origBillToID := jsonField(jsonObject(jsonObject(got, "defaults"), "bill_to_address"), "id")
+	origShipToID := jsonField(jsonObject(jsonObject(got, "defaults"), "ship_to_address"), "id")
 	require.NotEmpty(t, origBillToID)
 	require.NotEmpty(t, origShipToID)
 
@@ -325,7 +325,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 
 	// Update ALL changeable fields at once.
 	updatedName := uniqueName("e2e-cust-audit-upd")
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"name":                    updatedName,
 		"note":                    "audit update note",
 		"email":                   "audit-update@e2e.openmrp.ai",
@@ -338,7 +338,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		"default_payment_term_id": SeedDefaultPaymentTermID,
 		"bill_to_address_id":      newBillToID,
 		"ship_to_address_id":      newShipToID,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -357,7 +357,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		field string
 		value string
 	}{
-		{"note", "audit update note"},
+		{"instructions", "audit update note"},
 		{"email", "audit-update@e2e.openmrp.ai"},
 		{"phone", "555-AUDIT"},
 		{"url", "https://audit.e2e.openmrp.ai"},
@@ -423,7 +423,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	body["default_priority"] = SeedPriorityCode
 	body["default_sales_rep_id"] = SeedAccountUserID
 
-	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	created := parseJSON(createBody)
@@ -435,14 +435,14 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	// Get the customer to capture initial IDs for address and sales rep.
 	getStatus, getBody, err := apiClient.GetListRaw(
 		customersPath+"/"+id,
-		url.Values{"include": {"bill_to_address,ship_to_address,defaults.sales_rep"}},
+		url.Values{"include": {"defaults.bill_to_address,defaults.ship_to_address,defaults.sales_rep"}},
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 
-	origBillToID := jsonField(jsonObject(got, "bill_to_address"), "id")
-	origShipToID := jsonField(jsonObject(got, "ship_to_address"), "id")
+	origBillToID := jsonField(jsonObject(jsonObject(got, "defaults"), "bill_to_address"), "id")
+	origShipToID := jsonField(jsonObject(jsonObject(got, "defaults"), "ship_to_address"), "id")
 	origSalesRepID := jsonField(jsonObject(jsonObject(got, "defaults"), "sales_rep"), "id")
 	require.NotEmpty(t, origBillToID)
 	require.NotEmpty(t, origShipToID)
@@ -450,7 +450,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	assert.Equal(t, SeedAccountUserID, origSalesRepID)
 
 	// Clear ALL nullable fields at once.
-	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, forgeCustomerWrite(map[string]any{
 		"note":                    nil,
 		"email":                   nil,
 		"phone":                   nil,
@@ -459,7 +459,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		"default_sales_rep_id":    nil,
 		"bill_to_address_id":      nil,
 		"ship_to_address_id":      nil,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
@@ -472,7 +472,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		field    string
 		oldValue string
 	}{
-		{"note", "clear-test note"},
+		{"instructions", "clear-test note"},
 		{"email", "clear-test@e2e.openmrp.ai"},
 		{"phone", "555-CLEAR"},
 		{"url", "https://clear-test.e2e.openmrp.ai"},

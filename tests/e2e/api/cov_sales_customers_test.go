@@ -46,12 +46,12 @@ func TestCovSalesCustomers_MergeHappyPath(t *testing.T) {
 	target := covSalesCustomersCreate(t, nil)
 	targetID := jsonField(target, "id")
 
-	source1Status, source1Body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src1")), newIdempotencyKey())
+	source1Status, source1Body, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(uniqueName("e2e-covcust-merge-src1"))), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, source1Status, source1Body)
 	source1ID := jsonField(parseJSON(source1Body), "id")
 
-	source2Status, source2Body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-covcust-merge-src2")), newIdempotencyKey())
+	source2Status, source2Body, err := apiClient.Post(customersPath, forgeCustomerWrite(validCustomerBody(uniqueName("e2e-covcust-merge-src2"))), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, source2Status, source2Body)
 	source2ID := jsonField(parseJSON(source2Body), "id")
@@ -60,14 +60,17 @@ func TestCovSalesCustomers_MergeHappyPath(t *testing.T) {
 		"source_customer_ids": []string{source1ID, source2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, mergeStatus, mergeBody)
+	requireStatus(t, 202, mergeStatus, mergeBody)
 
-	merged := parseJSON(mergeBody)
-	assertIDFormat(t, jsonField(merged, "id"), "ac")
-	assertObjectField(t, merged, "customer")
-	assert.Equal(t, targetID, jsonField(merged, "id"), "merge response should be the target customer")
-	assertValidTimestamp(t, jsonField(merged, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(merged, "updated_at"), "updated_at")
+	accepted := parseJSON(mergeBody)
+	assertObjectField(t, accepted, "async_job")
+	assert.Equal(t, "merge_customers", jsonField(accepted, "type"))
+	assert.Equal(t, "customer", jsonField(accepted, "resource_type"))
+	job := pollJobUntilTerminal(t, jsonField(accepted, "id"))
+	require.Equal(t, "completed", jsonField(job, "status"), "the merge job completes: %v", job)
+	results := jobWrittenResults(job)
+	require.Len(t, results, 1, "the job names the merged target")
+	assert.Equal(t, targetID, jsonField(jsonObject(results[0], "resource"), "id"))
 
 	// Sources are deleted after a successful merge.
 	src1Status, _, err := apiClient.GetListRaw(customersPath+"/"+source1ID, nil)
@@ -104,13 +107,12 @@ func TestCovSalesCustomers_MergeConsolidatesPriceGroups(t *testing.T) {
 	// Cancel the auto-registered cleanup for the source: it will be deleted by
 	// the merge itself, and a post-merge Delete call would 404 harmlessly, but
 	// we don't want to rely on that — call merge explicitly instead.
-	mergeStatus, mergeBody, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge?include=price_groups", map[string]any{
-		"source_customer_ids": []string{sourceID},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, mergeStatus, mergeBody)
+	mergeCustomers(t, targetID, sourceID)
 
-	merged := parseJSON(mergeBody)
+	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+targetID, url.Values{"include": {"price_groups"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	merged := parseJSON(getBody)
 	pgList := jsonObject(merged, "price_groups")
 	require.NotNil(t, pgList, "price_groups should be present with ?include=price_groups")
 	pgData, _ := pgList["data"].([]any)
@@ -129,18 +131,15 @@ func TestCovSalesCustomers_MergeWithInclude(t *testing.T) {
 	source := covSalesCustomersCreate(t, nil)
 	sourceID := jsonField(source, "id")
 
-	mergeStatus, mergeBody, err := apiClient.Post(
-		customersPath+"/"+targetID+"/actions/merge?include=type,defaults.payment_term,defaults.shipping_term",
-		map[string]any{"source_customer_ids": []string{sourceID}},
-		newIdempotencyKey(),
-	)
+	mergeCustomers(t, targetID, sourceID)
+
+	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+targetID, url.Values{"include": {"group,defaults.payment_term,defaults.shipping_term"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, mergeStatus, mergeBody)
+	requireStatus(t, 200, getStatus, getBody)
+	merged := parseJSON(getBody)
 
-	merged := parseJSON(mergeBody)
-
-	typeGroup := jsonObject(merged, "type")
-	require.NotNil(t, typeGroup, "type should be present with ?include=type on merge")
+	typeGroup := jsonObject(merged, "group")
+	require.NotNil(t, typeGroup, "type should be present with ?include=group on merge")
 	assert.Equal(t, SeedCustomerGroupID, jsonField(typeGroup, "id"))
 
 	defaults := jsonObject(merged, "defaults")
@@ -151,7 +150,7 @@ func TestCovSalesCustomers_MergeWithInclude(t *testing.T) {
 	assert.Equal(t, SeedPaymentTermID, jsonField(pt, "id"))
 
 	// Not included, should remain null.
-	assert.Nil(t, merged["contact_info"], "contact_info should be null without ?include=contact_info")
+	assert.Nil(t, merged["parent_customer"], "parent_customer should be null without ?include=")
 }
 
 // ──────────────────────────────────────────────
@@ -217,13 +216,8 @@ func TestCovSalesCustomers_MergeNonexistentTargetNotFound(t *testing.T) {
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 }
 
-// TestCovSalesCustomers_MergeEmptySourceListIsNoOp documents current behavior:
-// an empty source_customer_ids array is a well-formed no-op merge (target
-// returned unchanged, 200), not rejected by validation. go-playground/validator's
-// `required` tag treats a non-nil empty slice as satisfying the constraint. This
-// is plausibly intentional (merge is idempotent/a no-op with nothing to merge)
-// rather than a bug, so we assert the observed behavior rather than force a 400.
-func TestCovSalesCustomers_MergeEmptySourceListIsNoOp(t *testing.T) {
+// An empty source_customer_ids has nothing to merge, so it is refused rather than raising a job that does nothing.
+func TestCovSalesCustomers_MergeEmptySourceListIsRejected(t *testing.T) {
 	t.Parallel()
 
 	target := covSalesCustomersCreate(t, nil)
@@ -233,10 +227,8 @@ func TestCovSalesCustomers_MergeEmptySourceListIsNoOp(t *testing.T) {
 		"source_customer_ids": []string{},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	merged := parseJSON(body)
-	assert.Equal(t, targetID, jsonField(merged, "id"))
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "source_customer_ids")
 }
 
 // ──────────────────────────────────────────────
@@ -257,15 +249,17 @@ func TestCovSalesCustomers_MergeIdempotentReplay(t *testing.T) {
 
 	status1, body1, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 200, status1, body1)
+	requireStatus(t, 202, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
+	job := pollJobUntilTerminal(t, id1)
+	require.Equal(t, "completed", jsonField(job, "status"), "%v", job)
 
 	status2, body2, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", payload, idemKey)
 	require.NoError(t, err)
-	requireStatus(t, 200, status2, body2)
+	requireStatus(t, 202, status2, body2)
 	id2 := jsonField(parseJSON(body2), "id")
 
-	assert.Equal(t, id1, id2, "replaying the same idempotency key should return the same merged target")
+	assert.Equal(t, id1, id2, "replaying the same idempotency key should return the same merge job")
 
 	// Source must still be gone (not re-merged / re-deleted a second time).
 	srcStatus, _, err := apiClient.GetListRaw(customersPath+"/"+sourceID, nil)
@@ -364,8 +358,8 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode(t *testing.T) {
 	})
 
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"freight_status_codes": {"free"},
-		"q":                    {name},
+		"freight_policies[]": {"free"},
+		"q":                  {name},
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "filter by free_freight should return the newly created free_freight customer")
@@ -384,8 +378,8 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode_NoResults(t *testing.T)
 	// The customer was created with free_freight; filtering for billed_freight
 	// scoped to its unique name must exclude it.
 	list, _, err := apiClient.GetList(customersPath, url.Values{
-		"freight_status_codes": {"billed"},
-		"q":                    {name},
+		"freight_policies[]": {"billed"},
+		"q":                  {name},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "free_freight customer should not match a billed_freight filter")
@@ -397,7 +391,7 @@ func TestCovSalesCustomers_ListFilterByFreightStatusCode_NoResults(t *testing.T)
 
 func TestCovSalesCustomers_ListFilterByParentAccountStatus_Parent(t *testing.T) {
 	t.Parallel()
-	assertListContainsID(t, customersPath, url.Values{"parent_account_status": {"parent"}}, SeedCustomerAccountID)
+	assertListContainsID(t, customersPath, url.Values{"relationship_types[]": {"parent"}}, SeedCustomerAccountID)
 }
 
 func TestCovSalesCustomers_ListFilterByParentAccountStatus_NonParent(t *testing.T) {
@@ -406,7 +400,7 @@ func TestCovSalesCustomers_ListFilterByParentAccountStatus_NonParent(t *testing.
 	standalone := covSalesCustomersCreate(t, nil)
 	standaloneID := jsonField(standalone, "id")
 
-	nonParentParams := url.Values{"parent_account_status": {"non_parent"}}
+	nonParentParams := url.Values{"relationship_types[]": {"standalone", "child"}}
 	assertListContainsID(t, customersPath, nonParentParams, standaloneID)
 
 	found := listFindByField(t, customersPath, nonParentParams, "id", SeedCustomerAccountID)
@@ -467,25 +461,25 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 
 	// Bracket: a wide window covering "now" must include the customer.
 	inRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"starts_at": {"2026-01-01T00:00:00Z"},
-		"ends_at":   {"2030-01-01T00:00:00Z"},
-		"q":         {name},
+		"created_after":  {"2026-01-01T00:00:00Z"},
+		"created_before": {"2030-01-01T00:00:00Z"},
+		"q":              {name},
 	})
 	require.NoError(t, err)
 	assert.True(t, listContainsID(inRange, custID), "wide date range bracketing now should include the newly created customer")
 
 	// starts_at in the far future must exclude it.
 	afterRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"starts_at": {"2030-01-01T00:00:00Z"},
-		"q":         {name},
+		"created_after": {"2030-01-01T00:00:00Z"},
+		"q":             {name},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, afterRange.Data, "starts_at in the far future should exclude a customer created now")
 
 	// ends_at in the far past must exclude it.
 	beforeRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"ends_at": {"2020-01-01T00:00:00Z"},
-		"q":       {name},
+		"created_before": {"2020-01-01T00:00:00Z"},
+		"q":              {name},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, beforeRange.Data, "ends_at in the far past should exclude a customer created now")
@@ -501,7 +495,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_account,child_accounts"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"parent_customer,child_customers"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -512,12 +506,12 @@ func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T)
 	// reflects whether the customer itself has children.
 	assert.Equal(t, "parent", jsonField(got, "relationship_type"))
 
-	parentAccount := jsonObject(got, "parent_account")
+	parentAccount := jsonObject(got, "parent_customer")
 	require.NotNil(t, parentAccount, "parent_account should be populated with real data for a customer with a parent relation")
 	assert.Equal(t, SeedAccountID, jsonField(parentAccount, "id"))
 	assert.Equal(t, "customer", jsonField(parentAccount, "object"))
 
-	childAccounts := jsonObject(got, "child_accounts")
+	childAccounts := jsonObject(got, "child_customers")
 	require.NotNil(t, childAccounts, "child_accounts should be populated with real data")
 	assert.Equal(t, "list", jsonField(childAccounts, "object"))
 	childData, _ := childAccounts["data"].([]any)
@@ -540,15 +534,12 @@ func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T)
 func TestCovSalesCustomers_FreightPreferencesServiceLevelPopulated(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"freight_preferences,freight_preferences.service_level"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, url.Values{"include": {"defaults.service_level"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	fp := jsonObject(got, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be present with ?include=freight_preferences")
-
-	sl := jsonObject(fp, "service_level")
+	sl := jsonObject(jsonObject(got, "defaults"), "service_level")
 	require.NotNil(t, sl, "freight_preferences.service_level should be populated with real data for the seeded fixture")
 	assert.Equal(t, SeedServiceLevelID, jsonField(sl, "id"))
 	assert.Equal(t, "service_level", jsonField(sl, "object"))
@@ -562,7 +553,7 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covcust-svclvl")
-	createResp, err := apiClient.PostFull(customersPath+"?include=freight_preferences.service_level", map[string]any{
+	createResp, err := apiClient.PostFull(customersPath+"?include=defaults.service_level", forgeCustomerWrite(map[string]any{
 		"name":                     name,
 		"default_carrier_id":       SeedCarrierID,
 		"default_payment_term_id":  SeedPaymentTermID,
@@ -577,7 +568,7 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 			"name":    name + " Shipping",
 			"country": "US",
 		},
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
@@ -586,23 +577,19 @@ func TestCovSalesCustomers_CreateAndClearDefaultServiceLevel(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(customersPath + "/" + id)
 
-	fp := jsonObject(created, "freight_preferences")
-	require.NotNil(t, fp, "freight_preferences should be present with ?include on create")
-	sl := jsonObject(fp, "service_level")
+	sl := jsonObject(jsonObject(created, "defaults"), "service_level")
 	require.NotNil(t, sl, "freight_preferences.service_level should be set from default_service_level_id on create")
 	assert.Equal(t, SeedServiceLevelID, jsonField(sl, "id"))
 
 	// Clear via null.
-	clearStatus, clearBody, err := apiClient.Patch(customersPath+"/"+id+"?include=freight_preferences.service_level", map[string]any{
+	clearStatus, clearBody, err := apiClient.Patch(customersPath+"/"+id+"?include=defaults.service_level", forgeCustomerWrite(map[string]any{
 		"default_service_level_id": nil,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, clearStatus, clearBody)
 
 	cleared := parseJSON(clearBody)
-	clearedFP := jsonObject(cleared, "freight_preferences")
-	require.NotNil(t, clearedFP, "freight_preferences should still be present")
-	assertNilField(t, clearedFP, "service_level")
+	assertNilField(t, jsonObject(cleared, "defaults"), "service_level")
 }
 
 // ──────────────────────────────────────────────
@@ -621,7 +608,7 @@ func TestCovSalesCustomers_DeleteConflictWhenReferencedBySalesOrders(t *testing.
 	status, body, err := apiClient.Delete(customersPath + "/" + SeedCustomerAccountID)
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
-	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+	requireErrorResponse(t, body, "resource_in_use", "invalid_request_error")
 
 	// Confirm the customer was NOT deleted.
 	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+SeedCustomerAccountID, nil)

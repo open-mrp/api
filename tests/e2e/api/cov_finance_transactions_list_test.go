@@ -19,7 +19,7 @@ import (
 func customerInGroup(t *testing.T, groupID string) string {
 	t.Helper()
 	body := validCustomerBody(uniqueName("e2e-tx-list-cust"))
-	body["customer_type_group_id"] = groupID
+	body["group_id"] = groupID
 	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, resp)

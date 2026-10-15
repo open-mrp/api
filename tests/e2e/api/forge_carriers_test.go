@@ -128,15 +128,15 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	carrier := forgeCarrier(t, map[string]any{"status": "archived"})
 
 	body := validCustomerBody(uniqueName("e2e-forge-carr-archcust"))
-	body["default_carrier_id"] = jsonField(carrier, "id")
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	customerDefaults(body)["carrier_id"] = jsonField(carrier, "id")
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_carrier_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.carrier_id")
 
 	// A customer already on the carrier keeps it after the carrier is archived.
 	live := forgeCarrier(t, nil)
@@ -144,7 +144,7 @@ func TestForgeCarriers_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	status, resp, err = apiClient.Patch(carriersPath+"/"+jsonField(live, "id"), map[string]any{"status": "archived"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
-	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"name": uniqueName("e2e-forge-carr-keep-u")}, newIdempotencyKey())
+	status, resp, err = apiClient.Patch(customersPath+"/"+customerID, forgeCustomerWrite(map[string]any{"name": uniqueName("e2e-forge-carr-keep-u")}), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
 	carrierID, _ := customerDefaultRouting(t, customerID)
@@ -276,16 +276,16 @@ func TestForgeServiceLevels_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	archivedID := covOperationsCarriersCreateServiceLevel(t, serviceLevelsPath(carrierID), map[string]any{"status": "archived"})
 
 	body := validCustomerBody(uniqueName("e2e-forge-sl-archcust"))
-	body["default_carrier_id"] = carrierID
-	body["default_service_level_id"] = archivedID
-	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	customerDefaults(body)["carrier_id"] = carrierID
+	customerDefaults(body)["service_level_id"] = archivedID
+	status, resp, err := apiClient.Post(customersPath, forgeCustomerWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		id := jsonField(parseJSON(resp), "id")
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + id) })
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "default_service_level_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "defaults.service_level_id")
 }
 
 func TestForgeServiceLevels_DeleteInUse(t *testing.T) {

@@ -11,45 +11,40 @@ import (
 const SampleAccountGroupID = "acgp_6p4z57e9alaf"
 const SampleAccountGroupName = "Wholesale Customers"
 
-// A named grouping of customer accounts, used for pricing rules or to categorize accounts.
-//
-// A customer carries at most one group of type `type_group` as its customer type, plus any number of groups of type `pricing_group`. Membership of either kind can scope a volume discount to the customer and open up product lines for it to order from.
+// A group that classifies customers, such as `Distributors`, and sets policies and defaults for every customer in it.
 type AccountGroup struct {
 	// Account group ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group"`
-	// How this account group is used.
-	//
-	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
-	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
-	//
-	// A group's type is fixed when it is created and cannot be changed afterwards.
-	Type constants.AccountGroupType `json:"type" validate:"required"`
-	// Display name of the account group.
-	//
-	// Unique within the account.
+	// How the group is used: `type_group` classifies customers, `pricing_group` scopes pricing.
+	Type constants.AccountGroupType `json:"type" validate:"required" visibility:"internal"`
+	// Display name, unique (case-insensitive) among your account's groups.
 	Name string `json:"name" validate:"required"`
-	// Free-form description of the account group.
+	// Free-form description of the group.
 	Description *string `json:"description"`
-	// How sales commission applies to accounts in this group.
+	// Whether orders from the group's customers earn commission.
 	//
-	// - `applied`: sales commission is calculated on orders from accounts in this group.
-	// - `exempt`: orders from accounts in this group are exempt from commission.
-	//
-	// Null to customer and supplier portal users, like the rest of your commission settings.
+	// A customer is exempt if it or its group is `exempt`. Always `null` for portal users.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
-	// How freight charges apply to orders from accounts in this group.
+	// Whether the group's customers are billed for freight.
 	//
-	// - `free`: customers within this group will not have to pay for freight.
-	// - `billed`: freight will be applied to any order within this account group, unless overridden elsewhere.
+	// Freight is waived if the customer, its group, or the product line of an ordered item is `free`.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has neither set its own nor inherited one from a parent account.
-	DefaultLeadTimeDays *int32 `json:"default_lead_time_days"`
+	// Values the group's customers inherit when they don't set their own.
+	Defaults *AccountGroupDefaults `json:"defaults" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// Values an account group's customers inherit when they don't set their own.
+type AccountGroupDefaults struct {
+	// Lead time for customers in this group that don't set their own or inherit one from a parent customer.
+	//
+	// Business days from an order being issued to it being due to ship. `null` uses your account default.
+	LeadTime *Quantity `json:"lead_time"`
 }
 
 var SampleAccountGroup = &AccountGroup{
@@ -60,6 +55,7 @@ var SampleAccountGroup = &AccountGroup{
 	Description:      nil,
 	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	FreightPolicy:    constants.FreightPolicyBilled,
+	Defaults:         &AccountGroupDefaults{LeadTime: &Quantity{Value: "5", Unit: SampleDayUnit}},
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

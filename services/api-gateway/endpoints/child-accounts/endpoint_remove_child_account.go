@@ -22,6 +22,8 @@ type RemoveChildAccountRequest struct {
 // Unlinks a child account from the target account.
 //
 // Only the parent-child relationship is removed; the child account itself, and your customer record for it, are left untouched. This call is idempotent: removing an account that is not currently a child of the target account succeeds without changes.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge sets a customer's `parent_customer_id` with Update Customer.
 type RemoveChildAccountEndpoint struct{}
 
 func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *object.Deleted] {
@@ -34,7 +36,6 @@ func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rem
 		ObjectType:        constants.ObjectTypeChildAccount,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
 		}},

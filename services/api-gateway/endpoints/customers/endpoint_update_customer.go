@@ -15,139 +15,65 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update a customer.
+// Request to update a customer.
 type UpdateCustomerRequest struct {
 	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 	// The customer's business name, as shown throughout the app and on documents.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Human-readable customer number used to identify the account, distinct from the `id`.
-	//
-	// Must be unique within your account.
+	// Customer number, unique within your account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Free-form note about the customer.
-	Note field.Clearable[string] `json:"note,omitzero"`
-	// The customer's account standing.
-	//
-	// - `normal`: standard account with no restrictions.
-	// - `preferred`: account flagged for prioritized handling.
-	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
-	// - `hold_all`: all activity for the customer should be held.
-	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero"`
-	// Email address.
-	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
-	// Phone number.
-	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
-	// Website URL.
-	URL field.Clearable[string] `json:"url,omitzero" validate:"omitempty,max=255"`
-	// How sales commission applies to this customer's orders.
-	//
-	// - `exempt`: this customer's orders are exempt from sales commission.
-	// - `applied`: sales commission is calculated on this customer's orders.
+	// Whether the customer can receive new orders: `active` or `archived`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// The customer's credit standing: `normal`, `hold_shipment` or `hold_all`.
+	Standing field.Optional[constants.CustomerStanding] `json:"standing,omitzero"`
+	// Your team's standing instructions for this customer's orders. Send `null` to clear them.
+	Instructions field.Clearable[string] `json:"instructions,omitzero"`
+	// Whether orders from this customer earn sales commission: `applied` or `exempt`.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
-	// Whether this customer is billed for freight on their orders.
-	//
-	// - `free`: the customer is not billed for freight.
-	// - `billed`: freight is billed to the customer.
-	//
-	// Freight is also waived when the customer's type group, one of its price groups, or a product line the ordered products belong to is `free`.
+	// Whether this customer is billed for freight: `billed` or `free`.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
-	// Calendar days between an order being issued and it being due to ship.
-	//
-	// Sets each order's `ship_by_date` when it is issued. Clear it to inherit the parent account's lead time, then the customer's account group lead time, then the account default.
-	LeadTimeDays field.Clearable[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
-	// The operating calendar naming the days this customer's dock accepts freight. Clearing it returns the customer to their group's calendar, then the account default.
-	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
-	// How this customer's orders are produced.
-	//
-	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
-	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
-	//
-	// Clearing it returns the customer to their account group policy, then the make-to-stock default.
-	FulfillmentPolicy field.Clearable[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
-	// ID of the carrier used on this customer's orders when the order does not specify one.
-	DefaultCarrierID field.Optional[string] `json:"default_carrier_id,omitzero" validate:"omitempty"`
-	// ID of the carrier service level used when an order takes its carrier from this customer's default.
-	DefaultServiceLevelID field.Clearable[string] `json:"default_service_level_id,omitzero" validate:"omitempty"`
-	// ID of the payment term used on this customer's orders when the order does not specify one.
-	DefaultPaymentTermID field.Optional[string] `json:"default_payment_term_id,omitzero" validate:"omitempty"`
-	// ID of the shipping term used on this customer's orders when the order does not specify one.
-	DefaultShippingTermID field.Optional[string] `json:"default_shipping_term_id,omitzero" validate:"omitempty"`
-	// Priority used to pre-fill new orders for this customer.
-	DefaultPriorityCode field.Optional[constants.PriorityCode] `json:"default_priority,omitzero"`
-	// The ID of the account user to credit as the sales rep on this customer's orders.
-	//
-	// Must be an account user on your own account.
-	DefaultSalesRepID field.Clearable[string] `json:"default_sales_rep_id,omitzero" validate:"omitempty"`
-	// ID of an existing address to use as the default billing address.
-	//
-	// The address is linked to the customer's account if it is not already.
-	BillToAddressID field.Clearable[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
-	// ID of an existing address to use as the default shipping address.
-	//
-	// The address is linked to the customer's account if it is not already.
-	ShipToAddressID field.Clearable[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
-	// IDs of the account groups of type `pricing_group` to assign to this customer, used to apply pricing rules.
-	//
-	// When provided, replaces the customer's full set of existing price groups.
-	CustomerPriceGroupIDs field.Optional[[]string] `json:"customer_price_group_ids,omitzero"`
-	// ID of the account group of type `type_group` that categorizes this customer (for example "Distributors").
-	CustomerTypeGroupID field.Optional[string] `json:"customer_type_group_id,omitzero" validate:"omitempty"`
-	// Who pays the carrier for shipments.
-	//
-	// - `sender`: the shipper (you) pays the carrier.
-	// - `third_party`: a third party is billed, using `carrier_billing_account`.
-	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero"`
-	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
-	CarrierBillingAccount field.Clearable[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
-	// Maximum credit extended to this customer.
+	// Credit extended to this customer. Send `null` for no limit.
 	CreditLimit field.Clearable[apirequest.MoneyInput] `json:"credit_limit,omitzero"`
+	// How to reach the customer's business. Only fields you send are changed.
+	Contact field.Optional[CustomerContactInput] `json:"contact,omitzero"`
+	// Who pays the carrier. Only fields you send are changed.
+	CarrierBilling field.Optional[CustomerCarrierBillingInput] `json:"carrier_billing,omitzero"`
+	// Values copied onto a new order for this customer. Only fields you send are changed.
+	Defaults field.Optional[UpdateCustomerDefaultsInput] `json:"defaults,omitzero"`
+	// ID of the account group that classifies this customer.
+	GroupID field.Optional[string] `json:"group_id,omitzero"`
+	// IDs of the pricing account groups the customer belongs to. Replaces the current set.
+	PriceGroupIDs field.Optional[[]string] `json:"price_group_ids,omitzero" visibility:"internal"`
+	// ID of the customer this one belongs to. Send `null` to make it a standalone customer.
+	ParentCustomerID field.Clearable[string] `json:"parent_customer_id,omitzero"`
+	// Who receives this customer's documents by email. Replaces the current list; send `[]` for none.
+	//
+	// Each recipient is one of the customer's users and the documents they get: `acknowledgment`, `invoice`, `shipment` or `statement`.
+	NotificationRecipients field.Optional[[]apirequest.EmailRecipientInput] `json:"notification_recipients,omitzero"`
 }
 
-var sampleUpdateCustomerName = "Acme Corp Updated"
-var sampleUpdateCustomerNote = "Updated account notes"
-var sampleUpdateCustomerDefaultCarrierID = apiresource.SampleCarrierID
-var sampleUpdateCustomerFreightPolicy = constants.FreightPolicyBilled
-var sampleUpdateCustomerEmail = "orders@acme.com"
-var sampleUpdateCustomerPhone = "555-123-4567"
-var sampleUpdateCustomerURL = "https://acme.com"
-var sampleUpdateCustomerCarrierBillingAccount = "123456789"
 var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
-	Name:                  field.Some(sampleUpdateCustomerName),
-	Number:                field.Some(apiresource.SampleCustomerNumber),
-	Note:                  field.Set(sampleUpdateCustomerNote),
-	StatusCode:            field.Some(constants.AccountStatusCodeNormal),
-	Email:                 field.Set(sampleUpdateCustomerEmail),
-	Phone:                 field.Set(sampleUpdateCustomerPhone),
-	URL:                   field.Set(sampleUpdateCustomerURL),
-	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
-	FreightPolicy:         field.Some(sampleUpdateCustomerFreightPolicy),
-	FulfillmentPolicy:     field.Set(constants.FulfillmentPolicyMakeToOrder),
-	DefaultCarrierID:      field.Some(sampleUpdateCustomerDefaultCarrierID),
-	DefaultServiceLevelID: field.Set(apiresource.SampleServiceLevelID),
-	DefaultPaymentTermID:  field.Some(apiresource.SamplePaymentTermID),
-	DefaultShippingTermID: field.Some(apiresource.SampleShippingTermID),
-	DefaultPriorityCode:   field.Some(constants.PriorityCodeNormal),
-	DefaultSalesRepID:     field.Set(apiresource.SampleAccountUserID),
-	BillToAddressID:       field.Set(apiresource.SampleAddressID),
-	ShipToAddressID:       field.Set(apiresource.SampleAddressID),
-	CustomerPriceGroupIDs: field.Some([]string{apiresource.SampleAccountGroupID}),
-	CustomerTypeGroupID:   field.Some(apiresource.SampleAccountGroupID),
-	CarrierBillingType:    field.Some(constants.CarrierBillingTypeSender),
-	CarrierBillingAccount: field.Set(sampleUpdateCustomerCarrierBillingAccount),
-	CreditLimit: field.Set(apirequest.MoneyInput{
-		Amount:   "10000.00",
-		Currency: "usd",
+	Name:     field.Some("Acme Corp"),
+	Standing: field.Some(constants.CustomerStandingHoldShipment),
+	Contact:  field.Some(CustomerContactInput{Email: field.Set("orders@acme.com")}),
+	Defaults: field.Some(UpdateCustomerDefaultsInput{
+		CarrierID: field.Some(apiresource.SampleCarrierID),
+		LeadTime:  field.Set(apirequest.QuantityInput{Value: "5", UnitID: apirequest.DayUnitID}),
 	}),
+	NotificationRecipients: field.Some([]apirequest.EmailRecipientInput{{
+		AccountUserID: apiresource.SampleAccountUserID,
+		Documents:     []constants.RecipientDocument{constants.RecipientDocumentInvoice},
+	}}),
 }
 
 func (*UpdateCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCustomerRequest)
 }
 
-// Partially updates a customer account.
+// Updates a customer.
 //
-// Only the fields provided in the request are changed. Nullable fields can be set to `null` to clear their current value.
+// Only fields you send are changed, including fields inside `contact`, `carrier_billing` and `defaults`. Send `null` to clear a clearable field.
 type UpdateCustomerEndpoint struct{}
 
 func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer] {
@@ -160,16 +86,13 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).UpdateCustomer
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomer,
-			Fields: []string{
-				"bill_to_address", "ship_to_address", "type", "parent_account", "freight_preferences.carrier", "freight_preferences.carrier.service_levels", "freight_preferences.service_level", "defaults.payment_term", "defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.priority", "contact_info", "freight_preferences", "defaults", "notification_preferences", "price_groups", "child_accounts", "credit_limit",
-			},
+			Fields:     customerIncludeFields,
 		}),
 	})
 }

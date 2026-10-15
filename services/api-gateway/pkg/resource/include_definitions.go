@@ -213,33 +213,29 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomer,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "type", ObjectType: constants.ObjectTypeAccountGroup},
-			{Key: "parent_account", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "group", ObjectType: constants.ObjectTypeAccountGroup},
+			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
+			{Key: "parent_customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "child_customers", ObjectType: constants.ObjectTypeCustomer},
 			{
-				Key:        "freight_preferences",
-				ObjectType: constants.ObjectTypeCustomer,
+				Key: "notification_recipients",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "account_user", ObjectType: constants.ObjectTypeAccountUser},
+				},
+			},
+			{
+				Key: "defaults",
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
 					{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
-				},
-			},
-			{
-				Key:        "defaults",
-				ObjectType: constants.ObjectTypeCustomer,
-				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 					{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
-					{Key: "priority", ObjectType: constants.ObjectTypePriority},
 					{Key: "sales_rep", ObjectType: constants.ObjectTypeAccountUser},
+					{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
+					{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
+					{Key: "receive_calendar", ObjectType: constants.ObjectTypeOperatingCalendar},
 				},
 			},
-			{Key: "contact_info", ObjectType: constants.ObjectTypeCustomerContactInfo},
-			{Key: "notification_preferences", ObjectType: constants.ObjectTypeCustomerNotificationPreferences},
-			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
-			{Key: "child_accounts", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "credit_limit", ObjectType: ""},
 		},
 	})
 
@@ -260,6 +256,7 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomerLeadTime,
 		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "account_group", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "parent_customer", ObjectType: constants.ObjectTypeCustomer},
 		},

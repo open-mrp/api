@@ -62,7 +62,7 @@ func TestCheckCustomerRefs_RefusesOnTheFieldThatNamedIt(t *testing.T) {
 
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
-	assert.Equal(t, "default_payment_term_id", apiErr.Param)
+	assert.Equal(t, "defaults.payment_term_id", apiErr.Param)
 }
 
 func TestCheckCustomerRefs_ReadsTheTypeAndPriceGroupsTogether(t *testing.T) {
@@ -77,7 +77,7 @@ func TestCheckCustomerRefs_ReadsTheTypeAndPriceGroupsTogether(t *testing.T) {
 
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
-	assert.Equal(t, "customer_price_group_ids", apiErr.Param)
+	assert.Equal(t, "price_group_ids", apiErr.Param)
 }
 
 func TestCheckCustomerRefs_CalendarAndSalesRepMustBeTheAccounts(t *testing.T) {
@@ -92,7 +92,7 @@ func TestCheckCustomerRefs_CalendarAndSalesRepMustBeTheAccounts(t *testing.T) {
 	}))
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, "default_sales_rep_id", apiErr.Param)
+	assert.Equal(t, "defaults.sales_rep_id", apiErr.Param)
 }
 
 func TestCheckCustomerRefs_PassesAnUnexpectedLookupError(t *testing.T) {
@@ -149,8 +149,8 @@ func TestChangedCustomerRefs_LeavesWhatTheCustomerHoldsAlone(t *testing.T) {
 	}, old)
 
 	assert.Equal(t, customerRefs{
-		{kind: customerRefServiceLevel, id: "crop_new", param: "default_service_level_id"},
-		{kind: customerRefPaymentTerm, id: "pytm_new", param: "default_payment_term_id"},
-		{kind: customerRefAccountGroup, id: "acgp_new", param: "customer_price_group_ids"},
+		{kind: customerRefServiceLevel, id: "crop_new", param: "defaults.service_level_id"},
+		{kind: customerRefPaymentTerm, id: "pytm_new", param: "defaults.payment_term_id"},
+		{kind: customerRefAccountGroup, id: "acgp_new", param: "price_group_ids"},
 	}, refs)
 }

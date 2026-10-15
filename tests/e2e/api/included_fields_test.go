@@ -53,12 +53,12 @@ func assertPriorityFieldsPopulated(t *testing.T, pri map[string]any, prefix stri
 // Customer — Included Sub-Resource Completeness
 // ──────────────────────────────────────────────
 
-const allCustomerIncludes = "type,defaults.payment_term,defaults.shipping_term,defaults.priority,freight_preferences.carrier"
+const allCustomerIncludes = "group,defaults.payment_term,defaults.shipping_term,defaults.carrier"
 
 func assertCustomerIncludedFieldsPopulated(t *testing.T, got map[string]any) {
 	t.Helper()
 
-	if typeGroup := jsonObject(got, "type"); typeGroup != nil {
+	if typeGroup := jsonObject(got, "group"); typeGroup != nil {
 		assert.NotEmpty(t, jsonField(typeGroup, "type"), "type.type must not be empty")
 		assert.NotEmpty(t, jsonField(typeGroup, "commission_policy"), "type.commission_policy must not be empty")
 		assert.NotEmpty(t, jsonField(typeGroup, "freight_policy"), "type.freight_policy must not be empty")
@@ -71,14 +71,8 @@ func assertCustomerIncludedFieldsPopulated(t *testing.T, got map[string]any) {
 		if st := jsonObject(defaults, "shipping_term"); st != nil {
 			assertShippingTermFieldsPopulated(t, st, "defaults.shipping_term")
 		}
-		if pri := jsonObject(defaults, "priority"); pri != nil {
-			assertPriorityFieldsPopulated(t, pri, "defaults.priority")
-		}
-	}
-
-	if fp := jsonObject(got, "freight_preferences"); fp != nil {
-		if carrier := jsonObject(fp, "carrier"); carrier != nil {
-			assertCarrierFieldsPopulated(t, carrier, "freight_preferences.carrier")
+		if carrier := jsonObject(defaults, "carrier"); carrier != nil {
+			assertCarrierFieldsPopulated(t, carrier, "defaults.carrier")
 		}
 	}
 }
@@ -103,7 +97,7 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	payload["default_priority"] = SeedPriorityCode
 	status, body, err := apiClient.Post(
 		customersPath+"?include="+allCustomerIncludes,
-		payload,
+		forgeCustomerWrite(payload),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -120,14 +114,14 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	name := uniqueName("e2e-cust-noempty-u")
 	updPayload := validCustomerBody(name)
 	updPayload["default_priority"] = SeedPriorityCode
-	createStatus, createBody, err := apiClient.Post(customersPath, updPayload, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, forgeCustomerWrite(updPayload), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
 	patchStatus, patchBody, err := apiClient.Patch(
 		customersPath+"/"+id+"?include="+allCustomerIncludes,
-		map[string]any{"note": "verify enum fields"},
+		forgeCustomerWrite(map[string]any{"note": "verify enum fields"}),
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)

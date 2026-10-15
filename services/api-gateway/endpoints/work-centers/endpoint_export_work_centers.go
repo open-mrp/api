@@ -1,4 +1,4 @@
-package departmentep
+package workcenterep
 
 import (
 	"context"
@@ -13,27 +13,27 @@ import (
 	apiexample "github.com/open-mrp/apikit/example"
 )
 
-// Filters which departments land in the exported file.
-type ExportDepartmentsRequest struct {
-	// Free-text search term matched against department names.
+// Filters which work centers land in the exported file.
+type ExportWorkCentersRequest struct {
+	// Free-text search term matched against work center names.
 	Query *string `json:"q"`
 }
 
-var sampleExportDepartmentsRequest = &ExportDepartmentsRequest{}
+var sampleExportWorkCentersRequest = &ExportWorkCentersRequest{}
 
-func (*ExportDepartmentsRequest) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(sampleExportDepartmentsRequest)
+func (*ExportWorkCentersRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleExportWorkCentersRequest)
 }
 
-// Starts an export of every matching department and returns the job that tracks it.
-type ExportDepartmentsEndpoint struct{}
+// Starts an export of every matching work center and returns the job that tracks it.
+type ExportWorkCentersEndpoint struct{}
 
-func (e *ExportDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportDepartmentsRequest, *apiresource.AsyncJob] {
-	return (&apiendpoint.APIEndpoint[*ExportDepartmentsRequest, *apiresource.AsyncJob]{
-		Title:             "Export Departments",
+func (e *ExportWorkCentersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportWorkCentersRequest, *apiresource.AsyncJob] {
+	return (&apiendpoint.APIEndpoint[*ExportWorkCentersRequest, *apiresource.AsyncJob]{
+		Title:             "Export Work Centers",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/departments/actions/export",
+		Route:             "/v1/operations/work-centers/actions/export",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		AgentTool:         true,
@@ -44,8 +44,8 @@ func (e *ExportDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expo
 			ObjectType: constants.ObjectTypeAsyncJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
-			return svc.(DepartmentSvc).ExportDepartments
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportWorkCentersRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+			return svc.(WorkCenterSvc).ExportWorkCenters
 		},
 		LocationFunc: func(resp *apiresource.AsyncJob) string {
 			return "/v1/core/async-jobs/" + resp.ID

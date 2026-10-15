@@ -53,7 +53,7 @@ var sampleCreateAccountUserEmail = apiresource.SampleUserEmail
 var sampleCreateAccountUserUsername = apiresource.SampleUserUsername
 var sampleCreateAccountUserPassword = apiresource.SampleUserPassword
 var sampleCreateAccountUserRoleID = apiresource.SampleRoleID
-var sampleCreateAccountUserDepartmentID = apiresource.SampleDepartmentID
+var sampleCreateAccountUserDepartmentID = apiresource.SampleWorkCenterID
 var sampleCreateAccountUserRequest = &CreateAccountUserRequest{
 	Name:         field.Some(sampleCreateAccountUserName),
 	Email:        field.Some(sampleCreateAccountUserEmail),

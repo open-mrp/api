@@ -140,7 +140,7 @@ var SampleProductionCostTotals = &ProductionCostTotals{
 
 var SampleProductionCostDepartment = &ProductionCostDepartment{
 	Object:     constants.ObjectTypeProductionCostDepartment,
-	Department: NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Department: NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	Productive: sampleProductionCostProductive,
 	Seconds:    sampleProductionCostSeconds,
 	Waste:      sampleProductionCostWaste,
@@ -158,7 +158,7 @@ var SampleProductionCostCategory = &ProductionCostCategory{
 
 var SampleProductionCostDepartmentCategory = &ProductionCostDepartmentCategory{
 	Object:     constants.ObjectTypeProductionCostDepartmentCategory,
-	Department: NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Department: NewEntity(SampleWorkCenterID, constants.ObjectTypeDepartment, new(SampleWorkCenterName), nil),
 	Category:   NewEntity(SampleItemCategoryID, constants.ObjectTypeItemCategory, new(SampleItemCategoryName), nil),
 	Productive: sampleProductionCostProductive,
 	Seconds:    sampleProductionCostSeconds,

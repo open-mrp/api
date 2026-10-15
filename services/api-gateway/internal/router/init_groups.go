@@ -365,12 +365,12 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(batchesGroup.APIEndpointGroup)
 	}
 
-	// Departments
-	departmentsGroup := (&httpgroup.DepartmentsEndpointGroup{}).Materialize(&httpgroup.DepartmentsEndpointGroupConfig{
+	// Work Centers
+	workCentersGroup := (&httpgroup.WorkCentersEndpointGroup{}).Materialize(&httpgroup.WorkCentersEndpointGroupConfig{
 		CoreClient: config.CoreClient,
 	})
-	if departmentsGroup != nil {
-		registry.RegisterGroup(departmentsGroup.APIEndpointGroup)
+	if workCentersGroup != nil {
+		registry.RegisterGroup(workCentersGroup.APIEndpointGroup)
 	}
 
 	// Email Logs

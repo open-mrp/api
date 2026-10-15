@@ -18,33 +18,31 @@ import (
 type CreateMachineRequest struct {
 	// Display name of the machine.
 	//
-	// Must be unique within your account; maximum 255 characters.
+	// Unique within your account (case-insensitive); maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
 	// Serial number of the machine.
 	//
-	// Maximum 255 characters.
+	// Unique within your account (case-insensitive); maximum 255 characters.
 	SerialNumber string `json:"serial_number" validate:"required,max=255"`
-	// Free-form notes about the machine.
-	Notes field.Optional[string] `json:"notes,omitzero"`
-	// ID of the department this machine belongs to.
-	//
-	// Must reference a department in your account.
-	DepartmentID string `json:"department_id" validate:"required"`
+	// ID of the work center the machine belongs to.
+	WorkCenterID string `json:"work_center_id" validate:"required"`
+	// `active` or `archived`. Defaults to `active`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleCreateMachineRequest = &CreateMachineRequest{
 	Name:         "CNC Router",
 	SerialNumber: "SN-2024-0001",
-	DepartmentID: apiresource.SampleDepartmentID,
+	WorkCenterID: apiresource.SampleWorkCenterID,
 }
 
 func (*CreateMachineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMachineRequest)
 }
 
-// Creates a machine and assigns it to a department.
+// Creates a machine at a work center.
 //
-// Returns a conflict error if another machine in your account already uses the same name, and a not-found error if the department does not belong to your account. The department cannot be changed once the machine exists.
+// Returns a conflict error if another machine already has the name or serial number.
 type CreateMachineEndpoint struct{}
 
 func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine] {
@@ -56,14 +54,13 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionCreate},
 		}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMachine,
-			Fields:     []string{"department"},
+			Fields:     []string{"work_center"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).CreateMachine

@@ -21,7 +21,7 @@ type DeleteScanningStationRequest struct {
 
 // Deletes a scanning station.
 //
-// Production steps connected to the station are not deleted, but they are left without a station to scan at until you connect them to another one. Deleting a station that was already deleted returns an already-deleted error rather than a not-found error.
+// A station that batches, production steps or inventory changes name can't be deleted (409 `resource_in_use`).
 type DeleteScanningStationEndpoint struct{}
 
 func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteScanningStationRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteScanningStationRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ScanningStationSvc).DeleteScanningStation, constants.ObjectTypeScanningStation, "id")
 		},

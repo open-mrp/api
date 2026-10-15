@@ -323,7 +323,8 @@ var unverifiableEndpoints = map[string]string{
 	"unread_count":          "gateway-gated recipient auth: GetUnreadCount scopes to recipient(); gateway declares messaging:read",
 	"unread_summary":        "gateway-gated recipient auth: GetUnreadSummary scopes to actor(); gateway declares messaging:read",
 
-	"retrieve_memory": "gateway loader indirection: GetMemory -> resourceloaders.LoadAgentMemories (BatchGetAgentMemoriesByIDs), not GetAgentMemory RPC; endpoint declares agent_memories:read",
+	"retrieve_work_center": "gateway loader indirection: GetWorkCenter -> resourceloaders.LoadWorkCenters (BatchGetDepartmentsByIDs), not GetDepartment RPC; endpoint declares departments:read",
+	"retrieve_memory":      "gateway loader indirection: GetMemory -> resourceloaders.LoadAgentMemories (BatchGetAgentMemoriesByIDs), not GetAgentMemory RPC; endpoint declares agent_memories:read",
 
 	"list_email_domains":  "gateway-gated account-scoped auth: ListDomains resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
 	"get_email_domain":    "gateway-gated account-scoped auth: GetDomain resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
@@ -412,7 +413,7 @@ var unverifiableEndpoints = map[string]string{
 	"bulk_create_production_runs":   "variable-domain bulk gate: BulkCreateProductionRuns -> enqueueBulkOperation, which checks CheckHasPermission(spec.PermissionDomain, a) for each spec action (production_runs [create]); endpoint declares production_runs:create",
 	"bulk_upsert_production_steps":  "variable-domain bulk gate: enqueueBulkOperation checks every spec action (production_steps [create, update]); endpoint requires both",
 	"bulk_upsert_scanning_stations": "variable-domain bulk gate: enqueueBulkOperation checks every spec action (scanners [create, update]); endpoint requires both",
-	"bulk_upsert_departments":       "variable-domain bulk gate: enqueueBulkOperation checks every spec action (departments [create, update]); endpoint requires both",
+	"bulk_upsert_work_centers":      "variable-domain bulk gate: enqueueBulkOperation checks every spec action (departments [create, update]); endpoint requires both",
 	"bulk_upsert_item_categories":   "variable-domain bulk gate: enqueueBulkOperation checks every spec action (item_categories [create, update]); endpoint requires both",
 	"bulk_upsert_locations":         "variable-domain bulk gate: enqueueBulkOperation checks every spec action (locations [create, update]); endpoint requires both",
 	"bulk_upsert_machines":          "variable-domain bulk gate: enqueueBulkOperation checks every spec action (machines [create, update]); endpoint requires both",
@@ -427,7 +428,7 @@ var unverifiableEndpoints = map[string]string{
 	"export_production_runs":   "variable-domain export gate: enqueueExport -> authorizeExport -> exportSpec.checkPermission() over production_runs; endpoint declares production_runs:read",
 	"export_production_steps":  "variable-domain export gate: exportSpec over production_steps; endpoint declares production_steps:read",
 	"export_scanning_stations": "variable-domain export gate: exportSpec over scanners; endpoint declares scanners:read",
-	"export_departments":       "variable-domain export gate: exportSpec over departments; endpoint declares departments:read",
+	"export_work_centers":      "variable-domain export gate: exportSpec over departments; endpoint declares departments:read",
 	"export_item_categories":   "variable-domain export gate: exportSpec over item_categories; endpoint declares item_categories:read",
 	"export_locations":         "variable-domain export gate: exportSpec over locations; endpoint declares locations:read",
 	"export_machines":          "variable-domain export gate: exportSpec over machines; endpoint declares machines:read",

@@ -15,34 +15,34 @@ func init() {
 		Load:       resourceloaders.LoadMachines,
 		Subs: []include.SubField{
 			{
-				Key:         "department",
-				Target:      constants.ObjectTypeDepartment,
+				Key:         "work_center",
+				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractDepartmentIDFromMachine,
-				Populate:    populateDepartmentOnMachine,
+				ExtractIDs:  extractWorkCenterIDFromMachine,
+				Populate:    populateWorkCenterOnMachine,
 			},
 		},
 	})
 }
 
-func extractDepartmentIDFromMachine(ctx context.Context, parent any) []string {
+func extractWorkCenterIDFromMachine(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Machine)
 	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeMachine, m.ID, "department_id")
+		GetString(constants.ObjectTypeMachine, m.ID, "work_center_id")
 	if id == "" {
 		return nil
 	}
 	return []string{id}
 }
 
-func populateDepartmentOnMachine(ctx context.Context, parent any, loaded map[string]any) {
+func populateWorkCenterOnMachine(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Machine)
 	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeMachine, m.ID, "department_id")
+		GetString(constants.ObjectTypeMachine, m.ID, "work_center_id")
 	if id == "" {
 		return
 	}
 	if v, ok := loaded[id]; ok {
-		m.Department = v.(*apiresource.Department)
+		m.WorkCenter = v.(*apiresource.WorkCenter)
 	}
 }

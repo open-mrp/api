@@ -28,7 +28,7 @@ var includeAdherenceResources = map[constants.ObjectType]any{
 	constants.ObjectTypeCarrier:                   Carrier{},
 	constants.ObjectTypeConsumption:               Consumption{},
 	constants.ObjectTypeCustomer:                  Customer{},
-	constants.ObjectTypeDepartment:                Department{},
+	constants.ObjectTypeWorkCenter:                WorkCenter{},
 	constants.ObjectTypeAnnouncement:              Announcement{},
 	constants.ObjectTypeChatMessage:               Message{},
 	constants.ObjectTypeConversation:              Conversation{},

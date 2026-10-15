@@ -20,16 +20,16 @@ type UpdateMachineRequest struct {
 	MachineID string `path:"id" validate:"required"`
 	// Display name of the machine.
 	//
-	// Must be unique within your account; maximum 255 characters.
+	// Unique within your account (case-insensitive); maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Serial number of the machine.
 	//
-	// Maximum 255 characters.
+	// Unique within your account (case-insensitive); maximum 255 characters.
 	SerialNumber field.Optional[string] `json:"serial_number,omitzero" validate:"omitempty,max=255"`
-	// Free-form notes about the machine.
-	//
-	// Send `null` to clear.
-	Notes field.Clearable[string] `json:"notes,omitzero"`
+	// ID of the work center to move the machine to.
+	WorkCenterID field.Optional[string] `json:"work_center_id,omitzero" validate:"omitempty"`
+	// `active` or `archived`. An archived machine stays on the records that already name it but can't be newly assigned.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleUpdateMachineName = "Updated CNC Router"
@@ -41,9 +41,9 @@ func (*UpdateMachineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMachineRequest)
 }
 
-// Partially updates a machine.
+// Updates a machine.
 //
-// Only the fields provided in the request are changed. Returns a conflict error if the new name is already in use by another machine in your account. A machine cannot be moved to a different department.
+// Only the fields you send change. Returns a conflict error if another machine already has the new name or serial number.
 type UpdateMachineEndpoint struct{}
 
 func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine] {
@@ -55,14 +55,13 @@ func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMa
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionUpdate},
 		}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMachine,
-			Fields:     []string{"department"},
+			Fields:     []string{"work_center"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).UpdateMachine

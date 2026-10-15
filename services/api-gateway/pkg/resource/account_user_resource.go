@@ -25,7 +25,7 @@ type AccountUser struct {
 	// The role that determines what this user is permitted to do in the account.
 	Role *Role `json:"role" expandable:"true"`
 	// The department this user belongs to within the account.
-	Department *Department `json:"department" expandable:"true"`
+	Department *WorkCenter `json:"department" expandable:"true"`
 	// The underlying user profile, shared across every account this person belongs to.
 	User *User `json:"user" expandable:"true"`
 	// Whether this user can be assigned as a sales representative on orders, territories, and targets.
@@ -59,7 +59,7 @@ var SampleAccountUser = &AccountUser{
 	Object:               constants.ObjectTypeAccountUser,
 	Status:               constants.AccountUserStatusActive,
 	Role:                 SampleRole,
-	Department:           SampleDepartment,
+	Department:           SampleWorkCenter,
 	User:                 SampleUser,
 	IsCommissionEligible: new(false),
 	NotificationTypes: &[]constants.AccountRelationNotificationType{

@@ -166,7 +166,7 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 	txRepo := txRepos.NewDepartmentRepo()
 
 	if old == nil {
-		departmentID, apiErr := id.GenID(id.DepartmentIDPrefix, nil)
+		departmentID, apiErr := id.GenID(id.WorkCenterIDPrefix, nil)
 		if apiErr != nil {
 			return "", apiErr
 		}

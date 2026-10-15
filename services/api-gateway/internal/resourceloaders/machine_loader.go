@@ -32,11 +32,7 @@ func LoadMachines(ctx context.Context, ids []string) (map[string]any, *apierror.
 	for _, m := range resp.Machines {
 		out[m.Id] = MachineFromProto(m)
 
-		var departmentID string
-		if m.DepartmentId != nil {
-			departmentID = *m.DepartmentId
-		}
-		meta.Set(constants.ObjectTypeMachine, m.Id, "department_id", departmentID)
+		meta.Set(constants.ObjectTypeMachine, m.Id, "work_center_id", m.GetDepartmentId())
 	}
 	return out, nil
 }
@@ -47,7 +43,7 @@ func MachineFromProto(m *pb.MachineInfo) *apiresource.Machine {
 		Object:       constants.ObjectTypeMachine,
 		Name:         m.Name,
 		SerialNumber: m.SerialNumber,
-		Notes:        m.Notes,
+		Status:       constants.ArchiveStatus(m.Status),
 		CreatedAt:    grpcutil.TimestampToTime(m.CreatedAt),
 		UpdatedAt:    grpcutil.TimestampToTime(m.UpdatedAt),
 	}

@@ -50,7 +50,7 @@ var sampleUpdateAccountUserName = apiresource.SampleUserName
 var sampleUpdateAccountUserEmail = apiresource.SampleUserEmail
 var sampleUpdateAccountUserUsername = apiresource.SampleUserUsername
 var sampleUpdateAccountUserRoleID = apiresource.SampleRoleID
-var sampleUpdateAccountUserDepartmentID = apiresource.SampleDepartmentID
+var sampleUpdateAccountUserDepartmentID = apiresource.SampleWorkCenterID
 var sampleUpdateAccountUserRequest = &UpdateAccountUserRequest{
 	Name:         field.Some(sampleUpdateAccountUserName),
 	Email:        field.Some(sampleUpdateAccountUserEmail),

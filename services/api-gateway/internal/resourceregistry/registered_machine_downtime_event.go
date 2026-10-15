@@ -23,7 +23,7 @@ func init() {
 			},
 			{
 				Key:         "department",
-				Target:      constants.ObjectTypeDepartment,
+				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDowntimeRefIDs("department_id"),
 				Populate:    populateDowntimeDepartment,
@@ -90,7 +90,7 @@ func populateDowntimeDepartment(ctx context.Context, parent any, loaded map[stri
 		return
 	}
 	if v, ok := loaded[downtimeRefID(ctx, parent, "department_id")]; ok {
-		e.Department = v.(*apiresource.Department)
+		e.Department = v.(*apiresource.WorkCenter)
 	}
 }
 

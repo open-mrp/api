@@ -288,7 +288,7 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.BatchesEndpointGroup{}).Materialize(&httpgroup.BatchesEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
-		*(&httpgroup.DepartmentsEndpointGroup{}).Materialize(&httpgroup.DepartmentsEndpointGroupConfig{
+		*(&httpgroup.WorkCentersEndpointGroup{}).Materialize(&httpgroup.WorkCentersEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.ConsumptionsEndpointGroup{}).Materialize(&httpgroup.ConsumptionsEndpointGroupConfig{

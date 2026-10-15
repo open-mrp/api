@@ -30,7 +30,7 @@ func init() {
 			},
 			{
 				Key:         "department",
-				Target:      constants.ObjectTypeDepartment,
+				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDepartmentIDFromAccountUser,
 				Populate:    populateDepartmentOnAccountUser,
@@ -101,6 +101,6 @@ func populateDepartmentOnAccountUser(ctx context.Context, parent any, loaded map
 		return
 	}
 	if v, ok := loaded[id]; ok {
-		au.Department = v.(*apiresource.Department)
+		au.Department = v.(*apiresource.WorkCenter)
 	}
 }

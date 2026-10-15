@@ -98,7 +98,7 @@ func (*AnalyzeOeeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeOeeRequest{
 		StartDate:     apiresource.SampleAnalyticsPeriodStart,
 		EndDate:       apiresource.SampleAnalyticsPeriodEnd,
-		DepartmentIDs: []string{apiresource.SampleDepartmentID},
+		DepartmentIDs: []string{apiresource.SampleWorkCenterID},
 	})
 }
 
@@ -106,7 +106,7 @@ func (*AnalyzeOeeTrendRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeOeeTrendRequest{
 		StartDate:     apiresource.SampleAnalyticsPeriodStart,
 		EndDate:       apiresource.SampleAnalyticsPeriodEnd,
-		DepartmentIDs: []string{apiresource.SampleDepartmentID},
+		DepartmentIDs: []string{apiresource.SampleWorkCenterID},
 	})
 }
 
@@ -132,7 +132,7 @@ func (*AnalyzeProductionCostsRequest) SchemaExample() any {
 		EndDate:        apiresource.SampleAnalyticsPeriodEnd,
 		ItemIDs:        []string{apiresource.SampleItemID},
 		ProductLineIDs: []string{apiresource.SampleProductLineID},
-		DepartmentIDs:  []string{apiresource.SampleDepartmentID},
+		DepartmentIDs:  []string{apiresource.SampleWorkCenterID},
 		CategoryIDs:    []string{apiresource.SampleItemCategoryID},
 	})
 }

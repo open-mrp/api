@@ -26,7 +26,7 @@ func init() {
 			{Key: "consumptions", Target: productionFlowConsumptionType, Populate: populateConsumptionsOnFlowStep, ExtractRefs: extractConsumptionRefsFromFlowStep},
 			{Key: "machines", Target: constants.ObjectTypeMachine, ExtractIDs: extractMachineIDsFromFlowStep, Populate: populateMachinesOnFlowStep},
 			{Key: "scanning_station", Target: constants.ObjectTypeScanningStation, ExtractIDs: extractScanningStationIDFromFlowStep, Populate: populateScanningStationOnFlowStep},
-			{Key: "department", Target: constants.ObjectTypeDepartment, ExtractIDs: extractDepartmentIDFromFlowStep, Populate: populateDepartmentOnFlowStep},
+			{Key: "department", Target: constants.ObjectTypeWorkCenter, ExtractIDs: extractDepartmentIDFromFlowStep, Populate: populateDepartmentOnFlowStep},
 			{Key: "in_steps", Populate: populateInStepsOnFlowStep},
 			{Key: "out_steps", Populate: populateOutStepsOnFlowStep},
 		},
@@ -155,7 +155,7 @@ func populateDepartmentOnFlowStep(ctx context.Context, parent any, loaded map[st
 		return
 	}
 	if v, ok := loaded[id]; ok {
-		ps.Department = v.(*apiresource.Department)
+		ps.Department = v.(*apiresource.WorkCenter)
 	}
 }
 

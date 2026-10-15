@@ -83,9 +83,10 @@ func loadScanningStationByID(ctx context.Context, id string) (*apiresource.Scann
 
 func (m *scanningStationSvcImpl) ListScanningStations(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError) {
 	pbReq := &pb.ListScanningStationsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Query:         req.Query,
+		DepartmentIds: req.WorkCenterIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.list", domain.ServiceName,
@@ -135,10 +136,9 @@ func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *Re
 func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.CreateScanningStationRequest{
 		Name:                req.Name,
-		Notes:               req.Notes.Ptr(),
 		Type:                string(req.Type),
 		OperatorRequirement: string(req.OperatorRequirement),
-		DepartmentId:        req.DepartmentID,
+		DepartmentId:        req.WorkCenterID,
 		LabelSizeCode:       req.LabelSizeCode.Ptr().StringPtr(),
 		LabelTypeCode:       req.LabelTypeCode.Ptr().StringPtr(),
 	}
@@ -159,10 +159,9 @@ func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context,
 	for i, ss := range req.ScanningStations {
 		pbStations[i] = &pb.UpsertScanningStationInput{
 			Name:                ss.Name,
-			Notes:               ss.Notes.Ptr(),
 			Type:                string(ss.Type),
 			OperatorRequirement: string(ss.OperatorRequirement),
-			Department:          apirequest.ObjectIdentifierToProto(ss.Department),
+			Department:          apirequest.ObjectIdentifierToProto(ss.WorkCenter),
 			LabelSizeCode:       fieldpb.EnumClearableToProto(ss.LabelSizeCode),
 			LabelTypeCode:       fieldpb.EnumClearableToProto(ss.LabelTypeCode),
 		}
@@ -183,7 +182,7 @@ func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req 
 	pbReq := &pb.UpdateScanningStationRequest{
 		Id:            req.ScanningStationID,
 		Name:          req.Name.Ptr(),
-		Notes:         fieldpb.StringClearableToProto(req.Notes),
+		DepartmentId:  req.WorkCenterID.Ptr(),
 		LabelSizeCode: fieldpb.EnumClearableToProto(req.LabelSizeCode),
 		LabelTypeCode: fieldpb.EnumClearableToProto(req.LabelTypeCode),
 		OperatorRequirement: func() *string {

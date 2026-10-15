@@ -18,10 +18,8 @@ import (
 type CreateScanningStationRequest struct {
 	// Display name of the scanning station.
 	//
-	// Must be unique within your account; maximum 255 characters.
+	// Unique within your account (case-insensitive); maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// Free-form notes about the scanning station.
-	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Scanning station type, determining which batch operation an operator performs when they scan here.
 	//
 	// - `init_batch`: starts a new batch at the beginning of a production flow.
@@ -36,10 +34,8 @@ type CreateScanningStationRequest struct {
 	// - `none`: no additional operator check is required.
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement" validate:"required"`
-	// ID of the department this station belongs to.
-	//
-	// Must be a department in your account, and cannot be changed after creation.
-	DepartmentID string `json:"department_id" validate:"required"`
+	// ID of the work center the station belongs to.
+	WorkCenterID string `json:"work_center_id" validate:"required"`
 	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
 	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
 	// Type of label printed at this station.
@@ -51,14 +47,12 @@ type CreateScanningStationRequest struct {
 
 var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne
 var sampleLabelTypeCode = constants.LabelTypeCodeTag
-var sampleCreateScanningStationNotes = "Primary intake station on the receiving dock."
 
 var sampleCreateScanningStationRequest = &CreateScanningStationRequest{
 	Name:                apiresource.SampleScanningStationName,
-	Notes:               field.Some(sampleCreateScanningStationNotes),
 	Type:                constants.ScanningStationTypeInitBatch,
 	OperatorRequirement: constants.OperatorRequirementNone,
-	DepartmentID:        apiresource.SampleDepartmentID,
+	WorkCenterID:        apiresource.SampleWorkCenterID,
 	LabelSizeCode:       field.Some(sampleLabelSizeCode),
 	LabelTypeCode:       field.Some(sampleLabelTypeCode),
 }
@@ -67,11 +61,9 @@ func (*CreateScanningStationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateScanningStationRequest)
 }
 
-// Creates a scanning station and assigns it to a department.
+// Creates a scanning station at a work center.
 //
-// The new station has no production steps connected to it; use Connect Production Steps to Scanning Station to attach them.
-//
-// Returns a conflict error if a scanning station with the same name already exists, and a not-found error if the department does not exist in your account.
+// Returns a conflict error if another scanning station already has the name.
 type CreateScanningStationEndpoint struct{}
 
 func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation] {
@@ -84,7 +76,6 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).CreateScanningStation
@@ -94,7 +85,7 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeScanningStation,
-			Fields:     []string{"department", "production_steps"},
+			Fields:     []string{"work_center", "production_steps"},
 		}),
 	})
 }

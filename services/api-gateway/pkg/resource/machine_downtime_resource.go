@@ -78,7 +78,7 @@ type MachineDowntimeEvent struct {
 	// The machine that stopped.
 	Machine *Machine `json:"machine" expandable:"true"`
 	// The department the machine belongs to, captured when the event was logged.
-	Department *Department `json:"department" expandable:"true"`
+	Department *WorkCenter `json:"department" expandable:"true"`
 	// Why the machine stopped.
 	Reason *MachineDowntimeReasonSummary `json:"reason" validate:"required"`
 	// When the machine stopped.
@@ -134,7 +134,7 @@ var SampleMachineDowntimeEvent = &MachineDowntimeEvent{
 	ID:         SampleMachineDowntimeEventID,
 	Object:     constants.ObjectTypeMachineDowntimeEvent,
 	Machine:    SampleMachine,
-	Department: SampleDepartment,
+	Department: SampleWorkCenter,
 	Reason: &MachineDowntimeReasonSummary{
 		Object:    constants.ObjectTypeMachineDowntimeReason,
 		Code:      constants.MachineDowntimeReasonCodeBreakdown,

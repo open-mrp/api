@@ -12,13 +12,13 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Request to get a machine.
+// Request to retrieve a machine.
 type RetrieveMachineRequest struct {
 	// ID of the machine to retrieve.
 	MachineID string `path:"id" validate:"required"`
 }
 
-// Returns a machine by ID.
+// Retrieves a machine.
 type RetrieveMachineEndpoint struct{}
 
 func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMachineRequest, *apiresource.Machine] {
@@ -30,7 +30,6 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionRead},
@@ -40,7 +39,7 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMachine,
-			Fields:     []string{"department"},
+			Fields:     []string{"work_center"},
 		}),
 	})
 }

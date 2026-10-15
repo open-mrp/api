@@ -147,7 +147,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	departmentID, apiErr := id.GenID(id.DepartmentIDPrefix, nil)
+	departmentID, apiErr := id.GenID(id.WorkCenterIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

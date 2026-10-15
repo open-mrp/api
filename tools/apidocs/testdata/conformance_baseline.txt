@@ -84,10 +84,7 @@ public_docstrings PATCH /v1/catalog/unit-groups/{unit_group_id}/units/{id}
 public_docstrings PATCH /v1/identity/account-users/{id}
 
 
-public_docstrings PATCH /v1/operations/departments/{id}
-public_docstrings PATCH /v1/operations/machines/{id}
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
-public_docstrings PATCH /v1/operations/scanning-stations/{id}
 public_docstrings PATCH /v1/sales/account-groups/{id}
 public_docstrings PATCH /v1/sales/account-prices/{id}
 public_docstrings PATCH /v1/sales/customers/{id}
@@ -164,11 +161,9 @@ search_documented GET /v1/identity/roles
 search_documented GET /v1/messaging/notifications
 search_documented GET /v1/operations/deliveries
 search_documented GET /v1/operations/demand-overrides
-search_documented GET /v1/operations/departments
 search_documented GET /v1/operations/inventories
 search_documented GET /v1/operations/inventory-change-logs
 search_documented GET /v1/operations/machine-downtime-events
-search_documented GET /v1/operations/machines
 search_documented GET /v1/operations/machines/{id}/items
 search_documented GET /v1/operations/picks
 search_documented GET /v1/operations/production-runs
@@ -179,7 +174,6 @@ search_documented GET /v1/operations/production-steps
 search_documented GET /v1/operations/purchase-orders
 search_documented GET /v1/operations/purchase-orders/statuses
 search_documented GET /v1/operations/receiving-orders
-search_documented GET /v1/operations/scanning-stations
 search_documented GET /v1/operations/scanning-stations/{id}/batches
 search_documented GET /v1/operations/shipments
 search_documented GET /v1/operations/shipments/{shipment_id}/lines

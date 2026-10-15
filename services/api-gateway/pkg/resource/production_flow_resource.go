@@ -43,7 +43,7 @@ type ProductionFlowStep struct {
 	// Machines assigned to this step.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
 	// Department responsible for this step.
-	Department *Department `json:"department" expandable:"true"`
+	Department *WorkCenter `json:"department" expandable:"true"`
 	// Scanning station where this step's batches are scanned.
 	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
 	// Leveling correction factor applied to labor time in cost calculations, as a decimal string.
@@ -142,7 +142,7 @@ var SampleProductionFlowStep = ProductionFlowStep{
 	InSteps:         NewList([]ProductionStep{}, PageInfo{}),
 	OutSteps:        NewList([]ProductionStep{}, PageInfo{}),
 	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
-	Department:      SampleDepartment,
+	Department:      SampleWorkCenter,
 	ScanningStation: SampleScanningStation,
 	LevelingFactor:  "1.000000000000000000000000000000",
 	Allowances:      "0.000000000000000000000000000000",

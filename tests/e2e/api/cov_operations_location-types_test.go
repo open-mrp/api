@@ -94,7 +94,7 @@ func TestCovOperationsLocationTypes_CustomerPortalForbidden_List(t *testing.T) {
 	status, body, err := client.GetListRaw(locationTypesPath, nil)
 	require.NoError(t, err)
 	requireStatus(t, 403, status, body)
-	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	requirePreview9Error(t, body, "insufficient_permissions")
 }
 
 // TestCovOperationsLocationTypes_CustomerPortalForbidden_Get extends the
@@ -106,5 +106,5 @@ func TestCovOperationsLocationTypes_CustomerPortalForbidden_Get(t *testing.T) {
 	status, body, err := client.GetListRaw(locationTypesPath+"/building", nil)
 	require.NoError(t, err)
 	requireStatus(t, 403, status, body)
-	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	requirePreview9Error(t, body, "insufficient_permissions")
 }

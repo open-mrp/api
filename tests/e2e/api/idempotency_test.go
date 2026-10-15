@@ -51,14 +51,14 @@ func TestIdempotency_UpdateConflict(t *testing.T) {
 
 	// First PATCH succeeds.
 	status1, body1, err := apiClient.Patch(path, map[string]any{
-		"note": "first note",
+		"instructions": "first note",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 
 	// Second PATCH with same key but different body.
 	status2, body2, err := apiClient.Patch(path, map[string]any{
-		"note": "different note",
+		"instructions": "different note",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 422, status2, body2)

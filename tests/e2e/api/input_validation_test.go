@@ -121,8 +121,8 @@ func TestInputValidation_LongStringAccepted(t *testing.T) {
 	// 255 chars is the DB max for name — should be accepted.
 	longName := strings.Repeat("a", 255)
 	payload := validCustomerBody(longName)
-	jsonObject(payload, "defaults")["bill_to_address"] = map[string]any{"name": "Billing", "country": "US"}
-	jsonObject(payload, "defaults")["ship_to_address"] = map[string]any{"name": "Shipping", "country": "US"}
+	payload["bill_to_address"] = map[string]any{"name": "Billing", "country": "US"}
+	payload["ship_to_address"] = map[string]any{"name": "Shipping", "country": "US"}
 	status, body, err := apiClient.Post(customersPath, forgeCustomerWrite(payload), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

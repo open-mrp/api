@@ -215,13 +215,8 @@ func stashCustomerRefs(ctx context.Context, id string, c *pb.CustomerProto) {
 				docs[j] = constants.RecipientDocument(d)
 			}
 			recipients[i] = apiresource.EmailRecipient{Documents: docs}
-			users[r.AccountUserId] = &apiresource.AccountUser{
-				ID:         r.AccountUserId,
-				Object:     constants.ObjectTypeAccountUser,
-				Status:     constants.AccountUserStatus(r.AccountUserStatus),
-				LastUsedAt: grpcutil.TimestampToTimePtr(r.AccountUserLastUsedAt),
-				CreatedAt:  grpcutil.TimestampToTime(r.AccountUserCreatedAt),
-				UpdatedAt:  grpcutil.TimestampToTime(r.AccountUserUpdatedAt),
+			if r.AccountUser != nil {
+				users[r.AccountUserId] = AccountUserFromDetail(ctx, r.AccountUser)
 			}
 		}
 		recipientUserIDs := make([]string, len(c.NotificationRecipients))

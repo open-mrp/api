@@ -519,16 +519,43 @@ message CustomerProto {
   repeated CustomerRecipientProto notification_recipients = 37;
   bool has_notification_recipients = 38;
 }
-// One person who receives a customer's documents, with the account user details the response shows.
+// One person who receives a customer's documents, and their account user on the customer's account.
 // documents are constants.RecipientDocument values.
 message CustomerRecipientProto {
   string account_user_id = 1;
   repeated string documents = 2;
-  string account_user_status = 3;
-  optional google.protobuf.Timestamp account_user_last_used_at = 4;
-  google.protobuf.Timestamp account_user_created_at = 5;
-  google.protobuf.Timestamp account_user_updated_at = 6;
+  AccountUserDetail account_user = 3;
 }
+message AccountUserDetail {
+  string id = 1;
+  string user_id = 2;
+  optional string name = 3;
+  optional string email = 4;
+  optional string username = 5;
+  optional string image_url = 6;
+  bool email_verified = 7;
+  optional string role_id = 8;
+  optional string role_name = 9;
+  optional string role_type_code = 10;
+  optional string department_id = 11;
+  optional string department_name = 12;
+  string status_code = 13;
+  optional google.protobuf.Timestamp last_used_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  optional google.protobuf.Timestamp department_created_at = 17;
+  optional google.protobuf.Timestamp department_updated_at = 18;
+  // Independent of the sales_rep role type, which still scopes analytics and hides cost.
+  bool is_commission_eligible = 19;
+  // Notification types the acting account sends this user when it manages the user's account as a customer or supplier. Unset for the acting account's own users. GetAccountUser and BatchGetAccountUsersByIDs fill it; ListAccountUsers does not, since the gateway hydrates list pages through the batch read.
+  AccountUserNotificationTypes notification_types = 20;
+}
+
+// Wraps the codes so an unset field (not applicable) is distinguishable from an empty list (none enabled).
+message AccountUserNotificationTypes {
+  repeated string codes = 1;
+}
+
 message CustomerCarrierProto {
   string id = 1;
   string name = 2;

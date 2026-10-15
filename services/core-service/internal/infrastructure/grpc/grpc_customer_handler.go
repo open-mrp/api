@@ -64,14 +64,9 @@ func customerRecipientsToProto(recipients []domain.NotificationRecipient) []*pb.
 			continue
 		}
 		rec := &pb.CustomerRecipientProto{
-			AccountUserId:        r.AccountUser.ID,
-			Documents:            docs,
-			AccountUserStatus:    string(r.AccountUser.StatusCode),
-			AccountUserCreatedAt: timestamppb.New(r.AccountUser.CreatedAt),
-			AccountUserUpdatedAt: timestamppb.New(r.AccountUser.UpdatedAt),
-		}
-		if r.AccountUser.LastUsedAt != nil {
-			rec.AccountUserLastUsedAt = timestamppb.New(*r.AccountUser.LastUsedAt)
+			AccountUserId: r.AccountUser.ID,
+			Documents:     docs,
+			AccountUser:   accountUserDetailToProto(r.AccountUser),
 		}
 		out = append(out, rec)
 	}

@@ -32,7 +32,7 @@ func TestConcurrency_ParallelPatchSameResource(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			status, _, err := apiClient.Patch(path, map[string]any{
-				"note": uniqueName("conc-note"),
+				"instructions": uniqueName("conc-note"),
 			}, newIdempotencyKey())
 			results[idx] = status
 			errors[idx] = err

@@ -17,17 +17,17 @@ import (
 // Request to list service levels.
 type ListServiceLevelsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return service levels with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 	// The carrier whose service levels are listed.
 	CarrierID string `path:"carrier_id" validate:"required"`
 }
 
-// Returns a paginated list of the service levels a carrier offers.
+// Returns a list of a carrier's service levels.
 //
-// Use this rather than the `service_levels` field on the carrier itself when a carrier has more than a handful of services, since that inline list is capped.
+// Sorted by creation date, newest first.
 type ListServiceLevelsEndpoint struct{}
 
 func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListServiceLevelsRequest, *apiresource.List[apiresource.ServiceLevel]] {
@@ -41,14 +41,13 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		AgentTool:         true,
 		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission).
 		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:    true,
 		ObjectType: constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListServiceLevelsRequest) (*apiresource.List[apiresource.ServiceLevel], *apierror.APIError) {
 			return svc.(ServiceLevelSvc).ListServiceLevels
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeServiceLevel,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"carrier", "owner", "owner.account"},
 		}),
 	})
 }

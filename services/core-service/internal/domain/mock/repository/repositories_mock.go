@@ -5566,6 +5566,20 @@ func (mr *MockCarrierRepoMockRecorder) Create(ctx, id, params any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCarrierRepo)(nil).Create), ctx, id, params)
 }
 
+// Delete mocks base method.
+func (m *MockCarrierRepo) Delete(ctx context.Context, accountID, carrierID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountID, carrierID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockCarrierRepoMockRecorder) Delete(ctx, accountID, carrierID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCarrierRepo)(nil).Delete), ctx, accountID, carrierID)
+}
+
 // DeleteOptionsByCarrierID mocks base method.
 func (m *MockCarrierRepo) DeleteOptionsByCarrierID(ctx context.Context, accountID, carrierID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -5700,18 +5714,18 @@ func (mr *MockCarrierRepoMockRecorder) ListOptionsByCarrierIDs(ctx, accountID, c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOptionsByCarrierIDs", reflect.TypeOf((*MockCarrierRepo)(nil).ListOptionsByCarrierIDs), ctx, accountID, carrierIDs)
 }
 
-// SoftDelete mocks base method.
-func (m *MockCarrierRepo) SoftDelete(ctx context.Context, accountID, carrierID string) *apierror.APIError {
+// SetDefaultServiceLevel mocks base method.
+func (m *MockCarrierRepo) SetDefaultServiceLevel(ctx context.Context, accountID, carrierID string, serviceLevelID *string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SoftDelete", ctx, accountID, carrierID)
+	ret := m.ctrl.Call(m, "SetDefaultServiceLevel", ctx, accountID, carrierID, serviceLevelID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// SoftDelete indicates an expected call of SoftDelete.
-func (mr *MockCarrierRepoMockRecorder) SoftDelete(ctx, accountID, carrierID any) *gomock.Call {
+// SetDefaultServiceLevel indicates an expected call of SetDefaultServiceLevel.
+func (mr *MockCarrierRepoMockRecorder) SetDefaultServiceLevel(ctx, accountID, carrierID, serviceLevelID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SoftDelete", reflect.TypeOf((*MockCarrierRepo)(nil).SoftDelete), ctx, accountID, carrierID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultServiceLevel", reflect.TypeOf((*MockCarrierRepo)(nil).SetDefaultServiceLevel), ctx, accountID, carrierID, serviceLevelID)
 }
 
 // Update mocks base method.
@@ -6049,18 +6063,18 @@ func (m *MockServiceLevelRepo) EXPECT() *MockServiceLevelRepoMockRecorder {
 	return m.recorder
 }
 
-// ClearDefaultsForCarrier mocks base method.
-func (m *MockServiceLevelRepo) ClearDefaultsForCarrier(ctx context.Context, accountID, carrierID string) *apierror.APIError {
+// Archive mocks base method.
+func (m *MockServiceLevelRepo) Archive(ctx context.Context, accountID, serviceLevelID string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearDefaultsForCarrier", ctx, accountID, carrierID)
+	ret := m.ctrl.Call(m, "Archive", ctx, accountID, serviceLevelID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// ClearDefaultsForCarrier indicates an expected call of ClearDefaultsForCarrier.
-func (mr *MockServiceLevelRepoMockRecorder) ClearDefaultsForCarrier(ctx, accountID, carrierID any) *gomock.Call {
+// Archive indicates an expected call of Archive.
+func (mr *MockServiceLevelRepoMockRecorder) Archive(ctx, accountID, serviceLevelID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDefaultsForCarrier", reflect.TypeOf((*MockServiceLevelRepo)(nil).ClearDefaultsForCarrier), ctx, accountID, carrierID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Archive", reflect.TypeOf((*MockServiceLevelRepo)(nil).Archive), ctx, accountID, serviceLevelID)
 }
 
 // Create mocks base method.

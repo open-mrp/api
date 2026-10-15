@@ -382,8 +382,7 @@ func TestAnalyticsParityOpenOrders_PurchaseOrdersAreNeverOpenSalesOrders(t *test
 
 func TestAnalyticsParityOpenOrders_AnotherTenantsCustomerYieldsNothing(t *testing.T) {
 	t.Parallel()
-	var foreignBuyer string
-	require.NoError(t, authDB(t).QueryRow(`SELECT buyer_account_id FROM sales_order WHERE owner_account_id <> ? AND sales_order_type_code = 'sales_order' LIMIT 1`, SeedAccountID).Scan(&foreignBuyer))
+	_, foreignBuyer := otherTenantSalesOrder(t)
 	body := map[string]any{"customer_ids": []string{foreignBuyer, parityCustomer(t, "")}}
 	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
 	assert.Equal(t, "0", reportMoneyAmount(t, summary, "ordered"))

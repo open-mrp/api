@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -26,6 +27,13 @@ func init() {
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromServiceLevel,
 				Populate:    populateOwnerAccountOnServiceLevel,
+			},
+			{
+				Key:         "carrier",
+				Target:      constants.ObjectTypeCarrier,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  extractCarrierIDFromServiceLevel,
+				Populate:    populateCarrierOnServiceLevel,
 			},
 		},
 	})
@@ -60,5 +68,22 @@ func populateOwnerAccountOnServiceLevel(ctx context.Context, parent any, loaded 
 	}
 	if v, ok := loaded[id]; ok {
 		sl.Owner.Account = v.(*apiresource.Account)
+	}
+}
+
+func extractCarrierIDFromServiceLevel(ctx context.Context, parent any) []string {
+	sl := parent.(*apiresource.ServiceLevel)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeServiceLevel, sl.ID, "carrier_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateCarrierOnServiceLevel(ctx context.Context, parent any, loaded map[string]any) {
+	sl := parent.(*apiresource.ServiceLevel)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeServiceLevel, sl.ID, "carrier_id")
+	if v, ok := loaded[id]; ok && id != "" {
+		sl.Carrier = v.(*apiresource.Carrier)
 	}
 }

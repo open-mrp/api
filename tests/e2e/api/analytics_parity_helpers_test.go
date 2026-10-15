@@ -5,6 +5,7 @@ package api_test
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -228,11 +229,25 @@ func customRoleClient(t *testing.T, perms ...string) *Client {
 	return roleScopedClient(t, jsonField(role, "id"))
 }
 
+// otherTenantSalesOrder writes an issued sales order tenant B owns, sold to a customer of its own, and returns the
+// order's ID and its buyer. The test makes its own so it holds in a run that seeds no other tenant's orders.
+func otherTenantSalesOrder(t *testing.T) (orderID, buyerAccountID string) {
+	t.Helper()
+	suffix := strings.ReplaceAll(uniqueName("tb"), "-", "")
+	orderID, buyerAccountID = "or_"+suffix, "ac_"+suffix
+	_, err := authDB(t).Exec(`INSERT INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code,
+		billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, issued_at, created_at, updated_at)
+		VALUES (?, ?, 'issued', 'sales_order', 'normal', ?, ?, ?, ?, ?, NOW(3), NOW(3), NOW(3))`,
+		orderID, "TB-"+suffix, "ad_"+suffix, "ad_"+suffix, buyerAccountID, SeedTenantBAccountID, SeedTenantBAccountID)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = authDB(t).Exec("DELETE FROM sales_order WHERE id = ?", orderID) })
+	return orderID, buyerAccountID
+}
+
 // otherTenantSalesOrderID is a sales order some other account owns.
 func otherTenantSalesOrderID(t *testing.T) string {
 	t.Helper()
-	var id string
-	require.NoError(t, authDB(t).QueryRow(`SELECT id FROM sales_order WHERE owner_account_id <> ? AND sales_order_type_code = 'sales_order' LIMIT 1`, SeedAccountID).Scan(&id))
+	id, _ := otherTenantSalesOrder(t)
 	return id
 }
 

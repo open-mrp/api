@@ -100,7 +100,7 @@ func TestFulfillmentPolicy_RejectsUnknownValues(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Less(t, status, 500, "a bad policy must be a client error: %s", string(body))
-		assert.Equal(t, 400, status, "body: %s", string(body))
+		assert.Equal(t, 422, status, "body: %s", string(body))
 	})
 
 	t.Run("unknown item", func(t *testing.T) {

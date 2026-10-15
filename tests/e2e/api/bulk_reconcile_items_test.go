@@ -308,7 +308,7 @@ func TestBulkReconcileItems_RejectsAnUnknownReconcileType(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "an unknown reconcile type is a client error: %s", string(body))
-	require.Equal(t, 400, status, "reconcile_type only accepts the documented values: %s", string(body))
+	require.Equal(t, 422, status, "reconcile_type only accepts the documented values: %s", string(body))
 }
 
 func TestBulkReconcileItems_RejectsAMissingReconcileType(t *testing.T) {

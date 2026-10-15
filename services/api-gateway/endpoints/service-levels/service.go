@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -56,6 +57,7 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 		Cursor:    req.Cursor,
 		Limit:     req.Limit,
 		Query:     req.Query,
+		Statuses:  archiveStatusStrings(req.Statuses),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListServiceLevelsResponse, error) {
@@ -97,16 +99,18 @@ func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *Retrieve
 
 func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 	isPortalEnabled := true
-	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+	if v, ok := req.PortalVisibility.Value(); ok {
 		isPortalEnabled = v == constants.CustomerPortalVisibilityVisible
 	}
+	makeDefault, _ := req.IsDefault.Value()
 	pbReq := &pb.CreateServiceLevelRequest{
-		CarrierId:          req.CarrierID,
-		Name:               req.Name,
-		Code:               req.Code,
-		IsPortalEnabled:    isPortalEnabled,
-		IsDefault:          req.IsDefault,
-		DefaultTransitDays: req.DefaultTransitDays.Ptr(),
+		CarrierId:            req.CarrierID,
+		Name:                 req.Name,
+		Code:                 req.Code,
+		IsPortalEnabled:      isPortalEnabled,
+		MakeDefault:          makeDefault,
+		EstimatedTransitDays: req.EstimatedTransitDays.Ptr(),
+		Status:               archiveStatusPtr(req.Status),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateServiceLevelResponse, error) {
@@ -120,18 +124,19 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 
 func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 	var isPortalEnabled *bool
-	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+	if v, ok := req.PortalVisibility.Value(); ok {
 		enabled := v == constants.CustomerPortalVisibilityVisible
 		isPortalEnabled = &enabled
 	}
 	pbReq := &pb.UpdateServiceLevelRequest{
-		CarrierId:          req.CarrierID,
-		Id:                 req.ServiceLevelID,
-		Name:               req.Name.Ptr(),
-		Code:               req.Code.Ptr(),
-		IsPortalEnabled:    isPortalEnabled,
-		IsDefault:          req.IsDefault.Ptr(),
-		DefaultTransitDays: fieldpb.Int32ClearableToProto(req.DefaultTransitDays),
+		CarrierId:            req.CarrierID,
+		Id:                   req.ServiceLevelID,
+		Name:                 req.Name.Ptr(),
+		Code:                 req.Code.Ptr(),
+		IsPortalEnabled:      isPortalEnabled,
+		MakeDefault:          req.IsDefault.Ptr(),
+		EstimatedTransitDays: fieldpb.Int32ClearableToProto(req.EstimatedTransitDays),
+		Status:               archiveStatusPtr(req.Status),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateServiceLevelResponse, error) {
@@ -169,4 +174,23 @@ func loadServiceLevelByID(ctx context.Context, id string) (*apiresource.ServiceL
 		return nil, apierror.NewNotFoundError("Service level not found.")
 	}
 	return v.(*apiresource.ServiceLevel), nil
+}
+
+// archiveStatusPtr is a request's optional status as core takes it.
+func archiveStatusPtr(status field.Optional[constants.ArchiveStatus]) *string {
+	v, ok := status.Value()
+	if !ok {
+		return nil
+	}
+	str := string(v)
+	return &str
+}
+
+// archiveStatusStrings is a statuses filter as core takes it.
+func archiveStatusStrings(statuses []constants.ArchiveStatus) []string {
+	out := make([]string, len(statuses))
+	for i, st := range statuses {
+		out[i] = string(st)
+	}
+	return out
 }

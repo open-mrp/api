@@ -3,6 +3,7 @@ package customerep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -661,10 +662,10 @@ func buildFreightPreferences(c *pb.CustomerProto) *apiresource.CustomerFreightPr
 			carrierVisibility = constants.CustomerPortalVisibilityVisible
 		}
 		carrier := &apiresource.Carrier{
-			ID:                       c.DefaultCarrier.Id,
-			Object:                   constants.ObjectTypeCarrier,
-			Name:                     c.DefaultCarrier.Name,
-			CustomerPortalVisibility: carrierVisibility,
+			ID:               c.DefaultCarrier.Id,
+			Object:           constants.ObjectTypeCarrier,
+			Name:             c.DefaultCarrier.Name,
+			PortalVisibility: carrierVisibility,
 		}
 		if c.DefaultCarrier.CreatedAt != nil {
 			carrier.CreatedAt = c.DefaultCarrier.CreatedAt.AsTime()
@@ -682,12 +683,12 @@ func buildFreightPreferences(c *pb.CustomerProto) *apiresource.CustomerFreightPr
 			Name:   c.DefaultServiceLevel.Name,
 		}
 		if c.DefaultServiceLevel.ServiceLevelToken != nil {
-			sl.ServiceLevelToken = constants.ServiceLevelCode(*c.DefaultServiceLevel.ServiceLevelToken)
+			sl.Code = constants.ServiceLevelCode(*c.DefaultServiceLevel.ServiceLevelToken)
 		}
 		if c.DefaultServiceLevel.IsPortalEnabled != nil && *c.DefaultServiceLevel.IsPortalEnabled {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			sl.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			sl.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if c.DefaultServiceLevel.CreatedAt != nil {
 			sl.CreatedAt = c.DefaultServiceLevel.CreatedAt.AsTime()

@@ -330,7 +330,7 @@ func TestShipmentParity_AdminTrackingClearsWithNull(t *testing.T) {
 
 // --- shape ---
 
-// Tracking links are built from the carrier's code, so the shipment's freight and its cases carry it.
+// Tracking links are built from the carrier's type, so the shipment's freight and its cases carry it.
 func TestShipmentParity_CarrierCodeOnFreightAndCases(t *testing.T) {
 	t.Parallel()
 
@@ -339,11 +339,11 @@ func TestShipmentParity_CarrierCodeOnFreightAndCases(t *testing.T) {
 
 	carrier := jsonObject(jsonObject(shipment, "freight"), "carrier")
 	require.NotNil(t, carrier, "freight carries its carrier: %v", shipment)
-	assert.Equal(t, "fedex", jsonField(carrier, "code"))
+	assert.Equal(t, "fedex", jsonField(carrier, "type"))
 
 	for _, raw := range jsonListData(shipment, "shipping_cases") {
 		sc := raw.(map[string]any)
-		assert.Equal(t, "fedex", jsonField(jsonObject(sc, "carrier"), "code"), "case carrier: %v", sc)
+		assert.Equal(t, "fedex", jsonField(jsonObject(sc, "carrier"), "type"), "case carrier: %v", sc)
 	}
 }
 

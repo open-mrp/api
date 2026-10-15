@@ -224,7 +224,7 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
 
 -- System-owned (account_id = NULL) carrier + service level for write-guard e2e coverage.
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
-    ('syscar_01seedsysdefault', 'delivery', 'System Default Delivery', NULL, NOW(), NOW());
+    ('syscar_01seedsysdefault', 'local_delivery', 'System Default Delivery', NULL, NOW(), NOW());
 
 INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
     ('crop_01seedsysground000', 'ground', 'System Ground', 'syscar_01seedsysdefault', NULL, NOW(), NOW());
@@ -245,9 +245,9 @@ INSERT IGNORE INTO carrier (id, code, name, shippo_carrier_account_id, account_i
 -- returns can match them, which is how a service the carrier will not rate behaves
 -- (freight, will-call) and is the only way the service-level fallback is reachable.
 INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, default_transit_days, carrier_id, account_id, created_at, updated_at) VALUES
-    ('crop_01e2etransitgrnd00', 'e2e_transit_ground', 'E2E Transit Ground', 'fedex_ground', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('crop_01e2etransit2day0', 'e2e_transit_2day', 'E2E Transit 2 Day', 'fedex_2_day', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('crop_01e2etransitovrn0', 'e2e_transit_overnight', 'E2E Transit Overnight', 'fedex_priority_overnight', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransitgrnd00', 'fedex_ground', 'E2E Transit Ground', 'fedex_ground', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransit2day0', 'fedex_2_day', 'E2E Transit 2 Day', 'fedex_2_day', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransitovrn0', 'fedex_priority_overnight', 'E2E Transit Overnight', 'fedex_priority_overnight', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('crop_01e2etransitdflt0', 'e2e_transit_default', 'E2E Transit Unratable With Default', NULL, 5, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('crop_01e2etransitnone0', 'e2e_transit_none', 'E2E Transit Unratable No Default', NULL, NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 

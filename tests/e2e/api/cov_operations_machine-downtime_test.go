@@ -562,7 +562,7 @@ func TestMachineDowntimeEvents_RejectsUnknownReasonCode(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Less(t, status, 500, "an unknown reason must be a client error, not a 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "unknown reason should be 400, got %d: %s", status, string(body))
+	assert.Equal(t, 422, status, "unknown reason should be 422, got %d: %s", status, string(body))
 }
 
 func TestMachineDowntimeEvents_RejectsEndBeforeStart(t *testing.T) {

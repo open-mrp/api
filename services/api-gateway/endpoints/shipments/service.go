@@ -593,12 +593,12 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 			ID:     s.CarrierId,
 			Object: constants.ObjectTypeCarrier,
 			Name:   s.CarrierName,
-			Code:   constants.EnumPtr[constants.CarrierCode](s.CarrierCode),
+			Type:   constants.CarrierTypeFromStored(s.CarrierCode),
 		}
 		if s.CarrierIsPortalEnabled != nil && *s.CarrierIsPortalEnabled {
-			carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			carrier.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			carrier.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if s.CarrierCreatedAt != nil {
 			carrier.CreatedAt = s.CarrierCreatedAt.AsTime()
@@ -616,12 +616,12 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 			Name:   ptrutil.Deref(s.ServiceLevelName),
 		}
 		if s.ServiceLevelIsPortalEnabled != nil && *s.ServiceLevelIsPortalEnabled {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			sl.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			sl.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if s.ServiceLevelToken != nil {
-			sl.ServiceLevelToken = constants.ServiceLevelCode(*s.ServiceLevelToken)
+			sl.Code = constants.ServiceLevelCode(*s.ServiceLevelToken)
 		}
 		if s.ServiceLevelCreatedAt != nil {
 			sl.CreatedAt = s.ServiceLevelCreatedAt.AsTime()
@@ -720,14 +720,13 @@ func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo, shipment *pb.Ship
 			ID:     c.CarrierId,
 			Object: constants.ObjectTypeCarrier,
 			Name:   c.CarrierName,
-		}
-		if shipment != nil && shipment.CarrierId == c.CarrierId {
-			result.Carrier.Code = constants.EnumPtr[constants.CarrierCode](shipment.CarrierCode)
+			Type:   constants.CarrierType(c.CarrierType),
+			Status: constants.ArchiveStatus(c.CarrierStatus),
 		}
 		if c.CarrierIsPortalEnabled != nil && *c.CarrierIsPortalEnabled {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			result.Carrier.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			result.Carrier.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if c.CarrierCreatedAt != nil {
 			result.Carrier.CreatedAt = c.CarrierCreatedAt.AsTime()

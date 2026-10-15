@@ -18,29 +18,37 @@ import (
 type UpdateCarrierRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// Human-readable name for the carrier.
+	// Display name, such as `FedEx`.
 	//
-	// Must not match another carrier already visible to your account, including the system-provided ones.
+	// Unique (case-insensitive) among your account's carriers and the system carriers.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Whether customers can see and select this carrier at checkout in the customer portal.
+	// Standard Carrier Alpha Code, such as `FDEG`. Send `null` to clear it.
+	SCAC field.Clearable[string] `json:"scac,omitzero" validate:"omitempty,min=2,max=4,alpha,uppercase"`
+	// Whether customers can see and pick this carrier at checkout in the customer portal.
 	//
-	// Each of the carrier's service levels carries its own customer portal visibility, which this does not change.
-	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
+	// Each of the carrier's service levels has its own `portal_visibility`, which this does not change.
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
+	// `active` or `archived`. Archived carriers can't be newly set on orders or customer defaults.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Service level selected by default when this carrier is chosen. Send `null` to clear it.
+	//
+	// Must be one of this carrier's active service levels.
+	DefaultServiceLevelID field.Clearable[string] `json:"default_service_level_id,omitzero"`
 }
 
-var sampleUpdateCarrierName = "FedEx Express"
 var sampleUpdateCarrierRequest = &UpdateCarrierRequest{
-	Name:                     field.Some(sampleUpdateCarrierName),
-	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
+	Name:                  field.Some("FedEx Express"),
+	PortalVisibility:      field.Some(constants.CustomerPortalVisibilityVisible),
+	DefaultServiceLevelID: field.Set(apiresource.SampleServiceLevelID),
 }
 
 func (*UpdateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCarrierRequest)
 }
 
-// Updates a carrier's name and customer portal visibility.
+// Updates a carrier.
 //
-// Only these two attributes can change: a carrier's code and account number are fixed at creation, and system-owned carriers cannot be updated at all.
+// Only fields you send are changed. `type` and `account_number` can't change after creation, and system carriers can't be updated.
 type UpdateCarrierEndpoint struct{}
 
 func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCarrierRequest, *apiresource.Carrier] {
@@ -53,14 +61,13 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).UpdateCarrier
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,
-			Fields:     []string{"owner", "owner.account", "service_levels"},
+			Fields:     []string{"default_service_level", "owner", "owner.account", "service_levels"},
 		}),
 	})
 }

@@ -29,9 +29,8 @@ func TestSandboxTrackingNumber(t *testing.T) {
 // Stubs the carrier and service level a live quote needs, for an account with no customer exemptions in play.
 func (h *labelHarness) expectQuotableCarrier() {
 	h.expectShippoCarrier()
-	token := "ups_ground"
 	h.serviceLevels.EXPECT().Get(gomock.Any(), testLabelAccountID, "crop_ground").
-		Return(&domain.ServiceLevel{ID: "crop_ground", ServiceLevelToken: &token}, nil)
+		Return(&domain.ServiceLevel{ID: "crop_ground", Code: "ups_ground", IsActive: true}, nil)
 }
 
 func estimateParams() domain.EstimateRateParams {

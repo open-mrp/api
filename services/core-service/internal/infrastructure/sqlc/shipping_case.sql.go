@@ -114,6 +114,8 @@ SELECT
     sc.carrier_id,
     c.name AS carrier_name,
     c.is_portal_enabled AS carrier_is_portal_enabled,
+    c.code AS carrier_code,
+    c.is_active AS carrier_is_active,
     c.created_at AS carrier_created_at,
     c.updated_at AS carrier_updated_at,
     sc.account_id,
@@ -180,6 +182,8 @@ type GetShippingCaseRow struct {
 	CarrierID                          string
 	CarrierName                        string
 	CarrierIsPortalEnabled             bool
+	CarrierCode                        sql.NullString
+	CarrierIsActive                    bool
 	CarrierCreatedAt                   time.Time
 	CarrierUpdatedAt                   time.Time
 	AccountID                          string
@@ -232,6 +236,8 @@ func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams
 		&i.CarrierID,
 		&i.CarrierName,
 		&i.CarrierIsPortalEnabled,
+		&i.CarrierCode,
+		&i.CarrierIsActive,
 		&i.CarrierCreatedAt,
 		&i.CarrierUpdatedAt,
 		&i.AccountID,
@@ -297,6 +303,8 @@ SELECT
     sc.carrier_id,
     c.name AS carrier_name,
     c.is_portal_enabled AS carrier_is_portal_enabled,
+    c.code AS carrier_code,
+    c.is_active AS carrier_is_active,
     c.created_at AS carrier_created_at,
     c.updated_at AS carrier_updated_at,
     sc.account_id,
@@ -348,6 +356,8 @@ type ListShippingCasesByShipmentRow struct {
 	CarrierID                          string
 	CarrierName                        string
 	CarrierIsPortalEnabled             bool
+	CarrierCode                        sql.NullString
+	CarrierIsActive                    bool
 	CarrierCreatedAt                   time.Time
 	CarrierUpdatedAt                   time.Time
 	AccountID                          string
@@ -407,6 +417,8 @@ func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID st
 			&i.CarrierID,
 			&i.CarrierName,
 			&i.CarrierIsPortalEnabled,
+			&i.CarrierCode,
+			&i.CarrierIsActive,
 			&i.CarrierCreatedAt,
 			&i.CarrierUpdatedAt,
 			&i.AccountID,

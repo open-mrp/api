@@ -52,7 +52,7 @@ func shipmentMasterTrackingURL(shipment *domain.Shipment) string {
 	if shipment == nil || shipment.MasterTrackingNumber == nil || shipment.CarrierCode == nil {
 		return ""
 	}
-	return constants.TrackingURL(constants.CarrierCode(*shipment.CarrierCode), *shipment.MasterTrackingNumber)
+	return constants.TrackingURL(constants.CarrierType(*shipment.CarrierCode), *shipment.MasterTrackingNumber)
 }
 
 // Flattens the invoice document into the invoice email's template parameters. masterTrackingURL is

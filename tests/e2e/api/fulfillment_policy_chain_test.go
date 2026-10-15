@@ -124,7 +124,7 @@ func TestProductLinePolicy_RejectsUnknownValues(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
-		assert.Equal(t, 400, status, "body: %s", string(body))
+		assert.Equal(t, 422, status, "body: %s", string(body))
 	})
 
 	t.Run("on update", func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestProductLinePolicy_RejectsUnknownValues(t *testing.T) {
 			map[string]any{"fulfillment_policy": "make_to_vibes"}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, status, 500, "must not 5xx: %s", string(body))
-		assert.Equal(t, 400, status, "body: %s", string(body))
+		assert.Equal(t, 422, status, "body: %s", string(body))
 	})
 }
 

@@ -254,7 +254,7 @@ func (s *salesOrderSvcImpl) recordLaneRates(ctx context.Context, accountID strin
 	return nil
 }
 
-// serviceLevelIDsByToken indexes the carrier's service levels by the token the carrier rates against, so a quote can be filed under the account's own IDs.
+// serviceLevelIDsByToken indexes the carrier's service levels by the code the carrier rates against, so a quote can be filed under the account's own IDs.
 func (s *salesOrderSvcImpl) serviceLevelIDsByToken(ctx context.Context, accountID, serviceLevelID string) (map[string]string, *apierror.APIError) {
 	serviceLevel, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, accountID, serviceLevelID)
 	if apiErr != nil {
@@ -268,9 +268,7 @@ func (s *salesOrderSvcImpl) serviceLevelIDsByToken(ctx context.Context, accountI
 
 	byToken := make(map[string]string, len(siblings))
 	for _, sl := range siblings {
-		if sl.ServiceLevelToken != nil && *sl.ServiceLevelToken != "" {
-			byToken[*sl.ServiceLevelToken] = sl.ID
-		}
+		byToken[sl.Code] = sl.ID
 	}
 	return byToken, nil
 }

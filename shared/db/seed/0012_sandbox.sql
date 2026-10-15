@@ -27,7 +27,7 @@ INSERT IGNORE INTO sandbox_account (type_id, owner_account_id, account_id, creat
 
 -- Sandbox carriers
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
-    ('cr_01seedsb_delivery000', 'delivery', 'Delivery', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', NOW(), NOW()),
+    ('cr_01seedsb_delivery000', 'local_delivery', 'Delivery', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', NOW(), NOW()),
     ('cr_01seedsb_willcall00', 'will_call', 'Will Call', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', NOW(), NOW());
 
 -- Sandbox departments (duplicate of main account)

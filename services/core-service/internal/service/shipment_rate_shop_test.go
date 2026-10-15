@@ -23,9 +23,9 @@ func TestShipmentSvc_RateShopReturnsTheCarriersAndServiceLevelsItsOptionsName(t 
 	meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{}).AnyTimes()
 	svc := NewShipmentSvc(&ShipmentSvcConfig{Repos: repos, MediatorFactory: meds, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: repos}, DispatchLeases: newMemLeases()})
 
-	ground := &domain.ServiceLevel{ID: "crop_ground", Name: "Ground", CarrierID: "cr_truck"}
-	express := &domain.ServiceLevel{ID: "crop_express", Name: "Express", CarrierID: "cr_truck"}
-	pickup := &domain.ServiceLevel{ID: "crop_pickup", Name: "Pickup", CarrierID: "cr_dock"}
+	ground := &domain.ServiceLevel{ID: "crop_ground", Name: "Ground", CarrierID: "cr_truck", IsActive: true}
+	express := &domain.ServiceLevel{ID: "crop_express", Name: "Express", CarrierID: "cr_truck", IsActive: true}
+	pickup := &domain.ServiceLevel{ID: "crop_pickup", Name: "Pickup", CarrierID: "cr_dock", IsActive: true}
 	carrierRepo.EXPECT().List(gomock.Any(), gomock.Any()).Return(&domain.ListCarriersResult{Carriers: []*domain.Carrier{
 		{ID: "cr_truck", Name: "Truck"},
 		{ID: "cr_dock", Name: "Dock"},

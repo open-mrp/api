@@ -60,7 +60,7 @@ func TestProductionSchedulePreview_ValidatesOverrides(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Less(t, status, 500, "a bad basis must be a client error, not a 5xx: %s", string(body))
-		assert.Equal(t, 400, status, "an unknown demand_basis should be 400, got %d: %s", status, string(body))
+		assert.Equal(t, 422, status, "an unknown demand_basis should be 422, got %d: %s", status, string(body))
 	})
 
 	t.Run("accepts the documented bases", func(t *testing.T) {

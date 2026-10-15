@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -53,6 +54,8 @@ type ShippingCase struct {
 	CarrierID              string `audit:"carrier_id"`
 	CarrierName            string
 	CarrierIsPortalEnabled bool
+	CarrierType            constants.CarrierType
+	CarrierIsActive        bool
 	CarrierCreatedAt       time.Time
 	CarrierUpdatedAt       time.Time
 	AccountID              string

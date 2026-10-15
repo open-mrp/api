@@ -552,6 +552,9 @@ type Carrier struct {
 	UpdatedAt              time.Time
 	IsPortalEnabled        bool
 	DeletedAt              sql.NullTime
+	IsActive               bool
+	Scac                   sql.NullString
+	DefaultCarrierOptionID sql.NullString
 }
 
 type CarrierOption struct {
@@ -566,6 +569,7 @@ type CarrierOption struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	DefaultTransitDays sql.NullInt32
+	IsActive           bool
 }
 
 type CarrierTransitEstimate struct {

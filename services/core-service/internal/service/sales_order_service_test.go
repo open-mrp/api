@@ -720,7 +720,7 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID 
 
 func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(accountID string) {
 	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), accountID, "svcl_default").
-		Return(&domain.ServiceLevel{}, nil).AnyTimes()
+		Return(&domain.ServiceLevel{IsActive: true}, nil).AnyTimes()
 	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	suite.shippingTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&domain.ShippingTerm{}, nil).AnyTimes()
@@ -732,7 +732,7 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(a
 		DoAndReturn(func(_ context.Context, _ string, ids []string) ([]*domain.Carrier, *apierror.APIError) {
 			carriers := make([]*domain.Carrier, len(ids))
 			for i, id := range ids {
-				carriers[i] = &domain.Carrier{ID: id}
+				carriers[i] = &domain.Carrier{ID: id, IsActive: true}
 			}
 			return carriers, nil
 		}).AnyTimes()
@@ -1102,7 +1102,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideC
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.expectCreateOrderReferenceValidationMocks("ac_test")
-	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_req").Return(&domain.ServiceLevel{}, nil).AnyTimes()
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_req").Return(&domain.ServiceLevel{IsActive: true}, nil).AnyTimes()
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
 	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).Return(false, nil).Times(1)
 
@@ -1170,8 +1170,8 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOf
 	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
-	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_default"}).Return([]*domain.Carrier{{ID: "cr_default"}}, nil)
-	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_default").Return(&domain.ServiceLevel{}, nil)
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_default"}).Return([]*domain.Carrier{{ID: "cr_default", IsActive: true}}, nil)
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_default").Return(&domain.ServiceLevel{IsActive: true}, nil)
 	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "svcl_default", "cr_default").Return(false, nil)
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), gomock.Any()).Times(0)
 	suite.expectCacheError()
@@ -1513,16 +1513,16 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesAServiceLevelOf
 		lookup func()
 	}{
 		{"carrier alone", domain.UpdateSalesOrderParams{CarrierID: new("cr_new")}, func() {
-			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
+			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new", IsActive: true}}, nil)
 			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_own", "cr_new").Return(false, nil)
 		}},
 		{"service level alone", domain.UpdateSalesOrderParams{ServiceLevelID: field.Set("crop_other")}, func() {
-			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other"}}, nil)
+			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other", IsActive: true}}, nil)
 			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_own").Return(false, nil)
 		}},
 		{"both", domain.UpdateSalesOrderParams{CarrierID: new("cr_new"), ServiceLevelID: field.Set("crop_other")}, func() {
-			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
-			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other"}}, nil)
+			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new", IsActive: true}}, nil)
+			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other", IsActive: true}}, nil)
 			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_new").Return(false, nil)
 		}},
 	} {
@@ -1551,7 +1551,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_TakesANewCarrierWithIt
 	suite.expectIdempotencyStarted()
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", CarrierID: new("cr_own"), ServiceLevelID: new("crop_own")}, nil)
-	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new", IsActive: true}}, nil)
 	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
 	suite.expectCacheSuccess()
 

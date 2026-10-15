@@ -42,10 +42,10 @@ func TestShippingCases_IncludeCarrier(t *testing.T) {
 	assert.Equal(t, "carrier", jsonField(carrier, "object"))
 	assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
 	// The include must carry the full carrier, not a stub built from the shipping-case join: the join
-	// projection dropped the carrier's own code, so a stub reads null here even though it's a carrier
-	// with a code. See TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
-	assert.Equal(t, "delivery", jsonField(carrier, "code"),
-		"the included carrier carries its code, not a partial stub")
+	// projection dropped the carrier's own type, so a stub reads empty here even though the carrier
+	// has one. See TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
+	assert.Equal(t, "local_delivery", jsonField(carrier, "type"),
+		"the included carrier carries its type, not a partial stub")
 }
 
 func TestShippingCases_IncludeShipment(t *testing.T) {

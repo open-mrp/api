@@ -19,9 +19,9 @@ type DeleteCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Deletes a carrier and all of its service levels.
+// Deletes a carrier and its service levels.
 //
-// If the carrier is connected through Shippo, its Shippo carrier account is deactivated. System-owned carriers cannot be deleted.
+// Only carriers your account created can be deleted, and only while no customer, order or shipment uses them. Archive a carrier that is in use by setting `status` to `archived`. A Shippo-connected carrier's Shippo account is deactivated.
 type DeleteCarrierEndpoint struct{}
 
 func (e *DeleteCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCarrierRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCa
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCarrierRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(CarrierSvc).DeleteCarrier, constants.ObjectTypeCarrier, "id")
 		},

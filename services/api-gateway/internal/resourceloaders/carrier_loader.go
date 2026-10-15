@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -48,34 +49,39 @@ func LoadCarriers(ctx context.Context, ids []string) (map[string]any, *apierror.
 		meta.Set(constants.ObjectTypeCarrier, c.Id, "owner_account_id", accountID)
 		meta.Set(constants.ObjectTypeCarrier, c.Id, "service_level_ids", append([]string(nil), c.ServiceLevelIdsPreview...))
 		meta.Set(constants.ObjectTypeCarrier, c.Id, "service_levels_has_more", c.ServiceLevelsHasMore)
+		var defaultServiceLevelID string
+		if c.DefaultServiceLevelId != nil {
+			defaultServiceLevelID = *c.DefaultServiceLevelId
+		}
+		meta.Set(constants.ObjectTypeCarrier, c.Id, "default_service_level_id", defaultServiceLevelID)
 	}
 	return out, nil
 }
 
-// CarrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier. Fields that depend on includes (Owner, ServiceLevels) are left nil — they only become populated when the resolver fires their SubField.Populate.
+// CarrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier. Fields that depend on includes (DefaultServiceLevel, Owner, ServiceLevels) are left nil — they only become populated when the resolver fires their SubField.Populate.
 func CarrierFromProto(c *pb.CarrierInfo) *apiresource.Carrier {
-	var code *constants.CarrierCode
-	if c.Code != nil {
-		v := constants.CarrierCode(*c.Code)
-		code = &v
+	return &apiresource.Carrier{
+		ID:               c.Id,
+		Object:           constants.ObjectTypeCarrier,
+		Name:             c.Name,
+		Type:             constants.CarrierType(c.Type),
+		SCAC:             c.Scac,
+		AccountNumber:    c.AccountNumber,
+		PortalVisibility: carrierPortalVisibility(c.IsPortalEnabled),
+		Status:           constants.ArchiveStatus(c.Status),
+		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
+		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
 	}
-	visibility := constants.CustomerPortalVisibilityHidden
-	if c.IsPortalEnabled {
-		visibility = constants.CustomerPortalVisibilityVisible
+}
+
+func carrierPortalVisibility(enabled bool) constants.CustomerPortalVisibility {
+	if enabled {
+		return constants.CustomerPortalVisibilityVisible
 	}
-	carrier := &apiresource.Carrier{
-		ID:                       c.Id,
-		Object:                   constants.ObjectTypeCarrier,
-		Name:                     c.Name,
-		Code:                     code,
-		AccountNumber:            c.AccountNumber,
-		CustomerPortalVisibility: visibility,
-		CreatedAt:                grpcutil.TimestampToTime(c.CreatedAt),
-		UpdatedAt:                grpcutil.TimestampToTime(c.UpdatedAt),
-	}
-	if c.DeletedAt != nil {
-		t := grpcutil.TimestampToTime(c.DeletedAt)
-		carrier.DeletedAt = &t
-	}
-	return carrier
+	return constants.CustomerPortalVisibilityHidden
+}
+
+// CarrierServiceLevelsListPath is the list a carrier's embedded service levels continue in.
+func CarrierServiceLevelsListPath(carrierID string) string {
+	return "/v1/operations/carriers/" + carrierID + "/service-levels"
 }

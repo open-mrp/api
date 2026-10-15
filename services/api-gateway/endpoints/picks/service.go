@@ -3,6 +3,7 @@ package pickep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -323,24 +324,24 @@ func freightFromPickProto(info *pb.PickInfo) *apiresource.Freight {
 	}
 	if info.CarrierId != nil {
 		carrier := &apiresource.Carrier{
-			ID:                       *info.CarrierId,
-			Object:                   constants.ObjectTypeCarrier,
-			Name:                     ptrutil.Deref(info.CarrierName),
-			CustomerPortalVisibility: portalVisibility(info.CarrierIsPortalEnabled),
-			CreatedAt:                grpcutil.TimestampToTime(info.CarrierCreatedAt),
-			UpdatedAt:                grpcutil.TimestampToTime(info.CarrierUpdatedAt),
+			ID:               *info.CarrierId,
+			Object:           constants.ObjectTypeCarrier,
+			Name:             ptrutil.Deref(info.CarrierName),
+			PortalVisibility: portalVisibility(info.CarrierIsPortalEnabled),
+			CreatedAt:        grpcutil.TimestampToTime(info.CarrierCreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(info.CarrierUpdatedAt),
 		}
 		f.Carrier = carrier
 	}
 	if info.ServiceLevelId != nil {
 		sl := &apiresource.ServiceLevel{
-			ID:                       *info.ServiceLevelId,
-			Object:                   constants.ObjectTypeServiceLevel,
-			Name:                     ptrutil.Deref(info.ServiceLevelName),
-			CustomerPortalVisibility: portalVisibility(info.ServiceLevelIsPortalEnabled),
-			ServiceLevelToken:        constants.ServiceLevelCode(ptrutil.Deref(info.ServiceLevelToken)),
-			CreatedAt:                grpcutil.TimestampToTime(info.ServiceLevelCreatedAt),
-			UpdatedAt:                grpcutil.TimestampToTime(info.ServiceLevelUpdatedAt),
+			ID:               *info.ServiceLevelId,
+			Object:           constants.ObjectTypeServiceLevel,
+			Name:             ptrutil.Deref(info.ServiceLevelName),
+			PortalVisibility: portalVisibility(info.ServiceLevelIsPortalEnabled),
+			Code:             constants.ServiceLevelCode(ptrutil.Deref(info.ServiceLevelToken)),
+			CreatedAt:        grpcutil.TimestampToTime(info.ServiceLevelCreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(info.ServiceLevelUpdatedAt),
 		}
 		f.ServiceLevel = sl
 	}

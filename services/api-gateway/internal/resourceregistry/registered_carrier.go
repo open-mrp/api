@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -9,14 +10,18 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 )
 
-// serviceLevelsCanonicalPath is the dedicated paginated endpoint that the `service_levels` include's next_page_url points at when the inline list is truncated. Keeping this in one place so the URL shape stays consistent with the registered HTTP route.
-const serviceLevelsCanonicalPath = "/v1/operations/carriers"
-
 func init() {
 	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeCarrier,
 		Load:       resourceloaders.LoadCarriers,
 		Subs: []include.SubField{
+			{
+				Key:         "default_service_level",
+				Target:      constants.ObjectTypeServiceLevel,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  extractDefaultServiceLevelIDFromCarrier,
+				Populate:    populateDefaultServiceLevelOnCarrier,
+			},
 			// owner: no fetch. Builds the Owner shell from the carrier's account_id in LoadMeta (set by the carrier loader). type=system for NULL, type=account for a populated id with a stub Account.
 			{
 				Key:      "owner",
@@ -94,12 +99,22 @@ func populateServiceLevelsOnCarrier(ctx context.Context, parent any, loaded map[
 			items = append(items, *(v.(*apiresource.ServiceLevel)))
 		}
 	}
+	c.ServiceLevels = apiresource.NewEmbeddedList(items, hasMore, resourceloaders.CarrierServiceLevelsListPath(c.ID), nil)
+}
 
-	var pageInfo apiresource.PageInfo
-	if hasMore {
-		// The inline preview isn't cursor-based, just a head-N projection of the full SL list. next_page_url therefore points at the first page of the dedicated paginated endpoint (no cursor query param); clients walk forward from there using its own cursors.
-		nextURL := serviceLevelsCanonicalPath + "/" + c.ID + "/service-levels"
-		pageInfo.NextPageURL = &nextURL
+func extractDefaultServiceLevelIDFromCarrier(ctx context.Context, parent any) []string {
+	c := parent.(*apiresource.Carrier)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCarrier, c.ID, "default_service_level_id")
+	if id == "" {
+		return nil
 	}
-	c.ServiceLevels = apiresource.NewList(items, pageInfo)
+	return []string{id}
+}
+
+func populateDefaultServiceLevelOnCarrier(ctx context.Context, parent any, loaded map[string]any) {
+	c := parent.(*apiresource.Carrier)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCarrier, c.ID, "default_service_level_id")
+	if v, ok := loaded[id]; ok && id != "" {
+		c.DefaultServiceLevel = v.(*apiresource.ServiceLevel)
+	}
 }

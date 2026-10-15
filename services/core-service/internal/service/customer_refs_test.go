@@ -51,7 +51,7 @@ func refsPtr(s string) *string { return &s }
 func TestCheckCustomerRefs_RefusesOnTheFieldThatNamedIt(t *testing.T) {
 	s := newCustomerRefsSetup(t)
 	s.carriers.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"car_own"}).
-		Return([]*domain.Carrier{{ID: "car_own"}}, nil)
+		Return([]*domain.Carrier{{ID: "car_own", IsActive: true}}, nil)
 	// Another account's term is not among the seller's own or the system's, so the scoped read omits it.
 	s.paymentTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"pytm_other"}).Return(nil, nil)
 

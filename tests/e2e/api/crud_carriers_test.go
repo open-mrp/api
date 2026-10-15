@@ -21,7 +21,7 @@ func TestCarriers_CRUD(t *testing.T) {
 	name := uniqueName("e2e-carrier")
 	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -32,8 +32,8 @@ func TestCarriers_CRUD(t *testing.T) {
 	assert.NotEmpty(t, id)
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "will_call", jsonField(created, "code"))
-	assert.Equal(t, "visible", jsonField(created, "customer_portal_visibility"))
+	assert.Equal(t, "will_call", jsonField(created, "type"))
+	assert.Equal(t, "visible", jsonField(created, "portal_visibility"))
 
 	// GET
 	getStatus, getBody, err := apiClient.GetListRaw(carriersPath+"/"+id, nil)
@@ -44,14 +44,14 @@ func TestCarriers_CRUD(t *testing.T) {
 	// UPDATE
 	newName := uniqueName("e2e-carrier-upd")
 	patchStatus, patchBody, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{
-		"name":                       newName,
-		"customer_portal_visibility": "hidden",
+		"name":              newName,
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
-	assert.Equal(t, "hidden", jsonField(updated, "customer_portal_visibility"))
+	assert.Equal(t, "hidden", jsonField(updated, "portal_visibility"))
 
 	// DELETE
 	delStatus, delBody, err := apiClient.Delete(carriersPath + "/" + id)
@@ -70,10 +70,10 @@ func TestCarriers_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-carr-allf")
 	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
-		"name":                       name,
-		"code":                       "will_call",
-		"account_number":             "CARRIER-001",
-		"customer_portal_visibility": "visible",
+		"name":              name,
+		"type":              "will_call",
+		"account_number":    "CARRIER-001",
+		"portal_visibility": "visible",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -86,10 +86,12 @@ func TestCarriers_CreateAndUpdateAllFields(t *testing.T) {
 
 	assert.Equal(t, "carrier", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "will_call", jsonField(got, "code"))
+	assert.Equal(t, "will_call", jsonField(got, "type"))
 	assert.Equal(t, "CARRIER-001", jsonField(got, "account_number"))
-	assert.Equal(t, "visible", jsonField(got, "customer_portal_visibility"))
-	assertNilField(t, got, "deleted_at")
+	assert.Equal(t, "visible", jsonField(got, "portal_visibility"))
+	assert.Equal(t, "active", jsonField(got, "status"))
+	assertNilField(t, got, "scac")
+	assertNilField(t, got, "default_service_level")
 	assertNilField(t, got, "owner")
 	assertNilField(t, got, "service_levels")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -98,8 +100,8 @@ func TestCarriers_CreateAndUpdateAllFields(t *testing.T) {
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-carr-allf-u")
 	patchStatus, patchBody, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{
-		"name":                       updatedName,
-		"customer_portal_visibility": "hidden",
+		"name":              updatedName,
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -107,10 +109,12 @@ func TestCarriers_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "hidden", jsonField(updated, "customer_portal_visibility"))
-	assert.Equal(t, "will_call", jsonField(updated, "code"), "code should be preserved")
+	assert.Equal(t, "hidden", jsonField(updated, "portal_visibility"))
+	assert.Equal(t, "will_call", jsonField(updated, "type"), "type should be preserved")
 	assert.Equal(t, "CARRIER-001", jsonField(updated, "account_number"), "account_number should be preserved")
-	assertNilField(t, updated, "deleted_at")
+	assert.Equal(t, "active", jsonField(updated, "status"))
+	assertNilField(t, updated, "scac")
+	assertNilField(t, updated, "default_service_level")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 }
@@ -158,7 +162,7 @@ func TestCarriers_ListPagination(t *testing.T) {
 	var ids []string
 	for i := 0; i < 2; i++ {
 		status, body, err := apiClient.Post(carriersPath,
-			map[string]any{"name": fmt.Sprintf("%s-%d", prefix, i), "code": "will_call"}, newIdempotencyKey())
+			map[string]any{"name": fmt.Sprintf("%s-%d", prefix, i), "type": "will_call"}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 		id := jsonField(parseJSON(body), "id")
@@ -180,7 +184,7 @@ func TestCarriers_GetSeeded(t *testing.T) {
 	assert.Equal(t, SeedCarrierID, jsonField(got, "id"))
 	assert.Equal(t, "carrier", jsonField(got, "object"))
 	assert.Equal(t, "Delivery", jsonField(got, "name"))
-	assert.Equal(t, "delivery", jsonField(got, "code"))
+	assert.Equal(t, "local_delivery", jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 }
@@ -189,9 +193,9 @@ func TestCarriers_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-carrier-shape")
 	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
-		"name":                       name,
-		"code":                       "will_call",
-		"customer_portal_visibility": "hidden",
+		"name":              name,
+		"type":              "will_call",
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -202,8 +206,8 @@ func TestCarriers_CreateResponseShape(t *testing.T) {
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "carrier", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "will_call", jsonField(got, "code"))
-	assert.Equal(t, "hidden", jsonField(got, "customer_portal_visibility"))
+	assert.Equal(t, "will_call", jsonField(got, "type"))
+	assert.Equal(t, "hidden", jsonField(got, "portal_visibility"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -219,12 +223,12 @@ func TestCarriers_CreateIdempotent(t *testing.T) {
 	name := uniqueName("e2e-idem-carrier")
 	idemKey := newIdempotencyKey()
 
-	status1, body1, err := apiClient.Post(carriersPath, map[string]any{"name": name, "code": "will_call"}, idemKey)
+	status1, body1, err := apiClient.Post(carriersPath, map[string]any{"name": name, "type": "will_call"}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
-	status2, body2, err := apiClient.Post(carriersPath, map[string]any{"name": name, "code": "will_call"}, idemKey)
+	status2, body2, err := apiClient.Post(carriersPath, map[string]any{"name": name, "type": "will_call"}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
@@ -247,7 +251,7 @@ func TestCarriers_UpdateValidation_EmptyName(t *testing.T) {
 	name := uniqueName("e2e-carr-blank")
 	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -363,9 +367,9 @@ func TestCarriers_UpdateOnlyName(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-carrier-pn")
 	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
-		"name":                       name,
-		"code":                       "will_call",
-		"customer_portal_visibility": "visible",
+		"name":              name,
+		"type":              "will_call",
+		"portal_visibility": "visible",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -379,7 +383,7 @@ func TestCarriers_UpdateOnlyName(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 	patched := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(patched, "name"))
-	assert.Equal(t, "visible", jsonField(patched, "customer_portal_visibility"))
+	assert.Equal(t, "visible", jsonField(patched, "portal_visibility"))
 
 	apiClient.Delete(carriersPath + "/" + id)
 }
@@ -389,20 +393,20 @@ func TestCarriers_UpdateOnlyVisibility(t *testing.T) {
 	name := uniqueName("e2e-carrier-pv")
 	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
 	patchStatus, patchBody, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{
-		"customer_portal_visibility": "hidden",
+		"portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"))
-	assert.Equal(t, "hidden", jsonField(patched, "customer_portal_visibility"))
+	assert.Equal(t, "hidden", jsonField(patched, "portal_visibility"))
 
 	apiClient.Delete(carriersPath + "/" + id)
 }
@@ -418,7 +422,7 @@ func TestCarriers_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-carr-omit")
 		status, body, err := apiClient.Post(carriersPath, map[string]any{
 			"name": name,
-			"code": "will_call",
+			"type": "will_call",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
@@ -430,10 +434,12 @@ func TestCarriers_OmittedFields(t *testing.T) {
 
 		assertObjectField(t, got, "carrier")
 		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, "will_call", jsonField(got, "code"))
+		assert.Equal(t, "will_call", jsonField(got, "type"))
 		assertNilField(t, got, "account_number")
-		assert.Equal(t, "visible", jsonField(got, "customer_portal_visibility"))
-		assertNilField(t, got, "deleted_at")
+		assert.Equal(t, "visible", jsonField(got, "portal_visibility"))
+		assert.Equal(t, "active", jsonField(got, "status"))
+		assertNilField(t, got, "scac")
+		assertNilField(t, got, "default_service_level")
 		assertNilField(t, got, "owner")
 		assertNilField(t, got, "service_levels")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -443,10 +449,10 @@ func TestCarriers_OmittedFields(t *testing.T) {
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-carr-pres")
 		createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
-			"name":                       name,
-			"code":                       "will_call",
-			"account_number":             "ACCT-PRES",
-			"customer_portal_visibility": "hidden",
+			"name":              name,
+			"type":              "will_call",
+			"account_number":    "ACCT-PRES",
+			"portal_visibility": "hidden",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -467,9 +473,9 @@ func TestCarriers_OmittedFields(t *testing.T) {
 
 		got := parseJSON(patchBody)
 		assert.Equal(t, newName, jsonField(got, "name"))
-		assert.Equal(t, "will_call", jsonField(got, "code"), "code should be preserved")
+		assert.Equal(t, "will_call", jsonField(got, "type"), "type should be preserved")
 		assert.Equal(t, "ACCT-PRES", jsonField(got, "account_number"), "account_number should be preserved")
-		assert.Equal(t, "hidden", jsonField(got, "customer_portal_visibility"), "customer_portal_visibility should be preserved")
+		assert.Equal(t, "hidden", jsonField(got, "portal_visibility"), "customer_portal_visibility should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -480,7 +486,7 @@ func TestCarriers_CreateDuplicateNameFails(t *testing.T) {
 	name := uniqueName("e2e-carrier-dup")
 	status1, body1, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "will_call",
+		"type": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
@@ -488,7 +494,7 @@ func TestCarriers_CreateDuplicateNameFails(t *testing.T) {
 
 	status2, body2, err := apiClient.Post(carriersPath, map[string]any{
 		"name": name,
-		"code": "delivery",
+		"type": "local_delivery",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status2, "Duplicate name should return 409, got %d: %s", status2, string(body2))

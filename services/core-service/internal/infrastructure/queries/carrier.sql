@@ -1,13 +1,17 @@
+-- The carrier queries below select identical columns, so their rows convert to GetCarrierRow.
+
 -- name: ListCarriersForward :many
 SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -17,6 +21,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR carrier.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR carrier.is_active = sqlc.narg('is_active'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR carrier.created_at < sqlc.narg('cursor_created_at')
@@ -30,11 +35,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -44,6 +51,7 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR carrier.name LIKE sqlc.narg('search_query')
 )
+AND (sqlc.narg('is_active') IS NULL OR carrier.is_active = sqlc.narg('is_active'))
 AND (
     carrier.created_at > sqlc.arg('cursor_created_at')
     OR (carrier.created_at = sqlc.arg('cursor_created_at') AND carrier.id > sqlc.arg('cursor_id'))
@@ -56,11 +64,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier
@@ -73,40 +83,54 @@ INSERT INTO carrier (
     id,
     name,
     code,
+    scac,
     shippo_carrier_account_id,
     account_number,
     is_portal_enabled,
+    is_active,
     account_id,
     created_at,
     updated_at
 ) VALUES (
     sqlc.arg('id'),
     sqlc.arg('name'),
-    sqlc.narg('code'),
+    sqlc.arg('code'),
+    sqlc.narg('scac'),
     sqlc.narg('shippo_carrier_account_id'),
     sqlc.narg('account_number'),
     sqlc.arg('is_portal_enabled'),
+    sqlc.arg('is_active'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
 );
 
 -- name: UpdateCarrier :execresult
+-- scac and default_carrier_option_id are assigned rather than merged so they can be cleared; the service carries the
+-- existing values forward when the caller leaves them out.
 UPDATE carrier SET
     name = COALESCE(sqlc.narg('name'), name),
     is_portal_enabled = COALESCE(sqlc.narg('is_portal_enabled'), is_portal_enabled),
+    is_active = COALESCE(sqlc.narg('is_active'), is_active),
+    scac = sqlc.narg('scac'),
+    default_carrier_option_id = sqlc.narg('default_carrier_option_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id')
 AND deleted_at IS NULL;
 
--- name: SoftDeleteCarrier :execresult
+-- name: SetCarrierDefaultCarrierOption :exec
 UPDATE carrier SET
-    deleted_at = NOW(3),
+    default_carrier_option_id = sqlc.narg('default_carrier_option_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id')
 AND deleted_at IS NULL;
+
+-- name: DeleteCarrier :execresult
+DELETE FROM carrier
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
 
 -- name: DeleteCarrierOptionsByCarrierID :exec
 DELETE FROM carrier_option
@@ -127,11 +151,13 @@ SELECT
     carrier.id,
     carrier.name,
     carrier.code,
+    carrier.scac,
     carrier.shippo_carrier_account_id,
     carrier.account_number,
     carrier.is_portal_enabled,
+    carrier.is_active,
+    carrier.default_carrier_option_id,
     carrier.account_id,
-    carrier.deleted_at,
     carrier.created_at,
     carrier.updated_at
 FROM carrier

@@ -845,9 +845,12 @@ type ShippingCaseDetailInfo struct {
 	CarrierIsPortalEnabled        *bool                  `protobuf:"varint,23,opt,name=carrier_is_portal_enabled,json=carrierIsPortalEnabled,proto3,oneof" json:"carrier_is_portal_enabled,omitempty"`
 	CarrierCreatedAt              *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
 	CarrierUpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
-	FreightAmount                 *Money                 `protobuf:"bytes,26,opt,name=freight_amount,json=freightAmount,proto3" json:"freight_amount,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	CarrierType                   string                 `protobuf:"bytes,28,opt,name=carrier_type,json=carrierType,proto3" json:"carrier_type,omitempty"`
+	// active | archived.
+	CarrierStatus string `protobuf:"bytes,29,opt,name=carrier_status,json=carrierStatus,proto3" json:"carrier_status,omitempty"`
+	FreightAmount *Money `protobuf:"bytes,26,opt,name=freight_amount,json=freightAmount,proto3" json:"freight_amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ShippingCaseDetailInfo) Reset() {
@@ -1053,6 +1056,20 @@ func (x *ShippingCaseDetailInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
 		return x.CarrierUpdatedAt
 	}
 	return nil
+}
+
+func (x *ShippingCaseDetailInfo) GetCarrierType() string {
+	if x != nil {
+		return x.CarrierType
+	}
+	return ""
+}
+
+func (x *ShippingCaseDetailInfo) GetCarrierStatus() string {
+	if x != nil {
+		return x.CarrierStatus
+	}
+	return ""
 }
 
 func (x *ShippingCaseDetailInfo) GetFreightAmount() *Money {
@@ -3077,7 +3094,7 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_order_line_descriptionB\x15\n" +
 	"\x13_order_line_item_idB\x18\n" +
-	"\x16_order_line_product_id\"\xdd\v\n" +
+	"\x16_order_line_product_id\"\xa7\f\n" +
 	"\x16ShippingCaseDetailInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -3109,7 +3126,9 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\x19carrier_is_portal_enabled\x18\x17 \x01(\bH\x04R\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
 	"\x12carrier_created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
-	"\x12carrier_updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x10carrierUpdatedAt\x88\x01\x01\x122\n" +
+	"\x12carrier_updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x10carrierUpdatedAt\x88\x01\x01\x12!\n" +
+	"\fcarrier_type\x18\x1c \x01(\tR\vcarrierType\x12%\n" +
+	"\x0ecarrier_status\x18\x1d \x01(\tR\rcarrierStatus\x122\n" +
 	"\x0efreight_amount\x18\x1a \x01(\v2\v.core.MoneyR\rfreightAmountB\a\n" +
 	"\x05_ssccB\x12\n" +
 	"\x10_tracking_numberB\x18\n" +

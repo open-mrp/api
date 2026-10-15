@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -37,31 +38,22 @@ func LoadServiceLevels(ctx context.Context, ids []string) (map[string]any, *apie
 			accountID = *sl.AccountId
 		}
 		meta.Set(constants.ObjectTypeServiceLevel, sl.Id, "owner_account_id", accountID)
+		meta.Set(constants.ObjectTypeServiceLevel, sl.Id, "carrier_id", sl.CarrierId)
 	}
 	return out, nil
 }
 
 // ServiceLevelFromProto maps a proto ServiceLevelInfo to an apiresource.ServiceLevel; its owner stays nil until included.
 func ServiceLevelFromProto(sl *pb.ServiceLevelInfo) *apiresource.ServiceLevel {
-	visibility := constants.CustomerPortalVisibilityHidden
-	if sl.IsPortalEnabled {
-		visibility = constants.CustomerPortalVisibilityVisible
-	}
-	var token constants.ServiceLevelCode
-	if sl.ServiceLevelToken != nil {
-		token = constants.ServiceLevelCode(*sl.ServiceLevelToken)
-	} else {
-		token = constants.ServiceLevelCode(sl.Code)
-	}
 	return &apiresource.ServiceLevel{
-		ID:                       sl.Id,
-		Object:                   constants.ObjectTypeServiceLevel,
-		Name:                     sl.Name,
-		ServiceLevelToken:        token,
-		CustomerPortalVisibility: visibility,
-		IsDefault:                sl.IsDefault,
-		DefaultTransitDays:       sl.DefaultTransitDays,
-		CreatedAt:                grpcutil.TimestampToTime(sl.CreatedAt),
-		UpdatedAt:                grpcutil.TimestampToTime(sl.UpdatedAt),
+		ID:                   sl.Id,
+		Object:               constants.ObjectTypeServiceLevel,
+		Name:                 sl.Name,
+		Code:                 constants.ServiceLevelCode(sl.Code),
+		PortalVisibility:     carrierPortalVisibility(sl.IsPortalEnabled),
+		Status:               constants.ArchiveStatus(sl.Status),
+		EstimatedTransitDays: sl.EstimatedTransitDays,
+		CreatedAt:            grpcutil.TimestampToTime(sl.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(sl.UpdatedAt),
 	}
 }

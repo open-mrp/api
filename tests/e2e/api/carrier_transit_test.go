@@ -378,15 +378,15 @@ func TestCarrierTransit_ServiceLevelDefaultIsConfigurable(t *testing.T) {
 
 	created := createAndCleanup(t, carriersPath, map[string]any{
 		"name": uniqueName("e2e-transit-carrier-cfg"),
-		"code": "will_call",
+		"type": "will_call",
 	})
 	carrierID := jsonField(created, "id")
 	path := carriersPath + "/" + carrierID + "/service-levels"
 
 	status, body, err := apiClient.Post(path, map[string]any{
-		"name":                 uniqueName("e2e-transit-svc"),
-		"code":                 uniqueName("e2e_transit_svc"),
-		"default_transit_days": 4,
+		"name":                   uniqueName("e2e-transit-svc"),
+		"code":                   uniqueName("e2e_transit_svc"),
+		"estimated_transit_days": 4,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "service level create must not 5xx: %s", string(body))
@@ -394,14 +394,14 @@ func TestCarrierTransit_ServiceLevelDefaultIsConfigurable(t *testing.T) {
 
 	serviceLevelID := jsonField(parseJSON(body), "id")
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path + "/" + serviceLevelID) })
-	assert.Equal(t, "4", jsonField(parseJSON(body), "default_transit_days"))
+	assert.Equal(t, "4", jsonField(parseJSON(body), "estimated_transit_days"))
 
 	t.Run("updates", func(t *testing.T) {
 		patchStatus, patchBody, err := apiClient.Patch(path+"/"+serviceLevelID,
-			map[string]any{"default_transit_days": 6}, newIdempotencyKey())
+			map[string]any{"estimated_transit_days": 6}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
-		assert.Equal(t, "6", jsonField(parseJSON(patchBody), "default_transit_days"))
+		assert.Equal(t, "6", jsonField(parseJSON(patchBody), "estimated_transit_days"))
 	})
 
 	// Omitting the field must not be read as clearing it, or any unrelated edit
@@ -411,20 +411,20 @@ func TestCarrierTransit_ServiceLevelDefaultIsConfigurable(t *testing.T) {
 			map[string]any{"name": uniqueName("e2e-transit-svc-renamed")}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
-		assert.Equal(t, "6", jsonField(parseJSON(patchBody), "default_transit_days"))
+		assert.Equal(t, "6", jsonField(parseJSON(patchBody), "estimated_transit_days"))
 	})
 
 	t.Run("clears explicitly", func(t *testing.T) {
 		patchStatus, patchBody, err := apiClient.Patch(path+"/"+serviceLevelID,
-			map[string]any{"default_transit_days": nil}, newIdempotencyKey())
+			map[string]any{"estimated_transit_days": nil}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
-		assert.Empty(t, jsonField(parseJSON(patchBody), "default_transit_days"))
+		assert.Empty(t, jsonField(parseJSON(patchBody), "estimated_transit_days"))
 	})
 
 	t.Run("rejects a negative value", func(t *testing.T) {
 		patchStatus, patchBody, err := apiClient.Patch(path+"/"+serviceLevelID,
-			map[string]any{"default_transit_days": -1}, newIdempotencyKey())
+			map[string]any{"estimated_transit_days": -1}, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Less(t, patchStatus, 500, "a bad value must not 5xx: %s", string(patchBody))
 		assert.Equal(t, 422, patchStatus, "body: %s", string(patchBody))

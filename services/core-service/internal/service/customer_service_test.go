@@ -204,10 +204,10 @@ func TestCreateCustomer_ChecksATypedNumberOnlyUnderTheOwnersLock(t *testing.T) {
 // expectRoutingOwned answers the ownership reads for the default carrier and service level as the account's own.
 func (s *customerSvcSetup) expectRoutingOwned(carrierID, serviceLevelID string) {
 	if carrierID != "" {
-		s.carriers.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{carrierID}).Return([]*domain.Carrier{{ID: carrierID}}, nil)
+		s.carriers.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{carrierID}).Return([]*domain.Carrier{{ID: carrierID, IsActive: true}}, nil)
 	}
 	if serviceLevelID != "" {
-		s.carriers.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_seller", []string{serviceLevelID}).Return([]*domain.ServiceLevel{{ID: serviceLevelID}}, nil)
+		s.carriers.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_seller", []string{serviceLevelID}).Return([]*domain.ServiceLevel{{ID: serviceLevelID, IsActive: true}}, nil)
 	}
 }
 

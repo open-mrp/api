@@ -3365,17 +3365,19 @@ func (x *BatchGetItemsByIDsResponse) GetAttributeProperties() []*PropertyInfo {
 }
 
 type CarrierInfo struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Code                   *string                `protobuf:"bytes,3,opt,name=code,proto3,oneof" json:"code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type  string                 `protobuf:"bytes,15,opt,name=type,proto3" json:"type,omitempty"`
+	Scac  *string                `protobuf:"bytes,16,opt,name=scac,proto3,oneof" json:"scac,omitempty"`
+	// active | archived.
+	Status                 string                 `protobuf:"bytes,17,opt,name=status,proto3" json:"status,omitempty"`
+	DefaultServiceLevelId  *string                `protobuf:"bytes,18,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
 	ShippoCarrierAccountId *string                `protobuf:"bytes,4,opt,name=shippo_carrier_account_id,json=shippoCarrierAccountId,proto3,oneof" json:"shippo_carrier_account_id,omitempty"`
 	AccountNumber          *string                `protobuf:"bytes,5,opt,name=account_number,json=accountNumber,proto3,oneof" json:"account_number,omitempty"`
 	IsPortalEnabled        bool                   `protobuf:"varint,6,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
-	IsDefault              bool                   `protobuf:"varint,7,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
 	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt              *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	ServiceLevels          []*ServiceLevelInfo    `protobuf:"bytes,11,rep,name=service_levels,json=serviceLevels,proto3" json:"service_levels,omitempty"`
 	// The account ID that owns this carrier. Null for system carriers.
 	AccountId *string `protobuf:"bytes,12,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
@@ -3436,9 +3438,30 @@ func (x *CarrierInfo) GetName() string {
 	return ""
 }
 
-func (x *CarrierInfo) GetCode() string {
-	if x != nil && x.Code != nil {
-		return *x.Code
+func (x *CarrierInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CarrierInfo) GetScac() string {
+	if x != nil && x.Scac != nil {
+		return *x.Scac
+	}
+	return ""
+}
+
+func (x *CarrierInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CarrierInfo) GetDefaultServiceLevelId() string {
+	if x != nil && x.DefaultServiceLevelId != nil {
+		return *x.DefaultServiceLevelId
 	}
 	return ""
 }
@@ -3464,13 +3487,6 @@ func (x *CarrierInfo) GetIsPortalEnabled() bool {
 	return false
 }
 
-func (x *CarrierInfo) GetIsDefault() bool {
-	if x != nil {
-		return x.IsDefault
-	}
-	return false
-}
-
 func (x *CarrierInfo) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
@@ -3481,13 +3497,6 @@ func (x *CarrierInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *CarrierInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
-	}
-	return nil
-}
-
-func (x *CarrierInfo) GetDeletedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.DeletedAt
 	}
 	return nil
 }
@@ -3521,22 +3530,22 @@ func (x *CarrierInfo) GetServiceLevelsHasMore() bool {
 }
 
 type ServiceLevelInfo struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Code              string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
-	ServiceLevelToken *string                `protobuf:"bytes,4,opt,name=service_level_token,json=serviceLevelToken,proto3,oneof" json:"service_level_token,omitempty"`
-	IsPortalEnabled   bool                   `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
-	IsDefault         bool                   `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
-	CarrierId         string                 `protobuf:"bytes,7,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Code            string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	IsPortalEnabled bool                   `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
+	// active | archived.
+	Status    string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	CarrierId string                 `protobuf:"bytes,7,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The account ID that owns this service level. Null for system options.
 	AccountId *string `protobuf:"bytes,10,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	// Fallback carrier transit for this service, used when no lane estimate has been cached.
-	DefaultTransitDays *int32 `protobuf:"varint,11,opt,name=default_transit_days,json=defaultTransitDays,proto3,oneof" json:"default_transit_days,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Fallback carrier transit for this service in business days, used when no lane estimate has been cached.
+	EstimatedTransitDays *int32 `protobuf:"varint,11,opt,name=estimated_transit_days,json=estimatedTransitDays,proto3,oneof" json:"estimated_transit_days,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ServiceLevelInfo) Reset() {
@@ -3590,13 +3599,6 @@ func (x *ServiceLevelInfo) GetCode() string {
 	return ""
 }
 
-func (x *ServiceLevelInfo) GetServiceLevelToken() string {
-	if x != nil && x.ServiceLevelToken != nil {
-		return *x.ServiceLevelToken
-	}
-	return ""
-}
-
 func (x *ServiceLevelInfo) GetIsPortalEnabled() bool {
 	if x != nil {
 		return x.IsPortalEnabled
@@ -3604,11 +3606,11 @@ func (x *ServiceLevelInfo) GetIsPortalEnabled() bool {
 	return false
 }
 
-func (x *ServiceLevelInfo) GetIsDefault() bool {
+func (x *ServiceLevelInfo) GetStatus() string {
 	if x != nil {
-		return x.IsDefault
+		return x.Status
 	}
-	return false
+	return ""
 }
 
 func (x *ServiceLevelInfo) GetCarrierId() string {
@@ -3639,19 +3641,21 @@ func (x *ServiceLevelInfo) GetAccountId() string {
 	return ""
 }
 
-func (x *ServiceLevelInfo) GetDefaultTransitDays() int32 {
-	if x != nil && x.DefaultTransitDays != nil {
-		return *x.DefaultTransitDays
+func (x *ServiceLevelInfo) GetEstimatedTransitDays() int32 {
+	if x != nil && x.EstimatedTransitDays != nil {
+		return *x.EstimatedTransitDays
 	}
 	return 0
 }
 
 type ListCarriersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Cursor   *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit    int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query    *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	// active | archived; empty returns every status.
+	Statuses      []string `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3710,6 +3714,13 @@ func (x *ListCarriersRequest) GetQuery() string {
 func (x *ListCarriersRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListCarriersRequest) GetStatuses() []string {
+	if x != nil {
+		return x.Statuses
 	}
 	return nil
 }
@@ -4149,12 +4160,15 @@ func (x *BatchGetAccountsByIDsResponse) GetAccounts() []*AccountInfo {
 type CreateCarrierRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Code            *string                `protobuf:"bytes,2,opt,name=code,proto3,oneof" json:"code,omitempty"`
+	Type            string                 `protobuf:"bytes,6,opt,name=type,proto3" json:"type,omitempty"`
+	Scac            *string                `protobuf:"bytes,7,opt,name=scac,proto3,oneof" json:"scac,omitempty"`
 	AccountNumber   *string                `protobuf:"bytes,3,opt,name=account_number,json=accountNumber,proto3,oneof" json:"account_number,omitempty"`
 	IsPortalEnabled bool                   `protobuf:"varint,4,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
-	Includes        []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// active | archived; unset is active.
+	Status        *string  `protobuf:"bytes,8,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Includes      []string `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateCarrierRequest) Reset() {
@@ -4194,9 +4208,16 @@ func (x *CreateCarrierRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateCarrierRequest) GetCode() string {
-	if x != nil && x.Code != nil {
-		return *x.Code
+func (x *CreateCarrierRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CreateCarrierRequest) GetScac() string {
+	if x != nil && x.Scac != nil {
+		return *x.Scac
 	}
 	return ""
 }
@@ -4213,6 +4234,13 @@ func (x *CreateCarrierRequest) GetIsPortalEnabled() bool {
 		return x.IsPortalEnabled
 	}
 	return false
+}
+
+func (x *CreateCarrierRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
 }
 
 func (x *CreateCarrierRequest) GetIncludes() []string {
@@ -4267,13 +4295,16 @@ func (x *CreateCarrierResponse) GetCarrier() *CarrierInfo {
 }
 
 type UpdateCarrierRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name            *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	IsPortalEnabled *bool                  `protobuf:"varint,3,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
-	Includes        []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                  *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	IsPortalEnabled       *bool                  `protobuf:"varint,3,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
+	Includes              []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	Status                *string                `protobuf:"bytes,5,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Scac                  *StringPatch           `protobuf:"bytes,6,opt,name=scac,proto3,oneof" json:"scac,omitempty"`
+	DefaultServiceLevelId *StringPatch           `protobuf:"bytes,7,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *UpdateCarrierRequest) Reset() {
@@ -4330,6 +4361,27 @@ func (x *UpdateCarrierRequest) GetIsPortalEnabled() bool {
 func (x *UpdateCarrierRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *UpdateCarrierRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *UpdateCarrierRequest) GetScac() *StringPatch {
+	if x != nil {
+		return x.Scac
+	}
+	return nil
+}
+
+func (x *UpdateCarrierRequest) GetDefaultServiceLevelId() *StringPatch {
+	if x != nil {
+		return x.DefaultServiceLevelId
 	}
 	return nil
 }
@@ -4703,11 +4755,13 @@ func (x *SyncServiceLevelsResponse) GetCarrier() *CarrierInfo {
 }
 
 type ListServiceLevelsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CarrierId     string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	Cursor        *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	CarrierId string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	Cursor    *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit     int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query     *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// active | archived; empty returns every status.
+	Statuses      []string `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4768,6 +4822,13 @@ func (x *ListServiceLevelsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListServiceLevelsRequest) GetStatuses() []string {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
 }
 
 type ListServiceLevelsResponse struct {
@@ -4919,16 +4980,18 @@ func (x *GetServiceLevelResponse) GetServiceLevel() *ServiceLevelInfo {
 }
 
 type CreateServiceLevelRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CarrierId          string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Code               string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
-	ServiceLevelToken  *string                `protobuf:"bytes,4,opt,name=service_level_token,json=serviceLevelToken,proto3,oneof" json:"service_level_token,omitempty"`
-	IsPortalEnabled    bool                   `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
-	IsDefault          bool                   `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
-	DefaultTransitDays *int32                 `protobuf:"varint,7,opt,name=default_transit_days,json=defaultTransitDays,proto3,oneof" json:"default_transit_days,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CarrierId       string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Code            string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	IsPortalEnabled bool                   `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
+	// Makes the new service level its carrier's default.
+	MakeDefault          bool   `protobuf:"varint,6,opt,name=make_default,json=makeDefault,proto3" json:"make_default,omitempty"`
+	EstimatedTransitDays *int32 `protobuf:"varint,7,opt,name=estimated_transit_days,json=estimatedTransitDays,proto3,oneof" json:"estimated_transit_days,omitempty"`
+	// active | archived; unset is active.
+	Status        *string `protobuf:"bytes,8,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateServiceLevelRequest) Reset() {
@@ -4982,13 +5045,6 @@ func (x *CreateServiceLevelRequest) GetCode() string {
 	return ""
 }
 
-func (x *CreateServiceLevelRequest) GetServiceLevelToken() string {
-	if x != nil && x.ServiceLevelToken != nil {
-		return *x.ServiceLevelToken
-	}
-	return ""
-}
-
 func (x *CreateServiceLevelRequest) GetIsPortalEnabled() bool {
 	if x != nil {
 		return x.IsPortalEnabled
@@ -4996,18 +5052,25 @@ func (x *CreateServiceLevelRequest) GetIsPortalEnabled() bool {
 	return false
 }
 
-func (x *CreateServiceLevelRequest) GetIsDefault() bool {
+func (x *CreateServiceLevelRequest) GetMakeDefault() bool {
 	if x != nil {
-		return x.IsDefault
+		return x.MakeDefault
 	}
 	return false
 }
 
-func (x *CreateServiceLevelRequest) GetDefaultTransitDays() int32 {
-	if x != nil && x.DefaultTransitDays != nil {
-		return *x.DefaultTransitDays
+func (x *CreateServiceLevelRequest) GetEstimatedTransitDays() int32 {
+	if x != nil && x.EstimatedTransitDays != nil {
+		return *x.EstimatedTransitDays
 	}
 	return 0
+}
+
+func (x *CreateServiceLevelRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
 }
 
 type CreateServiceLevelResponse struct {
@@ -5055,16 +5118,18 @@ func (x *CreateServiceLevelResponse) GetServiceLevel() *ServiceLevelInfo {
 }
 
 type UpdateServiceLevelRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CarrierId          string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	Id                 string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Name               *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Code               *string                `protobuf:"bytes,4,opt,name=code,proto3,oneof" json:"code,omitempty"`
-	IsPortalEnabled    *bool                  `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
-	IsDefault          *bool                  `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
-	DefaultTransitDays *Int32Patch            `protobuf:"bytes,7,opt,name=default_transit_days,json=defaultTransitDays,proto3,oneof" json:"default_transit_days,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CarrierId       string                 `protobuf:"bytes,1,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	Id              string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Name            *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Code            *string                `protobuf:"bytes,4,opt,name=code,proto3,oneof" json:"code,omitempty"`
+	IsPortalEnabled *bool                  `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
+	// true makes the service level its carrier's default; false stops it being the default.
+	MakeDefault          *bool       `protobuf:"varint,6,opt,name=make_default,json=makeDefault,proto3,oneof" json:"make_default,omitempty"`
+	EstimatedTransitDays *Int32Patch `protobuf:"bytes,7,opt,name=estimated_transit_days,json=estimatedTransitDays,proto3,oneof" json:"estimated_transit_days,omitempty"`
+	Status               *string     `protobuf:"bytes,8,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateServiceLevelRequest) Reset() {
@@ -5132,18 +5197,25 @@ func (x *UpdateServiceLevelRequest) GetIsPortalEnabled() bool {
 	return false
 }
 
-func (x *UpdateServiceLevelRequest) GetIsDefault() bool {
-	if x != nil && x.IsDefault != nil {
-		return *x.IsDefault
+func (x *UpdateServiceLevelRequest) GetMakeDefault() bool {
+	if x != nil && x.MakeDefault != nil {
+		return *x.MakeDefault
 	}
 	return false
 }
 
-func (x *UpdateServiceLevelRequest) GetDefaultTransitDays() *Int32Patch {
+func (x *UpdateServiceLevelRequest) GetEstimatedTransitDays() *Int32Patch {
 	if x != nil {
-		return x.DefaultTransitDays
+		return x.EstimatedTransitDays
 	}
 	return nil
+}
+
+func (x *UpdateServiceLevelRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
 }
 
 type UpdateServiceLevelResponse struct {
@@ -6918,41 +6990,38 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"categories\x18\x02 \x03(\v2\x16.core.ItemCategoryInfoR\n" +
 	"categories\x12E\n" +
-	"\x14attribute_properties\x18\x03 \x03(\v2\x12.core.PropertyInfoR\x13attributeProperties\"\xe4\x05\n" +
+	"\x14attribute_properties\x18\x03 \x03(\v2\x12.core.PropertyInfoR\x13attributeProperties\"\x8f\x06\n" +
 	"\vCarrierInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
-	"\x04code\x18\x03 \x01(\tH\x00R\x04code\x88\x01\x01\x12>\n" +
-	"\x19shippo_carrier_account_id\x18\x04 \x01(\tH\x01R\x16shippoCarrierAccountId\x88\x01\x01\x12*\n" +
-	"\x0eaccount_number\x18\x05 \x01(\tH\x02R\raccountNumber\x88\x01\x01\x12*\n" +
-	"\x11is_portal_enabled\x18\x06 \x01(\bR\x0fisPortalEnabled\x12\x1d\n" +
-	"\n" +
-	"is_default\x18\a \x01(\bR\tisDefault\x129\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x0f \x01(\tR\x04type\x12\x17\n" +
+	"\x04scac\x18\x10 \x01(\tH\x00R\x04scac\x88\x01\x01\x12\x16\n" +
+	"\x06status\x18\x11 \x01(\tR\x06status\x12<\n" +
+	"\x18default_service_level_id\x18\x12 \x01(\tH\x01R\x15defaultServiceLevelId\x88\x01\x01\x12>\n" +
+	"\x19shippo_carrier_account_id\x18\x04 \x01(\tH\x02R\x16shippoCarrierAccountId\x88\x01\x01\x12*\n" +
+	"\x0eaccount_number\x18\x05 \x01(\tH\x03R\raccountNumber\x88\x01\x01\x12*\n" +
+	"\x11is_portal_enabled\x18\x06 \x01(\bR\x0fisPortalEnabled\x129\n" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
-	"\n" +
-	"deleted_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tdeletedAt\x88\x01\x01\x12=\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12=\n" +
 	"\x0eservice_levels\x18\v \x03(\v2\x16.core.ServiceLevelInfoR\rserviceLevels\x12\"\n" +
 	"\n" +
 	"account_id\x18\f \x01(\tH\x04R\taccountId\x88\x01\x01\x129\n" +
 	"\x19service_level_ids_preview\x18\r \x03(\tR\x16serviceLevelIdsPreview\x125\n" +
 	"\x17service_levels_has_more\x18\x0e \x01(\bR\x14serviceLevelsHasMoreB\a\n" +
-	"\x05_codeB\x1c\n" +
+	"\x05_scacB\x1b\n" +
+	"\x19_default_service_level_idB\x1c\n" +
 	"\x1a_shippo_carrier_account_idB\x11\n" +
 	"\x0f_account_numberB\r\n" +
-	"\v_deleted_atB\r\n" +
-	"\v_account_id\"\xfa\x03\n" +
+	"\v_account_idJ\x04\b\x03\x10\x04J\x04\b\a\x10\bJ\x04\b\n" +
+	"\x10\v\"\xb8\x03\n" +
 	"\x10ServiceLevelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04code\x18\x03 \x01(\tR\x04code\x123\n" +
-	"\x13service_level_token\x18\x04 \x01(\tH\x00R\x11serviceLevelToken\x88\x01\x01\x12*\n" +
-	"\x11is_portal_enabled\x18\x05 \x01(\bR\x0fisPortalEnabled\x12\x1d\n" +
-	"\n" +
-	"is_default\x18\x06 \x01(\bR\tisDefault\x12\x1d\n" +
+	"\x04code\x18\x03 \x01(\tR\x04code\x12*\n" +
+	"\x11is_portal_enabled\x18\x05 \x01(\bR\x0fisPortalEnabled\x12\x16\n" +
+	"\x06status\x18\f \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\a \x01(\tR\tcarrierId\x129\n" +
 	"\n" +
@@ -6961,16 +7030,16 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
 	"\n" +
 	"account_id\x18\n" +
-	" \x01(\tH\x01R\taccountId\x88\x01\x01\x125\n" +
-	"\x14default_transit_days\x18\v \x01(\x05H\x02R\x12defaultTransitDays\x88\x01\x01B\x16\n" +
-	"\x14_service_level_tokenB\r\n" +
-	"\v_account_idB\x17\n" +
-	"\x15_default_transit_days\"\x94\x01\n" +
+	" \x01(\tH\x00R\taccountId\x88\x01\x01\x129\n" +
+	"\x16estimated_transit_days\x18\v \x01(\x05H\x01R\x14estimatedTransitDays\x88\x01\x01B\r\n" +
+	"\v_account_idB\x19\n" +
+	"\x17_estimated_transit_daysJ\x04\b\x04\x10\x05J\x04\b\x06\x10\a\"\xb0\x01\n" +
 	"\x13ListCarriersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12\x1a\n" +
+	"\bstatuses\x18\x05 \x03(\tR\bstatusesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"r\n" +
 	"\x14ListCarriersResponse\x12-\n" +
@@ -6993,24 +7062,33 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x1cBatchGetAccountsByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"N\n" +
 	"\x1dBatchGetAccountsByIDsResponse\x12-\n" +
-	"\baccounts\x18\x01 \x03(\v2\x11.core.AccountInfoR\baccounts\"\xd3\x01\n" +
+	"\baccounts\x18\x01 \x03(\v2\x11.core.AccountInfoR\baccounts\"\x95\x02\n" +
 	"\x14CreateCarrierRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n" +
-	"\x04code\x18\x02 \x01(\tH\x00R\x04code\x88\x01\x01\x12*\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x06 \x01(\tR\x04type\x12\x17\n" +
+	"\x04scac\x18\a \x01(\tH\x00R\x04scac\x88\x01\x01\x12*\n" +
 	"\x0eaccount_number\x18\x03 \x01(\tH\x01R\raccountNumber\x88\x01\x01\x12*\n" +
-	"\x11is_portal_enabled\x18\x04 \x01(\bR\x0fisPortalEnabled\x12\x1a\n" +
+	"\x11is_portal_enabled\x18\x04 \x01(\bR\x0fisPortalEnabled\x12\x1b\n" +
+	"\x06status\x18\b \x01(\tH\x02R\x06status\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x05 \x03(\tR\bincludesB\a\n" +
-	"\x05_codeB\x11\n" +
-	"\x0f_account_number\"D\n" +
+	"\x05_scacB\x11\n" +
+	"\x0f_account_numberB\t\n" +
+	"\a_statusJ\x04\b\x02\x10\x03\"D\n" +
 	"\x15CreateCarrierResponse\x12+\n" +
-	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xab\x01\n" +
+	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xf6\x02\n" +
 	"\x14UpdateCarrierRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12/\n" +
 	"\x11is_portal_enabled\x18\x03 \x01(\bH\x01R\x0fisPortalEnabled\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06status\x18\x05 \x01(\tH\x02R\x06status\x88\x01\x01\x12*\n" +
+	"\x04scac\x18\x06 \x01(\v2\x11.core.StringPatchH\x03R\x04scac\x88\x01\x01\x12O\n" +
+	"\x18default_service_level_id\x18\a \x01(\v2\x11.core.StringPatchH\x04R\x15defaultServiceLevelId\x88\x01\x01B\a\n" +
 	"\x05_nameB\x14\n" +
-	"\x12_is_portal_enabled\"D\n" +
+	"\x12_is_portal_enabledB\t\n" +
+	"\a_statusB\a\n" +
+	"\x05_scacB\x1b\n" +
+	"\x19_default_service_level_id\"D\n" +
 	"\x15UpdateCarrierResponse\x12+\n" +
 	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"&\n" +
 	"\x14DeleteCarrierRequest\x12\x0e\n" +
@@ -7032,13 +7110,14 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\"H\n" +
 	"\x19SyncServiceLevelsResponse\x12+\n" +
-	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\x9c\x01\n" +
+	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xb8\x01\n" +
 	"\x18ListServiceLevelsRequest\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x1b\n" +
 	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bstatuses\x18\x05 \x03(\tR\bstatusesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"\x87\x01\n" +
 	"\x19ListServiceLevelsResponse\x12=\n" +
@@ -7049,36 +7128,36 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"V\n" +
 	"\x17GetServiceLevelResponse\x12;\n" +
-	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\xca\x02\n" +
+	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\xb5\x02\n" +
 	"\x19CreateServiceLevelRequest\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04code\x18\x03 \x01(\tR\x04code\x123\n" +
-	"\x13service_level_token\x18\x04 \x01(\tH\x00R\x11serviceLevelToken\x88\x01\x01\x12*\n" +
-	"\x11is_portal_enabled\x18\x05 \x01(\bR\x0fisPortalEnabled\x12\x1d\n" +
-	"\n" +
-	"is_default\x18\x06 \x01(\bR\tisDefault\x125\n" +
-	"\x14default_transit_days\x18\a \x01(\x05H\x01R\x12defaultTransitDays\x88\x01\x01B\x16\n" +
-	"\x14_service_level_tokenB\x17\n" +
-	"\x15_default_transit_days\"Y\n" +
+	"\x04code\x18\x03 \x01(\tR\x04code\x12*\n" +
+	"\x11is_portal_enabled\x18\x05 \x01(\bR\x0fisPortalEnabled\x12!\n" +
+	"\fmake_default\x18\x06 \x01(\bR\vmakeDefault\x129\n" +
+	"\x16estimated_transit_days\x18\a \x01(\x05H\x00R\x14estimatedTransitDays\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\b \x01(\tH\x01R\x06status\x88\x01\x01B\x19\n" +
+	"\x17_estimated_transit_daysB\t\n" +
+	"\a_statusJ\x04\b\x04\x10\x05\"Y\n" +
 	"\x1aCreateServiceLevelResponse\x12;\n" +
-	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\xea\x02\n" +
+	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\x9e\x03\n" +
 	"\x19UpdateServiceLevelRequest\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
 	"\x04code\x18\x04 \x01(\tH\x01R\x04code\x88\x01\x01\x12/\n" +
-	"\x11is_portal_enabled\x18\x05 \x01(\bH\x02R\x0fisPortalEnabled\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"is_default\x18\x06 \x01(\bH\x03R\tisDefault\x88\x01\x01\x12G\n" +
-	"\x14default_transit_days\x18\a \x01(\v2\x10.core.Int32PatchH\x04R\x12defaultTransitDays\x88\x01\x01B\a\n" +
+	"\x11is_portal_enabled\x18\x05 \x01(\bH\x02R\x0fisPortalEnabled\x88\x01\x01\x12&\n" +
+	"\fmake_default\x18\x06 \x01(\bH\x03R\vmakeDefault\x88\x01\x01\x12K\n" +
+	"\x16estimated_transit_days\x18\a \x01(\v2\x10.core.Int32PatchH\x04R\x14estimatedTransitDays\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\b \x01(\tH\x05R\x06status\x88\x01\x01B\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_codeB\x14\n" +
-	"\x12_is_portal_enabledB\r\n" +
-	"\v_is_defaultB\x17\n" +
-	"\x15_default_transit_days\"Y\n" +
+	"\x12_is_portal_enabledB\x0f\n" +
+	"\r_make_defaultB\x19\n" +
+	"\x17_estimated_transit_daysB\t\n" +
+	"\a_status\"Y\n" +
 	"\x1aUpdateServiceLevelResponse\x12;\n" +
 	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"J\n" +
 	"\x19DeleteServiceLevelRequest\x12\x1d\n" +
@@ -7381,9 +7460,10 @@ var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*PageInfo)(nil),                             // 105: core.PageInfo
 	(*InlineAddressInput)(nil),                   // 106: core.InlineAddressInput
 	(*JobInfo)(nil),                              // 107: core.JobInfo
-	(*Int32Patch)(nil),                           // 108: core.Int32Patch
-	(*UnitInfo)(nil),                             // 109: core.UnitInfo
-	(*UnitPrice)(nil),                            // 110: core.UnitPrice
+	(*StringPatch)(nil),                          // 108: core.StringPatch
+	(*Int32Patch)(nil),                           // 109: core.Int32Patch
+	(*UnitInfo)(nil),                             // 110: core.UnitInfo
+	(*UnitPrice)(nil),                            // 111: core.UnitPrice
 }
 var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	104, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -7431,65 +7511,66 @@ var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	24,  // 42: core.BatchGetItemsByIDsResponse.attribute_properties:type_name -> core.PropertyInfo
 	104, // 43: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
 	104, // 44: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 45: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	59,  // 46: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
-	104, // 47: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 48: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58,  // 49: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
-	105, // 50: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
-	58,  // 51: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 52: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
-	59,  // 53: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	6,   // 54: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
-	58,  // 55: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 56: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 57: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
-	59,  // 58: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	105, // 59: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
-	59,  // 60: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	59,  // 61: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	108, // 62: core.UpdateServiceLevelRequest.default_transit_days:type_name -> core.Int32Patch
-	59,  // 63: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	104, // 64: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 65: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 66: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 67: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 68: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 69: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 70: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 71: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	92,  // 72: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
-	93,  // 73: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	104, // 74: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 75: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 76: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 77: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	109, // 78: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
-	94,  // 79: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
-	104, // 80: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 81: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	109, // 82: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
-	104, // 83: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 84: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	91,  // 85: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	110, // 86: core.ItemInfo.unit_value:type_name -> core.UnitPrice
-	110, // 87: core.ItemInfo.unit_cost:type_name -> core.UnitPrice
-	90,  // 88: core.ItemInfo.burn_rate:type_name -> core.RateInfo
-	104, // 89: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 90: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 91: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
-	104, // 92: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
-	104, // 93: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
-	96,  // 94: core.ListItemsResponse.items:type_name -> core.ItemInfo
-	105, // 95: core.ListItemsResponse.page_info:type_name -> core.PageInfo
-	96,  // 96: core.GetItemResponse.item:type_name -> core.ItemInfo
-	91,  // 97: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
-	24,  // 98: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
-	99,  // [99:99] is the sub-list for method output_type
-	99,  // [99:99] is the sub-list for method input_type
-	99,  // [99:99] is the sub-list for extension type_name
-	99,  // [99:99] is the sub-list for extension extendee
-	0,   // [0:99] is the sub-list for field type_name
+	59,  // 45: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
+	104, // 46: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 47: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 48: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
+	105, // 49: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
+	58,  // 50: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 51: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
+	59,  // 52: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	6,   // 53: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
+	58,  // 54: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	108, // 55: core.UpdateCarrierRequest.scac:type_name -> core.StringPatch
+	108, // 56: core.UpdateCarrierRequest.default_service_level_id:type_name -> core.StringPatch
+	58,  // 57: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 58: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
+	59,  // 59: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	105, // 60: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
+	59,  // 61: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	59,  // 62: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	109, // 63: core.UpdateServiceLevelRequest.estimated_transit_days:type_name -> core.Int32Patch
+	59,  // 64: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	104, // 65: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 66: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 67: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 68: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 69: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 70: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 71: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 72: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 73: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
+	93,  // 74: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	104, // 75: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 76: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 77: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 78: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	110, // 79: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	94,  // 80: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
+	104, // 81: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 82: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	110, // 83: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	104, // 84: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 85: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 86: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
+	111, // 87: core.ItemInfo.unit_value:type_name -> core.UnitPrice
+	111, // 88: core.ItemInfo.unit_cost:type_name -> core.UnitPrice
+	90,  // 89: core.ItemInfo.burn_rate:type_name -> core.RateInfo
+	104, // 90: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 91: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	95,  // 92: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
+	104, // 93: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
+	104, // 94: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
+	96,  // 95: core.ListItemsResponse.items:type_name -> core.ItemInfo
+	105, // 96: core.ListItemsResponse.page_info:type_name -> core.PageInfo
+	96,  // 97: core.GetItemResponse.item:type_name -> core.ItemInfo
+	91,  // 98: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 99: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
+	100, // [100:100] is the sub-list for method output_type
+	100, // [100:100] is the sub-list for method input_type
+	100, // [100:100] is the sub-list for extension type_name
+	100, // [100:100] is the sub-list for extension extendee
+	0,   // [0:100] is the sub-list for field type_name
 }
 
 func init() { file_core_core_accounts_carriers_proto_init() }

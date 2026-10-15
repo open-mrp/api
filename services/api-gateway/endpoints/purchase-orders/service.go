@@ -607,9 +607,9 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 			carrier.Name = *info.CarrierName
 		}
 		if info.CarrierIsPortalEnabled != nil && *info.CarrierIsPortalEnabled {
-			carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			carrier.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			carrier.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if info.CarrierCreatedAt != nil {
 			carrier.CreatedAt = info.CarrierCreatedAt.AsTime()
@@ -628,12 +628,12 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 			sl.Name = *info.ServiceLevelName
 		}
 		if info.ServiceLevelIsPortalEnabled != nil && *info.ServiceLevelIsPortalEnabled {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			sl.PortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
-			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			sl.PortalVisibility = constants.CustomerPortalVisibilityHidden
 		}
 		if info.ServiceLevelToken != nil {
-			sl.ServiceLevelToken = constants.ServiceLevelCode(*info.ServiceLevelToken)
+			sl.Code = constants.ServiceLevelCode(*info.ServiceLevelToken)
 		}
 		if info.ServiceLevelCreatedAt != nil {
 			sl.CreatedAt = info.ServiceLevelCreatedAt.AsTime()

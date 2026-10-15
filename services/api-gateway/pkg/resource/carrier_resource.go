@@ -11,61 +11,71 @@ import (
 const SampleCarrierID = "cr_tv5vfjtgu1n3"
 const SampleCarrierName = "FedEx"
 
-// A shipping carrier configured for fulfilling orders.
+// A carrier that ships orders, such as FedEx, an LTL freight line or your own delivery vans.
 //
-// Carriers with a Shippo-supported `code` (`fedex`, `ups`, `usps`) are connected through Shippo for live rating and label purchase; other carriers represent self-managed shipping methods such as will call or local delivery.
+// Carriers your account created sit beside the system carriers every account shares.
 type Carrier struct {
 	// Carrier ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=carrier"`
-	// Human-readable name for the carrier, unique among the carriers visible to your account.
+	// Display name, such as `FedEx`.
+	//
+	// Unique (case-insensitive) among your account's carriers and the system carriers.
 	Name string `json:"name" validate:"required"`
-	// Well-known carrier identifier, set only for recognized carriers and absent for custom ones.
+	// What kind of carrier this is.
 	//
-	// - `fedex`, `ups`, `usps`: integrated carriers managed through Shippo (live rating and labels).
-	// - `will_call`: customer picks the order up; no carrier shipment.
-	// - `delivery`: delivered by your own vehicles/drivers.
-	// - `ltl`, `ltl1`: less-than-truckload freight carriers.
-	// - `freight_collect`: freight billed to and arranged by the receiver.
-	Code *constants.CarrierCode `json:"code"`
-	// Your account number with this carrier.
+	// `fedex`, `ups`, `usps`: connected through Shippo for live rates and labels. `ltl`: less-than-truckload freight. `will_call`: the customer picks up. `local_delivery`: your own vehicles. `other`: any other carrier you manage yourself.
+	Type constants.CarrierType `json:"type" validate:"required"`
+	// Standard Carrier Alpha Code, such as `FDEG`.
 	//
-	// UPS and USPS carrier accounts are connected to Shippo using this number; FedEx carriers authorize through OAuth instead, so their account number is not used to connect them.
+	// The 2–4 letter code that identifies the carrier on EDI documents and bills of lading. `null` when not set.
+	SCAC *string `json:"scac"`
+	// Your account number with the carrier.
+	//
+	// Required for `ups` and `usps`, which connect using it. FedEx connects through OAuth instead.
 	AccountNumber *string `json:"account_number"`
-	// Whether customers can see and select this carrier at checkout in the customer portal.
-	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
+	// Whether customers can see and pick this carrier at checkout in the customer portal.
+	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
+	// Whether the carrier can be newly assigned.
+	//
+	// `active` carriers can be set on orders and customer defaults. `archived` carriers stay on the records that use them but can't be newly set.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// Service level selected by default when this carrier is chosen.
+	//
+	// `null` when the carrier has no default.
+	DefaultServiceLevel *ServiceLevel `json:"default_service_level" expandable:"true"`
 	// Provenance of this carrier.
 	//
 	// System-owned carriers are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned carriers are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Shipping service levels offered by this carrier (e.g. ground, overnight).
+	// Service levels this carrier offers.
 	//
-	// At most 10 service levels are returned inline; use the carrier's service levels endpoint to page through the full set.
+	// Returns the first 10. When there are more, `page_info.next_page_url` fetches the rest.
 	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
-	// Soft-delete timestamp.
-	DeletedAt *time.Time `json:"deleted_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var sampleCarrierCode constants.CarrierCode = constants.CarrierCodeFedEx
-
 var sampleCarrierAccountNumber = "603145678"
+var sampleCarrierSCAC = "FDEG"
 
 var SampleCarrier = &Carrier{
-	ID:                       SampleCarrierID,
-	Object:                   constants.ObjectTypeCarrier,
-	Name:                     SampleCarrierName,
-	Code:                     &sampleCarrierCode,
-	AccountNumber:            &sampleCarrierAccountNumber,
-	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
-	Owner:                    SampleOwnerAccount,
-	ServiceLevels:            NewList([]ServiceLevel{*SampleServiceLevel}, PageInfo{}),
-	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                  SampleCarrierID,
+	Object:              constants.ObjectTypeCarrier,
+	Name:                SampleCarrierName,
+	Type:                constants.CarrierTypeFedEx,
+	SCAC:                &sampleCarrierSCAC,
+	AccountNumber:       &sampleCarrierAccountNumber,
+	PortalVisibility:    constants.CustomerPortalVisibilityVisible,
+	Status:              constants.ArchiveStatusActive,
+	DefaultServiceLevel: SampleServiceLevel,
+	Owner:               SampleOwnerAccount,
+	ServiceLevels:       NewList([]ServiceLevel{*SampleServiceLevel}, PageInfo{}),
+	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Carrier) SchemaExample() any {

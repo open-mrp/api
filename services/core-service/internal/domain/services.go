@@ -442,7 +442,7 @@ type CarrierSvc interface {
 	// UpdateCarrier partially updates a carrier.
 	UpdateCarrier(ctx context.Context, params UpdateCarrierParams) (*Carrier, *apierror.APIError)
 
-	// DeleteCarrier soft-deletes a carrier and cascades to options.
+	// DeleteCarrier deletes an unused carrier and its service levels.
 	DeleteCarrier(ctx context.Context, carrierID string) *apierror.APIError
 
 	// InitiateOAuth starts the OAuth flow for a Shippo-managed carrier.

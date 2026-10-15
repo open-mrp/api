@@ -18,7 +18,9 @@ type RetrieveCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Returns a carrier by ID.
+// Retrieves a carrier.
+//
+// Works for your account's carriers and for system carriers.
 type RetrieveCarrierEndpoint struct{}
 
 func (e *RetrieveCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCarrierRequest, *apiresource.Carrier] {
@@ -31,14 +33,13 @@ func (e *RetrieveCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).GetCarrier
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,
-			Fields:     []string{"owner", "owner.account", "service_levels"},
+			Fields:     []string{"default_service_level", "owner", "owner.account", "service_levels"},
 		}),
 	})
 }

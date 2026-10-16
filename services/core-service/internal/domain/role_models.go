@@ -22,12 +22,12 @@ type Role struct {
 	UpdatedAt time.Time
 }
 
-// RoleReferences blocks deleting a role that members or API keys still hold.
+// RoleReferences blocks deleting a role that members (other than removed ones) or API keys still hold.
 var RoleReferences = RegisterReferences(References{
 	Noun: "role",
 	Probes: []ReferenceProbe{
-		{Label: "account users", Table: "account_user", Column: "role_id"},
-		{Label: "API keys", Table: "api_key", Column: "role_id"},
+		{Label: "account users", Table: "account_user", Column: "role_id", Where: "status_code <> 'removed'"},
+		{Label: "API keys", Table: "api_key", Column: "role_id", Where: "revoked_at IS NULL"},
 	},
 })
 

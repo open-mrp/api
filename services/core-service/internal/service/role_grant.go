@@ -18,15 +18,7 @@ func checkPermissionsGrantable(identity *types.Identity, granted map[string]bool
 	if identity.IsAdmin() {
 		return nil
 	}
-	// Every member holds the baseline permissions (their profile, messaging, notes), so handing them out widens nothing.
-	needed := make(map[string]bool, len(granted))
-	for code, ok := range granted {
-		if p, known := types.CatalogPermissionByCode(code); known && p.Level == constants.AccessLevelNone {
-			continue
-		}
-		needed[code] = ok
-	}
-	missing := types.PermissionsNotHeld(identity.Actor.Permissions, needed)
+	missing := types.PermissionsNotHeld(identity.Actor.Permissions, withoutBaseline(granted))
 	if len(missing) == 0 {
 		return nil
 	}
@@ -50,7 +42,7 @@ func checkRoleAssignable(ctx context.Context, identity *types.Identity, permRepo
 	if apiErr != nil {
 		return apiErr
 	}
-	missing := types.PermissionsNotHeld(identity.Actor.Permissions, granted)
+	missing := types.PermissionsNotHeld(identity.Actor.Permissions, withoutBaseline(granted))
 	if len(missing) == 0 {
 		return nil
 	}
@@ -77,4 +69,17 @@ func roleIDOrEmpty(roleID *string) string {
 		return ""
 	}
 	return *roleID
+}
+
+// withoutBaseline drops the permissions every member holds (their profile, messaging, notes): handing them out widens
+// nothing.
+func withoutBaseline(granted map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(granted))
+	for code, ok := range granted {
+		if p, known := types.CatalogPermissionByCode(code); known && p.Level == constants.AccessLevelNone {
+			continue
+		}
+		out[code] = ok
+	}
+	return out
 }

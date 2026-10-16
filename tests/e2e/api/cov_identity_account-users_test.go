@@ -71,7 +71,7 @@ func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 		"name":          name,
 		"email":         email,
 		"role_id":       SeedAdminRoleID,
-		"department_id": SeedDepartmentID,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -80,27 +80,27 @@ func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 	defer removeAccountUser(id)
 
 	// Sanity: role/department are actually set before clearing.
-	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	require.NotNil(t, jsonObject(got, "role"), "role should be set before clearing")
-	require.NotNil(t, jsonObject(got, "department"), "department should be set before clearing")
+	require.NotNil(t, jsonObject(got, "work_center"), "work_center should be set before clearing")
 
 	// Clear both via explicit null.
 	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
 		"role_id":       nil,
-		"department_id": nil,
+		"work_center_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
-	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,department"}})
+	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
 	got2 := parseJSON(getBody2)
 	assertNilField(t, got2, "role")
-	assertNilField(t, got2, "department")
+	assertNilField(t, got2, "work_center")
 }
 
 // ──────────────────────────────────────────────
@@ -147,7 +147,7 @@ func TestCovIdentityAccountUsers_StatusLockAdminNotSelfFails(t *testing.T) {
 	// identity (unlike SeedAccountUserID, which is simultaneously self and
 	// admin, conflating the two rules). This isolates "admin users cannot be
 	// locked" from "you cannot lock your own account".
-	status, body, err := apiClient.Put(accountUsersPath+"/"+SeedAdmin2AccountUserID+"/actions/disable", nil)
+	status, body, err := apiClient.Post(accountUsersPath+"/"+SeedAdmin2AccountUserID+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, body)
 
@@ -164,7 +164,7 @@ func TestCovIdentityAccountUsers_ActionsOnNonexistentIDReturn404(t *testing.T) {
 	const bogusID = "acus_000000000000"
 
 	for _, action := range []string{"activate", "disable", "remove"} {
-		status, body, err := apiClient.Put(accountUsersPath+"/"+bogusID+"/actions/"+action, nil)
+		status, body, err := apiClient.Post(accountUsersPath+"/"+bogusID+"/actions/"+action, nil, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.Equal(t, 404, status, "%s on a nonexistent account_user id should 404, got %d: %s", action, status, body)
 	}
@@ -317,7 +317,7 @@ func TestCovIdentityAccountUsers_CreateInvalidDepartmentIDShouldFail(t *testing.
 	resp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":          name,
 		"email":         name + "@e2e-test.openmrp.ai",
-		"department_id": "dp_doesnotexist00000",
+		"work_center_id": "dp_doesnotexist00000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 
@@ -346,9 +346,9 @@ func TestCovIdentityAccountUsers_ListFilterInvalidRoleType(t *testing.T) {
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
-func TestCovIdentityAccountUsers_ListFilterInvalidRemovedScope(t *testing.T) {
+func TestCovIdentityAccountUsers_ListFilterInvalidStatus(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountUsersPath, url.Values{"removed_scope": {"bogus_scope"}})
+	status, body, err := apiClient.GetListRaw(accountUsersPath, url.Values{"statuses[]": {"bogus_status"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")

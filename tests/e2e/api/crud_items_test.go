@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"maps"
 	"net/url"
 	"strings"
 	"testing"
@@ -254,9 +255,36 @@ func TestItems_CreateMaterialAllFields(t *testing.T) {
 	assertQuantityIn(t, jsonObject(material, "order_point"), "40", SeedMaterialUnitID, "material.order_point")
 	assertQuantityIn(t, jsonObject(material, "lead_time"), "5", dayUnitID, "material.lead_time")
 
-	// The read matches the create response.
+	// The read matches the create response. Parallel tests add and delete attributes in the shared Color property,
+	// which renumbers its attributes' sort_order between the two calls, so that part of the attribute is left out.
 	read := getItem(t, jsonField(got, "id"), "category", "attributes")
-	assert.Equal(t, got, read)
+	assert.Equal(t, withoutAttributeOrdering(got), withoutAttributeOrdering(read))
+}
+
+// withoutAttributeOrdering drops sort_order and updated_at from an item's included attributes, the fields that change
+// when another attribute of the same property is added or deleted.
+func withoutAttributeOrdering(item map[string]any) map[string]any {
+	out := maps.Clone(item)
+	attrs, ok := item["attributes"].(map[string]any)
+	if !ok {
+		return out
+	}
+	list := maps.Clone(attrs)
+	var data []any
+	for _, raw := range jsonListData(item, "attributes") {
+		attr, ok := raw.(map[string]any)
+		if !ok {
+			data = append(data, raw)
+			continue
+		}
+		attr = maps.Clone(attr)
+		delete(attr, "sort_order")
+		delete(attr, "updated_at")
+		data = append(data, attr)
+	}
+	list["data"] = data
+	out["attributes"] = list
+	return out
 }
 
 // A part you sell carries the sales section it was created with.

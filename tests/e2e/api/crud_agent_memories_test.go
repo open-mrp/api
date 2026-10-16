@@ -84,7 +84,12 @@ func TestAgentMemories_CategoryRestrictedToKnownValues(t *testing.T) {
 		"content":  "This is not a recognized category.",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, respBody)
+	// Memories answer only preview.9 callers, which got a body enum outside its set as a 400 parameter_invalid.
+	requireStatus(t, 400, status, respBody)
+	errObj := parseJSON(respBody)["error"].(map[string]any)
+	require.Equal(t, "parameter_invalid", errObj["code"])
+	require.Equal(t, "category", errObj["param"])
+	require.Equal(t, "https://docs.openmrp.ai/api/errors#parameter_invalid", errObj["doc_url"])
 
 	for _, category := range []string{"preference", "fact", "instruction"} {
 		createMemory(t, map[string]any{

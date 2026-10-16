@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/object"
 	"github.com/open-mrp/apikit/version"
 )
@@ -65,6 +66,13 @@ func (errorForgeToPreview9) TransformError(status int, body map[string]any) (int
 	default:
 		if old, ok := preview9ErrorCodes[code]; ok {
 			e["code"] = old
+		}
+	}
+	if newCode, _ := e["code"].(string); newCode != code {
+		if _, ok := e["doc_url"].(string); ok {
+			if url := apierror.Code(newCode).DocURL(); url != "" {
+				e["doc_url"] = url
+			}
 		}
 	}
 	if status == http.StatusUnprocessableEntity {

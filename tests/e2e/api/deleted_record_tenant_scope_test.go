@@ -26,6 +26,8 @@ type deletedScopeCase struct {
 	noGet bool
 	// patch is a body the update endpoint accepts; nil when the resource has no PATCH.
 	patch map[string]any
+	// preview9 marks a route that answers only preview.9 callers, whose errors predate forge's errors list.
+	preview9 bool
 }
 
 func runDeletedScopeCases(t *testing.T, cases []deletedScopeCase) {
@@ -59,7 +61,11 @@ func runDeletedScopeCases(t *testing.T, cases []deletedScopeCase) {
 			status, body, err = owner.Delete(target.path)
 			require.NoError(t, err)
 			requireStatus(t, 410, status, body)
-			requireErrorResponse(t, body, "resource_gone", "invalid_request_error")
+			if tc.preview9 {
+				requirePreview9Error(t, body, "resource_gone")
+			} else {
+				requireErrorResponse(t, body, "resource_gone", "invalid_request_error")
+			}
 		})
 	}
 }
@@ -175,14 +181,36 @@ func TestDeletedRecordScope_Sales(t *testing.T) {
 				lockPricingWrite(t)
 				return deletedScopeTarget{path: accountPricesPath + "/" + jsonField(createAccountPrice(t, SeedCustomerAccountID, "32.00"), "id")}
 			},
-			patch: map[string]any{"rate": map[string]any{"value": "33.00", "unit_id": e2eCurrencyUnitID, "per_unit_id": SeedUnitID}},
+			patch:    map[string]any{"rate": map[string]any{"value": "33.00", "unit_id": e2eCurrencyUnitID, "per_unit_id": SeedUnitID}},
+			preview9: true,
 		},
 		{
 			name: "volume discount",
 			setup: func(t *testing.T) deletedScopeTarget {
 				return deletedScopeTarget{path: volumeDiscountsPath + "/" + jsonField(createVolumeDiscount(t, map[string]any{}), "id")}
 			},
-			patch: map[string]any{"name": uniqueName("e2e-dscope-vd")},
+			patch:    map[string]any{"name": uniqueName("e2e-dscope-vd")},
+			preview9: true,
+		},
+		{
+			name: "price list",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: priceListsPath + "/" + jsonField(createPriceList(t, nil), "id")}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-prls")},
+		},
+		{
+			name: "price list rule",
+			setup: func(t *testing.T) deletedScopeTarget {
+				listID := jsonField(createPriceList(t, nil), "id")
+				rule := createPriceListRule(t, listID, map[string]any{"price": percentOfBase("90")})
+				listB := createInTenantB(t, priceListsPath, map[string]any{"name": uniqueName("e2e-dscope-prls-b")})
+				return deletedScopeTarget{
+					path:        priceListRulesPath(listID) + "/" + jsonField(rule, "id"),
+					tenantBPath: priceListRulesPath(listB) + "/" + jsonField(rule, "id"),
+				}
+			},
+			patch: map[string]any{"price": percentOfBase("80")},
 		},
 		{
 			name: "order discount",

@@ -111,7 +111,9 @@ func (s *accountPriceSvcImpl) buildPriceListDocument(ctx context.Context, accoun
 		doc.Notes = []string{"No products are currently available to this customer."}
 		return doc, 0, nil
 	}
-	if apiErr := s.hydratePriceListUnitGroups(ctx, accountID, products); apiErr != nil {
+
+	catalog, apiErr := s.loadPriceListCatalog(ctx, accountID, products)
+	if apiErr != nil {
 		return doc, 0, apiErr
 	}
 
@@ -124,22 +126,26 @@ func (s *accountPriceSvcImpl) buildPriceListDocument(ctx context.Context, accoun
 		OwnerAccountID: accountID,
 		BuyerAccountID: filters.CustomerAccountID,
 		ProductIDs:     priceListProductIDs(products),
-		OrderedUnitIDs: priceListBaseUnitIDs(products),
+		OrderedUnitIDs: catalog.priceUnitIDs(products),
 	})
 	if apiErr != nil {
 		return doc, 0, apiErr
 	}
+	if apiErr := catalog.loadUnits(ctx, s.repos.NewUnitRepo(), accountID, priceListTierUnitIDs(bundle)); apiErr != nil {
+		return doc, 0, apiErr
+	}
 
-	tiers, dropped := priceListTiersFromBundle(bundle, products)
+	tiers, dropped := priceListTiersFromBundle(bundle, catalog)
 	if dropped > 0 {
 		doc.Notes = append(doc.Notes, fmt.Sprintf("%d additional volume breaks are not shown.", dropped))
 	}
 
-	doc.Lines = assemblePriceListLines(products, priceListPrices(bundle, products, tiers), propertyNames, tiers)
+	doc.Lines = assemblePriceListLines(products, priceListPrices(bundle, products, tiers, catalog), propertyNames, tiers, catalog)
 	return doc, safeconv.IntToInt32(len(products)), nil
 }
 
-// priceListSellableProducts drops products with no product line: they can never match an account price or a line-scoped discount, and have no unit group to price against.
+// priceListSellableProducts keeps the products the document can place: those on a product line, which heads their
+// section.
 func priceListSellableProducts(products []*domain.ProductFull) []*domain.ProductFull {
 	out := make([]*domain.ProductFull, 0, len(products))
 	for _, product := range products {
@@ -150,27 +156,120 @@ func priceListSellableProducts(products []*domain.ProductFull) []*domain.Product
 	return out
 }
 
-// hydratePriceListUnitGroups attaches each product line's unit group, resolved once per group rather than once per line.
-//
-// The product export stitches the line but not its units, and without them the document has no pack to quote, no base unit to price against and no name for the cost column.
-func (s *accountPriceSvcImpl) hydratePriceListUnitGroups(ctx context.Context, accountID string, products []*domain.ProductFull) *apierror.APIError {
-	repo := s.repos.NewProductLineRepo()
-	groups := make(map[string]*domain.ProductLineUnitGroup)
+// priceListCatalog is the units the document quotes in: each item's stocking and order units, and every unit's name
+// and ratio.
+type priceListCatalog struct {
+	itemUnits map[string]*domain.ItemUnits
+	units     map[string]*domain.LightUnit
+}
+
+// loadPriceListCatalog reads the products' item units and the units they name, once for the whole catalog.
+func (s *accountPriceSvcImpl) loadPriceListCatalog(ctx context.Context, accountID string, products []*domain.ProductFull) (*priceListCatalog, *apierror.APIError) {
+	itemIDs := make([]string, 0, len(products))
 	for _, product := range products {
-		unitGroupID := product.ProductLine.UnitGroupID
-		if unitGroupID == "" {
-			continue
+		itemIDs = append(itemIDs, product.ItemID)
+	}
+	itemUnits, apiErr := s.repos.NewItemUnitsRepo().Get(ctx, uniqueIDs(itemIDs))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	catalog := &priceListCatalog{itemUnits: itemUnits, units: map[string]*domain.LightUnit{}}
+	var unitIDs []string
+	for _, u := range itemUnits {
+		unitIDs = append(unitIDs, u.AllowedUnitIDs()...)
+	}
+	return catalog, catalog.loadUnits(ctx, s.repos.NewUnitRepo(), accountID, unitIDs)
+}
+
+// loadUnits adds the named units not loaded yet.
+func (c *priceListCatalog) loadUnits(ctx context.Context, repo domain.UnitRepo, accountID string, ids []string) *apierror.APIError {
+	var missing []string
+	for _, id := range uniqueIDs(ids) {
+		if _, ok := c.units[id]; !ok {
+			missing = append(missing, id)
 		}
-		if _, loaded := groups[unitGroupID]; !loaded {
-			group, apiErr := repo.GetUnitGroup(ctx, accountID, unitGroupID, []string{"unit_group.base_unit", "unit_group.associated_units"})
-			if apiErr != nil {
-				return apiErr
-			}
-			groups[unitGroupID] = group
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	units, apiErr := repo.GetByIDs(ctx, accountID, missing)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, u := range units {
+		c.units[u.ID] = &domain.LightUnit{
+			ID: u.ID, Name: u.Name, Abbreviation: u.Abbreviation, RatioNumerator: u.RatioNumerator,
+			RatioDenominator: u.RatioDenominator, IsBaseUnit: u.IsBaseUnit,
 		}
-		product.ProductLine.UnitGroup = groups[unitGroupID]
 	}
 	return nil
+}
+
+// priceUnitID is the unit a product is quoted per: its item's default order unit, else its stocking unit.
+func (c *priceListCatalog) priceUnitID(product *domain.ProductFull) string {
+	u := c.itemUnits[product.ItemID]
+	if u == nil {
+		return ""
+	}
+	if u.DefaultOrderUnitID != "" {
+		return u.DefaultOrderUnitID
+	}
+	return u.StockingUnitID
+}
+
+// priceUnitIDs is every unit the catalog is quoted per, which is what the bundle needs to convert into.
+func (c *priceListCatalog) priceUnitIDs(products []*domain.ProductFull) []string {
+	ids := make([]string, 0, len(products))
+	for _, product := range products {
+		if id := c.priceUnitID(product); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return uniqueIDs(ids)
+}
+
+// measure is how much of the unit's dimension one of unitID holds for this item: the order unit's own quantity of
+// stocking units when it sets one, else the unit's ratio.
+func (c *priceListCatalog) measure(units *domain.ItemUnits, unitID string) decimal.Decimal {
+	if ou := units.OrderUnit(unitID); ou != nil && ou.StockingQuantity != nil {
+		if stocking := c.units[units.StockingUnitID]; stocking != nil {
+			qty, err := decimal.NewFromString(*ou.StockingQuantity)
+			if err == nil {
+				return qty.Mul(priceListUnitRatio(stocking.RatioNumerator, stocking.RatioDenominator))
+			}
+		}
+	}
+	if u := c.units[unitID]; u != nil {
+		return priceListUnitRatio(u.RatioNumerator, u.RatioDenominator)
+	}
+	return decimal.NewFromInt(1)
+}
+
+// packing describes how a product is sold, e.g. "10 Pairs Per Carton": the largest order unit customers can see,
+// counted in the unit the product is quoted per. A product with no larger visible unit names its quote unit alone.
+func (c *priceListCatalog) packing(product *domain.ProductFull) string {
+	units := c.itemUnits[product.ItemID]
+	priceUnit := c.units[c.priceUnitID(product)]
+	if units == nil || priceUnit == nil {
+		return ""
+	}
+	per := c.measure(units, priceUnit.ID)
+	best := decimal.NewFromInt(1)
+	bestName := ""
+	for _, ou := range units.OrderUnits {
+		u := c.units[ou.UnitID]
+		if u == nil || ou.UnitID == priceUnit.ID || ou.PortalVisibility == constants.CustomerPortalVisibilityHidden || per.IsZero() {
+			continue
+		}
+		ratio := c.measure(units, ou.UnitID).Div(per)
+		if ratio.GreaterThan(best) {
+			best, bestName = ratio, u.Name
+		}
+	}
+	if bestName == "" {
+		return priceUnit.Name
+	}
+	return fmt.Sprintf("%s %s Per %s", best.String(), pluralizeUnit(priceUnit.Name), bestName)
 }
 
 func priceListProductIDs(products []*domain.ProductFull) []string {
@@ -179,31 +278,6 @@ func priceListProductIDs(products []*domain.ProductFull) []string {
 		ids = append(ids, product.ID)
 	}
 	return ids
-}
-
-// priceListBaseUnitIDs is every per-unit basis the catalog is priced on, which is what the bundle needs to convert into.
-func priceListBaseUnitIDs(products []*domain.ProductFull) []string {
-	seen := make(map[string]struct{})
-	ids := make([]string, 0)
-	for _, product := range products {
-		id := priceListBaseUnitID(product)
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		ids = append(ids, id)
-	}
-	return ids
-}
-
-func priceListBaseUnitID(product *domain.ProductFull) string {
-	if product.ProductLine == nil || product.ProductLine.UnitGroup == nil {
-		return ""
-	}
-	return product.ProductLine.UnitGroup.BaseUnitID
 }
 
 // priceListPropertyNames resolves the property behind each attribute, since the table needs column headings and the product rows carry only ids.
@@ -234,57 +308,60 @@ func (s *accountPriceSvcImpl) priceListPropertyNames(ctx context.Context, accoun
 	return names, nil
 }
 
-// priceListUnit reads a unit off the catalog, since the pricing bundle carries only conversion factors and not the names a column has to be headed with.
-func priceListUnit(products []*domain.ProductFull, unitID string) *domain.LightUnit {
-	if unitID == "" {
-		return nil
-	}
-	for _, product := range products {
-		group := product.ProductLine.UnitGroup
-		if group == nil {
-			continue
-		}
-		if group.BaseUnit != nil && group.BaseUnit.ID == unitID {
-			return group.BaseUnit
-		}
-		for _, associated := range group.AssociatedUnits {
-			if associated.Unit.ID == unitID {
-				return &associated.Unit
-			}
+// priceListTierUnitIDs is every unit a tier column can be counted in.
+func priceListTierUnitIDs(bundle *domain.PricingBundle) []string {
+	var ids []string
+	for _, rule := range bundle.Rules {
+		if rule.Price.Type == constants.PriceListPriceTypeTiered {
+			ids = append(ids, rule.Price.UnitID)
 		}
 	}
-	return nil
+	for _, discount := range bundle.VolumeDiscounts {
+		if len(discount.AcceptableUnitIDs) > 0 {
+			ids = append(ids, discount.AcceptableUnitIDs[0])
+		}
+	}
+	return ids
 }
 
-// priceListTiersFromBundle builds the candidate price columns: quantity 1, then each distinct volume-discount threshold the customer can reach. The bundle already filtered the discounts to this buyer, so no scoping is re-derived here.
-func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.ProductFull) ([]priceListTier, int) {
-	baseUnitID := priceListDominantBaseUnit(products)
-	tiers := []priceListTier{priceListTierFor("1", baseUnitID, priceListUnit(products, baseUnitID))}
+// priceListTiersFromBundle builds the candidate price columns: quantity 1 of each product's own quote unit, then each
+// distinct break above 1 the customer can reach, from tiered price-list rules (or, before the account's prices are
+// mirrored, volume discounts). The bundle already holds only what applies to this buyer.
+func priceListTiersFromBundle(bundle *domain.PricingBundle, catalog *priceListCatalog) ([]priceListTier, int) {
+	tiers := []priceListTier{priceListTierFor("1", "", nil)}
 
 	type candidate struct {
 		quantity decimal.Decimal
 		unitID   string
-		unit     *domain.LightUnit
 	}
 	seen := make(map[string]struct{})
 	candidates := make([]candidate, 0)
+	add := func(minQuantity, unitID string) {
+		threshold, err := decimal.NewFromString(minQuantity)
+		if err != nil || unitID == "" || threshold.LessThanOrEqual(decimal.NewFromInt(1)) {
+			return
+		}
+		key := threshold.String() + "\x00" + unitID
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		candidates = append(candidates, candidate{quantity: threshold, unitID: unitID})
+	}
+	for _, rule := range bundle.Rules {
+		if rule.Price.Type != constants.PriceListPriceTypeTiered {
+			continue
+		}
+		for _, tier := range rule.Price.Tiers {
+			add(tier.MinQuantity, rule.Price.UnitID)
+		}
+	}
 	for _, discount := range bundle.VolumeDiscounts {
 		if len(discount.AcceptableUnitIDs) == 0 {
 			continue
 		}
-		unitID := discount.AcceptableUnitIDs[0]
-		unit := priceListUnit(products, unitID)
 		for _, tier := range discount.Tiers {
-			threshold, err := decimal.NewFromString(tier.Threshold)
-			if err != nil || threshold.LessThanOrEqual(decimal.NewFromInt(1)) {
-				continue
-			}
-			key := threshold.String() + "\x00" + unitID
-			if _, ok := seen[key]; ok {
-				continue
-			}
-			seen[key] = struct{}{}
-			candidates = append(candidates, candidate{quantity: threshold, unitID: unitID, unit: unit})
+			add(tier.Threshold, discount.AcceptableUnitIDs[0])
 		}
 	}
 
@@ -296,26 +373,9 @@ func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.P
 		candidates = candidates[:maxPriceListTierColumns-1]
 	}
 	for _, c := range candidates {
-		tiers = append(tiers, priceListTierFor(c.quantity.String(), c.unitID, c.unit))
+		tiers = append(tiers, priceListTierFor(c.quantity.String(), c.unitID, catalog.units[c.unitID]))
 	}
 	return tiers, dropped
-}
-
-// priceListDominantBaseUnit picks the per-unit basis most of the catalog is priced on, used for the quantity-1 column.
-func priceListDominantBaseUnit(products []*domain.ProductFull) string {
-	counts := make(map[string]int)
-	for _, product := range products {
-		if id := priceListBaseUnitID(product); id != "" {
-			counts[id]++
-		}
-	}
-	bestID, bestCount := "", 0
-	for id, count := range counts {
-		if count > bestCount || (count == bestCount && id < bestID) {
-			bestID, bestCount = id, count
-		}
-	}
-	return bestID
 }
 
 // priceListTierFor labels one price column. The quantity is what the price was quoted at; the unit is what the price under it is per, which is what the column has to say so a number without a basis is never printed.
@@ -332,14 +392,14 @@ func priceListTierFor(quantity, unitID string, unit *domain.LightUnit) priceList
 // priceListPrices prices every product at every tier against a bundle that was loaded once.
 //
 // Each product is priced as a line on its own rather than as part of one big order: a price list quotes what this SKU costs at this quantity, whereas the volume-discount stage sums quantities across every line sharing a discount and would otherwise let unrelated products inflate each other's break.
-func priceListPrices(bundle *domain.PricingBundle, products []*domain.ProductFull, tiers []priceListTier) map[string][]string {
+func priceListPrices(bundle *domain.PricingBundle, products []*domain.ProductFull, tiers []priceListTier, catalog *priceListCatalog) map[string][]string {
 	priced := make(map[string][]string, len(products))
 	for _, product := range products {
 		row := make([]string, len(tiers))
 		for t, tier := range tiers {
 			unitID := tier.UnitID
 			if unitID == "" {
-				unitID = priceListBaseUnitID(product)
+				unitID = catalog.priceUnitID(product)
 			}
 			line := domain.SalesOrderPriceLineInput{
 				ProductID:      product.ID,
@@ -368,11 +428,11 @@ func assemblePriceListLines(
 	priced map[string][]string,
 	propertyNames map[string]string,
 	tiers []priceListTier,
+	catalog *priceListCatalog,
 ) []priceListLine {
 	type bucket struct {
 		name         string
 		baseUnitName string
-		packing      string
 		products     []priceListProduct
 	}
 	buckets := make(map[string]*bucket)
@@ -382,9 +442,9 @@ func assemblePriceListLines(
 		line := product.ProductLine
 		b, ok := buckets[line.ID]
 		if !ok {
-			b = &bucket{name: line.Name, packing: priceListPacking(line.UnitGroup)}
-			if line.UnitGroup != nil && line.UnitGroup.BaseUnit != nil {
-				b.baseUnitName = line.UnitGroup.BaseUnit.Name
+			b = &bucket{name: line.Name}
+			if u := catalog.units[catalog.priceUnitID(product)]; u != nil {
+				b.baseUnitName = u.Name
 			}
 			buckets[line.ID] = b
 			order = append(order, line.ID)
@@ -413,7 +473,7 @@ func assemblePriceListLines(
 			AttributeValues: values,
 			AttributeOrders: orders,
 			Prices:          priced[product.ID],
-			Packing:         b.packing,
+			Packing:         catalog.packing(product),
 		})
 	}
 
@@ -430,32 +490,6 @@ func assemblePriceListLines(
 		})
 	}
 	return lines
-}
-
-// priceListPacking describes how a line is sold, e.g. "10 Pairs Per Carton", from the largest visible unit above the group's base unit. Unit ratios are stored against the dimension base (Each), not against the group's base unit, so they are re-expressed against it. A group whose base unit is already the pack it ships in has nothing to multiply and names the unit alone.
-func priceListPacking(group *domain.ProductLineUnitGroup) string {
-	if group == nil || group.BaseUnit == nil {
-		return ""
-	}
-	baseRatio := priceListUnitRatio(group.BaseUnit.RatioNumerator, group.BaseUnit.RatioDenominator)
-	best := decimal.NewFromInt(1)
-	bestName := ""
-	for _, associated := range group.AssociatedUnits {
-		unit := associated.Unit
-		// Skipped by identity, not by unit.IsBaseUnit: that flag marks the base of the dimension (Each), which is often not the base of this group.
-		if !associated.IsVisible || unit.ID == group.BaseUnitID {
-			continue
-		}
-		ratio := priceListUnitRatio(unit.RatioNumerator, unit.RatioDenominator).Div(baseRatio)
-		if ratio.GreaterThan(best) {
-			best = ratio
-			bestName = unit.Name
-		}
-	}
-	if bestName == "" {
-		return group.BaseUnit.Name
-	}
-	return fmt.Sprintf("%s %s Per %s", best.String(), pluralizeUnit(group.BaseUnit.Name), bestName)
 }
 
 func priceListUnitRatio(numerator, denominator string) decimal.Decimal {

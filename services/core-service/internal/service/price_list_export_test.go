@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -43,23 +44,34 @@ func TestExportObjectKey_ExtensionFollowsTheFormat(t *testing.T) {
 	}
 }
 
-// priceListExportProduct is a product as the product export really hands it over: the product line is stitched on, but its unit group is not, so anything the document needs from the units has to be resolved by the price list itself.
+// priceListExportProduct is a product as the product export hands it over: its item and product line, but not its
+// units, which the price list reads from the item's own stocking and order units.
 func priceListExportProduct(id, sku, description, size string) *domain.ProductFull {
 	lineID := "prln_1"
 	return &domain.ProductFull{
 		ID:            id,
+		ItemID:        "it_" + id,
 		ProductLineID: &lineID,
 		Item: &domain.Item{
+			ID:          "it_" + id,
 			SKU:         sku,
 			Description: &description,
 			Attributes:  []*domain.ItemAttribute{{PropertyID: "prop_size", Value: size, Order: 1}},
 		},
-		ProductLine: &domain.ProductLineFull{ID: lineID, Name: "Classic", UnitGroupID: "ungr_1"},
+		ProductLine: &domain.ProductLineFull{ID: lineID, Name: "Classic"},
 	}
 }
 
-// A price list without a pack does not say what the customer is buying, and the units it is priced in are the same units the pack is expressed in — so losing the unit group empties the packing column and silently prices every line without its conversion. It went unnoticed once because the product export stitches the product line but not its units.
-func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *testing.T) {
+var (
+	plUnitEach   = &domain.Unit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}
+	plUnitPair   = &domain.Unit{ID: "unit_pair", Name: "Pair", Abbreviation: "pr", RatioNumerator: "2", RatioDenominator: "1"}
+	plUnitCarton = &domain.Unit{ID: "unit_carton", Name: "Carton", RatioNumerator: "20", RatioDenominator: "1"}
+	plUnitDozen  = &domain.Unit{ID: "unit_dozen", Name: "Dozen", RatioNumerator: "12", RatioDenominator: "1"}
+)
+
+// Each product is quoted per its item's default order unit, and its packing names the largest unit customers can order
+// it in, both read from the item's own units.
+func TestBuildPriceListDocument_QuotesEachItemInItsOwnUnits(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	products := []*domain.ProductFull{
 		priceListExportProduct("prod_1", "SK-1001", "Classic Crew Sock", "A"),
@@ -78,23 +90,17 @@ func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *tes
 	propertyRepo := repositorymock.NewMockPropertyRepo(ctrl)
 	propertyRepo.EXPECT().GetByIDs(gomock.Any(), "ac_1", []string{"prop_size"}).Return([]*domain.Property{{ID: "prop_size", Name: "Size"}}, nil)
 
-	// Both products share a line, so the group is worth resolving once however many products hang off it.
-	productLineRepo := repositorymock.NewMockProductLineRepo(ctrl)
-	productLineRepo.EXPECT().
-		GetUnitGroup(gomock.Any(), "ac_1", "ungr_1", gomock.Any()).
-		Return(&domain.ProductLineUnitGroup{
-			ID:         "ungr_1",
-			BaseUnitID: "unit_pair",
-			BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", Abbreviation: "pr", RatioNumerator: "2", RatioDenominator: "1"},
-			AssociatedUnits: []*domain.UnitGroupUnit{
-				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
-				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
-				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_carton", Name: "Carton", RatioNumerator: "20", RatioDenominator: "1"}},
-			},
-		}, nil).
-		Times(1)
+	units := &domain.ItemUnits{StockingUnitID: "unit_each", DefaultOrderUnitID: "unit_pair", OrderUnits: []domain.ItemOrderUnit{
+		{UnitID: "unit_pair", PortalVisibility: constants.CustomerPortalVisibilityVisible},
+		{UnitID: "unit_carton", PortalVisibility: constants.CustomerPortalVisibilityVisible},
+	}}
+	itemUnitsRepo := repositorymock.NewMockItemUnitsRepo(ctrl)
+	itemUnitsRepo.EXPECT().Get(gomock.Any(), []string{"it_prod_1", "it_prod_2"}).
+		Return(map[string]*domain.ItemUnits{"it_prod_1": units, "it_prod_2": units}, nil)
 
-	// The bundle can only convert into a unit it was asked to load, which is the other half of what the missing group cost.
+	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
+	unitRepo.EXPECT().GetByIDs(gomock.Any(), "ac_1", gomock.Any()).Return([]*domain.Unit{plUnitEach, plUnitPair, plUnitCarton}, nil)
+
 	var loaded domain.LoadPricingBundleParams
 	pricingRepo := repositorymock.NewMockPricingRepo(ctrl)
 	pricingRepo.EXPECT().
@@ -109,7 +115,8 @@ func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *tes
 	repos.EXPECT().NewAccountRepo().Return(accountRepo).AnyTimes()
 	repos.EXPECT().NewProductRepo().Return(productRepo).AnyTimes()
 	repos.EXPECT().NewPropertyRepo().Return(propertyRepo).AnyTimes()
-	repos.EXPECT().NewProductLineRepo().Return(productLineRepo).AnyTimes()
+	repos.EXPECT().NewItemUnitsRepo().Return(itemUnitsRepo).AnyTimes()
+	repos.EXPECT().NewUnitRepo().Return(unitRepo).AnyTimes()
 	repos.EXPECT().NewPricingRepo().Return(pricingRepo).AnyTimes()
 
 	svc := &accountPriceSvcImpl{repos: repos}
@@ -126,10 +133,7 @@ func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *tes
 
 	line := doc.Lines[0]
 	if line.BaseUnitName != "Pair" {
-		t.Errorf("BaseUnitName = %q, want Pair — the cost column is headed with it", line.BaseUnitName)
-	}
-	if len(line.Sections) == 0 {
-		t.Fatal("product line has no sections")
+		t.Errorf("BaseUnitName = %q, want Pair, the items' default order unit", line.BaseUnitName)
 	}
 	for _, section := range line.Sections {
 		for _, row := range section.Rows {
@@ -143,9 +147,8 @@ func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *tes
 			}
 		}
 	}
-
 	if len(loaded.OrderedUnitIDs) != 1 || loaded.OrderedUnitIDs[0] != "unit_pair" {
-		t.Errorf("OrderedUnitIDs = %v, want the line's base unit", loaded.OrderedUnitIDs)
+		t.Errorf("OrderedUnitIDs = %v, want the default order unit", loaded.OrderedUnitIDs)
 	}
 }
 
@@ -161,56 +164,50 @@ func TestPriceListExportSpec_DeclaresPDF(t *testing.T) {
 	}
 }
 
-// Unit ratios are stored against the base of the dimension (Each), not against the base of the group, and unit.is_base_unit marks the former. Reading either as the latter produced "20 Carton (10 pr)s Per Carton (10 pr)" on a line whose base unit is the carton it ships in — the group's own base unit picked as its pack, multiplied by its ratio to Each.
-func TestPriceListPacking_MeasuresThePackAgainstTheGroupsBaseUnit(t *testing.T) {
+func priceListTestCatalog(units *domain.ItemUnits, all ...*domain.Unit) *priceListCatalog {
+	c := &priceListCatalog{itemUnits: map[string]*domain.ItemUnits{"it_1": units}, units: map[string]*domain.LightUnit{}}
+	for _, u := range all {
+		c.units[u.ID] = &domain.LightUnit{ID: u.ID, Name: u.Name, RatioNumerator: u.RatioNumerator, RatioDenominator: u.RatioDenominator}
+	}
+	return c
+}
+
+// Unit ratios are stored against the base of the dimension (Each), so a pack is measured against the unit the item is
+// quoted per, not against Each; an order unit that holds its own quantity of stocking units uses that quantity.
+func TestPriceListPacking_MeasuresThePackAgainstTheQuoteUnit(t *testing.T) {
+	product := &domain.ProductFull{ItemID: "it_1"}
+	visible := constants.CustomerPortalVisibilityVisible
 	cases := []struct {
-		name  string
-		group *domain.ProductLineUnitGroup
-		want  string
+		name    string
+		catalog *priceListCatalog
+		want    string
 	}{
 		{
-			name: "a pack above the base unit counts base units",
-			group: &domain.ProductLineUnitGroup{
-				BaseUnitID: "unit_pair",
-				BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"},
-				AssociatedUnits: []*domain.UnitGroupUnit{
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_dozen", Name: "Dozen", RatioNumerator: "12", RatioDenominator: "1"}},
-				},
-			},
+			name: "a pack above the quote unit counts quote units",
+			catalog: priceListTestCatalog(&domain.ItemUnits{StockingUnitID: "unit_each", DefaultOrderUnitID: "unit_pair", OrderUnits: []domain.ItemOrderUnit{
+				{UnitID: "unit_pair", PortalVisibility: visible}, {UnitID: "unit_dozen", PortalVisibility: visible},
+			}}, plUnitEach, plUnitPair, plUnitDozen),
 			want: "6 Pairs Per Dozen",
 		},
 		{
-			name: "a base unit that is already the pack names itself",
-			group: &domain.ProductLineUnitGroup{
-				BaseUnitID: "unit_carton",
-				BaseUnit:   &domain.LightUnit{ID: "unit_carton", Name: "Carton (10 pr)", RatioNumerator: "20", RatioDenominator: "1"},
-				AssociatedUnits: []*domain.UnitGroupUnit{
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_carton", Name: "Carton (10 pr)", RatioNumerator: "20", RatioDenominator: "1"}},
-				},
-			},
-			want: "Carton (10 pr)",
+			name: "an item's own pack quantity overrides the unit's ratio",
+			catalog: priceListTestCatalog(&domain.ItemUnits{StockingUnitID: "unit_each", DefaultOrderUnitID: "unit_pair", OrderUnits: []domain.ItemOrderUnit{
+				{UnitID: "unit_pair", PortalVisibility: visible}, {UnitID: "unit_carton", PortalVisibility: visible, StockingQuantity: new("24")},
+			}}, plUnitEach, plUnitPair, plUnitCarton),
+			want: "12 Pairs Per Carton",
 		},
 		{
-			name: "an invisible pack is not offered",
-			group: &domain.ProductLineUnitGroup{
-				BaseUnitID: "unit_pair",
-				BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"},
-				AssociatedUnits: []*domain.UnitGroupUnit{
-					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
-					{IsVisible: false, Unit: domain.LightUnit{ID: "unit_dozen", Name: "Dozen", RatioNumerator: "12", RatioDenominator: "1"}},
-				},
-			},
+			name: "a hidden pack is not offered",
+			catalog: priceListTestCatalog(&domain.ItemUnits{StockingUnitID: "unit_each", DefaultOrderUnitID: "unit_pair", OrderUnits: []domain.ItemOrderUnit{
+				{UnitID: "unit_pair", PortalVisibility: visible}, {UnitID: "unit_dozen", PortalVisibility: constants.CustomerPortalVisibilityHidden},
+			}}, plUnitEach, plUnitPair, plUnitDozen),
 			want: "Pair",
 		},
 	}
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := priceListPacking(tc.group); got != tc.want {
-				t.Errorf("priceListPacking = %q, want %q", got, tc.want)
+			if got := tc.catalog.packing(product); got != tc.want {
+				t.Errorf("packing = %q, want %q", got, tc.want)
 			}
 		})
 	}

@@ -1221,7 +1221,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOf
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.Require().NotNil(apiErr)
 	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
-	suite.Equal("service_level_id", apiErr.Param)
+	suite.Equal("freight.service_level_id", apiErr.Param)
 }
 
 // The carrier is looked up on its own, so a freight-exempt order that never reaches the shipping-rate lookup cannot store another tenant's carrier.
@@ -1242,7 +1242,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesACarrierOutside
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
 	suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
-	suite.Equal("carrier_id", apiErr.Param)
+	suite.Equal("freight.carrier_id", apiErr.Param)
 }
 
 // --- UpdateSalesOrder ---
@@ -1427,10 +1427,10 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesRoutingAndTerms
 		params domain.UpdateSalesOrderParams
 		lookup func()
 	}{
-		{"carrier_id", domain.UpdateSalesOrderParams{CarrierID: new("cr_foreign")}, func() {
+		{"freight.carrier_id", domain.UpdateSalesOrderParams{CarrierID: new("cr_foreign")}, func() {
 			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_foreign"}).Return(nil, nil)
 		}},
-		{"service_level_id", domain.UpdateSalesOrderParams{ServiceLevelID: field.Set("crop_foreign")}, func() {
+		{"freight.service_level_id", domain.UpdateSalesOrderParams{ServiceLevelID: field.Set("crop_foreign")}, func() {
 			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_foreign"}).Return(nil, nil)
 		}},
 		{"shipping_term_id", domain.UpdateSalesOrderParams{ShippingTermID: new("shtm_foreign")}, func() {
@@ -1620,7 +1620,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesAServiceLevelOf
 
 			suite.Require().NotNil(apiErr)
 			suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
-			suite.Equal("service_level_id", apiErr.Param)
+			suite.Equal("freight.service_level_id", apiErr.Param)
 		})
 	}
 }

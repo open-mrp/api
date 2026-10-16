@@ -913,7 +913,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
-			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "freight.service_level_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -2106,13 +2106,13 @@ func salesOrderCommitmentBasisChanged(existing *domain.SalesOrder, params domain
 func validateCommitmentBasisExclusive(promisedAt *time.Time, leadTimeOverrideDays *int32, shipByOverrideDate *time.Time) *apierror.APIError {
 	named := make([]string, 0, 3)
 	if promisedAt != nil {
-		named = append(named, "promised_at")
+		named = append(named, "promised_on")
 	}
 	if leadTimeOverrideDays != nil {
-		named = append(named, "lead_time_override_days")
+		named = append(named, "lead_time_override")
 	}
 	if shipByOverrideDate != nil {
-		named = append(named, "ship_by_override_date")
+		named = append(named, "ship_by_override_on")
 	}
 	if len(named) <= 1 {
 		return nil
@@ -2433,20 +2433,20 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 // validateSalesOrderReferences rejects caller-supplied foreign keys that don't exist in the account; order_discount_id is resolved separately by resolveOrderDiscountID. The carrier is checked here because a freight-exempt order never reaches the shipping-rate lookup.
 func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, params domain.CreateSalesOrderParams) *apierror.APIError {
 	var carrier customerRefs
-	carrier.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	carrier.add(customerRefCarrier, params.CarrierID, nil, "freight.carrier_id")
 	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, carrier); apiErr != nil {
 		return apiErr
 	}
 	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
 		level, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID)
 		if apiErr != nil {
-			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
+			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "freight.service_level_id")
 		}
-		if apiErr := domain.RequireAssignable("service_level_id", "service level", constants.ArchiveStatusFromIsActive(level.IsActive)); apiErr != nil {
+		if apiErr := domain.RequireAssignable("freight.service_level_id", "service level", constants.ArchiveStatusFromIsActive(level.IsActive)); apiErr != nil {
 			return apiErr
 		}
 	}
-	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "freight.service_level_id"); apiErr != nil {
 		return apiErr
 	}
 	if params.ShippingTermID != nil && *params.ShippingTermID != "" {
@@ -2478,8 +2478,8 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 // changedSalesOrderRefs lists the routing and terms an update moves to a different record; one the order already holds is not looked up again.
 func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) customerRefs {
 	var refs customerRefs
-	refs.add(customerRefCarrier, params.CarrierID, existing.CarrierID, "carrier_id")
-	refs.add(customerRefServiceLevel, params.ServiceLevelID.ValuePtr(), existing.ServiceLevelID, "service_level_id")
+	refs.add(customerRefCarrier, params.CarrierID, existing.CarrierID, "freight.carrier_id")
+	refs.add(customerRefServiceLevel, params.ServiceLevelID.ValuePtr(), existing.ServiceLevelID, "freight.service_level_id")
 	refs.add(customerRefShippingTerm, params.ShippingTermID, existing.ShippingTermID, "shipping_term_id")
 	refs.add(customerRefPaymentTerm, params.PaymentTermID, existing.PaymentTermID, "payment_term_id")
 	return refs

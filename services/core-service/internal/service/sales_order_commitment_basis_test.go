@@ -54,12 +54,12 @@ func TestValidateCommitmentBasisExclusive_NamesTheConflictingFields(t *testing.T
 	if apiErr == nil {
 		t.Fatal("expected a conflict")
 	}
-	for _, want := range []string{"promised_at", "lead_time_override_days"} {
+	for _, want := range []string{"promised_on", "lead_time_override"} {
 		if !strings.Contains(apiErr.PublicMessage, want) {
 			t.Errorf("message %q does not name %q", apiErr.PublicMessage, want)
 		}
 	}
-	if strings.Contains(apiErr.PublicMessage, "ship_by_override_date") {
+	if strings.Contains(apiErr.PublicMessage, "ship_by_override_on") {
 		t.Errorf("message %q names a field that was not set", apiErr.PublicMessage)
 	}
 }

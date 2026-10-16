@@ -545,6 +545,20 @@ func (mr *MockRepoFactoryMockRecorder) NewItemRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewItemRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewItemRepo))
 }
 
+// NewItemUnitsRepo mocks base method.
+func (m *MockRepoFactory) NewItemUnitsRepo() domain.ItemUnitsRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewItemUnitsRepo")
+	ret0, _ := ret[0].(domain.ItemUnitsRepo)
+	return ret0
+}
+
+// NewItemUnitsRepo indicates an expected call of NewItemUnitsRepo.
+func (mr *MockRepoFactoryMockRecorder) NewItemUnitsRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewItemUnitsRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewItemUnitsRepo))
+}
+
 // NewJobRepo mocks base method.
 func (m *MockRepoFactory) NewJobRepo() domain.JobRepo {
 	m.ctrl.T.Helper()
@@ -1383,6 +1397,20 @@ func (m *MockRepoFactory) NewShippingTermRepo() domain.ShippingTermRepo {
 func (mr *MockRepoFactoryMockRecorder) NewShippingTermRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewShippingTermRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewShippingTermRepo))
+}
+
+// NewStockingUnitRestateRepo mocks base method.
+func (m *MockRepoFactory) NewStockingUnitRestateRepo() domain.StockingUnitRestateRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewStockingUnitRestateRepo")
+	ret0, _ := ret[0].(domain.StockingUnitRestateRepo)
+	return ret0
+}
+
+// NewStockingUnitRestateRepo indicates an expected call of NewStockingUnitRestateRepo.
+func (mr *MockRepoFactoryMockRecorder) NewStockingUnitRestateRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewStockingUnitRestateRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewStockingUnitRestateRepo))
 }
 
 // NewStripeEventLogRepo mocks base method.

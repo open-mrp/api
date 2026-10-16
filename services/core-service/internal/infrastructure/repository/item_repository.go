@@ -485,6 +485,9 @@ func applyItemStitches(ctx context.Context, queries *sqlc.Queries, items []*doma
 		if apiErr := stitchItemSections(ctx, queries, items); apiErr != nil {
 			return apiErr
 		}
+		if apiErr := stitchItemUnits(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
 	}
 	if slices.Contains(incs, "category.properties") {
 		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
@@ -1213,4 +1216,23 @@ func (r *itemRepoImpl) FindItemsProducedFromConsumed(ctx context.Context, accoun
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return rows, nil
+}
+
+// stitchItemUnits loads each item's stocking unit, default order unit and order units.
+func stitchItemUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item) *apierror.APIError {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, len(items))
+	for i, item := range items {
+		ids[i] = item.ID
+	}
+	units, apiErr := NewItemUnitsRepo(queries).Get(ctx, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, item := range items {
+		item.Units = units[item.ID]
+	}
+	return nil
 }

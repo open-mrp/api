@@ -35,6 +35,8 @@ type Item struct {
 	Sales *ItemSales `audit:"sales"`
 	// MaterialSection is a material's order point and lead time. Loaded with the "sections" stitch.
 	MaterialSection *ItemMaterialSection `audit:"material"`
+	// Units are the units the item is stocked and ordered in. Loaded with the "sections" stitch.
+	Units *ItemUnits `audit:"units"`
 
 	// Joined data (populated when listing/getting items)
 	UnitValue *Rate
@@ -149,6 +151,9 @@ type CreateItemParams struct {
 	UnitCost     *CreateRateParams
 	Sales        *ItemSalesInput
 	Material     *ItemMaterialInput
+	Units        ItemUnitsInput
+	// LegacyUnits keeps a 1.0.forge-preview.9 create's units derived from the category's unit group.
+	LegacyUnits bool
 }
 
 // DeleteItemParams deletes an item.
@@ -175,6 +180,8 @@ type UpsertItemParams struct {
 	UnitCost      *CreateRateParams
 	Sales         *UpsertItemSalesRow
 	Material      *UpsertItemMaterialRow
+	// Units are the row's units; StockingUnitID applies on create and must match an existing item's.
+	Units ItemUnitsInput
 }
 
 // UpsertItemSalesRow is a bulk row's sales section.
@@ -471,6 +478,8 @@ type UpdateItemParams struct {
 	// RemoveSales deletes the item's sales section; Sales is nil when it is set.
 	RemoveSales bool
 	Material    *ItemMaterialInput
+	// Units changes the default order unit and order units; its StockingUnitID is never set.
+	Units ItemUnitsInput
 }
 
 // SetItemFieldsParams writes an item row's own columns; nil fields keep their values.

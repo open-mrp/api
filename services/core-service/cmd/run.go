@@ -853,6 +853,8 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.ShipShipment, shipmentSvc.ExecuteShipShipment),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.MergeCustomers, customerSvc.ExecuteMergeCustomers),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.SetItemOrderUnits, itemSvc.ExecuteSetItemOrderUnits),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.ChangeItemStockingUnit, itemSvc.ExecuteChangeItemStockingUnit),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {
@@ -963,6 +965,20 @@ func Run(
 		return err
 	}
 	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+
+	// Items store their own stocking and order units (00099). This stores them on the items written before, which
+	// read them derived from their unit groups until then. ITEM_UNITS_BACKFILL_DISABLED=true stops it.
+	if !cfg.ItemUnitsBackfillDisabled {
+		itemUnitsBackfill, err := backfill.New(&backfill.Config{
+			Name:     repository.ItemUnitsBackfillName,
+			Batch:    repository.NewItemUnitsBackfill(sqlc.New(reportDB), db).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go itemUnitsBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+	}
 
 	// Money is copying onto the columns of the rows that own it (00088 operations, 00089 commercial). These fill
 	// the rows written before the columns existed, one paced backfill per table per pod holding its lease.

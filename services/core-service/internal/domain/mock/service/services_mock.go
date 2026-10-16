@@ -3007,6 +3007,21 @@ func (mr *MockItemSvcMockRecorder) ChangeItemCategory(ctx, itemID, categoryID, i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeItemCategory", reflect.TypeOf((*MockItemSvc)(nil).ChangeItemCategory), ctx, itemID, categoryID, includes)
 }
 
+// ChangeItemStockingUnit mocks base method.
+func (m *MockItemSvc) ChangeItemStockingUnit(ctx context.Context, params domain.ChangeStockingUnitParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeItemStockingUnit", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ChangeItemStockingUnit indicates an expected call of ChangeItemStockingUnit.
+func (mr *MockItemSvcMockRecorder) ChangeItemStockingUnit(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeItemStockingUnit", reflect.TypeOf((*MockItemSvc)(nil).ChangeItemStockingUnit), ctx, params)
+}
+
 // ComputeItemCosts mocks base method.
 func (m *MockItemSvc) ComputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3064,6 +3079,34 @@ func (m *MockItemSvc) ExecuteBulkUpsertItems(ctx context.Context, event domain.B
 func (mr *MockItemSvcMockRecorder) ExecuteBulkUpsertItems(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteBulkUpsertItems", reflect.TypeOf((*MockItemSvc)(nil).ExecuteBulkUpsertItems), ctx, event)
+}
+
+// ExecuteChangeItemStockingUnit mocks base method.
+func (m *MockItemSvc) ExecuteChangeItemStockingUnit(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteChangeItemStockingUnit", ctx, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteChangeItemStockingUnit indicates an expected call of ExecuteChangeItemStockingUnit.
+func (mr *MockItemSvcMockRecorder) ExecuteChangeItemStockingUnit(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteChangeItemStockingUnit", reflect.TypeOf((*MockItemSvc)(nil).ExecuteChangeItemStockingUnit), ctx, event)
+}
+
+// ExecuteSetItemOrderUnits mocks base method.
+func (m *MockItemSvc) ExecuteSetItemOrderUnits(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteSetItemOrderUnits", ctx, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteSetItemOrderUnits indicates an expected call of ExecuteSetItemOrderUnits.
+func (mr *MockItemSvcMockRecorder) ExecuteSetItemOrderUnits(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSetItemOrderUnits", reflect.TypeOf((*MockItemSvc)(nil).ExecuteSetItemOrderUnits), ctx, event)
 }
 
 // ExportItems mocks base method.
@@ -3215,6 +3258,21 @@ func (m *MockItemSvc) RemoveItemAttribute(ctx context.Context, itemID, attribute
 func (mr *MockItemSvcMockRecorder) RemoveItemAttribute(ctx, itemID, attributeID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveItemAttribute", reflect.TypeOf((*MockItemSvc)(nil).RemoveItemAttribute), ctx, itemID, attributeID, includes)
+}
+
+// SetItemOrderUnits mocks base method.
+func (m *MockItemSvc) SetItemOrderUnits(ctx context.Context, params domain.SetOrderUnitsParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetItemOrderUnits", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetItemOrderUnits indicates an expected call of SetItemOrderUnits.
+func (mr *MockItemSvcMockRecorder) SetItemOrderUnits(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetItemOrderUnits", reflect.TypeOf((*MockItemSvc)(nil).SetItemOrderUnits), ctx, params)
 }
 
 // UpdateItem mocks base method.

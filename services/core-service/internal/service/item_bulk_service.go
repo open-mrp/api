@@ -133,6 +133,18 @@ func (s *itemSvcImpl) writeBulkUpsertItems(txCtx context.Context, txRepos domain
 					return apierror.NewFieldError("type", apierror.CodeInvalidFormat,
 						fmt.Sprintf("SKU %q is a %s; an item's type can't change", row.SKU, old.ItemTypeCode))
 				}
+				if row.Units.StockingUnitID != nil {
+					current, apiErr := txRepos.NewItemUnitsRepo().Get(spCtx, []string{old.ID})
+					if apiErr != nil {
+						return apiErr
+					}
+					if u := current[old.ID]; u != nil && *row.Units.StockingUnitID != u.StockingUnitID {
+						return apierror.NewFieldError("stocking_unit_id", apierror.CodeInvalidFormat,
+							fmt.Sprintf("SKU %q is stocked in another unit; to change it, use Change Stocking Unit", row.SKU))
+					}
+				}
+				unitsUpdate := row.Units
+				unitsUpdate.StockingUnitID = nil
 				update := domain.UpdateItemParams{
 					AccountID:         accountID,
 					ItemID:            old.ID,
@@ -144,6 +156,7 @@ func (s *itemSvcImpl) writeBulkUpsertItems(txCtx context.Context, txRepos domain
 					UnitCost:          row.UnitCost,
 					Sales:             row.Sales.Input(),
 					Material:          row.Material.Input(),
+					Units:             unitsUpdate,
 				}
 				if row.HasAttributes {
 					update.AttributeIDs = field.Some(attributeIDs)
@@ -172,6 +185,7 @@ func (s *itemSvcImpl) writeBulkUpsertItems(txCtx context.Context, txRepos domain
 				UnitCost:     row.UnitCost,
 				Sales:        row.Sales.Input(),
 				Material:     row.Material.Input(),
+				Units:        row.Units,
 			})
 			if apiErr != nil {
 				return apiErr

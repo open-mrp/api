@@ -590,6 +590,19 @@ message ItemInfo {
   ItemSalesInfo sales = 19;
   // Set for materials only.
   ItemMaterialInfo material = 20;
+  // Empty for a service.
+  string stocking_unit_id = 21;
+  string default_order_unit_id = 22;
+  repeated ItemOrderUnitInfo order_units = 23;
+}
+// A unit an item can be ordered in besides its stocking unit.
+message ItemOrderUnitInfo {
+  string unit_id = 1;
+  // visible | hidden
+  string portal_visibility = 2;
+  Discount discount = 3;
+  // Stocking units one of this unit holds for the item, overriding the unit's ratio.
+  optional string quantity = 4;
 }
 // An item's selling details. unit_price is the item's unit_value.
 message ItemSalesInfo {

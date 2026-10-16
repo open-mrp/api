@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/open-mrp/apikit/field"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -41,6 +42,16 @@ func (h *gRPCHandler) CreateItem(ctx context.Context, req *pb.CreateItemRequest)
 	if apiErr := money.err(); apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
+	params.LegacyUnits = req.LegacyUnits
+	params.Units.StockingUnitID = req.StockingUnitId
+	params.Units.DefaultOrderUnitID = req.DefaultOrderUnitId
+	if len(req.OrderUnits) > 0 {
+		orderUnits, apiErr := orderUnitsFromProto("", req.OrderUnits)
+		if apiErr != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+		}
+		params.Units.OrderUnits = &orderUnits
+	}
 
 	item, apiErr := h.itemSvc.CreateItem(ctx, params)
 	if apiErr != nil {
@@ -78,6 +89,14 @@ func (h *gRPCHandler) UpdateItem(ctx context.Context, req *pb.UpdateItemRequest)
 	}
 	if apiErr := money.err(); apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	params.Units.DefaultOrderUnitID = req.DefaultOrderUnitId
+	if req.OrderUnits != nil {
+		orderUnits, apiErr := orderUnitsFromProto("", req.OrderUnits.Values)
+		if apiErr != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+		}
+		params.Units.OrderUnits = &orderUnits
 	}
 
 	item, apiErr := h.itemSvc.UpdateItem(ctx, params)
@@ -141,6 +160,15 @@ func (h *gRPCHandler) BulkUpsertItems(ctx context.Context, req *pb.BulkUpsertIte
 			}
 			sales.LeadTime, sales.ClearLeadTime = quantityPatchParts(s.LeadTime)
 			row.Sales = sales
+		}
+		row.Units.StockingUnitID = in.StockingUnitId
+		row.Units.DefaultOrderUnitID = in.DefaultOrderUnitId
+		if in.OrderUnits != nil {
+			orderUnits, apiErr := orderUnitsFromProto(fmt.Sprintf("items[%d].", i), in.OrderUnits.Values)
+			if apiErr != nil {
+				return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+			}
+			row.Units.OrderUnits = &orderUnits
 		}
 		if m := in.Material; m != nil {
 			material := &domain.UpsertItemMaterialRow{}

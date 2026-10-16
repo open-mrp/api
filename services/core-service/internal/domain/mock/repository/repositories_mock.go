@@ -21654,3 +21654,152 @@ func (mr *MockReferenceRepoMockRecorder) InUseBy(ctx, id, probes any) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InUseBy", reflect.TypeOf((*MockReferenceRepo)(nil).InUseBy), ctx, id, probes)
 }
+
+// MockItemUnitsRepo is a mock of ItemUnitsRepo interface.
+type MockItemUnitsRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockItemUnitsRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockItemUnitsRepoMockRecorder is the mock recorder for MockItemUnitsRepo.
+type MockItemUnitsRepoMockRecorder struct {
+	mock *MockItemUnitsRepo
+}
+
+// NewMockItemUnitsRepo creates a new mock instance.
+func NewMockItemUnitsRepo(ctrl *gomock.Controller) *MockItemUnitsRepo {
+	mock := &MockItemUnitsRepo{ctrl: ctrl}
+	mock.recorder = &MockItemUnitsRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockItemUnitsRepo) EXPECT() *MockItemUnitsRepoMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockItemUnitsRepo) Get(ctx context.Context, itemIDs []string) (map[string]*domain.ItemUnits, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, itemIDs)
+	ret0, _ := ret[0].(map[string]*domain.ItemUnits)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockItemUnitsRepoMockRecorder) Get(ctx, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockItemUnitsRepo)(nil).Get), ctx, itemIDs)
+}
+
+// MatchItems mocks base method.
+func (m *MockItemUnitsRepo) MatchItems(ctx context.Context, accountID string, filter domain.SetOrderUnitsFilter, limit int) ([]domain.ItemTypeRef, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MatchItems", ctx, accountID, filter, limit)
+	ret0, _ := ret[0].([]domain.ItemTypeRef)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MatchItems indicates an expected call of MatchItems.
+func (mr *MockItemUnitsRepoMockRecorder) MatchItems(ctx, accountID, filter, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MatchItems", reflect.TypeOf((*MockItemUnitsRepo)(nil).MatchItems), ctx, accountID, filter, limit)
+}
+
+// Materialize mocks base method.
+func (m *MockItemUnitsRepo) Materialize(ctx context.Context, itemIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Materialize", ctx, itemIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Materialize indicates an expected call of Materialize.
+func (mr *MockItemUnitsRepoMockRecorder) Materialize(ctx, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Materialize", reflect.TypeOf((*MockItemUnitsRepo)(nil).Materialize), ctx, itemIDs)
+}
+
+// RemoveOrderUnits mocks base method.
+func (m *MockItemUnitsRepo) RemoveOrderUnits(ctx context.Context, itemID string, unitIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveOrderUnits", ctx, itemID, unitIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveOrderUnits indicates an expected call of RemoveOrderUnits.
+func (mr *MockItemUnitsRepoMockRecorder) RemoveOrderUnits(ctx, itemID, unitIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveOrderUnits", reflect.TypeOf((*MockItemUnitsRepo)(nil).RemoveOrderUnits), ctx, itemID, unitIDs)
+}
+
+// Replace mocks base method.
+func (m *MockItemUnitsRepo) Replace(ctx context.Context, accountID, itemID, defaultOrderUnitID string, orderUnits []domain.ItemOrderUnit) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Replace", ctx, accountID, itemID, defaultOrderUnitID, orderUnits)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Replace indicates an expected call of Replace.
+func (mr *MockItemUnitsRepoMockRecorder) Replace(ctx, accountID, itemID, defaultOrderUnitID, orderUnits any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Replace", reflect.TypeOf((*MockItemUnitsRepo)(nil).Replace), ctx, accountID, itemID, defaultOrderUnitID, orderUnits)
+}
+
+// SetStockingUnit mocks base method.
+func (m *MockItemUnitsRepo) SetStockingUnit(ctx context.Context, itemID, unitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetStockingUnit", ctx, itemID, unitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetStockingUnit indicates an expected call of SetStockingUnit.
+func (mr *MockItemUnitsRepoMockRecorder) SetStockingUnit(ctx, itemID, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStockingUnit", reflect.TypeOf((*MockItemUnitsRepo)(nil).SetStockingUnit), ctx, itemID, unitID)
+}
+
+// MockStockingUnitRestateRepo is a mock of StockingUnitRestateRepo interface.
+type MockStockingUnitRestateRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockStockingUnitRestateRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockStockingUnitRestateRepoMockRecorder is the mock recorder for MockStockingUnitRestateRepo.
+type MockStockingUnitRestateRepoMockRecorder struct {
+	mock *MockStockingUnitRestateRepo
+}
+
+// NewMockStockingUnitRestateRepo creates a new mock instance.
+func NewMockStockingUnitRestateRepo(ctrl *gomock.Controller) *MockStockingUnitRestateRepo {
+	mock := &MockStockingUnitRestateRepo{ctrl: ctrl}
+	mock.recorder = &MockStockingUnitRestateRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockStockingUnitRestateRepo) EXPECT() *MockStockingUnitRestateRepoMockRecorder {
+	return m.recorder
+}
+
+// Restate mocks base method.
+func (m *MockStockingUnitRestateRepo) Restate(ctx context.Context, accountID, itemID, fromUnitID, toUnitID string, factor decimal.Decimal) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Restate", ctx, accountID, itemID, fromUnitID, toUnitID, factor)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Restate indicates an expected call of Restate.
+func (mr *MockStockingUnitRestateRepoMockRecorder) Restate(ctx, accountID, itemID, fromUnitID, toUnitID, factor any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restate", reflect.TypeOf((*MockStockingUnitRestateRepo)(nil).Restate), ctx, accountID, itemID, fromUnitID, toUnitID, factor)
+}

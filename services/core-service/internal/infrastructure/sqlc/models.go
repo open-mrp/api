@@ -1159,6 +1159,8 @@ type Item struct {
 	UnitCostPerUnitID       sql.NullString
 	IsActive                bool
 	SupplyCode              sql.NullString
+	StockingUnitID          sql.NullString
+	DefaultOrderUnitID      sql.NullString
 }
 
 type ItemAttribute struct {
@@ -1194,6 +1196,21 @@ type ItemCategoryType struct {
 	Name      string
 	Code      string
 	UpdatedAt time.Time
+}
+
+type ItemOrderUnit struct {
+	ItemID                    string
+	UnitID                    string
+	AccountID                 string
+	Position                  int32
+	PortalVisibility          string
+	DiscountType              sql.NullString
+	DiscountPercentOff        sql.NullString
+	DiscountAmountOffAmount   sql.NullString
+	DiscountAmountOffCurrency sql.NullString
+	StockingQuantity          sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 type ItemType struct {

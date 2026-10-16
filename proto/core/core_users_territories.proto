@@ -381,6 +381,7 @@ message InventoryChangeLogInfo {
   optional string related_type = 36;
   optional string related_id = 37;
   optional UnitPrice unit_cost = 38;
+  optional string lot_number = 39;
 }
 message ListInventoryChangeLogsRequest {
   optional string cursor = 1;

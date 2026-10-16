@@ -124,6 +124,9 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		Note: struct {
 			pbgrpc.CoreNoteServiceClient
 		}{},
+		Inventory: struct {
+			pbgrpc.CoreInventoryServiceClient
+		}{},
 		ManufacturingMethod: struct {
 			pbgrpc.CoreManufacturingMethodServiceClient
 		}{},

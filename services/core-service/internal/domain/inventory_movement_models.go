@@ -14,10 +14,12 @@ import (
 
 // MovementFields is what an inventory movement records beyond its item and quantity.
 type MovementFields struct {
-	Type        constants.InventoryMovementType
-	Actor       actor.Actor
-	LocationID  *string
-	LotID       *string
+	Type       constants.InventoryMovementType
+	Actor      actor.Actor
+	LocationID *string
+	LotID      *string
+	// LotNumber is the lot's number, read with the movement; writes ignore it.
+	LotNumber   *string
 	Reason      *constants.InventoryMovementReason
 	RelatedType constants.RecordType
 	RelatedID   string

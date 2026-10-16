@@ -13,7 +13,7 @@ import (
 // movementColumns are the movement columns of an inventory_change_log row as read.
 type movementColumns struct {
 	TypeCode, ActorType, ActorID, LocationID, LotID, ReasonCode, RelatedType, RelatedID gosql.NullString
-	UnitCostAmount, UnitCostCurrency, UnitCostPerUnitID                                 gosql.NullString
+	UnitCostAmount, UnitCostCurrency, UnitCostPerUnitID, LotNumber                      gosql.NullString
 }
 
 // fields is the row's movement. A row written before movements stored their type and actor (00115) reads them derived
@@ -23,6 +23,7 @@ func (c movementColumns) fields(actionTypeCode, quantityValue string, stationID,
 		Type:        constants.InventoryMovementType(c.TypeCode.String),
 		LocationID:  nullStringPtr(c.LocationID),
 		LotID:       nullStringPtr(c.LotID),
+		LotNumber:   nullStringPtr(c.LotNumber),
 		RelatedType: constants.RecordType(c.RelatedType.String),
 		RelatedID:   c.RelatedID.String,
 	}

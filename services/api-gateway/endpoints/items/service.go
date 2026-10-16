@@ -150,6 +150,9 @@ func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*a
 }
 
 func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Use GET /v1/catalog/items/{id}/inventory."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetItemInventoryRequest{
 		Id: req.ItemID,
 	}
@@ -172,6 +175,9 @@ func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInv
 }
 
 func (m *itemSvcImpl) GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Use GET /v1/catalog/items/{id}/lot-size-default."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetItemLotDefaultRequest{ItemId: req.ItemID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_lot_default", domain.ServiceName,
@@ -332,6 +338,9 @@ func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCat
 }
 
 func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Use POST /v1/operations/inventory-movements."); apiErr != nil {
+		return nil, apiErr
+	}
 	var reconcile *bool
 	if op, ok := req.Operation.Value(); ok {
 		v := op == constants.InventoryUpdateOperationReconcile
@@ -409,6 +418,9 @@ func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsR
 }
 
 func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {
+	if apiErr := RequirePreview9(ctx, "Use POST /v1/operations/inventory-movements/actions/bulk-create."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbData := make([]*pb.BulkReconcileItemInput, len(req.Data))
 	for i, d := range req.Data {
 		pbData[i] = &pb.BulkReconcileItemInput{

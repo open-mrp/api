@@ -65,6 +65,7 @@ func inventoryChangeLogToProto(icl *domain.InventoryChangeLog) *pb.InventoryChan
 	info.Actor = m.Actor.ToProto()
 	info.LocationId = m.LocationID
 	info.LotId = m.LotID
+	info.LotNumber = m.LotNumber
 	info.Reason = m.Reason.StringPtr()
 	if m.RelatedID != "" {
 		relatedType := string(m.RelatedType)

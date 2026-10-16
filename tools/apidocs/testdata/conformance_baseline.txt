@@ -65,14 +65,12 @@ long_running_returns_async_job POST /v1/messaging/notifications
 
 
 public_docstrings GET /v1/operations/fulfillment-recommendations
-public_docstrings PATCH /v1/catalog/items/{id}/inventory
 
 
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}/lines/{line_id}
 public_docstrings POST /v1/ai/runs/{id}/actions/retry
-public_docstrings POST /v1/catalog/items/actions/bulk-reconcile
 public_docstrings POST /v1/core/actions/email-record
 
 

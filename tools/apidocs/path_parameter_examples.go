@@ -89,6 +89,7 @@ var routeSegmentToSampleID = map[string]string{
 	"sales-targets":                apiresource.SampleSalesTargetID,
 	"service-levels":               apiresource.SampleServiceLevelID,
 	"inventory-change-logs":        apiresource.SampleInventoryChangeLogID,
+	"inventory-movements":          apiresource.SampleInventoryMovementID,
 	"sales-order-statuses":         apiresource.SampleSalesOrderStatusID,
 	"conversations":                apiresource.SampleConversationID,
 	"messages":                     apiresource.SampleMessageID,

@@ -21,6 +21,7 @@ type CoreServiceClient struct {
 	MachineDowntime     pb.CoreMachineDowntimeServiceClient
 	DemandOverride      pb.CoreDemandOverrideServiceClient
 	Note                pb.CoreNoteServiceClient
+	Inventory           pb.CoreInventoryServiceClient
 	PriceList           pb.CorePriceListServiceClient
 	ProductionSchedule  pb.CoreProductionScheduleServiceClient
 	Receiving           pb.CoreReceivingServiceClient
@@ -51,6 +52,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		MachineDowntime:     pb.NewCoreMachineDowntimeServiceClient(conn),
 		DemandOverride:      pb.NewCoreDemandOverrideServiceClient(conn),
 		Note:                pb.NewCoreNoteServiceClient(conn),
+		Inventory:           pb.NewCoreInventoryServiceClient(conn),
 		PriceList:           pb.NewCorePriceListServiceClient(conn),
 		ProductionSchedule:  pb.NewCoreProductionScheduleServiceClient(conn),
 		Receiving:           pb.NewCoreReceivingServiceClient(conn),

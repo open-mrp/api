@@ -56,9 +56,7 @@ func (e *StartInventoryChangeLogsExportEndpoint) Materialize() *apiendpoint.APIE
 		Route:             "/v1/operations/inventory-change-logs/actions/export",
 		SDKMethodKey:      "start_export",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
-		Preview:           true,
-		AgentTool:         true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},

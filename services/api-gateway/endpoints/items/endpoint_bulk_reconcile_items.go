@@ -72,9 +72,7 @@ func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		Route:             "/v1/catalog/items/actions/bulk-reconcile",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}}},
 		Extras:            apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {

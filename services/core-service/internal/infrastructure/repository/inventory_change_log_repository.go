@@ -84,6 +84,7 @@ func mapGetICLRow(row sqlc.GetInventoryChangeLogRow) *domain.InventoryChangeLog 
 		TypeCode: row.TypeCode, ActorType: row.ActorType, ActorID: row.ActorID, LocationID: row.LocationID, LotID: row.LotID,
 		ReasonCode: row.ReasonCode, RelatedType: row.RelatedType, RelatedID: row.RelatedID,
 		UnitCostAmount: row.UnitCostAmount, UnitCostCurrency: row.UnitCostCurrency, UnitCostPerUnitID: row.UnitCostPerUnitID,
+		LotNumber: row.LotNumber,
 	}.fields(icl.ActionTypeCode, icl.QuantityValue, icl.ScanningStationID, icl.ResponsibleUserID)
 
 	return icl
@@ -126,6 +127,7 @@ func mapListAllICLRow(row sqlc.ListAllInventoryChangeLogsRow) *domain.InventoryC
 		TypeCode: row.TypeCode, ActorType: row.ActorType, ActorID: row.ActorID, LocationID: row.LocationID, LotID: row.LotID,
 		ReasonCode: row.ReasonCode, RelatedType: row.RelatedType, RelatedID: row.RelatedID,
 		UnitCostAmount: row.UnitCostAmount, UnitCostCurrency: row.UnitCostCurrency, UnitCostPerUnitID: row.UnitCostPerUnitID,
+		LotNumber: row.LotNumber,
 	}.fields(icl.ActionTypeCode, icl.QuantityValue, icl.ScanningStationID, icl.ResponsibleUserID)
 
 	return icl

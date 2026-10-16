@@ -55,13 +55,15 @@ SELECT
     icl.related_id,
     icl.unit_cost_amount,
     icl.unit_cost_currency,
-    icl.unit_cost_per_unit_id
+    icl.unit_cost_per_unit_id,
+    lt.lot_number
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
 JOIN unit u ON u.id = q.unit_id
 LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id
 LEFT JOIN user usr ON usr.id = icl.responsible_user_id
+LEFT JOIN lot lt ON lt.id = icl.lot_id
 WHERE icl.id = ?
 AND icl.account_id = ?
 `
@@ -114,6 +116,7 @@ type GetInventoryChangeLogRow struct {
 	UnitCostAmount                sql.NullString
 	UnitCostCurrency              sql.NullString
 	UnitCostPerUnitID             sql.NullString
+	LotNumber                     sql.NullString
 }
 
 func (q *Queries) GetInventoryChangeLog(ctx context.Context, arg GetInventoryChangeLogParams) (GetInventoryChangeLogRow, error) {
@@ -162,6 +165,7 @@ func (q *Queries) GetInventoryChangeLog(ctx context.Context, arg GetInventoryCha
 		&i.UnitCostAmount,
 		&i.UnitCostCurrency,
 		&i.UnitCostPerUnitID,
+		&i.LotNumber,
 	)
 	return i, err
 }
@@ -197,13 +201,15 @@ SELECT
     icl.related_id,
     icl.unit_cost_amount,
     icl.unit_cost_currency,
-    icl.unit_cost_per_unit_id
+    icl.unit_cost_per_unit_id,
+    lt.lot_number
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
 JOIN unit u ON u.id = q.unit_id
 LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id
 LEFT JOIN user usr ON usr.id = icl.responsible_user_id
+LEFT JOIN lot lt ON lt.id = icl.lot_id
 WHERE icl.account_id = ?
 AND (
     ? = false
@@ -271,6 +277,7 @@ type ListAllInventoryChangeLogsRow struct {
 	UnitCostAmount           sql.NullString
 	UnitCostCurrency         sql.NullString
 	UnitCostPerUnitID        sql.NullString
+	LotNumber                sql.NullString
 }
 
 func (q *Queries) ListAllInventoryChangeLogs(ctx context.Context, arg ListAllInventoryChangeLogsParams) ([]ListAllInventoryChangeLogsRow, error) {
@@ -347,6 +354,7 @@ func (q *Queries) ListAllInventoryChangeLogs(ctx context.Context, arg ListAllInv
 			&i.UnitCostAmount,
 			&i.UnitCostCurrency,
 			&i.UnitCostPerUnitID,
+			&i.LotNumber,
 		); err != nil {
 			return nil, err
 		}

@@ -43,8 +43,6 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		Route:             "/v1/operations/inventories",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
-		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainItems, Action: types.ActionRead},
 		}},

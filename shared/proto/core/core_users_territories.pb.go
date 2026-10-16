@@ -3675,6 +3675,7 @@ type InventoryChangeLogInfo struct {
 	RelatedType   *string    `protobuf:"bytes,36,opt,name=related_type,json=relatedType,proto3,oneof" json:"related_type,omitempty"`
 	RelatedId     *string    `protobuf:"bytes,37,opt,name=related_id,json=relatedId,proto3,oneof" json:"related_id,omitempty"`
 	UnitCost      *UnitPrice `protobuf:"bytes,38,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	LotNumber     *string    `protobuf:"bytes,39,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3973,6 +3974,13 @@ func (x *InventoryChangeLogInfo) GetUnitCost() *UnitPrice {
 		return x.UnitCost
 	}
 	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetLotNumber() string {
+	if x != nil && x.LotNumber != nil {
+		return *x.LotNumber
+	}
+	return ""
 }
 
 type ListInventoryChangeLogsRequest struct {
@@ -5822,7 +5830,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetEmailLogResponse\x12/\n" +
-	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\x8c\x13\n" +
+	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xbf\x13\n" +
 	"\x16InventoryChangeLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
@@ -5868,7 +5876,9 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\frelated_type\x18$ \x01(\tH\rR\vrelatedType\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"related_id\x18% \x01(\tH\x0eR\trelatedId\x88\x01\x01\x121\n" +
-	"\tunit_cost\x18& \x01(\v2\x0f.core.UnitPriceH\x0fR\bunitCost\x88\x01\x01B\x16\n" +
+	"\tunit_cost\x18& \x01(\v2\x0f.core.UnitPriceH\x0fR\bunitCost\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"lot_number\x18' \x01(\tH\x10R\tlotNumber\x88\x01\x01B\x16\n" +
 	"\x14_scanning_station_idB\x18\n" +
 	"\x16_scanning_station_nameB\x16\n" +
 	"\x14_responsible_user_idB\x18\n" +
@@ -5885,7 +5895,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\r_related_typeB\r\n" +
 	"\v_related_idB\f\n" +
 	"\n" +
-	"_unit_cost\"\xa2\x04\n" +
+	"_unit_costB\r\n" +
+	"\v_lot_number\"\xa2\x04\n" +
 	"\x1eListInventoryChangeLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +

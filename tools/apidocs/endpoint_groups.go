@@ -46,6 +46,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		Note: struct {
 			pbgrpc.CoreNoteServiceClient
 		}{},
+		Inventory: struct {
+			pbgrpc.CoreInventoryServiceClient
+		}{},
 		PriceList: struct {
 			pbgrpc.CorePriceListServiceClient
 		}{},
@@ -337,6 +340,15 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.InventoryChangeLogsEndpointGroup{}).Materialize(&httpgroup.InventoryChangeLogsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.InventoryMovementsEndpointGroup{}).Materialize(&httpgroup.InventoryChangeLogsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.InventoryLevelsEndpointGroup{}).Materialize(&httpgroup.InventoryChangeLogsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.LotSizeDefaultsEndpointGroup{}).Materialize(&httpgroup.InventoryChangeLogsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.ReceivablesEndpointGroup{}).Materialize(&httpgroup.ReceivablesEndpointGroupConfig{

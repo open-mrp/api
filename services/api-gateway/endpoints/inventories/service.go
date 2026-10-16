@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -48,6 +49,9 @@ func NewInventorySvc(config *InventorySvcConfig) InventorySvc {
 }
 
 func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "Use GET /v1/operations/inventory-levels."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListInventoriesRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,

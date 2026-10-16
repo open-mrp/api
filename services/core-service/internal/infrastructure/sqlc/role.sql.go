@@ -104,7 +104,7 @@ func (q *Queries) GetRoleByID(ctx context.Context, id string) (GetRoleByIDRow, e
 }
 
 const getRoleByIDAndAccount = `-- name: GetRoleByIDAndAccount :one
-SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code, notification_defaults
 FROM role
 WHERE id = ? AND (account_id = ? OR account_id IS NULL)
 `
@@ -126,6 +126,7 @@ func (q *Queries) GetRoleByIDAndAccount(ctx context.Context, arg GetRoleByIDAndA
 		&i.UpdatedAt,
 		&i.Access,
 		&i.TemplateCode,
+		&i.NotificationDefaults,
 	)
 	return i, err
 }
@@ -174,7 +175,7 @@ func (q *Queries) GetRolesByIDs(ctx context.Context, ids []string) ([]GetRolesBy
 }
 
 const getRolesFullByIDs = `-- name: GetRolesFullByIDs :many
-SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code, notification_defaults
 FROM role
 WHERE id IN (/*SLICE:ids*/?)
 AND (account_id = ? OR account_id IS NULL)
@@ -214,6 +215,7 @@ func (q *Queries) GetRolesFullByIDs(ctx context.Context, arg GetRolesFullByIDsPa
 			&i.UpdatedAt,
 			&i.Access,
 			&i.TemplateCode,
+			&i.NotificationDefaults,
 		); err != nil {
 			return nil, err
 		}
@@ -229,17 +231,18 @@ func (q *Queries) GetRolesFullByIDs(ctx context.Context, arg GetRolesFullByIDsPa
 }
 
 const insertRole = `-- name: InsertRole :exec
-INSERT INTO role (id, name, role_type_code, account_id, access, template_code, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO role (id, name, role_type_code, account_id, access, template_code, notification_defaults, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type InsertRoleParams struct {
-	ID           string
-	Name         string
-	RoleTypeCode string
-	AccountID    sql.NullString
-	Access       db.NullableRawMessage
-	TemplateCode sql.NullString
+	ID                   string
+	Name                 string
+	RoleTypeCode         string
+	AccountID            sql.NullString
+	Access               db.NullableRawMessage
+	TemplateCode         sql.NullString
+	NotificationDefaults db.NullableRawMessage
 }
 
 func (q *Queries) InsertRole(ctx context.Context, arg InsertRoleParams) error {
@@ -250,6 +253,7 @@ func (q *Queries) InsertRole(ctx context.Context, arg InsertRoleParams) error {
 		arg.AccountID,
 		arg.Access,
 		arg.TemplateCode,
+		arg.NotificationDefaults,
 	)
 	return err
 }
@@ -263,7 +267,8 @@ SELECT
     r.created_at,
     r.updated_at,
     r.access,
-    r.template_code
+    r.template_code,
+    r.notification_defaults
 FROM role r
 WHERE (r.account_id = ? OR r.account_id IS NULL)
 AND (
@@ -328,6 +333,7 @@ func (q *Queries) ListRolesBackward(ctx context.Context, arg ListRolesBackwardPa
 			&i.UpdatedAt,
 			&i.Access,
 			&i.TemplateCode,
+			&i.NotificationDefaults,
 		); err != nil {
 			return nil, err
 		}
@@ -351,7 +357,8 @@ SELECT
     r.created_at,
     r.updated_at,
     r.access,
-    r.template_code
+    r.template_code,
+    r.notification_defaults
 FROM role r
 WHERE (r.account_id = ? OR r.account_id IS NULL)
 AND (
@@ -418,6 +425,7 @@ func (q *Queries) ListRolesForward(ctx context.Context, arg ListRolesForwardPara
 			&i.UpdatedAt,
 			&i.Access,
 			&i.TemplateCode,
+			&i.NotificationDefaults,
 		); err != nil {
 			return nil, err
 		}
@@ -463,5 +471,22 @@ type UpdateRoleNameParams struct {
 
 func (q *Queries) UpdateRoleName(ctx context.Context, arg UpdateRoleNameParams) error {
 	_, err := q.db.ExecContext(ctx, updateRoleName, arg.Name, arg.ID, arg.AccountID)
+	return err
+}
+
+const updateRoleNotificationDefaults = `-- name: UpdateRoleNotificationDefaults :exec
+UPDATE role
+SET notification_defaults = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?
+`
+
+type UpdateRoleNotificationDefaultsParams struct {
+	NotificationDefaults db.NullableRawMessage
+	ID                   string
+	AccountID            sql.NullString
+}
+
+func (q *Queries) UpdateRoleNotificationDefaults(ctx context.Context, arg UpdateRoleNotificationDefaultsParams) error {
+	_, err := q.db.ExecContext(ctx, updateRoleNotificationDefaults, arg.NotificationDefaults, arg.ID, arg.AccountID)
 	return err
 }

@@ -26,6 +26,10 @@ sql:
             go_type:
               import: "github.com/open-mrp/apikit/db"
               type: "NullableRawMessage"
+          - column: "role.notification_defaults"
+            go_type:
+              import: "github.com/open-mrp/apikit/db"
+              type: "NullableRawMessage"
           - column: "job.results"
             go_type:
               import: "github.com/open-mrp/apikit/db"

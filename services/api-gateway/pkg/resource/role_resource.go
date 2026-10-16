@@ -37,6 +37,8 @@ type Role struct {
 	Revokes []string `json:"revokes" validate:"required"`
 	// Every permission the role holds, as `{permission}:{action}` codes such as `customers:read`.
 	Permissions *[]string `json:"permissions" expandable:"true"`
+	// The notification settings people with this role start from, before their own preferences and after the account's defaults.
+	NotificationDefaults NotificationSettings `json:"notification_defaults" validate:"required"`
 	// Who owns the role: OpenMRP for the shared system roles, which can't be changed, or your account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
@@ -94,12 +96,13 @@ var SampleRole = &Role{
 		Inventory: constants.AccessLevelEdit, Production: constants.AccessLevelNone, Finance: constants.AccessLevelNone,
 		Settings: constants.AccessLevelNone,
 	},
-	Grants:      []string{"receiving:create"},
-	Revokes:     []string{"inventory:update"},
-	Owner:       SampleOwnerAccount,
-	Permissions: &SampleRolePermissions,
-	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Grants:               []string{"receiving:create"},
+	Revokes:              []string{"inventory:update"},
+	NotificationDefaults: SampleNotificationSettings,
+	Owner:                SampleOwnerAccount,
+	Permissions:          &SampleRolePermissions,
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Role) SchemaExample() any {

@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	"github.com/open-mrp/api/shared/pricing"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
@@ -268,6 +269,8 @@ type RoleRepo interface {
 	UpdateName(ctx context.Context, roleID, accountID, name string) *apierror.APIError
 	// UpdateAccess stores the role's access levels; the caller rewrites its permission rows to match.
 	UpdateAccess(ctx context.Context, roleID, accountID string, access types.RoleAccess) *apierror.APIError
+	// UpdateNotificationDefaults replaces the role's notification defaults.
+	UpdateNotificationDefaults(ctx context.Context, roleID, accountID string, defaults notifyprefs.Defaults) *apierror.APIError
 	Delete(ctx context.Context, roleID, accountID string) *apierror.APIError
 }
 

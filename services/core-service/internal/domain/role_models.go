@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -16,10 +17,12 @@ type Role struct {
 	AccountID *string
 	// Access is the role's level per area; nil for a role saved before access levels, which is described from what it
 	// holds.
-	Access    types.RoleAccess `audit:"access"`
-	Template  *string          `audit:"template_code"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Access   types.RoleAccess `audit:"access"`
+	Template *string          `audit:"template_code"`
+	// NotificationDefaults are the role's starting notification settings, applied before the account's.
+	NotificationDefaults notifyprefs.Defaults `audit:"notification_defaults"`
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // RoleReferences blocks deleting a role that members (other than removed ones) or API keys still hold.
@@ -153,6 +156,8 @@ type CreateRoleParams struct {
 	Access    types.RoleAccess
 	Grants    *[]string
 	Revokes   []string
+	// NotificationDefaults, when nil, starts from the template's.
+	NotificationDefaults *notifyprefs.Defaults
 }
 
 // CreateRolePermissionInput represents a single permission to attach to a role.
@@ -173,4 +178,6 @@ type UpdateRoleParams struct {
 	Access    types.RoleAccess
 	Grants    *[]string
 	Revokes   *[]string
+	// NotificationDefaults merges into the role's notification defaults; nil leaves them.
+	NotificationDefaults *notifyprefs.Patch
 }

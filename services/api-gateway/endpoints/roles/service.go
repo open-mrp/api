@@ -2,6 +2,7 @@ package roleep
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -130,6 +131,13 @@ func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 		}
 		pbReq.TemplateCode, pbReq.Access, pbReq.HasGrants, pbReq.Grants, pbReq.Revokes = nil, def.access, true, def.grants, def.revokes
 	}
+	if req.NotificationDefaults != nil {
+		defaults, apiErr := req.NotificationDefaults.Settings("notification_defaults")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		pbReq.NotificationDefaultsJson = defaults.Marshal()
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateRoleResponse, error) {
@@ -162,6 +170,17 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 			return nil, apiErr
 		}
 		pbReq.Access, pbReq.HasGrants, pbReq.Grants, pbReq.HasRevokes, pbReq.Revokes = def.access, true, def.grants, true, def.revokes
+	}
+	if req.NotificationDefaults != nil {
+		patch, apiErr := req.NotificationDefaults.ToPatch("notification_defaults")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		patchJSON, err := json.Marshal(patch)
+		if err != nil {
+			return nil, apierror.NewInternalError(err, "Failed to encode the notification defaults.")
+		}
+		pbReq.NotificationDefaultsPatchJson = patchJSON
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.update", domain.ServiceName,

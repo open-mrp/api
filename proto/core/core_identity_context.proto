@@ -183,6 +183,8 @@ message RoleDetail {
   repeated string revokes = 10;
   repeated string effective_permissions = 11;
   optional string template_code = 12;
+  // The role's notification defaults as shared/notifyprefs Defaults JSON.
+  bytes notification_defaults_json = 13;
 }
 message ListRolesRequest {
   string cursor = 1;
@@ -221,6 +223,8 @@ message CreateRoleRequest {
   bool has_grants = 6;
   repeated string grants = 7;
   repeated string revokes = 8;
+  // shared/notifyprefs Defaults JSON; absent starts from the template's.
+  optional bytes notification_defaults_json = 9;
 }
 message CreateRoleResponse {
   RoleDetail role = 1;
@@ -238,6 +242,8 @@ message UpdateRoleRequest {
   repeated string grants = 8;
   bool has_revokes = 9;
   repeated string revokes = 10;
+  // shared/notifyprefs Patch JSON merged into the role's notification defaults; absent leaves them.
+  optional bytes notification_defaults_patch_json = 11;
 }
 message UpdateRoleResponse {
   RoleDetail role = 1;

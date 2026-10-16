@@ -26,6 +26,8 @@ type CreateRoleRequest struct {
 	Grants field.Optional[[]string] `json:"grants,omitzero"`
 	// Permission codes the access levels include that the role shouldn't hold.
 	Revokes []string `json:"revokes,omitzero"`
+	// The notification settings people with this role start from. Omit it to start from the template's.
+	NotificationDefaults *apiresource.NotificationSettingsPatch `json:"notification_defaults,omitzero"`
 	// The role's whole permission list, instead of a template, access, grants and revokes. Kept for older clients.
 	Permissions field.Optional[[]string] `json:"permissions,omitzero" visibility:"internal"`
 }

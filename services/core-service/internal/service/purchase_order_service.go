@@ -1168,7 +1168,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		return apiErr
 	}
 
-	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created)))
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, nil, created))
 }
 
 // checkPurchaseOrderAddressChoices requires the order's bill-to and ship-to, each given one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields, which then need a name and a country like any new address.

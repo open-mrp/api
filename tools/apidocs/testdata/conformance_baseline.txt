@@ -68,7 +68,6 @@ long_running_returns_async_job POST /v1/core/actions/email-record
 long_running_returns_async_job POST /v1/finance/accounts/{account_id}/actions/email-receivables
 long_running_returns_async_job POST /v1/messaging/conversations/{id}/actions/typing
 long_running_returns_async_job POST /v1/messaging/notifications
-public_docstrings DELETE /v1/ai/memories/{id}
 
 
 public_docstrings DELETE /v1/settings/integrations/{id}
@@ -86,7 +85,6 @@ public_docstrings PATCH /v1/sales/order-discounts/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}
 public_docstrings PATCH /v1/sales/sales-orders/{id}/lines/{line_id}
 public_docstrings PATCH /v1/sales/volume-discounts/{id}
-public_docstrings POST /v1/ai/memories
 public_docstrings POST /v1/ai/runs/{id}/actions/retry
 public_docstrings POST /v1/catalog/items/actions/bulk-reconcile
 public_docstrings POST /v1/core/actions/email-record
@@ -113,7 +111,6 @@ public_docstrings PUT /v1/operations/production-schedules/{id}/actions/regenerat
 public_docstrings PUT /v1/sales/sales-orders/{id}/actions/unissue
 public_docstrings PUT /v1/settings/integrations/{id}
 search_documented GET /v1/ai/agents
-search_documented GET /v1/ai/memories
 search_documented GET /v1/ai/runs
 search_documented GET /v1/ai/tool-groups
 search_documented GET /v1/ai/tools

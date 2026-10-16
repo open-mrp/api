@@ -43,6 +43,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		DemandOverride: struct {
 			pbgrpc.CoreDemandOverrideServiceClient
 		}{},
+		Note: struct {
+			pbgrpc.CoreNoteServiceClient
+		}{},
 		ProductionSchedule: struct {
 			pbgrpc.CoreProductionScheduleServiceClient
 		}{},
@@ -195,7 +198,10 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			AgentClient: agentClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AgentMemoriesEndpointGroup{}).Materialize(&httpgroup.AgentMemoriesEndpointGroupConfig{
-			AgentClient: agentClient,
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.NotesEndpointGroup{}).Materialize(&httpgroup.NotesEndpointGroupConfig{
+			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
 			BillingClient: billingClient,

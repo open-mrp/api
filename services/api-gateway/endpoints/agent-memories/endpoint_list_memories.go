@@ -18,9 +18,7 @@ import (
 // Request to list agent memories.
 type ListMemoriesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `content`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Filter to memories with this exact category (e.g. `preference`, `fact`).
 	Category *constants.AgentMemoryCategory `query:"category"`
@@ -46,7 +44,7 @@ func (*ListMemoriesRequest) SchemaExample() any {
 
 // Returns a paginated list of agent memories for the current account, newest first.
 //
-// Memories whose `expires_at` has passed are excluded. The `q` search term matches against a memory's ID, category, content, and the ID of the record it is scoped to.
+// Memories whose `expires_at` has passed are excluded.
 type ListMemoriesEndpoint struct{}
 
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {
@@ -56,11 +54,9 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeAgentMemory,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgentMemories, Action: types.ActionRead}}},
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainNotes, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
 			return svc.(AgentMemorySvc).ListMemories
 		},

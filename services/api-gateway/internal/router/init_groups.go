@@ -493,6 +493,20 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(operatingCalendarsGroup.APIEndpointGroup)
 	}
 
+	// Notes, and the preview.9 agent memory routes that read and write them
+	notesGroup := (&httpgroup.NotesEndpointGroup{}).Materialize(&httpgroup.NotesEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if notesGroup != nil {
+		registry.RegisterGroup(notesGroup.APIEndpointGroup)
+	}
+	agentMemoriesGroup := (&httpgroup.AgentMemoriesEndpointGroup{}).Materialize(&httpgroup.AgentMemoriesEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if agentMemoriesGroup != nil {
+		registry.RegisterGroup(agentMemoriesGroup.APIEndpointGroup)
+	}
+
 	// Demand Overrides
 	demandOverridesGroup := (&httpgroup.DemandOverridesEndpointGroup{}).Materialize(&httpgroup.DemandOverridesEndpointGroupConfig{
 		CoreClient: config.CoreClient,
@@ -838,13 +852,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		})
 		if agentToolsGroup != nil {
 			registry.RegisterGroup(agentToolsGroup.APIEndpointGroup)
-		}
-
-		agentMemoriesGroup := (&httpgroup.AgentMemoriesEndpointGroup{}).Materialize(&httpgroup.AgentMemoriesEndpointGroupConfig{
-			AgentClient: config.AgentClient,
-		})
-		if agentMemoriesGroup != nil {
-			registry.RegisterGroup(agentMemoriesGroup.APIEndpointGroup)
 		}
 	}
 

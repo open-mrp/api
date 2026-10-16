@@ -20,6 +20,7 @@ type CoreServiceClient struct {
 	ProductionStep     pb.CoreProductionStepServiceClient
 	MachineDowntime    pb.CoreMachineDowntimeServiceClient
 	DemandOverride     pb.CoreDemandOverrideServiceClient
+	Note               pb.CoreNoteServiceClient
 	ProductionSchedule pb.CoreProductionScheduleServiceClient
 	Receiving          pb.CoreReceivingServiceClient
 	Shipping           pb.CoreShippingServiceClient
@@ -47,6 +48,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		ProductionStep:     pb.NewCoreProductionStepServiceClient(conn),
 		MachineDowntime:    pb.NewCoreMachineDowntimeServiceClient(conn),
 		DemandOverride:     pb.NewCoreDemandOverrideServiceClient(conn),
+		Note:               pb.NewCoreNoteServiceClient(conn),
 		ProductionSchedule: pb.NewCoreProductionScheduleServiceClient(conn),
 		Receiving:          pb.NewCoreReceivingServiceClient(conn),
 		Shipping:           pb.NewCoreShippingServiceClient(conn),

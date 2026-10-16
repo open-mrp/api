@@ -66,6 +66,7 @@ func (h *gRPCHandler) UpdateItem(ctx context.Context, req *pb.UpdateItemRequest)
 		Supply:            fieldpb.EnumClearableFromProto[constants.Supply](req.Supply),
 		UnitCost:          money.rate("unit_cost", req.UnitCost),
 		Sales:             itemSalesInputFromProto(money, req.Sales),
+		RemoveSales:       req.ClearSales,
 		Material:          itemMaterialInputFromProto(req.Material),
 	}
 	if req.AttributeIds != nil {
@@ -235,18 +236,15 @@ func portalReadyFilter(visibilities []string) *bool {
 func itemSectionsToProto(i *domain.Item, out *pb.ItemInfo) {
 	out.Status = string(i.Status)
 	out.Supply = i.SupplyCode
-	if i.IsSold() {
-		// A sold item without a product row is hidden and has no line or lead time.
+	if s := i.Sales; s != nil {
 		sales := &pb.ItemSalesInfo{
 			UnitPrice:        domain.UnitPricePtrToProto(i.SalesUnitPrice),
 			PortalVisibility: string(constants.CustomerPortalVisibilityHidden),
+			ProductLineId:    s.ProductLineID,
+			LeadTime:         quantityValueToProto(s.LeadTime),
 		}
-		if s := i.Sales; s != nil {
-			if s.IsPortalReady {
-				sales.PortalVisibility = string(constants.CustomerPortalVisibilityVisible)
-			}
-			sales.ProductLineId = s.ProductLineID
-			sales.LeadTime = quantityValueToProto(s.LeadTime)
+		if s.IsPortalReady {
+			sales.PortalVisibility = string(constants.CustomerPortalVisibilityVisible)
 		}
 		out.Sales = sales
 	}

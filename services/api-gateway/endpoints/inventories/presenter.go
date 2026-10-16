@@ -7,6 +7,7 @@ import (
 
 	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -37,7 +38,7 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 			meta.Set(constants.ObjectTypeInventoryItem, item.Item.Id, "product_line_id", *item.ProductLineId)
 		}
 		valueStr := strconv.FormatFloat(item.OnHandQuantity, 'f', -1, 64)
-		presented := itemep.ItemPresenter(item.Item)
+		presented := itemep.ItemPresenter(item.Item, resourceloaders.IsPreview9(ctx))
 
 		items[i] = apiresource.InventoryItem{
 			Object: constants.ObjectTypeInventoryItem,

@@ -505,6 +505,96 @@ func TestItems_UpdateNullClears(t *testing.T) {
 	})
 }
 
+// itemProductID reads the product row behind an item's sales section: sales order lines still name it until they move
+// to item ids, and no forge route exposes it.
+func itemProductID(t *testing.T, itemID string) string {
+	t.Helper()
+	var productID string
+	require.NoError(t, authDB(t).QueryRow("SELECT id FROM product WHERE item_id = ?", itemID).Scan(&productID))
+	return productID
+}
+
+// A material or part has a sales section only once one is sent for it; a stored selling price alone doesn't make one.
+func TestItems_SalesSectionOnlyWhenSold(t *testing.T) {
+	t.Parallel()
+
+	t.Run("material priced on preview.9 has none", func(t *testing.T) {
+		body := validMaterialBody(uniqueName("e2e-item-priced-mat"))
+		body["unit_price"] = priceInputPer("4.00", SeedMaterialUnitID)
+		itemID := jsonField(jsonObject(createMaterialP9(t, materialsPath+"?include=item", body), "item"), "id")
+
+		assertNilField(t, getItem(t, itemID), "sales")
+		value := jsonObject(getPreview9Item(t, itemID), "unit_value")
+		require.NotNil(t, value, "preview.9 still reads the stored price")
+		assertDecimalEqual(t, "4.00", jsonField(value, "value"), "unit_value.value")
+	})
+
+	t.Run("sending sales makes a material sellable and null removes it", func(t *testing.T) {
+		itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("material", uniqueName("e2e-item-sell-mat"))), "id")
+
+		got := patchItem(t, itemID, map[string]any{"sales": map[string]any{
+			"unit_price": priceInputPer("6.25", SeedMaterialUnitID),
+			"lead_time":  map[string]any{"value": "2", "unit_id": dayUnitID},
+		}})
+		sales := jsonObject(got, "sales")
+		require.NotNil(t, sales, "sending sales creates the section")
+		assertItemPrice(t, jsonObject(sales, "unit_price"), "6.25", SeedMaterialUnitID, "sales.unit_price")
+		assert.Equal(t, "hidden", jsonField(sales, "portal_visibility"))
+		assertNilField(t, sales, "product_line")
+		assertQuantityIn(t, jsonObject(sales, "lead_time"), "2", dayUnitID, "sales.lead_time")
+		assert.Equal(t, sales, jsonObject(getItem(t, itemID), "sales"))
+
+		removed := patchItem(t, itemID, map[string]any{"sales": nil})
+		assertNilField(t, removed, "sales")
+		assertNilField(t, getItem(t, itemID), "sales")
+		assert.NotNil(t, jsonObject(removed, "material"), "the material section stays")
+		value := jsonObject(getPreview9Item(t, itemID), "unit_value")
+		require.NotNil(t, value, "the stored price outlives the section")
+		assertDecimalEqual(t, "6.25", jsonField(value, "value"), "unit_value.value")
+
+		again := jsonObject(patchItem(t, itemID, map[string]any{"sales": map[string]any{"portal_visibility": "visible"}}), "sales")
+		require.NotNil(t, again, "a removed section can be added back")
+		assert.Equal(t, "visible", jsonField(again, "portal_visibility"))
+		assertNilField(t, again, "lead_time")
+	})
+
+	t.Run("null on an item without sales changes nothing", func(t *testing.T) {
+		itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("part", uniqueName("e2e-item-unsold"))), "id")
+		assertNilField(t, patchItem(t, itemID, map[string]any{"sales": nil}), "sales")
+	})
+
+	t.Run("products and services keep their sales", func(t *testing.T) {
+		for _, itemType := range []string{"product", "service"} {
+			itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody(itemType, uniqueName("e2e-item-keep-"+itemType))), "id")
+			status, body, err := apiClient.Patch(itemsPath+"/"+itemID, map[string]any{"sales": nil}, newIdempotencyKey())
+			require.NoError(t, err)
+			requireStatus(t, 422, status, body)
+			assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "sales")
+			assert.NotNil(t, jsonObject(getItem(t, itemID), "sales"), itemType)
+		}
+	})
+
+	t.Run("removal refused while an open sales order lists the item", func(t *testing.T) {
+		body := forgeItemBody("material", uniqueName("e2e-item-sold-mat"))
+		body["sales"] = map[string]any{"product_line_id": SeedProductLineID, "portal_visibility": "visible"}
+		itemID := jsonField(createForgeItem(t, itemsPath, body), "id")
+		orderID := createLifecycleOrder(t)
+		status, respBody, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", map[string]any{
+			"product_id":  itemProductID(t, itemID),
+			"product_sku": uniqueName("E2E-LINE-SKU"),
+			"quantity":    map[string]any{"value": "1", "unit_id": SeedMaterialUnitID},
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, respBody)
+
+		status, respBody, err = apiClient.Patch(itemsPath+"/"+itemID, map[string]any{"sales": nil}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 409, status, respBody)
+		requireErrorResponse(t, respBody, "resource_in_use", "invalid_request_error")
+		assert.NotNil(t, jsonObject(getItem(t, itemID), "sales"), "a refused removal keeps the section")
+	})
+}
+
 func TestItems_UpdateStatusArchiveAndUnarchive(t *testing.T) {
 	t.Parallel()
 	itemID := jsonField(createForgeItem(t, itemsPath, forgeItemBody("part", uniqueName("e2e-item-arch"))), "id")

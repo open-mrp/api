@@ -26,7 +26,7 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 	}
 	var item *apiresource.Item
 	if m.Item != nil {
-		i := itemep.ItemPresenter(m.Item)
+		i := itemep.ItemPresenter(m.Item, true)
 		item = &i
 	}
 	return apiresource.Material{

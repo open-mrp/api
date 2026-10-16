@@ -66,7 +66,8 @@ func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*
 		Status:     req.Status.Ptr().StringPtr(),
 		Supply:     fieldpb.EnumClearableToProto(req.Supply),
 		UnitCost:   apirequest.OptionalUnitPriceToProto(req.UnitCost),
-		Sales:      updateSalesToProto(req.Sales),
+		Sales:      updateSalesToProto(req.Sales.Value()),
+		ClearSales: req.Sales.IsClear(),
 		Material:   updateMaterialToProto(req.Material),
 	}
 	if !req.Description.IsUnset() {
@@ -111,7 +112,7 @@ func (m *itemSvcImpl) BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsR
 			Status:      in.Status.Ptr().StringPtr(),
 			Supply:      fieldpb.EnumClearableToProto(in.Supply),
 			UnitCost:    apirequest.OptionalUnitPriceToProto(in.UnitCost),
-			Sales:       updateSalesToProto(in.Sales),
+			Sales:       updateSalesToProto(in.Sales.Value()),
 			Material:    updateMaterialToProto(in.Material),
 		}
 		if attrs, ok := in.Attributes.Value(); ok {
@@ -148,8 +149,7 @@ func writtenItem(ctx context.Context, saved *pb.ItemInfo) (*apiresource.Item, *a
 	return item, apiErr
 }
 
-func updateSalesToProto(f field.Optional[UpdateItemSalesInput]) *pb.ItemSalesInput {
-	sales, ok := f.Value()
+func updateSalesToProto(sales UpdateItemSalesInput, ok bool) *pb.ItemSalesInput {
 	if !ok {
 		return nil
 	}

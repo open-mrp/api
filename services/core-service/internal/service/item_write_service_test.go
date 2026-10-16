@@ -130,6 +130,63 @@ func TestUpdateItem_MaterialSectionOnlyOnMaterials(t *testing.T) {
 	requireFieldError(t, apiErr, apierror.CodeInvalidFormat, "material")
 }
 
+func TestUpdateItem_RemovingSalesWhileOnOpenOrdersConflicts(t *testing.T) {
+	t.Parallel()
+
+	r := newItemWriteRepos(t)
+	item := &domain.Item{ID: "itm_mat", AccountID: "ac_1", ItemTypeCode: string(constants.ItemTypeCodeMaterial),
+		Sales: &domain.ItemSales{ProductID: "prd_1"}}
+	r.items.EXPECT().GetByIDsWithIncludes(gomock.Any(), "ac_1", []string{"itm_mat"}, domain.ItemReadIncludes).Return([]*domain.Item{item}, nil)
+	r.refs.EXPECT().InUseBy(gomock.Any(), "itm_mat", domain.ItemSalesReferences.Probes).Return([]string{"open sales orders"}, nil)
+
+	_, apiErr := updateItemInTx(context.Background(), r.factory, domain.UpdateItemParams{
+		AccountID: "ac_1", ItemID: "itm_mat", RemoveSales: true,
+	})
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusConflict, apiErr.Status())
+	assert.Contains(t, apiErr.PublicMessage, "open sales orders")
+}
+
+func TestUpdateItem_ProductsKeepTheirSales(t *testing.T) {
+	t.Parallel()
+
+	for _, itemType := range []constants.ItemTypeCode{constants.ItemTypeCodeProduct, constants.ItemTypeCodeService} {
+		r := newItemWriteRepos(t)
+		r.items.EXPECT().GetByIDsWithIncludes(gomock.Any(), "ac_1", []string{"itm_1"}, domain.ItemReadIncludes).
+			Return([]*domain.Item{{ID: "itm_1", ItemTypeCode: string(itemType), Sales: &domain.ItemSales{}}}, nil)
+
+		_, apiErr := updateItemInTx(context.Background(), r.factory, domain.UpdateItemParams{
+			AccountID: "ac_1", ItemID: "itm_1", RemoveSales: true,
+		})
+		requireFieldError(t, apiErr, apierror.CodeInvalidFormat, "sales")
+	}
+}
+
+func TestUpdateItem_RemovingSalesDeletesTheProductRow(t *testing.T) {
+	t.Parallel()
+
+	r := newItemWriteRepos(t)
+	leadTimeID := "qty_lt"
+	before := &domain.Item{ID: "itm_part", AccountID: "ac_1", ItemTypeCode: string(constants.ItemTypeCodePart),
+		Sales: &domain.ItemSales{ProductID: "prd_1", LeadTimeID: &leadTimeID}}
+	after := &domain.Item{ID: "itm_part", AccountID: "ac_1", ItemTypeCode: string(constants.ItemTypeCodePart)}
+	gomock.InOrder(
+		r.items.EXPECT().GetByIDsWithIncludes(gomock.Any(), "ac_1", []string{"itm_part"}, domain.ItemReadIncludes).Return([]*domain.Item{before}, nil),
+		r.refs.EXPECT().InUseBy(gomock.Any(), "itm_part", domain.ItemSalesReferences.Probes).Return(nil, nil),
+		r.items.EXPECT().SetFields(gomock.Any(), gomock.Any()).Return(nil),
+		r.items.EXPECT().DeleteProduct(gomock.Any(), "itm_part").Return(nil),
+		r.items.EXPECT().DeleteQuantities(gomock.Any(), []string{"qty_lt"}).Return(nil),
+		r.items.EXPECT().GetByIDsWithIncludes(gomock.Any(), "ac_1", []string{"itm_part"}, domain.ItemReadIncludes).Return([]*domain.Item{after}, nil),
+	)
+	r.factory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
+
+	got, apiErr := updateItemInTx(internalProductIdentityCtx("ac_1"), r.factory, domain.UpdateItemParams{
+		AccountID: "ac_1", ItemID: "itm_part", RemoveSales: true,
+	})
+	require.Nil(t, apiErr)
+	assert.Nil(t, got.Sales)
+}
+
 // A material's suppliers reference its material row, so they are probed by the material id and reported with the
 // item's other uses.
 func TestDeleteItem_InUseNamesEveryReference(t *testing.T) {
@@ -190,29 +247,6 @@ func TestRequireItemsAssignable_RefusesAnArchivedItem(t *testing.T) {
 
 	apiErr := requireItemsAssignable(context.Background(), r.factory, "ac_1", []string{"itm_a", "itm_b", "itm_a"}, "lines")
 	requireFieldError(t, apiErr, apperr.CodeResourceArchived, "lines")
-}
-
-func TestItemIsSold(t *testing.T) {
-	t.Parallel()
-
-	price := func(amount string) *domain.UnitPrice {
-		return &domain.UnitPrice{Amount: amount, Currency: constants.CurrencyUSD}
-	}
-	cases := map[string]struct {
-		item domain.Item
-		want bool
-	}{
-		"product without a loaded row":   {domain.Item{ItemTypeCode: "product"}, true},
-		"service":                        {domain.Item{ItemTypeCode: "service"}, true},
-		"material with a product row":    {domain.Item{ItemTypeCode: "material", Sales: &domain.ItemSales{}}, true},
-		"material with a selling price":  {domain.Item{ItemTypeCode: "material", SalesUnitPrice: price("4.25")}, true},
-		"material priced at zero":        {domain.Item{ItemTypeCode: "material", SalesUnitPrice: price("0.000000")}, false},
-		"part with no price read":        {domain.Item{ItemTypeCode: "part"}, false},
-		"part with an unparsable amount": {domain.Item{ItemTypeCode: "part", SalesUnitPrice: price("n/a")}, false},
-	}
-	for name, tc := range cases {
-		assert.Equal(t, tc.want, tc.item.IsSold(), name)
-	}
 }
 
 func TestItemStatus(t *testing.T) {

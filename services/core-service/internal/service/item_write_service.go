@@ -42,7 +42,8 @@ func (s *itemSvcImpl) CreateItem(ctx context.Context, params domain.CreateItemPa
 	})
 }
 
-// UpdateItem changes the fields sent. A material or part gains a sales section the first time one is sent.
+// UpdateItem changes the fields sent. A material or part gains a sales section the first time one is sent, and loses
+// it when sales is cleared.
 func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemParams) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.update")
 	defer span.End()
@@ -294,6 +295,16 @@ func updateItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Upda
 	if p.Status != nil && !p.Status.IsValid() {
 		return nil, apierror.NewFieldError("status", apierror.CodeInvalidFormat, "status must be active or archived.")
 	}
+	removeSales := p.RemoveSales && before.Sales != nil
+	if removeSales {
+		if itemType == constants.ItemTypeCodeProduct || itemType == constants.ItemTypeCodeService {
+			return nil, apierror.NewFieldError("sales", apierror.CodeInvalidFormat,
+				"Products and services are always sold. Archive the item instead by setting `status` to `archived`.")
+		}
+		if apiErr := domain.ItemSalesReferences.RequireUnused(ctx, repos.NewReferenceRepo(), p.ItemID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
 	if p.SKU != nil {
 		exists, apiErr := itemRepo.CheckSKUExists(ctx, p.AccountID, *p.SKU, p.ItemID)
 		if apiErr != nil {
@@ -361,6 +372,11 @@ func updateItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Upda
 		}
 	}
 
+	if removeSales {
+		if apiErr := removeItemSales(ctx, repos, before); apiErr != nil {
+			return nil, apiErr
+		}
+	}
 	if p.Sales != nil {
 		if before.Sales == nil {
 			if apiErr := insertItemSales(ctx, repos, p.ItemID, p.Sales); apiErr != nil {
@@ -603,6 +619,19 @@ func updateItemSales(ctx context.Context, repos domain.RepoFactory, item *domain
 		return itemRepo.DeleteQuantities(ctx, []string{*item.Sales.LeadTimeID})
 	}
 	return itemRepo.SetProduct(ctx, set)
+}
+
+// removeItemSales deletes the product row holding an item's sales section, and its lead time. The stored selling
+// price stays on the item.
+func removeItemSales(ctx context.Context, repos domain.RepoFactory, item *domain.Item) *apierror.APIError {
+	itemRepo := repos.NewItemRepo()
+	if apiErr := itemRepo.DeleteProduct(ctx, item.ID); apiErr != nil {
+		return apiErr
+	}
+	if item.Sales.LeadTimeID == nil {
+		return nil
+	}
+	return itemRepo.DeleteQuantities(ctx, []string{*item.Sales.LeadTimeID})
 }
 
 // insertItemMaterial writes a material's order point and lead time (zero when unsent) and its material row.

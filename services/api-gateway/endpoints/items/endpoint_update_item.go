@@ -53,8 +53,8 @@ type UpdateItemRequest struct {
 	Supply field.Clearable[constants.Supply] `json:"supply,omitzero"`
 	// What one stocking unit of the item costs you.
 	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
-	// Selling details to change.
-	Sales field.Optional[UpdateItemSalesInput] `json:"sales,omitzero"`
+	// Selling details to change. Sending them for a material or part without a sales section makes it sellable. Send `null` to stop selling a material or part, refused while open sales orders list it.
+	Sales field.Clearable[UpdateItemSalesInput] `json:"sales,omitzero"`
 	// Purchasing details to change, for materials only.
 	Material field.Optional[UpdateItemMaterialInput] `json:"material,omitzero"`
 }
@@ -62,7 +62,7 @@ type UpdateItemRequest struct {
 var sampleUpdateItemRequest = &UpdateItemRequest{
 	Description: field.Set("6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick (v2)"),
 	Status:      field.Some(constants.ArchiveStatusActive),
-	Sales: field.Some(UpdateItemSalesInput{
+	Sales: field.Set(UpdateItemSalesInput{
 		UnitPrice:     field.Some(apirequest.UnitPriceInput{Amount: "219.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 		ProductLineID: field.Set(apiresource.SampleProductLineID),
 	}),

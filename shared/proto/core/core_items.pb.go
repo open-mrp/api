@@ -9,13 +9,12 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -619,10 +618,12 @@ type UpdateItemRequest struct {
 	// active | archived
 	Status *string `protobuf:"bytes,10,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	// stock | make | buy
-	Supply        *StringPatch       `protobuf:"bytes,11,opt,name=supply,proto3" json:"supply,omitempty"`
-	UnitCost      *UnitPrice         `protobuf:"bytes,12,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
-	Sales         *ItemSalesInput    `protobuf:"bytes,13,opt,name=sales,proto3" json:"sales,omitempty"`
-	Material      *ItemMaterialInput `protobuf:"bytes,14,opt,name=material,proto3" json:"material,omitempty"`
+	Supply   *StringPatch       `protobuf:"bytes,11,opt,name=supply,proto3" json:"supply,omitempty"`
+	UnitCost *UnitPrice         `protobuf:"bytes,12,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	Sales    *ItemSalesInput    `protobuf:"bytes,13,opt,name=sales,proto3" json:"sales,omitempty"`
+	Material *ItemMaterialInput `protobuf:"bytes,14,opt,name=material,proto3" json:"material,omitempty"`
+	// Removes the item's sales section (its product row); sales must be unset.
+	ClearSales    bool `protobuf:"varint,15,opt,name=clear_sales,json=clearSales,proto3" json:"clear_sales,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -739,6 +740,13 @@ func (x *UpdateItemRequest) GetMaterial() *ItemMaterialInput {
 		return x.Material
 	}
 	return nil
+}
+
+func (x *UpdateItemRequest) GetClearSales() bool {
+	if x != nil {
+		return x.ClearSales
+	}
+	return false
 }
 
 type UpdateItemResponse struct {
@@ -6802,7 +6810,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x06_notes\"W\n" +
 	"\x13ExportItemsResponse\x12*\n" +
 	"\x05items\x18\x01 \x03(\v2\x14.core.ExportItemInfoR\x05items\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"\xb9\x04\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"\xda\x04\n" +
 	"\x11UpdateItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
@@ -6817,7 +6825,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x06supply\x18\v \x01(\v2\x11.core.StringPatchR\x06supply\x12,\n" +
 	"\tunit_cost\x18\f \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12*\n" +
 	"\x05sales\x18\r \x01(\v2\x14.core.ItemSalesInputR\x05sales\x123\n" +
-	"\bmaterial\x18\x0e \x01(\v2\x17.core.ItemMaterialInputR\bmaterialB\x06\n" +
+	"\bmaterial\x18\x0e \x01(\v2\x17.core.ItemMaterialInputR\bmaterial\x12\x1f\n" +
+	"\vclear_sales\x18\x0f \x01(\bR\n" +
+	"clearSalesB\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\x0e\n" +
 	"\f_category_idB\t\n" +

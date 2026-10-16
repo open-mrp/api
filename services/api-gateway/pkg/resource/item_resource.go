@@ -47,7 +47,7 @@ type Item struct {
 	//
 	// `stock`: taken from inventory. `make`: produced for the demand. `buy`: purchased for the demand. `null` uses the product line's, then the account default. Always `null` for portal users.
 	Supply *constants.Supply `json:"supply" sensitive:"internal"`
-	// Selling details. `null` for a material or part you don't sell.
+	// Selling details. Products and services always have them; a material or part has them once you send `sales`, and `null` otherwise.
 	Sales *ItemSales `json:"sales"`
 	// Purchasing details, for materials. `null` for other types, and always `null` for portal users.
 	Material *ItemMaterial `json:"material" sensitive:"internal"`

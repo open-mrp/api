@@ -69,6 +69,15 @@ var ItemReferences = RegisterReferences(References{
 	},
 })
 
+// ItemSalesReferences blocks removing an item's sales section while open sales orders (estimate or issued) list it.
+var ItemSalesReferences = RegisterReferences(References{
+	Noun: "item's sales section",
+	Probes: []ReferenceProbe{
+		{Label: "open sales orders", Table: "sales_order_line", Column: "item_id",
+			Where: "EXISTS (SELECT 1 FROM `sales_order` so WHERE so.id = `sales_order_line`.`sales_order_id` AND so.sales_order_status_code IN ('estimate', 'issued'))"},
+	},
+})
+
 // ItemMaterialReferences blocks deleting a material its suppliers still list; it probes by the material's own id.
 var ItemMaterialReferences = RegisterReferences(References{
 	Noun:       "item",
@@ -84,22 +93,6 @@ func ItemStatus(isActive bool, deletedAt *time.Time) constants.ArchiveStatus {
 		return constants.ArchiveStatusActive
 	}
 	return constants.ArchiveStatusArchived
-}
-
-// IsSold reports whether the item has a sales section: products and services always do; a material or part does once
-// it has a product row or a selling price, which it carried before materials and parts could be sold.
-func (i *Item) IsSold() bool {
-	switch {
-	case i.Sales != nil:
-		return true
-	case i.ItemTypeCode == string(constants.ItemTypeCodeProduct) || i.ItemTypeCode == string(constants.ItemTypeCodeService):
-		return true
-	case i.SalesUnitPrice == nil:
-		return false
-	default:
-		amount, err := decimal.NewFromString(i.SalesUnitPrice.Amount)
-		return err == nil && !amount.IsZero()
-	}
 }
 
 // ItemSales is an item's selling details, stored on its product row. The price is the item's unit value.
@@ -475,7 +468,9 @@ type UpdateItemParams struct {
 	Supply       field.Clearable[constants.Supply]
 	UnitCost     *CreateRateParams
 	Sales        *ItemSalesInput
-	Material     *ItemMaterialInput
+	// RemoveSales deletes the item's sales section; Sales is nil when it is set.
+	RemoveSales bool
+	Material    *ItemMaterialInput
 }
 
 // SetItemFieldsParams writes an item row's own columns; nil fields keep their values.

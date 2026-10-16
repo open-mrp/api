@@ -233,69 +233,75 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	}
 
 	info := &pb.SalesOrderInfo{
-		Metadata:              o.Metadata,
-		Id:                    o.ID,
-		Number:                o.Number,
-		CustomerPoNumber:      o.CustomerPONumber,
-		Note:                  o.Note,
-		IsAcknowledgmentSent:  o.IsAcknowledgmentSent,
-		BillingAddressId:      o.BillingAddressID,
-		ShippingAddressId:     o.ShippingAddressID,
-		CarrierId:             o.CarrierID,
-		ServiceLevelId:        o.ServiceLevelID,
-		CarrierBillingType:    o.CarrierBillingType,
-		CarrierBillingAccount: o.CarrierBillingAccount,
-		CustomerId:            o.BuyerAccountID,
-		CustomerName:          o.CustomerName,
-		CustomerNumber:        o.CustomerNumber,
-		SalesRepId:            o.SalesRepID,
-		SalesRepName:          o.SalesRepName,
-		StatusCode:            o.SalesOrderStatusCode,
-		StatusName:            o.StatusName,
-		TypeCode:              o.SalesOrderTypeCode,
-		TypeName:              o.TypeName,
-		PriorityCode:          string(o.PriorityCode),
-		PriorityName:          o.PriorityName,
-		PaymentTermId:         o.PaymentTermID,
-		PaymentTermName:       o.PaymentTermName,
-		ShippingTermId:        o.ShippingTermID,
-		ShippingTermName:      o.ShippingTermName,
-		OrderDiscountId:       o.OrderDiscountID,
-		OrderDiscountName:     o.OrderDiscountName,
-		ProductionRunId:       o.ProductionRunID,
-		PickId:                o.PickID,
-		BillToName:            o.BillToName,
-		BillToStreetLine_1:    o.BillToStreetLine1,
-		BillToStreetLine_2:    o.BillToStreetLine2,
-		BillToLocality:        o.BillToLocality,
-		BillToState:           o.BillToState,
-		BillToPostalCode:      o.BillToPostalCode,
-		BillToCountry:         o.BillToCountry,
-		BillToPhone:           o.BillToPhone,
-		BillToEmail:           o.BillToEmail,
-		ShipToName:            o.ShipToName,
-		ShipToStreetLine_1:    o.ShipToStreetLine1,
-		ShipToStreetLine_2:    o.ShipToStreetLine2,
-		ShipToLocality:        o.ShipToLocality,
-		ShipToState:           o.ShipToState,
-		ShipToPostalCode:      o.ShipToPostalCode,
-		ShipToCountry:         o.ShipToCountry,
-		ShipToPhone:           o.ShipToPhone,
-		ShipToEmail:           o.ShipToEmail,
-		CarrierName:           o.CarrierName,
-		ServiceLevelName:      o.ServiceLevelName,
-		LineCount:             o.LineCount,
-		ShipmentIds:           o.ShipmentIDs,
-		InvoiceIds:            o.InvoiceIDs,
-		InvoiceEmails:         o.InvoiceEmails,
-		AcknowledgementEmails: o.AcknowledgementEmails,
-		PaymentStatus:         string(o.PaymentStatus),
-		PaymentIntentIds:      o.PaymentIntentIDs,
-		PickedCompletion:      o.PickedCompletion,
-		PackedCompletion:      o.PackedCompletion,
-		InvoicedCompletion:    o.InvoicedCompletion,
-		CreatedAt:             timestamppb.New(o.CreatedAt),
-		UpdatedAt:             timestamppb.New(o.UpdatedAt),
+		Metadata:               o.Metadata,
+		Id:                     o.ID,
+		Number:                 o.Number,
+		CustomerPoNumber:       o.CustomerPONumber,
+		Instructions:           o.Instructions,
+		BillTo:                 AddressSnapshotToProto(o.BillTo),
+		ShipTo:                 AddressSnapshotToProto(o.ShipTo),
+		SiteId:                 o.SiteID,
+		CommitmentFirmness:     o.CommitmentFirmness,
+		PromisedLeadTimeDays:   o.PromisedLeadTimeDays,
+		PromisedLeadTimeSource: o.PromisedLeadTimeSource,
+		IsAcknowledgmentSent:   o.IsAcknowledgmentSent,
+		BillingAddressId:       o.BillingAddressID,
+		ShippingAddressId:      o.ShippingAddressID,
+		CarrierId:              o.CarrierID,
+		ServiceLevelId:         o.ServiceLevelID,
+		CarrierBillingType:     o.CarrierBillingType,
+		CarrierBillingAccount:  o.CarrierBillingAccount,
+		CustomerId:             o.BuyerAccountID,
+		CustomerName:           o.CustomerName,
+		CustomerNumber:         o.CustomerNumber,
+		SalesRepId:             o.SalesRepID,
+		SalesRepName:           o.SalesRepName,
+		StatusCode:             o.SalesOrderStatusCode,
+		StatusName:             o.StatusName,
+		TypeCode:               o.SalesOrderTypeCode,
+		TypeName:               o.TypeName,
+		PriorityCode:           string(o.PriorityCode),
+		PriorityName:           o.PriorityName,
+		PaymentTermId:          o.PaymentTermID,
+		PaymentTermName:        o.PaymentTermName,
+		ShippingTermId:         o.ShippingTermID,
+		ShippingTermName:       o.ShippingTermName,
+		OrderDiscountId:        o.OrderDiscountID,
+		OrderDiscountName:      o.OrderDiscountName,
+		ProductionRunId:        o.ProductionRunID,
+		PickId:                 o.PickID,
+		BillToName:             o.BillToName,
+		BillToStreetLine_1:     o.BillToStreetLine1,
+		BillToStreetLine_2:     o.BillToStreetLine2,
+		BillToLocality:         o.BillToLocality,
+		BillToState:            o.BillToState,
+		BillToPostalCode:       o.BillToPostalCode,
+		BillToCountry:          o.BillToCountry,
+		BillToPhone:            o.BillToPhone,
+		BillToEmail:            o.BillToEmail,
+		ShipToName:             o.ShipToName,
+		ShipToStreetLine_1:     o.ShipToStreetLine1,
+		ShipToStreetLine_2:     o.ShipToStreetLine2,
+		ShipToLocality:         o.ShipToLocality,
+		ShipToState:            o.ShipToState,
+		ShipToPostalCode:       o.ShipToPostalCode,
+		ShipToCountry:          o.ShipToCountry,
+		ShipToPhone:            o.ShipToPhone,
+		ShipToEmail:            o.ShipToEmail,
+		CarrierName:            o.CarrierName,
+		ServiceLevelName:       o.ServiceLevelName,
+		LineCount:              o.LineCount,
+		ShipmentIds:            o.ShipmentIDs,
+		InvoiceIds:             o.InvoiceIDs,
+		InvoiceEmails:          o.InvoiceEmails,
+		AcknowledgementEmails:  o.AcknowledgementEmails,
+		PaymentStatus:          string(o.PaymentStatus),
+		PaymentIntentIds:       o.PaymentIntentIDs,
+		PickedCompletion:       o.PickedCompletion,
+		PackedCompletion:       o.PackedCompletion,
+		InvoicedCompletion:     o.InvoicedCompletion,
+		CreatedAt:              timestamppb.New(o.CreatedAt),
+		UpdatedAt:              timestamppb.New(o.UpdatedAt),
 	}
 
 	if o.ServiceLevelToken != nil {
@@ -461,7 +467,40 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		}
 	}
 
+	if o.EmailRecipients != nil {
+		info.EmailRecipients = orderRecipientsToProto(o.EmailRecipients)
+		info.HasEmailRecipients = true
+	}
+
 	return info
+}
+
+// orderRecipientsToProto is an order's recipients with the documents each receives.
+func orderRecipientsToProto(refs []domain.NotificationRecipientRef) []*pb.EmailRecipient {
+	out := make([]*pb.EmailRecipient, 0, len(refs))
+	for _, ref := range refs {
+		r := &pb.EmailRecipient{AccountUserId: ref.AccountUserID}
+		for _, code := range ref.NotificationTypeCodes {
+			if doc, ok := constants.AccountRelationNotificationType(code).RecipientDocument(); ok {
+				r.Documents = append(r.Documents, string(doc))
+			}
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+// orderRecipientsFromProto is requested order recipients as the notification types an order stores.
+func orderRecipientsFromProto(in []*pb.EmailRecipient) []domain.NotificationRecipientRef {
+	out := make([]domain.NotificationRecipientRef, len(in))
+	for i, r := range in {
+		codes := make([]string, len(r.Documents))
+		for j, doc := range r.Documents {
+			codes[j] = string(constants.RecipientDocument(doc).NotificationType())
+		}
+		out[i] = domain.NotificationRecipientRef{AccountUserID: r.AccountUserId, NotificationTypeCodes: codes}
+	}
+	return out
 }
 
 func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
@@ -656,27 +695,29 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 	}
 
 	params := domain.CreateSalesOrderParams{
-		Metadata:                     req.Metadata,
-		BuyerAccountID:               req.BuyerAccountId,
-		CustomerPONumber:             req.CustomerPoNumber,
-		Note:                         req.Note,
-		CarrierID:                    req.CarrierId,
-		ServiceLevelID:               req.ServiceLevelId,
-		CarrierBillingType:           req.CarrierBillingType,
-		CarrierBillingAccount:        req.CarrierBillingAccount,
-		PriorityCode:                 req.PriorityCode,
-		SalesRepID:                   req.SalesRepId,
-		ShippingTermID:               req.ShippingTermId,
-		PaymentTermID:                req.PaymentTermId,
-		OrderDiscountID:              req.OrderDiscountId,
-		BillToAddressID:              req.BillToAddressId,
-		ShipToAddressID:              req.ShipToAddressId,
-		Lines:                        lines,
-		AcknowledgementEmailContacts: protoToEmailContactInputs(req.AcknowledgementEmailContacts),
-		InvoiceEmailContacts:         protoToEmailContactInputs(req.InvoiceEmailContacts),
-		Includes:                     req.Includes,
-		BillToAddress:                inlineAddressToDomain(req.BillToAddress),
-		ShipToAddress:                inlineAddressToDomain(req.ShipToAddress),
+		Metadata:              req.Metadata,
+		BuyerAccountID:        req.BuyerAccountId,
+		CustomerPONumber:      req.CustomerPoNumber,
+		Instructions:          fieldpb.StringClearableFromProto(req.Instructions),
+		BillTo:                AddressSnapshotFromProto(req.BillTo),
+		ShipTo:                AddressSnapshotFromProto(req.ShipTo),
+		SiteID:                req.SiteId,
+		CommitmentFirmness:    req.CommitmentFirmness,
+		CarrierID:             req.CarrierId,
+		ServiceLevelID:        req.ServiceLevelId,
+		CarrierBillingType:    req.CarrierBillingType,
+		CarrierBillingAccount: req.CarrierBillingAccount,
+		PriorityCode:          req.PriorityCode,
+		SalesRepID:            req.SalesRepId,
+		ShippingTermID:        req.ShippingTermId,
+		PaymentTermID:         req.PaymentTermId,
+		OrderDiscountID:       req.OrderDiscountId,
+		Lines:                 lines,
+		Includes:              req.Includes,
+	}
+	if req.HasEmailRecipients {
+		recipients := orderRecipientsFromProto(req.EmailRecipients)
+		params.EmailRecipients = &recipients
 	}
 
 	if req.PromisedAt != nil {
@@ -721,14 +762,14 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		PaymentTermID:        req.PaymentTermId,
 		IsAcknowledgmentSent: req.IsAcknowledgmentSent,
 		BuyerAccountID:       req.CustomerId,
-		BillingAddressID:     req.BillingAddressId,
-		ShippingAddressID:    req.ShippingAddressId,
-		BillingAddress:       inlineAddressToDomain(req.BillingAddress),
-		ShippingAddress:      inlineAddressToDomain(req.ShippingAddress),
+		BillTo:               AddressSnapshotFromProto(req.BillTo),
+		ShipTo:               AddressSnapshotFromProto(req.ShipTo),
+		SiteID:               req.SiteId,
 		Includes:             req.Includes,
 		// Clearable fields (StringPatch / TimestampPatch → Clearable).
 		CustomerPONumber:      fieldpb.StringClearableFromProto(req.CustomerPoNumber),
-		Note:                  fieldpb.StringClearableFromProto(req.Note),
+		Instructions:          fieldpb.StringClearableFromProto(req.Instructions),
+		CommitmentFirmness:    fieldpb.StringClearableFromProto(req.CommitmentFirmness),
 		ServiceLevelID:        fieldpb.StringClearableFromProto(req.ServiceLevelId),
 		CarrierBillingType:    fieldpb.StringClearableFromProto(req.CarrierBillingType),
 		CarrierBillingAccount: fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
@@ -739,13 +780,9 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		ShipByOverrideDate:    fieldpb.TimestampClearableFromProto(req.ShipByOverrideDate),
 	}
 
-	if list := req.AcknowledgementEmailContacts; list != nil {
-		contacts := protoToEmailContactInputs(list.Contacts)
-		params.AcknowledgementEmailContacts = &contacts
-	}
-	if list := req.InvoiceEmailContacts; list != nil {
-		contacts := protoToEmailContactInputs(list.Contacts)
-		params.InvoiceEmailContacts = &contacts
+	if req.HasEmailRecipients {
+		recipients := orderRecipientsFromProto(req.EmailRecipients)
+		params.EmailRecipients = &recipients
 	}
 
 	order, apiErr := h.salesOrderSvc.UpdateSalesOrder(ctx, params)

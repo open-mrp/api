@@ -244,6 +244,11 @@ INSERT INTO sales_order (
     payment_term_id, order_discount_id, promised_at,
     lead_time_override_days, ship_by_override_date,
     buyer_account_id, seller_account_id, owner_account_id, metadata,
+    bill_to_address_id, bill_to_name, bill_to_line_1, bill_to_line_2, bill_to_city, bill_to_state,
+    bill_to_postal_code, bill_to_country, bill_to_phone, bill_to_email,
+    ship_to_address_id, ship_to_name, ship_to_line_1, ship_to_line_2, ship_to_city, ship_to_state,
+    ship_to_postal_code, ship_to_country, ship_to_phone, ship_to_email,
+    site_id, commitment_firmness,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, ?, false,
@@ -255,6 +260,13 @@ INSERT INTO sales_order (
     ?, ?, ?,
     ?, ?,
     ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?,
+    ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -283,6 +295,28 @@ type CreateSalesOrderParams struct {
 	SellerAccountID       string
 	OwnerAccountID        string
 	Metadata              json.RawMessage
+	BillToAddressID       sql.NullString
+	BillToName            sql.NullString
+	BillToLine1           sql.NullString
+	BillToLine2           sql.NullString
+	BillToCity            sql.NullString
+	BillToState           sql.NullString
+	BillToPostalCode      sql.NullString
+	BillToCountry         sql.NullString
+	BillToPhone           sql.NullString
+	BillToEmail           sql.NullString
+	ShipToAddressID       sql.NullString
+	ShipToName            sql.NullString
+	ShipToLine1           sql.NullString
+	ShipToLine2           sql.NullString
+	ShipToCity            sql.NullString
+	ShipToState           sql.NullString
+	ShipToPostalCode      sql.NullString
+	ShipToCountry         sql.NullString
+	ShipToPhone           sql.NullString
+	ShipToEmail           sql.NullString
+	SiteID                sql.NullString
+	CommitmentFirmness    sql.NullString
 }
 
 func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderParams) error {
@@ -310,6 +344,28 @@ func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderPara
 		arg.SellerAccountID,
 		arg.OwnerAccountID,
 		arg.Metadata,
+		arg.BillToAddressID,
+		arg.BillToName,
+		arg.BillToLine1,
+		arg.BillToLine2,
+		arg.BillToCity,
+		arg.BillToState,
+		arg.BillToPostalCode,
+		arg.BillToCountry,
+		arg.BillToPhone,
+		arg.BillToEmail,
+		arg.ShipToAddressID,
+		arg.ShipToName,
+		arg.ShipToLine1,
+		arg.ShipToLine2,
+		arg.ShipToCity,
+		arg.ShipToState,
+		arg.ShipToPostalCode,
+		arg.ShipToCountry,
+		arg.ShipToPhone,
+		arg.ShipToEmail,
+		arg.SiteID,
+		arg.CommitmentFirmness,
 	)
 	return err
 }
@@ -333,6 +389,15 @@ func (q *Queries) CreateSalesOrderEmailContact(ctx context.Context, arg CreateSa
 		arg.AccountUserID,
 		arg.NotificationTypeCode,
 	)
+	return err
+}
+
+const deleteDocumentParties = `-- name: DeleteDocumentParties :exec
+DELETE FROM document_party WHERE document_id = ?
+`
+
+func (q *Queries) DeleteDocumentParties(ctx context.Context, documentID string) error {
+	_, err := q.db.ExecContext(ctx, deleteDocumentParties, documentID)
 	return err
 }
 
@@ -682,6 +747,52 @@ func (q *Queries) GetOrderAcknowledgementRecipients(ctx context.Context, salesOr
 			return nil, err
 		}
 		items = append(items, email)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOrderEmailRecipients = `-- name: GetOrderEmailRecipients :many
+SELECT oec.sales_order_id, oec.account_user_id, oec.notification_type_code
+FROM order_email_contact oec
+WHERE oec.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY oec.sales_order_id, oec.created_at, oec.id
+`
+
+type GetOrderEmailRecipientsRow struct {
+	SalesOrderID         string
+	AccountUserID        string
+	NotificationTypeCode string
+}
+
+func (q *Queries) GetOrderEmailRecipients(ctx context.Context, salesOrderIds []string) ([]GetOrderEmailRecipientsRow, error) {
+	query := getOrderEmailRecipients
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderEmailRecipientsRow
+	for rows.Next() {
+		var i GetOrderEmailRecipientsRow
+		if err := rows.Scan(&i.SalesOrderID, &i.AccountUserID, &i.NotificationTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1602,6 +1713,121 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 	return i, err
 }
 
+const getSalesOrderForgeFields = `-- name: GetSalesOrderForgeFields :many
+SELECT
+    so.id,
+    so.bill_to_address_id, so.bill_to_name, so.bill_to_line_1, so.bill_to_line_2, so.bill_to_city, so.bill_to_state,
+    so.bill_to_postal_code, so.bill_to_country, so.bill_to_phone, so.bill_to_email,
+    so.ship_to_address_id, so.ship_to_name, so.ship_to_line_1, so.ship_to_line_2, so.ship_to_city, so.ship_to_state,
+    so.ship_to_postal_code, so.ship_to_country, so.ship_to_phone, so.ship_to_email,
+    so.site_id, so.commitment_firmness, so.promised_lead_time_days, so.promised_lead_time_source,
+    dp.id AS party_id, dp.instructions AS party_instructions, CAST(dp.metadata AS CHAR) AS party_metadata
+FROM sales_order so
+LEFT JOIN document_party dp ON dp.document_id = so.id AND dp.account_id = ?
+WHERE so.id IN (/*SLICE:ids*/?)
+`
+
+type GetSalesOrderForgeFieldsParams struct {
+	ViewerAccountID string
+	Ids             []string
+}
+
+type GetSalesOrderForgeFieldsRow struct {
+	ID                     string
+	BillToAddressID        sql.NullString
+	BillToName             sql.NullString
+	BillToLine1            sql.NullString
+	BillToLine2            sql.NullString
+	BillToCity             sql.NullString
+	BillToState            sql.NullString
+	BillToPostalCode       sql.NullString
+	BillToCountry          sql.NullString
+	BillToPhone            sql.NullString
+	BillToEmail            sql.NullString
+	ShipToAddressID        sql.NullString
+	ShipToName             sql.NullString
+	ShipToLine1            sql.NullString
+	ShipToLine2            sql.NullString
+	ShipToCity             sql.NullString
+	ShipToState            sql.NullString
+	ShipToPostalCode       sql.NullString
+	ShipToCountry          sql.NullString
+	ShipToPhone            sql.NullString
+	ShipToEmail            sql.NullString
+	SiteID                 sql.NullString
+	CommitmentFirmness     sql.NullString
+	PromisedLeadTimeDays   sql.NullInt32
+	PromisedLeadTimeSource sql.NullString
+	PartyID                sql.NullString
+	PartyInstructions      sql.NullString
+	PartyMetadata          interface{}
+}
+
+// GetSalesOrderForgeFields reads the order columns forge.1 added, beside the detail queries, and the viewer's own
+// party row (party_id is NULL when it has none).
+func (q *Queries) GetSalesOrderForgeFields(ctx context.Context, arg GetSalesOrderForgeFieldsParams) ([]GetSalesOrderForgeFieldsRow, error) {
+	query := getSalesOrderForgeFields
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.ViewerAccountID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderForgeFieldsRow
+	for rows.Next() {
+		var i GetSalesOrderForgeFieldsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BillToAddressID,
+			&i.BillToName,
+			&i.BillToLine1,
+			&i.BillToLine2,
+			&i.BillToCity,
+			&i.BillToState,
+			&i.BillToPostalCode,
+			&i.BillToCountry,
+			&i.BillToPhone,
+			&i.BillToEmail,
+			&i.ShipToAddressID,
+			&i.ShipToName,
+			&i.ShipToLine1,
+			&i.ShipToLine2,
+			&i.ShipToCity,
+			&i.ShipToState,
+			&i.ShipToPostalCode,
+			&i.ShipToCountry,
+			&i.ShipToPhone,
+			&i.ShipToEmail,
+			&i.SiteID,
+			&i.CommitmentFirmness,
+			&i.PromisedLeadTimeDays,
+			&i.PromisedLeadTimeSource,
+			&i.PartyID,
+			&i.PartyInstructions,
+			&i.PartyMetadata,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSalesOrderFreightPendingSince = `-- name: GetSalesOrderFreightPendingSince :one
 SELECT freight_pending_since FROM sales_order
 WHERE id = ? AND owner_account_id = ?
@@ -1728,6 +1954,25 @@ func (q *Queries) GetSalesOrderFulfillmentProgress(ctx context.Context, arg GetS
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSalesOrderItemLeadTimeDays = `-- name: GetSalesOrderItemLeadTimeDays :one
+SELECT COALESCE(CAST(MAX(CEIL(q.value * u.ratio_numerator / u.ratio_denominator * d.ratio_denominator / d.ratio_numerator)) AS SIGNED), -1) AS days
+FROM sales_order_line sol
+JOIN product p ON p.item_id = sol.item_id
+JOIN quantity q ON q.id = p.lead_time_id
+JOIN unit u ON u.id = q.unit_id
+JOIN unit d ON d.id = 'day'
+WHERE sol.sales_order_id = ?
+`
+
+// GetSalesOrderItemLeadTimeDays is the longest sales lead time of the items on an order's lines, in whole days
+// (rounded up); -1 when none of them has one.
+func (q *Queries) GetSalesOrderItemLeadTimeDays(ctx context.Context, salesOrderID string) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderItemLeadTimeDays, salesOrderID)
+	var days interface{}
+	err := row.Scan(&days)
+	return days, err
 }
 
 const getSalesOrderLineCounts = `-- name: GetSalesOrderLineCounts :many
@@ -3477,6 +3722,8 @@ UPDATE sales_order SET
     transit_source_code = ?,
     ship_by_cutoff_at = ?,
     calendar_adjustment_days = ?,
+    promised_lead_time_days = ?,
+    promised_lead_time_source = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
@@ -3490,6 +3737,8 @@ type SetSalesOrderShipByCommitmentParams struct {
 	TransitSourceCode      sql.NullString
 	ShipByCutoffAt         sql.NullTime
 	CalendarAdjustmentDays sql.NullInt32
+	PromisedLeadTimeDays   sql.NullInt32
+	PromisedLeadTimeSource sql.NullString
 	ID                     string
 	AccountID              string
 }
@@ -3506,6 +3755,8 @@ func (q *Queries) SetSalesOrderShipByCommitment(ctx context.Context, arg SetSale
 		arg.TransitSourceCode,
 		arg.ShipByCutoffAt,
 		arg.CalendarAdjustmentDays,
+		arg.PromisedLeadTimeDays,
+		arg.PromisedLeadTimeSource,
 		arg.ID,
 		arg.AccountID,
 	)
@@ -3535,6 +3786,29 @@ UPDATE sales_order SET
     buyer_account_id = ?,
     billing_address_id = COALESCE(?, billing_address_id),
     shipping_address_id = COALESCE(?, shipping_address_id),
+    -- A snapshot is written whole when set_bill_to / set_ship_to, and left alone otherwise.
+    bill_to_address_id = IF(?, ?, bill_to_address_id),
+    bill_to_name = IF(?, ?, bill_to_name),
+    bill_to_line_1 = IF(?, ?, bill_to_line_1),
+    bill_to_line_2 = IF(?, ?, bill_to_line_2),
+    bill_to_city = IF(?, ?, bill_to_city),
+    bill_to_state = IF(?, ?, bill_to_state),
+    bill_to_postal_code = IF(?, ?, bill_to_postal_code),
+    bill_to_country = IF(?, ?, bill_to_country),
+    bill_to_phone = IF(?, ?, bill_to_phone),
+    bill_to_email = IF(?, ?, bill_to_email),
+    ship_to_address_id = IF(?, ?, ship_to_address_id),
+    ship_to_name = IF(?, ?, ship_to_name),
+    ship_to_line_1 = IF(?, ?, ship_to_line_1),
+    ship_to_line_2 = IF(?, ?, ship_to_line_2),
+    ship_to_city = IF(?, ?, ship_to_city),
+    ship_to_state = IF(?, ?, ship_to_state),
+    ship_to_postal_code = IF(?, ?, ship_to_postal_code),
+    ship_to_country = IF(?, ?, ship_to_country),
+    ship_to_phone = IF(?, ?, ship_to_phone),
+    ship_to_email = IF(?, ?, ship_to_email),
+    site_id = COALESCE(?, site_id),
+    commitment_firmness = ?,
     -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
     -- an empty object instead, so only the patch's own keys remain.
     metadata = IF(? IS NULL, metadata, JSON_MERGE_PATCH(IF(?, JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), ?)),
@@ -3563,6 +3837,30 @@ type UpdateSalesOrderParams struct {
 	BuyerAccountID        sql.NullString
 	BillingAddressID      sql.NullString
 	ShippingAddressID     sql.NullString
+	SetBillTo             interface{}
+	BillToAddressID       interface{}
+	BillToName            interface{}
+	BillToLine1           interface{}
+	BillToLine2           interface{}
+	BillToCity            interface{}
+	BillToState           interface{}
+	BillToPostalCode      interface{}
+	BillToCountry         interface{}
+	BillToPhone           interface{}
+	BillToEmail           interface{}
+	SetShipTo             interface{}
+	ShipToAddressID       interface{}
+	ShipToName            interface{}
+	ShipToLine1           interface{}
+	ShipToLine2           interface{}
+	ShipToCity            interface{}
+	ShipToState           interface{}
+	ShipToPostalCode      interface{}
+	ShipToCountry         interface{}
+	ShipToPhone           interface{}
+	ShipToEmail           interface{}
+	SiteID                sql.NullString
+	CommitmentFirmness    sql.NullString
 	MetadataPatch         sql.NullString
 	MetadataClear         interface{}
 	ID                    string
@@ -3590,6 +3888,48 @@ func (q *Queries) UpdateSalesOrder(ctx context.Context, arg UpdateSalesOrderPara
 		arg.BuyerAccountID,
 		arg.BillingAddressID,
 		arg.ShippingAddressID,
+		arg.SetBillTo,
+		arg.BillToAddressID,
+		arg.SetBillTo,
+		arg.BillToName,
+		arg.SetBillTo,
+		arg.BillToLine1,
+		arg.SetBillTo,
+		arg.BillToLine2,
+		arg.SetBillTo,
+		arg.BillToCity,
+		arg.SetBillTo,
+		arg.BillToState,
+		arg.SetBillTo,
+		arg.BillToPostalCode,
+		arg.SetBillTo,
+		arg.BillToCountry,
+		arg.SetBillTo,
+		arg.BillToPhone,
+		arg.SetBillTo,
+		arg.BillToEmail,
+		arg.SetShipTo,
+		arg.ShipToAddressID,
+		arg.SetShipTo,
+		arg.ShipToName,
+		arg.SetShipTo,
+		arg.ShipToLine1,
+		arg.SetShipTo,
+		arg.ShipToLine2,
+		arg.SetShipTo,
+		arg.ShipToCity,
+		arg.SetShipTo,
+		arg.ShipToState,
+		arg.SetShipTo,
+		arg.ShipToPostalCode,
+		arg.SetShipTo,
+		arg.ShipToCountry,
+		arg.SetShipTo,
+		arg.ShipToPhone,
+		arg.SetShipTo,
+		arg.ShipToEmail,
+		arg.SiteID,
+		arg.CommitmentFirmness,
 		arg.MetadataPatch,
 		arg.MetadataClear,
 		arg.MetadataPatch,
@@ -3624,6 +3964,31 @@ func (q *Queries) UpdateSalesOrderStatus(ctx context.Context, arg UpdateSalesOrd
 		arg.CompletedAt,
 		arg.ID,
 		arg.AccountID,
+	)
+	return err
+}
+
+const upsertDocumentParty = `-- name: UpsertDocumentParty :exec
+INSERT INTO document_party (id, document_id, account_id, instructions, metadata, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE instructions = VALUES(instructions), metadata = VALUES(metadata), updated_at = NOW(3)
+`
+
+type UpsertDocumentPartyParams struct {
+	ID           string
+	DocumentID   string
+	AccountID    string
+	Instructions sql.NullString
+	Metadata     json.RawMessage
+}
+
+func (q *Queries) UpsertDocumentParty(ctx context.Context, arg UpsertDocumentPartyParams) error {
+	_, err := q.db.ExecContext(ctx, upsertDocumentParty,
+		arg.ID,
+		arg.DocumentID,
+		arg.AccountID,
+		arg.Instructions,
+		arg.Metadata,
 	)
 	return err
 }

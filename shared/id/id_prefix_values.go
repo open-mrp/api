@@ -226,6 +226,8 @@ var (
 
 	// Document-related prefix values
 	DocumentSettingIDPrefix = apikitid.ComposePrefix(VocDocument, VocSetting)
+	// DocumentPartyIDPrefix keys a party's own data on a two-party document. Internal: never in a response.
+	DocumentPartyIDPrefix = apikitid.ComposePrefix(VocDocument, VocAccount)
 
 	// Attribute-related prefix values
 	AttributeIDPrefix = apikitid.ComposePrefix(VocAttribute)

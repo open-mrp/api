@@ -10,11 +10,13 @@ const (
 	SalesOrderStatusCodeIssued SalesOrderStatusCode = "issued"
 	// SalesOrderStatusCodeFulfilled indicates the order has been fulfilled.
 	SalesOrderStatusCodeFulfilled SalesOrderStatusCode = "fulfilled"
+	// SalesOrderStatusCodeCanceled indicates the order was stopped before anything shipped.
+	SalesOrderStatusCodeCanceled SalesOrderStatusCode = "canceled"
 )
 
 func (m SalesOrderStatusCode) IsValid() bool {
 	switch m {
-	case SalesOrderStatusCodeEstimate, SalesOrderStatusCodeIssued, SalesOrderStatusCodeFulfilled:
+	case SalesOrderStatusCodeEstimate, SalesOrderStatusCodeIssued, SalesOrderStatusCodeFulfilled, SalesOrderStatusCodeCanceled:
 		return true
 	default:
 		return false
@@ -26,6 +28,7 @@ func (m SalesOrderStatusCode) EnumValues() []string {
 		string(SalesOrderStatusCodeEstimate),
 		string(SalesOrderStatusCodeIssued),
 		string(SalesOrderStatusCodeFulfilled),
+		string(SalesOrderStatusCodeCanceled),
 	}
 }
 
@@ -41,11 +44,13 @@ const (
 	SalesOrderStatusChangeUnissue SalesOrderStatusChange = "unissue"
 	// SalesOrderStatusChangeOpen transitions an order from fulfilled to issued.
 	SalesOrderStatusChangeOpen SalesOrderStatusChange = "open"
+	// SalesOrderStatusChangeCancel stops an issued order: canceled when nothing shipped, else fulfilled.
+	SalesOrderStatusChangeCancel SalesOrderStatusChange = "cancel"
 )
 
 func (m SalesOrderStatusChange) IsValid() bool {
 	switch m {
-	case SalesOrderStatusChangeIssue, SalesOrderStatusChangeClose, SalesOrderStatusChangeUnissue, SalesOrderStatusChangeOpen:
+	case SalesOrderStatusChangeIssue, SalesOrderStatusChangeClose, SalesOrderStatusChangeUnissue, SalesOrderStatusChangeOpen, SalesOrderStatusChangeCancel:
 		return true
 	default:
 		return false
@@ -58,6 +63,7 @@ func (m SalesOrderStatusChange) EnumValues() []string {
 		string(SalesOrderStatusChangeClose),
 		string(SalesOrderStatusChangeUnissue),
 		string(SalesOrderStatusChangeOpen),
+		string(SalesOrderStatusChangeCancel),
 	}
 }
 

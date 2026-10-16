@@ -88,6 +88,13 @@ func (s *salesOrderSvcImpl) commitmentQuoteSubject(ctx context.Context, params d
 			order.BuyerAccountID = *params.BuyerAccountID
 		}
 		if params.ShipToAddressID != nil {
+			holder, apiErr := orderAddressAccount(ctx, s.repos.NewAddressRepo(), params.AccountID, order.BuyerAccountID, *params.ShipToAddressID)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			if holder == "" {
+				return nil, apierror.NewNotFoundError("No address found with the provided ID.").WithParam("ship_to_address_id")
+			}
 			order.ShippingAddressID = *params.ShipToAddressID
 		}
 		order.CarrierID = params.CarrierID

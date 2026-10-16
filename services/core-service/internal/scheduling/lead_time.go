@@ -33,6 +33,10 @@ type Commitment struct {
 	ShipByDate   time.Time
 	LeadTimeDays int
 	Source       string
+	// PromisedLeadTimeDays is the lead time the date was promised on, in business days, and PromisedLeadTimeSource
+	// where it came from (customer, item or override). Nil and empty when a date was promised or pinned instead.
+	PromisedLeadTimeDays   *int
+	PromisedLeadTimeSource string
 	// TransitDays is the carrier transit subtracted to get ShipByDate, nil when transit was unknown or did not apply.
 	TransitDays *int
 	// TransitSource names where TransitDays came from, empty when TransitDays is nil.
@@ -122,6 +126,9 @@ type LeadTimeInput struct {
 	AccountGroupLeadTimeDays *int
 	// AccountLeadTimeDays is the account-wide default, the last fallback.
 	AccountLeadTimeDays *int
+	// ItemLeadTimeDays is the longest sales lead time of the order's items, in business days. When longer than the
+	// chain's, it is what the order is promised on: an order can't ship before its slowest item can.
+	ItemLeadTimeDays *int
 }
 
 // ResolveLeadTime picks the number of days and names the rule that produced it.
@@ -170,15 +177,42 @@ func ResolveCommitment(issuedAt time.Time, basis CommitmentBasis, in LeadTimeInp
 		return resolvePromisedCommitment(issueDate, *basis.PromisedAt, transit, cals)
 
 	case basis.LeadTimeOverrideDays != nil && *basis.LeadTimeOverrideDays >= 0:
-		return finishCommitment(issueDate, issueDate.AddDate(0, 0, *basis.LeadTimeOverrideDays), LeadTimeSourceOrderLeadTime, nil, cals, nil)
+		return finishLeadTime(issueDate, *basis.LeadTimeOverrideDays, LeadTimeSourceOrderLeadTime, PromisedLeadTimeSourceOverride, cals)
 
 	default:
 		days, source, ok := ResolveLeadTime(in)
 		if !ok {
 			return Commitment{}, false
 		}
-		return finishCommitment(issueDate, issueDate.AddDate(0, 0, days), source, nil, cals, nil)
+		promisedSource := PromisedLeadTimeSourceCustomer
+		if in.ItemLeadTimeDays != nil && *in.ItemLeadTimeDays > days {
+			days, promisedSource = *in.ItemLeadTimeDays, PromisedLeadTimeSourceItem
+		}
+		return finishLeadTime(issueDate, days, source, promisedSource, cals)
 	}
+}
+
+// Where a promised lead time came from, aliased from the shared enum.
+const (
+	PromisedLeadTimeSourceCustomer = string(constants.PromisedLeadTimeSourceCustomer)
+	PromisedLeadTimeSourceItem     = string(constants.PromisedLeadTimeSourceItem)
+	PromisedLeadTimeSourceOverride = string(constants.PromisedLeadTimeSourceOverride)
+)
+
+// finishLeadTime commits an order to ship days business days after issue, counted on the plant's shipping calendar,
+// and records the lead time it was promised on.
+func finishLeadTime(issueDate time.Time, days int, source, promisedSource string, cals Calendars) (Commitment, bool) {
+	candidate, ok := cals.Ship.AddDays(issueDate, days)
+	if !ok {
+		return Commitment{}, false
+	}
+	commitment, ok := finishCommitment(issueDate, candidate, source, nil, cals, nil)
+	if !ok {
+		return Commitment{}, false
+	}
+	commitment.PromisedLeadTimeDays = &days
+	commitment.PromisedLeadTimeSource = promisedSource
+	return commitment, true
 }
 
 // resolvePromisedCommitment works a promised delivery date back to the day the order has to leave.

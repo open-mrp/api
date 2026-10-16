@@ -626,6 +626,11 @@ INSERT INTO sales_order (
     payment_term_id, order_discount_id, promised_at,
     lead_time_override_days, ship_by_override_date,
     buyer_account_id, seller_account_id, owner_account_id, metadata,
+    bill_to_address_id, bill_to_name, bill_to_line_1, bill_to_line_2, bill_to_city, bill_to_state,
+    bill_to_postal_code, bill_to_country, bill_to_phone, bill_to_email,
+    ship_to_address_id, ship_to_name, ship_to_line_1, ship_to_line_2, ship_to_city, ship_to_state,
+    ship_to_postal_code, ship_to_country, ship_to_phone, ship_to_email,
+    site_id, commitment_firmness,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('number'), sqlc.narg('customer_po_number'), sqlc.narg('note'), false,
@@ -637,6 +642,13 @@ INSERT INTO sales_order (
     sqlc.narg('payment_term_id'), sqlc.narg('order_discount_id'), sqlc.narg('promised_at'),
     sqlc.narg('lead_time_override_days'), sqlc.narg('ship_by_override_date'),
     sqlc.arg('buyer_account_id'), sqlc.arg('seller_account_id'), sqlc.arg('owner_account_id'), sqlc.narg('metadata'),
+    sqlc.narg('bill_to_address_id'), sqlc.narg('bill_to_name'), sqlc.narg('bill_to_line_1'), sqlc.narg('bill_to_line_2'),
+    sqlc.narg('bill_to_city'), sqlc.narg('bill_to_state'), sqlc.narg('bill_to_postal_code'), sqlc.narg('bill_to_country'),
+    sqlc.narg('bill_to_phone'), sqlc.narg('bill_to_email'),
+    sqlc.narg('ship_to_address_id'), sqlc.narg('ship_to_name'), sqlc.narg('ship_to_line_1'), sqlc.narg('ship_to_line_2'),
+    sqlc.narg('ship_to_city'), sqlc.narg('ship_to_state'), sqlc.narg('ship_to_postal_code'), sqlc.narg('ship_to_country'),
+    sqlc.narg('ship_to_phone'), sqlc.narg('ship_to_email'),
+    sqlc.narg('site_id'), sqlc.narg('commitment_firmness'),
     NOW(3), NOW(3)
 );
 
@@ -663,6 +675,29 @@ UPDATE sales_order SET
     buyer_account_id = sqlc.narg('buyer_account_id'),
     billing_address_id = COALESCE(sqlc.narg('billing_address_id'), billing_address_id),
     shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), shipping_address_id),
+    -- A snapshot is written whole when set_bill_to / set_ship_to, and left alone otherwise.
+    bill_to_address_id = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_address_id'), bill_to_address_id),
+    bill_to_name = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_name'), bill_to_name),
+    bill_to_line_1 = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_line_1'), bill_to_line_1),
+    bill_to_line_2 = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_line_2'), bill_to_line_2),
+    bill_to_city = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_city'), bill_to_city),
+    bill_to_state = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_state'), bill_to_state),
+    bill_to_postal_code = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_postal_code'), bill_to_postal_code),
+    bill_to_country = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_country'), bill_to_country),
+    bill_to_phone = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_phone'), bill_to_phone),
+    bill_to_email = IF(sqlc.arg('set_bill_to'), sqlc.narg('bill_to_email'), bill_to_email),
+    ship_to_address_id = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_address_id'), ship_to_address_id),
+    ship_to_name = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_name'), ship_to_name),
+    ship_to_line_1 = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_line_1'), ship_to_line_1),
+    ship_to_line_2 = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_line_2'), ship_to_line_2),
+    ship_to_city = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_city'), ship_to_city),
+    ship_to_state = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_state'), ship_to_state),
+    ship_to_postal_code = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_postal_code'), ship_to_postal_code),
+    ship_to_country = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_country'), ship_to_country),
+    ship_to_phone = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_phone'), ship_to_phone),
+    ship_to_email = IF(sqlc.arg('set_ship_to'), sqlc.narg('ship_to_email'), ship_to_email),
+    site_id = COALESCE(sqlc.narg('site_id'), site_id),
+    commitment_firmness = sqlc.narg('commitment_firmness'),
     -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
     -- an empty object instead, so only the patch's own keys remain.
     metadata = IF(sqlc.narg('metadata_patch') IS NULL, metadata, JSON_MERGE_PATCH(IF(sqlc.arg('metadata_clear'), JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), sqlc.narg('metadata_patch'))),
@@ -1314,9 +1349,52 @@ UPDATE sales_order SET
     transit_source_code = sqlc.narg('transit_source_code'),
     ship_by_cutoff_at = sqlc.narg('ship_by_cutoff_at'),
     calendar_adjustment_days = sqlc.narg('calendar_adjustment_days'),
+    promised_lead_time_days = sqlc.narg('promised_lead_time_days'),
+    promised_lead_time_source = sqlc.narg('promised_lead_time_source'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');
+
+-- GetSalesOrderForgeFields reads the order columns forge.1 added, beside the detail queries, and the viewer's own
+-- party row (party_id is NULL when it has none).
+-- name: GetSalesOrderForgeFields :many
+SELECT
+    so.id,
+    so.bill_to_address_id, so.bill_to_name, so.bill_to_line_1, so.bill_to_line_2, so.bill_to_city, so.bill_to_state,
+    so.bill_to_postal_code, so.bill_to_country, so.bill_to_phone, so.bill_to_email,
+    so.ship_to_address_id, so.ship_to_name, so.ship_to_line_1, so.ship_to_line_2, so.ship_to_city, so.ship_to_state,
+    so.ship_to_postal_code, so.ship_to_country, so.ship_to_phone, so.ship_to_email,
+    so.site_id, so.commitment_firmness, so.promised_lead_time_days, so.promised_lead_time_source,
+    dp.id AS party_id, dp.instructions AS party_instructions, CAST(dp.metadata AS CHAR) AS party_metadata
+FROM sales_order so
+LEFT JOIN document_party dp ON dp.document_id = so.id AND dp.account_id = sqlc.arg('viewer_account_id')
+WHERE so.id IN (sqlc.slice('ids'));
+
+-- GetSalesOrderItemLeadTimeDays is the longest sales lead time of the items on an order's lines, in whole days
+-- (rounded up); -1 when none of them has one.
+-- name: GetSalesOrderItemLeadTimeDays :one
+SELECT COALESCE(CAST(MAX(CEIL(q.value * u.ratio_numerator / u.ratio_denominator * d.ratio_denominator / d.ratio_numerator)) AS SIGNED), -1) AS days
+FROM sales_order_line sol
+JOIN product p ON p.item_id = sol.item_id
+JOIN quantity q ON q.id = p.lead_time_id
+JOIN unit u ON u.id = q.unit_id
+JOIN unit d ON d.id = 'day'
+WHERE sol.sales_order_id = sqlc.arg('sales_order_id');
+
+-- name: UpsertDocumentParty :exec
+INSERT INTO document_party (id, document_id, account_id, instructions, metadata, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('document_id'), sqlc.arg('account_id'), sqlc.narg('instructions'), sqlc.narg('metadata'), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE instructions = VALUES(instructions), metadata = VALUES(metadata), updated_at = NOW(3);
+
+-- name: DeleteDocumentParties :exec
+DELETE FROM document_party WHERE document_id = sqlc.arg('document_id');
+
+-- name: GetOrderEmailRecipients :many
+SELECT oec.sales_order_id, oec.account_user_id, oec.notification_type_code
+FROM order_email_contact oec
+WHERE oec.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY oec.sales_order_id, oec.created_at, oec.id;
+
 
 -- SetPickShipByDateForOrder keeps a pick's denormalized ship-by sort key in step with its order's
 -- commitment. Paired with SetSalesOrderShipByCommitment: a no-op at issue (the pick is created just

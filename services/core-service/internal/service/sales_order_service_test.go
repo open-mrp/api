@@ -14,6 +14,7 @@ import (
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
@@ -73,6 +74,9 @@ type SalesOrderSvcTestSuite struct {
 	unitConversionRepo       *repositorymock.MockUnitConversionRepo
 	scheduleRepo             *repositorymock.MockProductionScheduleRepo
 	calendarRepo             *repositorymock.MockOperatingCalendarRepo
+	referenceRepo            *repositorymock.MockReferenceRepo
+	// inUse is what each record ID is referenced by, for delete checks.
+	inUse map[string][]string
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -178,15 +182,48 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewProductionFlowRepo().Return(suite.productionFlowRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductionStepQueryRepo().Return(suite.productionStepQueryRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewUnitConversionRepo().Return(suite.unitConversionRepo).AnyTimes()
+	suite.referenceRepo = repositorymock.NewMockReferenceRepo(suite.ctrl)
+	suite.inUse = map[string][]string{}
+	suite.referenceRepo.EXPECT().InUseBy(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, _ []domain.ReferenceProbe) ([]string, *apierror.APIError) {
+			return suite.inUse[id], nil
+		}).AnyTimes()
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(suite.referenceRepo).AnyTimes()
+	relations := repositorymock.NewMockAccountRelationRepo(suite.ctrl)
+	relations.EXPECT().FindRelationByOwnerAndCounterparty(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", apierror.NewNotFoundError("No relation.")).AnyTimes()
+	suite.repoFactory.EXPECT().NewAccountRelationRepo().Return(relations).AnyTimes()
+	// No item on these orders carries a sales lead time, and orders are written with their recipients as given.
+	suite.orderRepo.EXPECT().GetItemLeadTimeDays(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	suite.orderRepo.EXPECT().ReplaceEmailRecipients(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
 	suite.paymentFlagsMed = mediatormock.NewMockPaymentFlagsMed(suite.ctrl)
 	suite.mediatorFactory = factorymock.NewMockMediatorFactory(suite.ctrl)
+	// An address named by ID is copied as a US address; an inline one as given.
+	addresses := mediatormock.NewMockAddressMed(suite.ctrl)
+	addresses.EXPECT().Snapshot(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, in *domain.AddressSnapshot, _ string) (*domain.AddressSnapshot, *apierror.APIError) {
+			out := in.Clone()
+			if out.Country == "" {
+				out.Country = "US"
+				out.State = new("CA")
+				out.PostalCode = new("90001")
+			}
+			return out, nil
+		}).AnyTimes()
+	sites := mediatormock.NewMockSiteMed(suite.ctrl)
+	sites.EXPECT().Resolve(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, siteID *string, _ string) (*string, *apierror.APIError) {
+			return siteID, nil
+		}).AnyTimes()
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
 		Idempotency:  suite.idempotencyMed,
 		ReadAccess:   suite.readAccessMed,
 		PaymentFlags: suite.paymentFlagsMed,
+		Address:      addresses,
+		Site:         sites,
 	}).AnyTimes()
 
 	// Deterministic 32-byte key so the Checkout test can round-trip encrypted creds.
@@ -642,8 +679,8 @@ func baseCreateOrderParams() domain.CreateSalesOrderParams {
 		BuyerAccountID:       "ac_buyer",
 		SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
 		PriorityCode:         "normal",
-		BillToAddressID:      "ad_bill",
-		ShipToAddressID:      "ad_ship",
+		BillTo:               &domain.AddressSnapshot{AddressID: new("ad_bill")},
+		ShipTo:               &domain.AddressSnapshot{AddressID: new("ad_ship")},
 		CarrierID:            &carrierID,
 		ServiceLevelID:       &serviceLevelID,
 		ShippingTermID:       &shippingTermID,
@@ -690,6 +727,8 @@ func basePricingBundle() *domain.PricingBundle {
 func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID string) {
 	// Bill-to + ship-to addresses are referenced by ID: validated against an account, then fetched.
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	suite.addressRepo.EXPECT().GetOrderAddress(gomock.Any(), gomock.Any()).
+		Return(&domain.Address{Geolocation: &domain.Geolocation{State: new("CA"), PostalCode: new("90001")}}, nil).AnyTimes()
 	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&domain.Address{Geolocation: &domain.Geolocation{State: new("CA"), PostalCode: new("90001")}}, nil).AnyTimes()
 
@@ -840,9 +879,9 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOr
 		"/core.CoreService/CreateSalesOrder",
 	)
 
-	// Customer note-fold lookup (no note → nothing folded).
+	// The customer's order defaults, read once the create gets past its guards.
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
-		Return(&domain.Customer{}, nil).Times(1)
+		Return(&domain.Customer{}, nil).AnyTimes()
 
 	// Plan limit exceeded → rejected AFTER authorization, on the target account.
 	planID := "plan_basic"
@@ -873,13 +912,12 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrd
 	)
 
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
-		Return(&domain.Customer{}, nil).Times(1)
+		Return(&domain.Customer{}, nil).AnyTimes()
 	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCacheError()
 
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil).Times(2)
 
 	suite.orderDiscountRepo.EXPECT().Get(gomock.Any(), domain.GetOrderDiscountParams{
 		AccountID:       "ac_target",
@@ -952,7 +990,8 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureD
 	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
-	// Bill-to address fails validation → the create aborts before the write transaction.
+	// The bill-to names an address neither party holds → the create aborts before the write transaction.
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", gomock.Any()).Return(&domain.Customer{}, nil).AnyTimes()
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 
 	// The order number must never be allocated when the create fails before the transaction.
@@ -962,7 +1001,8 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureD
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
+	suite.Equal("bill_to.address_id", apiErr.Param)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONumber() {
@@ -1163,7 +1203,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutC
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
 	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
-	suite.Equal("carrier_id", apiErr.Param)
+	suite.Equal("freight.carrier_id", apiErr.Param)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOffTheCarrier() {
@@ -1242,7 +1282,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_PreservesNullableField
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID: "or_1",
-		Note:         field.Set("updated note"),
+		Instructions: field.Set("updated note"),
 	})
 	suite.Nil(apiErr)
 }
@@ -1258,12 +1298,12 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ClearsNullableField() 
 	existingNote := "old note"
 	suite.orderRepo.EXPECT().
 		Get(gomock.Any(), "ac_test", "or_1").
-		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", Note: &existingNote}, nil).Times(1)
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", Instructions: &existingNote}, nil).Times(1)
 
 	suite.orderRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, p domain.UpdateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
-			suite.True(p.Note.IsClear(), "an explicit clear must not be backfilled to the existing value")
+			suite.True(p.Instructions.IsClear(), "an explicit clear must not be backfilled to the existing value")
 			return &domain.SalesOrder{ID: "or_1"}, nil
 		}).Times(1)
 
@@ -1271,7 +1311,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ClearsNullableField() 
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID: "or_1",
-		Note:         field.Clear[string](),
+		Instructions: field.Clear[string](),
 	})
 	suite.Nil(apiErr)
 }
@@ -1301,11 +1341,9 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_DuplicateOrderNumberRe
 }
 
 func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepointsOrder() {
-	// Supplying a shipping_address_id re-points the order to an existing address via the
-	// order update. The service must NOT mutate any address or geolocation record — editing
-	// an address is a separate concern. It also must NOT re-estimate or overwrite the
-	// shipping line: freight is refreshed only on demand via QuoteSalesOrderFreight, so an
-	// address change never silently changes the freight price.
+	// A ship_to naming a saved address copies it onto the order and points the order at it. The service must NOT
+	// mutate any address or geolocation record. It also must NOT re-estimate or overwrite the shipping line: freight
+	// is refreshed only on demand via QuoteSalesOrderFreight, so an address change never silently changes the price.
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
 
 	suite.expectIdempotencyStarted()
@@ -1317,7 +1355,8 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepoint
 
 	suite.orderRepo.EXPECT().
 		Update(gomock.Any(), gomock.Cond(func(p domain.UpdateSalesOrderParams) bool {
-			return p.ShippingAddressID != nil && *p.ShippingAddressID == "addr_new"
+			return p.ShippingAddressID != nil && *p.ShippingAddressID == "addr_new" &&
+				p.ShipToSnapshot != nil && *p.ShipToSnapshot.AddressID == "addr_new"
 		})).
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 
@@ -1326,8 +1365,33 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepoint
 	suite.expectCacheSuccess()
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
-		SalesOrderID:      "or_1",
-		ShippingAddressID: new("addr_new"),
+		SalesOrderID: "or_1",
+		ShipTo:       &domain.AddressSnapshot{AddressID: new("addr_new")},
+	})
+	suite.Nil(apiErr)
+}
+
+// An address given inline is the order's own: copied as given, stored where no address book lists it.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_InlineShipToIsTheOrdersOwn() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", ShippingAddressID: "addr_ship", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.addressRepo.EXPECT().CreateOrderAddress(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Cond(func(p domain.CreateAddressParams) bool {
+		return p.Name == "Dock 4" && p.Country == "US" && p.AccountID == ""
+	})).Return(nil).Times(1)
+	suite.orderRepo.EXPECT().
+		Update(gomock.Any(), gomock.Cond(func(p domain.UpdateSalesOrderParams) bool {
+			return p.ShipToSnapshot != nil && p.ShipToSnapshot.AddressID == nil && p.ShipToSnapshot.Name == "Dock 4" &&
+				p.ShippingAddressID != nil && *p.ShippingAddressID != "addr_ship"
+		})).
+		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID: "or_1",
+		ShipTo:       &domain.AddressSnapshot{Name: "Dock 4", Country: "US"},
 	})
 	suite.Nil(apiErr)
 }
@@ -1352,7 +1416,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_NoRepriceWhenShippingU
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID: "or_1",
-		Note:         field.Set("just a note"),
+		Instructions: field.Set("just a note"),
 	})
 	suite.Nil(apiErr)
 }
@@ -1412,7 +1476,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldRoutingWithou
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID:   "or_1",
-		Note:           field.Set("resent with the current routing"),
+		Instructions:   field.Set("resent with the current routing"),
 		CarrierID:      new("cr_own"),
 		ServiceLevelID: field.Set("crop_own"),
 		ShippingTermID: new("shtm_own"),
@@ -1431,11 +1495,11 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesACustomerAddres
 		{"customer_id", domain.UpdateSalesOrderParams{BuyerAccountID: new("ac_foreign")}, func() {
 			suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_foreign", gomock.Any()).Return(nil, notFound)
 		}},
-		{"billing_address_id", domain.UpdateSalesOrderParams{BillingAddressID: new("ad_foreign")}, func() {
+		{"bill_to.address_id", domain.UpdateSalesOrderParams{BillTo: &domain.AddressSnapshot{AddressID: new("ad_foreign")}}, func() {
 			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_buyer", "ad_foreign").Return(false, nil)
 			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_test", "ad_foreign").Return(false, nil)
 		}},
-		{"shipping_address_id", domain.UpdateSalesOrderParams{ShippingAddressID: new("ad_foreign")}, func() {
+		{"ship_to.address_id", domain.UpdateSalesOrderParams{ShipTo: &domain.AddressSnapshot{AddressID: new("ad_foreign")}}, func() {
 			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_buyer", "ad_foreign").Return(false, nil)
 			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_test", "ad_foreign").Return(false, nil)
 		}},
@@ -1464,23 +1528,37 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesACustomerAddres
 	}
 }
 
-// Moving the order to another customer moves whose addresses it may use along with it.
+// Moving a draft to another customer moves whose addresses it may use along with it.
 func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ChecksANewAddressAgainstTheNewCustomer() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
 	suite.expectIdempotencyStarted()
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
-		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", ShippingAddressID: "ad_ship"}, nil)
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", ShippingAddressID: "ad_ship", SalesOrderStatusCode: "estimate"}, nil)
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_other", gomock.Any()).Return(&domain.Customer{}, nil)
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_other", "ad_other").Return(true, nil)
 	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
 	suite.expectCacheSuccess()
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
-		SalesOrderID:      "or_1",
-		BuyerAccountID:    new("ac_other"),
-		ShippingAddressID: new("ad_other"),
+		SalesOrderID:   "or_1",
+		BuyerAccountID: new("ac_other"),
+		ShipTo:         &domain.AddressSnapshot{AddressID: new("ad_other")},
 	})
 	suite.Nil(apiErr)
+}
+
+// An issued order keeps its customer.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_CustomerChangesOnlyWhileDraft() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", SalesOrderStatusCode: "issued"}, nil)
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_other", gomock.Any()).Return(&domain.Customer{}, nil)
+	suite.expectCacheError()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{SalesOrderID: "or_1", BuyerAccountID: new("ac_other")})
+	suite.Require().NotNil(apiErr)
+	suite.Equal("customer_id", apiErr.Param)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldCounterpartyRefsWithoutLookingThemUp() {
@@ -1621,16 +1699,16 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_Success() {
 	suite.Nil(apiErr)
 }
 
-func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_BlockedWhenFulfilled() {
+func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_BlockedOnceShipped() {
 	ctx := salesOrderInternalCtx("ac_test")
 
-	now := time.Now()
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
-		Return(&domain.SalesOrder{ID: "or_1", CompletedAt: &now}, nil).Times(1)
+		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
+	suite.inUse["or_1"] = []string{"shipments"}
 
 	apiErr := suite.svc.DeleteSalesOrder(ctx, domain.DeleteSalesOrderParams{SalesOrderID: "or_1"})
-	suite.NotNil(apiErr)
-	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.CodeResourceInUse, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_AlreadyDeletedReturnsSemanticError() {
@@ -1670,16 +1748,16 @@ func (suite *SalesOrderSvcTestSuite) TestBulkDeleteSalesOrders_RejectsIfAnyFulfi
 		Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteCascade(gomock.Any(), "ac_test", "or_ok").Return(nil).Times(1)
 
-	// Second order is fulfilled → batch aborts.
-	now := time.Now()
+	// Second order has shipped → batch aborts.
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_fulfilled").
-		Return(&domain.SalesOrder{ID: "or_fulfilled", CompletedAt: &now}, nil).Times(1)
+		Return(&domain.SalesOrder{ID: "or_fulfilled"}, nil).Times(1)
+	suite.inUse["or_fulfilled"] = []string{"shipments", "invoices"}
 
 	apiErr := suite.svc.BulkDeleteSalesOrders(ctx, domain.BulkDeleteSalesOrdersParams{
 		SalesOrderIDs: []string{"or_ok", "or_fulfilled"},
 	})
-	suite.NotNil(apiErr)
-	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.CodeResourceInUse, apiErr.Code)
 }
 
 // --- ChangeSalesOrderStatus ---
@@ -1771,7 +1849,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueRejectsNonEstimate() 
 		StatusChange: "issue",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
+	suite.Equal(apperr.CodeInvalidStateTransition, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Unissue_ReleasesInventory() {

@@ -144,6 +144,7 @@ func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddr
 }
 
 const getAddressesByIDs = `-- name: GetAddressesByIDs :many
+
 SELECT
     a.id,
     a.name,
@@ -264,6 +265,83 @@ func (q *Queries) GetGeolocationIDByAddressID(ctx context.Context, id string) (s
 	var geolocation_id string
 	err := row.Scan(&geolocation_id)
 	return geolocation_id, err
+}
+
+const getOrderAddress = `-- name: GetOrderAddress :one
+SELECT
+    a.id,
+    a.name,
+    a.phone,
+    a.email,
+    a.is_drop_ship,
+    a.receive_calendar_id,
+    a.created_at,
+    a.updated_at,
+    g.id AS geolocation_id,
+    g.street_line_1,
+    g.street_line_2,
+    g.locality,
+    g.state,
+    g.postal_code,
+    g.country,
+    g.google_place_id,
+    g.latitude,
+    g.longitude,
+    g.timezone
+FROM address a
+JOIN geolocation g ON a.geolocation_id = g.id
+WHERE a.id = ?
+`
+
+type GetOrderAddressRow struct {
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	GeolocationID     string
+	StreetLine1       sql.NullString
+	StreetLine2       sql.NullString
+	Locality          sql.NullString
+	State             sql.NullString
+	PostalCode        sql.NullString
+	Country           string
+	GooglePlaceID     sql.NullString
+	Latitude          sql.NullFloat64
+	Longitude         sql.NullFloat64
+	Timezone          sql.NullString
+}
+
+// GetOrderAddress reads an address by ID alone, for an address a sales order names: either a saved address or the
+// order's own copy of an address given inline, which no account's address book lists.
+func (q *Queries) GetOrderAddress(ctx context.Context, id string) (GetOrderAddressRow, error) {
+	row := q.db.QueryRowContext(ctx, getOrderAddress, id)
+	var i GetOrderAddressRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Phone,
+		&i.Email,
+		&i.IsDropShip,
+		&i.ReceiveCalendarID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GeolocationID,
+		&i.StreetLine1,
+		&i.StreetLine2,
+		&i.Locality,
+		&i.State,
+		&i.PostalCode,
+		&i.Country,
+		&i.GooglePlaceID,
+		&i.Latitude,
+		&i.Longitude,
+		&i.Timezone,
+	)
+	return i, err
 }
 
 const insertAccountAddress = `-- name: InsertAccountAddress :exec

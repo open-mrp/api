@@ -793,6 +793,16 @@ type DocApiKey struct {
 	UpdatedAt       time.Time
 }
 
+type DocumentParty struct {
+	ID           string
+	DocumentID   string
+	AccountID    string
+	Instructions sql.NullString
+	Metadata     json.RawMessage
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type DocumentSetting struct {
 	ID             string
 	AccountID      string
@@ -2479,6 +2489,30 @@ type SalesOrder struct {
 	CarrierBillingType     sql.NullString
 	FreightPendingSince    sql.NullTime
 	Metadata               json.RawMessage
+	BillToAddressID        sql.NullString
+	BillToName             sql.NullString
+	BillToLine1            sql.NullString
+	BillToLine2            sql.NullString
+	BillToCity             sql.NullString
+	BillToState            sql.NullString
+	BillToPostalCode       sql.NullString
+	BillToCountry          sql.NullString
+	BillToPhone            sql.NullString
+	BillToEmail            sql.NullString
+	ShipToAddressID        sql.NullString
+	ShipToName             sql.NullString
+	ShipToLine1            sql.NullString
+	ShipToLine2            sql.NullString
+	ShipToCity             sql.NullString
+	ShipToState            sql.NullString
+	ShipToPostalCode       sql.NullString
+	ShipToCountry          sql.NullString
+	ShipToPhone            sql.NullString
+	ShipToEmail            sql.NullString
+	SiteID                 sql.NullString
+	CommitmentFirmness     sql.NullString
+	PromisedLeadTimeDays   sql.NullInt32
+	PromisedLeadTimeSource sql.NullString
 }
 
 type SalesOrderLine struct {

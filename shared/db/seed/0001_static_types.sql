@@ -226,7 +226,8 @@ INSERT IGNORE INTO sales_order_status (id, code, name, created_at, updated_at) V
     ('orss_01seedall000000000', 'all', 'All', NOW(), NOW()),
     ('orss_01seedestimate0000', 'estimate', 'Estimate', NOW(), NOW()),
     ('orss_01seedissued000000', 'issued', 'Issued', NOW(), NOW()),
-    ('orss_01seedfulfilled000', 'fulfilled', 'Fulfilled', NOW(), NOW());
+    ('orss_01seedfulfilled000', 'fulfilled', 'Fulfilled', NOW(), NOW()),
+    ('orss_01seedcanceled00000', 'canceled', 'Canceled', NOW(), NOW());
 
 -- sales_order_type (prefix: ortp)
 INSERT IGNORE INTO sales_order_type (id, code, name, created_at, updated_at) VALUES

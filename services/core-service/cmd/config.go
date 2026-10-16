@@ -50,6 +50,7 @@ const (
 	envNoteBackfillOff            = "NOTE_BACKFILL_DISABLED"
 	envPriceListSyncBackfillOff   = "PRICE_LIST_SYNC_BACKFILL_DISABLED"
 	envMethodBackfillOff          = "MANUFACTURING_METHOD_BACKFILL_DISABLED"
+	envSalesOrderBackfillOff      = "SALES_ORDER_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -158,6 +159,10 @@ type config struct {
 	// ManufacturingMethodBackfillDisabled (optional; default: false) stops the backfill that turns production steps
 	// written before manufacturing methods into methods ("true" to stop it).
 	ManufacturingMethodBackfillDisabled bool
+	// SalesOrderBackfillDisabled (optional; default: false) stops the backfills that copy orders' addresses onto them
+	// and their owners' instructions and metadata into party rows ("true" to stop them). Reads fall back to the live
+	// addresses and legacy columns meanwhile.
+	SalesOrderBackfillDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -207,6 +212,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		NoteBackfillDisabled:                env.GetEnv(envNoteBackfillOff, getenv) == "true",
 		PriceListSyncBackfillDisabled:       env.GetEnv(envPriceListSyncBackfillOff, getenv) == "true",
 		ManufacturingMethodBackfillDisabled: env.GetEnv(envMethodBackfillOff, getenv) == "true",
+		SalesOrderBackfillDisabled:          env.GetEnv(envSalesOrderBackfillOff, getenv) == "true",
 	}
 }
 

@@ -100,36 +100,6 @@ func TestCheckPurchaseOrderAddressChoices(t *testing.T) {
 	}
 }
 
-func TestCheckSalesOrderCreateAddressChoices(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name   string
-		params domain.CreateSalesOrderParams
-		code   apierror.Code
-		param  string
-	}{
-		{"ids", domain.CreateSalesOrderParams{BillToAddressID: "ad_a", ShipToAddressID: "ad_b"}, "", ""},
-		{"inline", domain.CreateSalesOrderParams{BillToAddress: inlineName("A"), ShipToAddress: inlineName("B")}, "", ""},
-		{"neither for the bill-to", domain.CreateSalesOrderParams{ShipToAddressID: "ad_b"}, apierror.CodeMissingField, "bill_to_address_id"},
-		{"neither for the ship-to", domain.CreateSalesOrderParams{BillToAddress: inlineName("A")}, apierror.CodeMissingField, "ship_to_address_id"},
-		{"both for the ship-to", domain.CreateSalesOrderParams{BillToAddressID: "ad_a", ShipToAddressID: "ad_b", ShipToAddress: inlineName("B")}, apierror.CodeValidationFailed, "ship_to_address"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			apiErr := checkSalesOrderCreateAddressChoices(tc.params)
-			if tc.param == "" {
-				assert.Nil(t, apiErr)
-				return
-			}
-			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
-			if tc.code != apierror.CodeValidationFailed {
-				assert.Equal(t, tc.code, apiErr.Errors[0].Code)
-			}
-			assert.Equal(t, tc.param, apiErr.Param)
-		})
-	}
-}
-
 func internalCtxWithPerms(accountID string, perms ...types.Permission) context.Context {
 	granted := make(map[string]bool, len(perms))
 	for _, p := range perms {

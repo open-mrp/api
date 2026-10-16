@@ -278,7 +278,7 @@ func TestCheckDuplicates_RequestIsValidated(t *testing.T) {
 	}{
 		{"missing type", map[string]any{"record_number": "X-1"}, "missing_field", "type"},
 		// The dashboard's own enum also lists customer_number and user_name; the API checks neither.
-		{"unsupported type", map[string]any{"type": "customer_number", "record_number": "X-1"}, "parameter_invalid", "type"},
+		{"unsupported type", map[string]any{"type": "customer_number", "record_number": "X-1"}, "invalid_format", "type"},
 		{"missing record_number", map[string]any{"type": "invoice_number"}, "missing_field", "record_number"},
 		{"empty record_number", map[string]any{"type": "invoice_number", "record_number": ""}, "missing_field", "record_number"},
 		{"record_number not a string", map[string]any{"type": "invoice_number", "record_number": 1001}, "invalid_format", "record_number"},

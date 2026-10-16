@@ -64,7 +64,8 @@ func TestScheduleAttainment_RejectsUnknownGroupBy(t *testing.T) {
 		"group_by":  "shift",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "group_by")
 }
 
 func TestScheduleAttainment_GroupByDimensionsAllRespond(t *testing.T) {

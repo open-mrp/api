@@ -31,10 +31,10 @@ func orderCounterpartyRefs(t *testing.T, orderID string) map[string]string {
 
 func customerBillToAddressID(t *testing.T, customerID string) string {
 	t.Helper()
-	status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID, url.Values{"include": {"bill_to_address"}})
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID, url.Values{"include": {"defaults.bill_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	id := jsonField(jsonObject(parseJSON(body), "bill_to_address"), "id")
+	id := jsonField(jsonObject(jsonObject(parseJSON(body), "defaults"), "bill_to_address"), "id")
 	require.NotEmpty(t, id)
 	return id
 }
@@ -45,14 +45,16 @@ func tenantBCustomer(t *testing.T) string {
 	tenantB := getTenantBClient()
 	name := uniqueName("e2e-foreign-cust")
 	status, body, err := tenantB.Post(customersPath, map[string]any{
-		"name":                     name,
-		"status":                   "normal",
-		"default_carrier_id":       SeedSystemCarrierID,
-		"default_payment_term_id":  SeedDefaultPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"customer_type_group_id":   dashCustomersTenantBGroup(t, "type_group"),
-		"bill_to_address":          map[string]any{"name": name + " Billing", "country": "US"},
-		"ship_to_address":          map[string]any{"name": name + " Shipping", "country": "US"},
+		"name":     name,
+		"standing": "normal",
+		"defaults": map[string]any{
+			"carrier_id":       SeedSystemCarrierID,
+			"payment_term_id":  SeedDefaultPaymentTermID,
+			"shipping_term_id": SeedShippingTermID,
+		},
+		"group_id":        dashCustomersTenantBGroup(t, "type_group"),
+		"bill_to_address": map[string]any{"name": name + " Billing", "country": "US"},
+		"ship_to_address": map[string]any{"name": name + " Shipping", "country": "US"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

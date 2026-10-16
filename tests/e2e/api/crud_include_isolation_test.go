@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,11 @@ func TestIncludeIsolation_ListEndpointsReturnNullSubobjectsWithoutInclude(t *tes
 		{
 			name: "customers",
 			path: customersPath,
-			keys: []string{"contact_info", "freight_preferences", "defaults", "notification_preferences", "bill_to_address", "ship_to_address", "type", "price_groups", "parent_account", "child_accounts", "credit_limit"},
+			keys: []string{
+				"group", "price_groups", "parent_customer", "child_customers", "notification_recipients",
+				"defaults.carrier", "defaults.service_level", "defaults.payment_term", "defaults.shipping_term",
+				"defaults.sales_rep", "defaults.bill_to_address", "defaults.ship_to_address", "defaults.receive_calendar",
+			},
 		},
 	}
 
@@ -78,11 +83,24 @@ func TestIncludeIsolation_ListEndpointsReturnNullSubobjectsWithoutInclude(t *tes
 			for i, item := range list.Data {
 				m := parseJSON(item)
 				for _, k := range tc.keys {
-					assert.Nilf(t, m[k], "%s[%d]: %q must be null on list without ?include=%s", tc.name, i, k, k)
+					assert.Nilf(t, includeIsolationValue(m, k), "%s[%d]: %q must be null on list without ?include=%s", tc.name, i, k, k)
 				}
 			}
 		})
 	}
+}
+
+// includeIsolationValue reads a dotted key such as defaults.carrier; a missing parent reads as nil.
+func includeIsolationValue(m map[string]any, key string) any {
+	var v any = m
+	for _, part := range strings.Split(key, ".") {
+		obj, ok := v.(map[string]any)
+		if !ok {
+			return nil
+		}
+		v = obj[part]
+	}
+	return v
 }
 
 // TestRequestLogs_ListExpandableFieldsNullWithoutInclude is the list-endpoint

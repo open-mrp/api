@@ -169,7 +169,8 @@ func TestPortalRegistrationLookup_RejectsAnUnknownLookupType(t *testing.T) {
 		status, body, err = buyer.Post(sessionPath+"/actions/complete", nil, newIdempotencyKey())
 		require.NoError(t, err)
 	}
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "session_data.lookup_type")
 }
 
 func TestPortalRegistrationLookup_OneShotRegisterNeedsTheZIPToo(t *testing.T) {

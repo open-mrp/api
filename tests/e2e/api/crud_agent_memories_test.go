@@ -84,7 +84,7 @@ func TestAgentMemories_CategoryRestrictedToKnownValues(t *testing.T) {
 		"content":  "This is not a recognized category.",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
 	for _, category := range []string{"preference", "fact", "instruction"} {
 		createMemory(t, map[string]any{

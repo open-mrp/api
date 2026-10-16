@@ -383,10 +383,7 @@ func TestInvoiceParity_InvoicesReadRoleExpandsAllocationTransactions(t *testing.
 	require.NoError(t, err)
 	require.Equal(t, http.StatusForbidden, status, "the role cannot read the transaction on its own: %s", string(body))
 
-	includes := url.Values{"include": {
-		"allocations", "allocations.amount", "allocations.amount.unit",
-		"allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit",
-	}}
+	includes := url.Values{"include": {"allocations", "allocations.transaction"}}
 	assertDrawsOnThePayment := func(name string, allocations []any) {
 		t.Helper()
 		require.Len(t, allocations, 1, name)

@@ -5,6 +5,7 @@ package api_test
 import (
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,17 +71,20 @@ func TestJobs_ListNewestFirstWithFilters(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	pos := map[string]int{}
-	var prev string
+	var prev time.Time
 	for i, raw := range list.Data {
 		job := parseJSON(raw)
 		assert.Equal(t, "async_job", jsonField(job, "object"))
 		assert.Equal(t, "bulk_upsert", jsonField(job, "type"))
 		assert.Equal(t, "completed", jsonField(job, "status"))
 		assert.NotNil(t, jsonObject(job, "created_by"), "created_by is always present")
-		if prev != "" {
-			assert.GreaterOrEqual(t, prev, jsonField(job, "created_at"), "newest first")
+		// Timestamps drop trailing zeros (.31Z), so they are compared as times, not strings.
+		createdAt, err := time.Parse(time.RFC3339Nano, jsonField(job, "created_at"))
+		require.NoError(t, err)
+		if !prev.IsZero() {
+			assert.False(t, createdAt.After(prev), "newest first: %s listed after %s", createdAt, prev)
 		}
-		prev = jsonField(job, "created_at")
+		prev = createdAt
 		pos[jsonField(job, "id")] = i
 	}
 	require.Contains(t, pos, older)

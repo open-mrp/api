@@ -107,8 +107,8 @@ func TestAddresses_DeleteBlockedWhileACustomerDefault(t *testing.T) {
 	t.Parallel()
 
 	customerID := dashCustomersNew(t, "e2e-addr-in-use", nil)
-	_, customer := dashCustomersRead(t, apiClient, customerID, "bill_to_address")
-	billTo := jsonObject(customer, "bill_to_address")
+	_, customer := dashCustomersRead(t, apiClient, customerID, "defaults.bill_to_address")
+	billTo := jsonObject(jsonObject(customer, "defaults"), "bill_to_address")
 	require.NotNil(t, billTo, "the customer has a default billing address: %v", customer)
 
 	inCustomer := apiClient.WithAccountID(customerID)

@@ -3,6 +3,7 @@ package resourceregistry
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -16,14 +17,6 @@ func init() {
 		Load:       resourceloaders.LoadRequestLogs,
 		Subs: []include.SubField{
 			{Key: "account", Populate: populateAccountOnRequestLog},
-			{
-				Key:         "actor",
-				Target:      constants.ObjectTypeActor,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractActorIDFromRequestLog,
-				Populate:    populateActorOnRequestLog,
-			},
-			{Key: "query_params", Populate: populateQueryParamsOnRequestLog},
 			{Key: "request_body", Populate: populateRequestBodyOnRequestLog},
 			{Key: "response_body", Populate: populateResponseBodyOnRequestLog},
 		},
@@ -38,38 +31,6 @@ func populateAccountOnRequestLog(ctx context.Context, parent any, _ map[string]a
 		return
 	}
 	rl.Account = v.(*apiresource.Account)
-}
-
-func extractActorIDFromRequestLog(ctx context.Context, parent any) []string {
-	rl := parent.(*apiresource.RequestLog)
-	id, ok := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeRequestLog, rl.ID, "actor_id")
-	if !ok || id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateActorOnRequestLog(ctx context.Context, parent any, loaded map[string]any) {
-	rl := parent.(*apiresource.RequestLog)
-	id, ok := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeRequestLog, rl.ID, "actor_id")
-	if !ok || id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
-		rl.Actor = v.(*apiresource.Actor)
-	}
-}
-
-func populateQueryParamsOnRequestLog(ctx context.Context, parent any, _ map[string]any) {
-	rl := parent.(*apiresource.RequestLog)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeRequestLog, rl.ID, "query_params")
-	if !ok {
-		return
-	}
-	rl.QueryJSON = v.(json.RawMessage)
 }
 
 func populateRequestBodyOnRequestLog(ctx context.Context, parent any, _ map[string]any) {

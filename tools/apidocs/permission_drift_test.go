@@ -287,6 +287,8 @@ var unverifiableEndpoints = map[string]string{
 
 	"search": "gateway per-type dynamic gate: Search loops its providers calling identity.CheckHasPermission(domain, read) per resource type and only includes types the caller can read; endpoint declares the {sales_orders,purchase_orders,invoices,customers,items,shipments,messaging,agents}:read OR-set; no downstream name-matched handler to verify against",
 
+	"retrieve_request_log_bodies": "gateway private-helper indirection: GetRequestLogBodies -> getRequestLog -> platform GetRequestLog, which checks CheckIsInternalActorForRead + request_logs:read; endpoint declares request_logs:read",
+
 	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
 	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
 	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserDeletePermission; endpoint declares team:delete with customers:delete / suppliers:delete for counterparty accounts",

@@ -66,6 +66,8 @@ const (
 	ObjectTypeAgentSignUp ObjectType = "agent_sign_up"
 	// ObjectTypeRequestLogBodies indicates that the object is the request and response bodies of a request log.
 	ObjectTypeRequestLogBodies ObjectType = "request_log_bodies"
+	// ObjectTypeEmailLogRelated indicates that the object is the record an email log carried.
+	ObjectTypeEmailLogRelated ObjectType = "email_log_related"
 	// ObjectTypeSearchResult indicates that the object is one search result.
 	ObjectTypeSearchResult ObjectType = "search_result"
 	// ObjectTypeRoleTemplate indicates that the object is a role template, a starting point for a role.
@@ -85,6 +87,6 @@ func init() {
 		ObjectTypeDevicePairing, ObjectTypeNote, ObjectTypeSubscription, ObjectTypeNotificationPreferences,
 		ObjectTypeNotificationDefaults, ObjectTypeAgent, ObjectTypeAgentVersion, ObjectTypeTool, ObjectTypeToolCall,
 		ObjectTypeAgentSignUp, ObjectTypeRequestLogBodies, ObjectTypeSearchResult, ObjectTypeRoleTemplate,
-		ObjectTypeDemandAdjustment, ObjectTypePlanningSettings,
+		ObjectTypeDemandAdjustment, ObjectTypePlanningSettings, ObjectTypeEmailLogRelated,
 	)
 }

@@ -132,7 +132,7 @@ const defaultAuditEventWindow = 24 * time.Hour
 // withDefaultAuditEventWindow bounds an unanchored list. A list of specific records' events is a
 // record's history, which is wanted whole and is already served by the resource indexes.
 func withDefaultAuditEventWindow(filter *domain.ListAuditEventsFilter, now time.Time) {
-	anchored := len(filter.ResourceIDs) > 0 || (filter.RootResourceType != "" && filter.RootResourceID != "")
+	anchored := len(filter.ResourceIDs) > 0 || (len(filter.RootResourceTypes) > 0 && len(filter.RootResourceIDs) > 0)
 	if filter.StartDate != nil || anchored {
 		return
 	}

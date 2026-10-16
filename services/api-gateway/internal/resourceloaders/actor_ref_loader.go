@@ -32,6 +32,39 @@ func ActorRefFromProto(p *pb.Actor) *apiresource.ActorRef {
 	return ref
 }
 
+// ActorRefFromRecorded is the response shape of an actor a log recorded as a type and ID, or nil when the type isn't
+// an actor type. A system actor's recorded ID names its process (`system:stripe`); the response has no ID for it and
+// is named after the process. A recognized ID is enough on its own: it marks a system actor whatever type sits beside it.
+func ActorRefFromRecorded(actorType constants.ActorType, actorID string, name *string) *apiresource.ActorRef {
+	if process, ok := constants.ParseSystemActorID(actorID); ok || actorType == constants.ActorTypeSystem {
+		display := constants.SystemActor("").DisplayName()
+		if ok {
+			display = process.DisplayName()
+		}
+		return &apiresource.ActorRef{Type: constants.ActorTypeSystem, Name: new(display)}
+	}
+	if !actorType.IsValid() || actorID == "" {
+		return nil
+	}
+	ref := &apiresource.ActorRef{Type: actorType, ID: new(actorID)}
+	if name != nil && *name != "" {
+		ref.Name = new(*name)
+	}
+	return ref
+}
+
+// ActorRefFromBareID is the response shape of an actor stored as a bare identity-actor ID, with its type recovered
+// from the ID's prefix (see ActorRefFromID), or nil when the prefix names no actor type.
+func ActorRefFromBareID(actorID string) *apiresource.ActorRef {
+	if a := ActorRefFromID(actorID); a != nil {
+		return ActorRefFromRecorded(a.Type, a.ID, nil)
+	}
+	if _, ok := constants.ParseSystemActorID(actorID); ok {
+		return ActorRefFromRecorded(constants.ActorTypeSystem, actorID, nil)
+	}
+	return nil
+}
+
 // ResolveActorRefs fills each actor's display name in one batch per actor type: a person's name, an agent's name, an API key's or device's label. An actor that no longer exists keeps a null name. It is best-effort, so a failed lookup leaves names null rather than failing the response. Nils and duplicates are fine.
 //
 // `client` is filled only when the RPC already carried it: API keys gain a client with forge.1's agent work (G7).

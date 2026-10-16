@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -21,6 +22,7 @@ import (
 type RequestLogSvc interface {
 	ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError)
 	GetRequestLog(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError)
+	GetRequestLogBodies(ctx context.Context, req *RetrieveRequestLogBodiesRequest) (*apiresource.RequestLogBodies, *apierror.APIError)
 }
 
 type RequestLogSvcConfig struct {
@@ -51,52 +53,37 @@ func NewRequestLogSvc(config *RequestLogSvcConfig) RequestLogSvc {
 	}
 }
 
+// logIncludes are what every read of a log needs from platform-service: the actor and query parameters, which are always rendered, and the account when it is expanded.
+func logIncludes(ctx context.Context) []string {
+	return append(include.FilterIncludes(ctx, "account"), "actor", "query_params")
+}
+
 func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
-	methods := make([]string, len(req.Methods))
-	for i, m := range req.Methods {
-		methods[i] = string(m)
-	}
-
-	errorCodes := make([]string, len(req.ErrorCodes))
-	for i, ec := range req.ErrorCodes {
-		errorCodes[i] = string(ec)
-	}
-
-	excludeErrorCodes := make([]string, len(req.ExcludeErrorCodes))
-	for i, ec := range req.ExcludeErrorCodes {
-		excludeErrorCodes[i] = string(ec)
-	}
-
-	actorTypes := make([]string, len(req.ActorTypes))
-	for i, at := range req.ActorTypes {
-		actorTypes[i] = string(at)
-	}
-
 	pbReq := &pb.ListRequestLogsRequest{
 		Query:             req.Query,
-		Methods:           methods,
+		Methods:           stringsOf(req.Methods),
 		StatusCodes:       req.StatusCodes,
 		StatusCodeClasses: req.StatusCodeClasses,
-		ErrorCodes:        errorCodes,
-		ExcludeErrorCodes: excludeErrorCodes,
+		ErrorCodes:        stringsOf(req.ErrorCodes),
+		ExcludeErrorCodes: stringsOf(req.ExcludeErrorCodes),
 		ActorAccountIds:   req.ActorAccountIDs,
 		TargetAccountIds:  req.TargetAccountIDs,
 		ActorIds:          req.ActorIDs,
-		ActorTypes:        actorTypes,
+		ActorTypes:        stringsOf(req.ActorTypes),
 		NormalizedRoutes:  req.NormalizedRoutes,
 		Hosts:             req.Hosts,
 		MinLatencyUs:      req.MinLatencyUs,
 		IdempotencyKey:    req.IdempotencyKey,
 		Cursor:            req.Cursor,
 		Limit:             req.Limit,
-		Includes:          include.FilterIncludes(ctx, "account", "actor", "actor.role"),
+		Includes:          logIncludes(ctx),
 	}
 
-	if req.StartDate != nil && !req.StartDate.IsZero() {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	if req.OccurredAfter != nil && !req.OccurredAfter.IsZero() {
+		pbReq.StartDate = timestamppb.New(*req.OccurredAfter)
 	}
-	if req.EndDate != nil && !req.EndDate.IsZero() {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.OccurredBefore != nil && !req.OccurredBefore.IsZero() {
+		pbReq.EndDate = timestamppb.New(*req.OccurredBefore)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.list", domain.ServiceName,
@@ -114,89 +101,65 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 
 	meta := include.GetLoadMeta(ctx)
 	logs := make([]apiresource.RequestLog, len(resp.RequestLogs))
-	var agentActors []*apiresource.Actor
+	actors := make([]*apiresource.ActorRef, 0, len(resp.RequestLogs))
 	for i, rl := range resp.RequestLogs {
-		logs[i] = requestLogFromProto(rl)
-		if actor := stashRequestLogMeta(ctx, meta, rl); actor != nil && actor.Type == constants.ActorTypeAgent {
-			agentActors = append(agentActors, actor)
-		}
+		logs[i] = resourceloaders.RequestLogFromProto(rl)
+		stashRequestLogMeta(meta, rl)
+		actors = append(actors, logs[i].Actor)
 	}
-	hydrateAgentActors(ctx, agentActors)
+	resourceloaders.ResolveActorRefs(ctx, actors)
 
 	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
-	pbReq := &pb.GetRequestLogRequest{
-		Id:       req.ID,
-		Includes: include.FilterIncludes(ctx, "account", "actor", "actor.role", "query_params", "request_body", "response_body"),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRequestLogResponse, error) {
-			return m.loggingClient.GetRequestLog(ctx, pbReq, opts...)
-		})
-
+	includes := logIncludes(ctx)
+	includes = append(includes, include.FilterIncludes(ctx, "request_body", "response_body")...)
+	rl, apiErr := m.getRequestLog(ctx, req.ID, includes)
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	meta := include.GetLoadMeta(ctx)
-	result := requestLogFromProto(resp.RequestLog)
-	if actor := stashRequestLogMeta(ctx, meta, resp.RequestLog); actor != nil && actor.Type == constants.ActorTypeAgent {
-		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
-	}
+	result := resourceloaders.RequestLogFromProto(rl)
+	stashRequestLogMeta(include.GetLoadMeta(ctx), rl)
+	resourceloaders.ResolveActorRefs(ctx, []*apiresource.ActorRef{result.Actor})
 	return &result, nil
 }
 
-// hydrateAgentActors fills in agent actors' display name + handle from agent-service.
-// Unlike user/api_key actors — whose names are joined in platform-service — agent
-// definitions live in a separate datastore, so their names must be resolved here.
-// Best-effort and a no-op unless the caller expanded the actor (the only case where
-// the name is rendered), avoiding a needless agent-service round-trip otherwise.
-func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
-	if len(actors) == 0 || !include.RequestedIncludeSet(ctx)["actor"] {
+func (m *requestLogSvcImpl) GetRequestLogBodies(ctx context.Context, req *RetrieveRequestLogBodiesRequest) (*apiresource.RequestLogBodies, *apierror.APIError) {
+	rl, apiErr := m.getRequestLog(ctx, req.ID, []string{"request_body", "response_body"})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return &apiresource.RequestLogBodies{
+		Object:       constants.ObjectTypeRequestLogBodies,
+		RequestBody:  bodyOrEmpty(rl.BodyJson),
+		ResponseBody: bodyOrEmpty(rl.ResponseJson),
+	}, nil
+}
+
+func (m *requestLogSvcImpl) getRequestLog(ctx context.Context, id string, includes []string) (*pb.RequestLogInfo, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRequestLogResponse, error) {
+			return m.loggingClient.GetRequestLog(ctx, &pb.GetRequestLogRequest{Id: id, Includes: includes}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return resp.RequestLog, nil
+}
+
+func bodyOrEmpty(s *string) json.RawMessage {
+	if body := rawMessageFromString(s); body != nil {
+		return body
+	}
+	return json.RawMessage(`{}`)
+}
+
+// stashRequestLogMeta preheats the log's expandable account and preview.9's bodies into the load meta.
+func stashRequestLogMeta(meta *include.LoadMeta, rl *pb.RequestLogInfo) {
+	if rl == nil {
 		return
-	}
-	resourceloaders.HydrateActorNames(ctx, actors)
-}
-
-func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
-	if rl == nil {
-		return apiresource.RequestLog{}
-	}
-
-	result := apiresource.RequestLog{
-		ID:              rl.Id,
-		Object:          constants.ObjectTypeRequestLog,
-		Method:          constants.HTTPMethod(rl.Method),
-		Host:            rl.Host,
-		Path:            rl.Path,
-		NormalizedRoute: rl.NormalizedRoute,
-		StatusCode:      rl.StatusCode,
-		LatencyUs:       rl.LatencyUs,
-		APIVersion:      rl.ApiVersion,
-		ClientIP:        rl.ClientIp,
-		UserAgent:       rl.UserAgent,
-		Referrer:        rl.Referrer,
-		ErrorCode:       constants.EnumPtr[apierror.Code](rl.ErrorCode),
-		ErrorMessage:    rl.ErrorMessage,
-		OccurredAt:      grpcutil.TimestampToTime(rl.OccurredAt),
-		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),
-		IdempotencyKey:  rl.IdempotencyKey,
-	}
-	// Never expose internal infrastructure (internal listener host, pod IP) for agent requests.
-	result.ScrubInternalInfra(rl.IdentityType)
-	return result
-}
-
-// stashRequestLogMeta preheats the request log's account/actor and sub-resource
-// payloads into the request-scoped resolver cache. It returns the actor it built
-// (nil when the log has none) so the caller can post-process it — e.g. resolve agent
-// display names that platform-service cannot join.
-func stashRequestLogMeta(ctx context.Context, meta *include.LoadMeta, rl *pb.RequestLogInfo) *apiresource.Actor {
-	if rl == nil {
-		return nil
 	}
 
 	if rl.AccountId != nil && rl.AccountName != nil {
@@ -214,47 +177,32 @@ func stashRequestLogMeta(ctx context.Context, meta *include.LoadMeta, rl *pb.Req
 		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "account", account)
 	}
 
-	var actor *apiresource.Actor
-	if rl.Actor != nil {
-		actorType := constants.ActorType(rl.Actor.ActorType)
-		var handle *string
-		switch actorType {
-		case constants.ActorTypeAPIKey:
-			handle = rl.Actor.RedactedValue
-		case constants.ActorTypeUser:
-			handle = rl.Actor.Email
-		}
-		actor = apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
-		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
-		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "actor_id", actor.ID)
-		if rl.Actor.RoleId != nil {
-			meta.Set(constants.ObjectTypeActor, actor.ID, "role_id", *rl.Actor.RoleId)
-		}
+	if body := rawMessageFromString(rl.BodyJson); body != nil {
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "request_body", body)
 	}
-
-	if rl.QueryJson != nil {
-		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "query_params", rawMessageFromString(*rl.QueryJson))
+	if body := rawMessageFromString(rl.ResponseJson); body != nil {
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "response_body", body)
 	}
-	if rl.BodyJson != nil {
-		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "request_body", rawMessageFromString(*rl.BodyJson))
-	}
-	if rl.ResponseJson != nil {
-		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "response_body", rawMessageFromString(*rl.ResponseJson))
-	}
-
-	return actor
 }
 
-func rawMessageFromString(s string) json.RawMessage {
-	if s == "" {
+func rawMessageFromString(s *string) json.RawMessage {
+	if s == nil || *s == "" {
 		return nil
 	}
-	if json.Valid([]byte(s)) {
-		return json.RawMessage(s)
+	if json.Valid([]byte(*s)) {
+		return json.RawMessage(*s)
 	}
-	encoded, err := json.Marshal(s)
+	encoded, err := json.Marshal(*s)
 	if err != nil {
 		return nil
 	}
 	return json.RawMessage(encoded)
+}
+
+func stringsOf[T ~string](values []T) []string {
+	out := make([]string, len(values))
+	for i, v := range values {
+		out[i] = string(v)
+	}
+	return out
 }

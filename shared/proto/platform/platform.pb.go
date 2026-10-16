@@ -1956,10 +1956,15 @@ type ListAuditEventsRequest struct {
 	// Scope results to a root record's entire tree: all events whose
 	// root_resource_type/root_resource_id match (e.g. a sales_order and all of its
 	// lines, picks, shipments, and invoices). Both must be set together to apply.
+	// Superseded by root_resource_types / root_resource_ids; still honored for a gateway that sends it.
 	RootResourceType *string `protobuf:"bytes,16,opt,name=root_resource_type,json=rootResourceType,proto3,oneof" json:"root_resource_type,omitempty"`
 	RootResourceId   *string `protobuf:"bytes,17,opt,name=root_resource_id,json=rootResourceId,proto3,oneof" json:"root_resource_id,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Scope results to these root records' trees: events whose root type is in
+	// root_resource_types and whose root id is in root_resource_ids. Both must be set.
+	RootResourceTypes []string `protobuf:"bytes,18,rep,name=root_resource_types,json=rootResourceTypes,proto3" json:"root_resource_types,omitempty"`
+	RootResourceIds   []string `protobuf:"bytes,19,rep,name=root_resource_ids,json=rootResourceIds,proto3" json:"root_resource_ids,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListAuditEventsRequest) Reset() {
@@ -2095,6 +2100,20 @@ func (x *ListAuditEventsRequest) GetRootResourceId() string {
 		return *x.RootResourceId
 	}
 	return ""
+}
+
+func (x *ListAuditEventsRequest) GetRootResourceTypes() []string {
+	if x != nil {
+		return x.RootResourceTypes
+	}
+	return nil
+}
+
+func (x *ListAuditEventsRequest) GetRootResourceIds() []string {
+	if x != nil {
+		return x.RootResourceIds
+	}
+	return nil
 }
 
 type ListAuditEventsResponse struct {
@@ -3375,7 +3394,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
 	"auditEvent\"4\n" +
 	"\x18CreateAuditEventResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xde\x05\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xba\x06\n" +
 	"\x16ListAuditEventsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -3394,7 +3413,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vactor_types\x18\x0f \x03(\tR\n" +
 	"actorTypes\x121\n" +
 	"\x12root_resource_type\x18\x10 \x01(\tH\x04R\x10rootResourceType\x88\x01\x01\x12-\n" +
-	"\x10root_resource_id\x18\x11 \x01(\tH\x05R\x0erootResourceId\x88\x01\x01B\r\n" +
+	"\x10root_resource_id\x18\x11 \x01(\tH\x05R\x0erootResourceId\x88\x01\x01\x12.\n" +
+	"\x13root_resource_types\x18\x12 \x03(\tR\x11rootResourceTypes\x12*\n" +
+	"\x11root_resource_ids\x18\x13 \x03(\tR\x0frootResourceIdsB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +

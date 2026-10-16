@@ -38,6 +38,20 @@ func (a *SystemActor) StringPtr() *string {
 	return &s
 }
 
+// DisplayName is the process's name as an actor shows it, such as `Stripe`.
+func (a SystemActor) DisplayName() string {
+	switch a {
+	case SystemActorStripe:
+		return "Stripe"
+	case SystemActorScheduler:
+		return "Scheduler"
+	case SystemActorEmailIngest:
+		return "Inbound email"
+	default:
+		return "OpenMRP"
+	}
+}
+
 // ActorID is the actor ID audit events record for the process, such as `system:stripe`.
 func (a SystemActor) ActorID() string {
 	return systemActorIDPrefix + string(a)

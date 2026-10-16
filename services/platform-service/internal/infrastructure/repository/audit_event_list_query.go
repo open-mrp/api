@@ -162,7 +162,7 @@ func auditEventSearchCode(term string) string {
 }
 
 func (q *auditEventListQuery) hasRootFilter() bool {
-	return q.filter.RootResourceType != "" && q.filter.RootResourceID != ""
+	return len(q.filter.RootResourceTypes) > 0 && len(q.filter.RootResourceIDs) > 0
 }
 
 // writeAccountBranches reads the acting account's events through keys that yield them in list order; a few values of the leading filter are one arm per value, since no key yields several in order.
@@ -287,8 +287,8 @@ func (q *auditEventListQuery) writeIn(b *strings.Builder, column string, values 
 func (q *auditEventListQuery) writeResidualFilters(b *strings.Builder) {
 	f := q.filter
 	if q.hasRootFilter() {
-		b.WriteString(" AND ae.root_resource_type = ? AND ae.root_resource_id = ?")
-		q.args = append(q.args, f.RootResourceType, f.RootResourceID)
+		q.writeIn(b, "ae.root_resource_type", slices.Compact(slices.Sorted(slices.Values(f.RootResourceTypes))))
+		q.writeIn(b, "ae.root_resource_id", slices.Compact(slices.Sorted(slices.Values(f.RootResourceIDs))))
 	}
 	q.writeIn(b, "ae.account_id", f.ActorAccountIDs)
 	q.writeIn(b, "ae.identity_type", f.ActorTypes)

@@ -18,16 +18,14 @@ import (
 // Request to list request logs.
 type ListRequestLogsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Exact match on the log `id`; otherwise a case-insensitive substring match on `path`, `normalized_route` and `error_message`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Restricts results to request logs on or after this timestamp.
+	// Only requests received at or after this time.
 	//
-	// Defaults to 24 hours before `ends_at`, or before now when `ends_at` is also omitted. Pass an earlier timestamp to search further back.
-	StartDate *time.Time `query:"starts_at"`
-	// Restricts results to request logs on or before this timestamp.
-	EndDate *time.Time `query:"ends_at"`
+	// Defaults to 24 hours before `occurred_before`, or before now when that is also omitted. Pass an earlier time to search further back.
+	OccurredAfter *time.Time `query:"occurred_after"`
+	// Only requests received at or before this time.
+	OccurredBefore *time.Time `query:"occurred_before"`
 	// Filter by the HTTP method.
 	Methods []constants.HTTPMethod `query:"methods"`
 	// Filter by the HTTP status code.
@@ -89,14 +87,13 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRequestLogs, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
 			return svc.(RequestLogSvc).ListRequestLogs
 		},
 		ObjectType: constants.ObjectTypeRequestLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRequestLog,
-			Fields:     []string{"account", "actor", "actor.role"},
+			Fields:     []string{"account"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			HideFromRequestLog: true,

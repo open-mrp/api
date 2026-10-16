@@ -72,8 +72,10 @@ type AuditEvent struct {
 	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`
 	// Audited resource ID.
 	ResourceID string `json:"resource_id" validate:"required"`
-	// Actor who performed the mutation.
-	Actor *Actor `json:"actor" expandable:"true"`
+	// Who made the change: a user, API key, agent, device, or OpenMRP itself (`system`, such as a Stripe webhook or the scheduler).
+	//
+	// `null` only on events recorded before actors were tracked.
+	Actor *ActorRef `json:"actor"`
 	// Account the audited mutation was performed against.
 	//
 	// For a mutation on one of your own resources this is your account; when you act on a customer's or supplier's account, it is that account.
@@ -108,7 +110,7 @@ var SampleAuditEvent = &AuditEvent{
 	Action:       SampleAuditEventAction,
 	ResourceType: SampleAuditEventResourceType,
 	ResourceID:   SampleAuditEventResourceID,
-	Actor:        SampleActor,
+	Actor:        SampleActorRef,
 	Account:      SampleAccount,
 	Changes: NewList([]AuditFieldChange{
 		{

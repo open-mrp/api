@@ -33,11 +33,10 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAuditEvents, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
+			Fields:     []string{"account", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			HideFromRequestLog: true,

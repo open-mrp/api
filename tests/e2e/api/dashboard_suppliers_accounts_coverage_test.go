@@ -153,7 +153,7 @@ func TestDashSuppliers_NumberIsUniqueWithinTheAccount(t *testing.T) {
 	first := jsonField(createAndCleanup(t, suppliersPath, map[string]any{"name": uniqueName("e2e-dash-unq"), "number": number}), "id")
 	other := dashSuppliersNew(t, uniqueName("e2e-dash-unq-other"))
 
-	status, body, err := apiClient.Post(suppliersPath, map[string]any{"name": uniqueName("e2e-dash-unq-dup"), "number": strings.ToLower(number)}, newIdempotencyKey())
+	status, body, err := supplierP9().Post(suppliersPath, map[string]any{"name": uniqueName("e2e-dash-unq-dup"), "number": strings.ToLower(number)}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 409, status, body, "number")
 
@@ -170,7 +170,7 @@ func TestDashSuppliers_NumberIsUniqueWithinTheAccount(t *testing.T) {
 	tenantBSupplier := jsonField(parseJSON(body), "id")
 	t.Cleanup(func() { _, _, _ = tenantB.Delete(suppliersPath + "/" + tenantBSupplier) })
 
-	status, body, err = apiClient.Delete(suppliersPath + "/" + first)
+	status, body, err = supplierP9().Delete(suppliersPath + "/" + first)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	reused := createAndCleanup(t, suppliersPath, map[string]any{"name": uniqueName("e2e-dash-unq-reuse"), "number": number})
@@ -185,20 +185,20 @@ func TestDashSuppliers_ConcurrentCreatesKeepTheNumberUnique(t *testing.T) {
 	number := uniqueName("SUP-RACE")
 
 	statuses, bodies := dashSuppliersRace(6, func() (int, []byte, error) {
-		return dashSuppliersOnce(apiClient).Post(suppliersPath, map[string]any{"name": "Racer " + tok, "number": number}, newIdempotencyKey())
+		return dashSuppliersOnce(supplierP9()).Post(suppliersPath, map[string]any{"name": "Racer " + tok, "number": number}, newIdempotencyKey())
 	})
 	created := 0
 	for i, status := range statuses {
 		if status == 201 {
 			created++
 			id := jsonField(parseJSON(bodies[i]), "id")
-			t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
+			t.Cleanup(func() { _, _, _ = supplierP9().Delete(suppliersPath + "/" + id) })
 			continue
 		}
 		assert.Equal(t, 409, status, "a create that loses the number conflicts: %s", bodies[i])
 	}
 	assert.Equal(t, 1, created, "exactly one create takes the number: %v", statuses)
-	assert.Len(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}}), 1, "one supplier holds the number")
+	assert.Len(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}}), 1, "one supplier holds the number")
 }
 
 // A retried create returns the first response and creates nothing more: one supplier, one address each for
@@ -214,25 +214,25 @@ func TestDashSuppliers_CreateReplayMakesOneSupplierAndItsAddressesOnce(t *testin
 		"ship_to_address": paritySupplierAddressBody("Replay Dock", "2 Replay Rd"),
 	}
 
-	first, err := apiClient.PostFull(path, body, key)
+	first, err := supplierP9().PostFull(path, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, first.StatusCode, first.Body)
 	id := jsonField(parseJSON(first.Body), "id")
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(suppliersPath + "/" + id) })
 
-	replay, err := apiClient.PostFull(path, body, key)
+	replay, err := supplierP9().PostFull(path, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, replay.StatusCode, replay.Body)
 	assert.Equal(t, parseJSON(first.Body), parseJSON(replay.Body), "the replay is the first response")
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
 
-	assert.Equal(t, []string{id}, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}}))
+	assert.Equal(t, []string{id}, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}}))
 	var addresses int
 	require.NoError(t, authDB(t).QueryRow("SELECT COUNT(*) FROM account_address WHERE account_id = ?", id).Scan(&addresses))
 	assert.Equal(t, 2, addresses, "the bill-to and ship-to were each created once")
 
 	body["name"] = "Changed " + tok
-	status, resp, err := apiClient.Post(path, body, key)
+	status, resp, err := supplierP9().Post(path, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
@@ -246,20 +246,20 @@ func TestDashSuppliers_UpdateReplayDoesNotWriteAgain(t *testing.T) {
 	key := newIdempotencyKey()
 	firstBody := map[string]any{"note": "first", "update_note": true}
 
-	first, err := apiClient.PatchFull(path, firstBody, key)
+	first, err := supplierP9().PatchFull(path, firstBody, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, first.StatusCode, first.Body)
 	status, _, body := patchSupplier(t, path, map[string]any{"note": "second", "update_note": true})
 	requireStatus(t, 200, status, body)
 
-	replay, err := apiClient.PatchFull(path, firstBody, key)
+	replay, err := supplierP9().PatchFull(path, firstBody, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, replay.StatusCode, replay.Body)
 	assert.Equal(t, parseJSON(first.Body), parseJSON(replay.Body), "the replay is the first response")
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
 	assert.Equal(t, "second", jsonField(getSupplier(t, id), "note"), "the replay did not write the first note again")
 
-	status, resp, err := apiClient.Patch(path, map[string]any{"note": "third", "update_note": true}, key)
+	status, resp, err := supplierP9().Patch(path, map[string]any{"note": "third", "update_note": true}, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
@@ -299,7 +299,7 @@ func TestDashSuppliers_CreateRejectsInvalidFields(t *testing.T) {
 		{"bill-to without a name", map[string]any{"bill_to_address": address(map[string]any{"name": nil})}, "bill_to_address.name"},
 		{"ship-to with a malformed email", map[string]any{"ship_to_address": address(map[string]any{"email": "not-an-email"})}, "ship_to_address.email"},
 	}
-	once := dashSuppliersOnce(apiClient)
+	once := dashSuppliersOnce(supplierP9())
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			body := map[string]any{"name": "Invalid " + tok, "number": uniqueName("SUP")}
@@ -310,20 +310,20 @@ func TestDashSuppliers_CreateRejectsInvalidFields(t *testing.T) {
 			require.NoError(t, err)
 			if status == 201 {
 				id := jsonField(parseJSON(resp), "id")
-				t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
+				t.Cleanup(func() { _, _, _ = supplierP9().Delete(suppliersPath + "/" + id) })
 			}
 			requireStatus(t, 422, status, resp)
 			assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), tc.param)
 		})
 	}
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}}), "no refused create left a supplier")
+	assert.Empty(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}}), "no refused create left a supplier")
 }
 
 // Each invalid update is refused on the field at fault, and a refused update changes nothing.
 func TestDashSuppliers_UpdateRejectsInvalidFields(t *testing.T) {
 	t.Parallel()
 	name, number := uniqueName("e2e-dash-sup-inval"), uniqueName("SUP")
-	id := jsonField(createAndCleanup(t, suppliersPath, map[string]any{"name": name, "number": number, "note": "kept"}), "id")
+	id := jsonField(createAndCleanup(t, suppliersPath, map[string]any{"name": name, "number": number, "instructions": "kept"}), "id")
 	long := strings.Repeat("a", 256)
 
 	cases := []struct {
@@ -346,7 +346,7 @@ func TestDashSuppliers_UpdateRejectsInvalidFields(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			status, resp, err := apiClient.Patch(suppliersPath+"/"+id, tc.body, newIdempotencyKey())
+			status, resp, err := supplierP9().Patch(suppliersPath+"/"+id, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, resp)
 			errObj := requireErrorResponse(t, resp, tc.code, "invalid_request_error")
@@ -364,7 +364,7 @@ func TestDashSuppliers_UpdateRejectsInvalidFields(t *testing.T) {
 func TestDashSuppliers_ListRejectsMalformedDates(t *testing.T) {
 	t.Parallel()
 	for param, value := range map[string]string{"starts_at": "yesterday", "ends_at": "2026-13-45"} {
-		status, body, err := apiClient.GetListRaw(suppliersPath, url.Values{param: {value}})
+		status, body, err := supplierP9().GetListRaw(suppliersPath, url.Values{param: {value}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
 		assertErrorParam(t, requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error"), param)
@@ -375,11 +375,11 @@ func TestDashSuppliers_ListRejectsMalformedDates(t *testing.T) {
 // different answer would tell it the ID was once a supplier somewhere.
 func TestDashSuppliers_AnotherTenantCannotTellADeletedSupplierExisted(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(suppliersPath, map[string]any{"name": uniqueName("e2e-dash-sup-gone"), "number": uniqueName("SUP")}, newIdempotencyKey())
+	status, body, err := supplierP9().Post(suppliersPath, map[string]any{"name": uniqueName("e2e-dash-sup-gone"), "number": uniqueName("SUP")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
-	status, body, err = apiClient.Delete(suppliersPath + "/" + id)
+	status, body, err = supplierP9().Delete(suppliersPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -403,23 +403,23 @@ func TestDashSuppliers_MaterialLinkReplayLinksOnce(t *testing.T) {
 	key := newIdempotencyKey()
 	body := map[string]any{"material_id": materialID, "supplier_part_number": uniqueName("PN")}
 
-	first, err := apiClient.PostFull(supplierMaterialsOf(supplierID), body, key)
+	first, err := supplierP9().PostFull(supplierMaterialsOf(supplierID), body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, first.StatusCode, first.Body)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
 
-	replay, err := apiClient.PostFull(supplierMaterialsOf(supplierID), body, key)
+	replay, err := supplierP9().PostFull(supplierMaterialsOf(supplierID), body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, replay.StatusCode, replay.Body)
 	assert.Equal(t, parseJSON(first.Body), parseJSON(replay.Body), "the replay is the first response")
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
 
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "one link")
 
 	body["supplier_part_number"] = uniqueName("PN")
-	status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), body, key)
+	status, resp, err := supplierP9().Post(supplierMaterialsOf(supplierID), body, key)
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
 	requireErrorResponse(t, resp, "idempotency_key_reused", "idempotency_error")
@@ -434,13 +434,13 @@ func TestDashSuppliers_MaterialUpdateReplayDoesNotWriteAgain(t *testing.T) {
 	key := newIdempotencyKey()
 	firstBody := map[string]any{"supplier_part_number": "PN-FIRST"}
 
-	first, err := apiClient.PatchFull(path, firstBody, key)
+	first, err := supplierP9().PatchFull(path, firstBody, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, first.StatusCode, first.Body)
 	status, _, body := patchSupplier(t, path, map[string]any{"supplier_part_number": "PN-SECOND"})
 	requireStatus(t, 200, status, body)
 
-	replay, err := apiClient.PatchFull(path, firstBody, key)
+	replay, err := supplierP9().PatchFull(path, firstBody, key)
 	require.NoError(t, err)
 	requireStatus(t, 200, replay.StatusCode, replay.Body)
 	assert.Equal(t, parseJSON(first.Body), parseJSON(replay.Body), "the replay is the first response")
@@ -471,7 +471,7 @@ func TestDashSuppliers_MaterialRejectsInvalidFields(t *testing.T) {
 	}
 	for _, tc := range creates {
 		t.Run("create "+tc.name, func(t *testing.T) {
-			status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), tc.body, newIdempotencyKey())
+			status, resp, err := supplierP9().Post(supplierMaterialsOf(supplierID), tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, resp)
 			assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), tc.param)
@@ -492,7 +492,7 @@ func TestDashSuppliers_MaterialRejectsInvalidFields(t *testing.T) {
 	}
 	for _, tc := range updates {
 		t.Run("update "+tc.name, func(t *testing.T) {
-			status, resp, err := apiClient.Patch(path, tc.body, newIdempotencyKey())
+			status, resp, err := supplierP9().Patch(path, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 422, status, resp)
 			errObj := requireErrorResponse(t, resp, "", "invalid_request_error")
@@ -502,7 +502,7 @@ func TestDashSuppliers_MaterialRejectsInvalidFields(t *testing.T) {
 		})
 	}
 
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1, "no refused create linked a material")
 	got := parseJSON(mustGet(t, path))
@@ -516,10 +516,10 @@ func TestDashSuppliers_ConcurrentLinksOfOneMaterialMakeOneLink(t *testing.T) {
 	t.Parallel()
 	supplierID := dashSuppliersNew(t, uniqueName("e2e-dash-link-race"))
 	materialID, _ := parityMaterial(t)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
 
 	statuses, bodies := dashSuppliersRace(6, func() (int, []byte, error) {
-		return dashSuppliersOnce(apiClient).Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": uniqueName("PN")}, newIdempotencyKey())
+		return dashSuppliersOnce(supplierP9()).Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": uniqueName("PN")}, newIdempotencyKey())
 	})
 	created := 0
 	for i, status := range statuses {
@@ -530,7 +530,7 @@ func TestDashSuppliers_ConcurrentLinksOfOneMaterialMakeOneLink(t *testing.T) {
 		assert.Equal(t, 409, status, "a link that loses conflicts: %s", bodies[i])
 	}
 	assert.Equal(t, 1, created, "exactly one link is made: %v", statuses)
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1)
 }
@@ -543,28 +543,28 @@ func TestDashSuppliers_LinksFollowTheirSupplierAndCanBeRemade(t *testing.T) {
 	linkSupplierMaterial(t, supplierID, materialID, nil)
 	path := supplierMaterialsOf(supplierID) + "/" + materialID
 
-	status, body, err := apiClient.Delete(path)
+	status, body, err := supplierP9().Delete(path)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	remade := linkSupplierMaterial(t, supplierID, materialID, map[string]any{"supplier_part_number": "PN-AGAIN"})
 	assert.Equal(t, "PN-AGAIN", jsonField(remade, "supplier_part_number"))
 	assert.Equal(t, "active", jsonField(remade, "status"))
 
-	status, body, err = apiClient.Delete(suppliersPath + "/" + supplierID)
+	status, body, err = supplierP9().Delete(suppliersPath + "/" + supplierID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	dashSuppliersExpectAll(t, 404, []dashSuppliersCall{
-		{"retrieve link", func() (int, []byte, error) { return apiClient.GetListRaw(path, nil) }},
+		{"retrieve link", func() (int, []byte, error) { return supplierP9().GetListRaw(path, nil) }},
 		{"update link", func() (int, []byte, error) {
-			return apiClient.Patch(path, map[string]any{"supplier_part_number": "x"}, newIdempotencyKey())
+			return supplierP9().Patch(path, map[string]any{"supplier_part_number": "x"}, newIdempotencyKey())
 		}},
-		{"delete link", func() (int, []byte, error) { return apiClient.Delete(path) }},
+		{"delete link", func() (int, []byte, error) { return supplierP9().Delete(path) }},
 		{"create link", func() (int, []byte, error) {
-			return apiClient.Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+			return supplierP9().Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
 		}},
 	})
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Empty(t, list.Data, "a deleted supplier lists no links")
 }

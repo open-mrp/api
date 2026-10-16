@@ -15,6 +15,9 @@ import (
 
 const supplierAddressesPath = "/v1/core/addresses"
 
+// supplierP9 is the dashboard's client: these tests pin the 1.0.forge-preview.9 supplier contract it still reads.
+func supplierP9() *Client { return apiClient.WithAPIVersion(preview9Version) }
+
 func supplierMaterialsOf(supplierID string) string {
 	return suppliersPath + "/" + supplierID + "/materials"
 }
@@ -38,7 +41,7 @@ func paritySupplierAddressBody(name, street string) map[string]any {
 // supplierAccountAddress saves an address on the supplier's own account, as the dashboard's supplier page does.
 func supplierAccountAddress(t *testing.T, supplierID, name string) string {
 	t.Helper()
-	status, body, err := apiClient.WithAccountID(supplierID).Post(supplierAddressesPath,
+	status, body, err := supplierP9().WithAccountID(supplierID).Post(supplierAddressesPath,
 		paritySupplierAddressBody(name, "9 Spindle Way"), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -62,10 +65,10 @@ func linkSupplierMaterial(t *testing.T, supplierID, materialID string, extra map
 	for k, v := range extra {
 		body[k] = v
 	}
-	status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), body, newIdempotencyKey())
+	status, resp, err := supplierP9().Post(supplierMaterialsOf(supplierID), body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, resp)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
 	return parseJSON(resp)
 }
 
@@ -99,7 +102,7 @@ func getSupplier(t *testing.T, id string, include ...string) map[string]any {
 	if len(include) > 0 {
 		params = url.Values{"include": {strings.Join(include, ",")}}
 	}
-	status, body, err := apiClient.GetListRaw(suppliersPath+"/"+id, params)
+	status, body, err := supplierP9().GetListRaw(suppliersPath+"/"+id, params)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	return parseJSON(body)
@@ -107,7 +110,7 @@ func getSupplier(t *testing.T, id string, include ...string) map[string]any {
 
 func patchSupplier(t *testing.T, path string, body map[string]any) (int, map[string]any, []byte) {
 	t.Helper()
-	status, resp, err := apiClient.Patch(path, body, newIdempotencyKey())
+	status, resp, err := supplierP9().Patch(path, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(resp))
 	return status, parseJSON(resp), resp
@@ -147,7 +150,7 @@ func paritySupplier(t *testing.T, body map[string]any) map[string]any {
 func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-sup-addr")
-	status, body, err := apiClient.Post(suppliersPath+"?include=bill_to_address,ship_to_address", map[string]any{
+	status, body, err := supplierP9().Post(suppliersPath+"?include=bill_to_address,ship_to_address", map[string]any{
 		"name":            name,
 		"number":          uniqueName("SUP"),
 		"note":            "net 30",
@@ -158,7 +161,7 @@ func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	requireStatus(t, 201, status, body)
 	got := parseJSON(body)
 	id := jsonField(got, "id")
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(suppliersPath + "/" + id) })
 
 	assert.Equal(t, "net 30", jsonField(got, "note"))
 	billTo, shipTo := jsonObject(got, "bill_to_address"), jsonObject(got, "ship_to_address")
@@ -213,7 +216,7 @@ func TestSupplierParity_CreateDuplicateNumberConflicts(t *testing.T) {
 	number := uniqueName("SUP")
 	paritySupplier(t, map[string]any{"name": uniqueName("e2e-sup-dup"), "number": number})
 
-	status, body, err := apiClient.Post(suppliersPath, map[string]any{"name": uniqueName("e2e-sup-dup2"), "number": number}, newIdempotencyKey())
+	status, body, err := supplierP9().Post(suppliersPath, map[string]any{"name": uniqueName("e2e-sup-dup2"), "number": number}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 409, status, body, "number")
 }
@@ -225,7 +228,7 @@ func TestSupplierParity_CreateValidation(t *testing.T) {
 		"missing number": {"name": uniqueName("e2e-sup-val")},
 		"blank note":     {"name": uniqueName("e2e-sup-val"), "number": uniqueName("SUP"), "note": ""},
 	} {
-		status, resp, err := apiClient.Post(suppliersPath, body, newIdempotencyKey())
+		status, resp, err := supplierP9().Post(suppliersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.Equal(t, 422, status, "%s: %s", name, string(resp))
 	}
@@ -236,13 +239,13 @@ func TestSupplierParity_CreateIsIdempotent(t *testing.T) {
 	key := newIdempotencyKey()
 	body := map[string]any{"name": uniqueName("e2e-sup-idem"), "number": uniqueName("SUP")}
 
-	status1, resp1, err := apiClient.Post(suppliersPath, body, key)
+	status1, resp1, err := supplierP9().Post(suppliersPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, resp1)
 	id := jsonField(parseJSON(resp1), "id")
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
+	t.Cleanup(func() { _, _, _ = supplierP9().Delete(suppliersPath + "/" + id) })
 
-	status2, resp2, err := apiClient.Post(suppliersPath, body, key)
+	status2, resp2, err := supplierP9().Post(suppliersPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, resp2)
 	assert.Equal(t, id, jsonField(parseJSON(resp2), "id"), "a replay returns the supplier the first request created")
@@ -258,7 +261,7 @@ func TestSupplierParity_ListSearchMatchesEveryWordAcrossNameNumberAndNotes(t *te
 	}), "id")
 	beta := jsonField(paritySupplier(t, map[string]any{"name": "Beta " + shared, "number": uniqueName("SUP")}), "id")
 
-	search := func(q string) []string { return listedSupplierIDs(t, apiClient, url.Values{"q": {q}}) }
+	search := func(q string) []string { return listedSupplierIDs(t, supplierP9(), url.Values{"q": {q}}) }
 	assert.ElementsMatch(t, []string{alpha, beta}, search(shared))
 	assert.Equal(t, []string{alpha}, search("mills "+shared), "words match in any order and case")
 	assert.Equal(t, []string{alpha}, search(numberTok), "the number is searched")
@@ -278,8 +281,8 @@ func TestSupplierParity_ListFiltersByItemAndDateRange(t *testing.T) {
 	materialID, itemID := parityMaterial(t)
 	linkSupplierMaterial(t, linkedID, materialID, nil)
 
-	assert.Equal(t, []string{linkedID}, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "item_ids": {itemID}}))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "item_ids": {mustGenID(t, "it")}}))
+	assert.Equal(t, []string{linkedID}, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}, "item_ids": {itemID}}))
+	assert.Empty(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}, "item_ids": {mustGenID(t, "it")}}))
 
 	createdAt, err := time.Parse(time.RFC3339Nano, jsonField(linked, "created_at"))
 	require.NoError(t, err)
@@ -288,9 +291,9 @@ func TestSupplierParity_ListFiltersByItemAndDateRange(t *testing.T) {
 		"starts_at": {createdAt.Add(-time.Minute).UTC().Format(time.RFC3339)},
 		"ends_at":   {createdAt.Add(time.Minute).UTC().Format(time.RFC3339)},
 	}
-	assert.ElementsMatch(t, []string{linkedID, other}, listedSupplierIDs(t, apiClient, window))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "ends_at": {createdAt.Add(-time.Hour).UTC().Format(time.RFC3339)}}))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "starts_at": {createdAt.Add(time.Hour).UTC().Format(time.RFC3339)}}))
+	assert.ElementsMatch(t, []string{linkedID, other}, listedSupplierIDs(t, supplierP9(), window))
+	assert.Empty(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}, "ends_at": {createdAt.Add(-time.Hour).UTC().Format(time.RFC3339)}}))
+	assert.Empty(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}, "starts_at": {createdAt.Add(time.Hour).UTC().Format(time.RFC3339)}}))
 }
 
 func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
@@ -303,10 +306,10 @@ func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
 	params := url.Values{"q": {tok}}
 	assertScopedCursorPagination(t, suppliersPath, params, ids)
 
-	list, _, err := apiClient.GetList(suppliersPath, url.Values{"q": {tok}, "limit": {"1"}})
+	list, _, err := supplierP9().GetList(suppliersPath, url.Values{"q": {tok}, "limit": {"1"}})
 	require.NoError(t, err)
 	for i := 0; i < len(ids) && list.PageInfo.NextPageURL != nil; i++ {
-		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+		list, _, err = supplierP9().GetListFromPageURL(list.PageInfo.NextPageURL)
 		require.NoError(t, err)
 	}
 	var backward []string
@@ -317,7 +320,7 @@ func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
 		if !list.PageInfo.HasPrevPage() || list.PageInfo.PreviousPageURL == nil {
 			break
 		}
-		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.PreviousPageURL)
+		list, _, err = supplierP9().GetListFromPageURL(list.PageInfo.PreviousPageURL)
 		require.NoError(t, err)
 	}
 	assert.ElementsMatch(t, ids, backward, "walking back from the last page visits each row once")
@@ -345,7 +348,7 @@ func TestSupplierParity_MaterialCountMatchesTheMaterialsList(t *testing.T) {
 
 	assert.Equal(t, "1", jsonField(getSupplier(t, supplierID), "material_count"))
 	assert.Equal(t, "1", listedCount())
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Len(t, list.Data, 1)
 }
@@ -367,8 +370,8 @@ func TestSupplierParity_RenameWritesTheAliasEverywhereItIsRead(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, newName, jsonField(got, "name"))
 	assert.Equal(t, newName, jsonField(getSupplier(t, id), "name"))
-	assert.Equal(t, []string{id}, listedSupplierIDs(t, apiClient, url.Values{"q": {newTok}}))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {oldTok}}))
+	assert.Equal(t, []string{id}, listedSupplierIDs(t, supplierP9(), url.Values{"q": {newTok}}))
+	assert.Empty(t, listedSupplierIDs(t, supplierP9(), url.Values{"q": {oldTok}}))
 
 	var accountName, alias string
 	require.NoError(t, authDB(t).QueryRow("SELECT name FROM account WHERE id = ?", id).Scan(&accountName))
@@ -476,7 +479,7 @@ func TestSupplierParity_UpdateRefusesAnAddressThatIsNotTheSuppliers(t *testing.T
 func TestSupplierParity_DeleteReturnsAStubThenIsGone(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-sup-del")
-	status, body, err := apiClient.Post(suppliersPath, map[string]any{
+	status, body, err := supplierP9().Post(suppliersPath, map[string]any{
 		"name": name, "number": uniqueName("SUP"),
 		"bill_to_address": paritySupplierAddressBody(name, "8 Gone St"),
 	}, newIdempotencyKey())
@@ -484,16 +487,16 @@ func TestSupplierParity_DeleteReturnsAStubThenIsGone(t *testing.T) {
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
 
-	status, body, err = apiClient.Delete(suppliersPath + "/" + id)
+	status, body, err = supplierP9().Delete(suppliersPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assertDeletedStub(t, body, id, "supplier")
 
-	getStatus, getBody, err := apiClient.GetListRaw(suppliersPath+"/"+id, nil)
+	getStatus, getBody, err := supplierP9().GetListRaw(suppliersPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus, string(getBody))
 
-	againStatus, againBody, err := apiClient.Delete(suppliersPath + "/" + id)
+	againStatus, againBody, err := supplierP9().Delete(suppliersPath + "/" + id)
 	require.NoError(t, err)
 	assert.Equal(t, 410, againStatus, "a second delete is gone, not a fresh success: %s", string(againBody))
 
@@ -533,7 +536,7 @@ func TestSupplierParity_TenantIsolationOnEveryRoute(t *testing.T) {
 	status, body, err = clientB.Delete(suppliersPath + "/" + id)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
-	assert.Equal(t, []string{id}, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}}), "the supplier survives tenant B")
+	assert.Equal(t, []string{id}, listedSupplierIDs(t, supplierP9(), url.Values{"q": {tok}}), "the supplier survives tenant B")
 	assert.Empty(t, listedSupplierIDs(t, clientB, url.Values{"q": {tok}}))
 
 	status, body, err = clientB.GetListRaw(supplierMaterialsOf(id), nil)
@@ -553,7 +556,7 @@ func TestSupplierParity_TenantIsolationOnEveryRoute(t *testing.T) {
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "supplier_id")
 
-	status, body, err = apiClient.GetListRaw(link, nil)
+	status, body, err = supplierP9().GetListRaw(link, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
@@ -638,14 +641,14 @@ func TestSupplierMaterialParity_CRUD(t *testing.T) {
 	assertNilField(t, updated, "supplier_description")
 	assertNilField(t, parseJSON(mustGet(t, path)), "supplier_description")
 
-	status, body, err := apiClient.Delete(path)
+	status, body, err := supplierP9().Delete(path)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, materialID, jsonField(parseJSON(body), "id"))
-	status, body, err = apiClient.GetListRaw(path, nil)
+	status, body, err = supplierP9().GetListRaw(path, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
-	status, body, err = apiClient.Delete(path)
+	status, body, err = supplierP9().Delete(path)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
 }
@@ -656,7 +659,7 @@ func TestSupplierMaterialParity_DuplicateLinkConflicts(t *testing.T) {
 	materialID, _ := parityMaterial(t)
 	linkSupplierMaterial(t, supplierID, materialID, nil)
 
-	status, body, err := apiClient.Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": "again"}, newIdempotencyKey())
+	status, body, err := supplierP9().Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": "again"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 409, status, body, "material_id")
 }
@@ -667,7 +670,7 @@ func TestSupplierMaterialParity_ListAndRetrieveIncludes(t *testing.T) {
 	materialID, itemID := parityMaterial(t)
 	linkSupplierMaterial(t, supplierID, materialID, nil)
 
-	list, status, err := apiClient.GetList(supplierMaterialsOf(supplierID), url.Values{"include": {"material"}})
+	list, status, err := supplierP9().GetList(supplierMaterialsOf(supplierID), url.Values{"include": {"material"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	require.Len(t, list.Data, 1)
@@ -709,11 +712,11 @@ func TestSupplierMaterialParity_RefusesEndsThatAreNotTheOwners(t *testing.T) {
 	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-own"), "number": uniqueName("SUP")}), "id")
 	materialID, _ := parityMaterial(t)
 
-	status, body, err := apiClient.Post(supplierMaterialsOf(mustGenID(t, "ac")), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err := supplierP9().Post(supplierMaterialsOf(mustGenID(t, "ac")), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "supplier_id")
 
-	status, body, err = apiClient.Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": mustGenID(t, "ml"), "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = supplierP9().Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": mustGenID(t, "ml"), "supplier_part_number": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "material_id")
 
@@ -729,7 +732,7 @@ func TestSupplierMaterialParity_RefusesEndsThatAreNotTheOwners(t *testing.T) {
 	requireErrorParam(t, 404, status, body, "material_id")
 
 	// Tenant A names tenant B's supplier.
-	status, body, err = apiClient.Post(supplierMaterialsOf(tenantBSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = supplierP9().Post(supplierMaterialsOf(tenantBSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "supplier_id")
 }
@@ -744,16 +747,16 @@ func TestSupplierMaterialParity_DeletedItemLeavesTheLinkUnreachable(t *testing.T
 
 	softDeleteItem(t, itemID)
 
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	list, _, err := supplierP9().GetList(supplierMaterialsOf(supplierID), nil)
 	require.NoError(t, err)
 	assert.Empty(t, list.Data, "a link to a deleted item is not listed")
-	status, body, err := apiClient.GetListRaw(path, nil)
+	status, body, err := supplierP9().GetListRaw(path, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
 	status, _, body = patchSupplier(t, path, map[string]any{"supplier_part_number": "x"})
 	assert.Equal(t, 404, status, string(body))
 
-	status, body, err = apiClient.Post(supplierMaterialsOf(otherSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = supplierP9().Post(supplierMaterialsOf(otherSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "material_id")
 }
@@ -784,7 +787,7 @@ func TestSupplierMaterialParity_IsAudited(t *testing.T) {
 	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 2)
 	expectSupplierMaterialRootedEvents(t, otherSupplierID, materialID, 1)
 
-	status, body, err := apiClient.Delete(path)
+	status, body, err := supplierP9().Delete(path)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	expectAuditEventWithChanges(t, materialID, "supplier_material", "delete")
@@ -795,7 +798,7 @@ func TestSupplierMaterialParity_IsAudited(t *testing.T) {
 func expectSupplierMaterialRootedEvents(t *testing.T, supplierID, materialID string, want int) {
 	t.Helper()
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
-		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
+		status, body, err := supplierP9().GetListRaw(auditEventsPath, url.Values{
 			"root_resource_types": {"supplier"},
 			"root_resource_ids":   {supplierID},
 			"resource_types":      {"supplier_material"},

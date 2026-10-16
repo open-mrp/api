@@ -104,7 +104,21 @@ func requestVersion(version, path string) string {
 			return preview9Version
 		}
 	}
+	if isSupplierMaterialsPath(path) {
+		return preview9Version
+	}
 	return version
+}
+
+// isSupplierMaterialsPath reports whether path is under /v1/operations/suppliers/{id}/materials, which supplier items
+// replaced in 1.0.forge.
+func isSupplierMaterialsPath(path string) bool {
+	rest, ok := strings.CutPrefix(path, "/v1/operations/suppliers/")
+	if !ok {
+		return false
+	}
+	_, sub, ok := strings.Cut(rest, "/")
+	return ok && (sub == "materials" || strings.HasPrefix(sub, "materials/"))
 }
 
 // WithBearerToken returns a new Client that authenticates with the given bearer

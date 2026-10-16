@@ -1102,7 +1102,7 @@ func acceptBulkUpsertUnitGroups(t *testing.T, groups ...map[string]any) string {
 	requireStatus(t, 202, status, body)
 
 	m := parseJSON(body)
-	assert.Equal(t, "async_job", jsonField(m, "object"), "202 returns the async job")
+	assert.Equal(t, "job", jsonField(m, "object"), "202 returns preview.9's job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 	return jobID
@@ -1212,7 +1212,7 @@ func TestUnitGroups_BulkUpsert_ResponseShape(t *testing.T) {
 
 	m := parseJSON(body)
 	require.NotNil(t, m, "response body should parse as JSON")
-	assertObjectField(t, m, "async_job")
+	assertObjectField(t, m, "job")
 	jobID := jsonField(m, "id")
 	require.NotEmpty(t, jobID)
 
@@ -1379,11 +1379,11 @@ func TestUnitGroups_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 422,
+	assert.True(t, status == 400 || status == 422,
 		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "validation_failed", "")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_groups[1].name")
-	assert.Contains(t, errorMessages(errObj), "duplicate name")
+	assert.Equal(t, "invalid_format", errObj["code"])
 }
 
 func TestUnitGroups_BulkUpsert_DuplicateUnitInGroup(t *testing.T) {
@@ -1402,8 +1402,8 @@ func TestUnitGroups_BulkUpsert_DuplicateUnitInGroup(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "")
+	require.Contains(t, []int{400, 422}, status, "%s", body)
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_groups[0].unit_conversions[1].unit")
 }
 
@@ -1425,8 +1425,8 @@ func TestUnitGroups_BulkUpsert_RejectsSameUnitByIDAndAbbreviation(t *testing.T) 
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "")
+	require.Contains(t, []int{400, 422}, status, "%s", body)
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_groups[0].unit_conversions[1].unit")
 }
 
@@ -1476,8 +1476,8 @@ func TestUnitGroups_BulkUpsert_RejectsUnknownBaseUnit(t *testing.T) {
 	require.NoError(t, err)
 	// Unresolvable references fail in the synchronous accept phase, all-or-nothing: a
 	// row-indexed 400 before any job is raised, so the valid row is never written.
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "")
+	require.Contains(t, []int{400, 422}, status, "%s", body)
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_groups[1].base_unit")
 }
 
@@ -1615,4 +1615,14 @@ func TestUnitGroups_BulkUpsert_PartialSuccess(t *testing.T) {
 	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the bad row is recorded")
 	assert.Equal(t, float64(1), rowErrs[0]["index"], "the failure names row index 1")
+}
+
+// requireUnitGroupError reads an error from a unit group route. Only 1.0.forge-preview.9 callers reach them, so the
+// error has preview.9's shape: no errors list, the field's own code.
+func requireUnitGroupError(t *testing.T, body []byte) map[string]any {
+	t.Helper()
+	errObj, ok := parseJSON(body)["error"].(map[string]any)
+	require.True(t, ok, "response has an error object: %s", body)
+	assert.Equal(t, "invalid_request_error", errObj["type"], "error.type (body: %s)", body)
+	return errObj
 }

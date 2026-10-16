@@ -380,7 +380,7 @@ func TestItemParity_BulkUpsertOverOneMegabyteIsAccepted(t *testing.T) {
 
 	sku := uniqueName("e2e-parity-big-upsert")
 	var b bytes.Buffer
-	b.WriteString(`{"items":[{"type":"material","sku":"` + sku + `","category_id":"` + SeedMaterialCategoryID + `"}]`)
+	b.WriteString(`{"items":[{"type":"material","sku":"` + sku + `","category_id":"` + SeedMaterialCategoryID + `","stocking_unit_id":"` + SeedMaterialUnitID + `"}]`)
 	b.Write(bytes.Repeat([]byte(" "), (1<<20)+64))
 	b.WriteString("}")
 

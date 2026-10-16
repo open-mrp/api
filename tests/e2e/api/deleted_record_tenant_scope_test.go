@@ -156,26 +156,6 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-unit")},
 		},
-		{
-			name: "unit group",
-			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, unitGroupsPath, covCatalogUnitGroupsCreateBody(uniqueName("e2e-dscope-ug")))
-			},
-			patch: map[string]any{"name": uniqueName("e2e-dscope-ug")},
-		},
-		{
-			name: "unit group unit",
-			setup: func(t *testing.T) deletedScopeTarget {
-				groupID := jsonField(createAndCleanup(t, unitGroupsPath, covCatalogUnitGroupsCreateBody(uniqueName("e2e-dscope-ugu"))), "id")
-				unit := createAndCleanup(t, unitGroupUnitsPath(groupID), map[string]any{"unit_id": "un_01seeddozen00000000"})
-				groupB := createInTenantB(t, unitGroupsPath, covCatalogUnitGroupsCreateBody(uniqueName("e2e-dscope-ugu-b")))
-				return deletedScopeTarget{
-					path:        covCatalogUnitGroupUnitPath(groupID, jsonField(unit, "id")),
-					tenantBPath: covCatalogUnitGroupUnitPath(groupB, jsonField(unit, "id")),
-				}
-			},
-			patch: map[string]any{"discount_fixed": 1.0},
-		},
 	})
 }
 

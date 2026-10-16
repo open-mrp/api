@@ -587,8 +587,8 @@ func TestItems_SalesSectionOnlyWhenSold(t *testing.T) {
 		status, respBody, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", map[string]any{
 			"product_id":  itemProductID(t, itemID),
 			"product_sku": uniqueName("E2E-LINE-SKU"),
-			// Line units come from the product line's unit group.
-			"quantity": map[string]any{"value": "1", "unit_id": SeedUnitID},
+			// A line is in the item's stocking unit or one of its order units.
+			"quantity": map[string]any{"value": "1", "unit_id": SeedMaterialUnitID},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, respBody)

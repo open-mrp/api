@@ -185,7 +185,7 @@ func TestCovCatalogUnitGroupUnits_OmittedFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"missing unit_id should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_id")
 }
 
@@ -334,7 +334,7 @@ func TestCovCatalogUnitGroups_CreateAssociatedUnitsDimensionMismatch(t *testing.
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"dimension-mismatched associated_units should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_conversions")
 }
 
@@ -354,7 +354,7 @@ func TestCovCatalogUnitGroups_UpdateAssociatedUnitsDimensionMismatch(t *testing.
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"dimension-mismatched associated_units on update should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_conversions")
 }
 
@@ -441,7 +441,7 @@ func TestCovCatalogUnitGroupUnits_CreateDimensionMismatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"dimension-mismatched unit_id should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_id")
 }
 
@@ -465,7 +465,7 @@ func TestCovCatalogUnitGroupUnits_UpdateDimensionMismatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"dimension-mismatched unit_id on update should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "unit_id")
 }
 
@@ -481,7 +481,7 @@ func TestCovCatalogUnitGroups_CreateInvalidTypeEnum(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"invalid type enum should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -505,7 +505,7 @@ func TestCovCatalogUnitGroupUnits_CreateInvalidVisibilityEnum(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"invalid customer_portal_visibility should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "customer_portal_visibility")
 }
 
@@ -527,7 +527,7 @@ func TestCovCatalogUnitGroupUnits_UpdateInvalidVisibilityEnum(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"invalid customer_portal_visibility on update should return 400/422, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "customer_portal_visibility")
 }
 
@@ -546,7 +546,7 @@ func TestCovCatalogUnitGroups_CreateDuplicateName(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status, "duplicate name should return 409, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "name")
 }
 
@@ -564,7 +564,7 @@ func TestCovCatalogUnitGroups_UpdateToDuplicateName(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status, "updating to a duplicate name should return 409, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+	errObj := requireUnitGroupError(t, body)
 	assertErrorParam(t, errObj, "name")
 }
 

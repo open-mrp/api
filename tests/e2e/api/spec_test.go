@@ -262,6 +262,9 @@ var excludedPaths = []string{
 	"/v1/catalog/items/{id}/attributes",
 	"/v1/catalog/items/{id}/category",
 	"/v1/catalog/items/actions/bulk-create",
+	// 1.0.forge-preview.9 only: items name their own stocking and order units. Covered by the unit group crud tests.
+	"/v1/catalog/unit-groups",
+	"/v1/catalog/item-categories/{id}/unit-groups",
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

@@ -367,9 +367,11 @@ func TestItemUnits_ChangeStockingUnitRelabel(t *testing.T) {
 	require.Equal(t, "completed", jsonField(job, "status"), "%v", job)
 	results := jobResults(job)
 	require.Len(t, results, 1)
-	subs, _ := results[0]["sub_resources"].([]any)
+	subs := jsonListData(results[0], "sub_resources")
 	require.Len(t, subs, 1, "the dozen order unit measured another dimension and was removed: %v", results[0])
-	assert.Contains(t, string(mustJSON(t, subs[0])), seedDozenUnitID)
+	sub, _ := subs[0].(map[string]any)
+	assert.Equal(t, seedDozenUnitID, jsonField(sub, "id"))
+	assert.Equal(t, "unit", jsonField(sub, "type"))
 
 	got := getItem(t, itemID, itemUnitIncludes...)
 	assertUnitShape(t, jsonObject(got, "stocking_unit"), SeedMaterialUnitID, "stocking_unit")
@@ -466,13 +468,6 @@ func TestItemUnits_OrderUnitPricing(t *testing.T) {
 	assert.InDelta(t, 10.0, quote(SeedUnitID), 0.001, "the stocking unit pays list")
 	assert.InDelta(t, 55.0, quote(seedDozenUnitID), 0.001, "a dozen is 6 pairs: 60 less 5")
 	assert.InDelta(t, 20.0, quote(seedEachUnitID), 0.001, "this item's 'each' holds 4 pairs: 40 less 50%")
-
-	status, body, err := apiClient.Post(salesOrderPriceQuotePath, map[string]any{
-		"buyer_account_id": SeedCustomerAccountID,
-		"lines":            []map[string]any{quoteLine(productID, "1", SeedMaterialUnitID)},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireClientRejection(t, status, body)
 }
 
 // --- Units in use ---
@@ -480,7 +475,7 @@ func TestItemUnits_OrderUnitPricing(t *testing.T) {
 func TestItemUnits_UnitInUseByAnItemCantBeDeleted(t *testing.T) {
 	t.Parallel()
 	unitID := jsonField(createAndCleanup(t, unitsPath, map[string]any{
-		"name": uniqueName("e2e-iu-unit"), "abbreviation": uniqueName("iu")[:20], "dimension": "quantity",
+		"name": uniqueName("e2e-iu-unit"), "abbreviation": uniqueName("iu"), "dimension": "quantity",
 		"ratio_numerator": "3", "ratio_denominator": "1", "offset_numerator": "0", "offset_denominator": "1",
 	}), "id")
 	body := forgeItemBody("part", uniqueName("e2e-iu-inuse"))
@@ -499,19 +494,24 @@ func TestItemUnits_Preview9(t *testing.T) {
 	t.Parallel()
 	preview := apiClient.WithAPIVersion(preview9Version)
 
-	t.Run("a preview.9 item create takes its units from the category", func(t *testing.T) {
-		body := map[string]any{"type": "part", "sku": uniqueName("e2e-iu-p9"), "category_id": SeedItemCategoryID}
-		status, resp, err := preview.Post(itemsPath, body, newIdempotencyKey())
+	t.Run("a preview.9 product takes its units from its category's group", func(t *testing.T) {
+		_, itemID := newProductItemIDs(t, "e2e-iu-p9")
+		status, resp, err := preview.GetListRaw(itemsPath+"/"+itemID, nil)
 		require.NoError(t, err)
-		requireStatus(t, 201, status, resp)
+		requireStatus(t, 200, status, resp)
 		got := parseJSON(resp)
-		itemID := jsonField(got, "id")
-		t.Cleanup(func() { apiClient.Delete(itemsPath + "/" + itemID) })
 		for _, k := range itemUnitIncludes {
 			assert.NotContains(t, got, k, "preview.9 items have no %s", k)
 		}
 		forge := getItem(t, itemID, itemUnitIncludes...)
 		assertUnitShape(t, jsonObject(forge, "stocking_unit"), SeedUnitID, "the Socks group's base unit")
+		assertUnitShape(t, jsonObject(forge, "default_order_unit"), SeedUnitID, "default_order_unit")
+		var orderUnitIDs []string
+		for _, ou := range orderUnitsOf(t, forge) {
+			orderUnitIDs = append(orderUnitIDs, jsonField(jsonObject(ou, "unit"), "id"))
+		}
+		assert.Subset(t, orderUnitIDs, []string{seedEachUnitID, seedDozenUnitID}, "the Socks group's other members")
+		assert.NotContains(t, orderUnitIDs, SeedUnitID, "the stocking unit is not an order unit")
 	})
 
 	t.Run("unit groups answer preview.9 only", func(t *testing.T) {

@@ -27,7 +27,7 @@ func TestBulkUpsert_UnitCostChangeRestatesCostBasis(t *testing.T) {
 			sku := uniqueName("e2e-bup-cost-" + tc.itemType)
 			row := func(cost string) map[string]any {
 				return map[string]any{
-					"type": tc.itemType, "sku": sku, "category_id": tc.category,
+					"type": tc.itemType, "sku": sku, "category_id": tc.category, "stocking_unit_id": tc.unitID,
 					"unit_cost": priceInputPer(cost, tc.unitID),
 				}
 			}

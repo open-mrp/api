@@ -16,7 +16,7 @@ type AccountIntegration struct {
 	Name            string                    `audit:"name"`
 	IsActive        bool                      `audit:"is_active"`
 	// ConnectionStatus is whether the provider accepted OpenMRP's last call with these credentials.
-	ConnectionStatus constants.IntegrationConnectionStatus
+	ConnectionStatus constants.IntegrationConnectionStatus `audit:"connection_status"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

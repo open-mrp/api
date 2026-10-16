@@ -3368,7 +3368,7 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 
 // stripeClient is the account's Stripe client, recording each call's outcome on its Stripe integration.
 func (s *salesOrderSvcImpl) stripeClient(accountID, privateKey string) domain.StripeCheckoutClient {
-	return integrationhealth.Stripe(s.checkoutClientFactory.Build(privateKey), integrationhealth.ForAccount(s.repos.NewAccountIntegrationRepo(), accountID, constants.IntegrationCodeStripe))
+	return integrationhealth.Stripe(s.checkoutClientFactory.Build(privateKey), integrationhealth.ForAccount(s.repos, accountID, constants.IntegrationCodeStripe))
 }
 
 // accountStripeCredentials decrypts an account's active Stripe integration credentials. The blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.

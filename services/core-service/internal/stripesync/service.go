@@ -165,5 +165,5 @@ func (s *service) clientForAccount(ctx context.Context, accountID string) (domai
 		return nil, false, apierror.NewAuthenticationError("The Stripe integration has no API key. Reconnect the Stripe integration.")
 	}
 
-	return integrationhealth.Stripe(s.clientFactory.Build(creds.PrivateKey), integrationhealth.ForAccount(repo, accountID, constants.IntegrationCodeStripe)), true, nil
+	return integrationhealth.Stripe(s.clientFactory.Build(creds.PrivateKey), integrationhealth.ForAccount(s.repos, accountID, constants.IntegrationCodeStripe)), true, nil
 }

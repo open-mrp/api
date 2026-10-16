@@ -7,26 +7,55 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 )
 
 // Recorder notes the outcome of one provider call.
 type Recorder func(ctx context.Context, callErr *apierror.APIError)
 
 // ForAccount records outcomes on the account's integration for provider. A call that succeeds marks it connected, a
-// call refused for its credentials marks it invalid_credentials, and any other failure says nothing about them.
-func ForAccount(repo domain.AccountIntegrationRepo, accountID string, provider constants.IntegrationCode) Recorder {
+// call refused for its credentials marks it invalid_credentials, and any other failure says nothing about them. A
+// change is audited under the caller's identity; recording never fails the call.
+func ForAccount(repos domain.RepoFactory, accountID string, provider constants.IntegrationCode) Recorder {
 	return func(ctx context.Context, callErr *apierror.APIError) {
 		status, ok := StatusOf(callErr)
 		if !ok {
 			return
 		}
-		if apiErr := repo.SetConnectionStatus(ctx, accountID, provider, status); apiErr != nil {
+		if apiErr := record(ctx, repos, accountID, provider, status); apiErr != nil {
 			slog.WarnContext(ctx, "Failed to record integration connection status", "provider", provider, "status", status, "error", apiErr.Error())
 		}
 	}
+}
+
+func record(ctx context.Context, repos domain.RepoFactory, accountID string, provider constants.IntegrationCode, status constants.IntegrationConnectionStatus) *apierror.APIError {
+	repo := repos.NewAccountIntegrationRepo()
+	before, apiErr := repo.FindByCode(ctx, accountID, provider)
+	if apiErr != nil || before.ConnectionStatus == status {
+		return apiErr
+	}
+	changed, apiErr := repo.SetConnectionStatus(ctx, accountID, provider, status)
+	if apiErr != nil || !changed {
+		return apiErr
+	}
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil || !identity.IsTargetAccountSet() || identity.Target.AccountID != accountID {
+		return nil
+	}
+	after := *before
+	after.ConnectionStatus = status
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeAccountIntegration,
+		ResourceID:   before.ID,
+		Changes:      audit.ComputeChanges(before, &after),
+	})
 }
 
 // StatusOf is the connection status a provider call's outcome implies, if any.

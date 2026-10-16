@@ -321,14 +321,17 @@ func (r *accountIntegrationRepoImpl) HasIntegration(ctx context.Context, account
 	return count > 0, nil
 }
 
-func (r *accountIntegrationRepoImpl) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) *apierror.APIError {
+func (r *accountIntegrationRepoImpl) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError) {
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.set_connection_status")
 	defer span.End()
 
-	err := r.queries.SetAccountIntegrationConnectionStatus(ctx, sqlc.SetAccountIntegrationConnectionStatusParams{
+	n, err := r.queries.SetAccountIntegrationConnectionStatus(ctx, sqlc.SetAccountIntegrationConnectionStatusParams{
 		ConnectionStatus: string(status),
 		AccountID:        accountID,
 		IntegrationCode:  string(code),
 	})
-	return tracing.Trace(span, db.MapSQLError(err))
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return n > 0, nil
 }

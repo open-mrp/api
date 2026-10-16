@@ -455,8 +455,9 @@ type AccountIntegrationRepo interface {
 	Delete(ctx context.Context, params DeleteAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	GetEncryptedCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (credentials string, isActive bool, err *apierror.APIError)
 	HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError)
-	// SetConnectionStatus records the outcome of a provider call; it writes only when the status changes.
-	SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) *apierror.APIError
+	// SetConnectionStatus records the outcome of a provider call, reporting whether the status changed; it writes only
+	// when it does.
+	SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError)
 }
 
 // HubspotSyncRepo persists the HubSpot backfill state: jobs (state machine), the generic OpenMRP->HubSpot id mapping, and the company-match review queue.

@@ -100,7 +100,7 @@ SELECT COUNT(*) FROM account_integration
 WHERE account_id = sqlc.arg('account_id')
 AND integration_code = sqlc.arg('integration_code');
 
--- name: SetAccountIntegrationConnectionStatus :exec
+-- name: SetAccountIntegrationConnectionStatus :execrows
 -- Leaves the row untouched when the status already matches, so a provider call that succeeds as usual costs no write.
 UPDATE account_integration SET
     connection_status = sqlc.arg('connection_status')

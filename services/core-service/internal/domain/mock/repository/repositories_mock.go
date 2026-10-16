@@ -4836,11 +4836,12 @@ func (mr *MockAccountIntegrationRepoMockRecorder) List(ctx, params any) *gomock.
 }
 
 // SetConnectionStatus mocks base method.
-func (m *MockAccountIntegrationRepo) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) *apierror.APIError {
+func (m *MockAccountIntegrationRepo) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetConnectionStatus", ctx, accountID, code, status)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // SetConnectionStatus indicates an expected call of SetConnectionStatus.

@@ -288,7 +288,7 @@ func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccoun
 	return err
 }
 
-const setAccountIntegrationConnectionStatus = `-- name: SetAccountIntegrationConnectionStatus :exec
+const setAccountIntegrationConnectionStatus = `-- name: SetAccountIntegrationConnectionStatus :execrows
 UPDATE account_integration SET
     connection_status = ?
 WHERE account_id = ?
@@ -303,14 +303,17 @@ type SetAccountIntegrationConnectionStatusParams struct {
 }
 
 // Leaves the row untouched when the status already matches, so a provider call that succeeds as usual costs no write.
-func (q *Queries) SetAccountIntegrationConnectionStatus(ctx context.Context, arg SetAccountIntegrationConnectionStatusParams) error {
-	_, err := q.db.ExecContext(ctx, setAccountIntegrationConnectionStatus,
+func (q *Queries) SetAccountIntegrationConnectionStatus(ctx context.Context, arg SetAccountIntegrationConnectionStatusParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setAccountIntegrationConnectionStatus,
 		arg.ConnectionStatus,
 		arg.AccountID,
 		arg.IntegrationCode,
 		arg.ConnectionStatus,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateAccountIntegration = `-- name: UpdateAccountIntegration :execresult

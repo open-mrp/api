@@ -201,7 +201,7 @@ func (s *service) clientForAccount(ctx context.Context, accountID string) (domai
 	if creds.AccessToken == "" {
 		return nil, false, apierror.NewAuthenticationError("The HubSpot integration has no access token. Reconnect the HubSpot integration.")
 	}
-	return integrationhealth.Hubspot(s.clientFactory.Build(creds.AccessToken), integrationhealth.ForAccount(repo, accountID, constants.IntegrationCodeHubspot)), true, nil
+	return integrationhealth.Hubspot(s.clientFactory.Build(creds.AccessToken), integrationhealth.ForAccount(s.repos, accountID, constants.IntegrationCodeHubspot)), true, nil
 }
 
 // syncCompany resolves the customer's HubSpot company id, matching or creating it on first sync and reusing the stored mapping thereafter. When promoteLifecycle is set (an order represents won business) it moves the company to the customer lifecycle stage. The resolved mapping is persisted so later syncs and the backfill share it.

@@ -7741,6 +7741,36 @@ func (mr *MockInventoryQueryRepoMockRecorder) FetchPhysicalInventoryBaseForItems
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPhysicalInventoryBaseForItems", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchPhysicalInventoryBaseForItems), ctx, accountID, itemIDs)
 }
 
+// FetchStockLevels mocks base method.
+func (m *MockInventoryQueryRepo) FetchStockLevels(ctx context.Context, accountID string, itemIDs, locationIDs []string) (map[string]*domain.StockLevel, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchStockLevels", ctx, accountID, itemIDs, locationIDs)
+	ret0, _ := ret[0].(map[string]*domain.StockLevel)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FetchStockLevels indicates an expected call of FetchStockLevels.
+func (mr *MockInventoryQueryRepoMockRecorder) FetchStockLevels(ctx, accountID, itemIDs, locationIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchStockLevels", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchStockLevels), ctx, accountID, itemIDs, locationIDs)
+}
+
+// FetchStockLevelsAsOf mocks base method.
+func (m *MockInventoryQueryRepo) FetchStockLevelsAsOf(ctx context.Context, accountID string, itemIDs []string, asOf time.Time) (map[string]*domain.StockLevel, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchStockLevelsAsOf", ctx, accountID, itemIDs, asOf)
+	ret0, _ := ret[0].(map[string]*domain.StockLevel)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FetchStockLevelsAsOf indicates an expected call of FetchStockLevelsAsOf.
+func (mr *MockInventoryQueryRepoMockRecorder) FetchStockLevelsAsOf(ctx, accountID, itemIDs, asOf any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchStockLevelsAsOf", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchStockLevelsAsOf), ctx, accountID, itemIDs, asOf)
+}
+
 // ListAvailableReceiptUnitIDs mocks base method.
 func (m *MockInventoryQueryRepo) ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7754,6 +7784,21 @@ func (m *MockInventoryQueryRepo) ListAvailableReceiptUnitIDs(ctx context.Context
 func (mr *MockInventoryQueryRepoMockRecorder) ListAvailableReceiptUnitIDs(ctx, itemID, ownerAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAvailableReceiptUnitIDs", reflect.TypeOf((*MockInventoryQueryRepo)(nil).ListAvailableReceiptUnitIDs), ctx, itemID, ownerAccountID)
+}
+
+// LotBelongsToItem mocks base method.
+func (m *MockInventoryQueryRepo) LotBelongsToItem(ctx context.Context, accountID, itemID, lotID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LotBelongsToItem", ctx, accountID, itemID, lotID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LotBelongsToItem indicates an expected call of LotBelongsToItem.
+func (mr *MockInventoryQueryRepoMockRecorder) LotBelongsToItem(ctx, accountID, itemID, lotID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LotBelongsToItem", reflect.TypeOf((*MockInventoryQueryRepo)(nil).LotBelongsToItem), ctx, accountID, itemID, lotID)
 }
 
 // MockProductLineRepo is a mock of ProductLineRepo interface.

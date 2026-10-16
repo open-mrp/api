@@ -322,8 +322,12 @@ func (s *itemSvcImpl) reconcileBatch(ctx context.Context, params domain.BulkReco
 				}
 			}
 
-			if apiErr := mediator.RecordInventoryAuditTrailWithLevel(txCtx, txSvc.repos, accountID, itemID, delta, next, unitID,
-				"user_correction", nil, params.ResponsibleUserID); apiErr != nil {
+			movementType := constants.InventoryMovementTypeAdjustment
+			if params.ReconcileType == string(constants.ItemReconcileTypeForce) {
+				movementType = constants.InventoryMovementTypeReconciliation
+			}
+			if apiErr := mediator.RecordInventoryMovementWithLevel(txCtx, txSvc.repos, accountID, itemID, delta, next, unitID,
+				"user_correction", nil, params.ResponsibleUserID, domain.MovementFields{Type: movementType}); apiErr != nil {
 				return apiErr
 			}
 

@@ -1461,7 +1461,11 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				return apiErr
 			}
 
-			if apiErr := mediator.RecordInventoryAuditTrail(
+			movementType := constants.InventoryMovementTypeAdjustment
+			if reconcile {
+				movementType = constants.InventoryMovementTypeReconciliation
+			}
+			if apiErr := mediator.RecordInventoryMovement(
 				txCtx,
 				txSvc.repos,
 				accountID,
@@ -1471,6 +1475,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				"user_correction",
 				nil,
 				responsibleUserID,
+				domain.MovementFields{Type: movementType, LocationID: params.LocationID, LotID: lotID},
 			); apiErr != nil {
 				return apiErr
 			}

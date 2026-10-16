@@ -2978,6 +2978,21 @@ func (mr *MockItemSvcMockRecorder) BatchGetItemsByIDs(ctx, ids, embeds any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetItemsByIDs", reflect.TypeOf((*MockItemSvc)(nil).BatchGetItemsByIDs), ctx, ids, embeds)
 }
 
+// BulkCreateInventoryMovements mocks base method.
+func (m *MockItemSvc) BulkCreateInventoryMovements(ctx context.Context, params domain.BulkCreateInventoryMovementsParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BulkCreateInventoryMovements", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BulkCreateInventoryMovements indicates an expected call of BulkCreateInventoryMovements.
+func (mr *MockItemSvcMockRecorder) BulkCreateInventoryMovements(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkCreateInventoryMovements", reflect.TypeOf((*MockItemSvc)(nil).BulkCreateInventoryMovements), ctx, params)
+}
+
 // BulkCreateItems mocks base method.
 func (m *MockItemSvc) BulkCreateItems(ctx context.Context, params domain.BulkCreateItemsParams) ([]domain.BulkCreateItemResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3068,6 +3083,21 @@ func (mr *MockItemSvcMockRecorder) ComputeItemCosts(ctx, accountID, itemID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeItemCosts", reflect.TypeOf((*MockItemSvc)(nil).ComputeItemCosts), ctx, accountID, itemID)
 }
 
+// CreateInventoryMovement mocks base method.
+func (m *MockItemSvc) CreateInventoryMovement(ctx context.Context, params domain.CreateInventoryMovementParams) (*domain.InventoryChangeLog, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInventoryMovement", ctx, params)
+	ret0, _ := ret[0].(*domain.InventoryChangeLog)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateInventoryMovement indicates an expected call of CreateInventoryMovement.
+func (mr *MockItemSvcMockRecorder) CreateInventoryMovement(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInventoryMovement", reflect.TypeOf((*MockItemSvc)(nil).CreateInventoryMovement), ctx, params)
+}
+
 // CreateItem mocks base method.
 func (m *MockItemSvc) CreateItem(ctx context.Context, params domain.CreateItemParams) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3096,6 +3126,20 @@ func (m *MockItemSvc) DeleteItem(ctx context.Context, itemID string) (*domain.It
 func (mr *MockItemSvcMockRecorder) DeleteItem(ctx, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteItem", reflect.TypeOf((*MockItemSvc)(nil).DeleteItem), ctx, itemID)
+}
+
+// ExecuteBulkCreateInventoryMovements mocks base method.
+func (m *MockItemSvc) ExecuteBulkCreateInventoryMovements(ctx context.Context, evt domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteBulkCreateInventoryMovements", ctx, evt)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteBulkCreateInventoryMovements indicates an expected call of ExecuteBulkCreateInventoryMovements.
+func (mr *MockItemSvcMockRecorder) ExecuteBulkCreateInventoryMovements(ctx, evt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteBulkCreateInventoryMovements", reflect.TypeOf((*MockItemSvc)(nil).ExecuteBulkCreateInventoryMovements), ctx, evt)
 }
 
 // ExecuteBulkUpsertItems mocks base method.
@@ -3244,6 +3288,21 @@ func (m *MockItemSvc) ListInventories(ctx context.Context, params domain.ListInv
 func (mr *MockItemSvcMockRecorder) ListInventories(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInventories", reflect.TypeOf((*MockItemSvc)(nil).ListInventories), ctx, params)
+}
+
+// ListInventoryLevels mocks base method.
+func (m *MockItemSvc) ListInventoryLevels(ctx context.Context, params domain.ListInventoryLevelsParams) (*domain.ListInventoryLevelsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInventoryLevels", ctx, params)
+	ret0, _ := ret[0].(*domain.ListInventoryLevelsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListInventoryLevels indicates an expected call of ListInventoryLevels.
+func (mr *MockItemSvcMockRecorder) ListInventoryLevels(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInventoryLevels", reflect.TypeOf((*MockItemSvc)(nil).ListInventoryLevels), ctx, params)
 }
 
 // ListItems mocks base method.

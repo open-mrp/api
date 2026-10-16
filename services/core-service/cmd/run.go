@@ -882,6 +882,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProducts, productSvc.ExecuteBulkUpsertProducts),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMaterials, materialSvc.ExecuteBulkUpsertMaterials),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertItems, itemSvc.ExecuteBulkUpsertItems),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkCreateInventoryMovements, itemSvc.ExecuteBulkCreateInventoryMovements),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
@@ -1012,6 +1013,20 @@ func Run(
 			return err
 		}
 		go itemUnitsBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+	}
+
+	// Inventory movements store their type and actor (00115). This stores them on the movements written before, which
+	// read them derived until then. INVENTORY_MOVEMENT_BACKFILL_DISABLED=true stops it.
+	if !cfg.InventoryMovementBackfillDisabled {
+		movementTypesBackfill, err := backfill.New(&backfill.Config{
+			Name:     repository.InventoryMovementTypesBackfillName,
+			Batch:    repository.NewInventoryMovementTypesBackfill(sqlc.New(reportDB), db).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go movementTypesBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 	}
 
 	// Legacy account prices, volume discounts and price groups mirror into price lists (00107), one account at a time;
@@ -1176,6 +1191,7 @@ func Run(
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
 	grpc.RegisterNoteService(srv, noteSvc)
+	grpc.RegisterInventoryService(srv, itemSvc)
 	grpc.RegisterPriceListService(srv, priceListSvc)
 	grpc.RegisterManufacturingMethodService(srv, manufacturingMethodSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)

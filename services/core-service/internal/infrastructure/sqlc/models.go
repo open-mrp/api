@@ -1040,6 +1040,17 @@ type InventoryChangeLog struct {
 	UpdatedAt         time.Time
 	ResponsibleUserID sql.NullString
 	ActionTypeCode    string
+	TypeCode          sql.NullString
+	ActorType         sql.NullString
+	ActorID           sql.NullString
+	LocationID        sql.NullString
+	LotID             sql.NullString
+	ReasonCode        sql.NullString
+	RelatedType       sql.NullString
+	RelatedID         sql.NullString
+	UnitCostAmount    sql.NullString
+	UnitCostCurrency  sql.NullString
+	UnitCostPerUnitID sql.NullString
 }
 
 type InventoryIssue struct {

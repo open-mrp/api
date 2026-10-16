@@ -210,7 +210,13 @@ func recordReversalAuditTrail(
 	}
 
 	for _, delta := range deltas {
-		if apiErr := mediator.RecordInventoryAuditTrail(
+		// A reversal undoes what the scan did: stock coming back was consumed, stock going out was produced.
+		movement := batchMovement(&evt.BatchID)
+		movement.Type = constants.InventoryMovementTypeOutput
+		if delta.Measure.IsPositive() {
+			movement.Type = constants.InventoryMovementTypeConsumption
+		}
+		if apiErr := mediator.RecordInventoryMovement(
 			ctx,
 			repos,
 			accountID,
@@ -220,6 +226,7 @@ func recordReversalAuditTrail(
 			string(constants.InventoryActionTypeUserCorrection),
 			scanningStationID,
 			responsibleUserID,
+			movement,
 		); apiErr != nil {
 			return apiErr
 		}

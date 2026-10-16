@@ -1883,7 +1883,7 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *l
 	}
 
 	for _, itemID := range itemIDs {
-		if apiErr := mediator.RecordInventoryAuditTrail(
+		if apiErr := mediator.RecordInventoryMovement(
 			txCtx,
 			s.repos,
 			shipment.AccountID,
@@ -1893,6 +1893,11 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *l
 			string(constants.InventoryActionTypeUserCorrection),
 			nil,
 			nil,
+			domain.MovementFields{
+				Type:        constants.InventoryMovementTypeShipment,
+				RelatedType: constants.RecordTypeShipment,
+				RelatedID:   shipment.ID,
+			},
 		); apiErr != nil {
 			return apiErr
 		}

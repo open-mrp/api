@@ -39,6 +39,9 @@ type InventoryChangeLog struct {
 	AccountID                     string
 	CreatedAt                     time.Time
 	UpdatedAt                     time.Time
+	// Movement is what the row records as an inventory movement: its business event, actor, place, lot, reason,
+	// source document and cost. Rows written before movements stored these read with type and actor derived.
+	Movement MovementFields
 }
 
 // ListInventoryChangeLogsParams contains the parameters for listing inventory change logs.
@@ -53,6 +56,11 @@ type ListInventoryChangeLogsParams struct {
 	EndDate          *time.Time
 	// Query is a substring search on the affected item's SKU. Empty means no SKU search.
 	Query *string
+	// Types, ActorIDs, ActorTypes and LocationIDs narrow to movements with these stored values.
+	Types       []string
+	ActorIDs    []string
+	ActorTypes  []string
+	LocationIDs []string
 }
 
 // ListInventoryChangeLogsResult contains the paginated result of listing inventory change logs.
@@ -69,4 +77,8 @@ type ExportInventoryChangeLogsParams struct {
 	ChangedByUserIDs []string
 	StartDate        *time.Time
 	EndDate          *time.Time
+	Types            []string
+	ActorIDs         []string
+	ActorTypes       []string
+	LocationIDs      []string
 }

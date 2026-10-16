@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/actor"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
@@ -800,6 +801,17 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 			if identity.Actor != nil {
 				responsibleUserID = &identity.Actor.ID
 			}
+			unitCost := up.UnitCost()
+			movement := domain.MovementFields{
+				Type:        constants.InventoryMovementTypeReceipt,
+				LocationID:  allocation.LocationID,
+				RelatedType: constants.RecordTypeReceivingOrder,
+				RelatedID:   params.ReceivingOrderID,
+				UnitCost:    &unitCost,
+			}
+			if who, ok := actor.FromIdentity(identity); ok {
+				movement.Actor = who
+			}
 			if apiErr := mutationRepo.CreateInventoryChangeLog(ctx, domain.CreateInventoryChangeLogParams{
 				AccountID:         params.AccountID,
 				ItemID:            up.ItemID,
@@ -807,6 +819,7 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 				UnitID:            allocation.Quantity.UnitID,
 				ActionType:        "system_action",
 				ResponsibleUserID: responsibleUserID,
+				Movement:          movement,
 			}); apiErr != nil {
 				return apiErr
 			}

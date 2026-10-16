@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+// CoreInventoryService records inventory movements by hand and reports inventory levels.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_async.proto";
+import "core/core_identity_context.proto";
+import "core/core_users_territories.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreInventoryService {
+  // Records an adjustment or reconciliation and returns the movement it wrote.
+  rpc CreateInventoryMovement(CreateInventoryMovementRequest) returns (CreateInventoryMovementResponse);
+  // Accepts many movements as an async job.
+  rpc BulkCreateInventoryMovements(BulkCreateInventoryMovementsRequest) returns (BulkCreateInventoryMovementsResponse);
+  // Reports items' stock positions.
+  rpc ListInventoryLevels(ListInventoryLevelsRequest) returns (ListInventoryLevelsResponse);
+}
+
+message CreateInventoryMovementRequest {
+  string item_id = 1;
+  // adjust adds measure (negative to remove); reconcile sets stock to exactly measure.
+  bool reconcile = 2;
+  // Decimal string.
+  string measure = 3;
+  string unit_id = 4;
+  optional string location_id = 5;
+  optional string lot_id = 6;
+  optional string lot_number = 7;
+  optional string customer_id = 8;
+  optional string reason = 9;
+}
+
+message CreateInventoryMovementResponse {
+  InventoryChangeLogInfo movement = 1;
+}
+
+message BulkCreateInventoryMovementRow {
+  optional string item_id = 1;
+  optional string sku = 2;
+  // Decimal string.
+  string measure = 3;
+  string unit_id = 4;
+  optional string location_id = 5;
+  optional string lot_number = 6;
+  optional string reason = 7;
+}
+
+message BulkCreateInventoryMovementsRequest {
+  bool reconcile = 1;
+  repeated BulkCreateInventoryMovementRow rows = 2;
+}
+
+message BulkCreateInventoryMovementsResponse {
+  JobInfo job = 1;
+}
+
+message ListInventoryLevelsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string item_ids = 3;
+  repeated string location_ids = 4;
+  repeated string site_ids = 5;
+  optional google.protobuf.Timestamp as_of = 6;
+}
+
+// InventoryLevelInfo is an item's stock position in its stocking unit. With as_of only on_hand is set.
+message InventoryLevelInfo {
+  string item_id = 1;
+  optional string location_id = 2;
+  string unit_id = 3;
+  string on_hand = 4;
+  optional string reserved = 5;
+  optional string available_to_promise = 6;
+  optional string short = 7;
+}
+
+message ListInventoryLevelsResponse {
+  repeated InventoryLevelInfo levels = 1;
+  PageInfo page_info = 2;
+}

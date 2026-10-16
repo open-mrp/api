@@ -80,6 +80,11 @@ func mapGetICLRow(row sqlc.GetInventoryChangeLogRow) *domain.InventoryChangeLog 
 	if row.ResponsibleUserUpdatedAt.Valid {
 		icl.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
+	icl.Movement = movementColumns{
+		TypeCode: row.TypeCode, ActorType: row.ActorType, ActorID: row.ActorID, LocationID: row.LocationID, LotID: row.LotID,
+		ReasonCode: row.ReasonCode, RelatedType: row.RelatedType, RelatedID: row.RelatedID,
+		UnitCostAmount: row.UnitCostAmount, UnitCostCurrency: row.UnitCostCurrency, UnitCostPerUnitID: row.UnitCostPerUnitID,
+	}.fields(icl.ActionTypeCode, icl.QuantityValue, icl.ScanningStationID, icl.ResponsibleUserID)
 
 	return icl
 }
@@ -117,6 +122,11 @@ func mapListAllICLRow(row sqlc.ListAllInventoryChangeLogsRow) *domain.InventoryC
 	if row.ResponsibleUserName.Valid {
 		icl.ResponsibleUserName = &row.ResponsibleUserName.String
 	}
+	icl.Movement = movementColumns{
+		TypeCode: row.TypeCode, ActorType: row.ActorType, ActorID: row.ActorID, LocationID: row.LocationID, LotID: row.LotID,
+		ReasonCode: row.ReasonCode, RelatedType: row.RelatedType, RelatedID: row.RelatedID,
+		UnitCostAmount: row.UnitCostAmount, UnitCostCurrency: row.UnitCostCurrency, UnitCostPerUnitID: row.UnitCostPerUnitID,
+	}.fields(icl.ActionTypeCode, icl.QuantityValue, icl.ScanningStationID, icl.ResponsibleUserID)
 
 	return icl
 }
@@ -291,10 +301,30 @@ func (r *inventoryChangeLogRepoImpl) ListAll(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	items := make([]*domain.InventoryChangeLog, len(rows))
-	for i, row := range rows {
-		items[i] = mapListAllICLRow(row)
+	items := make([]*domain.InventoryChangeLog, 0, len(rows))
+	for _, row := range rows {
+		if icl := mapListAllICLRow(row); movementMatches(icl.Movement, params) {
+			items = append(items, icl)
+		}
 	}
 
 	return items, nil
+}
+
+// movementMatches applies an export's movement filters, which read the derived type and actor so rows the
+// inventory_movement_types backfill hasn't reached yet still match.
+func movementMatches(m domain.MovementFields, params domain.ExportInventoryChangeLogsParams) bool {
+	if len(params.Types) > 0 && !slices.Contains(params.Types, string(m.Type)) {
+		return false
+	}
+	if len(params.ActorTypes) > 0 && !slices.Contains(params.ActorTypes, string(m.Actor.Type)) {
+		return false
+	}
+	if len(params.ActorIDs) > 0 && (m.Actor.ID == "" || !slices.Contains(params.ActorIDs, m.Actor.ID)) {
+		return false
+	}
+	if len(params.LocationIDs) > 0 && (m.LocationID == nil || !slices.Contains(params.LocationIDs, *m.LocationID)) {
+		return false
+	}
+	return true
 }

@@ -74,11 +74,17 @@ VALUES (sqlc.arg('id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'), sqlc.arg('
 INSERT INTO inventory_change_log (
     id, item_id, quantity_id, action_type_code,
     scanning_station_id, account_id, inventory_log_id,
-    responsible_user_id, created_at, updated_at
+    responsible_user_id, type_code, actor_type, actor_id,
+    location_id, lot_id, reason_code, related_type, related_id,
+    unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id,
+    created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'), sqlc.arg('action_type_code'),
     sqlc.narg('scanning_station_id'), sqlc.arg('account_id'), sqlc.narg('inventory_log_id'),
-    sqlc.narg('responsible_user_id'), NOW(3), NOW(3)
+    sqlc.narg('responsible_user_id'), sqlc.arg('type_code'), sqlc.arg('actor_type'), sqlc.narg('actor_id'),
+    sqlc.narg('location_id'), sqlc.narg('lot_id'), sqlc.narg('reason_code'), sqlc.narg('related_type'), sqlc.narg('related_id'),
+    sqlc.narg('unit_cost_amount'), sqlc.narg('unit_cost_currency'), sqlc.narg('unit_cost_per_unit_id'),
+    NOW(3), NOW(3)
 );
 
 -- FetchPhysicalInventoryForItem is what the shelf holds net of the demand nothing has covered — the

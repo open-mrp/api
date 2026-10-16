@@ -349,11 +349,17 @@ const insertInventoryChangeLog = `-- name: InsertInventoryChangeLog :exec
 INSERT INTO inventory_change_log (
     id, item_id, quantity_id, action_type_code,
     scanning_station_id, account_id, inventory_log_id,
-    responsible_user_id, created_at, updated_at
+    responsible_user_id, type_code, actor_type, actor_id,
+    location_id, lot_id, reason_code, related_type, related_id,
+    unit_cost_amount, unit_cost_currency, unit_cost_per_unit_id,
+    created_at, updated_at
 ) VALUES (
     ?, ?, ?, ?,
     ?, ?, ?,
-    ?, NOW(3), NOW(3)
+    ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?, ?,
+    NOW(3), NOW(3)
 )
 `
 
@@ -366,6 +372,17 @@ type InsertInventoryChangeLogParams struct {
 	AccountID         string
 	InventoryLogID    sql.NullString
 	ResponsibleUserID sql.NullString
+	TypeCode          sql.NullString
+	ActorType         sql.NullString
+	ActorID           sql.NullString
+	LocationID        sql.NullString
+	LotID             sql.NullString
+	ReasonCode        sql.NullString
+	RelatedType       sql.NullString
+	RelatedID         sql.NullString
+	UnitCostAmount    sql.NullString
+	UnitCostCurrency  sql.NullString
+	UnitCostPerUnitID sql.NullString
 }
 
 func (q *Queries) InsertInventoryChangeLog(ctx context.Context, arg InsertInventoryChangeLogParams) error {
@@ -378,6 +395,17 @@ func (q *Queries) InsertInventoryChangeLog(ctx context.Context, arg InsertInvent
 		arg.AccountID,
 		arg.InventoryLogID,
 		arg.ResponsibleUserID,
+		arg.TypeCode,
+		arg.ActorType,
+		arg.ActorID,
+		arg.LocationID,
+		arg.LotID,
+		arg.ReasonCode,
+		arg.RelatedType,
+		arg.RelatedID,
+		arg.UnitCostAmount,
+		arg.UnitCostCurrency,
+		arg.UnitCostPerUnitID,
 	)
 	return err
 }

@@ -29,7 +29,6 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSand
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSandbox,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSandbox,
@@ -44,8 +43,6 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSand
 // ListSandboxesRequest pages through the account's sandboxes.
 type ListSandboxesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
 }

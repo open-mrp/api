@@ -33,7 +33,6 @@ func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSandbox,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).GetSandbox

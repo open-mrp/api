@@ -142,3 +142,14 @@ func TestPreview9_WorkCenterRoutes(t *testing.T) {
 	serve("/v1/operations/departments", apiversion.V1_0_Forge)
 	assert.Equal(t, "/v1/operations/departments", path, "forge callers are not rerouted")
 }
+
+// The embedded lists' next_page_url filters by work_center_ids[], which the machine and station lists accept on
+// preview.9 too, so a department's link passes through unchanged.
+func TestPreview9_DepartmentMembersKeepTheirNextPageURL(t *testing.T) {
+	t.Parallel()
+
+	const next = "/v1/operations/machines?work_center_ids%5B%5D=wkcc_1&cursor=abc.def"
+	got := downgrade(t, constants.ObjectTypeWorkCenter, `{"id":"wkcc_1","object":"work_center","name":"Knitting",
+		"machines":{"object":"list","data":[],"page_info":{"next_page_url":"`+next+`","previous_page_url":null}}}`)
+	assert.Equal(t, next, got["machines"].(map[string]any)["page_info"].(map[string]any)["next_page_url"])
+}

@@ -36,7 +36,8 @@ func init() {
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					wc := parent.(*apiresource.WorkCenter)
 					items := embeddedMembers[apiresource.ScanningStation](ctx, wc.ID, "scanning_station_ids", loaded)
-					wc.ScanningStations = apiresource.NewEmbeddedList(items, false, resourceloaders.WorkCenterMembersListPath("scanning-stations", wc.ID), nil)
+					wc.ScanningStations = apiresource.NewEmbeddedList(items, false, resourceloaders.WorkCenterMembersListPath("scanning-stations", wc.ID),
+						metaCursor[apiresource.ScanningStation](ctx, constants.ObjectTypeWorkCenter, wc.ID, resourceloaders.WorkCenterStationsCursorKey))
 				},
 			},
 			{
@@ -47,7 +48,8 @@ func init() {
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					wc := parent.(*apiresource.WorkCenter)
 					items := embeddedMembers[apiresource.Machine](ctx, wc.ID, "machine_ids", loaded)
-					wc.Machines = apiresource.NewEmbeddedList(items, false, resourceloaders.WorkCenterMembersListPath("machines", wc.ID), nil)
+					wc.Machines = apiresource.NewEmbeddedList(items, false, resourceloaders.WorkCenterMembersListPath("machines", wc.ID),
+						metaCursor[apiresource.Machine](ctx, constants.ObjectTypeWorkCenter, wc.ID, resourceloaders.WorkCenterMachinesCursorKey))
 				},
 			},
 		},
@@ -80,4 +82,13 @@ func embeddedMembers[T any](ctx context.Context, workCenterID, key string, loade
 		}
 	}
 	return items
+}
+
+// metaCursor is an embedded list's cursorAfter: the list cursor the parent's load meta holds under key, which the loader
+// set after the last item the list embeds.
+func metaCursor[T any](ctx context.Context, parentType constants.ObjectType, parentID, key string) func(T) string {
+	return func(T) string {
+		cursor, _ := include.GetLoadMeta(ctx).GetString(parentType, parentID, key)
+		return cursor
+	}
 }

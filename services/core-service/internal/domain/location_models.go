@@ -28,9 +28,12 @@ type Location struct {
 	// AddressID is where a site is. Only sites have one.
 	AddressID *string `audit:"address_id"`
 	// Children are the location's first EmbeddedLocationChildren children, newest first, when loaded.
-	Children  []LocationChild
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Children []LocationChild
+	// ChildrenNextCursor continues the location list, filtered to this parent, after the loaded children; nil when
+	// every child was loaded.
+	ChildrenNextCursor *string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // IsSite reports whether the location is a site.
@@ -44,9 +47,10 @@ const EmbeddedLocationChildren = 11
 
 // LocationChild is a lightweight child reference.
 type LocationChild struct {
-	ID       string
-	Name     string
-	TypeCode string
+	ID        string
+	Name      string
+	TypeCode  string
+	CreatedAt time.Time
 }
 
 // LocationReferences blocks deleting a location that stock, movements, child locations or other records still use.

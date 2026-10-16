@@ -18,6 +18,12 @@ import (
 
 var workCenterLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.work_center")
 
+// Load meta keys holding the list cursors after a work center's embedded machines and scanning stations.
+const (
+	WorkCenterMachinesCursorKey = "machines_next_cursor"
+	WorkCenterStationsCursorKey = "scanning_stations_next_cursor"
+)
+
 // LoadWorkCenters batch-loads work centers. Each carries its location and the IDs of its first machines and scanning
 // stations, newest first, for the includes that expand them.
 func LoadWorkCenters(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
@@ -49,6 +55,8 @@ func LoadWorkCenters(ctx context.Context, ids []string) (map[string]any, *apierr
 			machineIDs[i] = m.Id
 		}
 		meta.Set(constants.ObjectTypeWorkCenter, d.Id, "machine_ids", machineIDs)
+		meta.Set(constants.ObjectTypeWorkCenter, d.Id, WorkCenterMachinesCursorKey, d.GetMachinesNextCursor())
+		meta.Set(constants.ObjectTypeWorkCenter, d.Id, WorkCenterStationsCursorKey, d.GetScanningStationsNextCursor())
 	}
 	return out, nil
 }

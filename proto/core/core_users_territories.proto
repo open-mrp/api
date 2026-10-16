@@ -219,6 +219,10 @@ message DepartmentInfo {
   reserved 11;
   // Hourly labor rate for work done in this department; absent when none is set.
   UnitPrice labor_rate = 12;
+  // Machine list cursor for the page after the embedded machines; absent when they are all embedded.
+  optional string machines_next_cursor = 13;
+  // Scanning station list cursor for the page after the embedded stations; absent when they are all embedded.
+  optional string scanning_stations_next_cursor = 14;
 }
 message ListDepartmentsRequest {
   optional string cursor = 1;

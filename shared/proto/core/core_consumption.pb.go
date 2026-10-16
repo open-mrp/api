@@ -2572,8 +2572,10 @@ type LocationInfo struct {
 	ParentTypeCode *string                `protobuf:"bytes,10,opt,name=parent_type_code,json=parentTypeCode,proto3,oneof" json:"parent_type_code,omitempty"`
 	Status         string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`
 	AddressId      *string                `protobuf:"bytes,12,opt,name=address_id,json=addressId,proto3,oneof" json:"address_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Location list cursor for the page after the embedded children; absent when they are all embedded.
+	ChildrenNextCursor *string `protobuf:"bytes,13,opt,name=children_next_cursor,json=childrenNextCursor,proto3,oneof" json:"children_next_cursor,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *LocationInfo) Reset() {
@@ -2679,6 +2681,13 @@ func (x *LocationInfo) GetStatus() string {
 func (x *LocationInfo) GetAddressId() string {
 	if x != nil && x.AddressId != nil {
 		return *x.AddressId
+	}
+	return ""
+}
+
+func (x *LocationInfo) GetChildrenNextCursor() string {
+	if x != nil && x.ChildrenNextCursor != nil {
+		return *x.ChildrenNextCursor
 	}
 	return ""
 }
@@ -6587,7 +6596,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x11LocationChildInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\ttype_code\x18\x03 \x01(\tR\btypeCode\"\xf5\x03\n" +
+	"\ttype_code\x18\x03 \x01(\tR\btypeCode\"\xc5\x04\n" +
 	"\fLocationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
@@ -6604,12 +6613,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	" \x01(\tH\x02R\x0eparentTypeCode\x88\x01\x01\x12\x16\n" +
 	"\x06status\x18\v \x01(\tR\x06status\x12\"\n" +
 	"\n" +
-	"address_id\x18\f \x01(\tH\x03R\taddressId\x88\x01\x01B\f\n" +
+	"address_id\x18\f \x01(\tH\x03R\taddressId\x88\x01\x01\x125\n" +
+	"\x14children_next_cursor\x18\r \x01(\tH\x04R\x12childrenNextCursor\x88\x01\x01B\f\n" +
 	"\n" +
 	"_parent_idB\x0e\n" +
 	"\f_parent_nameB\x13\n" +
 	"\x11_parent_type_codeB\r\n" +
-	"\v_address_idJ\x04\b\x04\x10\x05\"\xc0\x01\n" +
+	"\v_address_idB\x17\n" +
+	"\x15_children_next_cursorJ\x04\b\x04\x10\x05\"\xc0\x01\n" +
 	"\x10LocationTypeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +

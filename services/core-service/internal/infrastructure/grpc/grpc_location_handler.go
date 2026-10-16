@@ -27,16 +27,17 @@ func locationToProto(sl *domain.Location) *pb.LocationInfo {
 	}
 
 	info := &pb.LocationInfo{
-		Id:             sl.ID,
-		Name:           sl.Name,
-		TypeCode:       sl.TypeCode,
-		ParentId:       sl.ParentID,
-		ParentName:     sl.ParentName,
-		ParentTypeCode: sl.ParentTypeCode,
-		Status:         string(sl.Status),
-		AddressId:      sl.AddressID,
-		CreatedAt:      timestamppb.New(sl.CreatedAt),
-		UpdatedAt:      timestamppb.New(sl.UpdatedAt),
+		Id:                 sl.ID,
+		Name:               sl.Name,
+		TypeCode:           sl.TypeCode,
+		ParentId:           sl.ParentID,
+		ParentName:         sl.ParentName,
+		ParentTypeCode:     sl.ParentTypeCode,
+		Status:             string(sl.Status),
+		AddressId:          sl.AddressID,
+		ChildrenNextCursor: sl.ChildrenNextCursor,
+		CreatedAt:          timestamppb.New(sl.CreatedAt),
+		UpdatedAt:          timestamppb.New(sl.UpdatedAt),
 	}
 
 	if sl.Children != nil {

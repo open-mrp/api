@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/open-mrp/apikit/include"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	materialep "github.com/open-mrp/api/services/api-gateway/endpoints/materials"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -33,6 +34,9 @@ type supplierMaterialSvcImpl struct {
 	coreClient pb.CoreServiceClient
 }
 
+// supplierMaterialsRemoved points a 1.0.forge caller of a supplier material route at its replacement.
+const supplierMaterialsRemoved = "Use /v1/operations/suppliers/{supplier_id}/items."
+
 var supplierMaterialSvcTracer = tracing.GetTracer("api-gateway.endpoints.supplier-materials.service")
 
 func (c *SupplierMaterialSvcConfig) validate() error {
@@ -50,6 +54,9 @@ func NewSupplierMaterialSvc(config *SupplierMaterialSvcConfig) SupplierMaterialS
 }
 
 func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req *ListSupplierMaterialsRequest) (*apiresource.List[apiresource.SupplierMaterial], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, supplierMaterialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListSupplierMaterialsRequest{
 		SupplierAccountId: req.SupplierID,
 		Cursor:            req.Cursor,
@@ -67,6 +74,9 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req
 }
 
 func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, supplierMaterialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetSupplierMaterialRequest{
 		SupplierAccountId: req.SupplierID,
 		MaterialId:        req.MaterialID,
@@ -84,6 +94,9 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *
 }
 
 func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, supplierMaterialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	isActive := true
 	if v, ok := req.IsActive.Value(); ok {
 		isActive = v
@@ -109,6 +122,9 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, re
 }
 
 func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, req *UpdateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, supplierMaterialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdateSupplierMaterialRequest{
 		SupplierAccountId:   req.SupplierID,
 		MaterialId:          req.MaterialID,
@@ -130,6 +146,9 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, re
 }
 
 func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, req *DeleteSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, supplierMaterialsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteSupplierMaterialRequest{
 		SupplierAccountId: req.SupplierID,
 		MaterialId:        req.MaterialID,

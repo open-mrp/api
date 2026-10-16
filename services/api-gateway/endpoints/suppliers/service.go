@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/open-mrp/apikit/include"
-
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -40,8 +39,6 @@ type supplierSvcImpl struct {
 
 var supplierSvcTracer = tracing.GetTracer("api-gateway.endpoints.suppliers.service")
 
-var supplierIncludes = []string{"bill_to_address", "ship_to_address"}
-
 func (c *SupplierSvcConfig) validate() error {
 	if c.CoreClient == nil {
 		return fmt.Errorf("supplier endpoint service: core client is required")
@@ -57,63 +54,84 @@ func NewSupplierSvc(config *SupplierSvcConfig) SupplierSvc {
 }
 
 func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.Supplier], *apierror.APIError) {
+	if apiErr := req.CreatedRange.Validate(); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListSuppliersRequest{
-		Cursor:  req.Cursor,
-		Limit:   req.Limit,
-		Query:   req.Query,
-		ItemIds: req.ItemIDs,
-		// The addresses are joined by the backend rather than resolved here: they belong to the
-		// supplier's account, which the account-scoped address loader cannot read.
-		Includes: include.FilterIncludes(ctx, supplierIncludes...),
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		ItemIds:  req.ItemIDs,
+		IsActive: constants.IsActiveFilter(req.Statuses),
+		Includes: resourceloaders.SupplierCoreIncludes(ctx),
 	}
-
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	if req.CreatedAfter != nil {
+		pbReq.StartDate = timestamppb.New(*req.CreatedAfter)
 	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.CreatedBefore != nil {
+		pbReq.EndDate = timestamppb.New(*req.CreatedBefore)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListSuppliersResponse, error) {
 			return s.coreClient.ListSuppliers(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	if resp == nil {
+		return apiresource.NewList[apiresource.Supplier](nil, apiresource.PageInfo{}), nil
+	}
 
-	return supplierListFromProto(ctx, resp), nil
+	items := make([]apiresource.Supplier, len(resp.Suppliers))
+	for i, sp := range resp.Suppliers {
+		items[i] = *resourceloaders.SupplierFromSummaryProto(ctx, sp)
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
 		Id:       req.SupplierID,
-		Includes: include.FilterIncludes(ctx, supplierIncludes...),
+		Includes: resourceloaders.SupplierCoreIncludes(ctx),
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetSupplierResponse, error) {
 			return s.coreClient.GetSupplier(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := supplierDetailFromProto(resp.Supplier)
-	stashSupplierMeta(ctx, resp.Supplier, &result)
-	return &result, nil
+	return resourceloaders.SupplierFromProto(ctx, resp.Supplier), nil
 }
 
 func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.CreateSupplierRequest{
-		Name:     req.Name,
-		Number:   req.Number,
-		Note:     req.Note.Ptr(),
-		Includes: include.FilterIncludes(ctx, supplierIncludes...),
+		Name:         req.Name,
+		Number:       req.Number,
+		Instructions: req.Instructions.Ptr(),
+		Includes:     resourceloaders.SupplierCoreIncludes(ctx),
 	}
-
+	if v, ok := req.Status.Value(); ok {
+		status := string(v)
+		pbReq.Status = &status
+	}
+	if contact, ok := req.Contact.Value(); ok {
+		pbReq.Email, pbReq.Phone, pbReq.Url = contact.Email.ValuePtr(), contact.Phone.ValuePtr(), contact.URL.ValuePtr()
+	}
+	if billing, ok := req.CarrierBilling.Value(); ok {
+		if t, ok := billing.Type.Value(); ok {
+			v := string(t)
+			pbReq.CarrierBillingType = &v
+		}
+		pbReq.CarrierBillingAccount = billing.AccountNumber.ValuePtr()
+	}
+	if defaults, ok := req.Defaults.Value(); ok {
+		pbReq.DefaultCarrierId = defaults.CarrierID.Ptr()
+		pbReq.DefaultServiceLevelId = defaults.ServiceLevelID.Ptr()
+		pbReq.PaymentTermId = defaults.PaymentTermID.Ptr()
+		pbReq.ShippingTermId = defaults.ShippingTermID.Ptr()
+	}
 	if v, ok := req.BillToAddress.Value(); ok {
 		pbReq.BillToAddress = createAddressRequestToProto(&v)
 	}
@@ -125,75 +143,76 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateSupplierResponse, error) {
 			return s.coreClient.CreateSupplier(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := supplierDetailFromProto(resp.Supplier)
-	stashSupplierMeta(ctx, resp.Supplier, &result)
-	return &result, nil
+	return resourceloaders.SupplierFromProto(ctx, resp.Supplier), nil
 }
 
 func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.UpdateSupplierRequest{
-		Id:              req.SupplierID,
-		Name:            req.Name.Ptr(),
-		Number:          req.Number.Ptr(),
-		Note:            req.Note.Ptr(),
-		UpdateNote:      req.UpdateNote,
-		BillToAddressId: req.BillToAddressID.Ptr(),
-		ShipToAddressId: req.ShipToAddressID.Ptr(),
-		Includes:        include.FilterIncludes(ctx, supplierIncludes...),
+		Id:           req.SupplierID,
+		Name:         req.Name.Ptr(),
+		Number:       req.Number.Ptr(),
+		Instructions: fieldpb.StringClearableToProto(req.Instructions),
+		Includes:     resourceloaders.SupplierCoreIncludes(ctx),
+	}
+	if v, ok := req.Status.Value(); ok {
+		status := string(v)
+		pbReq.Status = &status
+	}
+	if contact, ok := req.Contact.Value(); ok {
+		pbReq.Email = fieldpb.StringClearableToProto(contact.Email)
+		pbReq.Phone = fieldpb.StringClearableToProto(contact.Phone)
+		pbReq.Url = fieldpb.StringClearableToProto(contact.URL)
+	}
+	if billing, ok := req.CarrierBilling.Value(); ok {
+		if t, ok := billing.Type.Value(); ok {
+			v := string(t)
+			pbReq.CarrierBillingType = &v
+		}
+		pbReq.CarrierBillingAccount = fieldpb.StringClearableToProto(billing.AccountNumber)
+	}
+	if defaults, ok := req.Defaults.Value(); ok {
+		pbReq.DefaultCarrierId = fieldpb.StringClearableToProto(defaults.CarrierID)
+		pbReq.DefaultServiceLevelId = fieldpb.StringClearableToProto(defaults.ServiceLevelID)
+		pbReq.PaymentTermId = fieldpb.StringClearableToProto(defaults.PaymentTermID)
+		pbReq.ShippingTermId = fieldpb.StringClearableToProto(defaults.ShippingTermID)
+		pbReq.DefaultBillToAddressId = fieldpb.StringClearableToProto(defaults.BillToAddressID)
+		pbReq.DefaultShipToAddressId = fieldpb.StringClearableToProto(defaults.ShipToAddressID)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateSupplierResponse, error) {
 			return s.coreClient.UpdateSupplier(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := supplierDetailFromProto(resp.Supplier)
-	stashSupplierMeta(ctx, resp.Supplier, &result)
-	return &result, nil
+	return resourceloaders.SupplierFromProto(ctx, resp.Supplier), nil
 }
 
 func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
-	pbReq := &pb.DeleteSupplierRequest{
-		Id: req.SupplierID,
-	}
-
+	pbReq := &pb.DeleteSupplierRequest{Id: req.SupplierID}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.DeleteSupplierResponse, error) {
 			return s.coreClient.DeleteSupplier(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := supplierDetailFromProto(resp.Supplier)
-	stashSupplierMeta(ctx, resp.Supplier, &result)
-	return &result, nil
+	return resourceloaders.SupplierFromProto(ctx, resp.Supplier), nil
 }
 
 func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, req *BulkDeleteSuppliersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.BulkDeleteSuppliersRequest{
-		SupplierIds: req.SupplierIDs,
-	}
-
+	pbReq := &pb.BulkDeleteSuppliersRequest{SupplierIds: req.SupplierIDs}
 	_, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.bulk_delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return s.coreClient.BulkDeleteSuppliers(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
 }
 
@@ -205,7 +224,7 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 		Name:         a.Name,
 		Phone:        a.Phone.Ptr(),
 		Email:        a.Email.Ptr(),
-		IsDropShip:   addressTypeToDropShip(a.Type.Ptr()),
+		IsDropShip:   a.Type.Ptr() != nil && *a.Type.Ptr() == constants.AddressTypeDropShip,
 		StreetLine_1: a.Line1.Ptr(),
 		StreetLine_2: a.Line2.Ptr(),
 		Locality:     a.City.Ptr(),
@@ -213,77 +232,4 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 		PostalCode:   a.PostalCode.Ptr(),
 		Country:      a.Country,
 	}
-}
-
-func supplierDetailFromProto(s *pb.SupplierProto) apiresource.Supplier {
-	if s == nil {
-		return apiresource.Supplier{}
-	}
-
-	return apiresource.Supplier{
-		ID:            s.Id,
-		Object:        constants.ObjectTypeSupplier,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: &s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
-	}
-}
-
-func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.Supplier) {
-	if s == nil {
-		return
-	}
-	meta := include.GetLoadMeta(ctx)
-	if s.BillToAddress != nil {
-		meta.Set(constants.ObjectTypeSupplier, d.ID, "bill_to_address", addressProtoToResource(s.BillToAddress))
-	}
-	if s.ShipToAddress != nil {
-		meta.Set(constants.ObjectTypeSupplier, d.ID, "ship_to_address", addressProtoToResource(s.ShipToAddress))
-	}
-}
-
-// stashSupplierSummaryMeta records a list row's default addresses for the include resolver: the
-// records the backend joined when they were asked for, and their ids either way.
-func stashSupplierSummaryMeta(ctx context.Context, s *pb.SupplierSummaryProto) {
-	if s == nil {
-		return
-	}
-	meta := include.GetLoadMeta(ctx)
-	if s.BillToAddressId != nil && *s.BillToAddressId != "" {
-		meta.Set(constants.ObjectTypeSupplier, s.Id, "bill_to_address_id", *s.BillToAddressId)
-	}
-	if s.ShipToAddressId != nil && *s.ShipToAddressId != "" {
-		meta.Set(constants.ObjectTypeSupplier, s.Id, "ship_to_address_id", *s.ShipToAddressId)
-	}
-	if s.BillToAddress != nil {
-		meta.Set(constants.ObjectTypeSupplier, s.Id, "bill_to_address", addressProtoToResource(s.BillToAddress))
-	}
-	if s.ShipToAddress != nil {
-		meta.Set(constants.ObjectTypeSupplier, s.Id, "ship_to_address", addressProtoToResource(s.ShipToAddress))
-	}
-}
-
-func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.Supplier] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.Supplier](nil, apiresource.PageInfo{})
-	}
-
-	items := make([]apiresource.Supplier, len(resp.Suppliers))
-	for i, s := range resp.Suppliers {
-		items[i] = resourceloaders.SupplierFromSummaryProto(s)
-		stashSupplierSummaryMeta(ctx, s)
-	}
-
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
-}
-
-func addressProtoToResource(a *pb.CustomerAddressProto) *apiresource.Address {
-	return resourceloaders.CustomerAddressFromProto(a)
-}
-
-func addressTypeToDropShip(t *constants.AddressType) bool {
-	return t != nil && *t == constants.AddressTypeDropShip
 }

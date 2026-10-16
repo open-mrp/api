@@ -21,7 +21,7 @@ type DeleteSupplierRequest struct {
 
 // Deletes a supplier.
 //
-// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns a deleted stub. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.
+// Only while no purchase order or supplier item references it. Its addresses and users are deleted with it. Archive a supplier that's in use by setting `status` to `archived`.
 type DeleteSupplierEndpoint struct{}
 
 func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *object.Deleted] {
@@ -31,9 +31,8 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		// Single delete checks suppliers:update downstream (Dashboard convention), not suppliers:delete.
 		Auth: authz.Policy{Permissions: []types.Permission{

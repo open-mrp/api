@@ -3,7 +3,6 @@ package supplierep
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/open-mrp/apikit/object"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
@@ -19,23 +19,18 @@ import (
 // Request to list suppliers.
 type ListSuppliersRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	apirequest.CreatedRange
+	// Case-insensitive substring match on `name` or `number`. Each word must match on its own.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter to suppliers that can source any of these items.
-	//
-	// A supplier matches when it provides a material for one of the items, whether or not that material link is active.
+	// Only return suppliers with any of these statuses: `active` or `archived`.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
+	// Only return suppliers with a supplier item for any of these items, active or archived.
 	ItemIDs []string `query:"item_ids"`
-	// Only return suppliers created at or after this timestamp.
-	StartDate *time.Time `query:"starts_at"`
-	// Only return suppliers created at or before this timestamp.
-	EndDate *time.Time `query:"ends_at"`
 }
 
-// Returns a paginated list of suppliers for the current account, newest first.
+// Returns a list of suppliers.
 //
-// Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term is split into words, and a supplier matches when every word appears in its name, number or notes.
+// Sorted by creation date, newest first.
 type ListSuppliersEndpoint struct{}
 
 func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]] {
@@ -45,9 +40,8 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
@@ -57,7 +51,7 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSupplier,
-			Fields:     []string{"bill_to_address", "ship_to_address"},
+			Fields:     supplierIncludeFields,
 		}),
 	})
 }

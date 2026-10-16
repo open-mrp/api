@@ -18,47 +18,34 @@ import (
 type UpdateSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
-	// The supplier's name, as shown in the dashboard and on documents.
-	//
-	// This is your account's name for the supplier; it does not rename the supplier's own account.
+	// The supplier's business name. This is your account's name for the supplier; it does not rename the supplier's own account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Human-facing supplier code, such as `SUP-001`.
-	//
-	// Must be unique per account; updating to a number already used by another supplier returns a conflict error.
+	// Supplier number, unique within your account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// New value for the supplier's note.
-	//
-	// Ignored unless `update_note` is `true`.
-	Note field.Optional[string] `json:"note,omitzero"`
-	// Whether to apply the `note` field.
-	//
-	// When `true`, the note is set to the provided `note` value, or cleared if `note` is omitted. When `false`, the note is left unchanged.
-	UpdateNote bool `json:"update_note"`
-	// ID of an existing address to set as the supplier's default billing address.
-	//
-	// Must be one of the supplier's own addresses, as listed for the supplier's account; any other address is not found.
-	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
-	// ID of an existing address to set as the supplier's default shipping address.
-	//
-	// Must be one of the supplier's own addresses, as listed for the supplier's account; any other address is not found.
-	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
+	// Whether the supplier can be named on new records: `active` or `archived`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Your team's standing instructions for this supplier's orders. Send `null` to clear them.
+	Instructions field.Clearable[string] `json:"instructions,omitzero"`
+	// How to reach the supplier's business. Only fields you send are changed.
+	Contact field.Optional[SupplierContactInput] `json:"contact,omitzero"`
+	// Who pays the carrier for freight from the supplier. Only fields you send are changed.
+	CarrierBilling field.Optional[SupplierCarrierBillingInput] `json:"carrier_billing,omitzero"`
+	// Values copied onto a new purchase order from the supplier. Only fields you send are changed.
+	Defaults field.Optional[UpdateSupplierDefaultsInput] `json:"defaults,omitzero"`
 }
 
-var sampleUpdateSupplierName = "Acme Supplies LLC"
-var sampleUpdateSupplierNote = "Updated contact info"
 var sampleUpdateSupplierRequest = &UpdateSupplierRequest{
-	Name:       field.Some(sampleUpdateSupplierName),
-	Note:       field.Some(sampleUpdateSupplierNote),
-	UpdateNote: true,
+	Name:         field.Some("Acme Supplies LLC"),
+	Instructions: field.Set("Deliveries to the north dock only."),
 }
 
 func (*UpdateSupplierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSupplierRequest)
 }
 
-// Partially updates a supplier.
+// Updates a supplier.
 //
-// Only provided fields are changed. To update or clear the note, set `update_note` to `true`.
+// Only fields you send are changed, including fields inside `contact`, `carrier_billing` and `defaults`. Send `null` to clear a clearable field.
 type UpdateSupplierEndpoint struct{}
 
 func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.Supplier] {
@@ -68,9 +55,8 @@ func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
@@ -80,7 +66,7 @@ func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSupplier,
-			Fields:     []string{"bill_to_address", "ship_to_address"},
+			Fields:     supplierIncludeFields,
 		}),
 	})
 }

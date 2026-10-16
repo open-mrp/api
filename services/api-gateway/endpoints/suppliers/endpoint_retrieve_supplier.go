@@ -18,7 +18,7 @@ type RetrieveSupplierRequest struct {
 	SupplierID string `path:"id" validate:"required"`
 }
 
-// Returns a supplier by ID.
+// Retrieves a supplier.
 type RetrieveSupplierEndpoint struct{}
 
 func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.Supplier] {
@@ -28,9 +28,8 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
@@ -40,7 +39,7 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSupplier,
-			Fields:     []string{"bill_to_address", "ship_to_address"},
+			Fields:     supplierIncludeFields,
 		}),
 	})
 }

@@ -14,16 +14,13 @@ import (
 	"github.com/open-mrp/apikit/tracing"
 )
 
-// supplierItemsActor is the caller of a supplier item endpoint, allowed the action on suppliers.
-func supplierItemsActor(ctx context.Context, action types.Action) (*types.Identity, *apierror.APIError) {
+// internalIdentity is the caller, who must belong to the account acting.
+func internalIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
 	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, apiErr
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, action); apiErr != nil {
 		return nil, apiErr
 	}
 	return identity, nil
@@ -45,8 +42,11 @@ func (s *supplierMaterialSvcImpl) ListSupplierItems(ctx context.Context, params 
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_item.list")
 	defer span.End()
 
-	identity, apiErr := supplierItemsActor(ctx, types.ActionRead)
+	identity, apiErr := internalIdentity(ctx)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	params.OwnerAccountID = identity.Target.AccountID
@@ -60,8 +60,11 @@ func (s *supplierMaterialSvcImpl) GetSupplierItem(ctx context.Context, supplierA
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_item.get")
 	defer span.End()
 
-	identity, apiErr := supplierItemsActor(ctx, types.ActionRead)
+	identity, apiErr := internalIdentity(ctx)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return s.repos.NewSupplierMaterialRepo().GetItem(ctx, identity.Target.AccountID, supplierAccountID, supplierItemID)
@@ -73,8 +76,11 @@ func (s *supplierMaterialSvcImpl) CreateSupplierItem(ctx context.Context, params
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_item.create")
 	defer span.End()
 
-	identity, apiErr := supplierItemsActor(ctx, types.ActionCreate)
+	identity, apiErr := internalIdentity(ctx)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if params.ArchiveStatus == "" {
@@ -180,8 +186,11 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierItem(ctx context.Context, params
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_item.update")
 	defer span.End()
 
-	identity, apiErr := supplierItemsActor(ctx, types.ActionUpdate)
+	identity, apiErr := internalIdentity(ctx)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if params.ArchiveStatus != nil && !params.ArchiveStatus.IsValid() {
@@ -252,8 +261,11 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierItem(ctx context.Context, suppli
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_item.delete")
 	defer span.End()
 
-	identity, apiErr := supplierItemsActor(ctx, types.ActionUpdate)
+	identity, apiErr := internalIdentity(ctx)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	ownerAccountID := identity.Target.AccountID

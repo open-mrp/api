@@ -1029,6 +1029,20 @@ func Run(
 		go movementTypesBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 	}
 
+	// Records made before subscriptions (00119) subscribe their creators and responsible people; until then their
+	// alerts go to their owner. SUBSCRIPTION_BACKFILL_DISABLED=true stops it.
+	if !cfg.SubscriptionBackfillDisabled {
+		subscriptionBackfill, err := backfill.New(&backfill.Config{
+			Name:     repository.SubscriptionBackfillName,
+			Batch:    repository.NewSubscriptionBackfill(sqlc.New(reportDB), db).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go subscriptionBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+	}
+
 	// Legacy account prices, volume discounts and price groups mirror into price lists (00107), one account at a time;
 	// an account's orders price from its lists once it is mirrored. PRICE_LIST_SYNC_BACKFILL_DISABLED=true stops it.
 	if !cfg.PriceListSyncBackfillDisabled {

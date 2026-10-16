@@ -51,6 +51,7 @@ const (
 	envNoteBackfillOff            = "NOTE_BACKFILL_DISABLED"
 	envPriceListSyncBackfillOff   = "PRICE_LIST_SYNC_BACKFILL_DISABLED"
 	envMethodBackfillOff          = "MANUFACTURING_METHOD_BACKFILL_DISABLED"
+	envSubscriptionBackfillOff    = "SUBSCRIPTION_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -156,6 +157,9 @@ type config struct {
 	// NoteBackfillDisabled (optional; default: false) stops the backfills that copy notes columns into notes ("true"
 	// to stop them).
 	NoteBackfillDisabled bool
+	// SubscriptionBackfillDisabled (optional; default: false) stops the backfill that subscribes the creators and
+	// responsible people of existing orders and production runs ("true" to stop it).
+	SubscriptionBackfillDisabled bool
 	// PriceListSyncBackfillDisabled (optional; default: false) stops the backfill that mirrors legacy account prices
 	// and volume discounts into price lists ("true" to stop). Unmirrored accounts keep pricing from the legacy records.
 	PriceListSyncBackfillDisabled bool
@@ -212,6 +216,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		NoteBackfillDisabled:                env.GetEnv(envNoteBackfillOff, getenv) == "true",
 		PriceListSyncBackfillDisabled:       env.GetEnv(envPriceListSyncBackfillOff, getenv) == "true",
 		ManufacturingMethodBackfillDisabled: env.GetEnv(envMethodBackfillOff, getenv) == "true",
+		SubscriptionBackfillDisabled:        env.GetEnv(envSubscriptionBackfillOff, getenv) == "true",
 	}
 }
 

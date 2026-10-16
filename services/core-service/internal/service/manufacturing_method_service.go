@@ -76,23 +76,52 @@ func (s *manufacturingMethodSvcImpl) withTx(ctx context.Context, fn func(context
 	})
 }
 
-// methodIdentity is the caller, checked for an action on manufacturing methods. Reads allow include reads.
-func methodIdentity(ctx context.Context, action types.Action) (*types.Identity, *apierror.APIError) {
+// methodCaller is the caller of a manufacturing method call: an internal actor (reads also allow include reads).
+func methodCaller(ctx context.Context, read bool) (*types.Identity, *apierror.APIError) {
 	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}
 	check := identity.CheckIsInternalActor
-	if action == types.ActionRead {
+	if read {
 		check = identity.CheckIsInternalActorForRead
 	}
 	if apiErr := check(); apiErr != nil {
 		return nil, apiErr
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainManufacturingMethods, action); apiErr != nil {
+	return identity, nil
+}
+
+func checkMethodReadPermission(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	identity, apiErr := methodCaller(ctx, true)
+	if apiErr != nil {
 		return nil, apiErr
 	}
-	return identity, nil
+	return identity, identity.CheckHasPermission(types.PermissionDomainManufacturingMethods, types.ActionRead)
+}
+
+func checkMethodCreatePermission(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	identity, apiErr := methodCaller(ctx, false)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return identity, identity.CheckHasPermission(types.PermissionDomainManufacturingMethods, types.ActionCreate)
+}
+
+func checkMethodUpdatePermission(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	identity, apiErr := methodCaller(ctx, false)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return identity, identity.CheckHasPermission(types.PermissionDomainManufacturingMethods, types.ActionUpdate)
+}
+
+func checkMethodDeletePermission(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	identity, apiErr := methodCaller(ctx, false)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return identity, identity.CheckHasPermission(types.PermissionDomainManufacturingMethods, types.ActionDelete)
 }
 
 // idempotentWrite runs a write once per Idempotency-Key: fn runs in a transaction and its result (or error) is cached
@@ -177,7 +206,7 @@ func (s *manufacturingMethodSvcImpl) ListManufacturingMethods(ctx context.Contex
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.list")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -195,7 +224,7 @@ func (s *manufacturingMethodSvcImpl) BatchGetManufacturingMethodsByIDs(ctx conte
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.batch_get_by_ids")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -207,7 +236,7 @@ func (s *manufacturingMethodSvcImpl) DefaultManufacturingMethodIDs(ctx context.C
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.default_ids")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -305,7 +334,7 @@ func (s *manufacturingMethodSvcImpl) CreateManufacturingMethod(ctx context.Conte
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.create")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionCreate)
+	identity, apiErr := checkMethodCreatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -362,7 +391,7 @@ func (s *manufacturingMethodSvcImpl) UpdateManufacturingMethod(ctx context.Conte
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.update")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -399,7 +428,7 @@ func (s *manufacturingMethodSvcImpl) DeleteManufacturingMethod(ctx context.Conte
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.delete")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionDelete)
+	identity, apiErr := checkMethodDeletePermission(ctx)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -483,7 +512,7 @@ func (s *manufacturingMethodSvcImpl) ActivateManufacturingMethod(ctx context.Con
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.activate")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -633,7 +662,7 @@ func (s *manufacturingMethodSvcImpl) NewManufacturingMethodVersion(ctx context.C
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.new_version")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionCreate)
+	identity, apiErr := checkMethodCreatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -703,11 +732,11 @@ func (s *manufacturingMethodSvcImpl) NewManufacturingMethodVersion(ctx context.C
 }
 
 // GetProductionFlow walks an item's default method down through the methods of the materials it makes.
-func (s *manufacturingMethodSvcImpl) GetProductionFlow(ctx context.Context, itemID string) (*domain.ProductionFlow, *apierror.APIError) {
+func (s *manufacturingMethodSvcImpl) GetMethodProductionFlow(ctx context.Context, itemID string) (*domain.ProductionFlow, *apierror.APIError) {
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.production_flow")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -761,7 +790,7 @@ func (s *manufacturingMethodSvcImpl) ListMethodOperations(ctx context.Context, p
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.list_operations")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -777,7 +806,7 @@ func (s *manufacturingMethodSvcImpl) BatchGetMethodOperationsByIDs(ctx context.C
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.batch_get_operations")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1021,7 +1050,7 @@ func (s *manufacturingMethodSvcImpl) CreateMethodOperation(ctx context.Context, 
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.create_operation")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1088,7 +1117,7 @@ func (s *manufacturingMethodSvcImpl) UpdateMethodOperation(ctx context.Context, 
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.update_operation")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1156,7 +1185,7 @@ func (s *manufacturingMethodSvcImpl) DeleteMethodOperation(ctx context.Context, 
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.delete_operation")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -1215,7 +1244,7 @@ func (s *manufacturingMethodSvcImpl) ListMethodMaterials(ctx context.Context, pa
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.list_materials")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1231,7 +1260,7 @@ func (s *manufacturingMethodSvcImpl) BatchGetMethodMaterialsByIDs(ctx context.Co
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.batch_get_materials")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionRead)
+	identity, apiErr := checkMethodReadPermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1350,7 +1379,7 @@ func (s *manufacturingMethodSvcImpl) CreateMethodMaterial(ctx context.Context, p
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.create_material")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1403,7 +1432,7 @@ func (s *manufacturingMethodSvcImpl) UpdateMethodMaterial(ctx context.Context, p
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.update_material")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1449,7 +1478,7 @@ func (s *manufacturingMethodSvcImpl) DeleteMethodMaterial(ctx context.Context, m
 	ctx, span := manufacturingMethodSvcTracer.Start(ctx, "service.manufacturing_method.delete_material")
 	defer span.End()
 
-	identity, apiErr := methodIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := checkMethodUpdatePermission(ctx)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

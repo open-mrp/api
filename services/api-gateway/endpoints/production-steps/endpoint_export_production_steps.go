@@ -27,6 +27,8 @@ func (*ExportProductionStepsRequest) SchemaExample() any {
 
 // Starts an export of every matching production step and returns the job that tracks it; the file
 // lists a step's consumptions one per row.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type ExportProductionStepsEndpoint struct{}
 
 func (e *ExportProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportProductionStepsRequest, *apiresource.AsyncJob] {
@@ -39,7 +41,6 @@ func (e *ExportProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionStepSvc).ExportProductionSteps

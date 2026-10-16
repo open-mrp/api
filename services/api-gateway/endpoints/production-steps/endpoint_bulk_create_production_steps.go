@@ -107,6 +107,8 @@ func (*BulkCreateProductionStepsRequest) SchemaExample() any {
 // Rows are matched to existing steps by name. A matched step has its production outputs and consumptions replaced, and its allowances, leveling factor, and scanning station overwritten from the row — omitting any of those three resets it — while its labor rate, labor time, and overhead rate keep the values they already had. Unmatched rows are created in full, and every created or updated step is reconnected into the production flow graph from the items it produces and consumes.
 //
 // Each row succeeds or fails independently: a row referencing an unknown SKU, scanning station, or labor time unit is skipped and reported in the response instead of failing the whole request.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type BulkCreateProductionStepsEndpoint struct{}
 
 func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse] {
@@ -118,7 +120,6 @@ func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkCreateProductionSteps

@@ -44,6 +44,9 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 					if reason, ok := includesWithoutTheirResourceYet[include]; ok {
 						t.Skip(reason)
 					}
+					if reason, ok := includesWithoutTheirResourceYetOnPath[ep.Path][include]; ok {
+						t.Skip(reason)
+					}
 
 					path, query, ok := resolveGetScenario(ep, include)
 					require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
@@ -346,8 +349,14 @@ type IncludeGetEndpoint struct {
 
 // includesWithoutTheirResourceYet are include keys a resource already declares for a related resource that does
 // not exist yet, so nothing can carry one. Each entry leaves once its resource ships.
-var includesWithoutTheirResourceYet = map[string]string{
-	"default_manufacturing_method": "manufacturing methods are not built yet, so no item names a default one",
+var includesWithoutTheirResourceYet = map[string]string{}
+
+// includesWithoutTheirResourceYetOnPath is includesWithoutTheirResourceYet for keys that are real on other routes, keyed
+// by the route that declares them.
+var includesWithoutTheirResourceYetOnPath = map[string]map[string]string{
+	"/v1/operations/manufacturing-methods":      {"sales_order_line": "order-specific manufacturing methods are not built yet"},
+	"/v1/operations/manufacturing-methods/{id}": {"sales_order_line": "order-specific manufacturing methods are not built yet"},
+	"/v1/catalog/items/{id}/production-flow":    {"sales_order_line": "order-specific manufacturing methods are not built yet"},
 }
 
 type includeGetScenario struct {

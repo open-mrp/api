@@ -12236,19 +12236,19 @@ func (mr *MockManufacturingMethodSvcMockRecorder) DeleteMethodOperation(ctx, met
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMethodOperation", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).DeleteMethodOperation), ctx, methodID, operationID)
 }
 
-// GetProductionFlow mocks base method.
-func (m *MockManufacturingMethodSvc) GetProductionFlow(ctx context.Context, itemID string) (*domain.ProductionFlow, *apierror.APIError) {
+// GetMethodProductionFlow mocks base method.
+func (m *MockManufacturingMethodSvc) GetMethodProductionFlow(ctx context.Context, itemID string) (*domain.ProductionFlow, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductionFlow", ctx, itemID)
+	ret := m.ctrl.Call(m, "GetMethodProductionFlow", ctx, itemID)
 	ret0, _ := ret[0].(*domain.ProductionFlow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// GetProductionFlow indicates an expected call of GetProductionFlow.
-func (mr *MockManufacturingMethodSvcMockRecorder) GetProductionFlow(ctx, itemID any) *gomock.Call {
+// GetMethodProductionFlow indicates an expected call of GetMethodProductionFlow.
+func (mr *MockManufacturingMethodSvcMockRecorder) GetMethodProductionFlow(ctx, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionFlow", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).GetProductionFlow), ctx, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMethodProductionFlow", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).GetMethodProductionFlow), ctx, itemID)
 }
 
 // ListManufacturingMethods mocks base method.

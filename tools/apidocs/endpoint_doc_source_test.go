@@ -124,6 +124,9 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		Note: struct {
 			pbgrpc.CoreNoteServiceClient
 		}{},
+		ManufacturingMethod: struct {
+			pbgrpc.CoreManufacturingMethodServiceClient
+		}{},
 		ProductionSchedule: struct {
 			pbgrpc.CoreProductionScheduleServiceClient
 		}{},
@@ -211,6 +214,9 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.NotesEndpointGroup{}).Materialize(&httpgroup.NotesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ManufacturingMethodsEndpointGroup{}).Materialize(&httpgroup.ManufacturingMethodsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{

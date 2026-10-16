@@ -22,6 +22,8 @@ type DeleteProductionStepRequest struct {
 // Deletes a production step.
 //
 // The step's connections to its upstream and downstream steps are removed as part of the deletion, so the neighboring steps are left unconnected to each other. Deleting a step that was already deleted returns an already-deleted error rather than a not-found error.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type DeleteProductionStepEndpoint struct{}
 
 func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *object.Deleted] {
@@ -34,7 +36,6 @@ func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		ObjectType:        constants.ObjectTypeProductionStep,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionStepRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ProductionStepSvc).DeleteProductionStep, constants.ObjectTypeProductionStep, "id")

@@ -24,6 +24,8 @@ type DeleteConsumptionRequest struct {
 // Removes a material input from a production step.
 //
 // Any production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. A deleted stub is returned; deleting it again reports that it has already been deleted.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type DeleteConsumptionEndpoint struct{}
 
 func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *object.Deleted] {
@@ -35,7 +37,6 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionDelete},

@@ -21,6 +21,8 @@ type GetProductionFlowRequest struct {
 // Returns the production flow graph for the given item.
 //
 // The graph contains the step(s) that produce the item, every upstream step that feeds them, and any connected downstream steps, with each step's production output, consumptions, and connections. The list of steps is empty if no production step produces the item.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type GetProductionFlowEndpoint struct{}
 
 func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductionFlowRequest, *apiresource.ProductionFlow] {
@@ -32,7 +34,6 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionFlow,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead},

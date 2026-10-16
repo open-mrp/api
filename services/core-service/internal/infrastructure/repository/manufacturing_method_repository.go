@@ -301,7 +301,7 @@ func buildManufacturingMethodListPage(params domain.ListManufacturingMethodsPara
 		page.args = append(page.args, stringArgs(params.WorkCenterIDs)...)
 	}
 	if params.Created.After != nil {
-		page.where = append(page.where, "m.created_at > ?")
+		page.where = append(page.where, "m.created_at >= ?")
 		page.args = append(page.args, *params.Created.After)
 	}
 	if params.Created.Before != nil {

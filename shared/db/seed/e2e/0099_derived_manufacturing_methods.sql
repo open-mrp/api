@@ -2,7 +2,7 @@
 -- method for the item it produces, as the API and the adoption backfill make it, with its consumptions as materials
 -- and its machines on the operation.
 INSERT INTO manufacturing_method (id, account_id, item_id, version, status_code, output_quantity_value, output_quantity_unit_id, activated_at, created_at, updated_at)
-SELECT CONCAT('prmt_', LEFT(MD5(CONCAT('production_step:', s.id)), 24)), s.account_id, s.item_id,
+SELECT CONCAT('pnmd_', LEFT(MD5(CONCAT('production_step:', s.id)), 24)), s.account_id, s.item_id,
     COALESCE((SELECT MAX(m.version) FROM manufacturing_method m WHERE m.item_id = s.item_id), 0) + s.rn,
     'active', s.value, s.unit_id, s.created_at, s.created_at, NOW(3)
 FROM (
@@ -15,7 +15,7 @@ FROM (
 ) s;
 
 UPDATE production_step ps
-JOIN manufacturing_method m ON m.id = CONCAT('prmt_', LEFT(MD5(CONCAT('production_step:', ps.id)), 24))
+JOIN manufacturing_method m ON m.id = CONCAT('pnmd_', LEFT(MD5(CONCAT('production_step:', ps.id)), 24))
 SET ps.manufacturing_method_id = m.id, ps.position = 1
 WHERE ps.manufacturing_method_id IS NULL;
 

@@ -48,6 +48,8 @@ func (*UpdateProductionRequest) SchemaExample() any {
 }
 
 // Partially updates a production output within a production step.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type UpdateProductionEndpoint struct{}
 
 func (e *UpdateProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRequest, *apiresource.ProductionOutput] {
@@ -59,7 +61,6 @@ func (e *UpdateProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}}},
 		ObjectType:        constants.ObjectTypeProduction,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError) {

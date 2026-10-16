@@ -21,6 +21,8 @@ type RetrieveConsumptionRequest struct {
 }
 
 // Returns a consumption by ID within a production step.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type RetrieveConsumptionEndpoint struct{}
 
 func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveConsumptionRequest, *apiresource.Consumption] {
@@ -32,7 +34,6 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead},

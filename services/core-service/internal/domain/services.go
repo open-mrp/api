@@ -1918,7 +1918,7 @@ type ManufacturingMethodSvc interface {
 	NewManufacturingMethodVersion(ctx context.Context, methodID string) (*ManufacturingMethod, *apierror.APIError)
 	// DefaultManufacturingMethodIDs maps items to the method used for their new production.
 	DefaultManufacturingMethodIDs(ctx context.Context, itemIDs []string) (map[string]string, *apierror.APIError)
-	GetProductionFlow(ctx context.Context, itemID string) (*ProductionFlow, *apierror.APIError)
+	GetMethodProductionFlow(ctx context.Context, itemID string) (*ProductionFlow, *apierror.APIError)
 
 	ListMethodOperations(ctx context.Context, params ListMethodMembersParams) (*ListMethodOperationsResult, *apierror.APIError)
 	BatchGetMethodOperationsByIDs(ctx context.Context, ids []string) ([]*MethodOperation, *apierror.APIError)

@@ -204,6 +204,33 @@ func init() {
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeManufacturingMethod,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
+			{Key: "operations", ObjectType: constants.ObjectTypeMethodOperation},
+			{Key: "materials", ObjectType: constants.ObjectTypeMethodMaterial},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeMethodOperation,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
+			{Key: "machines", ObjectType: constants.ObjectTypeMachine},
+			{Key: "scanning_station", ObjectType: constants.ObjectTypeScanningStation},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeMethodMaterial,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			{Key: "operation", ObjectType: constants.ObjectTypeMethodOperation},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeWorkCenter,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "location", ObjectType: constants.ObjectTypeLocation},
@@ -343,7 +370,8 @@ func init() {
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
 			{Key: "sales.product_line", ObjectType: constants.ObjectTypeProductLine},
-			{Key: "default_manufacturing_method", ObjectType: constants.ObjectTypeManufacturingMethod},
+			// The method alone: its own includes are read from the manufacturing method routes.
+			{Key: "default_manufacturing_method", ObjectType: constants.ObjectTypeManufacturingMethod, Children: []apiendpoint.IncludeFieldDef{}},
 			{Key: "stocking_unit", ObjectType: constants.ObjectTypeUnit},
 			{Key: "default_order_unit", ObjectType: constants.ObjectTypeUnit},
 			{Key: "order_units", ObjectType: ""},

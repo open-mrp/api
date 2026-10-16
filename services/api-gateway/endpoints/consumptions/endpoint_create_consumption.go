@@ -52,6 +52,8 @@ func (*CreateConsumptionRequest) SchemaExample() any {
 // Adds a material input to a production step.
 //
 // Adding a consumption recomputes the production flow: if another production step produces the consumed item, the two steps are linked upstream/downstream automatically.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type CreateConsumptionEndpoint struct{}
 
 func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption] {
@@ -63,7 +65,6 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate},

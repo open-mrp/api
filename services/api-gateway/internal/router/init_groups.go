@@ -493,6 +493,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(operatingCalendarsGroup.APIEndpointGroup)
 	}
 
+	// Manufacturing methods, with their operations, materials and items' production flows
+	manufacturingMethodsGroup := (&httpgroup.ManufacturingMethodsEndpointGroup{}).Materialize(&httpgroup.ManufacturingMethodsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if manufacturingMethodsGroup != nil {
+		registry.RegisterGroup(manufacturingMethodsGroup.APIEndpointGroup)
+	}
+
 	// Notes, and the preview.9 agent memory routes that read and write them
 	notesGroup := (&httpgroup.NotesEndpointGroup{}).Materialize(&httpgroup.NotesEndpointGroupConfig{
 		CoreClient: config.CoreClient,

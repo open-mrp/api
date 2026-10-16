@@ -319,7 +319,7 @@ func (h *manufacturingMethodGRPCHandler) GetMethodProductionFlow(ctx context.Con
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
-	flow, apiErr := h.svc.GetProductionFlow(ctx, req.ItemId)
+	flow, apiErr := h.svc.GetMethodProductionFlow(ctx, req.ItemId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

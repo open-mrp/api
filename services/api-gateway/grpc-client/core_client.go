@@ -10,24 +10,25 @@ import (
 const coreServiceName = "core-service"
 
 type CoreServiceClient struct {
-	Client             pb.CoreServiceClient
-	Job                pb.CoreJobServiceClient
-	Sales              pb.CoreSalesServiceClient
-	Purchase           pb.CorePurchaseServiceClient
-	Fulfillment        pb.CoreFulfillmentServiceClient
-	Picking            pb.CorePickingServiceClient
-	ProductionRun      pb.CoreProductionRunServiceClient
-	ProductionStep     pb.CoreProductionStepServiceClient
-	MachineDowntime    pb.CoreMachineDowntimeServiceClient
-	DemandOverride     pb.CoreDemandOverrideServiceClient
-	Note               pb.CoreNoteServiceClient
-	ProductionSchedule pb.CoreProductionScheduleServiceClient
-	Receiving          pb.CoreReceivingServiceClient
-	Shipping           pb.CoreShippingServiceClient
-	ShippingCase       pb.CoreShippingCaseServiceClient
-	HubspotSync        pb.CoreHubspotSyncServiceClient
-	PortalDomain       pb.CorePortalDomainServiceClient
-	grpcConn           *contracts.GRPCClientConn
+	Client              pb.CoreServiceClient
+	Job                 pb.CoreJobServiceClient
+	Sales               pb.CoreSalesServiceClient
+	Purchase            pb.CorePurchaseServiceClient
+	Fulfillment         pb.CoreFulfillmentServiceClient
+	Picking             pb.CorePickingServiceClient
+	ProductionRun       pb.CoreProductionRunServiceClient
+	ProductionStep      pb.CoreProductionStepServiceClient
+	MachineDowntime     pb.CoreMachineDowntimeServiceClient
+	DemandOverride      pb.CoreDemandOverrideServiceClient
+	Note                pb.CoreNoteServiceClient
+	ManufacturingMethod pb.CoreManufacturingMethodServiceClient
+	ProductionSchedule  pb.CoreProductionScheduleServiceClient
+	Receiving           pb.CoreReceivingServiceClient
+	Shipping            pb.CoreShippingServiceClient
+	ShippingCase        pb.CoreShippingCaseServiceClient
+	HubspotSync         pb.CoreHubspotSyncServiceClient
+	PortalDomain        pb.CorePortalDomainServiceClient
+	grpcConn            *contracts.GRPCClientConn
 }
 
 func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
@@ -38,24 +39,25 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 
 	conn := grpcConn.Conn()
 	return &CoreServiceClient{
-		Client:             pb.NewCoreServiceClient(conn),
-		Job:                pb.NewCoreJobServiceClient(conn),
-		Sales:              pb.NewCoreSalesServiceClient(conn),
-		Purchase:           pb.NewCorePurchaseServiceClient(conn),
-		Fulfillment:        pb.NewCoreFulfillmentServiceClient(conn),
-		Picking:            pb.NewCorePickingServiceClient(conn),
-		ProductionRun:      pb.NewCoreProductionRunServiceClient(conn),
-		ProductionStep:     pb.NewCoreProductionStepServiceClient(conn),
-		MachineDowntime:    pb.NewCoreMachineDowntimeServiceClient(conn),
-		DemandOverride:     pb.NewCoreDemandOverrideServiceClient(conn),
-		Note:               pb.NewCoreNoteServiceClient(conn),
-		ProductionSchedule: pb.NewCoreProductionScheduleServiceClient(conn),
-		Receiving:          pb.NewCoreReceivingServiceClient(conn),
-		Shipping:           pb.NewCoreShippingServiceClient(conn),
-		ShippingCase:       pb.NewCoreShippingCaseServiceClient(conn),
-		HubspotSync:        pb.NewCoreHubspotSyncServiceClient(conn),
-		PortalDomain:       pb.NewCorePortalDomainServiceClient(conn),
-		grpcConn:           grpcConn,
+		Client:              pb.NewCoreServiceClient(conn),
+		Job:                 pb.NewCoreJobServiceClient(conn),
+		Sales:               pb.NewCoreSalesServiceClient(conn),
+		Purchase:            pb.NewCorePurchaseServiceClient(conn),
+		Fulfillment:         pb.NewCoreFulfillmentServiceClient(conn),
+		Picking:             pb.NewCorePickingServiceClient(conn),
+		ProductionRun:       pb.NewCoreProductionRunServiceClient(conn),
+		ProductionStep:      pb.NewCoreProductionStepServiceClient(conn),
+		MachineDowntime:     pb.NewCoreMachineDowntimeServiceClient(conn),
+		DemandOverride:      pb.NewCoreDemandOverrideServiceClient(conn),
+		Note:                pb.NewCoreNoteServiceClient(conn),
+		ManufacturingMethod: pb.NewCoreManufacturingMethodServiceClient(conn),
+		ProductionSchedule:  pb.NewCoreProductionScheduleServiceClient(conn),
+		Receiving:           pb.NewCoreReceivingServiceClient(conn),
+		Shipping:            pb.NewCoreShippingServiceClient(conn),
+		ShippingCase:        pb.NewCoreShippingCaseServiceClient(conn),
+		HubspotSync:         pb.NewCoreHubspotSyncServiceClient(conn),
+		PortalDomain:        pb.NewCorePortalDomainServiceClient(conn),
+		grpcConn:            grpcConn,
 	}, nil
 }
 

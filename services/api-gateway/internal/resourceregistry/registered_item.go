@@ -60,8 +60,21 @@ func init() {
 				Key:      "order_units",
 				Populate: populateOrderUnitsOnItem,
 			},
-			// No item names a manufacturing method yet, so the include always reads null.
-			{Key: "default_manufacturing_method", Populate: func(context.Context, any, map[string]any) {}},
+			{
+				// The method is looked up by item: the loader resolves the item's default method in the same batch.
+				Key:         "default_manufacturing_method",
+				Target:      constants.ObjectTypeManufacturingMethod,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs: func(_ context.Context, parent any) []string {
+					return []string{resourceloaders.DefaultMethodOfItemKey(parent.(*apiresource.Item).ID)}
+				},
+				Populate: func(_ context.Context, parent any, loaded map[string]any) {
+					item := parent.(*apiresource.Item)
+					if v, ok := loaded[resourceloaders.DefaultMethodOfItemKey(item.ID)]; ok {
+						item.DefaultManufacturingMethod = v.(*apiresource.ManufacturingMethod)
+					}
+				},
+			},
 		},
 	})
 }

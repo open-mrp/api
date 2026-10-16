@@ -666,8 +666,17 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSupplier,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
+			{
+				Key: "defaults",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
+					{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
+					{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
+					{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
+					{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
+					{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
+				},
+			},
 		},
 	})
 
@@ -774,6 +783,14 @@ func init() {
 		ObjectType: constants.ObjectTypeSupplierMaterial,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "material", ObjectType: constants.ObjectTypeMaterial},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeSupplierItem,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
 

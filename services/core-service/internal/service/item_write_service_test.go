@@ -197,12 +197,12 @@ func TestDeleteItem_InUseNamesEveryReference(t *testing.T) {
 		MaterialSection: &domain.ItemMaterialSection{MaterialID: "ml_1"}}
 	r.items.EXPECT().GetByIDsWithIncludes(gomock.Any(), "ac_1", []string{"itm_mat"}, domain.ItemReadIncludes).Return([]*domain.Item{item}, nil)
 	r.refs.EXPECT().InUseBy(gomock.Any(), "itm_mat", domain.ItemReferences.Probes).Return([]string{"orders"}, nil)
-	r.refs.EXPECT().InUseBy(gomock.Any(), "ml_1", domain.ItemMaterialReferences.Probes).Return([]string{"supplier materials"}, nil)
+	r.refs.EXPECT().InUseBy(gomock.Any(), "ml_1", domain.ItemMaterialReferences.Probes).Return([]string{"supplier items"}, nil)
 
 	_, apiErr := deleteItemInTx(context.Background(), r.factory, "ac_1", "itm_mat")
 	require.NotNil(t, apiErr)
 	assert.Equal(t, http.StatusConflict, apiErr.Status())
-	assert.Contains(t, apiErr.PublicMessage, "orders and supplier materials")
+	assert.Contains(t, apiErr.PublicMessage, "orders and supplier items")
 	assert.Contains(t, apiErr.PublicMessage, "`archived`")
 }
 

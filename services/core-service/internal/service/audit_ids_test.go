@@ -9,11 +9,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSupplierMaterialAuditEvent_KeysByThePublicMaterialIDUnderTheSupplier(t *testing.T) {
-	sm := &domain.SupplierMaterial{ID: "suml_link", MaterialID: "ml_public", SupplierAccountID: "ac_supplier"}
-	event := supplierMaterialAuditEvent(constants.AuditActionUpdate, sm, nil)
-	assert.Equal(t, constants.ObjectTypeSupplierMaterial, event.ResourceType)
-	assert.Equal(t, "ml_public", event.ResourceID)
+// A supplier material write is the supplier item's history, keyed by the row's own ID, whichever route wrote it.
+func TestSupplierMaterialAuditEvent_KeysByTheSupplierItemIDUnderTheSupplier(t *testing.T) {
+	sm := &domain.SupplierMaterial{ID: "suml_link", MaterialID: "ml_public", SupplierAccountID: "ac_supplier", SupplierPartNumber: "A", IsActive: true}
+	after := *sm
+	after.SupplierPartNumber, after.IsActive = "B", false
+	event := supplierMaterialAuditEvent(constants.AuditActionUpdate, &after, sm, &after)
+	assert.Equal(t, constants.ObjectTypeSupplierItem, event.ResourceType)
+	assert.Equal(t, "suml_link", event.ResourceID)
+	fields := map[string]bool{}
+	for _, c := range event.Changes {
+		fields[c.Field] = true
+	}
+	assert.Equal(t, map[string]bool{"supplier_sku": true, "status": true}, fields)
 	assert.Equal(t, constants.ObjectTypeSupplier, event.RootResourceType)
 	assert.Equal(t, "ac_supplier", event.RootResourceID)
 	assert.Equal(t, constants.AuditActionUpdate, event.Action)

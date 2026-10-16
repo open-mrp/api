@@ -266,6 +266,8 @@ var excludedPaths = []string{
 	"/v1/catalog/unit-groups",
 	"/v1/catalog/item-categories/{id}/unit-groups",
 	"/v1/ai/memories", // 1.0.forge-preview.9 only, over notes; covered by the agent memory and notes tests.
+	// 1.0.forge-preview.9 only: supplier items replaced them. Covered by the supplier material and supplier item tests.
+	"/v1/operations/suppliers/{supplier_id}/materials",
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

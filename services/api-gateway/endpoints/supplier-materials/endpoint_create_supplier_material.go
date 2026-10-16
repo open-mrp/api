@@ -56,8 +56,6 @@ func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
-		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate},
 		}},

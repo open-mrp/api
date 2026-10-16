@@ -198,6 +198,10 @@ func sampleIDFromPathParam(pathParamName, route string) string {
 	if strings.HasPrefix(route, "/v1/settings/properties/") {
 		return apiresource.SampleSysPropertyID
 	}
+	// A supplier's items (/v1/operations/suppliers/{supplier_id}/items/{id}) collide on the "items" segment with catalog items.
+	if strings.HasPrefix(route, "/v1/operations/suppliers/") && strings.HasSuffix(route, "/items/{id}") {
+		return apiresource.SampleSupplierItemID
+	}
 	segment := openapi.RouteSegmentBefore(route, "{id}")
 	if segment == "" {
 		return ""

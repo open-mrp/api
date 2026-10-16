@@ -17,33 +17,42 @@ import (
 
 // Request to create a supplier.
 type CreateSupplierRequest struct {
-	// The supplier's name, as shown in the dashboard and on documents.
+	// The supplier's business name, as shown throughout the app and on documents.
 	Name string `json:"name" validate:"required,max=255"`
-	// Human-facing supplier code, such as `SUP-001`.
-	//
-	// Must be unique per account; creating a supplier with a number already in use returns a conflict error.
+	// Supplier number, unique within your account, such as `SUP-001`.
 	Number string `json:"number" validate:"required,max=255"`
-	// Free-form notes about the supplier.
-	Note field.Optional[string] `json:"note,omitzero"`
-	// Default billing address to create for the supplier.
-	//
-	// A new address record is created from these values and saved to the supplier; existing addresses cannot be reused here.
+	// Whether the supplier can be named on new records: `active` or `archived`. Defaults to `active`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
+	// Your team's standing instructions for this supplier's orders.
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
+	// How to reach the supplier's business.
+	Contact field.Optional[SupplierContactInput] `json:"contact,omitzero"`
+	// Who pays the carrier for freight from the supplier.
+	CarrierBilling field.Optional[SupplierCarrierBillingInput] `json:"carrier_billing,omitzero"`
+	// Values copied onto a new purchase order from the supplier when the order doesn't set them.
+	Defaults field.Optional[CreateSupplierDefaultsInput] `json:"defaults,omitzero"`
+	// The supplier's billing address. It becomes `defaults.bill_to_address`.
 	BillToAddress field.Optional[apirequest.AddressInput] `json:"bill_to_address,omitzero"`
-	// Default shipping address to create for the supplier.
-	//
-	// If omitted and `bill_to_address` is provided, the billing address is also used as the default shipping address. If it is identical to `bill_to_address`, no second address is created and both defaults are the one billing address.
+	// The address the supplier ships from. It becomes `defaults.ship_to_address`; omitted, or identical to the billing address, it is the billing address.
 	ShipToAddress field.Optional[apirequest.AddressInput] `json:"ship_to_address,omitzero"`
 }
 
-var sampleCreateSupplierNote = "Primary raw materials supplier"
 var sampleCreateSupplierStreetLine1 = "456 Industrial Pkwy"
 var sampleCreateSupplierLocality = "Chicago"
 var sampleCreateSupplierState = "IL"
 var sampleCreateSupplierPostalCode = "60601"
 var sampleCreateSupplierRequest = &CreateSupplierRequest{
-	Name:   apiresource.SampleSupplierName,
-	Number: apiresource.SampleSupplierNumber,
-	Note:   field.Some(sampleCreateSupplierNote),
+	Name:         apiresource.SampleSupplierName,
+	Number:       apiresource.SampleSupplierNumber,
+	Instructions: field.Some("Confirm every delivery date by email."),
+	Contact: field.Some(SupplierContactInput{
+		Email: field.Set("orders@acmesupplies.com"),
+		Phone: field.Set("555-987-6543"),
+	}),
+	Defaults: field.Some(CreateSupplierDefaultsInput{
+		PaymentTermID:  field.Some(apiresource.SamplePaymentTermID),
+		ShippingTermID: field.Some(apiresource.SampleShippingTermID),
+	}),
 	BillToAddress: field.Some(apirequest.AddressInput{
 		Name:       apiresource.SampleSupplierName,
 		Line1:      field.SomePtr(&sampleCreateSupplierStreetLine1),
@@ -58,9 +67,9 @@ func (*CreateSupplierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSupplierRequest)
 }
 
-// Creates a supplier, optionally with inline bill-to and ship-to addresses.
+// Creates a supplier.
 //
-// Returns a conflict error if another supplier in the account already uses the given number. The created addresses are returned when requested with `include`.
+// Give its billing and ship-from addresses inline; they become the supplier's default addresses. `number` must be unique within your account.
 type CreateSupplierEndpoint struct{}
 
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.Supplier] {
@@ -70,9 +79,8 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		Route:             "/v1/operations/suppliers",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate},
@@ -85,7 +93,7 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSupplier,
-			Fields:     []string{"bill_to_address", "ship_to_address"},
+			Fields:     supplierIncludeFields,
 		}),
 	})
 }

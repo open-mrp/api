@@ -151,7 +151,6 @@ search_documented GET /v1/operations/receiving-orders
 search_documented GET /v1/operations/scanning-stations/{id}/batches
 search_documented GET /v1/operations/shipments
 search_documented GET /v1/operations/shipments/{shipment_id}/lines
-search_documented GET /v1/operations/suppliers
 search_documented GET /v1/operations/suppliers/{supplier_id}/materials
 search_documented GET /v1/sales/account-prices
 search_documented GET /v1/sales/account-statuses

@@ -12,7 +12,7 @@ import (
 )
 
 // supplierListedFields are the supplier's own fields, which a document's supplier carries exactly as the supplier list does.
-var supplierListedFields = []string{"id", "object", "name", "number", "note", "material_count", "created_at", "updated_at"}
+var supplierListedFields = []string{"id", "object", "status", "name", "number", "instructions", "contact", "carrier_billing", "created_at", "updated_at"}
 
 // A role that may read purchase or receiving orders sees the supplier they name in full, though it cannot read suppliers itself.
 func TestSupplierInclude_DocumentReadersSeeTheSupplierAsListed(t *testing.T) {
@@ -37,12 +37,11 @@ func TestSupplierInclude_DocumentReadersSeeTheSupplierAsListed(t *testing.T) {
 			require.Equal(t, http.StatusForbidden, status, "the role cannot read the supplier on its own: %s", string(body))
 
 			canonical := parseJSON(mustGetAs(t, apiClient, suppliersPath+"/"+supplierID, nil))
-			require.NotNil(t, canonical["material_count"], "the supplier reports its material count")
 			for _, field := range supplierListedFields {
 				assert.Equal(t, canonical[field], supplier[field], "supplier.%s", field)
 			}
-			assertNilField(t, supplier, "bill_to_address")
-			assertNilField(t, supplier, "ship_to_address")
+			assertNilField(t, jsonObject(supplier, "defaults"), "bill_to_address")
+			assertNilField(t, jsonObject(supplier, "defaults"), "ship_to_address")
 		})
 	}
 }
@@ -63,7 +62,7 @@ func TestSupplierInclude_ListedReceivingOrdersCarryTheirSupplier(t *testing.T) {
 		}
 		carried++
 		assert.Equal(t, "supplier", jsonField(supplier, "object"))
-		assert.NotNil(t, supplier["material_count"], "receiving order %s: supplier.material_count", jsonField(row, "id"))
+		assert.NotNil(t, supplier["defaults"], "receiving order %s: supplier.defaults", jsonField(row, "id"))
 		assertValidTimestamp(t, jsonField(supplier, "created_at"), "supplier.created_at")
 	}
 	assert.Positive(t, carried, "some receiving order on the page names a supplier the account still has")

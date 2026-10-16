@@ -269,6 +269,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(supplierMaterialsGroup.APIEndpointGroup)
 	}
 
+	// Supplier Items
+	supplierItemsGroup := (&httpgroup.SupplierItemsEndpointGroup{}).Materialize(&httpgroup.SupplierMaterialsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if supplierItemsGroup != nil {
+		registry.RegisterGroup(supplierItemsGroup.APIEndpointGroup)
+	}
+
 	// Parts
 	partsGroup := (&httpgroup.PartsEndpointGroup{}).Materialize(&httpgroup.PartsEndpointGroupConfig{
 		CoreClient: config.CoreClient,

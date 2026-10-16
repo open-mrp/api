@@ -322,6 +322,11 @@ const (
 	CoreService_CreateSupplierMaterial_FullMethodName                     = "/core.CoreService/CreateSupplierMaterial"
 	CoreService_UpdateSupplierMaterial_FullMethodName                     = "/core.CoreService/UpdateSupplierMaterial"
 	CoreService_DeleteSupplierMaterial_FullMethodName                     = "/core.CoreService/DeleteSupplierMaterial"
+	CoreService_ListSupplierItems_FullMethodName                          = "/core.CoreService/ListSupplierItems"
+	CoreService_GetSupplierItem_FullMethodName                            = "/core.CoreService/GetSupplierItem"
+	CoreService_CreateSupplierItem_FullMethodName                         = "/core.CoreService/CreateSupplierItem"
+	CoreService_UpdateSupplierItem_FullMethodName                         = "/core.CoreService/UpdateSupplierItem"
+	CoreService_DeleteSupplierItem_FullMethodName                         = "/core.CoreService/DeleteSupplierItem"
 	CoreService_CreatePart_FullMethodName                                 = "/core.CoreService/CreatePart"
 	CoreService_GetPart_FullMethodName                                    = "/core.CoreService/GetPart"
 	CoreService_ListParts_FullMethodName                                  = "/core.CoreService/ListParts"
@@ -970,6 +975,11 @@ type CoreServiceClient interface {
 	CreateSupplierMaterial(ctx context.Context, in *CreateSupplierMaterialRequest, opts ...grpc.CallOption) (*CreateSupplierMaterialResponse, error)
 	UpdateSupplierMaterial(ctx context.Context, in *UpdateSupplierMaterialRequest, opts ...grpc.CallOption) (*UpdateSupplierMaterialResponse, error)
 	DeleteSupplierMaterial(ctx context.Context, in *DeleteSupplierMaterialRequest, opts ...grpc.CallOption) (*DeleteSupplierMaterialResponse, error)
+	ListSupplierItems(ctx context.Context, in *ListSupplierItemsRequest, opts ...grpc.CallOption) (*ListSupplierItemsResponse, error)
+	GetSupplierItem(ctx context.Context, in *GetSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error)
+	CreateSupplierItem(ctx context.Context, in *CreateSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error)
+	UpdateSupplierItem(ctx context.Context, in *UpdateSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error)
+	DeleteSupplierItem(ctx context.Context, in *DeleteSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error)
 	// Parts
 	CreatePart(ctx context.Context, in *CreatePartRequest, opts ...grpc.CallOption) (*CreatePartResponse, error)
 	GetPart(ctx context.Context, in *GetPartRequest, opts ...grpc.CallOption) (*GetPartResponse, error)
@@ -4085,6 +4095,56 @@ func (c *coreServiceClient) DeleteSupplierMaterial(ctx context.Context, in *Dele
 	return out, nil
 }
 
+func (c *coreServiceClient) ListSupplierItems(ctx context.Context, in *ListSupplierItemsRequest, opts ...grpc.CallOption) (*ListSupplierItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSupplierItemsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListSupplierItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetSupplierItem(ctx context.Context, in *GetSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SupplierItemResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetSupplierItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) CreateSupplierItem(ctx context.Context, in *CreateSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SupplierItemResponse)
+	err := c.cc.Invoke(ctx, CoreService_CreateSupplierItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) UpdateSupplierItem(ctx context.Context, in *UpdateSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SupplierItemResponse)
+	err := c.cc.Invoke(ctx, CoreService_UpdateSupplierItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) DeleteSupplierItem(ctx context.Context, in *DeleteSupplierItemRequest, opts ...grpc.CallOption) (*SupplierItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SupplierItemResponse)
+	err := c.cc.Invoke(ctx, CoreService_DeleteSupplierItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) CreatePart(ctx context.Context, in *CreatePartRequest, opts ...grpc.CallOption) (*CreatePartResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreatePartResponse)
@@ -5802,6 +5862,11 @@ type CoreServiceServer interface {
 	CreateSupplierMaterial(context.Context, *CreateSupplierMaterialRequest) (*CreateSupplierMaterialResponse, error)
 	UpdateSupplierMaterial(context.Context, *UpdateSupplierMaterialRequest) (*UpdateSupplierMaterialResponse, error)
 	DeleteSupplierMaterial(context.Context, *DeleteSupplierMaterialRequest) (*DeleteSupplierMaterialResponse, error)
+	ListSupplierItems(context.Context, *ListSupplierItemsRequest) (*ListSupplierItemsResponse, error)
+	GetSupplierItem(context.Context, *GetSupplierItemRequest) (*SupplierItemResponse, error)
+	CreateSupplierItem(context.Context, *CreateSupplierItemRequest) (*SupplierItemResponse, error)
+	UpdateSupplierItem(context.Context, *UpdateSupplierItemRequest) (*SupplierItemResponse, error)
+	DeleteSupplierItem(context.Context, *DeleteSupplierItemRequest) (*SupplierItemResponse, error)
 	// Parts
 	CreatePart(context.Context, *CreatePartRequest) (*CreatePartResponse, error)
 	GetPart(context.Context, *GetPartRequest) (*GetPartResponse, error)
@@ -6851,6 +6916,21 @@ func (UnimplementedCoreServiceServer) UpdateSupplierMaterial(context.Context, *U
 }
 func (UnimplementedCoreServiceServer) DeleteSupplierMaterial(context.Context, *DeleteSupplierMaterialRequest) (*DeleteSupplierMaterialResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSupplierMaterial not implemented")
+}
+func (UnimplementedCoreServiceServer) ListSupplierItems(context.Context, *ListSupplierItemsRequest) (*ListSupplierItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSupplierItems not implemented")
+}
+func (UnimplementedCoreServiceServer) GetSupplierItem(context.Context, *GetSupplierItemRequest) (*SupplierItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSupplierItem not implemented")
+}
+func (UnimplementedCoreServiceServer) CreateSupplierItem(context.Context, *CreateSupplierItemRequest) (*SupplierItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSupplierItem not implemented")
+}
+func (UnimplementedCoreServiceServer) UpdateSupplierItem(context.Context, *UpdateSupplierItemRequest) (*SupplierItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSupplierItem not implemented")
+}
+func (UnimplementedCoreServiceServer) DeleteSupplierItem(context.Context, *DeleteSupplierItemRequest) (*SupplierItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSupplierItem not implemented")
 }
 func (UnimplementedCoreServiceServer) CreatePart(context.Context, *CreatePartRequest) (*CreatePartResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreatePart not implemented")
@@ -12540,6 +12620,96 @@ func _CoreService_DeleteSupplierMaterial_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ListSupplierItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSupplierItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListSupplierItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListSupplierItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListSupplierItems(ctx, req.(*ListSupplierItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetSupplierItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSupplierItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetSupplierItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetSupplierItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetSupplierItem(ctx, req.(*GetSupplierItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_CreateSupplierItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSupplierItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).CreateSupplierItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_CreateSupplierItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).CreateSupplierItem(ctx, req.(*CreateSupplierItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_UpdateSupplierItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSupplierItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).UpdateSupplierItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_UpdateSupplierItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).UpdateSupplierItem(ctx, req.(*UpdateSupplierItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_DeleteSupplierItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSupplierItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).DeleteSupplierItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_DeleteSupplierItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).DeleteSupplierItem(ctx, req.(*DeleteSupplierItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_CreatePart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreatePartRequest)
 	if err := dec(in); err != nil {
@@ -15868,6 +16038,26 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSupplierMaterial",
 			Handler:    _CoreService_DeleteSupplierMaterial_Handler,
+		},
+		{
+			MethodName: "ListSupplierItems",
+			Handler:    _CoreService_ListSupplierItems_Handler,
+		},
+		{
+			MethodName: "GetSupplierItem",
+			Handler:    _CoreService_GetSupplierItem_Handler,
+		},
+		{
+			MethodName: "CreateSupplierItem",
+			Handler:    _CoreService_CreateSupplierItem_Handler,
+		},
+		{
+			MethodName: "UpdateSupplierItem",
+			Handler:    _CoreService_UpdateSupplierItem_Handler,
+		},
+		{
+			MethodName: "DeleteSupplierItem",
+			Handler:    _CoreService_DeleteSupplierItem_Handler,
 		},
 		{
 			MethodName: "CreatePart",

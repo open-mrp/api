@@ -23,20 +23,22 @@ func TestSuppliers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	assert.Nil(t, got["bill_to_address"], "bill_to_address should be null without ?include=bill_to_address")
-	assert.Nil(t, got["ship_to_address"], "ship_to_address should be null without ?include=ship_to_address")
+	defaults := jsonObject(parseJSON(body), "defaults")
+	require.NotNil(t, defaults)
+	for _, ref := range []string{"carrier", "service_level", "payment_term", "shipping_term", "bill_to_address", "ship_to_address"} {
+		assert.Nil(t, defaults[ref], "defaults.%s should be null without its include", ref)
+	}
 }
 
 func TestSuppliers_IncludeBillToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(suppliersPath+"/"+SeedSupplierAccountID, url.Values{"include": {"bill_to_address"}})
+	status, body, err := apiClient.GetListRaw(suppliersPath+"/"+SeedSupplierAccountID, url.Values{"include": {"defaults.bill_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
 	// Address may legitimately be null if supplier has no billing address set
-	if addr := jsonObject(got, "bill_to_address"); addr != nil {
+	if addr := jsonObject(jsonObject(got, "defaults"), "bill_to_address"); addr != nil {
 		assert.Equal(t, "address", jsonField(addr, "object"))
 		assert.NotEmpty(t, jsonField(addr, "id"))
 	}
@@ -44,12 +46,12 @@ func TestSuppliers_IncludeBillToAddress(t *testing.T) {
 
 func TestSuppliers_IncludeShipToAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(suppliersPath+"/"+SeedSupplierAccountID, url.Values{"include": {"ship_to_address"}})
+	status, body, err := apiClient.GetListRaw(suppliersPath+"/"+SeedSupplierAccountID, url.Values{"include": {"defaults.ship_to_address"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	if addr := jsonObject(got, "ship_to_address"); addr != nil {
+	if addr := jsonObject(jsonObject(got, "defaults"), "ship_to_address"); addr != nil {
 		assert.Equal(t, "address", jsonField(addr, "object"))
 		assert.NotEmpty(t, jsonField(addr, "id"))
 	}

@@ -28,7 +28,7 @@ func (*BulkDeleteSuppliersRequest) SchemaExample() any {
 
 // Deletes multiple suppliers in a single atomic operation.
 //
-// Each supplier's saved addresses and any users belonging to it are deleted along with it. If any supplier ID is not found, no suppliers are deleted.
+// Each supplier's saved addresses and any users belonging to it are deleted along with it. If any supplier ID is not found, or any supplier is still referenced by a purchase order or supplier item, no suppliers are deleted.
 type BulkDeleteSuppliersEndpoint struct{}
 
 func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteSuppliersRequest, *apiresource.EmptyResource] {
@@ -40,7 +40,6 @@ func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionDelete},
 		}},

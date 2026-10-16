@@ -37,8 +37,6 @@ func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeSupplierMaterial,
 		Public:            false,
-		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		}},

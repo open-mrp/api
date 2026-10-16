@@ -15,10 +15,6 @@ import (
 
 const supplierAddressesPath = "/v1/core/addresses"
 
-func supplierMaterialsOf(supplierID string) string {
-	return suppliersPath + "/" + supplierID + "/materials"
-}
-
 // searchToken is a word unique to one test, made of letters and digits so a word search keeps it whole.
 func searchToken(prefix string) string {
 	return strings.ReplaceAll(uniqueName(prefix), "-", "")
@@ -47,34 +43,19 @@ func supplierAccountAddress(t *testing.T, supplierID, name string) string {
 	return id
 }
 
-// parityMaterial creates a material and returns it with the id of its catalog item.
-func parityMaterial(t *testing.T) (materialID, itemID string) {
+// linkSupplierItem records that the supplier provides the item and deletes the supplier item after the test.
+func linkSupplierItem(t *testing.T, supplierID, itemID string, extra map[string]any) map[string]any {
 	t.Helper()
-	created := createAndCleanup(t, materialsPath, validMaterialBody(uniqueName("e2e-supmat")))
-	materialID = jsonField(created, "id")
-	require.NoError(t, authDB(t).QueryRow("SELECT item_id FROM material WHERE id = ?", materialID).Scan(&itemID))
-	return materialID, itemID
-}
-
-func linkSupplierMaterial(t *testing.T, supplierID, materialID string, extra map[string]any) map[string]any {
-	t.Helper()
-	body := map[string]any{"material_id": materialID, "supplier_part_number": uniqueName("PN")}
+	body := map[string]any{"item_id": itemID, "supplier_sku": uniqueName("PN")}
 	for k, v := range extra {
 		body[k] = v
 	}
-	status, resp, err := apiClient.Post(supplierMaterialsOf(supplierID), body, newIdempotencyKey())
+	status, resp, err := apiClient.Post(supplierItemsPath(supplierID), body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, resp)
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsOf(supplierID) + "/" + materialID) })
-	return parseJSON(resp)
-}
-
-// softDeleteItem marks an item deleted the way the catalog does, and restores it when the test ends.
-func softDeleteItem(t *testing.T, itemID string) {
-	t.Helper()
-	_, err := authDB(t).Exec("UPDATE item SET deleted_at = NOW(3) WHERE id = ?", itemID)
-	require.NoError(t, err)
-	t.Cleanup(func() { _, _ = authDB(t).Exec("UPDATE item SET deleted_at = NULL WHERE id = ?", itemID) })
+	created := parseJSON(resp)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierItemsPath(supplierID) + "/" + jsonField(created, "id")) })
+	return created
 }
 
 func listedSupplierIDs(t *testing.T, client *Client, params url.Values) []string {
@@ -105,6 +86,11 @@ func getSupplier(t *testing.T, id string, include ...string) map[string]any {
 	return parseJSON(body)
 }
 
+// supplierDefault is the supplier's defaults.<key>.
+func supplierDefault(supplier map[string]any, key string) map[string]any {
+	return jsonObject(jsonObject(supplier, "defaults"), key)
+}
+
 func patchSupplier(t *testing.T, path string, body map[string]any) (int, map[string]any, []byte) {
 	t.Helper()
 	status, resp, err := apiClient.Patch(path, body, newIdempotencyKey())
@@ -129,12 +115,13 @@ func TestSupplierParity_CreateMinimalAssertsEveryField(t *testing.T) {
 
 	assertIDFormat(t, jsonField(got, "id"), "ac")
 	assertObjectField(t, got, "supplier")
+	assert.Equal(t, "active", jsonField(got, "status"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, number, jsonField(got, "number"))
-	assertNilField(t, got, "note")
-	assertNilField(t, got, "bill_to_address")
-	assertNilField(t, got, "ship_to_address")
-	assert.Equal(t, "0", jsonField(got, "material_count"), "a new supplier has no materials")
+	assertNilField(t, got, "instructions")
+	for _, key := range []string{"bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term"} {
+		assertNilField(t, jsonObject(got, "defaults"), key)
+	}
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 }
@@ -147,10 +134,10 @@ func paritySupplier(t *testing.T, body map[string]any) map[string]any {
 func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-sup-addr")
-	status, body, err := apiClient.Post(suppliersPath+"?include=bill_to_address,ship_to_address", map[string]any{
+	status, body, err := apiClient.Post(suppliersPath+"?include=defaults.bill_to_address,defaults.ship_to_address", map[string]any{
 		"name":            name,
 		"number":          uniqueName("SUP"),
-		"note":            "net 30",
+		"instructions":    "net 30",
 		"bill_to_address": paritySupplierAddressBody(name+" Billing", "1 Bill St"),
 		"ship_to_address": paritySupplierAddressBody(name+" Dock", "2 Dock Rd"),
 	}, newIdempotencyKey())
@@ -160,10 +147,10 @@ func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	id := jsonField(got, "id")
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(suppliersPath + "/" + id) })
 
-	assert.Equal(t, "net 30", jsonField(got, "note"))
-	billTo, shipTo := jsonObject(got, "bill_to_address"), jsonObject(got, "ship_to_address")
-	require.NotNil(t, billTo, "bill_to_address is returned from create when included")
-	require.NotNil(t, shipTo, "ship_to_address is returned from create when included")
+	assert.Equal(t, "net 30", jsonField(got, "instructions"))
+	billTo, shipTo := supplierDefault(got, "bill_to_address"), supplierDefault(got, "ship_to_address")
+	require.NotNil(t, billTo, "defaults.bill_to_address is returned from create when included")
+	require.NotNil(t, shipTo, "defaults.ship_to_address is returned from create when included")
 	assertObjectField(t, billTo, "address")
 	assert.Equal(t, name+" Billing", jsonField(billTo, "name"))
 	assert.Equal(t, "1 Bill St", jsonField(billTo, "line_1"))
@@ -171,11 +158,11 @@ func TestSupplierParity_CreateReturnsAddressesWhenIncluded(t *testing.T) {
 	assert.NotEqual(t, jsonField(billTo, "id"), jsonField(shipTo, "id"), "two different addresses are two records")
 
 	plain := getSupplier(t, id)
-	assertNilField(t, plain, "bill_to_address")
-	assertNilField(t, plain, "ship_to_address")
-	included := getSupplier(t, id, "bill_to_address", "ship_to_address")
-	assert.Equal(t, jsonField(billTo, "id"), jsonField(jsonObject(included, "bill_to_address"), "id"))
-	assert.Equal(t, jsonField(shipTo, "id"), jsonField(jsonObject(included, "ship_to_address"), "id"))
+	assertNilField(t, jsonObject(plain, "defaults"), "bill_to_address")
+	assertNilField(t, jsonObject(plain, "defaults"), "ship_to_address")
+	included := getSupplier(t, id, "defaults.bill_to_address", "defaults.ship_to_address")
+	assert.Equal(t, jsonField(billTo, "id"), jsonField(supplierDefault(included, "bill_to_address"), "id"))
+	assert.Equal(t, jsonField(shipTo, "id"), jsonField(supplierDefault(included, "ship_to_address"), "id"))
 }
 
 // The dashboard omits ship_to when it equals bill_to; the bill-to address then becomes both defaults.
@@ -187,10 +174,10 @@ func TestSupplierParity_CreateWithOnlyBillToDefaultsShipTo(t *testing.T) {
 		"bill_to_address": paritySupplierAddressBody(name, "3 Same St"),
 	})
 
-	read := getSupplier(t, jsonField(got, "id"), "bill_to_address", "ship_to_address")
-	billID := jsonField(jsonObject(read, "bill_to_address"), "id")
+	read := getSupplier(t, jsonField(got, "id"), "defaults.bill_to_address", "defaults.ship_to_address")
+	billID := jsonField(supplierDefault(read, "bill_to_address"), "id")
 	require.NotEmpty(t, billID)
-	assert.Equal(t, billID, jsonField(jsonObject(read, "ship_to_address"), "id"))
+	assert.Equal(t, billID, jsonField(supplierDefault(read, "ship_to_address"), "id"))
 }
 
 func TestSupplierParity_CreateWithIdenticalAddressesSavesOne(t *testing.T) {
@@ -202,10 +189,10 @@ func TestSupplierParity_CreateWithIdenticalAddressesSavesOne(t *testing.T) {
 		"bill_to_address": address, "ship_to_address": address,
 	})
 
-	read := getSupplier(t, jsonField(got, "id"), "bill_to_address", "ship_to_address")
-	billID := jsonField(jsonObject(read, "bill_to_address"), "id")
+	read := getSupplier(t, jsonField(got, "id"), "defaults.bill_to_address", "defaults.ship_to_address")
+	billID := jsonField(supplierDefault(read, "bill_to_address"), "id")
 	require.NotEmpty(t, billID)
-	assert.Equal(t, billID, jsonField(jsonObject(read, "ship_to_address"), "id"), "an identical ship-to reuses the bill-to")
+	assert.Equal(t, billID, jsonField(supplierDefault(read, "ship_to_address"), "id"), "an identical ship-to reuses the bill-to")
 }
 
 func TestSupplierParity_CreateDuplicateNumberConflicts(t *testing.T) {
@@ -221,9 +208,9 @@ func TestSupplierParity_CreateDuplicateNumberConflicts(t *testing.T) {
 func TestSupplierParity_CreateValidation(t *testing.T) {
 	t.Parallel()
 	for name, body := range map[string]map[string]any{
-		"missing name":   {"number": uniqueName("SUP")},
-		"missing number": {"name": uniqueName("e2e-sup-val")},
-		"blank note":     {"name": uniqueName("e2e-sup-val"), "number": uniqueName("SUP"), "note": ""},
+		"missing name":       {"number": uniqueName("SUP")},
+		"missing number":     {"name": uniqueName("e2e-sup-val")},
+		"blank instructions": {"name": uniqueName("e2e-sup-val"), "number": uniqueName("SUP"), "instructions": ""},
 	} {
 		status, resp, err := apiClient.Post(suppliersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
@@ -250,11 +237,11 @@ func TestSupplierParity_CreateIsIdempotent(t *testing.T) {
 
 // --- List ---
 
-func TestSupplierParity_ListSearchMatchesEveryWordAcrossNameNumberAndNotes(t *testing.T) {
+func TestSupplierParity_ListSearchMatchesEveryWordAcrossNameAndNumber(t *testing.T) {
 	t.Parallel()
-	shared, numberTok, noteTok := searchToken("shr"), searchToken("num"), searchToken("note")
+	shared, numberTok, instructionsTok := searchToken("shr"), searchToken("num"), searchToken("ins")
 	alpha := jsonField(paritySupplier(t, map[string]any{
-		"name": "Alpha " + shared + " Mills", "number": "N-" + numberTok, "note": "dyes " + noteTok,
+		"name": "Alpha " + shared + " Mills", "number": "N-" + numberTok, "instructions": "dyes " + instructionsTok,
 	}), "id")
 	beta := jsonField(paritySupplier(t, map[string]any{"name": "Beta " + shared, "number": uniqueName("SUP")}), "id")
 
@@ -263,8 +250,8 @@ func TestSupplierParity_ListSearchMatchesEveryWordAcrossNameNumberAndNotes(t *te
 	assert.Equal(t, []string{alpha}, search("mills "+shared), "words match in any order and case")
 	assert.Equal(t, []string{alpha}, search(numberTok), "the number is searched")
 	assert.Equal(t, []string{alpha}, search("N-"+numberTok), "a number keeps its punctuation")
-	assert.Equal(t, []string{alpha}, search(noteTok), "the notes are searched")
-	assert.Equal(t, []string{alpha}, search(shared+" "+noteTok), "words may match different fields")
+	assert.Equal(t, []string{alpha}, search(shared+" "+numberTok), "words may match different fields")
+	assert.Empty(t, search(instructionsTok), "instructions are not searched")
 	assert.Empty(t, search(shared+" Beta Mills"), "no supplier has every word")
 	assert.Empty(t, search(shared+" zzznomatchzzz"))
 }
@@ -275,8 +262,8 @@ func TestSupplierParity_ListFiltersByItemAndDateRange(t *testing.T) {
 	linked := paritySupplier(t, map[string]any{"name": "Linked " + tok, "number": uniqueName("SUP")})
 	other := jsonField(paritySupplier(t, map[string]any{"name": "Other " + tok, "number": uniqueName("SUP")}), "id")
 	linkedID := jsonField(linked, "id")
-	materialID, itemID := parityMaterial(t)
-	linkSupplierMaterial(t, linkedID, materialID, nil)
+	itemID := forgeMaterialItem(t)
+	linkSupplierItem(t, linkedID, itemID, nil)
 
 	assert.Equal(t, []string{linkedID}, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "item_ids": {itemID}}))
 	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "item_ids": {mustGenID(t, "it")}}))
@@ -284,13 +271,13 @@ func TestSupplierParity_ListFiltersByItemAndDateRange(t *testing.T) {
 	createdAt, err := time.Parse(time.RFC3339Nano, jsonField(linked, "created_at"))
 	require.NoError(t, err)
 	window := url.Values{
-		"q":         {tok},
-		"starts_at": {createdAt.Add(-time.Minute).UTC().Format(time.RFC3339)},
-		"ends_at":   {createdAt.Add(time.Minute).UTC().Format(time.RFC3339)},
+		"q":              {tok},
+		"created_after":  {createdAt.Add(-time.Minute).UTC().Format(time.RFC3339)},
+		"created_before": {createdAt.Add(time.Minute).UTC().Format(time.RFC3339)},
 	}
 	assert.ElementsMatch(t, []string{linkedID, other}, listedSupplierIDs(t, apiClient, window))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "ends_at": {createdAt.Add(-time.Hour).UTC().Format(time.RFC3339)}}))
-	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "starts_at": {createdAt.Add(time.Hour).UTC().Format(time.RFC3339)}}))
+	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "created_before": {createdAt.Add(-time.Hour).UTC().Format(time.RFC3339)}}))
+	assert.Empty(t, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}, "created_after": {createdAt.Add(time.Hour).UTC().Format(time.RFC3339)}}))
 }
 
 func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
@@ -323,31 +310,28 @@ func TestSupplierParity_ListPagesEveryRowOnceBothWays(t *testing.T) {
 	assert.ElementsMatch(t, ids, backward, "walking back from the last page visits each row once")
 }
 
-// material_count is what the supplier's materials list returns: a link to a deleted item is not counted.
-func TestSupplierParity_MaterialCountMatchesTheMaterialsList(t *testing.T) {
+// preview.9's material_count is how many supplier items the supplier has, on the list and the supplier alike.
+func TestSupplierParity_Preview9MaterialCountCountsTheSupplierItems(t *testing.T) {
 	t.Parallel()
 	tok := searchToken("cnt")
 	supplierID := jsonField(paritySupplier(t, map[string]any{"name": "Counted " + tok, "number": uniqueName("SUP")}), "id")
-	firstMaterial, _ := parityMaterial(t)
-	secondMaterial, secondItem := parityMaterial(t)
-	linkSupplierMaterial(t, supplierID, firstMaterial, nil)
-	linkSupplierMaterial(t, supplierID, secondMaterial, nil)
+	linkSupplierItem(t, supplierID, forgeMaterialItem(t), nil)
+	linkSupplierItem(t, supplierID, forgeMaterialItem(t), nil)
 
-	listedCount := func() string {
-		row := listFindByField(t, suppliersPath, url.Values{"q": {tok}}, "id", supplierID)
-		require.NotNil(t, row)
-		return jsonField(parseJSON(row), "material_count")
-	}
-	assert.Equal(t, "2", jsonField(getSupplier(t, supplierID), "material_count"))
-	assert.Equal(t, "2", listedCount())
-
-	softDeleteItem(t, secondItem)
-
-	assert.Equal(t, "1", jsonField(getSupplier(t, supplierID), "material_count"))
-	assert.Equal(t, "1", listedCount())
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
+	p9 := apiClient.WithAPIVersion(preview9Version)
+	status, body, err := p9.GetListRaw(suppliersPath+"/"+supplierID, nil)
 	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "2", jsonField(parseJSON(body), "material_count"))
+
+	status, body, err = p9.GetListRaw(suppliersPath, url.Values{"q": {tok}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	rows := jsonArray(parseJSON(body), "data")
+	require.Len(t, rows, 1)
+	assert.Equal(t, "2", jsonField(rows[0].(map[string]any), "material_count"))
+
+	assertNilField(t, getSupplier(t, supplierID), "material_count")
 }
 
 // --- Update ---
@@ -383,11 +367,11 @@ func TestSupplierParity_RenameWritesTheAliasEverywhereItIsRead(t *testing.T) {
 	require.True(t, ok, "the rename is audited: %v", changes)
 	assert.Equal(t, "Before "+oldTok, jsonField(nameChange, "old_value"))
 	assert.Equal(t, newName, jsonField(nameChange, "new_value"))
-	_, billChanged := changeForField(changes, "bill_to_address")
+	_, billChanged := changeForField(changes, "bill_to_address_id")
 	assert.False(t, billChanged, "an address the update did not touch is not audited as changed: %v", changes)
 }
 
-func TestSupplierParity_UpdateNumberAndNote(t *testing.T) {
+func TestSupplierParity_UpdateNumberAndInstructions(t *testing.T) {
 	t.Parallel()
 	takenNumber := uniqueName("SUP")
 	paritySupplier(t, map[string]any{"name": uniqueName("e2e-sup-taken"), "number": takenNumber})
@@ -402,17 +386,17 @@ func TestSupplierParity_UpdateNumberAndNote(t *testing.T) {
 	status, _, body = patchSupplier(t, path, map[string]any{"number": takenNumber})
 	requireErrorParam(t, 409, status, body, "number")
 
-	status, got, body = patchSupplier(t, path, map[string]any{"note": "call first", "update_note": true})
+	status, got, body = patchSupplier(t, path, map[string]any{"instructions": "call first"})
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, "call first", jsonField(got, "note"))
+	assert.Equal(t, "call first", jsonField(got, "instructions"))
 
-	status, got, body = patchSupplier(t, path, map[string]any{"note": "ignored"})
+	status, got, body = patchSupplier(t, path, map[string]any{"name": jsonField(got, "name")})
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, "call first", jsonField(got, "note"), "a note without update_note is not applied")
+	assert.Equal(t, "call first", jsonField(got, "instructions"), "instructions the update omitted are kept")
 
-	status, got, body = patchSupplier(t, path, map[string]any{"update_note": true})
+	status, got, body = patchSupplier(t, path, map[string]any{"instructions": nil})
 	requireStatus(t, 200, status, body)
-	assertNilField(t, got, "note")
+	assertNilField(t, got, "instructions")
 	assert.Equal(t, newNumber, jsonField(got, "number"), "fields the update omitted are kept")
 }
 
@@ -423,26 +407,26 @@ func TestSupplierParity_UpdateDefaultAddresses(t *testing.T) {
 		"name": name, "number": uniqueName("SUP"),
 		"bill_to_address": paritySupplierAddressBody(name, "6 First St"),
 	}), "id")
-	path := suppliersPath + "/" + id + "?include=bill_to_address,ship_to_address"
-	original := jsonField(jsonObject(getSupplier(t, id, "ship_to_address"), "ship_to_address"), "id")
+	path := suppliersPath + "/" + id + "?include=defaults.bill_to_address,defaults.ship_to_address"
+	original := jsonField(supplierDefault(getSupplier(t, id, "defaults.ship_to_address"), "ship_to_address"), "id")
 	saved := supplierAccountAddress(t, id, name+" Annex")
 
-	status, got, body := patchSupplier(t, path, map[string]any{"bill_to_address_id": saved})
+	status, got, body := patchSupplier(t, path, map[string]any{"defaults": map[string]any{"bill_to_address_id": saved}})
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, saved, jsonField(jsonObject(got, "bill_to_address"), "id"), "the update returns its addresses when included")
-	assert.Equal(t, original, jsonField(jsonObject(got, "ship_to_address"), "id"), "the other default is kept")
+	assert.Equal(t, saved, jsonField(supplierDefault(got, "bill_to_address"), "id"), "the update returns its addresses when included")
+	assert.Equal(t, original, jsonField(supplierDefault(got, "ship_to_address"), "id"), "the other default is kept")
 
-	status, got, body = patchSupplier(t, path, map[string]any{"ship_to_address_id": saved})
+	status, got, body = patchSupplier(t, path, map[string]any{"defaults": map[string]any{"ship_to_address_id": saved}})
 	requireStatus(t, 200, status, body)
-	assert.Equal(t, saved, jsonField(jsonObject(got, "ship_to_address"), "id"))
-	read := getSupplier(t, id, "bill_to_address", "ship_to_address")
-	assert.Equal(t, saved, jsonField(jsonObject(read, "bill_to_address"), "id"))
-	assert.Equal(t, saved, jsonField(jsonObject(read, "ship_to_address"), "id"))
+	assert.Equal(t, saved, jsonField(supplierDefault(got, "ship_to_address"), "id"))
+	read := getSupplier(t, id, "defaults.bill_to_address", "defaults.ship_to_address")
+	assert.Equal(t, saved, jsonField(supplierDefault(read, "bill_to_address"), "id"))
+	assert.Equal(t, saved, jsonField(supplierDefault(read, "ship_to_address"), "id"))
 
-	plainStatus, plain, plainBody := patchSupplier(t, suppliersPath+"/"+id, map[string]any{"note": "x", "update_note": true})
+	plainStatus, plain, plainBody := patchSupplier(t, suppliersPath+"/"+id, map[string]any{"instructions": "x"})
 	requireStatus(t, 200, plainStatus, plainBody)
-	assertNilField(t, plain, "bill_to_address")
-	assertNilField(t, plain, "ship_to_address")
+	assertNilField(t, jsonObject(plain, "defaults"), "bill_to_address")
+	assertNilField(t, jsonObject(plain, "defaults"), "ship_to_address")
 }
 
 // A default address must be one of the supplier's own; another account's would be read back through the supplier.
@@ -452,23 +436,23 @@ func TestSupplierParity_UpdateRefusesAnAddressThatIsNotTheSuppliers(t *testing.T
 	path := suppliersPath + "/" + id
 
 	ownersAddress := createE2EAddress(t, uniqueName("e2e-owner-addr"))
-	status, _, body := patchSupplier(t, path, map[string]any{"bill_to_address_id": ownersAddress})
-	requireErrorParam(t, 404, status, body, "bill_to_address_id")
+	status, _, body := patchSupplier(t, path, map[string]any{"defaults": map[string]any{"bill_to_address_id": ownersAddress}})
+	requireErrorParam(t, 404, status, body, "defaults.bill_to_address_id")
 
 	bStatus, bBody, err := getTenantBClient().Post(supplierAddressesPath, paritySupplierAddressBody(uniqueName("e2e-tenantb-addr"), "7 Other Co"), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, bStatus, bBody)
 	tenantBAddress := jsonField(parseJSON(bBody), "id")
 	t.Cleanup(func() { _, _, _ = getTenantBClient().Delete(supplierAddressesPath + "/" + tenantBAddress) })
-	status, _, body = patchSupplier(t, path, map[string]any{"ship_to_address_id": tenantBAddress})
-	requireErrorParam(t, 404, status, body, "ship_to_address_id")
+	status, _, body = patchSupplier(t, path, map[string]any{"defaults": map[string]any{"ship_to_address_id": tenantBAddress}})
+	requireErrorParam(t, 404, status, body, "defaults.ship_to_address_id")
 
-	status, _, body = patchSupplier(t, path, map[string]any{"bill_to_address_id": mustGenID(t, "ad")})
-	requireErrorParam(t, 404, status, body, "bill_to_address_id")
+	status, _, body = patchSupplier(t, path, map[string]any{"defaults": map[string]any{"bill_to_address_id": mustGenID(t, "ad")}})
+	requireErrorParam(t, 404, status, body, "defaults.bill_to_address_id")
 
-	read := getSupplier(t, id, "bill_to_address", "ship_to_address")
-	assertNilField(t, read, "bill_to_address")
-	assertNilField(t, read, "ship_to_address")
+	read := getSupplier(t, id, "defaults.bill_to_address", "defaults.ship_to_address")
+	assertNilField(t, jsonObject(read, "defaults"), "bill_to_address")
+	assertNilField(t, jsonObject(read, "defaults"), "ship_to_address")
 }
 
 // --- Delete ---
@@ -497,7 +481,7 @@ func TestSupplierParity_DeleteReturnsAStubThenIsGone(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 410, againStatus, "a second delete is gone, not a fresh success: %s", string(againBody))
 
-	patchStatus, _, patchBody := patchSupplier(t, suppliersPath+"/"+id, map[string]any{"note": "x", "update_note": true})
+	patchStatus, _, patchBody := patchSupplier(t, suppliersPath+"/"+id, map[string]any{"instructions": "x"})
 	assert.Equal(t, 404, patchStatus, string(patchBody))
 
 	expectAuditEventWithChanges(t, id, "supplier", "delete")
@@ -520,9 +504,8 @@ func TestSupplierParity_TenantIsolationOnEveryRoute(t *testing.T) {
 	clientB := getTenantBClient()
 	tok := searchToken("iso")
 	id := jsonField(paritySupplier(t, map[string]any{"name": "Isolated " + tok, "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
-	linkSupplierMaterial(t, id, materialID, nil)
-	link := supplierMaterialsOf(id) + "/" + materialID
+	itemID := forgeMaterialItem(t)
+	link := supplierItemsPath(id) + "/" + jsonField(linkSupplierItem(t, id, itemID, nil), "id")
 
 	status, body, err := clientB.GetListRaw(suppliersPath+"/"+id, nil)
 	require.NoError(t, err)
@@ -536,20 +519,19 @@ func TestSupplierParity_TenantIsolationOnEveryRoute(t *testing.T) {
 	assert.Equal(t, []string{id}, listedSupplierIDs(t, apiClient, url.Values{"q": {tok}}), "the supplier survives tenant B")
 	assert.Empty(t, listedSupplierIDs(t, clientB, url.Values{"q": {tok}}))
 
-	status, body, err = clientB.GetListRaw(supplierMaterialsOf(id), nil)
+	status, body, err = clientB.GetListRaw(supplierItemsPath(id), nil)
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	assert.Empty(t, jsonArray(parseJSON(body), "data"), "tenant B sees none of tenant A's links")
+	requireErrorParam(t, 404, status, body, "supplier_id")
 	status, body, err = clientB.GetListRaw(link, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
-	status, body, err = clientB.Patch(link, map[string]any{"supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = clientB.Patch(link, map[string]any{"supplier_sku": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
 	status, body, err = clientB.Delete(link)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, string(body))
-	status, body, err = clientB.Post(supplierMaterialsOf(id), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = clientB.Post(supplierItemsPath(id), map[string]any{"item_id": itemID, "supplier_sku": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "supplier_id")
 
@@ -561,8 +543,8 @@ func TestSupplierParity_TenantIsolationOnEveryRoute(t *testing.T) {
 func TestSupplierParity_PermissionRefusals(t *testing.T) {
 	t.Parallel()
 	id := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-sup-perm"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
-	linkSupplierMaterial(t, id, materialID, nil)
+	itemID := forgeMaterialItem(t)
+	link := supplierItemsPath(id) + "/" + jsonField(linkSupplierItem(t, id, itemID, nil), "id")
 	role := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-sup-reader"), "permissions": []string{"suppliers:read"}})
 	reader := roleScopedClient(t, jsonField(role, "id"))
 
@@ -572,7 +554,7 @@ func TestSupplierParity_PermissionRefusals(t *testing.T) {
 	status, body, err = reader.GetListRaw(suppliersPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	status, body, err = reader.GetListRaw(supplierMaterialsOf(id)+"/"+materialID, nil)
+	status, body, err = reader.GetListRaw(link, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -584,13 +566,13 @@ func TestSupplierParity_PermissionRefusals(t *testing.T) {
 			return reader.Patch(suppliersPath+"/"+id, map[string]any{"name": "x"}, newIdempotencyKey())
 		},
 		"delete supplier": func() (int, []byte, error) { return reader.Delete(suppliersPath + "/" + id) },
-		"link material": func() (int, []byte, error) {
-			return reader.Post(supplierMaterialsOf(id), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+		"create supplier item": func() (int, []byte, error) {
+			return reader.Post(supplierItemsPath(id), map[string]any{"item_id": itemID, "supplier_sku": "x"}, newIdempotencyKey())
 		},
-		"update link": func() (int, []byte, error) {
-			return reader.Patch(supplierMaterialsOf(id)+"/"+materialID, map[string]any{"supplier_part_number": "x"}, newIdempotencyKey())
+		"update supplier item": func() (int, []byte, error) {
+			return reader.Patch(link, map[string]any{"supplier_sku": "x"}, newIdempotencyKey())
 		},
-		"delete link": func() (int, []byte, error) { return reader.Delete(supplierMaterialsOf(id) + "/" + materialID) },
+		"delete supplier item": func() (int, []byte, error) { return reader.Delete(link) },
 	} {
 		status, body, err := call()
 		require.NoError(t, err)
@@ -603,93 +585,16 @@ func TestSupplierParity_PermissionRefusals(t *testing.T) {
 	assert.Equal(t, 403, status, "a role without suppliers cannot list them: %s", string(body))
 }
 
-// --- Supplier materials ---
-
-func TestSupplierMaterialParity_CRUD(t *testing.T) {
-	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-crud"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
-	partNumber := uniqueName("PN")
-	path := supplierMaterialsOf(supplierID) + "/" + materialID
-
-	created := linkSupplierMaterial(t, supplierID, materialID, map[string]any{
-		"supplier_part_number": partNumber, "supplier_description": "Cone-wound", "is_active": false,
-	})
-	assert.Equal(t, materialID, jsonField(created, "id"), "a link is identified by its material")
-	assertObjectField(t, created, "supplier_material")
-	assert.Equal(t, partNumber, jsonField(created, "supplier_part_number"))
-	assert.Equal(t, "Cone-wound", jsonField(created, "supplier_description"))
-	assert.Equal(t, "inactive", jsonField(created, "status"))
-	assertNilField(t, created, "material")
-	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
-
-	got := parseJSON(mustGet(t, path))
-	assert.Equal(t, partNumber, jsonField(got, "supplier_part_number"))
-
-	status, updated, body := patchSupplier(t, path, map[string]any{"supplier_part_number": partNumber + "-B", "is_active": true})
-	requireStatus(t, 200, status, body)
-	assert.Equal(t, partNumber+"-B", jsonField(updated, "supplier_part_number"))
-	assert.Equal(t, "active", jsonField(updated, "status"))
-	assert.Equal(t, "Cone-wound", jsonField(updated, "supplier_description"), "an omitted description is kept")
-
-	status, updated, body = patchSupplier(t, path, map[string]any{"supplier_description": nil})
-	requireStatus(t, 200, status, body)
-	assertNilField(t, updated, "supplier_description")
-	assertNilField(t, parseJSON(mustGet(t, path)), "supplier_description")
-
-	status, body, err := apiClient.Delete(path)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	assert.Equal(t, materialID, jsonField(parseJSON(body), "id"))
-	status, body, err = apiClient.GetListRaw(path, nil)
-	require.NoError(t, err)
-	assert.Equal(t, 404, status, string(body))
-	status, body, err = apiClient.Delete(path)
-	require.NoError(t, err)
-	assert.Equal(t, 404, status, string(body))
-}
-
-func TestSupplierMaterialParity_DuplicateLinkConflicts(t *testing.T) {
-	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-dup"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
-	linkSupplierMaterial(t, supplierID, materialID, nil)
-
-	status, body, err := apiClient.Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": materialID, "supplier_part_number": "again"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireErrorParam(t, 409, status, body, "material_id")
-}
-
-func TestSupplierMaterialParity_ListAndRetrieveIncludes(t *testing.T) {
-	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-inc"), "number": uniqueName("SUP")}), "id")
-	materialID, itemID := parityMaterial(t)
-	linkSupplierMaterial(t, supplierID, materialID, nil)
-
-	list, status, err := apiClient.GetList(supplierMaterialsOf(supplierID), url.Values{"include": {"material"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-	row := parseJSON(list.Data[0])
-	material := jsonObject(row, "material")
-	require.NotNil(t, material)
-	assert.Equal(t, materialID, jsonField(material, "id"))
-	assertNilField(t, material, "item")
-
-	got := parseJSON(mustGet(t, supplierMaterialsOf(supplierID)+"/"+materialID+"?include=material.item"))
-	assert.Equal(t, itemID, jsonField(jsonObject(jsonObject(got, "material"), "item"), "id"))
-}
+// --- Supplier items ---
 
 // The column is TEXT, so a description runs to 65,535 bytes; the request counts characters, the service bytes.
-func TestSupplierMaterialParity_LongDescriptions(t *testing.T) {
+func TestSupplierItemParity_LongDescriptions(t *testing.T) {
 	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-long"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
+	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supitem-long"), "number": uniqueName("SUP")}), "id")
 	long := strings.Repeat("spec ", 1000)
-	created := linkSupplierMaterial(t, supplierID, materialID, map[string]any{"supplier_description": long})
+	created := linkSupplierItem(t, supplierID, forgeMaterialItem(t), map[string]any{"supplier_description": long})
 	assert.Equal(t, long, jsonField(created, "supplier_description"))
-	path := supplierMaterialsOf(supplierID) + "/" + materialID
+	path := supplierItemsPath(supplierID) + "/" + jsonField(created, "id")
 
 	full := strings.Repeat("a", 65535)
 	status, got, body := patchSupplier(t, path, map[string]any{"supplier_description": full})
@@ -704,102 +609,68 @@ func TestSupplierMaterialParity_LongDescriptions(t *testing.T) {
 	assert.Len(t, jsonField(parseJSON(mustGet(t, path)), "supplier_description"), 65535, "a refused update changes nothing")
 }
 
-func TestSupplierMaterialParity_RefusesEndsThatAreNotTheOwners(t *testing.T) {
+func TestSupplierItemParity_RefusesAnotherTenantsItemOrSupplier(t *testing.T) {
 	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-own"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
+	itemID := forgeMaterialItem(t)
 
-	status, body, err := apiClient.Post(supplierMaterialsOf(mustGenID(t, "ac")), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireErrorParam(t, 404, status, body, "supplier_id")
-
-	status, body, err = apiClient.Post(supplierMaterialsOf(supplierID), map[string]any{"material_id": mustGenID(t, "ml"), "supplier_part_number": "x"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireErrorParam(t, 404, status, body, "material_id")
-
-	// Tenant B links tenant A's material to its own supplier.
+	// Tenant B names tenant A's item on its own supplier.
 	clientB := getTenantBClient()
 	bStatus, bBody, err := clientB.Post(suppliersPath, map[string]any{"name": uniqueName("e2e-tenantb-sup"), "number": uniqueName("SUP")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, bStatus, bBody)
 	tenantBSupplier := jsonField(parseJSON(bBody), "id")
 	t.Cleanup(func() { _, _, _ = clientB.Delete(suppliersPath + "/" + tenantBSupplier) })
-	status, body, err = clientB.Post(supplierMaterialsOf(tenantBSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err := clientB.Post(supplierItemsPath(tenantBSupplier), map[string]any{"item_id": itemID, "supplier_sku": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireErrorParam(t, 404, status, body, "material_id")
+	requireErrorParam(t, 404, status, body, "item_id")
 
 	// Tenant A names tenant B's supplier.
-	status, body, err = apiClient.Post(supplierMaterialsOf(tenantBSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
+	status, body, err = apiClient.Post(supplierItemsPath(tenantBSupplier), map[string]any{"item_id": itemID, "supplier_sku": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireErrorParam(t, 404, status, body, "supplier_id")
 }
 
-func TestSupplierMaterialParity_DeletedItemLeavesTheLinkUnreachable(t *testing.T) {
+func TestSupplierItemParity_IsAudited(t *testing.T) {
 	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-gone"), "number": uniqueName("SUP")}), "id")
-	otherSupplier := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-gone2"), "number": uniqueName("SUP")}), "id")
-	materialID, itemID := parityMaterial(t)
-	linkSupplierMaterial(t, supplierID, materialID, nil)
-	path := supplierMaterialsOf(supplierID) + "/" + materialID
+	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supitem-audit"), "number": uniqueName("SUP")}), "id")
+	otherSupplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supitem-audit-b"), "number": uniqueName("SUP")}), "id")
+	itemID := forgeMaterialItem(t)
+	sku := uniqueName("PN")
+	link := linkSupplierItem(t, supplierID, itemID, map[string]any{"supplier_sku": sku})
+	linkID := jsonField(link, "id")
+	path := supplierItemsPath(supplierID) + "/" + linkID
 
-	softDeleteItem(t, itemID)
-
-	list, _, err := apiClient.GetList(supplierMaterialsOf(supplierID), nil)
-	require.NoError(t, err)
-	assert.Empty(t, list.Data, "a link to a deleted item is not listed")
-	status, body, err := apiClient.GetListRaw(path, nil)
-	require.NoError(t, err)
-	assert.Equal(t, 404, status, string(body))
-	status, _, body = patchSupplier(t, path, map[string]any{"supplier_part_number": "x"})
-	assert.Equal(t, 404, status, string(body))
-
-	status, body, err = apiClient.Post(supplierMaterialsOf(otherSupplier), map[string]any{"material_id": materialID, "supplier_part_number": "x"}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireErrorParam(t, 404, status, body, "material_id")
-}
-
-func TestSupplierMaterialParity_IsAudited(t *testing.T) {
-	t.Parallel()
-	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-audit"), "number": uniqueName("SUP")}), "id")
-	otherSupplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-audit-b"), "number": uniqueName("SUP")}), "id")
-	materialID, _ := parityMaterial(t)
-	partNumber := uniqueName("PN")
-	link := linkSupplierMaterial(t, supplierID, materialID, map[string]any{"supplier_part_number": partNumber})
-	require.Equal(t, materialID, jsonField(link, "id"))
-	path := supplierMaterialsOf(supplierID) + "/" + materialID
-
-	created, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, materialID, "supplier_material", "create"), "changes"), "supplier_part_number")
+	created, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, linkID, "supplier_item", "create"), "changes"), "supplier_sku")
 	require.True(t, ok)
-	assert.Equal(t, partNumber, jsonField(created, "new_value"))
+	assert.Equal(t, sku, jsonField(created, "new_value"))
 
-	linkSupplierMaterial(t, otherSupplierID, materialID, nil)
-	expectSupplierMaterialRootedEvents(t, otherSupplierID, materialID, 1)
-	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 1)
+	otherLinkID := jsonField(linkSupplierItem(t, otherSupplierID, itemID, nil), "id")
+	expectSupplierItemRootedEvents(t, otherSupplierID, otherLinkID, 1)
+	expectSupplierItemRootedEvents(t, supplierID, linkID, 1)
 
-	status, _, body := patchSupplier(t, path, map[string]any{"supplier_part_number": partNumber + "-B"})
+	status, _, body := patchSupplier(t, path, map[string]any{"supplier_sku": sku + "-B"})
 	requireStatus(t, 200, status, body)
-	updated, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, materialID, "supplier_material", "update"), "changes"), "supplier_part_number")
+	updated, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, linkID, "supplier_item", "update"), "changes"), "supplier_sku")
 	require.True(t, ok)
-	assert.Equal(t, partNumber+"-B", jsonField(updated, "new_value"))
-	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 2)
-	expectSupplierMaterialRootedEvents(t, otherSupplierID, materialID, 1)
+	assert.Equal(t, sku+"-B", jsonField(updated, "new_value"))
+	expectSupplierItemRootedEvents(t, supplierID, linkID, 2)
 
 	status, body, err := apiClient.Delete(path)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	expectAuditEventWithChanges(t, materialID, "supplier_material", "delete")
-	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 3)
+	expectAuditEventWithChanges(t, linkID, "supplier_item", "delete")
+	expectSupplierItemRootedEvents(t, supplierID, linkID, 3)
 }
 
-// expectSupplierMaterialRootedEvents polls until the supplier's history holds want events for the material's link.
-func expectSupplierMaterialRootedEvents(t *testing.T, supplierID, materialID string, want int) {
+// expectSupplierItemRootedEvents polls until the supplier's history holds want events for the supplier item.
+func expectSupplierItemRootedEvents(t *testing.T, supplierID, supplierItemID string, want int) {
 	t.Helper()
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 			"root_resource_types": {"supplier"},
 			"root_resource_ids":   {supplierID},
-			"resource_types":      {"supplier_material"},
-			"resource_ids":        {materialID},
+			"resource_types":      {"supplier_item"},
+			"resource_ids":        {supplierItemID},
 			"limit":               {"100"},
 		})
 		if err != nil {
@@ -809,7 +680,7 @@ func expectSupplierMaterialRootedEvents(t *testing.T, supplierID, materialID str
 			return fmt.Errorf("audit events: %d %s", status, body)
 		}
 		if got := len(jsonArray(parseJSON(body), "data")); got != want {
-			return fmt.Errorf("supplier %s has %d supplier_material events for %s, want %d", supplierID, got, materialID, want)
+			return fmt.Errorf("supplier %s has %d supplier_item events for %s, want %d", supplierID, got, supplierItemID, want)
 		}
 		return nil
 	})

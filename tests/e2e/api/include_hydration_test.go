@@ -376,13 +376,13 @@ func TestPurchaseOrders_LineItemExpandsFullyHydrated(t *testing.T) {
 func TestSuppliers_ListAddressesExpandWithInclude(t *testing.T) {
 	t.Parallel()
 
-	raw := listFindByField(t, suppliersPath, url.Values{"include": {"bill_to_address", "ship_to_address"}}, "id", SeedSupplierAccountID)
+	raw := listFindByField(t, suppliersPath, url.Values{"include": {"defaults.bill_to_address", "defaults.ship_to_address"}}, "id", SeedSupplierAccountID)
 	require.NotNil(t, raw, "the seeded supplier is listed")
 	row := parseJSON(raw)
 	assertObjectField(t, row, "supplier")
 
 	for _, key := range []string{"bill_to_address", "ship_to_address"} {
-		address := jsonObject(row, key)
+		address := jsonObject(jsonObject(row, "defaults"), key)
 		require.NotNil(t, address, "the seeded supplier's %s expands", key)
 		assertObjectField(t, address, "address")
 		assert.Equal(t, SeedSupplierAddressID, jsonField(address, "id"), "an expanded address is a whole record")
@@ -399,9 +399,9 @@ func TestSuppliers_ListAddressesAreNullWithoutInclude(t *testing.T) {
 	require.NotEmpty(t, list.Data)
 
 	for _, raw := range list.Data {
-		row := parseJSON(raw)
-		assertNilField(t, row, "bill_to_address")
-		assertNilField(t, row, "ship_to_address")
+		defaults := jsonObject(parseJSON(raw), "defaults")
+		assertNilField(t, defaults, "bill_to_address")
+		assertNilField(t, defaults, "ship_to_address")
 	}
 }
 

@@ -294,3 +294,31 @@ WHERE m.id = sqlc.arg('material_id');
 DELETE FROM supplier_material
 WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND supplier_account_id IN (sqlc.slice('supplier_account_ids'));
+
+-- name: ListSupplierItemsByIDs :many
+-- Reads the supplier items a page of supplierItemListPageQuery chose, or one by its ID.
+SELECT
+    sm.id,
+    sm.supplier_account_id,
+    sm.material_id,
+    m.item_id,
+    sm.supplier_part_number,
+    sm.supplier_description,
+    sm.is_active,
+    sm.created_at,
+    sm.updated_at
+FROM supplier_material sm
+JOIN material m ON m.id = sm.material_id
+WHERE sm.owner_account_id = sqlc.arg('owner_account_id')
+  AND sm.supplier_account_id = sqlc.arg('supplier_account_id')
+  AND sm.id IN (sqlc.slice('ids'));
+
+-- name: UpdateSupplierItem :exec
+-- Writes the values the service merged from the request and the row.
+UPDATE supplier_material SET
+    supplier_part_number = sqlc.arg('supplier_part_number'),
+    supplier_description = sqlc.narg('supplier_description'),
+    is_active = sqlc.arg('is_active'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+  AND owner_account_id = sqlc.arg('owner_account_id');

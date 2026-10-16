@@ -224,6 +224,57 @@ message DeleteSupplierMaterialRequest {
 message DeleteSupplierMaterialResponse {
   SupplierMaterialInfo supplier_material = 1;
 }
+
+// A supplier item: an item a supplier provides, with the supplier's own code and description for it.
+message SupplierItemInfo {
+  string id = 1;
+  string supplier_id = 2;
+  string item_id = 3;
+  string supplier_sku = 4;
+  optional string supplier_description = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message ListSupplierItemsRequest {
+  string supplier_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+  optional bool is_active = 5;
+  repeated string item_ids = 6;
+  optional google.protobuf.Timestamp created_after = 7;
+  optional google.protobuf.Timestamp created_before = 8;
+}
+message ListSupplierItemsResponse {
+  repeated SupplierItemInfo supplier_items = 1;
+  PageInfo page_info = 2;
+}
+message GetSupplierItemRequest {
+  string supplier_id = 1;
+  string id = 2;
+}
+message CreateSupplierItemRequest {
+  string supplier_id = 1;
+  string item_id = 2;
+  string supplier_sku = 3;
+  optional string supplier_description = 4;
+  optional string status = 5;
+}
+message UpdateSupplierItemRequest {
+  string supplier_id = 1;
+  string id = 2;
+  optional string supplier_sku = 3;
+  optional StringPatch supplier_description = 4;
+  optional string status = 5;
+}
+message DeleteSupplierItemRequest {
+  string supplier_id = 1;
+  string id = 2;
+}
+message SupplierItemResponse {
+  SupplierItemInfo supplier_item = 1;
+}
 message PartInfo {
   string id = 1;
   string item_id = 2;

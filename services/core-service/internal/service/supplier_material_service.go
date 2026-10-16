@@ -217,7 +217,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 			}
 			result = created
 
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created))); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, nil, created)); apiErr != nil {
 				return apiErr
 			}
 
@@ -293,7 +293,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 			}
 			result = updated
 
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionUpdate, updated, audit.ComputeChanges(old, updated))); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionUpdate, updated, old, updated)); apiErr != nil {
 				return apiErr
 			}
 
@@ -351,7 +351,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 		}
 		result = deleted
 
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionDelete, entity, audit.ComputeChanges(entity, (*domain.SupplierMaterial)(nil)))); apiErr != nil {
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionDelete, entity, entity, nil)); apiErr != nil {
 			return apiErr
 		}
 
@@ -374,14 +374,29 @@ func checkSupplierDescription(description *string) *apierror.APIError {
 	return nil
 }
 
-func supplierMaterialAuditEvent(action constants.AuditAction, sm *domain.SupplierMaterial, changes []audit.FieldChange) audit.EventData {
-	return audit.EventData{
-		ServiceName:      domain.ServiceName,
-		Action:           action,
-		ResourceType:     constants.ObjectTypeSupplierMaterial,
-		ResourceID:       sm.MaterialID,
-		RootResourceType: constants.ObjectTypeSupplier,
-		RootResourceID:   sm.SupplierAccountID,
-		Changes:          changes,
+// supplierMaterialAuditEvent records a supplier material write as the supplier item it is, so a row's history is one
+// supplier_item resource whichever route wrote it.
+func supplierMaterialAuditEvent(action constants.AuditAction, sm, before, after *domain.SupplierMaterial) audit.EventData {
+	return supplierItemAuditEvent(action, supplierMaterialAsItem(sm), audit.ComputeChanges(supplierMaterialAsItem(before), supplierMaterialAsItem(after)))
+}
+
+// supplierMaterialAsItem is a supplier material in its supplier item fields; nil stays nil.
+func supplierMaterialAsItem(sm *domain.SupplierMaterial) *domain.SupplierItem {
+	if sm == nil {
+		return nil
 	}
+	item := &domain.SupplierItem{
+		ID:                  sm.ID,
+		SupplierAccountID:   sm.SupplierAccountID,
+		MaterialID:          sm.MaterialID,
+		SupplierSKU:         sm.SupplierPartNumber,
+		SupplierDescription: sm.SupplierDescription,
+		Status:              constants.ArchiveStatusFromIsActive(sm.IsActive),
+		CreatedAt:           sm.CreatedAt,
+		UpdatedAt:           sm.UpdatedAt,
+	}
+	if sm.Material != nil {
+		item.ItemID = sm.Material.ItemID
+	}
+	return item
 }

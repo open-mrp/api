@@ -1496,6 +1496,17 @@ type SupplierMaterialSvc interface {
 
 	// DeleteSupplierMaterial deletes a supplier material association.
 	DeleteSupplierMaterial(ctx context.Context, params DeleteSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
+
+	// ListSupplierItems pages a supplier's items.
+	ListSupplierItems(ctx context.Context, params ListSupplierItemsParams) (*ListSupplierItemsResult, *apierror.APIError)
+	// GetSupplierItem reads one of a supplier's items by its ID.
+	GetSupplierItem(ctx context.Context, supplierAccountID, id string) (*SupplierItem, *apierror.APIError)
+	// CreateSupplierItem records that a supplier provides an item.
+	CreateSupplierItem(ctx context.Context, params CreateSupplierItemParams) (*SupplierItem, *apierror.APIError)
+	// UpdateSupplierItem changes the fields sent.
+	UpdateSupplierItem(ctx context.Context, params UpdateSupplierItemParams) (*SupplierItem, *apierror.APIError)
+	// DeleteSupplierItem hard-deletes a supplier item and returns it as it was.
+	DeleteSupplierItem(ctx context.Context, supplierAccountID, id string) (*SupplierItem, *apierror.APIError)
 }
 
 type PermissionGroupSvc interface {
@@ -1722,7 +1733,7 @@ type SupplierSvc interface {
 	DeleteSupplier(ctx context.Context, params DeleteSupplierParams) (*Supplier, *apierror.APIError)
 	BulkDeleteSuppliers(ctx context.Context, params BulkDeleteSuppliersParams) *apierror.APIError
 	// BatchGetSuppliersByIDs reads the suppliers documents name, for the gateway's include resolver.
-	BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*SupplierSummary, *apierror.APIError)
+	BatchGetSuppliersByIDs(ctx context.Context, ids, includes []string) ([]*Supplier, *apierror.APIError)
 }
 
 type SysPropertySvc interface {

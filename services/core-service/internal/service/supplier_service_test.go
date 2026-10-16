@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,8 +30,10 @@ type supplierTestDeps struct {
 	materialRepo    *repositorymock.MockMaterialRepo
 	supplierMatRepo *repositorymock.MockSupplierMaterialRepo
 	idempotency     *mediatormock.MockIdempotencyMed
-	supplierSvc     domain.SupplierSvc
-	supplierMatSvc  domain.SupplierMaterialSvc
+	// items are the item states GetAssignability reports, by ID.
+	items          map[string]domain.ItemAssignability
+	supplierSvc    domain.SupplierSvc
+	supplierMatSvc domain.SupplierMaterialSvc
 }
 
 func newSupplierTestDeps(t *testing.T) *supplierTestDeps {
@@ -47,7 +50,17 @@ func newSupplierTestDeps(t *testing.T) *supplierTestDeps {
 	d.repos.EXPECT().NewAddressRepo().Return(d.addressRepo).AnyTimes()
 	d.repos.EXPECT().NewMaterialRepo().Return(d.materialRepo).AnyTimes()
 	assignableItems := repositorymock.NewMockItemRepo(ctrl)
-	assignableItems.EXPECT().GetAssignability(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	d.items = map[string]domain.ItemAssignability{}
+	assignableItems.EXPECT().GetAssignability(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, ids []string) ([]domain.ItemAssignability, *apierror.APIError) {
+			var out []domain.ItemAssignability
+			for _, id := range ids {
+				if state, ok := d.items[id]; ok {
+					out = append(out, state)
+				}
+			}
+			return out, nil
+		}).AnyTimes()
 	d.repos.EXPECT().NewItemRepo().Return(assignableItems).AnyTimes()
 	d.repos.EXPECT().NewSupplierMaterialRepo().Return(d.supplierMatRepo).AnyTimes()
 	d.repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
@@ -157,34 +170,53 @@ func TestSupplierMaterialDescription_RefusesMoreBytesThanTheColumnHolds(t *testi
 func TestUpdateSupplier_RefusesAnAddressThatIsNotTheSuppliers(t *testing.T) {
 	t.Parallel()
 	d := newSupplierTestDeps(t)
-	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", BillToAddress: &domain.CustomerAddress{ID: "ad_own"}}, nil)
+	own := "ad_own"
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", BillToAddressID: &own}, nil)
 	d.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_sup", "ad_foreign").Return(false, nil)
 
-	foreign := "ad_foreign"
-	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", ShipToAddressID: &foreign})
+	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", ShipToAddressID: field.Set("ad_foreign")})
 
 	require.NotNil(t, apiErr)
 	assert.Equal(t, http.StatusNotFound, apiErr.Code.Status())
-	assert.Equal(t, "ship_to_address_id", apiErr.Param)
+	assert.Equal(t, "defaults.ship_to_address_id", apiErr.Param)
 }
 
-// The update reads the supplier back with its addresses, as it read the old one, so the audit diff holds only what changed.
-func TestUpdateSupplier_ReadsBackWithAddressesAndSkipsTheCheckForAnUnchangedAddress(t *testing.T) {
+// An update writes every column, so each one it was not sent goes back as the supplier held it.
+func TestUpdateSupplier_WritesBackWhatItWasNotSentAndSkipsTheCheckForAnUnchangedAddress(t *testing.T) {
 	t.Parallel()
 	d := newSupplierTestDeps(t)
-	old := &domain.Supplier{ID: "ac_sup", Name: "Old", BillToAddress: &domain.CustomerAddress{ID: "ad_own"}}
-	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(old, nil)
-	d.supplierRepo.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p domain.UpdateSupplierParams) (*domain.Supplier, *apierror.APIError) {
-		assert.ElementsMatch(t, []string{"bill_to_address", "ship_to_address"}, p.Includes)
-		assert.Equal(t, "ad_own", *p.BillToAddressID, "an unchanged default is written back as it was")
-		return &domain.Supplier{ID: "ac_sup", Name: "New", BillToAddress: old.BillToAddress}, nil
+	own, instructions := "ad_own", "Call ahead"
+	old := &domain.Supplier{ID: "ac_sup", Name: "Old", Number: "S-1", ArchiveStatus: constants.ArchiveStatusActive, BillToAddressID: &own, Instructions: &instructions}
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(old, nil).Times(2)
+	d.supplierRepo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, w domain.SupplierRelationWrite, _ []string) (*domain.Supplier, *apierror.APIError) {
+		assert.Equal(t, "New", w.Name)
+		assert.Equal(t, "S-1", w.Number)
+		assert.True(t, w.IsActive)
+		assert.Equal(t, &own, w.BillToAddressID, "an unchanged default is written back as it was")
+		assert.Nil(t, w.Instructions, "a cleared field is written as null")
+		return &domain.Supplier{ID: "ac_sup", Name: "New"}, nil
 	})
 
-	same, name := "ad_own", "New"
-	updated, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", Name: &name, BillToAddressID: &same})
+	name := "New"
+	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{
+		SupplierID: "ac_sup", Name: &name, BillToAddressID: field.Set("ad_own"), Instructions: field.Clear[string](),
+	})
 
 	require.Nil(t, apiErr)
-	assert.Equal(t, "New", updated.Name)
+}
+
+func TestDeleteSupplier_RefusesASupplierStillInUse(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup"}, nil)
+	d.supplierRepo.EXPECT().InUseBy(gomock.Any(), supplierTestOwnerID, "ac_sup").Return([]string{"purchase orders", "supplier items"}, nil)
+	d.supplierRepo.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	_, apiErr := d.supplierSvc.DeleteSupplier(supplierAdminCtx(), domain.DeleteSupplierParams{SupplierID: "ac_sup"})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
+	assert.Equal(t, "resource_in_use", string(apiErr.Code))
 }
 
 func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
@@ -198,12 +230,12 @@ func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
 	d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), supplierTestOwnerID, "S-1", nil).Return(false, nil)
 	d.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil).Times(1)
 	d.supplierRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ string, p domain.CreateSupplierParams, billTo, shipTo *string) (*domain.Supplier, *apierror.APIError) {
+		DoAndReturn(func(_ context.Context, _, _ string, _ domain.CreateSupplierParams, billTo, shipTo *string) (*domain.Supplier, *apierror.APIError) {
 			require.NotNil(t, billTo)
 			assert.Equal(t, billTo, shipTo, "both defaults are the one address")
-			assert.ElementsMatch(t, []string{"bill_to_address", "ship_to_address"}, p.Includes)
 			return &domain.Supplier{ID: "ac_new"}, nil
 		})
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_new"}, nil)
 
 	_, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{
 		Name: "Acme", Number: "S-1", BillToAddress: &address, ShipToAddress: &shipTo,
@@ -250,8 +282,8 @@ func TestUpdateSupplier_LeavesTheNumbersUnlockedWhenTheNumberIsNotSent(t *testin
 	t.Parallel()
 	d := newSupplierTestDeps(t)
 	d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), gomock.Any()).Times(0)
-	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "Old"}, nil)
-	d.supplierRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "New"}, nil)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "Old"}, nil).Times(2)
+	d.supplierRepo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "New"}, nil)
 
 	name := "New"
 	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", Name: &name})
@@ -285,10 +317,10 @@ func TestSupplierSvc_BatchGetServesWhoeverMayReadADocumentNamingTheSupplier(t *t
 		t.Run(perm, func(t *testing.T) {
 			t.Parallel()
 			d := newSupplierTestDeps(t)
-			want := []*domain.SupplierSummary{{ID: "ac_sup1"}}
-			d.supplierRepo.EXPECT().GetByIDs(gomock.Any(), supplierTestOwnerID, []string{"ac_sup1"}).Return(want, nil)
+			want := []*domain.Supplier{{ID: "ac_sup1"}}
+			d.supplierRepo.EXPECT().GetByIDs(gomock.Any(), supplierTestOwnerID, []string{"ac_sup1"}, nil).Return(want, nil)
 
-			got, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx(perm), []string{"ac_sup1"})
+			got, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx(perm), []string{"ac_sup1"}, nil)
 			require.Nil(t, apiErr)
 			assert.Equal(t, want, got)
 		})
@@ -298,8 +330,110 @@ func TestSupplierSvc_BatchGetServesWhoeverMayReadADocumentNamingTheSupplier(t *t
 		t.Parallel()
 		d := newSupplierTestDeps(t)
 
-		_, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx("customers:read"), []string{"ac_sup1"})
+		_, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx("customers:read"), []string{"ac_sup1"}, nil)
 		require.NotNil(t, apiErr)
 		assert.Equal(t, http.StatusForbidden, apiErr.Code.Status())
 	})
+}
+
+// --- Supplier items ---
+
+func TestCreateSupplierItem_RefusesAnArchivedSupplier(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", ArchiveStatus: constants.ArchiveStatusArchived}, nil)
+
+	_, apiErr := d.supplierMatSvc.CreateSupplierItem(supplierAdminCtx(), domain.CreateSupplierItemParams{SupplierAccountID: "ac_sup", ItemID: "it_1", SupplierSKU: "S"})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusUnprocessableEntity, apiErr.Code.Status())
+	assert.Equal(t, "supplier_id", apiErr.Param)
+}
+
+func TestCreateSupplierItem_ChecksTheItem(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		state      *domain.ItemAssignability
+		hasSection bool
+		status     int
+	}{
+		"not the owner's":     {status: http.StatusNotFound},
+		"archived":            {state: &domain.ItemAssignability{ItemID: "it_1"}, status: http.StatusUnprocessableEntity},
+		"no material section": {state: &domain.ItemAssignability{ItemID: "it_1", IsAssignable: true}, status: http.StatusUnprocessableEntity},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			d := newSupplierTestDeps(t)
+			if tc.state != nil {
+				d.items["it_1"] = *tc.state
+			}
+			d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", ArchiveStatus: constants.ArchiveStatusActive}, nil)
+			d.materialRepo.EXPECT().GetByItemID(gomock.Any(), supplierTestOwnerID, "it_1").Return(nil, notFound()).AnyTimes()
+
+			_, apiErr := d.supplierMatSvc.CreateSupplierItem(supplierAdminCtx(), domain.CreateSupplierItemParams{SupplierAccountID: "ac_sup", ItemID: "it_1", SupplierSKU: "S"})
+
+			require.NotNil(t, apiErr)
+			assert.Equal(t, tc.status, apiErr.Code.Status())
+			assert.Equal(t, "item_id", apiErr.Param)
+		})
+	}
+}
+
+func TestCreateSupplierItem_OnePerItemAndSupplier(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.items["it_1"] = domain.ItemAssignability{ItemID: "it_1", IsAssignable: true}
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", ArchiveStatus: constants.ArchiveStatusActive}, nil)
+	d.materialRepo.EXPECT().GetByItemID(gomock.Any(), supplierTestOwnerID, "it_1").Return(&domain.Material{ID: "ml_1"}, nil)
+	d.supplierMatRepo.EXPECT().ExistsByMaterialAndSupplier(gomock.Any(), supplierTestOwnerID, "ml_1", "ac_sup").Return(true, nil)
+
+	_, apiErr := d.supplierMatSvc.CreateSupplierItem(supplierAdminCtx(), domain.CreateSupplierItemParams{SupplierAccountID: "ac_sup", ItemID: "it_1", SupplierSKU: "S"})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
+}
+
+func TestCreateSupplierItem_StoresTheLinkUnderTheItemsMaterial(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.items["it_1"] = domain.ItemAssignability{ItemID: "it_1", IsAssignable: true}
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", ArchiveStatus: constants.ArchiveStatusActive}, nil)
+	d.materialRepo.EXPECT().GetByItemID(gomock.Any(), supplierTestOwnerID, "it_1").Return(&domain.Material{ID: "ml_1"}, nil)
+	d.supplierMatRepo.EXPECT().ExistsByMaterialAndSupplier(gomock.Any(), supplierTestOwnerID, "ml_1", "ac_sup").Return(false, nil)
+	d.supplierMatRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, id string, p domain.CreateSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
+			assert.Equal(t, "ml_1", p.MaterialID)
+			assert.False(t, p.IsActive, "an archived supplier item is stored inactive")
+			return &domain.SupplierMaterial{ID: id}, nil
+		})
+	d.supplierMatRepo.EXPECT().GetItem(gomock.Any(), supplierTestOwnerID, "ac_sup", gomock.Any()).Return(&domain.SupplierItem{ID: "suit_1", ItemID: "it_1", SupplierAccountID: "ac_sup"}, nil)
+
+	created, apiErr := d.supplierMatSvc.CreateSupplierItem(supplierAdminCtx(), domain.CreateSupplierItemParams{
+		SupplierAccountID: "ac_sup", ItemID: "it_1", SupplierSKU: "S", ArchiveStatus: constants.ArchiveStatusArchived,
+	})
+
+	require.Nil(t, apiErr)
+	assert.Equal(t, "it_1", created.ItemID)
+}
+
+func TestUpdateSupplierItem_ChangesOnlyWhatWasSent(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	desc := "old"
+	old := &domain.SupplierItem{ID: "suit_1", SupplierSKU: "A", SupplierDescription: &desc, Status: constants.ArchiveStatusActive}
+	d.supplierMatRepo.EXPECT().GetItem(gomock.Any(), supplierTestOwnerID, "ac_sup", "suit_1").Return(old, nil).Times(2)
+	d.supplierMatRepo.EXPECT().UpdateItem(gomock.Any(), supplierTestOwnerID, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, item *domain.SupplierItem) *apierror.APIError {
+			assert.Equal(t, "A", item.SupplierSKU)
+			assert.Nil(t, item.SupplierDescription)
+			assert.Equal(t, constants.ArchiveStatusArchived, item.Status)
+			return nil
+		})
+
+	archived := constants.ArchiveStatusArchived
+	_, apiErr := d.supplierMatSvc.UpdateSupplierItem(supplierAdminCtx(), domain.UpdateSupplierItemParams{
+		SupplierAccountID: "ac_sup", SupplierItemID: "suit_1", SupplierDescription: field.Clear[string](), ArchiveStatus: &archived,
+	})
+	require.Nil(t, apiErr)
 }

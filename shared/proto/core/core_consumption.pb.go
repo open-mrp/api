@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -3882,8 +3883,22 @@ type SupplierSummaryProto struct {
 	ShipToAddress *CustomerAddressProto `protobuf:"bytes,11,opt,name=ship_to_address,json=shipToAddress,proto3" json:"ship_to_address,omitempty"`
 	// Links to the owner's materials, not counting a material whose item was deleted.
 	MaterialCount int64 `protobuf:"varint,12,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The lifecycle status: active or archived.
+	Status                string  `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
+	Instructions          *string `protobuf:"bytes,14,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Email                 *string `protobuf:"bytes,15,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *string `protobuf:"bytes,16,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *string `protobuf:"bytes,17,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	CarrierBillingType    *string `protobuf:"bytes,18,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *string `protobuf:"bytes,19,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	DefaultCarrierId      *string `protobuf:"bytes,20,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
+	DefaultServiceLevelId *string `protobuf:"bytes,21,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	PaymentTermId         *string `protobuf:"bytes,22,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
+	ShippingTermId        *string `protobuf:"bytes,23,opt,name=shipping_term_id,json=shippingTermId,proto3,oneof" json:"shipping_term_id,omitempty"`
+	// Set only when the caller asked for the material count.
+	HasMaterialCount bool `protobuf:"varint,24,opt,name=has_material_count,json=hasMaterialCount,proto3" json:"has_material_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SupplierSummaryProto) Reset() {
@@ -3993,19 +4008,119 @@ func (x *SupplierSummaryProto) GetMaterialCount() int64 {
 	return 0
 }
 
+func (x *SupplierSummaryProto) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetInstructions() string {
+	if x != nil && x.Instructions != nil {
+		return *x.Instructions
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetCarrierBillingType() string {
+	if x != nil && x.CarrierBillingType != nil {
+		return *x.CarrierBillingType
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetCarrierBillingAccount() string {
+	if x != nil && x.CarrierBillingAccount != nil {
+		return *x.CarrierBillingAccount
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetDefaultCarrierId() string {
+	if x != nil && x.DefaultCarrierId != nil {
+		return *x.DefaultCarrierId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetDefaultServiceLevelId() string {
+	if x != nil && x.DefaultServiceLevelId != nil {
+		return *x.DefaultServiceLevelId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetPaymentTermId() string {
+	if x != nil && x.PaymentTermId != nil {
+		return *x.PaymentTermId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetShippingTermId() string {
+	if x != nil && x.ShippingTermId != nil {
+		return *x.ShippingTermId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetHasMaterialCount() bool {
+	if x != nil {
+		return x.HasMaterialCount
+	}
+	return false
+}
+
 type SupplierProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Number        string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	Note          *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	BillToAddress *CustomerAddressProto  `protobuf:"bytes,5,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
-	ShipToAddress *CustomerAddressProto  `protobuf:"bytes,6,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	MaterialCount int64                  `protobuf:"varint,10,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Number          string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	Note            *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	BillToAddress   *CustomerAddressProto  `protobuf:"bytes,5,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
+	ShipToAddress   *CustomerAddressProto  `protobuf:"bytes,6,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	MaterialCount   int64                  `protobuf:"varint,10,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
+	BillToAddressId *string                `protobuf:"bytes,11,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
+	ShipToAddressId *string                `protobuf:"bytes,12,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	// The lifecycle status: active or archived.
+	Status                string  `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
+	Instructions          *string `protobuf:"bytes,14,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Email                 *string `protobuf:"bytes,15,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *string `protobuf:"bytes,16,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *string `protobuf:"bytes,17,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	CarrierBillingType    *string `protobuf:"bytes,18,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *string `protobuf:"bytes,19,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	DefaultCarrierId      *string `protobuf:"bytes,20,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
+	DefaultServiceLevelId *string `protobuf:"bytes,21,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	PaymentTermId         *string `protobuf:"bytes,22,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
+	ShippingTermId        *string `protobuf:"bytes,23,opt,name=shipping_term_id,json=shippingTermId,proto3,oneof" json:"shipping_term_id,omitempty"`
+	// Set only when the caller asked for the material count.
+	HasMaterialCount bool `protobuf:"varint,24,opt,name=has_material_count,json=hasMaterialCount,proto3" json:"has_material_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SupplierProto) Reset() {
@@ -4099,6 +4214,104 @@ func (x *SupplierProto) GetMaterialCount() int64 {
 		return x.MaterialCount
 	}
 	return 0
+}
+
+func (x *SupplierProto) GetBillToAddressId() string {
+	if x != nil && x.BillToAddressId != nil {
+		return *x.BillToAddressId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetShipToAddressId() string {
+	if x != nil && x.ShipToAddressId != nil {
+		return *x.ShipToAddressId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetInstructions() string {
+	if x != nil && x.Instructions != nil {
+		return *x.Instructions
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetCarrierBillingType() string {
+	if x != nil && x.CarrierBillingType != nil {
+		return *x.CarrierBillingType
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetCarrierBillingAccount() string {
+	if x != nil && x.CarrierBillingAccount != nil {
+		return *x.CarrierBillingAccount
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetDefaultCarrierId() string {
+	if x != nil && x.DefaultCarrierId != nil {
+		return *x.DefaultCarrierId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetDefaultServiceLevelId() string {
+	if x != nil && x.DefaultServiceLevelId != nil {
+		return *x.DefaultServiceLevelId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetPaymentTermId() string {
+	if x != nil && x.PaymentTermId != nil {
+		return *x.PaymentTermId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetShippingTermId() string {
+	if x != nil && x.ShippingTermId != nil {
+		return *x.ShippingTermId
+	}
+	return ""
+}
+
+func (x *SupplierProto) GetHasMaterialCount() bool {
+	if x != nil {
+		return x.HasMaterialCount
+	}
+	return false
 }
 
 type CreateSupplierAddressInput struct {
@@ -4218,14 +4431,16 @@ func (x *CreateSupplierAddressInput) GetCountry() string {
 }
 
 type ListSuppliersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	StartDate     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
-	EndDate       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
-	ItemIds       []string               `protobuf:"bytes,6,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
-	Includes      []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Cursor    *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit     int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query     *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	StartDate *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
+	EndDate   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	ItemIds   []string               `protobuf:"bytes,6,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
+	Includes  []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Narrows to active (true) or archived (false) suppliers when set.
+	IsActive      *bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4307,6 +4522,13 @@ func (x *ListSuppliersRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *ListSuppliersRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
 }
 
 type ListSuppliersResponse struct {
@@ -4458,15 +4680,26 @@ func (x *GetSupplierResponse) GetSupplier() *SupplierProto {
 }
 
 type CreateSupplierRequest struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Name          string                      `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Number        string                      `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	Note          *string                     `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	BillToAddress *CreateSupplierAddressInput `protobuf:"bytes,4,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
-	ShipToAddress *CreateSupplierAddressInput `protobuf:"bytes,5,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
-	Includes      []string                    `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState      `protogen:"open.v1"`
+	Name                  string                      `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Number                string                      `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	Note                  *string                     `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	BillToAddress         *CreateSupplierAddressInput `protobuf:"bytes,4,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
+	ShipToAddress         *CreateSupplierAddressInput `protobuf:"bytes,5,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
+	Includes              []string                    `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
+	Status                *string                     `protobuf:"bytes,7,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Instructions          *string                     `protobuf:"bytes,8,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Email                 *string                     `protobuf:"bytes,9,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *string                     `protobuf:"bytes,10,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *string                     `protobuf:"bytes,11,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	CarrierBillingType    *string                     `protobuf:"bytes,12,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *string                     `protobuf:"bytes,13,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	DefaultCarrierId      *string                     `protobuf:"bytes,14,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
+	DefaultServiceLevelId *string                     `protobuf:"bytes,15,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	PaymentTermId         *string                     `protobuf:"bytes,16,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
+	ShippingTermId        *string                     `protobuf:"bytes,17,opt,name=shipping_term_id,json=shippingTermId,proto3,oneof" json:"shipping_term_id,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateSupplierRequest) Reset() {
@@ -4541,6 +4774,83 @@ func (x *CreateSupplierRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreateSupplierRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetInstructions() string {
+	if x != nil && x.Instructions != nil {
+		return *x.Instructions
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetCarrierBillingType() string {
+	if x != nil && x.CarrierBillingType != nil {
+		return *x.CarrierBillingType
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetCarrierBillingAccount() string {
+	if x != nil && x.CarrierBillingAccount != nil {
+		return *x.CarrierBillingAccount
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetDefaultCarrierId() string {
+	if x != nil && x.DefaultCarrierId != nil {
+		return *x.DefaultCarrierId
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetDefaultServiceLevelId() string {
+	if x != nil && x.DefaultServiceLevelId != nil {
+		return *x.DefaultServiceLevelId
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetPaymentTermId() string {
+	if x != nil && x.PaymentTermId != nil {
+		return *x.PaymentTermId
+	}
+	return ""
+}
+
+func (x *CreateSupplierRequest) GetShippingTermId() string {
+	if x != nil && x.ShippingTermId != nil {
+		return *x.ShippingTermId
+	}
+	return ""
+}
+
 type CreateSupplierResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Supplier      *SupplierProto         `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty"`
@@ -4586,17 +4896,31 @@ func (x *CreateSupplierResponse) GetSupplier() *SupplierProto {
 }
 
 type UpdateSupplierRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name            *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Number          *string                `protobuf:"bytes,3,opt,name=number,proto3,oneof" json:"number,omitempty"`
-	Note            *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	UpdateNote      bool                   `protobuf:"varint,5,opt,name=update_note,json=updateNote,proto3" json:"update_note,omitempty"`
-	BillToAddressId *string                `protobuf:"bytes,6,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
-	ShipToAddressId *string                `protobuf:"bytes,7,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
-	Includes        []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                  *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Number                *string                `protobuf:"bytes,3,opt,name=number,proto3,oneof" json:"number,omitempty"`
+	Note                  *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	UpdateNote            bool                   `protobuf:"varint,5,opt,name=update_note,json=updateNote,proto3" json:"update_note,omitempty"`
+	BillToAddressId       *string                `protobuf:"bytes,6,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
+	ShipToAddressId       *string                `protobuf:"bytes,7,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	Includes              []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	Status                *string                `protobuf:"bytes,9,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Instructions          *StringPatch           `protobuf:"bytes,10,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Email                 *StringPatch           `protobuf:"bytes,11,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *StringPatch           `protobuf:"bytes,12,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *StringPatch           `protobuf:"bytes,13,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	CarrierBillingType    *string                `protobuf:"bytes,14,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *StringPatch           `protobuf:"bytes,15,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	DefaultCarrierId      *StringPatch           `protobuf:"bytes,16,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
+	DefaultServiceLevelId *StringPatch           `protobuf:"bytes,17,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	PaymentTermId         *StringPatch           `protobuf:"bytes,18,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
+	ShippingTermId        *StringPatch           `protobuf:"bytes,19,opt,name=shipping_term_id,json=shippingTermId,proto3,oneof" json:"shipping_term_id,omitempty"`
+	// Clearable default addresses; bill_to_address_id / ship_to_address_id (6, 7) set without clearing.
+	DefaultBillToAddressId *StringPatch `protobuf:"bytes,20,opt,name=default_bill_to_address_id,json=defaultBillToAddressId,proto3,oneof" json:"default_bill_to_address_id,omitempty"`
+	DefaultShipToAddressId *StringPatch `protobuf:"bytes,21,opt,name=default_ship_to_address_id,json=defaultShipToAddressId,proto3,oneof" json:"default_ship_to_address_id,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateSupplierRequest) Reset() {
@@ -4681,6 +5005,97 @@ func (x *UpdateSupplierRequest) GetShipToAddressId() string {
 func (x *UpdateSupplierRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *UpdateSupplierRequest) GetInstructions() *StringPatch {
+	if x != nil {
+		return x.Instructions
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetEmail() *StringPatch {
+	if x != nil {
+		return x.Email
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetPhone() *StringPatch {
+	if x != nil {
+		return x.Phone
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetUrl() *StringPatch {
+	if x != nil {
+		return x.Url
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetCarrierBillingType() string {
+	if x != nil && x.CarrierBillingType != nil {
+		return *x.CarrierBillingType
+	}
+	return ""
+}
+
+func (x *UpdateSupplierRequest) GetCarrierBillingAccount() *StringPatch {
+	if x != nil {
+		return x.CarrierBillingAccount
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetDefaultCarrierId() *StringPatch {
+	if x != nil {
+		return x.DefaultCarrierId
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetDefaultServiceLevelId() *StringPatch {
+	if x != nil {
+		return x.DefaultServiceLevelId
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetPaymentTermId() *StringPatch {
+	if x != nil {
+		return x.PaymentTermId
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetShippingTermId() *StringPatch {
+	if x != nil {
+		return x.ShippingTermId
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetDefaultBillToAddressId() *StringPatch {
+	if x != nil {
+		return x.DefaultBillToAddressId
+	}
+	return nil
+}
+
+func (x *UpdateSupplierRequest) GetDefaultShipToAddressId() *StringPatch {
+	if x != nil {
+		return x.DefaultShipToAddressId
 	}
 	return nil
 }
@@ -6719,7 +7134,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x1aBulkUpsertLocationsRequest\x12;\n" +
 	"\tlocations\x18\x01 \x03(\v2\x1d.core.BulkUpsertLocationInputR\tlocations\">\n" +
 	"\x1bBulkUpsertLocationsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xab\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xe7\t\n" +
 	"\x14SupplierSummaryProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -6734,10 +7149,34 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0fbill_to_address\x18\n" +
 	" \x01(\v2\x1a.core.CustomerAddressProtoR\rbillToAddress\x12B\n" +
 	"\x0fship_to_address\x18\v \x01(\v2\x1a.core.CustomerAddressProtoR\rshipToAddress\x12%\n" +
-	"\x0ematerial_count\x18\f \x01(\x03R\rmaterialCountB\a\n" +
+	"\x0ematerial_count\x18\f \x01(\x03R\rmaterialCount\x12\x16\n" +
+	"\x06status\x18\r \x01(\tR\x06status\x12'\n" +
+	"\finstructions\x18\x0e \x01(\tH\x03R\finstructions\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x0f \x01(\tH\x04R\x05email\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\x10 \x01(\tH\x05R\x05phone\x88\x01\x01\x12\x15\n" +
+	"\x03url\x18\x11 \x01(\tH\x06R\x03url\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x12 \x01(\tH\aR\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x18\x13 \x01(\tH\bR\x15carrierBillingAccount\x88\x01\x01\x121\n" +
+	"\x12default_carrier_id\x18\x14 \x01(\tH\tR\x10defaultCarrierId\x88\x01\x01\x12<\n" +
+	"\x18default_service_level_id\x18\x15 \x01(\tH\n" +
+	"R\x15defaultServiceLevelId\x88\x01\x01\x12+\n" +
+	"\x0fpayment_term_id\x18\x16 \x01(\tH\vR\rpaymentTermId\x88\x01\x01\x12-\n" +
+	"\x10shipping_term_id\x18\x17 \x01(\tH\fR\x0eshippingTermId\x88\x01\x01\x12,\n" +
+	"\x12has_material_count\x18\x18 \x01(\bR\x10hasMaterialCountB\a\n" +
 	"\x05_noteB\x15\n" +
 	"\x13_bill_to_address_idB\x15\n" +
-	"\x13_ship_to_address_id\"\xc4\x03\n" +
+	"\x13_ship_to_address_idB\x0f\n" +
+	"\r_instructionsB\b\n" +
+	"\x06_emailB\b\n" +
+	"\x06_phoneB\x06\n" +
+	"\x04_urlB\x17\n" +
+	"\x15_carrier_billing_typeB\x1a\n" +
+	"\x18_carrier_billing_accountB\x15\n" +
+	"\x13_default_carrier_idB\x1b\n" +
+	"\x19_default_service_level_idB\x12\n" +
+	"\x10_payment_term_idB\x13\n" +
+	"\x11_shipping_term_id\"\x92\n" +
+	"\n" +
 	"\rSupplierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -6750,10 +7189,37 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
 	"\x0ematerial_count\x18\n" +
-	" \x01(\x03R\rmaterialCountB\a\n" +
+	" \x01(\x03R\rmaterialCount\x120\n" +
+	"\x12bill_to_address_id\x18\v \x01(\tH\x03R\x0fbillToAddressId\x88\x01\x01\x120\n" +
+	"\x12ship_to_address_id\x18\f \x01(\tH\x04R\x0fshipToAddressId\x88\x01\x01\x12\x16\n" +
+	"\x06status\x18\r \x01(\tR\x06status\x12'\n" +
+	"\finstructions\x18\x0e \x01(\tH\x05R\finstructions\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x0f \x01(\tH\x06R\x05email\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\x10 \x01(\tH\aR\x05phone\x88\x01\x01\x12\x15\n" +
+	"\x03url\x18\x11 \x01(\tH\bR\x03url\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x12 \x01(\tH\tR\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x18\x13 \x01(\tH\n" +
+	"R\x15carrierBillingAccount\x88\x01\x01\x121\n" +
+	"\x12default_carrier_id\x18\x14 \x01(\tH\vR\x10defaultCarrierId\x88\x01\x01\x12<\n" +
+	"\x18default_service_level_id\x18\x15 \x01(\tH\fR\x15defaultServiceLevelId\x88\x01\x01\x12+\n" +
+	"\x0fpayment_term_id\x18\x16 \x01(\tH\rR\rpaymentTermId\x88\x01\x01\x12-\n" +
+	"\x10shipping_term_id\x18\x17 \x01(\tH\x0eR\x0eshippingTermId\x88\x01\x01\x12,\n" +
+	"\x12has_material_count\x18\x18 \x01(\bR\x10hasMaterialCountB\a\n" +
 	"\x05_noteB\x12\n" +
 	"\x10_bill_to_addressB\x12\n" +
-	"\x10_ship_to_address\"\xb5\x03\n" +
+	"\x10_ship_to_addressB\x15\n" +
+	"\x13_bill_to_address_idB\x15\n" +
+	"\x13_ship_to_address_idB\x0f\n" +
+	"\r_instructionsB\b\n" +
+	"\x06_emailB\b\n" +
+	"\x06_phoneB\x06\n" +
+	"\x04_urlB\x17\n" +
+	"\x15_carrier_billing_typeB\x1a\n" +
+	"\x18_carrier_billing_accountB\x15\n" +
+	"\x13_default_carrier_idB\x1b\n" +
+	"\x19_default_service_level_idB\x12\n" +
+	"\x10_payment_term_idB\x13\n" +
+	"\x11_shipping_term_id\"\xb5\x03\n" +
 	"\x1aCreateSupplierAddressInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05phone\x18\x02 \x01(\tH\x00R\x05phone\x88\x01\x01\x12\x19\n" +
@@ -6774,7 +7240,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
-	"\f_postal_code\"\xc8\x02\n" +
+	"\f_postal_code\"\xf8\x02\n" +
 	"\x14ListSuppliersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -6783,11 +7249,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"start_date\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\aendDate\x88\x01\x01\x12\x19\n" +
 	"\bitem_ids\x18\x06 \x03(\tR\aitemIds\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12 \n" +
+	"\tis_active\x18\b \x01(\bH\x04R\bisActive\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"~\n" +
+	"\t_end_dateB\f\n" +
+	"\n" +
+	"_is_active\"~\n" +
 	"\x15ListSuppliersResponse\x128\n" +
 	"\tsuppliers\x18\x01 \x03(\v2\x1a.core.SupplierSummaryProtoR\tsuppliers\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"@\n" +
@@ -6795,19 +7264,43 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetSupplierResponse\x12/\n" +
-	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xc7\x02\n" +
+	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xe5\a\n" +
 	"\x15CreateSupplierRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
 	"\x04note\x18\x03 \x01(\tH\x00R\x04note\x88\x01\x01\x12M\n" +
 	"\x0fbill_to_address\x18\x04 \x01(\v2 .core.CreateSupplierAddressInputH\x01R\rbillToAddress\x88\x01\x01\x12M\n" +
 	"\x0fship_to_address\x18\x05 \x01(\v2 .core.CreateSupplierAddressInputH\x02R\rshipToAddress\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x06 \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06status\x18\a \x01(\tH\x03R\x06status\x88\x01\x01\x12'\n" +
+	"\finstructions\x18\b \x01(\tH\x04R\finstructions\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\t \x01(\tH\x05R\x05email\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\n" +
+	" \x01(\tH\x06R\x05phone\x88\x01\x01\x12\x15\n" +
+	"\x03url\x18\v \x01(\tH\aR\x03url\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\f \x01(\tH\bR\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x18\r \x01(\tH\tR\x15carrierBillingAccount\x88\x01\x01\x121\n" +
+	"\x12default_carrier_id\x18\x0e \x01(\tH\n" +
+	"R\x10defaultCarrierId\x88\x01\x01\x12<\n" +
+	"\x18default_service_level_id\x18\x0f \x01(\tH\vR\x15defaultServiceLevelId\x88\x01\x01\x12+\n" +
+	"\x0fpayment_term_id\x18\x10 \x01(\tH\fR\rpaymentTermId\x88\x01\x01\x12-\n" +
+	"\x10shipping_term_id\x18\x11 \x01(\tH\rR\x0eshippingTermId\x88\x01\x01B\a\n" +
 	"\x05_noteB\x12\n" +
 	"\x10_bill_to_addressB\x12\n" +
-	"\x10_ship_to_address\"I\n" +
+	"\x10_ship_to_addressB\t\n" +
+	"\a_statusB\x0f\n" +
+	"\r_instructionsB\b\n" +
+	"\x06_emailB\b\n" +
+	"\x06_phoneB\x06\n" +
+	"\x04_urlB\x17\n" +
+	"\x15_carrier_billing_typeB\x1a\n" +
+	"\x18_carrier_billing_accountB\x15\n" +
+	"\x13_default_carrier_idB\x1b\n" +
+	"\x19_default_service_level_idB\x12\n" +
+	"\x10_payment_term_idB\x13\n" +
+	"\x11_shipping_term_id\"I\n" +
 	"\x16CreateSupplierResponse\x12/\n" +
-	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xe2\x02\n" +
+	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\x91\v\n" +
 	"\x15UpdateSupplierRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
@@ -6817,12 +7310,40 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"updateNote\x120\n" +
 	"\x12bill_to_address_id\x18\x06 \x01(\tH\x03R\x0fbillToAddressId\x88\x01\x01\x120\n" +
 	"\x12ship_to_address_id\x18\a \x01(\tH\x04R\x0fshipToAddressId\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06status\x18\t \x01(\tH\x05R\x06status\x88\x01\x01\x12:\n" +
+	"\finstructions\x18\n" +
+	" \x01(\v2\x11.core.StringPatchH\x06R\finstructions\x88\x01\x01\x12,\n" +
+	"\x05email\x18\v \x01(\v2\x11.core.StringPatchH\aR\x05email\x88\x01\x01\x12,\n" +
+	"\x05phone\x18\f \x01(\v2\x11.core.StringPatchH\bR\x05phone\x88\x01\x01\x12(\n" +
+	"\x03url\x18\r \x01(\v2\x11.core.StringPatchH\tR\x03url\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x0e \x01(\tH\n" +
+	"R\x12carrierBillingType\x88\x01\x01\x12N\n" +
+	"\x17carrier_billing_account\x18\x0f \x01(\v2\x11.core.StringPatchH\vR\x15carrierBillingAccount\x88\x01\x01\x12D\n" +
+	"\x12default_carrier_id\x18\x10 \x01(\v2\x11.core.StringPatchH\fR\x10defaultCarrierId\x88\x01\x01\x12O\n" +
+	"\x18default_service_level_id\x18\x11 \x01(\v2\x11.core.StringPatchH\rR\x15defaultServiceLevelId\x88\x01\x01\x12>\n" +
+	"\x0fpayment_term_id\x18\x12 \x01(\v2\x11.core.StringPatchH\x0eR\rpaymentTermId\x88\x01\x01\x12@\n" +
+	"\x10shipping_term_id\x18\x13 \x01(\v2\x11.core.StringPatchH\x0fR\x0eshippingTermId\x88\x01\x01\x12R\n" +
+	"\x1adefault_bill_to_address_id\x18\x14 \x01(\v2\x11.core.StringPatchH\x10R\x16defaultBillToAddressId\x88\x01\x01\x12R\n" +
+	"\x1adefault_ship_to_address_id\x18\x15 \x01(\v2\x11.core.StringPatchH\x11R\x16defaultShipToAddressId\x88\x01\x01B\a\n" +
 	"\x05_nameB\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\x15\n" +
 	"\x13_bill_to_address_idB\x15\n" +
-	"\x13_ship_to_address_id\"I\n" +
+	"\x13_ship_to_address_idB\t\n" +
+	"\a_statusB\x0f\n" +
+	"\r_instructionsB\b\n" +
+	"\x06_emailB\b\n" +
+	"\x06_phoneB\x06\n" +
+	"\x04_urlB\x17\n" +
+	"\x15_carrier_billing_typeB\x1a\n" +
+	"\x18_carrier_billing_accountB\x15\n" +
+	"\x13_default_carrier_idB\x1b\n" +
+	"\x19_default_service_level_idB\x12\n" +
+	"\x10_payment_term_idB\x13\n" +
+	"\x11_shipping_term_idB\x1d\n" +
+	"\x1b_default_bill_to_address_idB\x1d\n" +
+	"\x1b_default_ship_to_address_id\"I\n" +
 	"\x16UpdateSupplierResponse\x12/\n" +
 	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"'\n" +
 	"\x15DeleteSupplierRequest\x12\x0e\n" +
@@ -7163,33 +7684,44 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	58,  // 84: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
 	58,  // 85: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
 	57,  // 86: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 87: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 88: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	56,  // 89: core.BatchGetSuppliersByIDsResponse.suppliers:type_name -> core.SupplierSummaryProto
-	96,  // 90: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 91: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	72,  // 92: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	97,  // 93: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	72,  // 94: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	72,  // 95: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	72,  // 96: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
-	96,  // 97: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 98: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	84,  // 99: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	94,  // 100: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	83,  // 101: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	85,  // 102: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	96,  // 103: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	86,  // 104: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	87,  // 105: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	87,  // 106: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	88,  // 107: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	89,  // 108: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	109, // [109:109] is the sub-list for method output_type
-	109, // [109:109] is the sub-list for method input_type
-	109, // [109:109] is the sub-list for extension type_name
-	109, // [109:109] is the sub-list for extension extendee
-	0,   // [0:109] is the sub-list for field type_name
+	100, // 87: core.UpdateSupplierRequest.instructions:type_name -> core.StringPatch
+	100, // 88: core.UpdateSupplierRequest.email:type_name -> core.StringPatch
+	100, // 89: core.UpdateSupplierRequest.phone:type_name -> core.StringPatch
+	100, // 90: core.UpdateSupplierRequest.url:type_name -> core.StringPatch
+	100, // 91: core.UpdateSupplierRequest.carrier_billing_account:type_name -> core.StringPatch
+	100, // 92: core.UpdateSupplierRequest.default_carrier_id:type_name -> core.StringPatch
+	100, // 93: core.UpdateSupplierRequest.default_service_level_id:type_name -> core.StringPatch
+	100, // 94: core.UpdateSupplierRequest.payment_term_id:type_name -> core.StringPatch
+	100, // 95: core.UpdateSupplierRequest.shipping_term_id:type_name -> core.StringPatch
+	100, // 96: core.UpdateSupplierRequest.default_bill_to_address_id:type_name -> core.StringPatch
+	100, // 97: core.UpdateSupplierRequest.default_ship_to_address_id:type_name -> core.StringPatch
+	57,  // 98: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	57,  // 99: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	56,  // 100: core.BatchGetSuppliersByIDsResponse.suppliers:type_name -> core.SupplierSummaryProto
+	96,  // 101: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 102: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	72,  // 103: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	97,  // 104: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	72,  // 105: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	72,  // 106: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	72,  // 107: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
+	96,  // 108: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 109: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	84,  // 110: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	94,  // 111: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	83,  // 112: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	85,  // 113: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	96,  // 114: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	86,  // 115: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	87,  // 116: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	87,  // 117: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	88,  // 118: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	89,  // 119: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	120, // [120:120] is the sub-list for method output_type
+	120, // [120:120] is the sub-list for method input_type
+	120, // [120:120] is the sub-list for extension type_name
+	120, // [120:120] is the sub-list for extension extendee
+	0,   // [0:120] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }

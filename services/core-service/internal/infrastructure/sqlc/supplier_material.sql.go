@@ -348,6 +348,88 @@ func (q *Queries) GetSupplierMaterialBySupplierAndMaterialID(ctx context.Context
 	return i, err
 }
 
+const listSupplierItemsByIDs = `-- name: ListSupplierItemsByIDs :many
+SELECT
+    sm.id,
+    sm.supplier_account_id,
+    sm.material_id,
+    m.item_id,
+    sm.supplier_part_number,
+    sm.supplier_description,
+    sm.is_active,
+    sm.created_at,
+    sm.updated_at
+FROM supplier_material sm
+JOIN material m ON m.id = sm.material_id
+WHERE sm.owner_account_id = ?
+  AND sm.supplier_account_id = ?
+  AND sm.id IN (/*SLICE:ids*/?)
+`
+
+type ListSupplierItemsByIDsParams struct {
+	OwnerAccountID    string
+	SupplierAccountID string
+	Ids               []string
+}
+
+type ListSupplierItemsByIDsRow struct {
+	ID                  string
+	SupplierAccountID   string
+	MaterialID          string
+	ItemID              string
+	SupplierPartNumber  string
+	SupplierDescription sql.NullString
+	IsActive            bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// Reads the supplier items a page of supplierItemListPageQuery chose, or one by its ID.
+func (q *Queries) ListSupplierItemsByIDs(ctx context.Context, arg ListSupplierItemsByIDsParams) ([]ListSupplierItemsByIDsRow, error) {
+	query := listSupplierItemsByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.SupplierAccountID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSupplierItemsByIDsRow
+	for rows.Next() {
+		var i ListSupplierItemsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SupplierAccountID,
+			&i.MaterialID,
+			&i.ItemID,
+			&i.SupplierPartNumber,
+			&i.SupplierDescription,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSupplierMaterialsBackward = `-- name: ListSupplierMaterialsBackward :many
 SELECT
     sm.id,
@@ -842,6 +924,36 @@ func (q *Queries) ListSupplierMaterialsForward(ctx context.Context, arg ListSupp
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSupplierItem = `-- name: UpdateSupplierItem :exec
+UPDATE supplier_material SET
+    supplier_part_number = ?,
+    supplier_description = ?,
+    is_active = ?,
+    updated_at = NOW(3)
+WHERE id = ?
+  AND owner_account_id = ?
+`
+
+type UpdateSupplierItemParams struct {
+	SupplierPartNumber  string
+	SupplierDescription sql.NullString
+	IsActive            bool
+	ID                  string
+	OwnerAccountID      string
+}
+
+// Writes the values the service merged from the request and the row.
+func (q *Queries) UpdateSupplierItem(ctx context.Context, arg UpdateSupplierItemParams) error {
+	_, err := q.db.ExecContext(ctx, updateSupplierItem,
+		arg.SupplierPartNumber,
+		arg.SupplierDescription,
+		arg.IsActive,
+		arg.ID,
+		arg.OwnerAccountID,
+	)
+	return err
 }
 
 const updateSupplierMaterial = `-- name: UpdateSupplierMaterial :execresult

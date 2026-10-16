@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -12,13 +13,11 @@ import (
 	"github.com/open-mrp/api/shared/idemresponse"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/tracing"
 )
 
 var supplierSvcTracer = tracing.GetTracer("core-service.supplier_service")
-
-// supplierAddressIncludes reads a supplier with its addresses. The gateway shows them only to a caller that asked.
-var supplierAddressIncludes = []string{"bill_to_address", "ship_to_address"}
 
 type supplierSvcImpl struct {
 	repos           domain.RepoFactory
@@ -103,7 +102,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, params domain.ListS
 }
 
 // BatchGetSuppliersByIDs serves the suppliers purchase and receiving orders name, so it admits whoever may read those orders.
-func (s *supplierSvcImpl) BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+func (s *supplierSvcImpl) BatchGetSuppliersByIDs(ctx context.Context, ids, includes []string) ([]*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.batch_get_by_ids")
 	defer span.End()
 
@@ -123,7 +122,7 @@ func (s *supplierSvcImpl) BatchGetSuppliersByIDs(ctx context.Context, ids []stri
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewSupplierRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	return s.repos.NewSupplierRepo().GetByIDs(ctx, identity.Target.AccountID, ids, includes)
 }
 
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
@@ -173,6 +172,12 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if params.ArchiveStatus == "" {
+		params.ArchiveStatus = constants.ArchiveStatusActive
+	}
+	if apiErr := checkSupplierEnums(&params.ArchiveStatus, params.CarrierBillingType); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	accountID, apiErr := id.GenID(id.AccountIDPrefix, nil)
 	if apiErr != nil {
@@ -210,7 +215,6 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			// Check for duplicate supplier number.
 			exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, params.Number, nil)
 			if apiErr != nil {
 				return apiErr
@@ -219,7 +223,18 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
 			}
 
-			// Create bill-to address if provided.
+			var refs customerRefs
+			refs.add(customerRefCarrier, params.DefaultCarrierID, nil, "defaults.carrier_id")
+			refs.add(customerRefServiceLevel, params.DefaultServiceLevelID, nil, "defaults.service_level_id")
+			refs.add(customerRefPaymentTerm, params.PaymentTermID, nil, "defaults.payment_term_id")
+			refs.add(customerRefShippingTerm, params.ShippingTermID, nil, "defaults.shipping_term_id")
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, refs); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkServiceLevelOnCarrier(txCtx, txSvc.repos, params.DefaultCarrierID, params.DefaultServiceLevelID, "defaults.service_level_id"); apiErr != nil {
+				return apiErr
+			}
+
 			var billToAddressID *string
 			if params.BillToAddress != nil {
 				addrID, geoID, acctAddrID, err := generateAddressIDs()
@@ -227,14 +242,13 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 					return err
 				}
 				params.BillToAddress.AccountID = accountID
-				_, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.BillToAddress)
-				if apiErr != nil {
+				if _, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.BillToAddress); apiErr != nil {
 					return apiErr
 				}
 				billToAddressID = &addrID
 			}
 
-			// Create ship-to address if provided, reusing the bill-to when it is the same address.
+			// The ship-to reuses the bill-to when it is the same address, and defaults to it when omitted.
 			var shipToAddressID *string
 			if params.ShipToAddress != nil && params.BillToAddress != nil && addressParamsEqual(*params.BillToAddress, *params.ShipToAddress) {
 				shipToAddressID = billToAddressID
@@ -244,21 +258,26 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 					return err
 				}
 				params.ShipToAddress.AccountID = accountID
-				_, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.ShipToAddress)
-				if apiErr != nil {
+				if _, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.ShipToAddress); apiErr != nil {
 					return apiErr
 				}
 				shipToAddressID = &addrID
 			}
-
-			// Dashboard defaults ship-to to bill-to when only bill-to is provided.
 			if shipToAddressID == nil && billToAddressID != nil {
 				shipToAddressID = billToAddressID
 			}
 
-			// The audit records the addresses whether or not the caller asked for them back.
-			params.Includes = supplierAddressIncludes
-			created, apiErr := txSupplierRepo.Create(txCtx, accountID, relationID, params, billToAddressID, shipToAddressID)
+			userIncludes := params.Includes
+			params.Includes = nil
+			if _, apiErr := txSupplierRepo.Create(txCtx, accountID, relationID, params, billToAddressID, shipToAddressID); apiErr != nil {
+				return apiErr
+			}
+			if params.Email != nil || params.Phone != nil || params.URL != nil {
+				if apiErr := txSvc.repos.NewCustomerRepo().UpdateBranding(txCtx, accountID, params.Email, params.Phone, params.URL); apiErr != nil {
+					return apiErr
+				}
+			}
+			created, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: accountID, Includes: userIncludes})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -268,14 +287,12 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			changes := audit.ComputeChanges(nil, created)
-
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
 				ResourceType: constants.ObjectTypeSupplier,
 				ResourceID:   created.ID,
-				Changes:      changes,
+				Changes:      audit.ComputeChanges(nil, created),
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -309,6 +326,12 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := checkSupplierEnums(params.ArchiveStatus, params.CarrierBillingType); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkSupplierNotBlank(params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	params.OwnerAccountID = identity.Target.AccountID
 
@@ -339,28 +362,12 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 				}
 			}
 
-			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
+			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID})
 			if apiErr != nil {
 				return apiErr
 			}
 
-			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.BillToAddressID, old.BillToAddress, "bill_to_address_id"); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.ShipToAddressID, old.ShipToAddress, "ship_to_address_id"); apiErr != nil {
-				return apiErr
-			}
-
-			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
-			if params.BillToAddressID == nil && old.BillToAddress != nil {
-				params.BillToAddressID = &old.BillToAddress.ID
-			}
-			if params.ShipToAddressID == nil && old.ShipToAddress != nil {
-				params.ShipToAddressID = &old.ShipToAddress.ID
-			}
-
-			// Check for duplicate supplier number if it's being changed.
-			if params.Number != nil {
+			if params.Number != nil && *params.Number != old.Number {
 				exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, *params.Number, &params.SupplierID)
 				if apiErr != nil {
 					return apiErr
@@ -370,26 +377,54 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 				}
 			}
 
-			// Read back as old was read, or the diff reports every address the caller did not ask for as removed.
-			params.Includes = supplierAddressIncludes
-			updated, apiErr := txSupplierRepo.Update(txCtx, params)
+			var refs customerRefs
+			refs.add(customerRefCarrier, params.DefaultCarrierID.ValuePtr(), old.DefaultCarrierID, "defaults.carrier_id")
+			refs.add(customerRefServiceLevel, params.DefaultServiceLevelID.ValuePtr(), old.DefaultServiceLevelID, "defaults.service_level_id")
+			refs.add(customerRefPaymentTerm, params.PaymentTermID.ValuePtr(), old.PaymentTermID, "defaults.payment_term_id")
+			refs.add(customerRefShippingTerm, params.ShippingTermID.ValuePtr(), old.ShippingTermID, "defaults.shipping_term_id")
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, refs); apiErr != nil {
+				return apiErr
+			}
+
+			w := mergeSupplierWrite(params, old)
+			if !equalStringPtr(w.DefaultCarrierID, old.DefaultCarrierID) || !equalStringPtr(w.DefaultServiceLevelID, old.DefaultServiceLevelID) {
+				if apiErr := checkServiceLevelOnCarrier(txCtx, txSvc.repos, w.DefaultCarrierID, w.DefaultServiceLevelID, "defaults.service_level_id"); apiErr != nil {
+					return apiErr
+				}
+			}
+			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.BillToAddressID.ValuePtr(), old.BillToAddressID, "defaults.bill_to_address_id"); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.ShipToAddressID.ValuePtr(), old.ShipToAddressID, "defaults.ship_to_address_id"); apiErr != nil {
+				return apiErr
+			}
+
+			if params.Email.WasProvided() || params.Phone.WasProvided() || params.URL.WasProvided() {
+				if apiErr := txSvc.repos.NewCustomerRepo().UpdateBranding(txCtx, params.SupplierID,
+					clearableOr(params.Email, old.Email), clearableOr(params.Phone, old.Phone), clearableOr(params.URL, old.URL)); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			updated, apiErr := txSupplierRepo.Update(txCtx, w, nil)
 			if apiErr != nil {
 				return apiErr
 			}
-			result = updated
-
-			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypeSupplier,
 				ResourceID:   updated.ID,
-				Changes:      changes,
+				Changes:      audit.ComputeChanges(old, updated),
 			}); apiErr != nil {
 				return apiErr
 			}
 
+			result, apiErr = txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: params.Includes})
+			if apiErr != nil {
+				return apiErr
+			}
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -402,6 +437,79 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// mergeSupplierWrite is the relation as an update leaves it: each field sent, and what the supplier held otherwise.
+func mergeSupplierWrite(params domain.UpdateSupplierParams, old *domain.Supplier) domain.SupplierRelationWrite {
+	w := domain.SupplierRelationWrite{
+		OwnerAccountID:        params.OwnerAccountID,
+		SupplierID:            params.SupplierID,
+		Name:                  old.Name,
+		Number:                old.Number,
+		IsActive:              old.ArchiveStatus.IsActive(),
+		Instructions:          clearableOr(params.Instructions, old.Instructions),
+		CarrierBillingType:    old.CarrierBillingType,
+		CarrierBillingAccount: clearableOr(params.CarrierBillingAccount, old.CarrierBillingAccount),
+		DefaultCarrierID:      clearableOr(params.DefaultCarrierID, old.DefaultCarrierID),
+		DefaultServiceLevelID: clearableOr(params.DefaultServiceLevelID, old.DefaultServiceLevelID),
+		PaymentTermID:         clearableOr(params.PaymentTermID, old.PaymentTermID),
+		ShippingTermID:        clearableOr(params.ShippingTermID, old.ShippingTermID),
+		BillToAddressID:       clearableOr(params.BillToAddressID, old.BillToAddressID),
+		ShipToAddressID:       clearableOr(params.ShipToAddressID, old.ShipToAddressID),
+	}
+	if params.Name != nil {
+		w.Name = *params.Name
+	}
+	if params.Number != nil {
+		w.Number = *params.Number
+	}
+	if params.ArchiveStatus != nil {
+		w.IsActive = params.ArchiveStatus.IsActive()
+	}
+	if params.CarrierBillingType != nil {
+		w.CarrierBillingType = params.CarrierBillingType
+	}
+	return w
+}
+
+// clearableOr is c's value when it was sent (nil when cleared), else held.
+func clearableOr(c field.Clearable[string], held *string) *string {
+	if !c.WasProvided() {
+		return held
+	}
+	return c.ValuePtr()
+}
+
+// checkSupplierEnums refuses a status or carrier billing type outside its values.
+func checkSupplierEnums(status *constants.ArchiveStatus, billing *constants.CarrierBillingType) *apierror.APIError {
+	if status != nil && !status.IsValid() {
+		return apierror.NewFieldError("status", apierror.CodeInvalidFormat, "status must be one of active or archived.")
+	}
+	if billing != nil && *billing != constants.CarrierBillingTypeSender && *billing != constants.CarrierBillingTypeThirdParty {
+		return apierror.NewFieldError("carrier_billing.type", apierror.CodeInvalidFormat, "carrier_billing.type must be one of sender or third_party.")
+	}
+	return nil
+}
+
+// checkSupplierNotBlank refuses a blank value where null is how a field is cleared.
+func checkSupplierNotBlank(params domain.UpdateSupplierParams) *apierror.APIError {
+	for _, f := range []struct {
+		value field.Clearable[string]
+		param string
+	}{
+		{params.Instructions, "instructions"},
+		{params.DefaultCarrierID, "defaults.carrier_id"},
+		{params.DefaultServiceLevelID, "defaults.service_level_id"},
+		{params.PaymentTermID, "defaults.payment_term_id"},
+		{params.ShippingTermID, "defaults.shipping_term_id"},
+		{params.BillToAddressID, "defaults.bill_to_address_id"},
+		{params.ShipToAddressID, "defaults.ship_to_address_id"},
+	} {
+		if v, ok := f.value.Value(); ok && strings.TrimSpace(v) == "" {
+			return apierror.NewFieldError(f.param, apierror.CodeInvalidFormat, "Field '"+f.param+"' must not be blank; send null to clear it.")
+		}
+	}
+	return nil
 }
 
 func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.DeleteSupplierParams) (*domain.Supplier, *apierror.APIError) {
@@ -423,7 +531,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	params.OwnerAccountID = identity.Target.AccountID
 
-	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
+	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID})
 	if apiErr != nil {
 		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID, params.OwnerAccountID)
@@ -437,37 +545,39 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	var result *domain.Supplier
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
-			return apiErr
-		}
-
-		var txErr *apierror.APIError
-		result, txErr = txSvc.repos.NewSupplierRepo().Delete(txCtx, params.OwnerAccountID, params.SupplierID)
-		if txErr != nil {
-			return txErr
-		}
-
-		changes := audit.ComputeChanges(result, (*domain.Supplier)(nil))
-
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeSupplier,
-			ResourceID:   result.ID,
-			Changes:      changes,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		return nil
+		return deleteSupplierInTx(txCtx, txSvc.repos, params.OwnerAccountID, supplier)
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return result, nil
+	return supplier, nil
+}
+
+// deleteSupplierInTx refuses a supplier that purchase orders or supplier items still reference, then deletes it,
+// leaving a tombstone and an audit event.
+func deleteSupplierInTx(ctx context.Context, repos domain.RepoFactory, ownerAccountID string, supplier *domain.Supplier) *apierror.APIError {
+	labels, apiErr := repos.NewSupplierRepo().InUseBy(ctx, ownerAccountID, supplier.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(labels) > 0 {
+		return domain.SupplierInUse.InUseError(labels)
+	}
+	if apiErr := repos.NewDeletedRecordRepo().CreateInAccount(ctx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, ownerAccountID, supplier); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := repos.NewSupplierRepo().Delete(ctx, ownerAccountID, supplier.ID); apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionDelete,
+		ResourceType: constants.ObjectTypeSupplier,
+		ResourceID:   supplier.ID,
+		Changes:      audit.ComputeChanges(supplier, (*domain.Supplier)(nil)),
+	})
 }
 
 func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain.BulkDeleteSuppliersParams) *apierror.APIError {
@@ -489,49 +599,25 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 
 	params.OwnerAccountID = identity.Target.AccountID
 
-	// Fetch all suppliers before deletion for audit trail.
 	supplierRepo := s.repos.NewSupplierRepo()
 	suppliers := make([]*domain.Supplier, 0, len(params.SupplierIDs))
 	for _, supplierID := range params.SupplierIDs {
-		supplier, apiErr := supplierRepo.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: supplierID, Includes: supplierAddressIncludes})
+		supplier, apiErr := supplierRepo.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: supplierID})
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 		suppliers = append(suppliers, supplier)
 	}
 
+	// All or none: one supplier still in use refuses the whole request.
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
-		deletedRecordRepo := txSvc.repos.NewDeletedRecordRepo()
 		for _, supplier := range suppliers {
-			if apiErr := deletedRecordRepo.CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
+			if apiErr := deleteSupplierInTx(txCtx, txSvc.repos, params.OwnerAccountID, supplier); apiErr != nil {
 				return apiErr
 			}
 		}
-
-		if apiErr := txSvc.repos.NewSupplierRepo().BulkDelete(txCtx, params.OwnerAccountID, params.SupplierIDs); apiErr != nil {
-			return apiErr
-		}
-
-		publisher := audit.NewPublisher()
-		outboxRepo := txSvc.repos.NewOutboxRepo()
-
-		for _, supplier := range suppliers {
-			changes := audit.ComputeChanges(supplier, (*domain.Supplier)(nil))
-
-			if apiErr := publisher.Publish(txCtx, outboxRepo, audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionDelete,
-				ResourceType: constants.ObjectTypeSupplier,
-				ResourceID:   supplier.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-		}
-
 		return nil
 	})
-
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -541,8 +627,8 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 
 // checkSupplierAddress refuses a default address that is not one of the supplier's own. Another account's
 // address would otherwise be read back through this supplier.
-func (s *supplierSvcImpl) checkSupplierAddress(ctx context.Context, supplierID string, addressID *string, current *domain.CustomerAddress, param string) *apierror.APIError {
-	if addressID == nil || (current != nil && current.ID == *addressID) {
+func (s *supplierSvcImpl) checkSupplierAddress(ctx context.Context, supplierID string, addressID, current *string, param string) *apierror.APIError {
+	if addressID == nil || (current != nil && *current == *addressID) {
 		return nil
 	}
 	inAccount, apiErr := s.repos.NewAddressRepo().IsInAccount(ctx, supplierID, *addressID)

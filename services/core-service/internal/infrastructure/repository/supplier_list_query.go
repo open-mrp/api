@@ -15,7 +15,7 @@ const supplierSearchWordLimit = 16
 // supplierListPageQuery selects one page of supplier account IDs in list order, emitting only the predicates the
 // request uses. ListSuppliersByIDs reads the page's rows.
 //
-// Every word of a search must appear in the supplier's name, number or notes, each word matched on its own.
+// Every word of a search must appear in the supplier's name or number, each word matched on its own.
 func supplierListPageQuery(params domain.ListSuppliersParams, cursor *pagination.StringCursor, limit int32) (string, []any) {
 	var f listFilter
 	f.add("ar.owner_account_id = ?", params.OwnerAccountID)
@@ -26,15 +26,13 @@ func supplierListPageQuery(params domain.ListSuppliersParams, cursor *pagination
 		join = "\nJOIN account a ON a.id = ar.counterparty_account_id"
 		for _, w := range words {
 			like := "%" + db.EscapeLike(w) + "%"
-			f.add("(COALESCE(NULLIF(ar.alias, ''), a.name) LIKE ? OR ar.external_number LIKE ? OR ar.notes LIKE ?)", like, like, like)
+			f.add("(COALESCE(NULLIF(ar.alias, ''), a.name) LIKE ? OR ar.external_number LIKE ?)", like, like)
 		}
 	}
-	if params.StartDate != nil {
-		f.add("ar.created_at >= ?", *params.StartDate)
+	if params.IsActive != nil {
+		f.add("ar.is_active = ?", *params.IsActive)
 	}
-	if params.EndDate != nil {
-		f.add("ar.created_at <= ?", *params.EndDate)
-	}
+	f.createdBetween("ar.created_at", params.Created)
 	if len(params.ItemIDs) > 0 {
 		f.add("EXISTS (SELECT 1 FROM supplier_material sm JOIN material m ON m.id = sm.material_id"+
 			" WHERE sm.supplier_account_id = ar.counterparty_account_id AND sm.owner_account_id = ar.owner_account_id"+

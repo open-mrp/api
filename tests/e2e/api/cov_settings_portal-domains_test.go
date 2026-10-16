@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -134,16 +135,13 @@ func TestCovPortalDomains_Lifecycle(t *testing.T) {
 	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
 
-	// A subdomain yields exactly one routing CNAME to Vercel.
-	records := jsonListData(created, "dns_records")
+	assert.ElementsMatch(t, []string{"id", "object", "domain", "status", "dns_records", "verified_at", "created_at", "updated_at"}, mapKeys(created))
+
+	// A subdomain yields exactly one routing CNAME, as a plain array of {type, name, value}.
+	records, ok := created["dns_records"].([]any)
+	require.True(t, ok, "dns_records should be a plain array")
 	require.Len(t, records, 1, "a subdomain should get exactly one DNS record")
-	rec, ok := records[0].(map[string]any)
-	require.True(t, ok, "dns_records[0] should be an object")
-	assertObjectField(t, rec, "dns_record")
-	assert.Equal(t, "CNAME", jsonField(rec, "type"))
-	assert.Equal(t, domain, jsonField(rec, "name"))
-	assert.Equal(t, "cname.vercel-dns.com", jsonField(rec, "value"))
-	assert.Equal(t, "routing", jsonField(rec, "reason"))
+	assert.Equal(t, map[string]any{"type": "CNAME", "name": domain, "value": "cname.vercel-dns.com"}, records[0])
 
 	// GET reflects the same freshly-created state.
 	getStatus, getBody, err := apiClient.GetListRaw(covPortalDomainsPath+"/"+id, nil)
@@ -249,10 +247,37 @@ func TestCovPortalDomains_Delete(t *testing.T) {
 	status, body, err := apiClient.Delete(covPortalDomainsPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	assertDeletedStub(t, body, id, "portal_domain")
 
 	getStatus, getBody, err := apiClient.GetListRaw(covPortalDomainsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, getStatus, getBody)
+}
+
+// TestCovPortalDomains_Preview9 covers a preview.9 caller, which still reads dns_records as a list of dns_record
+// objects with a reason.
+func TestCovPortalDomains_Preview9(t *testing.T) {
+	preview := apiClient.WithAPIVersion(preview9Version)
+	domain := covPortalDomainsUniqueDomain("e2e-podn-p9")
+	created := covPortalDomainsCreate(t, preview, domain)
+
+	records := jsonListData(created, "dns_records")
+	require.Len(t, records, 1)
+	assert.Equal(t, map[string]any{"object": "dns_record", "type": "CNAME", "name": domain, "value": "cname.vercel-dns.com", "reason": "routing"}, records[0])
+
+	list, status, err := preview.GetList(covPortalDomainsPath, nil)
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.Len(t, list.Data, 1)
+	assert.Equal(t, "list", jsonField(jsonObject(parseJSON(list.Data[0]), "dns_records"), "object"))
+}
+
+func TestCovPortalDomains_ListRejectsACursor(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(covPortalDomainsPath, url.Values{"cursor": {"bogus"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error"), "cursor")
 }
 
 // ──────────────────────────────────────────────

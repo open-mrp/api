@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -15,39 +14,21 @@ import (
 
 // Account Integrations (/v1/settings/integrations) coverage.
 //
-// This resource has only List/Create/Update(PUT)/Delete — there is no
-// retrieve-by-id endpoint. "Get" coverage therefore comes from list-scanning
-// for created ids and from the Create/Update/Delete response bodies
-// themselves. The resource struct has no `expandable:"true"` fields and the
-// list operation accepts no `include` param, so the Expandable Fields
-// category is N/A for this group.
+// There is no retrieve-by-id endpoint, so reads come from the list and from the write responses. The resource has no
+// expandable fields.
 //
-// Create is an upsert-by-(account,provider): a second create for a provider
-// code that already exists on the account updates the existing row instead
-// of erroring (confirmed live), and only 3 provider codes exist
-// (stripe/shippo/hubspot). The main seed account already has `shippo` seeded
-// (SeedAccountIntegrationID) and must not be mutated or deleted. That leaves
-// exactly 2 free codes on the main account and 3 free codes on Tenant B
-// (which has zero seeded account_integration rows). To avoid parallel tests
-// racing on the same (account, provider) pair, codes are allocated as
-// follows and never shared across top-level tests:
-//   - SeedAccountID (main):        hubspot -> TestCovSettingsIntegrations_CRUD
-//                                  stripe  -> TestCovSettingsIntegrations_CreateAndUpdateAllFields
-//   - SeedTenantBAccountID:        hubspot, stripe (sequential subtests) -> TestCovSettingsIntegrations_OmittedFields
-//                                  shippo  -> TestCovSettingsIntegrations_CreateResponseShape
+// An account has one integration per provider and only 3 providers exist (stripe/shippo/hubspot). The main seed
+// account already has `shippo` seeded (SeedAccountIntegrationID), which must not be mutated or deleted. That leaves 2
+// free providers on the main account and 3 on Tenant B. To keep parallel tests off the same (account, provider) pair,
+// each top-level test owns its slots and runs everything on them sequentially:
+//   - SeedAccountID (main):   hubspot -> TestCovSettingsIntegrations_CRUD
+//     stripe  -> TestCovSettingsIntegrations_CreateAndUpdateAllFields (and the webhook tests, under stripeConnectionMu)
+//   - SeedTenantBAccountID:   hubspot, stripe -> TestCovSettingsIntegrations_OmittedFields
+//     shippo  -> TestCovSettingsIntegrations_Preview9
 //
-// Idempotency coverage (create-idempotency-key-replay, create-as-upsert with
-// a different key, and update-idempotency-key-replay) is folded in as extra
-// sequential subtests appended to TestCovSettingsIntegrations_CRUD and
-// TestCovSettingsIntegrations_CreateAndUpdateAllFields, reusing the same
-// (account, provider) slot only after that test's primary row has already
-// been deleted — there is no 6th free (account, provider) slot to allocate
-// a fully independent top-level idempotency test.
-//
-// Validation-only requests never reach the DB insert/update, so they reuse
-// provider codes freely across parallel subtests, and null/blank Update
-// validation subtests target the read-only seeded SeedAccountIntegrationID
-// row (confirmed live: a 400-rejected PUT does not mutate the stored row).
+// Validation-only requests never reach an insert or update, so they reuse providers freely. In the e2e stack the
+// provider check is a stub: credentials containing "invalid" are rejected and those containing "unreachable" get no
+// answer.
 
 const covSettingsIntegrationsPath = "/v1/settings/integrations"
 
@@ -68,24 +49,44 @@ func lockStripeUnconnected(t *testing.T) {
 	t.Cleanup(stripeConnectionMu.RUnlock)
 }
 
-// covSettingsIntegrationsHubspotCredentials returns a valid hubspot credentials JSON string.
-func covSettingsIntegrationsHubspotCredentials(suffix string) string {
-	return `{"access_token":"pat-e2e-` + suffix + `"}`
+// covSettingsIntegrationsHubspotCredentials returns valid hubspot credentials.
+func covSettingsIntegrationsHubspotCredentials(suffix string) map[string]any {
+	return map[string]any{"access_token": "pat-e2e-" + suffix}
 }
 
-// covSettingsIntegrationsStripeCredentials returns valid (production/live) stripe credentials JSON.
-func covSettingsIntegrationsStripeCredentials(suffix string) string {
-	return `{"private_key":"sk_live_e2e` + suffix + `","publishable_key":"pk_live_e2e` + suffix + `","webhook_secret":"whsec_e2e` + suffix + `"}`
+// covSettingsIntegrationsStripeCredentials returns valid (production/live) stripe credentials.
+func covSettingsIntegrationsStripeCredentials(suffix string) map[string]any {
+	return map[string]any{"private_key": "sk_live_e2e" + suffix, "publishable_key": "pk_live_e2e" + suffix, "webhook_secret": "whsec_e2e" + suffix}
 }
 
 // covSettingsIntegrationsShippoCredentials returns shippo credentials valid on the e2e stack, which
 // is not production and so takes only test keys.
-func covSettingsIntegrationsShippoCredentials(suffix string) string {
-	return `{"api_key":"shippo_test_e2e` + suffix + `"}`
+func covSettingsIntegrationsShippoCredentials(suffix string) map[string]any {
+	return map[string]any{"api_key": "shippo_test_e2e" + suffix}
+}
+
+// assertIntegration checks every field of an integration response.
+func assertIntegration(t *testing.T, got map[string]any, name, provider, status string) {
+	t.Helper()
+	assert.ElementsMatch(t, []string{"id", "object", "name", "provider", "status", "connection_status", "created_at", "updated_at"}, mapKeys(got))
+	assertIDFormat(t, jsonField(got, "id"), "acig")
+	assertObjectField(t, got, "account_integration")
+	assert.Equal(t, name, jsonField(got, "name"))
+	assert.Equal(t, provider, jsonField(got, "provider"))
+	assert.Equal(t, status, jsonField(got, "status"))
+	assert.Equal(t, "connected", jsonField(got, "connection_status"), "the provider accepted the credentials when they were saved")
+	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
+	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+}
+
+func integrationPath(id string) string { return covSettingsIntegrationsPath + "/" + id }
+
+func rotateCredentialsPath(id string) string {
+	return integrationPath(id) + "/actions/rotate-credentials"
 }
 
 // ──────────────────────────────────────────────
-// CRUD Lifecycle (+ folded-in idempotency)
+// CRUD lifecycle, duplicate provider, rotation
 // ──────────────────────────────────────────────
 
 func TestCovSettingsIntegrations_CRUD(t *testing.T) {
@@ -99,102 +100,134 @@ func TestCovSettingsIntegrations_CRUD(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-
 	created := parseJSON(body)
 	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
-	assertIDFormat(t, id, "acig")
-	assertObjectField(t, created, "account_integration")
-	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "hubspot", jsonField(created, "provider"))
-	assert.Equal(t, "active", jsonField(created, "status"))
-
-	// No GET-by-id endpoint exists — verify presence via list scan instead.
+	assertIntegration(t, created, name, "hubspot", "active")
 	assertListContainsID(t, covSettingsIntegrationsPath, nil, id)
 
-	// UPDATE (PUT, not PATCH).
-	newName := uniqueName("e2e-covsi-crud-upd")
-	updStatus, updBody, err := apiClient.Put(covSettingsIntegrationsPath+"/"+id, map[string]any{
-		"name":   newName,
-		"status": "inactive",
+	t.Run("SecondIntegrationForTheProviderConflicts", func(t *testing.T) {
+		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
+			"name":        uniqueName("e2e-covsi-dup"),
+			"provider":    "hubspot",
+			"credentials": covSettingsIntegrationsHubspotCredentials("dup"),
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 409, status, body)
+		errObj := requireErrorResponse(t, body, "resource_exists", "invalid_request_error")
+		assertErrorParam(t, errObj, "provider")
 	})
+
+	t.Run("RotateCredentials", func(t *testing.T) {
+		key := newIdempotencyKey()
+		rotate := map[string]any{"credentials": covSettingsIntegrationsHubspotCredentials("rotated")}
+		s1, b1, err := apiClient.Post(rotateCredentialsPath(id), rotate, key)
+		require.NoError(t, err)
+		requireStatus(t, 200, s1, b1)
+		rotated := parseJSON(b1)
+		assertIntegration(t, rotated, name, "hubspot", "active")
+		assert.Equal(t, id, jsonField(rotated, "id"))
+		assert.Equal(t, jsonField(created, "created_at"), jsonField(rotated, "created_at"))
+
+		s2, b2, err := apiClient.Post(rotateCredentialsPath(id), rotate, key)
+		require.NoError(t, err)
+		requireStatus(t, 200, s2, b2)
+		assert.JSONEq(t, string(b1), string(b2), "a repeated Idempotency-Key replays the rotation")
+	})
+
+	t.Run("RotateRejectedByTheProvider", func(t *testing.T) {
+		status, body, err := apiClient.Post(rotateCredentialsPath(id), map[string]any{
+			"credentials": map[string]any{"access_token": "pat-invalid"},
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, body)
+		errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+		assertErrorParam(t, errObj, "credentials")
+	})
+
+	t.Run("RotateWhenTheProviderIsUnreachable", func(t *testing.T) {
+		status, body, err := apiClient.Post(rotateCredentialsPath(id), map[string]any{
+			"credentials": map[string]any{"access_token": "pat-unreachable"},
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 502, status, body)
+		requireErrorResponse(t, body, "external_service_error", "api_error")
+	})
+
+	t.Run("RotateWithAnotherProvidersKeys", func(t *testing.T) {
+		status, body, err := apiClient.Post(rotateCredentialsPath(id), map[string]any{
+			"credentials": covSettingsIntegrationsShippoCredentials("wrong"),
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, body)
+		errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+		assertErrorFieldParams(t, errObj, "credentials.access_token", "credentials.api_key")
+	})
+
+	t.Run("RotateMissingCredentials", func(t *testing.T) {
+		status, body, err := apiClient.Post(rotateCredentialsPath(id), map[string]any{}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 422, status, body)
+		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+		assertErrorParam(t, errObj, "credentials")
+	})
+
+	newName := uniqueName("e2e-covsi-crud-upd")
+	updStatus, updBody, err := apiClient.Patch(integrationPath(id), map[string]any{"name": newName, "status": "disabled"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, updStatus, updBody)
-
 	updated := parseJSON(updBody)
+	assertIntegration(t, updated, newName, "hubspot", "disabled")
 	assert.Equal(t, id, jsonField(updated, "id"))
-	assert.Equal(t, newName, jsonField(updated, "name"))
-	assert.Equal(t, "inactive", jsonField(updated, "status"))
-	assert.Equal(t, "hubspot", jsonField(updated, "provider"), "provider should not change on update")
 
-	assertListContainsID(t, covSettingsIntegrationsPath, nil, id)
-
-	// DELETE — returns the deleted resource body.
-	delStatus, delBody, err := apiClient.Delete(covSettingsIntegrationsPath + "/" + id)
+	delStatus, delBody, err := apiClient.Delete(integrationPath(id))
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
-	deleted := parseJSON(delBody)
-	assert.Equal(t, id, jsonField(deleted, "id"))
+	assertDeletedStub(t, delBody, id, "account_integration")
 
-	// Second delete -> 410 Gone (a real behavioral distinction for this
-	// resource: most others return 404 on a second delete).
-	del2Status, del2Body, err := apiClient.Delete(covSettingsIntegrationsPath + "/" + id)
+	del2Status, del2Body, err := apiClient.Delete(integrationPath(id))
 	require.NoError(t, err)
 	requireStatus(t, 410, del2Status, del2Body)
 	requireErrorResponse(t, del2Body, "resource_gone", "invalid_request_error")
+	assert.Nil(t, listFindByField(t, covSettingsIntegrationsPath, nil, "id", id), "a deleted integration is not listed")
 
-	assert.Nil(t, listFindByField(t, covSettingsIntegrationsPath, nil, "id", id),
-		"deleted row should no longer appear in the list")
+	rotStatus, rotBody, err := apiClient.Post(rotateCredentialsPath(id), map[string]any{"credentials": covSettingsIntegrationsHubspotCredentials("gone")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 404, rotStatus, rotBody)
 
-	// --- Idempotency coverage, folded in here to reuse the now-free
-	// (SeedAccountID, hubspot) slot sequentially rather than claim a 6th
-	// (account, provider) pair that does not exist. ---
-
+	// The hubspot slot is free again: the same Idempotency-Key replays one create.
 	t.Run("CreateIdempotent", func(t *testing.T) {
 		idemName := uniqueName("e2e-covsi-idem")
 		idemKey := newIdempotencyKey()
-		creds := covSettingsIntegrationsHubspotCredentials("idem")
+		req := map[string]any{"name": idemName, "provider": "hubspot", "credentials": covSettingsIntegrationsHubspotCredentials("idem")}
 
-		s1, b1, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        idemName,
-			"provider":    "hubspot",
-			"credentials": creds,
-		}, idemKey)
+		s1, b1, err := apiClient.Post(covSettingsIntegrationsPath, req, idemKey)
 		require.NoError(t, err)
 		requireStatus(t, 201, s1, b1)
 		id1 := jsonField(parseJSON(b1), "id")
-		require.NotEmpty(t, id1)
-		defer apiClient.Delete(covSettingsIntegrationsPath + "/" + id1)
+		defer apiClient.Delete(integrationPath(id1))
 
-		s2, b2, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        idemName,
-			"provider":    "hubspot",
-			"credentials": creds,
-		}, idemKey)
+		s2, b2, err := apiClient.Post(covSettingsIntegrationsPath, req, idemKey)
 		require.NoError(t, err)
 		requireStatus(t, 201, s2, b2)
-		assert.Equal(t, id1, jsonField(parseJSON(b2), "id"),
-			"repeated Idempotency-Key with identical body should return the same resource")
-
-		// A *different* Idempotency-Key targeting the same provider takes the
-		// create-as-upsert path (distinct from idempotency-key caching): 201
-		// again, same row id (upsert-by-provider), but the name is updated.
-		upsertName := uniqueName("e2e-covsi-idem-upsert")
-		s3, b3, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        upsertName,
-			"provider":    "hubspot",
-			"credentials": covSettingsIntegrationsHubspotCredentials("idem2"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, s3, b3)
-		upserted := parseJSON(b3)
-		assert.Equal(t, id1, jsonField(upserted, "id"), "create-as-upsert keeps the same row id for the provider")
-		assert.Equal(t, upsertName, jsonField(upserted, "name"), "create-as-upsert updates the name")
+		assert.Equal(t, id1, jsonField(parseJSON(b2), "id"), "repeated Idempotency-Key with identical body returns the same integration")
 	})
 }
 
+// assertErrorFieldParams checks a validation_failed error lists exactly these failing params.
+func assertErrorFieldParams(t *testing.T, errObj map[string]any, params ...string) {
+	t.Helper()
+	rows, _ := errObj["errors"].([]any)
+	got := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if row, ok := r.(map[string]any); ok {
+			got = append(got, jsonField(row, "param"))
+		}
+	}
+	assert.ElementsMatch(t, params, got)
+}
+
 // ──────────────────────────────────────────────
-// Create + Update All Fields (+ folded-in update idempotency)
+// Create + Update All Fields
 // ──────────────────────────────────────────────
 
 func TestCovSettingsIntegrations_CreateAndUpdateAllFields(t *testing.T) {
@@ -206,77 +239,50 @@ func TestCovSettingsIntegrations_CreateAndUpdateAllFields(t *testing.T) {
 		"name":        name,
 		"provider":    "stripe",
 		"credentials": covSettingsIntegrationsStripeCredentials("allf"),
+		"status":      "disabled",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-
 	created := parseJSON(body)
 	id := jsonField(created, "id")
-	require.NotEmpty(t, id)
+	assertIntegration(t, created, name, "stripe", "disabled")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(integrationPath(id)) })
 
-	// Every field on the AccountIntegration resource struct.
-	assertIDFormat(t, id, "acig")
-	assertObjectField(t, created, "account_integration")
-	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "stripe", jsonField(created, "provider"))
-	assert.Equal(t, "active", jsonField(created, "status"))
-	assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
-	origCreatedAt := jsonField(created, "created_at")
-	origUpdatedAt := jsonField(created, "updated_at")
+	disabled, _, err := apiClient.GetList(covSettingsIntegrationsPath, url.Values{"statuses": {"disabled"}})
+	require.NoError(t, err)
+	found := false
+	for _, item := range disabled.Data {
+		assert.Equal(t, "disabled", DataItemField(item, "status"), "statuses[] narrows the list")
+		found = found || DataItemField(item, "id") == id
+	}
+	assert.True(t, found, "statuses=disabled lists the disabled integration")
 
-	// UPDATE both mutable fields.
 	updatedName := uniqueName("e2e-covsi-allf-upd")
-	updStatus, updBody, err := apiClient.Put(covSettingsIntegrationsPath+"/"+id, map[string]any{
-		"name":   updatedName,
-		"status": "inactive",
-	})
+	updStatus, updBody, err := apiClient.Patch(integrationPath(id), map[string]any{"name": updatedName, "status": "active"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, updStatus, updBody)
-
 	updated := parseJSON(updBody)
-	assert.Equal(t, id, jsonField(updated, "id"), "id must not change")
-	assertObjectField(t, updated, "account_integration")
-	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "inactive", jsonField(updated, "status"))
-	assert.Equal(t, "stripe", jsonField(updated, "provider"), "provider is preserved (not updatable via PUT)")
-	assert.Equal(t, origCreatedAt, jsonField(updated, "created_at"), "created_at is preserved")
-	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
-	assert.NotEqual(t, origUpdatedAt, jsonField(updated, "updated_at"), "updated_at should advance after update")
+	assertIntegration(t, updated, updatedName, "stripe", "active")
+	assert.Equal(t, id, jsonField(updated, "id"))
+	assert.Equal(t, jsonField(created, "created_at"), jsonField(updated, "created_at"))
+	assert.NotEqual(t, jsonField(created, "updated_at"), jsonField(updated, "updated_at"), "updated_at advances")
 
-	delStatus, delBody, err := apiClient.Delete(covSettingsIntegrationsPath + "/" + id)
-	require.NoError(t, err)
-	requireStatus(t, 200, delStatus, delBody)
-
-	// --- Update-idempotency coverage, folded in here to reuse the now-free
-	// (SeedAccountID, stripe) slot sequentially. ---
 	t.Run("UpdateIdempotent", func(t *testing.T) {
-		freshName := uniqueName("e2e-covsi-allf-idemput")
-		cStatus, cBody, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        freshName,
-			"provider":    "stripe",
-			"credentials": covSettingsIntegrationsStripeCredentials("idemput"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 201, cStatus, cBody)
-		freshID := jsonField(parseJSON(cBody), "id")
-		require.NotEmpty(t, freshID)
-		defer apiClient.Delete(covSettingsIntegrationsPath + "/" + freshID)
-
 		idemKey := newIdempotencyKey()
-		putBody := map[string]any{"name": uniqueName("e2e-covsi-allf-idemput-renamed")}
-
-		// apiClient.Put() never sends an Idempotency-Key header — use Do
-		// directly to exercise Update's idempotency-key propagation.
-		s1, b1, err := apiClient.Do(http.MethodPut, covSettingsIntegrationsPath+"/"+freshID, putBody, idemKey)
+		patch := map[string]any{"name": uniqueName("e2e-covsi-allf-idem")}
+		s1, b1, err := apiClient.Patch(integrationPath(id), patch, idemKey)
 		require.NoError(t, err)
 		requireStatus(t, 200, s1, b1)
-
-		s2, b2, err := apiClient.Do(http.MethodPut, covSettingsIntegrationsPath+"/"+freshID, putBody, idemKey)
+		s2, b2, err := apiClient.Patch(integrationPath(id), patch, idemKey)
 		require.NoError(t, err)
 		requireStatus(t, 200, s2, b2)
+		assert.JSONEq(t, string(b1), string(b2), "a repeated Idempotency-Key replays the update")
+	})
 
-		assert.JSONEq(t, string(b1), string(b2), "repeated Idempotency-Key on PUT should return an identical response")
+	t.Run("PutIsNotAForgeRoute", func(t *testing.T) {
+		status, body, err := apiClient.Put(integrationPath(id), map[string]any{"name": "x"})
+		require.NoError(t, err)
+		requireStatus(t, 405, status, body)
 	})
 }
 
@@ -297,40 +303,9 @@ func TestCovSettingsIntegrations_OmittedFields(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
-
 		got := parseJSON(body)
-		id := jsonField(got, "id")
-		require.NotEmpty(t, id)
-		defer tenantB.Delete(covSettingsIntegrationsPath + "/" + id)
-
-		assertObjectField(t, got, "account_integration")
-		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, "hubspot", jsonField(got, "provider"))
-		assert.Equal(t, "active", jsonField(got, "status"), "status should default to active")
-		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-	})
-
-	t.Run("CreateMissingName", func(t *testing.T) {
-		status, body, err := tenantB.Post(covSettingsIntegrationsPath, map[string]any{
-			"provider":    "stripe",
-			"credentials": covSettingsIntegrationsStripeCredentials("missingname"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
-	})
-
-	t.Run("CreateMissingProvider", func(t *testing.T) {
-		status, body, err := tenantB.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-noprov"),
-			"credentials": "{}",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "provider")
+		defer tenantB.Delete(integrationPath(jsonField(got, "id")))
+		assertIntegration(t, got, name, "hubspot", "active")
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
@@ -342,55 +317,70 @@ func TestCovSettingsIntegrations_OmittedFields(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
-
 		created := parseJSON(createBody)
 		id := jsonField(created, "id")
-		require.NotEmpty(t, id)
-		defer tenantB.Delete(covSettingsIntegrationsPath + "/" + id)
-		origCreatedAt := jsonField(created, "created_at")
+		defer tenantB.Delete(integrationPath(id))
 
-		newName := uniqueName("e2e-covsi-pres-upd")
-		updStatus, updBody, err := tenantB.Put(covSettingsIntegrationsPath+"/"+id, map[string]any{
-			"name": newName,
-		})
+		updStatus, updBody, err := tenantB.Patch(integrationPath(id), map[string]any{"status": "disabled"}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, updStatus, updBody)
-
 		got := parseJSON(updBody)
-		assert.Equal(t, newName, jsonField(got, "name"))
-		assert.Equal(t, "stripe", jsonField(got, "provider"), "provider preserved")
-		assert.Equal(t, "active", jsonField(got, "status"), "status preserved (omitted from PUT body)")
-		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
-		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+		assertIntegration(t, got, name, "stripe", "disabled")
+		assert.Equal(t, jsonField(created, "created_at"), jsonField(got, "created_at"))
 	})
 }
 
 // ──────────────────────────────────────────────
-// Response Shape
+// 1.0.forge-preview.9 compatibility
 // ──────────────────────────────────────────────
 
-func TestCovSettingsIntegrations_CreateResponseShape(t *testing.T) {
+// A preview.9 caller still sends credentials as a JSON string, reads inactive, updates with PUT and reconnects a
+// provider by creating it again.
+func TestCovSettingsIntegrations_Preview9(t *testing.T) {
 	t.Parallel()
-	tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+	preview := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID).WithAPIVersion(preview9Version)
 
-	name := uniqueName("e2e-covsi-shape")
-	status, body, err := tenantB.Post(covSettingsIntegrationsPath, map[string]any{
-		"name":        name,
-		"provider":    "shippo",
-		"credentials": covSettingsIntegrationsShippoCredentials("shape"),
+	name := uniqueName("e2e-covsi-p9")
+	status, body, err := preview.Post(covSettingsIntegrationsPath, map[string]any{
+		"name": name, "provider": "shippo", "credentials": `{"api_key":"shippo_test_e2ep9"}`,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
+	created := parseJSON(body)
+	id := jsonField(created, "id")
+	t.Cleanup(func() { _, _, _ = preview.Delete(integrationPath(id)) })
+	assert.ElementsMatch(t, []string{"id", "object", "name", "provider", "status", "created_at", "updated_at"}, mapKeys(created))
+	assert.Equal(t, "active", jsonField(created, "status"))
 
-	got := parseJSON(body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer tenantB.Delete(covSettingsIntegrationsPath + "/" + id)
+	againName := uniqueName("e2e-covsi-p9-again")
+	status, body, err = preview.Post(covSettingsIntegrationsPath, map[string]any{
+		"name": againName, "provider": "shippo", "credentials": `{"api_key":"shippo_test_e2ep9b"}`,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	again := parseJSON(body)
+	assert.Equal(t, id, jsonField(again, "id"), "creating a connected provider again rotates it in place")
+	assert.Equal(t, againName, jsonField(again, "name"))
 
-	assertIDFormat(t, id, "acig")
-	assertObjectField(t, got, "account_integration")
-	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
-	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+	status, body, err = preview.Put(integrationPath(id), map[string]any{"status": "inactive"})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "inactive", jsonField(parseJSON(body), "status"))
+
+	forge := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+	list, _, err := forge.GetList(covSettingsIntegrationsPath, url.Values{"statuses": {"disabled"}})
+	require.NoError(t, err)
+	found := false
+	for _, item := range list.Data {
+		found = found || DataItemField(item, "id") == id
+	}
+	assert.True(t, found, "preview.9's inactive is forge's disabled")
+
+	status, body, err = preview.Post(covSettingsIntegrationsPath, map[string]any{
+		"name": "x", "provider": "shippo", "credentials": "not-json",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
 }
 
 // ──────────────────────────────────────────────
@@ -402,7 +392,7 @@ func TestCovSettingsIntegrations_List(t *testing.T) {
 	list, _, err := apiClient.GetList(covSettingsIntegrationsPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "list", list.Object)
-	assert.GreaterOrEqual(t, len(list.Data), 1, "should have at least the seeded shippo/quickbooks rows")
+	assert.GreaterOrEqual(t, len(list.Data), 1, "should have at least the seeded shippo row")
 }
 
 func TestCovSettingsIntegrations_ListPagination(t *testing.T) {
@@ -415,7 +405,7 @@ func TestCovSettingsIntegrations_ListPagination(t *testing.T) {
 
 func TestCovSettingsIntegrations_ListSearch(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(covSettingsIntegrationsPath, url.Values{"q": {"Shippo"}})
+	list, _, err := apiClient.GetList(covSettingsIntegrationsPath, url.Values{"q": {"Shippo"}, "statuses": {"active"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1)
 
@@ -425,7 +415,8 @@ func TestCovSettingsIntegrations_ListSearch(t *testing.T) {
 			found = true
 			assert.Equal(t, "Shippo Integration", DataItemField(item, "name"))
 			assert.Equal(t, "shippo", DataItemField(item, "provider"))
-			assert.Equal(t, "account_integration", DataItemField(item, "object"))
+			assert.Equal(t, "active", DataItemField(item, "status"))
+			assert.Equal(t, "unknown", DataItemField(item, "connection_status"), "no provider call has settled the seeded row")
 		}
 	}
 	assert.True(t, found, "q=Shippo should find the seeded shippo integration (SeedAccountIntegrationID)")
@@ -438,12 +429,17 @@ func TestCovSettingsIntegrations_ListSearchNoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data)
 }
 
-func TestCovSettingsIntegrations_ListInvalidCursor(t *testing.T) {
+func TestCovSettingsIntegrations_ListInvalidFilters(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(covSettingsIntegrationsPath, url.Values{"cursor": {"bogus___not_a_real_cursor"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "", "invalid_request_error")
+
+	status, body, err = apiClient.GetListRaw(covSettingsIntegrationsPath, url.Values{"statuses": {"inactive"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "statuses")
 }
 
 func TestCovSettingsIntegrations_ListUnknownQueryParamRejected(t *testing.T) {
@@ -460,170 +456,78 @@ func TestCovSettingsIntegrations_ListUnknownQueryParamRejected(t *testing.T) {
 func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 	t.Parallel()
 
-	t.Run("MissingName", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"provider":    "stripe",
-			"credentials": covSettingsIntegrationsStripeCredentials("val1"),
-		}, newIdempotencyKey())
+	post := func(t *testing.T, req map[string]any) (int, []byte) {
+		t.Helper()
+		status, body, err := apiClient.Post(covSettingsIntegrationsPath, req, newIdempotencyKey())
 		require.NoError(t, err)
+		return status, body
+	}
+	expect422 := func(t *testing.T, req map[string]any, param string) {
+		t.Helper()
+		status, body := post(t, req)
 		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
+		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), param)
+	}
+	name := func() string { return uniqueName("e2e-covsi-val") }
+
+	cases := []struct {
+		label string
+		req   map[string]any
+		param string
+	}{
+		{"MissingName", map[string]any{"provider": "stripe", "credentials": covSettingsIntegrationsStripeCredentials("v1")}, "name"},
+		{"EmptyName", map[string]any{"name": "", "provider": "stripe", "credentials": covSettingsIntegrationsStripeCredentials("v2")}, "name"},
+		{"NameTooLong", map[string]any{"name": strings.Repeat("a", 256), "provider": "stripe", "credentials": covSettingsIntegrationsStripeCredentials("v3")}, "name"},
+		{"MissingProvider", map[string]any{"name": name(), "credentials": covSettingsIntegrationsStripeCredentials("v4")}, "provider"},
+		{"InvalidProviderEnum", map[string]any{"name": name(), "provider": "quickbooks", "credentials": map[string]any{}}, "provider"},
+		{"MissingCredentials", map[string]any{"name": name(), "provider": "stripe"}, "credentials"},
+		{"InvalidStatus", map[string]any{"name": name(), "provider": "hubspot", "credentials": covSettingsIntegrationsHubspotCredentials("v5"), "status": "inactive"}, "status"},
+		{"StripeMissingKey", map[string]any{"name": name(), "provider": "stripe", "credentials": map[string]any{"private_key": "sk_live_x", "webhook_secret": "whsec_x"}}, "credentials.publishable_key"},
+		{"KeyForAnotherProvider", map[string]any{"name": name(), "provider": "hubspot", "credentials": map[string]any{"access_token": "pat-x", "api_key": "shippo_test_x"}}, "credentials.api_key"},
+		{"StripeMissingKeyPrefix", map[string]any{"name": name(), "provider": "stripe", "credentials": map[string]any{"private_key": "abc", "publishable_key": "def", "webhook_secret": "ghi"}}, "credentials.private_key"},
+		{"StripeSandboxKeysOnProductionAccount", map[string]any{"name": name(), "provider": "stripe", "credentials": map[string]any{"private_key": "sk_test_x", "publishable_key": "pk_test_x", "webhook_secret": "whsec_x"}}, "credentials.private_key"},
+		{"ShippoMissingKeyPrefix", map[string]any{"name": name(), "provider": "shippo", "credentials": map[string]any{"api_key": "abc"}}, "credentials.api_key"},
+		// Only a production deployment may spend with a live key; the e2e stack is not one.
+		{"ShippoLiveKeyOutsideProduction", map[string]any{"name": name(), "provider": "shippo", "credentials": map[string]any{"api_key": "shippo_live_x"}}, "credentials.api_key"},
+		{"HubspotMissingTokenPrefix", map[string]any{"name": name(), "provider": "hubspot", "credentials": map[string]any{"access_token": "abc"}}, "credentials.access_token"},
+		{"RejectedByTheProvider", map[string]any{"name": name(), "provider": "stripe", "credentials": covSettingsIntegrationsStripeCredentials("invalid")}, "credentials"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.label, func(t *testing.T) {
+			t.Parallel()
+			expect422(t, tc.req, tc.param)
+		})
+	}
+
+	t.Run("CredentialsAsAString", func(t *testing.T) {
+		t.Parallel()
+		status, body := post(t, map[string]any{"name": name(), "provider": "stripe", "credentials": "not-json"})
+		requireStatus(t, 400, status, body)
 	})
 
-	t.Run("EmptyName", func(t *testing.T) {
+	t.Run("ProviderUnreachable", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        "",
-			"provider":    "stripe",
-			"credentials": covSettingsIntegrationsStripeCredentials("val2"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
-	})
-
-	t.Run("NameTooLong", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        strings.Repeat("a", 256),
-			"provider":    "stripe",
-			"credentials": covSettingsIntegrationsStripeCredentials("val3"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
-	})
-
-	t.Run("MissingProvider", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"credentials": "{}",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "provider")
-	})
-
-	t.Run("InvalidProviderEnum", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "quickbooks",
-			"credentials": "{}",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "provider")
-	})
-
-	t.Run("MissingCredentials", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":     uniqueName("e2e-covsi-val"),
-			"provider": "stripe",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	t.Run("MalformedCredentialsJSON", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "stripe",
-			"credentials": "not-json",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	t.Run("StripeMissingKeyPrefix", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "stripe",
-			"credentials": `{"private_key":"abc","publishable_key":"def","webhook_secret":"ghi"}`,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	t.Run("StripeSandboxKeysOnProductionAccount", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "stripe",
-			"credentials": `{"private_key":"sk_test_x","publishable_key":"pk_test_x","webhook_secret":"whsec_x"}`,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	t.Run("ShippoMissingKeyPrefix", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "shippo",
-			"credentials": `{"api_key":"abc"}`,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	// Only a production deployment may spend with a live key; the e2e stack is not one.
-	t.Run("ShippoLiveKeyOutsideProduction", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "shippo",
-			"credentials": `{"api_key":"shippo_live_x"}`,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
-	})
-
-	t.Run("HubspotMissingTokenPrefix", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
-			"name":        uniqueName("e2e-covsi-val"),
-			"provider":    "hubspot",
-			"credentials": `{"access_token":"abc"}`,
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "credentials")
+		status, body := post(t, map[string]any{"name": name(), "provider": "shippo", "credentials": covSettingsIntegrationsShippoCredentials("unreachable")})
+		requireStatus(t, 502, status, body)
+		requireErrorResponse(t, body, "external_service_error", "api_error")
 	})
 
 	t.Run("MalformedJSONUnknownFieldRejected", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
+		status, body := post(t, map[string]any{
 			bogusE2EJSONField: "1",
-			"name":            uniqueName("e2e-covsi-val"),
+			"name":            name(),
 			"provider":        "stripe",
 			"credentials":     covSettingsIntegrationsStripeCredentials("valunk"),
-		}, newIdempotencyKey())
-		require.NoError(t, err)
+		})
 		assertJSONUnknownFieldRejected(t, "POST", covSettingsIntegrationsPath, status, body)
+	})
+
+	t.Run("UnknownCredentialKeyRejected", func(t *testing.T) {
+		t.Parallel()
+		status, body := post(t, map[string]any{"name": name(), "provider": "hubspot", "credentials": map[string]any{"access_token": "pat-x", "secret": "y"}})
+		requireStatus(t, 400, status, body)
+		requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
 	})
 }
 
@@ -634,73 +538,48 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 	t.Parallel()
 
-	// These target the seeded, read-only SeedAccountIntegrationID row.
-	// Confirmed live: a 400-rejected PUT never mutates the stored row (name
-	// and updated_at are unchanged after each of these calls), so it is safe
-	// to reuse this shared row across parallel validation-only subtests
-	// without a create/delete lifecycle of its own.
-
-	t.Run("NullNameRejected", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Put(covSettingsIntegrationsPath+"/"+SeedAccountIntegrationID, map[string]any{
-			"name": nil,
-		})
+	// These target the seeded, read-only SeedAccountIntegrationID row; a rejected PATCH never mutates it.
+	patch := func(t *testing.T, client *Client, id string, req map[string]any) (int, []byte) {
+		t.Helper()
+		status, body, err := client.Patch(integrationPath(id), req, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
-	})
+		return status, body
+	}
 
-	t.Run("BlankNameRejected", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Put(covSettingsIntegrationsPath+"/"+SeedAccountIntegrationID, map[string]any{
-			"name": "",
+	for label, tc := range map[string]struct {
+		req   map[string]any
+		param string
+	}{
+		"NullNameRejected":        {map[string]any{"name": nil}, "name"},
+		"BlankNameRejected":       {map[string]any{"name": ""}, "name"},
+		"NullStatusRejected":      {map[string]any{"status": nil}, "status"},
+		"BogusStatusEnumRejected": {map[string]any{"status": "bogus"}, "status"},
+		"InactiveIsNotAStatus":    {map[string]any{"status": "inactive"}, "status"},
+		"CredentialsNotUpdatable": {map[string]any{"credentials": covSettingsIntegrationsShippoCredentials("x")}, ""},
+		"ProviderNotUpdatable":    {map[string]any{"provider": "hubspot"}, ""},
+	} {
+		t.Run(label, func(t *testing.T) {
+			t.Parallel()
+			status, body := patch(t, apiClient, SeedAccountIntegrationID, tc.req)
+			if tc.param == "" {
+				requireStatus(t, 400, status, body)
+				requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
+				return
+			}
+			requireStatus(t, 422, status, body)
+			assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.param)
 		})
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "name")
-	})
-
-	t.Run("NullStatusRejected", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Put(covSettingsIntegrationsPath+"/"+SeedAccountIntegrationID, map[string]any{
-			"status": nil,
-		})
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "status")
-	})
-
-	// Regression-pin: `status` is validated against the
-	// AccountIntegrationStatus enum (active/inactive), mirroring the enum
-	// validation already proven for `provider` on create. Verified live
-	// against the running stack that a garbage value is rejected with 400
-	// rather than silently coerced to `inactive`.
-	t.Run("BogusStatusEnumRejected", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Put(covSettingsIntegrationsPath+"/"+SeedAccountIntegrationID, map[string]any{
-			"status": "bogus",
-		})
-		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-		assertErrorParam(t, errObj, "status")
-	})
+	}
 
 	t.Run("UpdateNonexistentIDReturns404", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.Put(covSettingsIntegrationsPath+"/acig_doesnotexist00000000000", map[string]any{
-			"name": uniqueName("e2e-covsi-404"),
-		})
-		require.NoError(t, err)
+		status, body := patch(t, apiClient, "acig_doesnotexist00000000000", map[string]any{"name": uniqueName("e2e-covsi-404")})
 		requireStatus(t, 404, status, body)
 	})
 
 	t.Run("DeleteNonexistentIDReturns404", func(t *testing.T) {
 		t.Parallel()
-		status, body, err := apiClient.Delete(covSettingsIntegrationsPath + "/acig_doesnotexist00000000000")
+		status, body, err := apiClient.Delete(integrationPath("acig_doesnotexist00000000000"))
 		require.NoError(t, err)
 		requireStatus(t, 404, status, body)
 	})
@@ -708,9 +587,14 @@ func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 	t.Run("CrossTenantUpdateReturns404", func(t *testing.T) {
 		t.Parallel()
 		tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
-		status, body, err := tenantB.Put(covSettingsIntegrationsPath+"/"+SeedAccountIntegrationID, map[string]any{
-			"name": uniqueName("e2e-covsi-crosstenant"),
-		})
+		status, body := patch(t, tenantB, SeedAccountIntegrationID, map[string]any{"name": uniqueName("e2e-covsi-crosstenant")})
+		requireStatus(t, 404, status, body)
+	})
+
+	t.Run("CrossTenantRotateReturns404", func(t *testing.T) {
+		t.Parallel()
+		tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+		status, body, err := tenantB.Post(rotateCredentialsPath(SeedAccountIntegrationID), map[string]any{"credentials": covSettingsIntegrationsShippoCredentials("x")}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 404, status, body)
 	})

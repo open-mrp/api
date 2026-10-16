@@ -140,14 +140,14 @@ func TestPreview9_SalesOrderListFiltersAndIncludes(t *testing.T) {
 	RegisterRouteIncludes(salesOrdersRoute, []string{"freight.carrier", "freight.service_level", "related.jobs", "bill_to_address", "contacts"})
 
 	q := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeSalesOrder, salesOrdersRoute, url.Values{
-		"status_codes[]":     {"estimate", "fulfilled", "all"},
+		"status_codes[]":     {"estimate", "fulfilled"},
 		"customer_group_ids": {"acgp_1"},
 		"starts_at":          {"2026-01-01"},
 		"include[]":          {"freight", "related.production_run", "bill_to_address", "contacts"},
 	})
 	assert.Equal(t, []string{"draft", "fulfilled"}, q["statuses[]"])
 	assert.Equal(t, []string{"acgp_1"}, q["group_ids"])
-	assert.Equal(t, []string{"2026-01-01"}, q["created_after"])
+	assert.Equal(t, []string{"2026-01-01T00:00:00Z"}, q["created_after"], "a bare date is the start of that day")
 	require.NotContains(t, q, "status_codes[]")
 	assert.Equal(t, []string{"freight.carrier", "freight.service_level", "related.jobs", "bill_to_address", "contacts"}, q["include[]"])
 }

@@ -17,7 +17,8 @@ import (
 //   - note became instructions, kept per party; priority and payment_intent_ids are gone (preview.9 reads null and []).
 //   - bill_to and ship_to are copies of the addresses; preview.9 keeps bill_to_address and ship_to_address (the saved
 //     addresses, internal on forge) and its contacts.
-//   - freight is always present as { carrier, service_level, carrier_billing { type, account_number } }.
+//   - freight is always present as { carrier, service_level, carrier_billing { type, account_number } }; preview.9
+//     reads it only when its carrier was expanded.
 //   - commitment dates are business days (promised_on, ship_by_override_on, ship_by_on), lead_time_override is a day
 //     Quantity, and the promised lead time is recorded.
 //   - sales_rep is the account user, not an actor; related.production_run became related.jobs; completed_at became
@@ -72,9 +73,11 @@ func downgradeSalesOrder(obj map[string]any) {
 	obj["payment_intent_ids"] = []any{}
 	obj["sales_rep"] = preview9SalesRep(obj["sales_rep"])
 
-	freight := map[string]any{"object": string(constants.ObjectTypeFreight), "policy": nil, "carrier": nil, "service_level": nil, "billing_type": nil, "billing_account_number": nil}
-	if f, ok := obj["freight"].(map[string]any); ok {
-		freight["carrier"], freight["service_level"] = f["carrier"], f["service_level"]
+	// preview.9's freight was expandable as a whole; forge's carrier, which every order has, is expanded only when
+	// freight was asked for, so an unexpanded carrier is a freight preview.9 left collapsed.
+	var freight map[string]any
+	if f, ok := obj["freight"].(map[string]any); ok && f["carrier"] != nil {
+		freight = map[string]any{"object": string(constants.ObjectTypeFreight), "policy": nil, "carrier": f["carrier"], "service_level": f["service_level"], "billing_type": nil, "billing_account_number": nil}
 		if billing, ok := f["carrier_billing"].(map[string]any); ok {
 			freight["billing_type"], freight["billing_account_number"] = billing["type"], billing["account_number"]
 		}
@@ -229,6 +232,10 @@ func upgradeSalesOrderWrite(body map[string]any, update bool) {
 		}
 		freight["carrier_billing"] = billing
 		moved = true
+	case hasAccount:
+		// An account number alone names no billing type; forge refuses it rather than dropping it.
+		freight["carrier_billing"] = map[string]any{"account_number": account}
+		moved = true
 	}
 	if moved {
 		body["freight"] = freight
@@ -330,6 +337,18 @@ var preview9SalesOrderFilters = map[string]string{
 	"ends_at":            "created_before",
 }
 
+// preview9DayFilter is a preview.9 date window bound as forge's timestamp: preview.9 also took a bare `YYYY-MM-DD`,
+// meaning the start of that day in UTC.
+func preview9DayFilter(param, v string) string {
+	if param != "starts_at" && param != "ends_at" {
+		return v
+	}
+	if _, err := time.Parse(time.DateOnly, v); err == nil {
+		return v + "T00:00:00Z"
+	}
+	return v
+}
+
 // preview9SalesOrderIncludes are preview.9's include paths under an order, by the forge paths that replaced them.
 var preview9SalesOrderIncludes = map[string][]string{
 	"freight":                {"freight.carrier", "freight.service_level"},
@@ -342,7 +361,9 @@ func (salesOrderForgeToPreview9) TransformQuery(_ object.Type, route string, que
 			for _, suffix := range []string{"", "[]"} {
 				if values, ok := query[old+suffix]; ok {
 					query.Del(old + suffix)
-					query[forge+suffix] = append(query[forge+suffix], values...)
+					for _, v := range values {
+						query.Add(forge+suffix, preview9DayFilter(old, v))
+					}
 				}
 			}
 		}
@@ -353,9 +374,7 @@ func (salesOrderForgeToPreview9) TransformQuery(_ object.Type, route string, que
 			}
 			query.Del("status_codes" + suffix)
 			for _, v := range values {
-				if v != "all" {
-					query.Add("statuses"+suffix, string(constants.SalesOrderStatusCode(v).Status()))
-				}
+				query.Add("statuses"+suffix, string(constants.SalesOrderStatusCode(v).Status()))
 			}
 		}
 	}

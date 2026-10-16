@@ -395,6 +395,14 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{
 	// shared account_id seed points at.
 	"list-territories":   {pathValues: map[string]string{"account_id": SeedAccountID}},
 	"retrieve-territory": {pathValues: map[string]string{"account_id": SeedAccountID, "id": SeedTerritoryID}},
+	// The first seeded email log predates related records; the second carried a shipment.
+	"retrieve-email-log": {
+		pathValuesByInclude: map[string]map[string]string{
+			"related.record": {"id": SeedEmailLogID2},
+		},
+	},
+	// Search needs `q` unless it is narrowed with `types`; browsing one type's newest records always returns seed rows.
+	"search": {query: url.Values{"types": {"customer"}}},
 }
 
 // excludedIncludePaths lists path prefixes skipped by the includes coverage

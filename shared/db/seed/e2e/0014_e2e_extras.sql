@@ -402,9 +402,12 @@ INSERT IGNORE INTO hubspot_sync_record (id, account_id, augno_type, augno_id, hu
 -- and the update/{id} endpoints resolve their path param)
 -- ============================================================
 
+-- Two standing domains keep the domain list pageable whatever other tests delete.
 INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, mail_from_domain, verified_at, created_at, updated_at) VALUES
     ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.openmrp.ai', 'verified',
-     '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', 'mail.mail.e2e.openmrp.ai', NOW(), NOW(), NOW());
+     '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', 'mail.mail.e2e.openmrp.ai', NOW(), NOW(), NOW()),
+    ('emdom_01seeddomain2_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'notify.e2e.openmrp.ai', 'verified',
+     '["sel1._domainkey.notify.e2e.openmrp.ai","sel2._domainkey.notify.e2e.openmrp.ai"]', 'mail.notify.e2e.openmrp.ai', NOW(), NOW(), NOW());
 
 -- The inbox seats a team roster on each new thread, so its `group` include resolves a real group.
 INSERT IGNORE INTO messaging_group (id, account_id, name, created_at, updated_at) VALUES
@@ -413,8 +416,10 @@ INSERT IGNORE INTO messaging_group (id, account_id, name, created_at, updated_at
 INSERT IGNORE INTO messaging_group_member (id, group_id, account_id, member_type, account_user_id, created_at) VALUES
     ('cvgppt_01seedinboxtm00', 'cvgp_01seedinboxteam00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'user', 'acus_s83fjhyfmqen', NOW());
 
+-- A second standing inbox keeps the inbox list pageable whatever other tests delete.
 INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, group_id, created_at, updated_at) VALUES
-    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', 'cvgp_01seedinboxteam00', NOW(), NOW());
+    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', 'cvgp_01seedinboxteam00', NOW(), NOW()),
+    ('eminb_01seedinbox2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'billing@mail.e2e.openmrp.ai', 'E2E Billing', 'active', NULL, NULL, NOW(), NOW());
 
 -- A configured sender so GET/PUT/DELETE /v1/messaging/email-sender resolve against a real row.
 INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, from_name, reply_to, created_at, updated_at) VALUES
@@ -503,9 +508,10 @@ INSERT IGNORE INTO _item_attributes (A, B) VALUES
 -- EMAIL LOGS (2 rows for pagination)
 -- ============================================================
 
-INSERT IGNORE INTO email_log (id, has_sent, account_id, sent_by_id, subject, created_at, updated_at) VALUES
-    ('emlog_01seedemaillog1_0', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'Order Confirmation - ORD-001', NOW(), NOW()),
-    ('emlog_01seedemaillog2_0', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'Shipment Notification - SHP-001', NOW(), NOW());
+-- Log 1 predates related records; log 2 carried its shipment.
+INSERT IGNORE INTO email_log (id, has_sent, account_id, sent_by_id, subject, related_type, related_id, created_at, updated_at) VALUES
+    ('emlog_01seedemaillog1_0', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'Order Confirmation - ORD-001', NULL, NULL, NOW(), NOW()),
+    ('emlog_01seedemaillog2_0', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'Shipment Notification - SHP-001', 'shipment', 'sh_01k0a87w33emw8pmkz1mf86cg1', NOW(), NOW());
 
 INSERT IGNORE INTO email_recipient (id, email, email_log_id, created_at, updated_at) VALUES
     ('emrp_01seedemailrcpt1_0', 'customer@example.com', 'emlog_01seedemaillog1_0', NOW(), NOW()),

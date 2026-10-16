@@ -32,14 +32,8 @@ func init() {
 				ExtractIDs:  extractSelfIDForCreatedBy,
 				Populate:    populateCreatedByOnSO,
 			},
-			AddressSnapshotSub(constants.ObjectTypeSalesOrder, "bill_to", func(parent any) (string, *apiresource.AddressSnapshot) {
-				so := parent.(*apiresource.SalesOrder)
-				return so.ID, so.BillTo
-			}),
-			AddressSnapshotSub(constants.ObjectTypeSalesOrder, "ship_to", func(parent any) (string, *apiresource.AddressSnapshot) {
-				so := parent.(*apiresource.SalesOrder)
-				return so.ID, so.ShipTo
-			}),
+			salesOrderSnapshotSource("bill_to", resourceloaders.SalesOrderMetaBillToAddress, func(so *apiresource.SalesOrder) *apiresource.AddressSnapshot { return so.BillTo }),
+			salesOrderSnapshotSource("ship_to", resourceloaders.SalesOrderMetaShipToAddress, func(so *apiresource.SalesOrder) *apiresource.AddressSnapshot { return so.ShipTo }),
 			salesOrderRef("freight.carrier", constants.ObjectTypeCarrier, resourceloaders.SalesOrderMetaCarrierID, func(so *apiresource.SalesOrder, v any) {
 				so.Freight.Carrier = v.(*apiresource.Carrier)
 			}),
@@ -134,6 +128,27 @@ func salesOrderRef(key string, target constants.ObjectType, metaKey string, set 
 			}
 		},
 	}
+}
+
+// salesOrderSnapshotSource is the `<key>.address` include of an order's address copy: the saved address it came
+// from, which the order query reads with it. The saved address is often the customer's, which the address loader,
+// scoped to your own account, can't reach.
+func salesOrderSnapshotSource(key, metaKey string, snapshotOf func(so *apiresource.SalesOrder) *apiresource.AddressSnapshot) include.SubField {
+	return include.SubField{Key: key + ".address", Populate: func(ctx context.Context, parent any, _ map[string]any) {
+		so := parent.(*apiresource.SalesOrder)
+		snap := snapshotOf(so)
+		if snap == nil {
+			return
+		}
+		source, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.AddressSnapshotMetaKey(key))
+		v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, metaKey)
+		if !ok || source == "" {
+			return
+		}
+		if addr := v.(*apiresource.Address); addr.ID == source {
+			snap.Address = addr
+		}
+	}}
 }
 
 // salesOrderStashed declares an include its presenter already built, stashed under metaKey.

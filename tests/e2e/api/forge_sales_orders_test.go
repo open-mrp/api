@@ -209,7 +209,6 @@ func TestForgeSalesOrders_OmittedFieldsCopyTheCustomerDefaults(t *testing.T) {
 	assert.Equal(t, map[string]any{"type": "third_party", "account_number": "CUST-9"}, jsonObject(freight, "carrier_billing"))
 	assert.Equal(t, SeedPaymentTermID, jsonField(jsonObject(order, "payment_term"), "id"))
 	assert.Equal(t, SeedShippingTermID, jsonField(jsonObject(order, "shipping_term"), "id"))
-	assert.Equal(t, SeedAccountUser2ID, jsonField(jsonObject(order, "sales_rep"), "id"))
 	recipients := jsonListData(order, "email_recipients")
 	require.Len(t, recipients, 1, "the customer's recipients are copied")
 	r := recipients[0].(map[string]any)

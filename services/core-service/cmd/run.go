@@ -692,6 +692,12 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	manufacturingMethodSvc := service.NewManufacturingMethodSvc(&service.ManufacturingMethodSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
 	roleSvc := service.NewRoleSvc(&service.RoleSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1037,6 +1043,27 @@ func Run(
 			go runner.Keep(ctx, leaseSvc, backfillRetryInterval)
 		}
 	}
+	// Production steps written before manufacturing methods (00109) become the single operation of an active method
+	// for what they produce. It waits out the rollout so steps the previous release's pods still wrote are adopted too.
+	// MANUFACTURING_METHOD_BACKFILL_DISABLED=true stops it.
+	if !cfg.ManufacturingMethodBackfillDisabled {
+		methodBackfill, err := backfill.New(&backfill.Config{
+			Name:     repository.ManufacturingMethodBackfillName,
+			Batch:    repository.NewManufacturingMethodBackfill(sqlc.New(reportDB), db).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(noteBackfillDelay):
+			}
+			methodBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+		}()
+	}
 	// The notes columns forge.1 drops from the API become notes, one paced backfill per table. They wait out the rollout
 	// so notes the previous release's pods still wrote are copied too. NOTE_BACKFILL_DISABLED=true stops them.
 	if !cfg.NoteBackfillDisabled {
@@ -1128,6 +1155,7 @@ func Run(
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
 	grpc.RegisterNoteService(srv, noteSvc)
+	grpc.RegisterManufacturingMethodService(srv, manufacturingMethodSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)

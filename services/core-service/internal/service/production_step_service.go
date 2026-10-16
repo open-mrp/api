@@ -258,6 +258,11 @@ func (s *productionStepSvcImpl) CreateProductionStep(ctx context.Context, params
 				}
 			}
 
+			// The step is the single operation of an active manufacturing method for what it produces.
+			if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, stepID); apiErr != nil {
+				return apiErr
+			}
+
 			// Re-fetch the full step to return.
 			fetched, apiErr := txRepo.Get(txCtx, params.AccountID, stepID)
 			if apiErr != nil {
@@ -373,6 +378,9 @@ func (s *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, params
 				if apiErr := txSvc.setStepMachines(txCtx, params.AccountID, old, *params.MachineIDs); apiErr != nil {
 					return apiErr
 				}
+			}
+			if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, params.ProductionStepID); apiErr != nil {
+				return apiErr
 			}
 
 			fetched, apiErr := txRepo.Get(txCtx, params.AccountID, params.ProductionStepID)
@@ -533,8 +541,16 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 	// Disconnect parent-child links and owned rows, then delete — atomically.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionStepSvcImpl) *apierror.APIError {
 		repo := txSvc.repos.NewProductionStepRepo()
+		methodRepo := txSvc.repos.NewManufacturingMethodRepo()
+		asOperation, apiErr := methodRepo.GetOperationsByIDs(txCtx, accountID, []string{stepID})
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := repo.DeleteParentChildLinks(txCtx, stepID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := methodRepo.SetOperationMachines(txCtx, accountID, stepID, nil); apiErr != nil {
 			return apiErr
 		}
 
@@ -548,6 +564,12 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 
 		if apiErr := repo.Delete(txCtx, accountID, stepID); apiErr != nil {
 			return apiErr
+		}
+		// A method whose only operation this was goes with it.
+		if len(asOperation) > 0 {
+			if apiErr := methodRepo.DeleteIfEmpty(txCtx, accountID, asOperation[0].MethodID); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		// Whatever the item is costed from now, it is no longer this step.

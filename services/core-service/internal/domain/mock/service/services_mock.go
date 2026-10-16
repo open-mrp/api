@@ -12049,3 +12049,309 @@ func (mr *MockNoteSvcMockRecorder) UpdateNote(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNote", reflect.TypeOf((*MockNoteSvc)(nil).UpdateNote), ctx, params)
 }
+
+// MockManufacturingMethodSvc is a mock of ManufacturingMethodSvc interface.
+type MockManufacturingMethodSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockManufacturingMethodSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockManufacturingMethodSvcMockRecorder is the mock recorder for MockManufacturingMethodSvc.
+type MockManufacturingMethodSvcMockRecorder struct {
+	mock *MockManufacturingMethodSvc
+}
+
+// NewMockManufacturingMethodSvc creates a new mock instance.
+func NewMockManufacturingMethodSvc(ctrl *gomock.Controller) *MockManufacturingMethodSvc {
+	mock := &MockManufacturingMethodSvc{ctrl: ctrl}
+	mock.recorder = &MockManufacturingMethodSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockManufacturingMethodSvc) EXPECT() *MockManufacturingMethodSvcMockRecorder {
+	return m.recorder
+}
+
+// ActivateManufacturingMethod mocks base method.
+func (m *MockManufacturingMethodSvc) ActivateManufacturingMethod(ctx context.Context, methodID string) (*domain.ManufacturingMethod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ActivateManufacturingMethod", ctx, methodID)
+	ret0, _ := ret[0].(*domain.ManufacturingMethod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ActivateManufacturingMethod indicates an expected call of ActivateManufacturingMethod.
+func (mr *MockManufacturingMethodSvcMockRecorder) ActivateManufacturingMethod(ctx, methodID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateManufacturingMethod", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).ActivateManufacturingMethod), ctx, methodID)
+}
+
+// BatchGetManufacturingMethodsByIDs mocks base method.
+func (m *MockManufacturingMethodSvc) BatchGetManufacturingMethodsByIDs(ctx context.Context, ids []string) ([]*domain.ManufacturingMethod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetManufacturingMethodsByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.ManufacturingMethod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetManufacturingMethodsByIDs indicates an expected call of BatchGetManufacturingMethodsByIDs.
+func (mr *MockManufacturingMethodSvcMockRecorder) BatchGetManufacturingMethodsByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetManufacturingMethodsByIDs", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).BatchGetManufacturingMethodsByIDs), ctx, ids)
+}
+
+// BatchGetMethodMaterialsByIDs mocks base method.
+func (m *MockManufacturingMethodSvc) BatchGetMethodMaterialsByIDs(ctx context.Context, ids []string) ([]*domain.MethodMaterial, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetMethodMaterialsByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.MethodMaterial)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetMethodMaterialsByIDs indicates an expected call of BatchGetMethodMaterialsByIDs.
+func (mr *MockManufacturingMethodSvcMockRecorder) BatchGetMethodMaterialsByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetMethodMaterialsByIDs", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).BatchGetMethodMaterialsByIDs), ctx, ids)
+}
+
+// BatchGetMethodOperationsByIDs mocks base method.
+func (m *MockManufacturingMethodSvc) BatchGetMethodOperationsByIDs(ctx context.Context, ids []string) ([]*domain.MethodOperation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetMethodOperationsByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.MethodOperation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetMethodOperationsByIDs indicates an expected call of BatchGetMethodOperationsByIDs.
+func (mr *MockManufacturingMethodSvcMockRecorder) BatchGetMethodOperationsByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetMethodOperationsByIDs", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).BatchGetMethodOperationsByIDs), ctx, ids)
+}
+
+// CreateManufacturingMethod mocks base method.
+func (m *MockManufacturingMethodSvc) CreateManufacturingMethod(ctx context.Context, params domain.CreateManufacturingMethodParams) (*domain.ManufacturingMethod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateManufacturingMethod", ctx, params)
+	ret0, _ := ret[0].(*domain.ManufacturingMethod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateManufacturingMethod indicates an expected call of CreateManufacturingMethod.
+func (mr *MockManufacturingMethodSvcMockRecorder) CreateManufacturingMethod(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateManufacturingMethod", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).CreateManufacturingMethod), ctx, params)
+}
+
+// CreateMethodMaterial mocks base method.
+func (m *MockManufacturingMethodSvc) CreateMethodMaterial(ctx context.Context, params domain.CreateMethodMaterialParams) (*domain.MethodMaterial, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMethodMaterial", ctx, params)
+	ret0, _ := ret[0].(*domain.MethodMaterial)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateMethodMaterial indicates an expected call of CreateMethodMaterial.
+func (mr *MockManufacturingMethodSvcMockRecorder) CreateMethodMaterial(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMethodMaterial", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).CreateMethodMaterial), ctx, params)
+}
+
+// CreateMethodOperation mocks base method.
+func (m *MockManufacturingMethodSvc) CreateMethodOperation(ctx context.Context, params domain.CreateMethodOperationParams) (*domain.MethodOperation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMethodOperation", ctx, params)
+	ret0, _ := ret[0].(*domain.MethodOperation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateMethodOperation indicates an expected call of CreateMethodOperation.
+func (mr *MockManufacturingMethodSvcMockRecorder) CreateMethodOperation(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMethodOperation", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).CreateMethodOperation), ctx, params)
+}
+
+// DefaultManufacturingMethodIDs mocks base method.
+func (m *MockManufacturingMethodSvc) DefaultManufacturingMethodIDs(ctx context.Context, itemIDs []string) (map[string]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultManufacturingMethodIDs", ctx, itemIDs)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DefaultManufacturingMethodIDs indicates an expected call of DefaultManufacturingMethodIDs.
+func (mr *MockManufacturingMethodSvcMockRecorder) DefaultManufacturingMethodIDs(ctx, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultManufacturingMethodIDs", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).DefaultManufacturingMethodIDs), ctx, itemIDs)
+}
+
+// DeleteManufacturingMethod mocks base method.
+func (m *MockManufacturingMethodSvc) DeleteManufacturingMethod(ctx context.Context, methodID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteManufacturingMethod", ctx, methodID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteManufacturingMethod indicates an expected call of DeleteManufacturingMethod.
+func (mr *MockManufacturingMethodSvcMockRecorder) DeleteManufacturingMethod(ctx, methodID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManufacturingMethod", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).DeleteManufacturingMethod), ctx, methodID)
+}
+
+// DeleteMethodMaterial mocks base method.
+func (m *MockManufacturingMethodSvc) DeleteMethodMaterial(ctx context.Context, methodID, materialID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteMethodMaterial", ctx, methodID, materialID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteMethodMaterial indicates an expected call of DeleteMethodMaterial.
+func (mr *MockManufacturingMethodSvcMockRecorder) DeleteMethodMaterial(ctx, methodID, materialID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMethodMaterial", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).DeleteMethodMaterial), ctx, methodID, materialID)
+}
+
+// DeleteMethodOperation mocks base method.
+func (m *MockManufacturingMethodSvc) DeleteMethodOperation(ctx context.Context, methodID, operationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteMethodOperation", ctx, methodID, operationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteMethodOperation indicates an expected call of DeleteMethodOperation.
+func (mr *MockManufacturingMethodSvcMockRecorder) DeleteMethodOperation(ctx, methodID, operationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMethodOperation", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).DeleteMethodOperation), ctx, methodID, operationID)
+}
+
+// GetProductionFlow mocks base method.
+func (m *MockManufacturingMethodSvc) GetProductionFlow(ctx context.Context, itemID string) (*domain.ProductionFlow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductionFlow", ctx, itemID)
+	ret0, _ := ret[0].(*domain.ProductionFlow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductionFlow indicates an expected call of GetProductionFlow.
+func (mr *MockManufacturingMethodSvcMockRecorder) GetProductionFlow(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionFlow", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).GetProductionFlow), ctx, itemID)
+}
+
+// ListManufacturingMethods mocks base method.
+func (m *MockManufacturingMethodSvc) ListManufacturingMethods(ctx context.Context, params domain.ListManufacturingMethodsParams) (*domain.ListManufacturingMethodsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListManufacturingMethods", ctx, params)
+	ret0, _ := ret[0].(*domain.ListManufacturingMethodsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListManufacturingMethods indicates an expected call of ListManufacturingMethods.
+func (mr *MockManufacturingMethodSvcMockRecorder) ListManufacturingMethods(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListManufacturingMethods", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).ListManufacturingMethods), ctx, params)
+}
+
+// ListMethodMaterials mocks base method.
+func (m *MockManufacturingMethodSvc) ListMethodMaterials(ctx context.Context, params domain.ListMethodMembersParams) (*domain.ListMethodMaterialsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMethodMaterials", ctx, params)
+	ret0, _ := ret[0].(*domain.ListMethodMaterialsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMethodMaterials indicates an expected call of ListMethodMaterials.
+func (mr *MockManufacturingMethodSvcMockRecorder) ListMethodMaterials(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMethodMaterials", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).ListMethodMaterials), ctx, params)
+}
+
+// ListMethodOperations mocks base method.
+func (m *MockManufacturingMethodSvc) ListMethodOperations(ctx context.Context, params domain.ListMethodMembersParams) (*domain.ListMethodOperationsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMethodOperations", ctx, params)
+	ret0, _ := ret[0].(*domain.ListMethodOperationsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMethodOperations indicates an expected call of ListMethodOperations.
+func (mr *MockManufacturingMethodSvcMockRecorder) ListMethodOperations(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMethodOperations", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).ListMethodOperations), ctx, params)
+}
+
+// NewManufacturingMethodVersion mocks base method.
+func (m *MockManufacturingMethodSvc) NewManufacturingMethodVersion(ctx context.Context, methodID string) (*domain.ManufacturingMethod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewManufacturingMethodVersion", ctx, methodID)
+	ret0, _ := ret[0].(*domain.ManufacturingMethod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// NewManufacturingMethodVersion indicates an expected call of NewManufacturingMethodVersion.
+func (mr *MockManufacturingMethodSvcMockRecorder) NewManufacturingMethodVersion(ctx, methodID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewManufacturingMethodVersion", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).NewManufacturingMethodVersion), ctx, methodID)
+}
+
+// UpdateManufacturingMethod mocks base method.
+func (m *MockManufacturingMethodSvc) UpdateManufacturingMethod(ctx context.Context, params domain.UpdateManufacturingMethodParams) (*domain.ManufacturingMethod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateManufacturingMethod", ctx, params)
+	ret0, _ := ret[0].(*domain.ManufacturingMethod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateManufacturingMethod indicates an expected call of UpdateManufacturingMethod.
+func (mr *MockManufacturingMethodSvcMockRecorder) UpdateManufacturingMethod(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateManufacturingMethod", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).UpdateManufacturingMethod), ctx, params)
+}
+
+// UpdateMethodMaterial mocks base method.
+func (m *MockManufacturingMethodSvc) UpdateMethodMaterial(ctx context.Context, params domain.UpdateMethodMaterialParams) (*domain.MethodMaterial, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMethodMaterial", ctx, params)
+	ret0, _ := ret[0].(*domain.MethodMaterial)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateMethodMaterial indicates an expected call of UpdateMethodMaterial.
+func (mr *MockManufacturingMethodSvcMockRecorder) UpdateMethodMaterial(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMethodMaterial", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).UpdateMethodMaterial), ctx, params)
+}
+
+// UpdateMethodOperation mocks base method.
+func (m *MockManufacturingMethodSvc) UpdateMethodOperation(ctx context.Context, params domain.UpdateMethodOperationParams) (*domain.MethodOperation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMethodOperation", ctx, params)
+	ret0, _ := ret[0].(*domain.MethodOperation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateMethodOperation indicates an expected call of UpdateMethodOperation.
+func (mr *MockManufacturingMethodSvcMockRecorder) UpdateMethodOperation(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMethodOperation", reflect.TypeOf((*MockManufacturingMethodSvc)(nil).UpdateMethodOperation), ctx, params)
+}

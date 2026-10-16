@@ -667,6 +667,9 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 				if apiErr != nil {
 					return apiErr
 				}
+				if apiErr := txRepos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, created.ID); apiErr != nil {
+					return apiErr
+				}
 				if apiErr := publishImportedStepCostBasis(txCtx, txRepos, accountID, nil, created); apiErr != nil {
 					return apiErr
 				}
@@ -743,6 +746,9 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 
 			updated, apiErr := txRepo.Get(txCtx, accountID, old.ID)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txRepos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, updated.ID); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := publishImportedStepCostBasis(txCtx, txRepos, accountID, oldFull, updated); apiErr != nil {
@@ -971,6 +977,9 @@ func (s *productionStepSvcImpl) bulkUpdateExistingStep(
 		if apiErr != nil {
 			return apiErr
 		}
+		if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, updated.ID); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := publishImportedStepCostBasis(txCtx, txSvc.repos, accountID, old, updated); apiErr != nil {
 			return apiErr
 		}
@@ -1135,6 +1144,9 @@ func (s *productionStepSvcImpl) bulkCreateNewStep(
 		// Re-fetch the created step for audit diff.
 		created, apiErr := txStepRepo.Get(txCtx, accountID, stepID)
 		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, created.ID); apiErr != nil {
 			return apiErr
 		}
 		if apiErr := publishImportedStepCostBasis(txCtx, txSvc.repos, accountID, nil, created); apiErr != nil {

@@ -194,6 +194,10 @@ func (s *consumptionSvcImpl) CreateConsumption(ctx context.Context, params domai
 			}
 			result = created
 
+			if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, params.ProductionStepID); apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := txSvc.mediators().ProductionFlow.LinkFlow(txCtx, params.ProductionStepID, params.AccountID); apiErr != nil {
 				return apiErr
 			}

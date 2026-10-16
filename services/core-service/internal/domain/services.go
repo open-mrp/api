@@ -1905,3 +1905,30 @@ type NoteSvc interface {
 	// RecallNotes is what an agent reads before it works. It is for OpenMRP's own services, never exposed.
 	RecallNotes(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
 }
+
+// ManufacturingMethodSvc manages manufacturing methods: versioned operations and materials per item. Only drafts are
+// edited; activating one makes it the item's method for new production.
+type ManufacturingMethodSvc interface {
+	ListManufacturingMethods(ctx context.Context, params ListManufacturingMethodsParams) (*ListManufacturingMethodsResult, *apierror.APIError)
+	BatchGetManufacturingMethodsByIDs(ctx context.Context, ids []string) ([]*ManufacturingMethod, *apierror.APIError)
+	CreateManufacturingMethod(ctx context.Context, params CreateManufacturingMethodParams) (*ManufacturingMethod, *apierror.APIError)
+	UpdateManufacturingMethod(ctx context.Context, params UpdateManufacturingMethodParams) (*ManufacturingMethod, *apierror.APIError)
+	DeleteManufacturingMethod(ctx context.Context, methodID string) *apierror.APIError
+	ActivateManufacturingMethod(ctx context.Context, methodID string) (*ManufacturingMethod, *apierror.APIError)
+	NewManufacturingMethodVersion(ctx context.Context, methodID string) (*ManufacturingMethod, *apierror.APIError)
+	// DefaultManufacturingMethodIDs maps items to the method used for their new production.
+	DefaultManufacturingMethodIDs(ctx context.Context, itemIDs []string) (map[string]string, *apierror.APIError)
+	GetProductionFlow(ctx context.Context, itemID string) (*ProductionFlow, *apierror.APIError)
+
+	ListMethodOperations(ctx context.Context, params ListMethodMembersParams) (*ListMethodOperationsResult, *apierror.APIError)
+	BatchGetMethodOperationsByIDs(ctx context.Context, ids []string) ([]*MethodOperation, *apierror.APIError)
+	CreateMethodOperation(ctx context.Context, params CreateMethodOperationParams) (*MethodOperation, *apierror.APIError)
+	UpdateMethodOperation(ctx context.Context, params UpdateMethodOperationParams) (*MethodOperation, *apierror.APIError)
+	DeleteMethodOperation(ctx context.Context, methodID, operationID string) *apierror.APIError
+
+	ListMethodMaterials(ctx context.Context, params ListMethodMembersParams) (*ListMethodMaterialsResult, *apierror.APIError)
+	BatchGetMethodMaterialsByIDs(ctx context.Context, ids []string) ([]*MethodMaterial, *apierror.APIError)
+	CreateMethodMaterial(ctx context.Context, params CreateMethodMaterialParams) (*MethodMaterial, *apierror.APIError)
+	UpdateMethodMaterial(ctx context.Context, params UpdateMethodMaterialParams) (*MethodMaterial, *apierror.APIError)
+	DeleteMethodMaterial(ctx context.Context, methodID, materialID string) *apierror.APIError
+}

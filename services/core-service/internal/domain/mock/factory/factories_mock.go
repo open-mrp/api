@@ -629,6 +629,20 @@ func (mr *MockRepoFactoryMockRecorder) NewMachineStatusRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMachineStatusRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMachineStatusRepo))
 }
 
+// NewManufacturingMethodRepo mocks base method.
+func (m *MockRepoFactory) NewManufacturingMethodRepo() domain.ManufacturingMethodRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewManufacturingMethodRepo")
+	ret0, _ := ret[0].(domain.ManufacturingMethodRepo)
+	return ret0
+}
+
+// NewManufacturingMethodRepo indicates an expected call of NewManufacturingMethodRepo.
+func (mr *MockRepoFactoryMockRecorder) NewManufacturingMethodRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewManufacturingMethodRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewManufacturingMethodRepo))
+}
+
 // NewMaterialDemandRepo mocks base method.
 func (m *MockRepoFactory) NewMaterialDemandRepo() domain.MaterialDemandRepo {
 	m.ctrl.T.Helper()

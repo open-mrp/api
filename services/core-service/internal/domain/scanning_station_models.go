@@ -26,13 +26,13 @@ type ScanningStation struct {
 	UpdatedAt           time.Time
 }
 
-// ScanningStationReferences blocks deleting a station that batches, production steps or inventory changes still
+// ScanningStationReferences blocks deleting a station that batches, method operations or inventory changes still
 // name.
 var ScanningStationReferences = RegisterReferences(References{
 	Noun: "scanning station",
 	Probes: []ReferenceProbe{
 		{Label: "batches", Table: "batch", Column: "scanning_station_id"},
-		{Label: "production steps", Table: "production_step", Column: "scanning_station_id"},
+		{Label: "manufacturing method operations", Table: "production_step", Column: "scanning_station_id"},
 		{Label: "inventory changes", Table: "inventory_change_log", Column: "scanning_station_id"},
 	},
 })

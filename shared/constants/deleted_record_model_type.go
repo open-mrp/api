@@ -32,6 +32,12 @@ const (
 	DeletedRecordResourceTypeAgentMemory DeletedRecordResourceType = "agent_memory"
 	// DeletedRecordResourceTypeNote identifies deleted note records.
 	DeletedRecordResourceTypeNote DeletedRecordResourceType = "note"
+	// DeletedRecordResourceTypeManufacturingMethod identifies deleted manufacturing_method records.
+	DeletedRecordResourceTypeManufacturingMethod DeletedRecordResourceType = "manufacturing_method"
+	// DeletedRecordResourceTypeMethodOperation identifies deleted method_operation records.
+	DeletedRecordResourceTypeMethodOperation DeletedRecordResourceType = "method_operation"
+	// DeletedRecordResourceTypeMethodMaterial identifies deleted method_material records.
+	DeletedRecordResourceTypeMethodMaterial DeletedRecordResourceType = "method_material"
 	// DeletedRecordResourceTypeMessagingGroup identifies deleted messaging_group records.
 	DeletedRecordResourceTypeMessagingGroup DeletedRecordResourceType = "messaging_group"
 	// DeletedRecordResourceTypeCustomer identifies deleted customer records.
@@ -130,6 +136,9 @@ func (m DeletedRecordResourceType) IsValid() bool {
 		DeletedRecordResourceTypeCustomAgent,
 		DeletedRecordResourceTypeAgentMemory,
 		DeletedRecordResourceTypeNote,
+		DeletedRecordResourceTypeManufacturingMethod,
+		DeletedRecordResourceTypeMethodOperation,
+		DeletedRecordResourceTypeMethodMaterial,
 		DeletedRecordResourceTypeMessagingGroup,
 		DeletedRecordResourceTypeCustomer,
 		DeletedRecordResourceTypeCustomerProductLineAccess,
@@ -192,6 +201,9 @@ func (m DeletedRecordResourceType) EnumValues() []string {
 		string(DeletedRecordResourceTypeCustomAgent),
 		string(DeletedRecordResourceTypeAgentMemory),
 		string(DeletedRecordResourceTypeNote),
+		string(DeletedRecordResourceTypeManufacturingMethod),
+		string(DeletedRecordResourceTypeMethodOperation),
+		string(DeletedRecordResourceTypeMethodMaterial),
 		string(DeletedRecordResourceTypeMessagingGroup),
 		string(DeletedRecordResourceTypeCustomer),
 		string(DeletedRecordResourceTypeCustomerProductLineAccess),

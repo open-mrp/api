@@ -2145,3 +2145,60 @@ type NoteRepo interface {
 	// Recall is account-wide notes except comments plus the notes on params.RecordIDs, unexpired, most important first.
 	Recall(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
 }
+
+// ManufacturingMethodRepo stores manufacturing methods. Operations are production_step rows and materials consumption
+// rows; only active methods carry the production rows, step links and machine assignments execution reads.
+type ManufacturingMethodRepo interface {
+	List(ctx context.Context, params ListManufacturingMethodsParams) (*ListManufacturingMethodsResult, *apierror.APIError)
+	Get(ctx context.Context, accountID, id string) (*ManufacturingMethod, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ManufacturingMethod, *apierror.APIError)
+	// Lock holds the method row for the rest of the transaction and returns its status and item.
+	Lock(ctx context.Context, accountID, id string) (constants.ManufacturingMethodStatus, string, *apierror.APIError)
+	NextVersion(ctx context.Context, itemID string) (int32, *apierror.APIError)
+	Insert(ctx context.Context, m *ManufacturingMethod) *apierror.APIError
+	UpdateOutput(ctx context.Context, accountID, id string, q QuantityValue) *apierror.APIError
+	SetStatus(ctx context.Context, accountID, id string, status constants.ManufacturingMethodStatus, activatedAt *time.Time) *apierror.APIError
+	Delete(ctx context.Context, accountID, id string) *apierror.APIError
+	ActiveStandardIDsForItem(ctx context.Context, accountID, itemID string) ([]string, *apierror.APIError)
+	// DefaultMethodIDs maps each item that has one to the method used for its new production.
+	DefaultMethodIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError)
+	ItemsWithActiveMethods(ctx context.Context, accountID string, itemIDs []string) (map[string]bool, *apierror.APIError)
+
+	ListOperationIDs(ctx context.Context, methodID string) ([]string, *apierror.APIError)
+	ListOperations(ctx context.Context, params ListMethodMembersParams) (*ListMethodOperationsResult, *apierror.APIError)
+	GetOperationsByIDs(ctx context.Context, accountID string, ids []string) ([]*MethodOperation, *apierror.APIError)
+	InsertOperation(ctx context.Context, accountID, name string, op *MethodOperation) *apierror.APIError
+	UpdateOperation(ctx context.Context, accountID string, op *MethodOperation) *apierror.APIError
+	SetOperationPosition(ctx context.Context, accountID, id string, position int32) *apierror.APIError
+	SetOperationMachines(ctx context.Context, accountID, operationID string, machineIDs []string) *apierror.APIError
+	DeleteOperation(ctx context.Context, accountID string, op *MethodOperation) *apierror.APIError
+	CountOperationMaterials(ctx context.Context, operationID string) (int64, *apierror.APIError)
+	OperationNameTaken(ctx context.Context, accountID, name string) (bool, *apierror.APIError)
+
+	ListMaterials(ctx context.Context, params ListMethodMembersParams) (*ListMethodMaterialsResult, *apierror.APIError)
+	GetMaterialsByIDs(ctx context.Context, accountID string, ids []string) ([]*MethodMaterial, *apierror.APIError)
+	InsertMaterial(ctx context.Context, m *MethodMaterial) *apierror.APIError
+	UpdateMaterial(ctx context.Context, m *MethodMaterial) *apierror.APIError
+	DeleteMaterial(ctx context.Context, m *MethodMaterial) *apierror.APIError
+
+	InsertRate(ctx context.Context, id string, v RateValue) *apierror.APIError
+	InsertQuantity(ctx context.Context, id string, v QuantityValue) *apierror.APIError
+	DeleteRates(ctx context.Context, ids []string) *apierror.APIError
+	DeleteQuantities(ctx context.Context, ids []string) *apierror.APIError
+
+	// InsertProduction records that the step makes the item, which is what execution, costing and planning find.
+	InsertProduction(ctx context.Context, id, itemID, quantityID, stepID string) *apierror.APIError
+	// RemoveProjection takes a step out of execution: its production rows, step links and machine assignments.
+	RemoveProjection(ctx context.Context, stepID string) *apierror.APIError
+	ConnectSteps(ctx context.Context, upstreamID, downstreamID string) *apierror.APIError
+	AssignMachinesToStep(ctx context.Context, accountID, stepID string, machineIDs []string) *apierror.APIError
+
+	// SyncLegacyStep keeps a production step written through the preview.9 routes in its method: a step not yet in one
+	// becomes the single operation of a new active method for the item it produces; one already in a method passes on
+	// its output, consumptions and machines. A step that records no output is left alone.
+	SyncLegacyStep(ctx context.Context, stepID string) *apierror.APIError
+	// DeleteIfEmpty deletes a method that no longer has operations.
+	DeleteIfEmpty(ctx context.Context, accountID, methodID string) *apierror.APIError
+	// ListStepIDsAfter walks every production step by ID, for the adoption backfill.
+	ListStepIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
+}

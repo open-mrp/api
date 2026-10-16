@@ -61,13 +61,13 @@ type Department struct {
 const EmbeddedDepartmentMembers = 11
 
 // DepartmentReferences blocks deleting a department (a work center in the API) that machines, scanning stations,
-// production steps or account users still belong to.
+// manufacturing method operations or account users still belong to.
 var DepartmentReferences = RegisterReferences(References{
 	Noun: "work center",
 	Probes: []ReferenceProbe{
 		{Label: "machines", Table: "machine", Column: "department_id"},
 		{Label: "scanning stations", Table: "scanning_station", Column: "department_id"},
-		{Label: "production steps", Table: "production_step", Column: "department_id"},
+		{Label: "manufacturing method operations", Table: "production_step", Column: "department_id"},
 		{Label: "account users", Table: "account_user", Column: "department_id"},
 	},
 })

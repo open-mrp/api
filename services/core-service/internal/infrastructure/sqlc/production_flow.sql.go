@@ -164,9 +164,11 @@ SELECT ps.id
 FROM production_step ps
 JOIN consumption c ON c.production_step_id = ps.id
 JOIN item i ON c.item_id = i.id
+LEFT JOIN manufacturing_method mm ON mm.id = ps.manufacturing_method_id
 WHERE ps.account_id = ?
 AND c.item_id = ?
 AND i.deleted_at IS NULL
+AND (ps.manufacturing_method_id IS NULL OR mm.status_code = 'active')
 `
 
 type FindStepsThatConsumeItemParams struct {
@@ -174,6 +176,7 @@ type FindStepsThatConsumeItemParams struct {
 	ItemID    string
 }
 
+// Only operations of active methods take part in the flow; drafts and archived versions never link.
 func (q *Queries) FindStepsThatConsumeItem(ctx context.Context, arg FindStepsThatConsumeItemParams) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, findStepsThatConsumeItem, arg.AccountID, arg.ItemID)
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/open-mrp/apikit/include"
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -25,6 +24,7 @@ var jobEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.jobs.service")
 
 type JobSvc interface {
 	GetJob(ctx context.Context, req *RetrieveJobRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	ListJobs(ctx context.Context, req *ListJobsRequest) (*apiresource.List[apiresource.AsyncJob], *apierror.APIError)
 	CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.AsyncJob, *apierror.APIError)
 }
 
@@ -103,12 +103,16 @@ func responseErrorFromJSON(raw string) *apierror.ErrorObject {
 	return &e
 }
 
-// maps a JobInfo to the async_job resource. Exported because every async operation's
-// 202 returns one, so every such endpoint reuses this one mapping.
-//
-// created_by is left nil: it is expandable, and the creator's id is stashed for the
-// include resolver by StashJobMeta rather than inlined here.
-func JobFromProto(info *pb.JobInfo) *apiresource.AsyncJob {
+// JobFromProto maps a JobInfo to the async_job resource, with its creator's name resolved. Exported because every
+// async operation's 202 returns one, so every such endpoint reuses this one mapping.
+func JobFromProto(ctx context.Context, info *pb.JobInfo) *apiresource.AsyncJob {
+	job := jobFromProto(info)
+	resourceloaders.ResolveActorRefs(ctx, []*apiresource.ActorRef{job.CreatedBy})
+	return job
+}
+
+// jobFromProto maps a JobInfo without resolving its creator's name, so a list can resolve every creator at once.
+func jobFromProto(info *pb.JobInfo) *apiresource.AsyncJob {
 	job := &apiresource.AsyncJob{AsyncJob: object.AsyncJob[apiresource.Entity]{
 		ID:        info.GetId(),
 		Object:    object.TypeAsyncJob,
@@ -118,7 +122,7 @@ func JobFromProto(info *pb.JobInfo) *apiresource.AsyncJob {
 		Error:     responseErrorFromJSON(info.GetError()),
 		CreatedAt: info.GetCreatedAt().AsTime(),
 		UpdatedAt: info.GetUpdatedAt().AsTime(),
-	}}
+	}, CreatedBy: jobCreator(info.GetCreatedById())}
 
 	if resourceType := info.GetResourceType(); resourceType != "" {
 		t := constants.ObjectType(resourceType)
@@ -140,31 +144,19 @@ func JobFromProto(info *pb.JobInfo) *apiresource.AsyncJob {
 		t := info.GetCancelledAt().AsTime()
 		job.CanceledAt = &t
 	}
+	if url := info.GetExport().GetUrl(); url != "" {
+		job.Export = apiresource.NewAsyncJobExport(url)
+	}
 
 	return job
 }
 
-// StashJobMeta records the creator's id for the created_by include and preheats the actor
-// built from it — LoadActors has no backing store. The actor is returned (nil when the job
-// has no creator) so the caller can batch-hydrate display names.
-func StashJobMeta(ctx context.Context, info *pb.JobInfo, jobID string) *apiresource.Actor {
-	actor := resourceloaders.ActorRefFromID(info.GetCreatedById())
-	if actor == nil {
-		return nil
+// jobCreator is the job's creator. A job raised with no recorded creator was raised by the platform itself.
+func jobCreator(createdByID string) *apiresource.ActorRef {
+	if ref := resourceloaders.ActorRefFromBareID(createdByID); ref != nil {
+		return ref
 	}
-	include.GetLoadMeta(ctx).Set(constants.ObjectTypeAsyncJob, jobID, "created_by_id", actor.ID)
-	include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
-	return actor
-}
-
-// hydrateCreator fills the creator's display name + handle. A no-op unless the caller
-// expanded created_by — the only case where the name is rendered — avoiding a needless
-// loader round-trip on the 202 of every async operation.
-func hydrateCreator(ctx context.Context, creator *apiresource.Actor) {
-	if creator == nil || !include.RequestedIncludeSet(ctx)["created_by"] {
-		return
-	}
-	resourceloaders.HydrateIdentityActorNames(ctx, []*apiresource.Actor{creator})
+	return resourceloaders.ActorRefFromRecorded(constants.ActorTypeSystem, "", nil)
 }
 
 // reads a job. A completed export carries the link to its file alongside the rest of it.
@@ -177,12 +169,35 @@ func (m *jobSvcImpl) GetJob(ctx context.Context, req *RetrieveJobRequest) (*apir
 		return nil, apiErr
 	}
 
-	job := JobFromProto(resp.GetJob())
-	if url := resp.GetJob().GetExport().GetUrl(); url != "" {
-		job.Export = apiresource.NewAsyncJobExport(url)
+	return JobFromProto(ctx, resp.GetJob()), nil
+}
+
+func (m *jobSvcImpl) ListJobs(ctx context.Context, req *ListJobsRequest) (*apiresource.List[apiresource.AsyncJob], *apierror.APIError) {
+	pbReq := &pb.ListJobsRequest{Cursor: req.Cursor, Limit: req.Limit}
+	for _, t := range req.Types {
+		pbReq.Types = append(pbReq.Types, string(t))
 	}
-	hydrateCreator(ctx, StashJobMeta(ctx, resp.GetJob(), job.ID))
-	return job, nil
+	for _, s := range req.Statuses {
+		pbReq.Statuses = append(pbReq.Statuses, string(s))
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, jobEpSvcTracer, "service.jobs.list", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListJobsResponse, error) {
+			return m.coreClient.ListJobs(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	jobs := make([]apiresource.AsyncJob, len(resp.GetJobs()))
+	creators := make([]*apiresource.ActorRef, len(resp.GetJobs()))
+	for i, info := range resp.GetJobs() {
+		jobs[i] = *jobFromProto(info)
+		creators[i] = jobs[i].CreatedBy
+	}
+	resourceloaders.ResolveActorRefs(ctx, creators)
+
+	return apiresource.NewList(jobs, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
 }
 
 func (m *jobSvcImpl) CancelJob(ctx context.Context, req *CancelJobRequest) (*apiresource.AsyncJob, *apierror.APIError) {
@@ -194,7 +209,5 @@ func (m *jobSvcImpl) CancelJob(ctx context.Context, req *CancelJobRequest) (*api
 		return nil, apiErr
 	}
 
-	job := JobFromProto(resp.GetJob())
-	hydrateCreator(ctx, StashJobMeta(ctx, resp.GetJob(), job.ID))
-	return job, nil
+	return JobFromProto(ctx, resp.GetJob()), nil
 }

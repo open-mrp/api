@@ -169,7 +169,7 @@ func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsR
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
@@ -244,7 +244,7 @@ func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) 
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func loadPartByID(ctx context.Context, id string) (*apiresource.Part, *apierror.APIError) {

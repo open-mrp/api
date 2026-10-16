@@ -314,12 +314,20 @@ message EmailLogInfo {
   reserved 8; // previously optional string sent_by_name
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  // The record the email carried (a constants.RecordType and its id); unset on emails logged before it was recorded.
+  optional string related_type = 11;
+  optional string related_id = 12;
 }
 message ListEmailLogsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
   repeated string includes = 4;
+  // sent | pending.
+  repeated string send_statuses = 5;
+  optional google.protobuf.Timestamp created_after = 6;
+  optional google.protobuf.Timestamp created_before = 7;
+  repeated string related_ids = 8;
 }
 message ListEmailLogsResponse {
   repeated EmailLogInfo email_logs = 1;

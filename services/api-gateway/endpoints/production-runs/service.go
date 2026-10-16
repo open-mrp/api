@@ -68,7 +68,7 @@ func (m *productionRunSvcImpl) ExportProductionRuns(ctx context.Context, req *Ex
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRun], *apierror.APIError) {
@@ -219,7 +219,7 @@ func (m *productionRunSvcImpl) BulkCreateProductionRuns(ctx context.Context, req
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {

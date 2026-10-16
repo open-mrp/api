@@ -1,77 +1,3 @@
--- name: ListEmailLogsForward :many
-SELECT
-    el.id,
-    el.has_sent,
-    el.subject,
-    el.filename,
-    el.ses_message_id,
-    el.sent_by_id,
-    u.name AS sent_by_name,
-    u.username AS sent_by_username,
-    u.email AS sent_by_email,
-    ak.type_id AS sent_by_api_key_id,
-    ak.name AS sent_by_api_key_name,
-    el.created_at,
-    el.updated_at
--- FORCE INDEX walks the account's emails in list order. Left free, the planner ranges the account on
--- email_log_account_id_idx and sorts every email it has, even for the first page.
-FROM email_log el FORCE INDEX (email_log_account_created_idx)
-LEFT JOIN user u ON el.sent_by_id = u.id
-LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
-WHERE el.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR el.subject LIKE sqlc.narg('search_query')
-    OR EXISTS (
-        SELECT 1 FROM email_recipient er
-        WHERE er.email_log_id = el.id
-        AND er.email LIKE sqlc.narg('search_query')
-    )
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR el.created_at < sqlc.narg('cursor_created_at')
-    OR (el.created_at = sqlc.narg('cursor_created_at') AND el.id < sqlc.narg('cursor_id'))
-)
-ORDER BY el.created_at DESC, el.id DESC
-LIMIT ?;
-
--- name: ListEmailLogsBackward :many
-SELECT
-    el.id,
-    el.has_sent,
-    el.subject,
-    el.filename,
-    el.ses_message_id,
-    el.sent_by_id,
-    u.name AS sent_by_name,
-    u.username AS sent_by_username,
-    u.email AS sent_by_email,
-    ak.type_id AS sent_by_api_key_id,
-    ak.name AS sent_by_api_key_name,
-    el.created_at,
-    el.updated_at
--- See ListEmailLogsForward.
-FROM email_log el FORCE INDEX (email_log_account_created_idx)
-LEFT JOIN user u ON el.sent_by_id = u.id
-LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
-WHERE el.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR el.subject LIKE sqlc.narg('search_query')
-    OR EXISTS (
-        SELECT 1 FROM email_recipient er
-        WHERE er.email_log_id = el.id
-        AND er.email LIKE sqlc.narg('search_query')
-    )
-)
-AND (
-    el.created_at >sqlc.arg('cursor_created_at')
-    OR (el.created_at = sqlc.arg('cursor_created_at') AND el.id > sqlc.arg('cursor_id'))
-)
-ORDER BY el.created_at ASC, el.id ASC
-LIMIT ?;
-
 -- name: GetEmailLog :one
 SELECT
     el.id,
@@ -85,6 +11,8 @@ SELECT
     u.email AS sent_by_email,
     ak.type_id AS sent_by_api_key_id,
     ak.name AS sent_by_api_key_name,
+    el.related_type,
+    el.related_id,
     el.created_at,
     el.updated_at
 FROM email_log el

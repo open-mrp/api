@@ -59,32 +59,33 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 	}
 
 	pbReq := &pb.ListAuditEventsRequest{
-		ResourceTypes:    stringsFromObjectTypes(req.ResourceTypes),
-		ResourceIds:      req.ResourceIDs,
-		ActorIds:         req.ActorIDs,
-		ActorTypes:       actorTypes,
-		Actions:          stringsFromActions(req.Actions),
-		ActorAccountIds:  req.ActorAccountIDs,
-		TargetAccountIds: req.TargetAccountIDs,
-		Query:            req.Query,
-		Cursor:           req.Cursor,
-		Limit:            req.Limit,
-		Includes:         include.FilterIncludes(ctx, "actor", "changes", "metadata"),
+		ResourceTypes:     stringsFromObjectTypes(req.ResourceTypes),
+		ResourceIds:       req.ResourceIDs,
+		ActorIds:          req.ActorIDs,
+		ActorTypes:        actorTypes,
+		Actions:           stringsFromActions(req.Actions),
+		ActorAccountIds:   req.ActorAccountIDs,
+		TargetAccountIds:  req.TargetAccountIDs,
+		Query:             req.Query,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		RootResourceTypes: stringsFromObjectTypes(req.RootResourceTypes),
+		RootResourceIds:   req.RootResourceIDs,
+		Includes:          include.FilterIncludes(ctx, "changes", "metadata"),
+	}
+	// Both are needed: the root key leads with the type, so IDs alone would walk every event of the account.
+	if len(req.RootResourceIDs) > 0 && len(req.RootResourceTypes) == 0 {
+		return nil, apierror.NewParameterMissingError("root_resource_types", "root_resource_types is required with root_resource_ids.")
+	}
+	if len(req.RootResourceTypes) > 0 && len(req.RootResourceIDs) == 0 {
+		return nil, apierror.NewParameterMissingError("root_resource_ids", "root_resource_ids is required with root_resource_types.")
 	}
 
-	if req.RootResourceType != nil {
-		rt := string(*req.RootResourceType)
-		pbReq.RootResourceType = &rt
+	if req.OccurredAfter != nil && !req.OccurredAfter.IsZero() {
+		pbReq.StartDate = timestamppb.New(*req.OccurredAfter)
 	}
-	if req.RootResourceID != nil {
-		pbReq.RootResourceId = req.RootResourceID
-	}
-
-	if req.StartDate != nil && !req.StartDate.IsZero() {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
-	}
-	if req.EndDate != nil && !req.EndDate.IsZero() {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.OccurredBefore != nil && !req.OccurredBefore.IsZero() {
+		pbReq.EndDate = timestamppb.New(*req.OccurredBefore)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.list", domain.ServiceName,
@@ -102,14 +103,13 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 
 	meta := include.GetLoadMeta(ctx)
 	events := make([]apiresource.AuditEvent, len(resp.AuditEvents))
-	var agentActors []*apiresource.Actor
+	actors := make([]*apiresource.ActorRef, 0, len(resp.AuditEvents))
 	for i, ev := range resp.AuditEvents {
 		events[i] = auditEventFromProto(ev)
-		if actor := stashAuditEventMeta(ctx, meta, ev); actor != nil && actor.Type == constants.ActorTypeAgent {
-			agentActors = append(agentActors, actor)
-		}
+		stashAuditEventMeta(meta, ev)
+		actors = append(actors, events[i].Actor)
 	}
-	hydrateAgentActors(ctx, agentActors)
+	resourceloaders.ResolveActorRefs(ctx, actors)
 
 	return apiresource.NewList(events, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -138,7 +138,7 @@ func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *
 func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 	pbReq := &pb.GetAuditEventRequest{
 		Id:       req.ID,
-		Includes: include.FilterIncludes(ctx, "actor", "changes", "metadata"),
+		Includes: include.FilterIncludes(ctx, "changes", "metadata"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.get", domain.ServiceName,
@@ -150,24 +150,10 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 		return nil, apiErr
 	}
 
-	meta := include.GetLoadMeta(ctx)
 	result := auditEventFromProto(resp.AuditEvent)
-	if actor := stashAuditEventMeta(ctx, meta, resp.AuditEvent); actor != nil && actor.Type == constants.ActorTypeAgent {
-		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
-	}
+	stashAuditEventMeta(include.GetLoadMeta(ctx), resp.AuditEvent)
+	resourceloaders.ResolveActorRefs(ctx, []*apiresource.ActorRef{result.Actor})
 	return &result, nil
-}
-
-// hydrateAgentActors fills in agent actors' display name + handle from agent-service.
-// Unlike user/api_key actors — whose names are joined in platform-service — agent
-// definitions live in a separate datastore, so their names must be resolved here.
-// Best-effort and a no-op unless the caller expanded the actor (the only case where
-// the name is rendered), avoiding a needless agent-service round-trip otherwise.
-func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
-	if len(actors) == 0 || !include.RequestedIncludeSet(ctx)["actor"] {
-		return
-	}
-	resourceloaders.HydrateActorNames(ctx, actors)
 }
 
 func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
@@ -176,6 +162,7 @@ func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
 	}
 
 	return apiresource.AuditEvent{
+		Actor:          auditActorRef(ev.Actor),
 		ID:             ev.Id,
 		Object:         constants.ObjectTypeAuditEvent,
 		Action:         constants.AuditAction(ev.Action),
@@ -188,30 +175,18 @@ func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
 	}
 }
 
-// stashAuditEventMeta stashes the event's expandable sub-resources into the load
-// meta and returns the event's actor (or nil) so the caller can hydrate agent
-// actors' names from agent-service, mirroring the request-log path.
-func stashAuditEventMeta(ctx context.Context, meta *include.LoadMeta, ev *pb.AuditEventInfo) *apiresource.Actor {
-	if ev == nil {
+// auditActorRef is the event's actor. platform-service joins user and API key names; ResolveActorRefs fills the rest.
+func auditActorRef(a *pb.AuditActor) *apiresource.ActorRef {
+	if a == nil {
 		return nil
 	}
+	return resourceloaders.ActorRefFromRecorded(constants.ActorType(a.ActorType), a.Id, a.Name)
+}
 
-	var actor *apiresource.Actor
-	// Background processes (Stripe webhooks, the scheduler, inbound mail) are recorded as system actors, which have no public actor type.
-	if ev.Actor != nil && constants.ActorType(ev.Actor.ActorType).IsValid() {
-		var name *string
-		if ev.Actor.Name != nil && *ev.Actor.Name != "" {
-			n := *ev.Actor.Name
-			name = &n
-		}
-		actor = apiresource.NewActor(
-			ev.Actor.Id,
-			constants.ActorType(ev.Actor.ActorType),
-			name,
-			stringPtrFromOptional(ev.Actor.Handle),
-		)
-		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
-		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "actor", actor)
+// stashAuditEventMeta stashes the event's expandable sub-resources into the load meta.
+func stashAuditEventMeta(meta *include.LoadMeta, ev *pb.AuditEventInfo) {
+	if ev == nil {
+		return
 	}
 
 	if ev.AccountId != nil && ev.AccountName != nil {
@@ -240,8 +215,6 @@ func stashAuditEventMeta(ctx context.Context, meta *include.LoadMeta, ev *pb.Aud
 	if ev.RequestId != nil && *ev.RequestId != "" {
 		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "request_id", *ev.RequestId)
 	}
-
-	return actor
 }
 
 func auditFieldChangesFromProto(changes []*pb.AuditFieldChange) *apiresource.List[apiresource.AuditFieldChange] {

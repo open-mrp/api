@@ -18,53 +18,45 @@ import (
 // Request to list audit events.
 type ListAuditEventsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
+	// Exact match on `resource_id`, the ID of the request that caused the change, `resource_type`, or `action`.
 	//
-	// Which fields are matched against the term varies by endpoint.
+	// A resource type or action matches by its code (`sales_order`) or its name (`Sales Order`).
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Restricts results to audit events on or after this timestamp.
+	// Only events that occurred at or after this time.
 	//
-	// Defaults to 24 hours before `ends_at`, or before now when `ends_at` is also omitted, unless `resource_ids` or the root resource is given — a record's history is returned whole. Pass an earlier timestamp to search further back.
-	StartDate *time.Time `query:"starts_at"`
-	// Restricts results to audit events on or before this timestamp.
-	EndDate *time.Time `query:"ends_at"`
-	// Filter by the resource type of the audited entity.
-	//
-	// The full set of valid values is available from the List Audit Event Resource Types endpoint.
+	// Defaults to 24 hours before `occurred_before`, or before now when that is also omitted, unless `resource_ids` or `root_resource_types` and `root_resource_ids` are given: a record's history is returned whole. Pass an earlier time to search further back.
+	OccurredAfter *time.Time `query:"occurred_after"`
+	// Only events that occurred at or before this time.
+	OccurredBefore *time.Time `query:"occurred_before"`
+	// Only events on resources of these types.
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
-	// Filter by the audited resource IDs.
+	// Only events on these resources.
 	ResourceIDs []string `query:"resource_ids"`
-	// Scope results to a root record's entire history tree.
+	// Only events in the history of records of these types: the record itself and everything under it, such as a sales order with its lines, picks, shipments and invoices.
 	//
-	// Returns every event whose root resource matches, covering the root record itself and all of its descendants — for example a sales order together with its lines, picks, shipments, and invoices. Both `root_resource_type` and `root_resource_id` must be supplied together; supplying only one has no effect.
-	RootResourceType *constants.ObjectType `query:"root_resource_type"`
-	// ID of the root record whose history tree to return.
-	//
-	// Only applied when paired with `root_resource_type`.
-	RootResourceID *string `query:"root_resource_id"`
-	// Filter by the actor identifier.
-	//
-	// Matches the event's `actor.id`: a user ID for `user` actors, an API key ID for `api_key` actors, or an agent ID for `agent` actors.
+	// Pass with `root_resource_ids`.
+	RootResourceTypes []constants.ObjectType `query:"root_resource_types"`
+	// Only events in the history of these records, with `root_resource_types` naming their types.
+	RootResourceIDs []string `query:"root_resource_ids"`
+	// Only events whose `actor.id` is one of these: a user, API key, agent or device ID.
 	ActorIDs []string `query:"actor_ids"`
-	// Filter by the actor type.
-	//
-	// Events are recorded for actors of type `user`, `api_key`, and `agent` — the last covering changes an OpenMRP agent made on your account's behalf.
+	// Only events whose `actor.type` is one of these.
 	ActorTypes []constants.ActorType `query:"actor_types"`
-	// Filter by the mutation type recorded on the event.
+	// Only events recording these actions.
 	Actions []constants.AuditAction `query:"actions"`
-	// Filter by the _acting_ account: the account that performed the mutation.
+	// Only events made by these accounts: the account the actor belongs to.
 	//
-	// Results are always scoped to events where your account is either the acting account or the target account; this narrows that set to specific acting accounts — for example a specific customer's account that mutated a resource on your account.
+	// Results always cover events where your account is either the acting account or the account acted upon; this narrows them to specific acting accounts, such as one customer's.
 	ActorAccountIDs []string `query:"actor_account_ids"`
-	// Filter by the _target_ account the mutation was performed against (the event's `account`).
+	// Only events made against these accounts (the event's `account`).
 	//
-	// Results are always scoped to events where your account is either the acting account or the target account; this narrows that set to specific target accounts — for example a specific customer's or supplier's account.
+	// Results always cover events where your account is either the acting account or the account acted upon; this narrows them to specific target accounts, such as one customer's or supplier's.
 	TargetAccountIDs []string `query:"target_account_ids"`
 }
 
-// Returns a paginated list of audit events, newest first.
+// Returns a page of audit events, newest first.
 //
-// Results cover every change where your account is either the acting account or the account that was acted upon, so a customer's or supplier's changes to your records appear alongside your own. The `q` parameter matches a resource ID, an originating request ID, a resource type or an action exactly; a type or action can be given as its code (`sales_order`) or its name (`Sales Order`).
+// Results cover every change where your account is either the acting account or the account acted upon, so a customer's or supplier's changes to your records appear alongside your own.
 type ListAuditEventsEndpoint struct{}
 
 func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]] {
@@ -77,11 +69,10 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAuditEvents, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
+			Fields:     []string{"account", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			HideFromRequestLog: true,

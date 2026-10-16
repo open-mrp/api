@@ -116,7 +116,8 @@ func TestSandboxes_Delete(t *testing.T) {
 
 	delStatus, delBody, err := apiClient.Delete(sandboxesPath + "/" + id)
 	require.NoError(t, err)
-	requireStatus(t, 202, delStatus, delBody)
+	requireStatus(t, 200, delStatus, delBody)
+	assert.Equal(t, map[string]any{"id": id, "object": "sandbox", "deleted": true}, parseJSON(delBody), "delete answers with the deleted stub")
 
 	getStatus, _, err := apiClient.GetListRaw(sandboxesPath+"/"+id, nil)
 	require.NoError(t, err)

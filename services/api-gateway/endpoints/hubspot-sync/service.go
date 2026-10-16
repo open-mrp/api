@@ -191,7 +191,7 @@ func (m *hubspotSyncSvcImpl) BulkResolveCompanyReviews(ctx context.Context, req 
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *hubspotSyncSvcImpl) ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
@@ -202,7 +202,7 @@ func (m *hubspotSyncSvcImpl) ExportCompanyReviews(ctx context.Context, req *Expo
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *hubspotSyncSvcImpl) ExecuteSync(ctx context.Context, req *ExecuteHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError) {

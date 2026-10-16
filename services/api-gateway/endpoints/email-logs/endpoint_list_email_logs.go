@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,15 +18,18 @@ import (
 // Request to list email logs.
 type ListEmailLogsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	apirequest.CreatedRange
+	// Case-insensitive substring match on `subject` or any recipient address.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return email logs with any of these send statuses: `sent` or `pending`.
+	SendStatuses []constants.EmailSendStatus `query:"send_statuses"`
+	// Only return email logs that carried any of these records, such as an invoice ID.
+	RelatedIDs []string `query:"related_ids"`
 }
 
-// Returns a paginated list of email logs for the current account, most recently created first.
+// Returns a list of email logs.
 //
-// The `q` search term matches the subject line or any recipient address.
+// Sorted by creation date, newest first.
 type ListEmailLogsEndpoint struct{}
 
 func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailLogsRequest, *apiresource.List[apiresource.EmailLog]] {
@@ -38,14 +42,13 @@ func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmai
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainEmailLogs, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEmailLogsRequest) (*apiresource.List[apiresource.EmailLog], *apierror.APIError) {
 			return svc.(EmailLogSvc).ListEmailLogs
 		},
 		ObjectType: constants.ObjectTypeEmailLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeEmailLog,
-			Fields:     []string{"sent_by"},
+			Fields:     []string{"related.record"},
 		}),
 	})
 }

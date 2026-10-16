@@ -37,13 +37,8 @@ func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(AnalyticsSvc).ExportSalesLines
 		},

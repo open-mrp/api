@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/open-mrp/apikit/db"
 )
 
 const createRequestLog = `-- name: CreateRequestLog :exec
@@ -39,9 +41,11 @@ INSERT INTO request_log (
         trace_id,
         public_endpoint,
         hidden,
-        payload_key
+        payload_key,
+        query_params
     )
 VALUES (
+        ?,
         ?,
         ?,
         ?,
@@ -100,6 +104,7 @@ type CreateRequestLogParams struct {
 	PublicEndpoint       bool
 	Hidden               bool
 	PayloadKey           sql.NullString
+	QueryParams          db.NullableRawMessage
 }
 
 func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogParams) error {
@@ -131,6 +136,7 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 		arg.PublicEndpoint,
 		arg.Hidden,
 		arg.PayloadKey,
+		arg.QueryParams,
 	)
 	return err
 }
@@ -151,7 +157,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.payload_key,
+       rl.idempotency_key_id, rl.payload_key, rl.query_params,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -186,6 +192,7 @@ type FindRequestLogBaseByIDRow struct {
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
 	PayloadKey       sql.NullString
+	QueryParams      db.NullableRawMessage
 	TargetAccountID  sql.NullString
 	IdempotencyKey   sql.NullString
 }
@@ -220,6 +227,7 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
 		&i.PayloadKey,
+		&i.QueryParams,
 		&i.TargetAccountID,
 		&i.IdempotencyKey,
 	)
@@ -231,7 +239,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.payload_key,
+       rl.idempotency_key_id, rl.payload_key, rl.query_params,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -280,6 +288,7 @@ type FindRequestLogByIDRow struct {
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
 	PayloadKey          sql.NullString
+	QueryParams         db.NullableRawMessage
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -327,6 +336,7 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
 		&i.PayloadKey,
+		&i.QueryParams,
 		&i.UserEmail,
 		&i.UserName,
 		&i.ApiKeyTypeID,

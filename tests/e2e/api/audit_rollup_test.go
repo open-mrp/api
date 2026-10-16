@@ -16,9 +16,9 @@ func rootScopedResourceTypes(t *testing.T, orderID string) map[string]bool {
 	t.Helper()
 
 	list, status, err := apiClient.GetList(auditEventsPath, url.Values{
-		"root_resource_type": {"sales_order"},
-		"root_resource_id":   {orderID},
-		"limit":              {"100"},
+		"root_resource_types": {"sales_order"},
+		"root_resource_ids":   {orderID},
+		"limit":               {"100"},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status, "root-scoped audit query should return 200")

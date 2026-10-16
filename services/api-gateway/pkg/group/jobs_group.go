@@ -40,10 +40,12 @@ func (*JobsEndpointGroup) Materialize(config *JobsEndpointGroupConfig) *JobsEndp
 		ResourceType: &apiresource.AsyncJob{},
 	}
 
+	listEndpoint := apiendpoint.From(&jobep.ListJobsEndpoint{}).WithService(inner, svc)
 	retrieveEndpoint := apiendpoint.From(&jobep.RetrieveJobEndpoint{}).WithService(inner, svc)
 	cancelEndpoint := apiendpoint.From(&jobep.CancelJobEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
+		listEndpoint,
 		retrieveEndpoint,
 		cancelEndpoint,
 	}

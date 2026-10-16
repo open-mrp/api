@@ -20,7 +20,7 @@ type RetrieveRequestLogRequest struct {
 
 // Returns a single API request log by ID.
 //
-// The log is readable when your account is either the acting account or the account that was acted upon. This is also the only endpoint that can return the captured query parameters and request and response bodies, and the only way to read the high-traffic-endpoint logs that are withheld from the list endpoint.
+// The log is readable when your account is either the acting account or the account that was acted upon. This is the only way to read the high-traffic-endpoint logs that are withheld from the list endpoint. Read the request and response bodies with Retrieve Request Log Bodies.
 type RetrieveRequestLogEndpoint struct{}
 
 func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog] {
@@ -33,14 +33,13 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRequestLogs, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
 			return svc.(RequestLogSvc).GetRequestLog
 		},
 		ObjectType: constants.ObjectTypeRequestLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRequestLog,
-			Fields:     []string{"account", "actor", "actor.role", "actor.role.permissions", "query_params", "request_body", "response_body"},
+			Fields:     []string{"account", "request_body", "response_body"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			HideFromRequestLog: true,

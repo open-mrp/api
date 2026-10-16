@@ -836,6 +836,8 @@ type EmailLog struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+	RelatedType  sql.NullString
+	RelatedID    sql.NullString
 }
 
 type EmailMessage struct {
@@ -2201,6 +2203,7 @@ type RequestLog struct {
 	IdentityType         sql.NullString
 	ActorType            sql.NullString
 	PayloadKey           sql.NullString
+	QueryParams          json.RawMessage
 }
 
 type Role struct {

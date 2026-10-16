@@ -302,12 +302,13 @@ type ListAnnouncementsInput struct {
 }
 
 type EmailLogData struct {
-	SesMessageID string   `json:"ses_message_id"`
-	To           []string `json:"to,omitempty"`
-	AccountID    *string  `json:"account_id,omitempty"`
-	SentByID     *string  `json:"sent_by_id,omitempty"`
-	Subject      string   `json:"subject"`
-	Filename     *string  `json:"filename,omitempty"`
+	SesMessageID string        `json:"ses_message_id"`
+	To           []string      `json:"to,omitempty"`
+	AccountID    *string       `json:"account_id,omitempty"`
+	SentByID     *string       `json:"sent_by_id,omitempty"`
+	Subject      string        `json:"subject"`
+	Filename     *string       `json:"filename,omitempty"`
+	Related      *EmailRelated `json:"related,omitempty"`
 }
 
 type EmailSendData struct {
@@ -328,6 +329,14 @@ type EmailSendData struct {
 	PlainText bool     `json:"plain_text,omitempty"`
 	// InReplyToSESMessageID threads this email under one this service already sent, identified by the SES message ID that send returned.
 	InReplyToSESMessageID *string `json:"in_reply_to_ses_message_id,omitempty"`
+	// Related is the record the email carried, shown in its log.
+	Related *EmailRelated `json:"related,omitempty"`
+}
+
+// EmailRelated is the record an email carried, such as the invoice it attached.
+type EmailRelated struct {
+	Type constants.RecordType `json:"type"`
+	ID   string               `json:"id"`
 }
 
 // EnterpriseRequestData contains data for an enterprise upgrade request email

@@ -27,10 +27,9 @@ func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndp
 		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events/resource-types",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
+		AgentTool:         false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAuditEvents, Action: types.ActionRead}}},
-		Preview:           true,
 		Extras: apiendpoint.APIEndpointExtras{
 			HideFromRequestLog: true,
 		},

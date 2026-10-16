@@ -36,13 +36,13 @@ type AnalyzeQuarterlyOrdersEndpoint struct{}
 func (e *AnalyzeQuarterlyOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse]{
 		Title:             "Analyze Quarterly Orders",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/quarterly-orders",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/quarterly-orders/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeQuarterlyOrdersRequest) (*apiresource.AnalyzeQuarterlyOrdersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeQuarterlyOrders

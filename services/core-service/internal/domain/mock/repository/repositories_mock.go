@@ -1913,6 +1913,20 @@ func (mr *MockItemRepoMockRecorder) ClearItemDirtyFlag(ctx, accountID, itemID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearItemDirtyFlag", reflect.TypeOf((*MockItemRepo)(nil).ClearItemDirtyFlag), ctx, accountID, itemID)
 }
 
+// DeleteProduct mocks base method.
+func (m *MockItemRepo) DeleteProduct(ctx context.Context, itemID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProduct", ctx, itemID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteProduct indicates an expected call of DeleteProduct.
+func (mr *MockItemRepoMockRecorder) DeleteProduct(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProduct", reflect.TypeOf((*MockItemRepo)(nil).DeleteProduct), ctx, itemID)
+}
+
 // DeleteQuantities mocks base method.
 func (m *MockItemRepo) DeleteQuantities(ctx context.Context, ids []string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -2353,20 +2367,6 @@ func (m *MockItemRepo) SetFields(ctx context.Context, params domain.SetItemField
 func (mr *MockItemRepoMockRecorder) SetFields(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFields", reflect.TypeOf((*MockItemRepo)(nil).SetFields), ctx, params)
-}
-
-// DeleteProduct mocks base method.
-func (m *MockItemRepo) DeleteProduct(ctx context.Context, itemID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteProduct", ctx, itemID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// DeleteProduct indicates an expected call of DeleteProduct.
-func (mr *MockItemRepoMockRecorder) DeleteProduct(ctx, itemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProduct", reflect.TypeOf((*MockItemRepo)(nil).DeleteProduct), ctx, itemID)
 }
 
 // SetProduct mocks base method.
@@ -21268,6 +21268,21 @@ func (m *MockJobRepo) GetItems(ctx context.Context, job *domain.Job) (json.RawMe
 func (mr *MockJobRepoMockRecorder) GetItems(ctx, job any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItems", reflect.TypeOf((*MockJobRepo)(nil).GetItems), ctx, job)
+}
+
+// List mocks base method.
+func (m *MockJobRepo) List(ctx context.Context, params domain.ListJobsRepositoryParams) (*domain.ListJobsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, params)
+	ret0, _ := ret[0].(*domain.ListJobsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockJobRepoMockRecorder) List(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockJobRepo)(nil).List), ctx, params)
 }
 
 // PutItems mocks base method.

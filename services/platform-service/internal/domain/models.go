@@ -232,12 +232,12 @@ type ListAuditEventsFilter struct {
 	EndDate       *time.Time
 	ResourceTypes []string
 	ResourceIDs   []string
-	// RootResourceType / RootResourceID scope results to a root record's entire tree (e.g. all events whose root_resource is a given sales_order). Both must be set together to apply.
-	RootResourceType string
-	RootResourceID   string
-	ActorIDs         []string
-	ActorTypes       []string
-	Actions          []string
+	// RootResourceTypes / RootResourceIDs scope results to root records' entire trees (e.g. all events whose root_resource is a given sales_order). Both must be set to apply.
+	RootResourceTypes []string
+	RootResourceIDs   []string
+	ActorIDs          []string
+	ActorTypes        []string
+	Actions           []string
 	// ActorAccountIDs filters by audit_event.account_id: the account that performed the mutation. TargetAccountIDs filters by audit_event.target_account_id: the account the mutation targeted. Both narrow within the caller's actor-or-target security scope.
 	ActorAccountIDs  []string
 	TargetAccountIDs []string

@@ -20,6 +20,103 @@ import (
 // forced deterministically; instead a large batch makes the write itself slow enough that
 // an immediate cancel reliably lands mid-write, exercising the guarded rollback.
 
+// Every async job names who raised it, from the 202 that answers the request onward.
+func TestJobs_CreatedByIsAlwaysPresent(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.Post(unitsBulkUpsertPath, map[string]any{
+		"units": []any{upsertUnitInput(uniqueName("e2e-jobby"), uniqueName("jby"), "quantity")},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 202, status, body)
+	accepted := parseJSON(body)
+	assertJobCreatedByHarnessKey(t, accepted)
+
+	job := pollJobUntilTerminal(t, jsonField(accepted, "id"))
+	if created, _ := jobResultIDs(job); len(created) > 0 {
+		defer cleanupUnitIDs(created)
+	}
+	assertJobCreatedByHarnessKey(t, job)
+
+	status, body, err = apiClient.GetListRaw(jobsPath+"/"+jsonField(job, "id"), url.Values{"include": {"created_by"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+}
+
+func assertJobCreatedByHarnessKey(t *testing.T, job map[string]any) {
+	t.Helper()
+	createdBy := jsonObject(job, "created_by")
+	require.NotNil(t, createdBy, "created_by is always present: %v", job)
+	assertActorRef(t, createdBy, "api_key")
+	assert.Equal(t, SeedAPIKeyID, jsonField(createdBy, "id"))
+	assert.NotEmpty(t, jsonField(createdBy, "name"), "the key's name is resolved")
+}
+
+// The list returns the account's jobs newest first, narrowed by type and status.
+func TestJobs_ListNewestFirstWithFilters(t *testing.T) {
+	t.Parallel()
+
+	older := acceptBulkUpsertUnits(t, upsertUnitInput(uniqueName("e2e-jobl"), uniqueName("jbl"), "quantity"))
+	newer := acceptBulkUpsertUnits(t, upsertUnitInput(uniqueName("e2e-jobl"), uniqueName("jbl"), "quantity"))
+	for _, id := range []string{older, newer} {
+		job := pollJobUntilTerminal(t, id)
+		require.Equal(t, "completed", jsonField(job, "status"))
+		if created, _ := jobResultIDs(job); len(created) > 0 {
+			defer cleanupUnitIDs(created)
+		}
+	}
+
+	list, status, err := apiClient.GetList(jobsPath, url.Values{"types": {"bulk_upsert"}, "statuses": {"completed"}, "limit": {"100"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, nil)
+	pos := map[string]int{}
+	var prev string
+	for i, raw := range list.Data {
+		job := parseJSON(raw)
+		assert.Equal(t, "async_job", jsonField(job, "object"))
+		assert.Equal(t, "bulk_upsert", jsonField(job, "type"))
+		assert.Equal(t, "completed", jsonField(job, "status"))
+		assert.NotNil(t, jsonObject(job, "created_by"), "created_by is always present")
+		if prev != "" {
+			assert.GreaterOrEqual(t, prev, jsonField(job, "created_at"), "newest first")
+		}
+		prev = jsonField(job, "created_at")
+		pos[jsonField(job, "id")] = i
+	}
+	require.Contains(t, pos, older)
+	require.Contains(t, pos, newer)
+	assert.Less(t, pos[newer], pos[older], "the newer job lists first")
+
+	for _, params := range []url.Values{
+		{"types": {"export"}, "limit": {"100"}},
+		{"statuses": {"queued", "running", "failed", "canceled"}, "limit": {"100"}},
+	} {
+		other, _, err := apiClient.GetList(jobsPath, params)
+		require.NoError(t, err)
+		for _, raw := range other.Data {
+			id := DataItemField(raw, "id")
+			assert.NotEqual(t, older, id, "filter %v must exclude a completed bulk upsert", params)
+			assert.NotEqual(t, newer, id, "filter %v must exclude a completed bulk upsert", params)
+		}
+	}
+}
+
+func TestJobs_ListPagination(t *testing.T) {
+	t.Parallel()
+	acceptBulkUpsertUnits(t, upsertUnitInput(uniqueName("e2e-jobp"), uniqueName("jbp"), "quantity"))
+	acceptBulkUpsertUnits(t, upsertUnitInput(uniqueName("e2e-jobp"), uniqueName("jbp"), "quantity"))
+	assertCursorPaginationAdvances(t, jobsPath, nil)
+}
+
+func TestJobs_ListRejectsUnknownFilterValues(t *testing.T) {
+	t.Parallel()
+	for _, params := range []url.Values{{"types": {"zzz"}}, {"statuses": {"started"}}} {
+		status, body, err := apiClient.GetListRaw(jobsPath, params)
+		require.NoError(t, err)
+		requireStatus(t, 400, status, body)
+	}
+}
+
 // A job that has already finished cannot be cancelled — the transition is refused.
 func TestJobs_Cancel_RejectedAfterCompletion(t *testing.T) {
 	t.Parallel()

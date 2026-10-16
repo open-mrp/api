@@ -21,7 +21,7 @@ type DeleteSandboxRequest struct {
 
 // Deletes a sandbox account and everything inside it.
 //
-// The sandbox becomes inaccessible as soon as this call returns, but its data is purged asynchronously and may persist briefly. Deletion is permanent: the sandbox cannot be restored, and deleting it again reports that it has already been deleted. Sandboxes cannot be deleted while acting in a sandbox.
+// The sandbox becomes inaccessible as soon as this call returns; its data is purged in the background. Deletion is permanent: the sandbox cannot be restored, and deleting it again reports that it has already been deleted. Sandboxes cannot be deleted while acting in a sandbox.
 type DeleteSandboxEndpoint struct{}
 
 func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSandboxRequest, *object.Deleted] {
@@ -30,12 +30,11 @@ func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSa
 		Method:            http.MethodDelete,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusAccepted,
+		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeSandbox,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSandboxRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(SandboxSvc).DeleteSandbox, constants.ObjectTypeSandbox, "id")
 		},

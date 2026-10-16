@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -21,34 +22,41 @@ func LoadRequestLogs(ctx context.Context, ids []string) (map[string]any, *apierr
 	}
 
 	out := make(map[string]any, len(ids))
+	actors := make([]*apiresource.ActorRef, 0, len(ids))
 	for _, id := range ids {
 		resp, apiErr := grpcutil.CallRPC(ctx, requestLogLoaderTracer, "loader.request_logs.get", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRequestLogResponse, error) {
-				// Base resource only: this loader populates a request_log embedded as another resource's sub-resource (e.g. an audit event's "request"). Nested expansions like "request.account"/"request.actor" are not part of any endpoint's allowed includes, so the embedded request_log must not carry account/actor data the client never asked for.
+				// The embedded log (e.g. an audit event's "request") carries what every log does, but not its expandable account: no endpoint offers "request.account".
 				return loggingClient.GetRequestLog(ctx, &pb.GetRequestLogRequest{
-					Id: id,
+					Id:       id,
+					Includes: []string{"actor", "query_params"},
 				}, opts...)
 			})
 		if apiErr != nil || resp == nil || resp.RequestLog == nil {
 			continue
 		}
-		out[id] = requestLogFromProto(resp.RequestLog)
+		rl := RequestLogFromProto(resp.RequestLog)
+		actors = append(actors, rl.Actor)
+		out[id] = &rl
 	}
+	ResolveActorRefs(ctx, actors)
 	return out, nil
 }
 
-func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
+// RequestLogFromProto is the request log an RPC carried, without its expandable fields.
+func RequestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
 	if rl == nil {
-		return nil
+		return apiresource.RequestLog{}
 	}
 
-	result := &apiresource.RequestLog{
+	result := apiresource.RequestLog{
 		ID:              rl.Id,
 		Object:          constants.ObjectTypeRequestLog,
 		Method:          constants.HTTPMethod(rl.Method),
 		Host:            rl.Host,
 		Path:            rl.Path,
 		NormalizedRoute: rl.NormalizedRoute,
+		QueryParams:     queryParamsFromJSON(rl.QueryJson),
 		StatusCode:      rl.StatusCode,
 		LatencyUs:       rl.LatencyUs,
 		APIVersion:      rl.ApiVersion,
@@ -61,35 +69,40 @@ func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
 		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),
 		IdempotencyKey:  rl.IdempotencyKey,
 	}
-
-	if rl.AccountId != nil && rl.AccountName != nil {
-		result.Account = &apiresource.Account{
-			ID:     *rl.AccountId,
-			Object: constants.ObjectTypeAccount,
-			Name:   *rl.AccountName,
-		}
-		if rl.AccountCreatedAt != nil {
-			result.Account.CreatedAt = rl.AccountCreatedAt.AsTime()
-		}
-		if rl.AccountUpdatedAt != nil {
-			result.Account.UpdatedAt = rl.AccountUpdatedAt.AsTime()
-		}
-	}
-
+	// platform-service joins user and API key names; ResolveActorRefs fills the rest.
 	if rl.Actor != nil {
-		actorType := constants.ActorType(rl.Actor.ActorType)
-		var handle *string
-		switch actorType {
-		case constants.ActorTypeAPIKey:
-			handle = rl.Actor.RedactedValue
-		case constants.ActorTypeUser:
-			handle = rl.Actor.Email
-		}
-		result.Actor = apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
+		result.Actor = ActorRefFromRecorded(constants.ActorType(rl.Actor.ActorType), rl.Actor.Id, rl.Actor.Name)
 	}
 
-	// Never expose internal infrastructure (internal listener host, pod IP) for agent requests — including when this request_log is embedded as another resource's sub-resource (e.g. an audit event's "request").
+	// Never expose internal infrastructure (internal listener host, pod IP) for agent requests, embedded or not.
 	result.ScrubInternalInfra(rl.IdentityType)
-
 	return result
+}
+
+// queryParamsFromJSON reads stored query parameters, where a parameter sent once is a string and one sent more than
+// once is a list of strings. Anything else reads as no parameters.
+func queryParamsFromJSON(s *string) map[string][]string {
+	if s == nil || *s == "" {
+		return nil
+	}
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(*s), &raw); err != nil || len(raw) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(raw))
+	for k, v := range raw {
+		switch vv := v.(type) {
+		case string:
+			out[k] = []string{vv}
+		case []any:
+			values := make([]string, 0, len(vv))
+			for _, item := range vv {
+				if str, ok := item.(string); ok {
+					values = append(values, str)
+				}
+			}
+			out[k] = values
+		}
+	}
+	return out
 }

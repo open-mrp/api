@@ -176,7 +176,7 @@ func dashItemsCorrections(t *testing.T, itemID string) []map[string]any {
 // dashItemsReceiptGroups reads the item's stock grouped by location, lot and owner.
 func dashItemsReceiptGroups(t *testing.T, itemID string) []map[string]any {
 	t.Helper()
-	status, body, err := apiClient.Put(dashItemsReceiptsAnalyticsPath, map[string]any{"item_ids": []string{itemID}})
+	status, body, err := apiClient.QueryAnalytics(dashItemsReceiptsAnalyticsPath, nil, map[string]any{"item_ids": []string{itemID}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	var groups []map[string]any

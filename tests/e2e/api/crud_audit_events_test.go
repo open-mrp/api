@@ -229,13 +229,12 @@ func TestAuditEvents_FilterByResourceIDsImpossible(t *testing.T) {
 	assertEmptyListData(t, list.Data, "Filtering by impossible resource_id should return no results")
 }
 
-// discoverAuditActorID fetches recent events with ?include=actor and returns
+// discoverAuditActorID fetches recent events and returns
 // the first actor ID found, or empty string if none.
 func discoverAuditActorID(t *testing.T) string {
 	t.Helper()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"include": {"actor"},
-		"limit":   {"10"},
+		"limit": {"10"},
 	})
 	if err != nil || len(list.Data) == 0 {
 		return ""
@@ -263,7 +262,6 @@ func TestAuditEvents_FilterByActorIDSingle(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_ids": {actorID},
-		"include":   {"actor"},
 		"limit":     {"25"},
 	})
 	require.NoError(t, err)
@@ -272,7 +270,7 @@ func TestAuditEvents_FilterByActorIDSingle(t *testing.T) {
 	for _, item := range filtered.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, actorID, jsonField(actor, "id"), "All results should match the filtered actor_id")
 	}
 }
@@ -287,7 +285,6 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_ids": {actorID, "actu_zzzzzzzzzzzzzzzz"},
-		"include":   {"actor"},
 		"limit":     {"25"},
 	})
 	require.NoError(t, err)
@@ -353,8 +350,7 @@ func TestAuditEvents_ListSearchByRequestID(t *testing.T) {
 func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 	t.Parallel()
 	probe, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"include": {"actor"},
-		"limit":   {"100"},
+		"limit": {"100"},
 	})
 	if err != nil || len(probe.Data) == 0 {
 		t.Fatal("No audit events available to discover actor IDs")
@@ -389,7 +385,6 @@ func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_ids": {actorA, actorB},
-		"include":   {"actor"},
 		"limit":     {"100"},
 	})
 	require.NoError(t, err)
@@ -398,7 +393,7 @@ func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 	sawA, sawB := false, false
 	for _, item := range filtered.Data {
 		actor := jsonObject(parseJSON(item), "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		got := jsonField(actor, "id")
 		assert.True(t, allowed[got], "actor.id %q not in requested set {%s, %s}", got, actorA, actorB)
 		switch got {
@@ -547,31 +542,43 @@ func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 
 	got := parseJSON(getBody)
-	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
+	assert.NotNil(t, got["actor"], "actor is always present")
 	assert.Nil(t, got["account"], "account should be null without ?include=account")
 	assert.Nil(t, got["changes"], "changes should be null without ?include=changes")
 	assert.Nil(t, got["metadata"], "metadata should be null without ?include=metadata")
 	assert.Nil(t, got["request"], "request should be null without ?include=request")
 }
 
-func TestAuditEvents_IncludeActor(t *testing.T) {
+// The actor is an ActorRef: always present, never expandable, with no object, handle, avatar or role.
+func TestAuditEvents_ActorIsAnActorRef(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"actor_types": {"user"}, "limit": {"1"}})
 	require.NoError(t, err)
-	if len(list.Data) == 0 {
-		t.Fatal("No audit events available")
-	}
+	require.NotEmpty(t, list.Data, "the seed has user-attributed audit events")
 	eventID := DataItemField(list.Data[0], "id")
 
-	getStatus, getBody, err := apiClient.GetListRaw(auditEventsPath+"/"+eventID, url.Values{"include": {"actor"}})
+	getStatus, getBody, err := apiClient.GetListRaw(auditEventsPath+"/"+eventID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
 	actor := jsonObject(parseJSON(getBody), "actor")
 	require.NotNil(t, actor)
+	assertActorRef(t, actor, "user")
 	assert.NotEmpty(t, jsonField(actor, "id"))
-	assert.Equal(t, "actor", jsonField(actor, "object"))
-	assert.NotEmpty(t, jsonField(actor, "type"))
+}
+
+func TestAuditEvents_ActorIsNotAnInclude(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"include": {"actor"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+}
+
+// assertActorRef checks an ActorRef has exactly its four fields and the wanted type.
+func assertActorRef(t *testing.T, actor map[string]any, wantType string) {
+	t.Helper()
+	assert.ElementsMatch(t, []string{"type", "id", "name", "client"}, mapKeys(actor), "an ActorRef carries type, id, name and client only")
+	assert.Equal(t, wantType, jsonField(actor, "type"))
 }
 
 // firstAuditEventWithAccount lists audit events with ?include=account and returns

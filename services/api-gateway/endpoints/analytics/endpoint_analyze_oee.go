@@ -40,14 +40,13 @@ type AnalyzeOeeEndpoint struct{}
 func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse]{
 		Title:             "Analyze OEE",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/oee",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/oee/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		ReadOnly:          true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOee

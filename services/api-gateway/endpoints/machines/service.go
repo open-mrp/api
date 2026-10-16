@@ -81,7 +81,7 @@ func (m *machineSvcImpl) ExportMachines(ctx context.Context, req *ExportMachines
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
@@ -165,7 +165,7 @@ func (m *machineSvcImpl) BulkUpsertMachines(ctx context.Context, req *BulkUpsert
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {

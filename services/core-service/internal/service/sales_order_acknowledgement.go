@@ -385,6 +385,7 @@ func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactor
 		TemplateID: constants.EmailTemplateOrderAcknowledgement,
 		Params:     data.emailParams(),
 		AccountID:  &accountID,
+		Related:    &messaging.EmailRelated{Type: constants.RecordTypeSalesOrder, ID: salesOrderID},
 	}
 	applyMerchantReplyTo(emailData, data.AccountEmail)
 

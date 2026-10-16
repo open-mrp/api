@@ -105,7 +105,7 @@ func TestSelectActiveSearchProviders(t *testing.T) {
 
 	// A customer-scoped search drops every non-customer-safe provider, even ones the caller can read.
 	// Here only sales_order is customer-safe and permitted, so the privileged customer type is excluded.
-	scoped := selectActiveSearchProviders(providers, nil, identity, searchScope{customerID: "acc_cust"})
+	scoped := selectActiveSearchProviders(providers, nil, identity, searchScope{customerIDs: []string{"acc_cust"}})
 	require.Len(t, scoped, 1)
 	assert.Equal(t, constants.ObjectTypeSalesOrder, scoped[0].objectType)
 }

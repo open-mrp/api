@@ -33,7 +33,7 @@ func TestAuditEvents_OmittedStartCoversTheLastDay(t *testing.T) {
 	recent := auditEventIDsAs(t, apiClient, url.Values{"q": {infraAuditRequestID}})
 	assert.False(t, recent[SeedAuditEventInfraAgentID], "an event from 2022 is outside the default window")
 
-	all := auditEventIDsAs(t, apiClient, url.Values{"q": {infraAuditRequestID}, "starts_at": {"2000-01-01T00:00:00Z"}})
+	all := auditEventIDsAs(t, apiClient, url.Values{"q": {infraAuditRequestID}, "occurred_after": {"2000-01-01T00:00:00Z"}})
 	assert.True(t, all[SeedAuditEventInfraAgentID], "an explicit start reaches it")
 }
 

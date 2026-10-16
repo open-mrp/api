@@ -3,6 +3,7 @@ package requestlogep
 import (
 	"testing"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 )
@@ -14,7 +15,7 @@ func TestRequestLogFromProto_ScrubsInternalAgentInfra(t *testing.T) {
 	const podIP = "10.244.0.18"
 
 	t.Run("agent request is scrubbed", func(t *testing.T) {
-		got := requestLogFromProto(&pb.RequestLogInfo{
+		got := resourceloaders.RequestLogFromProto(&pb.RequestLogInfo{
 			Id:           "rq_agent",
 			Method:       "GET",
 			Host:         internalHost,
@@ -31,7 +32,7 @@ func TestRequestLogFromProto_ScrubsInternalAgentInfra(t *testing.T) {
 	})
 
 	t.Run("user request keeps host and client_ip", func(t *testing.T) {
-		got := requestLogFromProto(&pb.RequestLogInfo{
+		got := resourceloaders.RequestLogFromProto(&pb.RequestLogInfo{
 			Id:           "rq_user",
 			Method:       "GET",
 			Host:         "api.openmrp.ai",

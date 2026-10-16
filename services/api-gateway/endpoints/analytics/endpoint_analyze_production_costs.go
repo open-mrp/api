@@ -43,14 +43,13 @@ type AnalyzeProductionCostsEndpoint struct{}
 func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeProductionCostsRequest, *apiresource.AnalyzeProductionCostsResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeProductionCostsRequest, *apiresource.AnalyzeProductionCostsResponse]{
 		Title:             "Analyze Production Costs",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/production-costs",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/production-costs/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
 		ReadOnly:          true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAnalyzeProductionCostsResponse,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {

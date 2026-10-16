@@ -35,7 +35,7 @@ func TestCreate_StoresInlineBodiesInObjectStorage(t *testing.T) {
 	repo := NewRequestLogRepo(sqlc.New(sqlDB), store)
 
 	mock.ExpectExec("INSERT INTO request_log").
-		WithArgs(append(anyArgs(26), "request-logs/rq_1.json.gz")...).
+		WithArgs(append(anyArgs(26), "request-logs/rq_1.json.gz", sqlmock.AnyArg())...).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	body := `{"name":"widget"}`
@@ -67,7 +67,7 @@ func TestCreate_WithoutStoreDropsBodies(t *testing.T) {
 
 	repo := NewRequestLogRepo(sqlc.New(sqlDB), nil)
 	mock.ExpectExec("INSERT INTO request_log").
-		WithArgs(append(anyArgs(26), nil)...).
+		WithArgs(append(anyArgs(26), nil, sqlmock.AnyArg())...).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	body := `{"name":"widget"}`

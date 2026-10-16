@@ -101,9 +101,9 @@ func saleFilter(customerID string) map[string]any {
 	}
 }
 
-func putSales(t *testing.T, path string, params url.Values, body map[string]any) (int, map[string]any, []byte) {
+func querySales(t *testing.T, path string, params url.Values, body map[string]any) (int, map[string]any, []byte) {
 	t.Helper()
-	status, respBody, err := apiClient.PutRaw(path, params, body)
+	status, respBody, err := apiClient.QueryAnalytics(path, params, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s must not 5xx: %s", path, string(respBody))
 	if status != 200 {
@@ -118,7 +118,7 @@ func awaitSalesSummary(t *testing.T, customerID string, want int) map[string]any
 	var last []byte
 	deadline := time.Now().Add(45 * time.Second)
 	for time.Now().Before(deadline) {
-		status, summary, body := putSales(t, salesSummaryPath, nil, saleFilter(customerID))
+		status, summary, body := querySales(t, salesSummaryPath, nil, saleFilter(customerID))
 		last = body
 		// 503 means the facts are still being backfilled on a fresh stack.
 		if status == 200 && jsonField(jsonObject(summary, "overall"), "invoice_count") == itoa(want) {
@@ -151,7 +151,7 @@ func awaitSalesReports(t *testing.T) {
 	t.Helper()
 	now := time.Now().UTC()
 	eventually(t, 45*time.Second, time.Second, func() error {
-		status, _, body := putSales(t, salesSummaryPath, nil, map[string]any{"starts_at": rfc3339(now.Add(-time.Hour)), "ends_at": rfc3339(now)})
+		status, _, body := querySales(t, salesSummaryPath, nil, map[string]any{"starts_at": rfc3339(now.Add(-time.Hour)), "ends_at": rfc3339(now)})
 		if status != 200 {
 			return fmt.Errorf("sales summary answered %d: %s", status, string(body))
 		}
@@ -205,7 +205,7 @@ func TestSalesAnalytics_ComparisonPeriodIsReportedSeparately(t *testing.T) {
 	body := saleFilter(sale.customerID)
 	body["comparison_starts_at"] = rfc3339(time.Now().UTC().AddDate(-1, 0, -1))
 	body["comparison_ends_at"] = rfc3339(time.Now().UTC().AddDate(-1, 0, 1))
-	status, summary, raw := putSales(t, salesSummaryPath, nil, body)
+	status, summary, raw := querySales(t, salesSummaryPath, nil, body)
 	requireStatus(t, 200, status, raw)
 
 	comparison := jsonObject(summary, "comparison")
@@ -224,7 +224,7 @@ func TestSalesAnalytics_LocalDayBucketsFollowTheCallersOffset(t *testing.T) {
 	for _, offset := range []int{-600, 0, 600} {
 		body := saleFilter(sale.customerID)
 		body["tz_offset_minutes"] = offset
-		status, summary, raw := putSales(t, salesSummaryPath, nil, body)
+		status, summary, raw := querySales(t, salesSummaryPath, nil, body)
 		requireStatus(t, 200, status, raw)
 		days := jsonListData(summary, "periods")
 		require.Len(t, days, 1)
@@ -247,7 +247,7 @@ func TestSalesAnalytics_BreakdownByProductCarriesItemDetail(t *testing.T) {
 
 	body := saleFilter(sale.customerID)
 	body["group_by"] = "product"
-	status, list, raw := putSales(t, salesBreakdownPath, nil, body)
+	status, list, raw := querySales(t, salesBreakdownPath, nil, body)
 	requireStatus(t, 200, status, raw)
 	assert.Equal(t, "list", jsonField(list, "object"))
 
@@ -284,7 +284,7 @@ func TestSalesAnalytics_BreakdownByEveryDimensionResponds(t *testing.T) {
 			assertDecimalEqual(t, "0", salesAmount(t, jsonObject(g, "comparison_totals"), "revenue"), groupBy)
 			continue
 		}
-		status, _, raw := putSales(t, salesBreakdownPath, nil, body)
+		status, _, raw := querySales(t, salesBreakdownPath, nil, body)
 		requireStatus(t, 200, status, raw)
 	}
 }
@@ -295,7 +295,7 @@ func awaitSalesBreakdown(t *testing.T, params url.Values, body map[string]any, w
 	t.Helper()
 	var list map[string]any
 	eventually(t, 45*time.Second, time.Second, func() error {
-		status, got, raw := putSales(t, salesBreakdownPath, params, body)
+		status, got, raw := querySales(t, salesBreakdownPath, params, body)
 		if status != 200 {
 			return fmt.Errorf("breakdown answered %d: %s", status, string(raw))
 		}
@@ -327,7 +327,7 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 		revenue float64
 	}
 	page := func(params url.Values) ([]row, map[string]any) {
-		status, list, raw := putSales(t, salesBreakdownPath, params, body)
+		status, list, raw := querySales(t, salesBreakdownPath, params, body)
 		requireStatus(t, 200, status, raw)
 		var out []row
 		for _, g := range jsonArray(list, "data") {
@@ -378,7 +378,7 @@ func TestSalesAnalytics_InvoicesListTheShippedInvoice(t *testing.T) {
 	sale := shipSaleToNewCustomer(t)
 	awaitSalesSummary(t, sale.customerID, 1)
 
-	status, list, raw := putSales(t, salesInvoicesPath, nil, saleFilter(sale.customerID))
+	status, list, raw := querySales(t, salesInvoicesPath, nil, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	invoices := jsonArray(list, "data")
 	require.Len(t, invoices, 1)
@@ -411,7 +411,7 @@ func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) 
 		invoicedAt string
 	}
 	page := func(params url.Values) ([]row, map[string]any) {
-		status, list, raw := putSales(t, salesInvoicesPath, params, body)
+		status, list, raw := querySales(t, salesInvoicesPath, params, body)
 		requireStatus(t, 200, status, raw)
 		var out []row
 		for _, inv := range jsonArray(list, "data") {
@@ -464,7 +464,7 @@ func TestSalesAnalytics_LegacyEntriesFilterByCustomer(t *testing.T) {
 
 	entries := func(path string, body map[string]any) []any {
 		t.Helper()
-		status, list, raw := putSales(t, path, nil, body)
+		status, list, raw := querySales(t, path, nil, body)
 		requireStatus(t, 200, status, raw)
 		return jsonArray(list, "data")
 	}
@@ -500,7 +500,7 @@ func TestSalesAnalytics_LinesArePricedInTheBaseUnit(t *testing.T) {
 	sale := shipSaleToNewCustomer(t)
 	awaitSalesSummary(t, sale.customerID, 1)
 
-	status, list, raw := putSales(t, salesLinesPath, nil, saleFilter(sale.customerID))
+	status, list, raw := querySales(t, salesLinesPath, nil, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	lines := jsonArray(list, "data")
 	require.Len(t, lines, 2)
@@ -527,7 +527,7 @@ func TestSalesAnalytics_LinesPageForwardAndBack(t *testing.T) {
 	sale := shipSaleToNewCustomer(t)
 	awaitSalesSummary(t, sale.customerID, 1)
 
-	status, first, raw := putSales(t, salesLinesPath, url.Values{"limit": {"1"}}, saleFilter(sale.customerID))
+	status, first, raw := querySales(t, salesLinesPath, url.Values{"limit": {"1"}}, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	firstInfo := jsonObject(first, "page_info")
 	assert.Equal(t, "true", pageFlag(firstInfo, "next"))
@@ -535,7 +535,7 @@ func TestSalesAnalytics_LinesPageForwardAndBack(t *testing.T) {
 	firstID := jsonField(jsonArray(first, "data")[0].(map[string]any), "id")
 
 	next := cursorFromURL(t, jsonField(firstInfo, "next_page_url"))
-	status, second, raw := putSales(t, salesLinesPath, url.Values{"limit": {"1"}, "cursor": {next}}, saleFilter(sale.customerID))
+	status, second, raw := querySales(t, salesLinesPath, url.Values{"limit": {"1"}, "cursor": {next}}, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	secondInfo := jsonObject(second, "page_info")
 	assert.Equal(t, "false", pageFlag(secondInfo, "next"))
@@ -544,7 +544,7 @@ func TestSalesAnalytics_LinesPageForwardAndBack(t *testing.T) {
 	assert.NotEqual(t, firstID, secondID)
 
 	prev := cursorFromURL(t, jsonField(secondInfo, "previous_page_url"))
-	status, back, raw := putSales(t, salesLinesPath, url.Values{"limit": {"1"}, "cursor": {prev}}, saleFilter(sale.customerID))
+	status, back, raw := querySales(t, salesLinesPath, url.Values{"limit": {"1"}, "cursor": {prev}}, saleFilter(sale.customerID))
 	requireStatus(t, 200, status, raw)
 	assert.Equal(t, firstID, jsonField(jsonArray(back, "data")[0].(map[string]any), "id"), "going back returns the first page")
 }
@@ -595,7 +595,7 @@ func TestSalesAnalytics_RejectsInvalidRequests(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			status, _, raw := putSales(t, tc.path, tc.params, tc.body)
+			status, _, raw := querySales(t, tc.path, tc.params, tc.body)
 			assert.Contains(t, []int{400, 422}, status, "%s: %s", tc.name, string(raw))
 		})
 	}
@@ -604,7 +604,7 @@ func TestSalesAnalytics_RejectsInvalidRequests(t *testing.T) {
 func TestSalesAnalytics_UnknownCustomerYieldsNoSales(t *testing.T) {
 	t.Parallel()
 	awaitSalesReports(t)
-	status, summary, raw := putSales(t, salesSummaryPath, nil, saleFilter("ac_doesnotexist0"))
+	status, summary, raw := querySales(t, salesSummaryPath, nil, saleFilter("ac_doesnotexist0"))
 	requireStatus(t, 200, status, raw)
 	assert.Equal(t, "0", jsonField(jsonObject(summary, "overall"), "invoice_count"))
 	assertDecimalEqual(t, "0", salesAmount(t, jsonObject(summary, "overall"), "revenue"))

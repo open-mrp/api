@@ -73,7 +73,7 @@ func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnit
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
@@ -399,5 +399,5 @@ func (m *unitGroupSvcImpl) BulkUpsertUnitGroups(ctx context.Context, req *BulkUp
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }

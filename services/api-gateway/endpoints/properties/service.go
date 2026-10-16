@@ -162,7 +162,7 @@ func (m *propertySvcImpl) BulkUpsertProperties(ctx context.Context, req *BulkUps
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *propertySvcImpl) ExportProperties(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
@@ -174,7 +174,7 @@ func (m *propertySvcImpl) ExportProperties(ctx context.Context, req *ExportPrope
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *propertySvcImpl) DeleteProperty(ctx context.Context, req *DeletePropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {

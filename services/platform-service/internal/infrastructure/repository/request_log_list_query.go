@@ -49,6 +49,7 @@ var requestLogRLBaseColumns = []string{
 	"rl.created_at",
 	"rl.idempotency_key_id",
 	"rl.target_account_id",
+	"rl.query_params",
 }
 
 // buildListQuery assembles the dynamic list SQL for a request_log listing. Filter predicates are omitted entirely when the caller did not supply a value — no OR-sentinel or CASE-WHEN wrappers — so MySQL sees only the predicates that actually narrow the result set.
@@ -107,9 +108,10 @@ func buildListQuery(
 			outer.WriteString(
 				", au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
 					"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
-					"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
+					"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at",
 			)
 		}
+		outer.WriteString(", ik.idempotency_key")
 	}
 	outer.WriteString(" FROM (")
 	outer.WriteString(page.String())
@@ -128,10 +130,10 @@ func buildListQuery(
 				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
 					" LEFT JOIN role r_user ON au.role_id = r_user.id" +
 					" LEFT JOIN role r_key ON ak.role_id = r_key.id" +
-					" LEFT JOIN account a ON rl.target_account_id = a.id" +
-					" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
+					" LEFT JOIN account a ON rl.target_account_id = a.id",
 			)
 		}
+		outer.WriteString(" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id")
 	}
 
 	return outer.String(), unionArgs
@@ -328,7 +330,7 @@ func scanBaseListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.TargetAccountID,
+			&r.TargetAccountID, &r.QueryParams,
 			&r.IdempotencyKey,
 		); err != nil {
 			return nil, err
@@ -354,7 +356,7 @@ func scanFullListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.TargetAccountID,
+			&r.TargetAccountID, &r.QueryParams,
 			&r.UserEmail, &r.UserName,
 			&r.ApiKeyTypeID, &r.ApiKeyRedactedValue, &r.ApiKeyName,
 			&r.UserRoleID, &r.UserRoleName, &r.UserRoleTypeCode,
@@ -382,9 +384,10 @@ func scanActorListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.TargetAccountID,
+			&r.TargetAccountID, &r.QueryParams,
 			&r.UserEmail, &r.UserName,
 			&r.ApiKeyTypeID, &r.ApiKeyRedactedValue, &r.ApiKeyName,
+			&r.IdempotencyKey,
 		); err != nil {
 			return nil, err
 		}

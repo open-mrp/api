@@ -25,13 +25,12 @@ type AnalyzeOpenOrdersSummaryEndpoint struct{}
 func (e *AnalyzeOpenOrdersSummaryEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenOrdersSummaryRequest, *apiresource.AnalyzeOpenOrdersSummaryResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOpenOrdersSummaryRequest, *apiresource.AnalyzeOpenOrdersSummaryResponse]{
 		Title:             "Analyze Open Orders Summary",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/open-orders/summary",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/open-orders/summary/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		ObjectType:        constants.ObjectTypeOpenOrdersSummary,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},

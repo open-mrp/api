@@ -159,18 +159,22 @@ func (h *auditHandler) ListAuditEvents(ctx context.Context, req *pb.ListAuditEve
 	}
 
 	filter := &domain.ListAuditEventsFilter{
-		ResourceTypes:    req.ResourceTypes,
-		ResourceIDs:      req.ResourceIds,
-		ActorIDs:         req.ActorIds,
-		ActorTypes:       req.ActorTypes,
-		Actions:          req.Actions,
-		ActorAccountIDs:  req.ActorAccountIds,
-		TargetAccountIDs: req.TargetAccountIds,
-		RootResourceType: req.GetRootResourceType(),
-		RootResourceID:   req.GetRootResourceId(),
-		Query:            req.Query,
-		Cursor:           req.Cursor,
-		Limit:            req.Limit,
+		ResourceTypes:     req.ResourceTypes,
+		ResourceIDs:       req.ResourceIds,
+		ActorIDs:          req.ActorIds,
+		ActorTypes:        req.ActorTypes,
+		Actions:           req.Actions,
+		ActorAccountIDs:   req.ActorAccountIds,
+		TargetAccountIDs:  req.TargetAccountIds,
+		RootResourceTypes: req.RootResourceTypes,
+		RootResourceIDs:   req.RootResourceIds,
+		Query:             req.Query,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+	}
+	if req.GetRootResourceType() != "" && req.GetRootResourceId() != "" {
+		filter.RootResourceTypes = append(filter.RootResourceTypes, req.GetRootResourceType())
+		filter.RootResourceIDs = append(filter.RootResourceIDs, req.GetRootResourceId())
 	}
 
 	if req.StartDate != nil {

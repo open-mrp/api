@@ -55,7 +55,7 @@ func receiveInto(t *testing.T, itemID, value, unitID, locationID, lot string) {
 
 func receiptSummaries(t *testing.T, client *Client, body map[string]any) []map[string]any {
 	t.Helper()
-	return listRows(t, mustPutAnalytics(t, client, inventoryReceiptsPath, nil, body))
+	return listRows(t, mustQueryAnalytics(t, client, inventoryReceiptsPath, nil, body))
 }
 
 // awaitRemaining polls until the item's one summary row reports remaining: allocation runs behind the
@@ -208,7 +208,7 @@ func TestAnalyticsParityInventoryReceipts_OldestFirstAndFilteredInSQL(t *testing
 
 func materialRow(t *testing.T, materialID string) map[string]any {
 	t.Helper()
-	for _, row := range listRows(t, mustPutAnalytics(t, apiClient, analyticsMaterialsPath, nil, nil)) {
+	for _, row := range listRows(t, mustQueryAnalytics(t, apiClient, analyticsMaterialsPath, nil, nil)) {
 		if jsonField(row, "id") == materialID {
 			return row
 		}

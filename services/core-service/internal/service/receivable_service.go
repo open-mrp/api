@@ -252,6 +252,7 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 			TemplateID:            constants.EmailTemplateStatementOfAccount,
 			Params:                letterhead.params,
 			AccountID:             &accountID,
+			Related:               &messaging.EmailRelated{Type: constants.RecordTypeCustomer, ID: params.CustomerAccountID},
 			SentByID:              &identity.Actor.ID,
 			AttachmentData:        &encoded,
 			AttachmentFilename:    &attachmentFilename,

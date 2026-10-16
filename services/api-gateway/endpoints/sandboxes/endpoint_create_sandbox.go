@@ -53,7 +53,6 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSandbox,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSandbox,

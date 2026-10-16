@@ -31,14 +31,13 @@ func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainEmailLogs, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 			return svc.(EmailLogSvc).GetEmailLog
 		},
 		ObjectType: constants.ObjectTypeEmailLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeEmailLog,
-			Fields:     []string{"sent_by"},
+			Fields:     []string{"related.record"},
 		}),
 	})
 }

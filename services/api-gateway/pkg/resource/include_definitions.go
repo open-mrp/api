@@ -106,19 +106,14 @@ func init() {
 		ObjectType: constants.ObjectTypeRequestLog,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
-			{Key: "query_params", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "request_body", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "response_body", ObjectType: constants.ObjectTypeRequestLog},
-			{Key: "actor", ObjectType: constants.ObjectTypeActor, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "role", ObjectType: constants.ObjectTypeRole},
-			}},
 		},
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAuditEvent,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "actor", ObjectType: constants.ObjectTypeActor},
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "changes", ObjectType: constants.ObjectTypeAuditEvent},
 			{Key: "metadata", ObjectType: constants.ObjectTypeAuditEvent},
@@ -129,7 +124,21 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeEmailLog,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "sent_by", ObjectType: constants.ObjectTypeActor},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeEmailLogRelated,
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "record", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeSearchResult,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "resource", ObjectType: constants.ObjectTypeSearchResult, Children: []apiendpoint.IncludeFieldDef{}},
+			{Key: "entity", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
@@ -558,13 +567,6 @@ func init() {
 		ObjectType: constants.ObjectTypeDemandOverride,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "scope", ObjectType: constants.ObjectTypeEntity},
-		},
-	})
-
-	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeAsyncJob,
-		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "created_by", ObjectType: constants.ObjectTypeActor},
 		},
 	})
 

@@ -23,7 +23,7 @@ type ListSalesLinesRequest struct {
 	// Opaque cursor from a previous page's `next_page_url` or `previous_page_url`. Omit for the first page.
 	Cursor *string `query:"cursor"`
 	// Maximum number of lines to return.
-	Limit int32 `query:"limit" default:"50" validate:"min=1,max=500"`
+	Limit int32 `query:"limit" default:"25" validate:"min=1,max=100"`
 }
 
 // Returns invoiced sale lines newest first, each priced with its quantity in the item's base unit, unit and total price, cost and profit.
@@ -34,13 +34,12 @@ type ListSalesLinesEndpoint struct{}
 func (e *ListSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesLinesRequest, *apiresource.List[apiresource.SalesEntry]] {
 	return (&apiendpoint.APIEndpoint[*ListSalesLinesRequest, *apiresource.List[apiresource.SalesEntry]]{
 		Title:             "List Sales Lines",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/sales-lines",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/sales-lines/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError) {

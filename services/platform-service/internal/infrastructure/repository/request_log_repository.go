@@ -35,6 +35,23 @@ func NewRequestLogRepo(db *sqlc.Queries, payloads *blobstore.Store) domain.Reque
 // validJSON keeps a malformed stored body from reaching the API, which embeds it as raw JSON: one
 // truncated body would otherwise make the whole response unparseable. Substitute the size so the log
 // still shows something was there.
+// queryParamsColumn is a log's query parameters as the row stores them, or NULL for a request without any (or with
+// parameters that aren't JSON, which the gateway never sends).
+func queryParamsColumn(s *string) db.NullableRawMessage {
+	if s == nil || *s == "" || !json.Valid([]byte(*s)) {
+		return nil
+	}
+	return db.NullableRawMessage(*s)
+}
+
+func queryParamsFromColumn(raw db.NullableRawMessage) *string {
+	if len(raw) == 0 {
+		return nil
+	}
+	s := string(raw)
+	return &s
+}
+
 func validJSON(s *string) *string {
 	if s == nil || json.Valid([]byte(*s)) {
 		return s
@@ -86,6 +103,7 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		PublicEndpoint:       rl.PublicEndpoint,
 		Hidden:               rl.Hidden,
 		PayloadKey:           db.NullStringPtr(payloadKey),
+		QueryParams:          queryParamsColumn(rl.QueryJSON),
 	})
 	// The id is the request's own, so a duplicate is a redelivery of a log already stored.
 	if db.IsDuplicateEntry(err) {
@@ -158,10 +176,12 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID s
 }
 
 // loadPayload fills a log's body includes from object storage. It reads the object only when one
-// of them was asked for, so a log opened without them never touches the bucket. A log with no
-// object, or a body the object lacks, reads as {}: a request or response without a body.
+// of them was asked for, or query parameters were and the row predates storing them, so a log
+// opened without them never touches the bucket. A log with no object, or a body the object lacks,
+// reads as {}: a request or response without a body.
 func (r *requestLogRepoImpl) loadPayload(ctx context.Context, read *domain.RequestLogRead, key *string, includes []string) *apierror.APIError {
-	if !anyIncludeRequested(includes, "query_params", "request_body", "response_body") {
+	bodies := anyIncludeRequested(includes, "request_body", "response_body")
+	if !bodies && !(read.QueryJSON == nil && anyIncludeRequested(includes, "query_params")) {
 		return nil
 	}
 	emptyObject := "{}"
@@ -179,7 +199,7 @@ func (r *requestLogRepoImpl) loadPayload(ctx context.Context, read *domain.Reque
 		return apiErr
 	}
 
-	read.QueryJSON = validJSON(payload.QueryJSON)
+	read.QueryJSON = cmp.Or(read.QueryJSON, validJSON(payload.QueryJSON))
 	read.BodyJSON = cmp.Or(validJSON(payload.RequestBodyJSON), &emptyObject)
 	read.ResponseJSON = cmp.Or(validJSON(payload.ResponseBodyJSON), &emptyObject)
 	return nil
@@ -362,6 +382,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 		AccountID:       db.StringFromNullString(row.TargetAccountID),
 		AccountName:     db.StringFromNullString(row.AccountName),
 		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
+		QueryJSON:       queryParamsFromColumn(row.QueryParams),
 	}
 
 	if row.AccountCreatedAt.Valid {
@@ -433,6 +454,7 @@ func mapBaseRowToRequestLogRead(row *sqlc.FindRequestLogBaseByIDRow) *domain.Req
 		ErrorMessage:    db.StringFromNullString(row.ErrorMessage),
 		AccountID:       db.StringFromNullString(row.TargetAccountID),
 		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
+		QueryJSON:       queryParamsFromColumn(row.QueryParams),
 	}
 
 	return rl

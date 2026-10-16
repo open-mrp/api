@@ -36,13 +36,13 @@ type AnalyzeSalesEndpoint struct{}
 func (e *AnalyzeSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse]{
 		Title:             "Analyze Sales",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/sales",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/sales/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesRequest) (*apiresource.AnalyzeSalesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeSales

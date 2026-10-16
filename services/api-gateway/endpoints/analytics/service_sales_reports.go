@@ -226,7 +226,7 @@ func (m *analyticsSvcImpl) ExportSalesLines(ctx context.Context, req *ExportSale
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // salesTotalsFromProto renders totals; unitAbbr labels the quantity when every line in it shares one base unit.

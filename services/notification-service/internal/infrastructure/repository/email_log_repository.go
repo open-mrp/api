@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
@@ -21,6 +22,20 @@ func NewEmailLogRepo(db *sqlc.Queries) domain.EmailLogRepo {
 	return &emailLogRepoImpl{db: db}
 }
 
+func relatedTypeColumn(r *domain.EmailRelated) sql.NullString {
+	if r == nil {
+		return sql.NullString{}
+	}
+	return db.NullString(string(r.Type))
+}
+
+func relatedIDColumn(r *domain.EmailRelated) sql.NullString {
+	if r == nil {
+		return sql.NullString{}
+	}
+	return db.NullString(r.ID)
+}
+
 func (r *emailLogRepoImpl) Create(ctx context.Context, emailLog *domain.EmailLog) *apierror.APIError {
 	ctx, span := emailLogRepoTracer.Start(ctx, "repository.email_log.create")
 	defer span.End()
@@ -33,6 +48,8 @@ func (r *emailLogRepoImpl) Create(ctx context.Context, emailLog *domain.EmailLog
 		Subject:      db.NullStringPtr(emailLog.Subject),
 		Filename:     db.NullStringPtr(emailLog.Filename),
 		SesMessageID: db.NullStringPtr(emailLog.SesMessageID),
+		RelatedType:  relatedTypeColumn(emailLog.Related),
+		RelatedID:    relatedIDColumn(emailLog.Related),
 	})
 	if err != nil {
 		if db.IsDuplicateEntry(err) {

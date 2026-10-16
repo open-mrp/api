@@ -34,13 +34,8 @@ func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJo
 		// Public: the polling companion for every async operation, including the public bulk endpoints whose 202 Location points here.
 		Public:     true,
 		AgentTool:  true,
-		Preview:    true,
 		ObjectType: constants.ObjectTypeAsyncJob,
 		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainJobs, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		// A completed export's link is a bearer credential, so nothing may hold on to it.
 		CacheControl: "no-store",
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveJobRequest) (*apiresource.AsyncJob, *apierror.APIError) {

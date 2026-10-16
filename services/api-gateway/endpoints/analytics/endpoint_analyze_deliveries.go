@@ -38,13 +38,13 @@ type AnalyzeDeliveriesEndpoint struct{}
 func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse]{
 		Title:             "Analyze Deliveries",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/deliveries",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/deliveries/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDeliveries

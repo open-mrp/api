@@ -39,8 +39,10 @@ type RequestLog struct {
 	//
 	// For example `/v1/sales/customers/{id}` is the normalized route for the request path `/v1/sales/customers/ac_...`. Falls back to the raw path when the request did not match a registered route.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
-	// Query-string parameters the request was made with, as a JSON object.
-	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
+	// The query-string parameters the request was made with: each parameter's values, in the order sent.
+	//
+	// `null` when the request had none.
+	QueryParams map[string][]string `json:"query_params"`
 	// HTTP response status code (e.g. `200`, `404`).
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
@@ -77,53 +79,68 @@ type RequestLog struct {
 	//
 	// Results are scoped to logs where your account is either the acting account or the target account. Use the `target_account_ids` query parameter to filter by which account was acted upon, and `actor_account_ids` to filter by who acted.
 	Account *Account `json:"account" expandable:"true"`
-	// Actor who made the request.
-	Actor *Actor `json:"actor" expandable:"true"`
+	// Who made the request: a user, API key or agent.
+	//
+	// `null` for a request that wasn't authenticated.
+	Actor *ActorRef `json:"actor"`
 	// User-provided idempotency key.
 	IdempotencyKey *string `json:"idempotency_key"`
-	// The JSON body the request was sent with.
-	//
-	// Sensitive values such as passwords, tokens, and secrets are redacted before the body is stored. Bodies larger than 8 MiB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
-	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true"`
-	// The JSON body OpenMRP responded with.
-	//
-	// Sensitive values such as generated API key secrets are redacted before the body is stored. Bodies larger than 8 MiB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
-	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true"`
+	// Kept for 1.0.forge-preview.9 callers, which read bodies through the log; others use the Retrieve Request Log Bodies endpoint.
+	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true" visibility:"internal" sensitive:"true"`
+	// Kept for 1.0.forge-preview.9 callers, which read bodies through the log; others use the Retrieve Request Log Bodies endpoint.
+	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true" visibility:"internal" sensitive:"true"`
 }
 
-var SampleRequestLogActor = &Actor{
-	ID:        SampleUserID,
-	Object:    constants.ObjectTypeActor,
-	Type:      constants.ActorTypeUser,
-	Name:      new(SampleUserName),
-	Handle:    new(SampleUserEmail),
-	AvatarURL: new(SampleUserImageUrl),
-	Role:      SampleRole,
+var SampleRequestLogActor = &ActorRef{
+	Type: constants.ActorTypeUser,
+	ID:   new(SampleUserID),
+	Name: new(SampleUserName),
 }
 
 var SampleRequestLog = &RequestLog{
-	ID:               SampleRequestLogID,
-	Object:           constants.ObjectTypeRequestLog,
-	Method:           "GET",
-	Host:             SampleRequestLogHost,
-	Path:             SampleRequestLogPath,
-	NormalizedRoute:  SampleRequestLogPath,
-	QueryJSON:        json.RawMessage(SampleRequestLogQueryJSON),
-	StatusCode:       200,
-	LatencyUs:        12345,
-	APIVersion:       new(SampleRequestLogAPIVersion),
-	ClientIP:         new(SampleRequestLogClientIP),
-	UserAgent:        new(SampleRequestLogUserAgent),
-	Referrer:         new("https://www.openmrp.ai"),
-	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	Account:          SampleAccount,
-	Actor:            SampleRequestLogActor,
-	ResponseBodyJSON: json.RawMessage(SampleRequestLogResponseBody),
+	ID:              SampleRequestLogID,
+	Object:          constants.ObjectTypeRequestLog,
+	Method:          "GET",
+	Host:            SampleRequestLogHost,
+	Path:            SampleRequestLogPath,
+	NormalizedRoute: SampleRequestLogPath,
+	QueryParams:     map[string][]string{"limit": {"10"}},
+	StatusCode:      200,
+	LatencyUs:       12345,
+	APIVersion:      new(SampleRequestLogAPIVersion),
+	ClientIP:        new(SampleRequestLogClientIP),
+	UserAgent:       new(SampleRequestLogUserAgent),
+	Referrer:        new("https://www.openmrp.ai"),
+	OccurredAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	Account:         SampleAccount,
+	Actor:           SampleRequestLogActor,
 }
 
 func (*RequestLog) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleRequestLog)
+}
+
+// The request and response bodies of a request log.
+//
+// Sensitive values such as passwords, tokens, secrets and generated API key secrets are redacted before a body is stored. A body larger than 8 MiB is not stored in full: a small marker object with `_truncated` set to `true` is stored in its place.
+type RequestLogBodies struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=request_log_bodies"`
+	// The JSON body the request was sent with. `{}` when it had none.
+	RequestBody json.RawMessage `json:"request_body" validate:"required" sensitive:"true"`
+	// The JSON body OpenMRP responded with. `{}` when it had none.
+	ResponseBody json.RawMessage `json:"response_body" validate:"required" sensitive:"true"`
+}
+
+var SampleRequestLogBodies = &RequestLogBodies{
+	Object:       constants.ObjectTypeRequestLogBodies,
+	RequestBody:  json.RawMessage(`{}`),
+	ResponseBody: json.RawMessage(SampleRequestLogResponseBody),
+}
+
+func (*RequestLogBodies) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRequestLogBodies)
 }
 
 // RedactedRequestLogHost is the host shown for internal/agent request logs in

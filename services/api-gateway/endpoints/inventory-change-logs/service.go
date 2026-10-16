@@ -177,7 +177,7 @@ func (m *inventoryChangeLogSvcImpl) StartInventoryChangeLogsExport(ctx context.C
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // actionTypeStrings unwraps the typed filter for the proto request, which carries codes as plain strings.

@@ -216,7 +216,7 @@ func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentReq
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {

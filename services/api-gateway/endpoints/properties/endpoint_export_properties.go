@@ -39,10 +39,6 @@ func (e *ExportPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PropertySvc).ExportProperties
 		},

@@ -177,7 +177,7 @@ func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpse
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
@@ -254,7 +254,7 @@ func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMateri
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func loadMaterialByID(ctx context.Context, id string) (*apiresource.Material, *apierror.APIError) {

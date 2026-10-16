@@ -252,9 +252,17 @@ func (c *NotificationConsumer) logFailedEmail(ctx context.Context, messageID str
 		AccountID: payload.AccountID,
 		SentByID:  payload.SentByID,
 		Filename:  payload.AttachmentFilename,
+		Related:   emailRelated(payload.Related),
 	}); apiErr != nil {
 		log.Printf("Failed to log failed email: %v", apiErr)
 	}
+}
+
+func emailRelated(r *messaging.EmailRelated) *domain.EmailRelated {
+	if r == nil || r.ID == "" {
+		return nil
+	}
+	return &domain.EmailRelated{Type: r.Type, ID: r.ID}
 }
 
 func (c *NotificationConsumer) publishEmailLogEvent(ctx context.Context, sesMessageID string, payload messaging.EmailSendData) error {
@@ -265,6 +273,7 @@ func (c *NotificationConsumer) publishEmailLogEvent(ctx context.Context, sesMess
 		SentByID:     payload.SentByID,
 		Subject:      payload.Subject,
 		Filename:     payload.AttachmentFilename,
+		Related:      payload.Related,
 	}
 
 	logJSON, err := json.Marshal(logData)
@@ -304,6 +313,7 @@ func (c *NotificationConsumer) handleEmailLog(ctx context.Context, logData messa
 			SentByID:     logData.SentByID,
 			Subject:      logData.Subject,
 			Filename:     logData.Filename,
+			Related:      emailRelated(logData.Related),
 		},
 	)
 

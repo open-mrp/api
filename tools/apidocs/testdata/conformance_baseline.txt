@@ -28,7 +28,6 @@ actions_are_post PUT /v1/sales/sales-orders/{id}/actions/open
 actions_are_post PUT /v1/sales/sales-orders/{id}/actions/unissue
 delete_returns_stub DELETE /v1/auth/refresh-tokens
 delete_returns_stub DELETE /v1/catalog/items/{id}/attributes/{attribute_id}
-delete_returns_stub DELETE /v1/core/sandboxes/{id}
 
 delete_returns_stub DELETE /v1/operations/operating-calendars/{id}
 delete_returns_stub DELETE /v1/operations/operating-calendars/{id}/closures/{closure_id}
@@ -61,7 +60,6 @@ lists_page_with_list_request GET /v1/sales/customers/{id}/notification-recipient
 lists_page_with_list_request GET /v1/settings/integrations/hubspot/sync/records
 lists_page_with_list_request GET /v1/settings/integrations/hubspot/sync/{id}/company-reviews
 lists_page_with_list_request GET /v1/settings/portal-domains
-long_running_returns_async_job DELETE /v1/core/sandboxes/{id}
 long_running_returns_async_job POST /v1/auth/passwords/actions/request-reset
 long_running_returns_async_job POST /v1/auth/registration-sessions/{session_id}/actions/resend-verification-email
 long_running_returns_async_job POST /v1/core/actions/email-record
@@ -126,11 +124,6 @@ search_documented GET /v1/catalog/parts
 search_documented GET /v1/catalog/product-types
 search_documented GET /v1/catalog/products
 search_documented GET /v1/catalog/unit-groups
-search_documented GET /v1/core/audit-events
-search_documented GET /v1/core/email-logs
-search_documented GET /v1/core/request-logs
-search_documented GET /v1/core/sandboxes
-search_documented GET /v1/core/search
 search_documented GET /v1/finance/accounts/{account_id}/invoices
 search_documented GET /v1/finance/accounts/{account_id}/transactions
 search_documented GET /v1/finance/adjustment-types

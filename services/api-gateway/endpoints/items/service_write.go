@@ -132,7 +132,7 @@ func (m *itemSvcImpl) BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsR
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // writtenItem is the item a write saved, read back whole. A caller allowed to write items but not read them still gets

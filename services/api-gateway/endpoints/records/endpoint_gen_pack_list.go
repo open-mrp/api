@@ -10,21 +10,12 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
-	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to generate a pack list for a shipment.
 type GenPackListRequest struct {
 	// ID of the shipment to generate the pack list for.
-	ShipmentID string `json:"shipment_id" validate:"required"`
-}
-
-var sampleGenPackListRequest = &GenPackListRequest{
-	ShipmentID: apiresource.SampleShipmentID,
-}
-
-func (*GenPackListRequest) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(sampleGenPackListRequest)
+	ShipmentID string `path:"id" validate:"required"`
 }
 
 // Assembles a printable pack-list document for a shipment.
@@ -37,11 +28,10 @@ func (e *GenPackListEndpoint) Materialize() *apiendpoint.APIEndpoint[*GenPackLis
 		Title:             "Generate Pack List",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/core/records/actions/generate-pack-list",
+		Route:             "/v1/operations/shipments/{id}/actions/generate-pack-list",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypePackList,
 		Auth: authz.Policy{Permissions: []types.Permission{

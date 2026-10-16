@@ -17,7 +17,7 @@ const analyticsOeePath = "/v1/core/analytics/oee"
 func analyzeOee(t *testing.T, body map[string]any) map[string]any {
 	t.Helper()
 
-	status, respBody, err := apiClient.Put(analyticsOeePath, body)
+	status, respBody, err := apiClient.QueryAnalytics(analyticsOeePath, nil, body)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "OEE analytics must not 5xx: %s", string(respBody))
 	requireStatus(t, 200, status, respBody)
@@ -451,7 +451,7 @@ func TestAnalyticsOee_UnknownDepartmentReturnsEmpty(t *testing.T) {
 func TestAnalyticsOee_RejectsMissingDates(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(analyticsOeePath, map[string]any{})
+	status, body, err := apiClient.QueryAnalytics(analyticsOeePath, nil, map[string]any{})
 	require.NoError(t, err)
 	assert.Less(t, status, 500, "a missing date must be a client error, not a 5xx: %s", string(body))
 	assert.Equal(t, 422, status, "starts_at and ends_at are required, got %d: %s", status, string(body))

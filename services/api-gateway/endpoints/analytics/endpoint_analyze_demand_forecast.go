@@ -31,13 +31,13 @@ type AnalyzeDemandForecastEndpoint struct{}
 func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse]{
 		Title:             "Analyze Demand Forecast",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/demand-forecast",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/demand-forecast/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDemandForecast

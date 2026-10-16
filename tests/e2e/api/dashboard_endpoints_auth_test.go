@@ -201,7 +201,7 @@ func dashboardRequestBody(op dashboardOperation) map[string]any {
 	if body, ok := dashboardValidBodies[op.operationID]; ok {
 		return body
 	}
-	if strings.HasPrefix(op.path, "/v1/core/analytics/") && op.method == http.MethodPut {
+	if strings.HasPrefix(op.path, "/v1/core/analytics/") && strings.HasSuffix(op.path, "/actions/query") {
 		end := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
 		return map[string]any{"starts_at": rfc3339(end.AddDate(0, -1, 0)), "ends_at": rfc3339(end)}
 	}

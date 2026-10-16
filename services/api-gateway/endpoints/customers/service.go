@@ -191,7 +191,7 @@ func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustom
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
@@ -449,7 +449,7 @@ func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomer
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {

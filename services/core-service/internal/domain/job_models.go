@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/pagination"
 )
 
 type Job struct {
@@ -95,6 +96,26 @@ func (j *Job) IsTerminal() bool {
 	default:
 		return false
 	}
+}
+
+// ListJobsParams filters an account's jobs. Empty lists don't filter.
+type ListJobsParams struct {
+	Cursor   *string
+	Limit    int32
+	Types    []constants.JobType
+	Statuses []constants.JobStatus
+}
+
+// ListJobsRepositoryParams is ListJobsParams scoped to an account, and to one creator for a portal caller.
+type ListJobsRepositoryParams struct {
+	ListJobsParams
+	AccountID   string
+	CreatedByID *string
+}
+
+type ListJobsResult struct {
+	Jobs     []*Job
+	PageInfo pagination.PageInfo
 }
 
 type CreateJobServiceParams struct {

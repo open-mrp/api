@@ -52,10 +52,6 @@ func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickReque
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionUpdate},
 		}},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PackPickRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PickSvc).PackPick
 		},

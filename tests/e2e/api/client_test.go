@@ -440,6 +440,15 @@ func (c *Client) PutBytes(path, contentType string, body []byte) (int, []byte, e
 
 // PutRaw performs PUT with optional query params (same pattern as GET with query encoding).
 func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, error) {
+	return c.doRaw(http.MethodPut, path, params, body)
+}
+
+// QueryAnalytics runs an analytics report: POST {path}/actions/query with optional query params.
+func (c *Client) QueryAnalytics(path string, params url.Values, body any) (int, []byte, error) {
+	return c.doRaw(http.MethodPost, path+"/actions/query", params, body)
+}
+
+func (c *Client) doRaw(method, path string, params url.Values, body any) (int, []byte, error) {
 	u := c.baseURL + path
 	if len(params) > 0 {
 		u += "?" + params.Encode()
@@ -455,7 +464,7 @@ func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, 
 			bodyReader = bytes.NewReader(b)
 		}
 
-		req, err := http.NewRequest(http.MethodPut, u, bodyReader)
+		req, err := http.NewRequest(method, u, bodyReader)
 		if err != nil {
 			return 0, nil, fmt.Errorf("creating request: %w", err)
 		}
@@ -486,7 +495,7 @@ func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, 
 		return resp.StatusCode, respBody, nil
 	}
 
-	return 0, nil, fmt.Errorf("exhausted retries for PUT %s", u)
+	return 0, nil, fmt.Errorf("exhausted retries for %s %s", method, u)
 }
 
 // Delete performs an authenticated DELETE request.

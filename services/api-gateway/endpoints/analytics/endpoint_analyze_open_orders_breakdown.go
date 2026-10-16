@@ -29,13 +29,12 @@ type AnalyzeOpenOrdersBreakdownEndpoint struct{}
 func (e *AnalyzeOpenOrdersBreakdownEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenOrdersBreakdownRequest, *apiresource.List[apiresource.OpenOrderProduct]] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOpenOrdersBreakdownRequest, *apiresource.List[apiresource.OpenOrderProduct]]{
 		Title:             "Analyze Open Orders Breakdown",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/open-orders/breakdown",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/open-orders/breakdown/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		ObjectType:        constants.ObjectTypeOpenOrderProduct,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},

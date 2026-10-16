@@ -119,7 +119,7 @@ func feeds(t *testing.T, input, output string) {
 
 func openBatchRows(t *testing.T, stationID string, body map[string]any) []map[string]any {
 	t.Helper()
-	got := mustPutAnalytics(t, apiClient, openBatchesPath, nil, body)
+	got := mustQueryAnalytics(t, apiClient, openBatchesPath, nil, body)
 	var out []map[string]any
 	for _, r := range listRows(t, got) {
 		if jsonField(jsonObject(r, "scanning_station"), "id") == stationID {
@@ -189,7 +189,7 @@ func TestAnalyticsParityOpenBatches_CountsWhatIsLeftPerStationAndItem(t *testing
 
 func forecastRow(t *testing.T, itemID string, body map[string]any) map[string]any {
 	t.Helper()
-	got := mustPutAnalytics(t, apiClient, demandForecastPath, nil, body)
+	got := mustQueryAnalytics(t, apiClient, demandForecastPath, nil, body)
 	assert.Equal(t, "analyze_demand_forecast_response", jsonField(got, "object"))
 	for _, r := range listRows(t, jsonObject(got, "data")) {
 		if jsonField(jsonObject(r, "item"), "id") == itemID {

@@ -78,14 +78,13 @@ func TestAccountUsers_UserIDFiltersRequestLogs(t *testing.T) {
 
 	logs, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_ids": {seedUserID},
-		"include":   {"actor"},
 		"limit":     {"10"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, logs.Data, "filtering request logs by a user_id should return that user's logs")
 	for _, item := range logs.Data {
 		actor := jsonObject(parseJSON(item), "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, seedUserID, jsonField(actor, "id"), "request log actor.id should be the user_id")
 	}
 }

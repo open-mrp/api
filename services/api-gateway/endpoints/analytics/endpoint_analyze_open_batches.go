@@ -27,13 +27,13 @@ type AnalyzeOpenBatchesEndpoint struct{}
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse]{
 		Title:             "Analyze Open Batches",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/open-batches",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/open-batches/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.AnalyzeOpenBatchesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOpenBatches

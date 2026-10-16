@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Behavioral coverage for POST /v1/core/records/actions/generate-pack-list, which
+// Behavioral coverage for POST /v1/operations/shipments/{id}/actions/generate-pack-list, which
 // assembles a printable pack-list document for a shipment by composing the shipment
 // (lines + shipping cases) with its parent sales order (header, parties, terms, and
 // back-ordered lines) and the selling account.
@@ -27,7 +27,9 @@ import (
 //     (packed, never shipped).
 //   - ORD-002 has no customer PO; bill-to is the customer "Global Manufacturing Solutions".
 
-const genPackListPath = "/v1/core/records/actions/generate-pack-list"
+func genPackListPath(shipmentID string) string {
+	return shipmentsPath + "/" + shipmentID + "/actions/generate-pack-list"
+}
 
 // packListSubList returns the `data` array of a pack-list sub-list (line_items,
 // back_orders, shipping_cases), asserting the wrapper is a List resource.
@@ -51,7 +53,7 @@ func packListFloat(t *testing.T, m map[string]any, key string) float64 {
 func TestGenPackList_AssemblesShipmentDocument(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Post(genPackListPath, map[string]any{"shipment_id": SeedShipmentID}, newIdempotencyKey())
+	status, body, err := apiClient.Post(genPackListPath(SeedShipmentID), map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -128,7 +130,7 @@ func TestGenPackList_ExcludesNonSaleLinesFromBackOrders(t *testing.T) {
 	// back-order of 1 if the back-order table did not filter to sale-type products.
 	// An empty back_orders list therefore pins both the fully-packed case and the
 	// product-type exclusion (regression guard for the product_type_code filter).
-	status, body, err := apiClient.Post(genPackListPath, map[string]any{"shipment_id": SeedShipmentID}, newIdempotencyKey())
+	status, body, err := apiClient.Post(genPackListPath(SeedShipmentID), map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -146,7 +148,7 @@ func TestGenPackList_LineItemsMatchShipmentLines(t *testing.T) {
 	requireStatus(t, 200, shStatus, shBody)
 	shipmentLines := jsonArray(jsonObject(parseJSON(shBody), "lines"), "data")
 
-	plStatus, plBody, err := apiClient.Post(genPackListPath, map[string]any{"shipment_id": SeedShipmentID}, newIdempotencyKey())
+	plStatus, plBody, err := apiClient.Post(genPackListPath(SeedShipmentID), map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, plStatus, plBody)
 	packListItems := packListSubList(t, parseJSON(plBody), "line_items")
@@ -158,16 +160,7 @@ func TestGenPackList_ShipmentNotFound(t *testing.T) {
 	t.Parallel()
 
 	// Well-formed but nonexistent shipment id → 404, not a 5xx.
-	status, body, err := apiClient.Post(genPackListPath, map[string]any{"shipment_id": "sh_01k0a87w33emw8pmkz1mf80000"}, newIdempotencyKey())
+	status, body, err := apiClient.Post(genPackListPath("sh_01k0a87w33emw8pmkz1mf80000"), map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-}
-
-func TestGenPackList_RequiresShipmentID(t *testing.T) {
-	t.Parallel()
-
-	// shipment_id is required; omitting it is a request-validation error, not a 5xx.
-	status, body, err := apiClient.Post(genPackListPath, map[string]any{}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
 }

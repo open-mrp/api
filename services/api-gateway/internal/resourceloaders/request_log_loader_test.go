@@ -16,7 +16,7 @@ func TestRequestLogFromProto_Loader_ScrubsInternalAgentInfra(t *testing.T) {
 	const podIP = "10.244.0.18"
 
 	t.Run("agent request is scrubbed", func(t *testing.T) {
-		got := requestLogFromProto(&pb.RequestLogInfo{
+		got := RequestLogFromProto(&pb.RequestLogInfo{
 			Id:           "rq_agent",
 			Method:       "GET",
 			Host:         internalHost,
@@ -24,9 +24,6 @@ func TestRequestLogFromProto_Loader_ScrubsInternalAgentInfra(t *testing.T) {
 			ClientIp:     new(podIP),
 			IdentityType: new("agent"),
 		})
-		if got == nil {
-			t.Fatal("expected a request log")
-		}
 		if got.Host != apiresource.RedactedRequestLogHost {
 			t.Errorf("Host = %q, want %q", got.Host, apiresource.RedactedRequestLogHost)
 		}
@@ -36,7 +33,7 @@ func TestRequestLogFromProto_Loader_ScrubsInternalAgentInfra(t *testing.T) {
 	})
 
 	t.Run("user request keeps host and client_ip", func(t *testing.T) {
-		got := requestLogFromProto(&pb.RequestLogInfo{
+		got := RequestLogFromProto(&pb.RequestLogInfo{
 			Id:           "rq_user",
 			Method:       "GET",
 			Host:         "api.openmrp.ai",
@@ -44,9 +41,6 @@ func TestRequestLogFromProto_Loader_ScrubsInternalAgentInfra(t *testing.T) {
 			ClientIp:     new("198.51.100.7"),
 			IdentityType: new("user"),
 		})
-		if got == nil {
-			t.Fatal("expected a request log")
-		}
 		if got.Host != "api.openmrp.ai" {
 			t.Errorf("Host = %q, want api.openmrp.ai", got.Host)
 		}

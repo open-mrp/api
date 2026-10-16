@@ -15,7 +15,6 @@ func init() {
 		ObjectType: constants.ObjectTypeAuditEvent,
 		Load:       resourceloaders.LoadAuditEvents,
 		Subs: []include.SubField{
-			{Key: "actor", Populate: populateActorOnAuditEvent},
 			{Key: "account", Populate: populateAccountOnAuditEvent},
 			{Key: "changes", Populate: populateChangesOnAuditEvent},
 			{Key: "metadata", Populate: populateMetadataOnAuditEvent},
@@ -28,16 +27,6 @@ func init() {
 			},
 		},
 	})
-}
-
-func populateActorOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
-	ae := parent.(*apiresource.AuditEvent)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeAuditEvent, ae.ID, "actor")
-	if !ok {
-		return
-	}
-	ae.Actor = v.(*apiresource.Actor)
 }
 
 func populateAccountOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {

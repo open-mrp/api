@@ -187,6 +187,14 @@ type EmailSendData struct {
 	Bcc []string `json:"bcc,omitempty"`
 	// ThreadNote, when set, is sent after the email succeeds as a reply to it, so the note sits in the same thread as the sent message in its recipients' inboxes.
 	ThreadNote *EmailThreadNote `json:"thread_note,omitempty"`
+	// Related is the record the email carries, such as the invoice it attaches, shown in the email log's `related`.
+	Related *EmailRelated `json:"related,omitempty"`
+}
+
+// EmailRelated names the record an email carries.
+type EmailRelated struct {
+	Type constants.RecordType `json:"type"`
+	ID   string               `json:"id"`
 }
 
 // EmailThreadNote is an internal email threaded under the email it accompanies.
@@ -213,6 +221,8 @@ type EmailLogData struct {
 	Subject string `json:"subject"`
 	// Filename is the name of any attachment included with the email.
 	Filename *string `json:"filename,omitempty"`
+	// Related is the record the email carried.
+	Related *EmailRelated `json:"related,omitempty"`
 }
 
 // AgentExecuteRunData is the payload for AgentCmdExecuteRunQueue messages. It identifies which agent config to run for which account.

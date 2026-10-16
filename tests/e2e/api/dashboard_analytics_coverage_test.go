@@ -49,7 +49,7 @@ type dashAnalyticsReport struct {
 // dashAnalyticsInternalReports is every report the dashboard calls that only the seller's own staff may run, each with a valid request.
 func dashAnalyticsInternalReports() []dashAnalyticsReport {
 	put := func(name, path string, body map[string]any) dashAnalyticsReport {
-		return dashAnalyticsReport{name: name, method: "PUT", path: path, body: body}
+		return dashAnalyticsReport{name: name, method: "POST", path: path, body: body}
 	}
 	return []dashAnalyticsReport{
 		put("customer-pricing", customerPricingPath, map[string]any{}),
@@ -86,7 +86,7 @@ func dashAnalyticsCall(t *testing.T, client *Client, r dashAnalyticsReport) (int
 	if r.method == "GET" {
 		status, body, err = client.GetListRaw(r.path, nil)
 	} else {
-		status, body, err = client.PutRaw(r.path, nil, r.body)
+		status, body, err = client.QueryAnalytics(r.path, nil, r.body)
 	}
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s must not 5xx: %s", r.path, string(body))
@@ -157,7 +157,7 @@ func TestDashAnalytics_InvertedWindowsAreRejected(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			status, _, raw := putAnalytics(t, apiClient, tc.path, nil, tc.body)
+			status, _, raw := queryAnalytics(t, apiClient, tc.path, nil, tc.body)
 			require.Equal(t, 422, status, string(raw))
 			assertErrorParam(t, requireErrorResponse(t, raw, "", "invalid_request_error"), tc.param)
 		})
@@ -173,55 +173,55 @@ func TestDashAnalytics_MalformedReportRequestsAreRejected(t *testing.T) {
 		body                      map[string]any
 	}{
 		// Unparseable dates.
-		{"sales-summary bad date", "PUT", salesSummaryPath, "starts_at", nil, badDate},
-		{"sales-breakdown bad date", "PUT", salesBreakdownPath, "starts_at", nil, dashAnalyticsWith(badDate, map[string]any{"group_by": "customer"})},
-		{"sales-invoices bad date", "PUT", salesInvoicesPath, "starts_at", nil, badDate},
-		{"sales-lines bad date", "PUT", salesLinesPath, "starts_at", nil, badDate},
-		{"new-customers-table bad date", "PUT", newCustomersPath, "starts_at", nil, badDate},
-		{"oee bad date", "PUT", analyticsOeePath, "starts_at", nil, badDate},
-		{"oee-trend bad date", "PUT", analyticsOeeTrendPath, "starts_at", nil, badDate},
-		{"production-costs bad date", "PUT", productionCostsPath, "starts_at", nil, badDate},
-		{"realized-margins bad date", "PUT", realizedMarginsPath, "starts_at", nil, badDate},
-		{"schedule-attainment bad date", "PUT", scheduleAttainmentPath, "starts_at", nil, badDate},
-		{"sales-summary impossible calendar date", "PUT", salesSummaryPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart, "ends_at": "2021-13-45T00:00:00Z"}},
+		{"sales-summary bad date", "POST", salesSummaryPath, "starts_at", nil, badDate},
+		{"sales-breakdown bad date", "POST", salesBreakdownPath, "starts_at", nil, dashAnalyticsWith(badDate, map[string]any{"group_by": "customer"})},
+		{"sales-invoices bad date", "POST", salesInvoicesPath, "starts_at", nil, badDate},
+		{"sales-lines bad date", "POST", salesLinesPath, "starts_at", nil, badDate},
+		{"new-customers-table bad date", "POST", newCustomersPath, "starts_at", nil, badDate},
+		{"oee bad date", "POST", analyticsOeePath, "starts_at", nil, badDate},
+		{"oee-trend bad date", "POST", analyticsOeeTrendPath, "starts_at", nil, badDate},
+		{"production-costs bad date", "POST", productionCostsPath, "starts_at", nil, badDate},
+		{"realized-margins bad date", "POST", realizedMarginsPath, "starts_at", nil, badDate},
+		{"schedule-attainment bad date", "POST", scheduleAttainmentPath, "starts_at", nil, badDate},
+		{"sales-summary impossible calendar date", "POST", salesSummaryPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart, "ends_at": "2021-13-45T00:00:00Z"}},
 
 		// Missing window bounds.
-		{"oee-trend without a start", "PUT", analyticsOeeTrendPath, "starts_at", nil, map[string]any{"ends_at": dashAnalyticsPastEnd}},
-		{"oee-trend without an end", "PUT", analyticsOeeTrendPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart}},
-		{"oee without an end", "PUT", analyticsOeePath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart}},
-		{"sales-breakdown without an end", "PUT", salesBreakdownPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart, "group_by": "customer"}},
-		{"schedule-attainment without a start", "PUT", scheduleAttainmentPath, "starts_at", nil, map[string]any{"ends_at": dashAnalyticsPastEnd}},
+		{"oee-trend without a start", "POST", analyticsOeeTrendPath, "starts_at", nil, map[string]any{"ends_at": dashAnalyticsPastEnd}},
+		{"oee-trend without an end", "POST", analyticsOeeTrendPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart}},
+		{"oee without an end", "POST", analyticsOeePath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart}},
+		{"sales-breakdown without an end", "POST", salesBreakdownPath, "ends_at", nil, map[string]any{"starts_at": dashAnalyticsPastStart, "group_by": "customer"}},
+		{"schedule-attainment without a start", "POST", scheduleAttainmentPath, "starts_at", nil, map[string]any{"ends_at": dashAnalyticsPastEnd}},
 
 		// A filter that is not a list of ids.
-		{"customer-pricing customer_ids", "PUT", customerPricingPath, "customer_ids", nil, map[string]any{"customer_ids": SeedCustomerAccountID}},
-		{"demand-forecast item_ids", "PUT", demandForecastPath, "item_ids", nil, map[string]any{"item_ids": SeedItemID}},
-		{"inventory-receipts location_ids", "PUT", inventoryReceiptsPath, "location_ids", nil, map[string]any{"location_ids": SeedLocationID}},
-		{"materials supplier_ids", "PUT", analyticsMaterialsPath, "supplier_ids", nil, map[string]any{"supplier_ids": SeedSupplierAccountID}},
-		{"open-batches item_ids of numbers", "PUT", openBatchesPath, "item_ids[0]", nil, map[string]any{"item_ids": []int{1, 2}}},
-		{"open-orders-summary customer_ids", "PUT", openOrdersSummaryPath, "customer_ids", nil, map[string]any{"customer_ids": SeedCustomerAccountID}},
-		{"quarterly-orders item_ids", "PUT", quarterlyOrdersPath, "item_ids", nil, map[string]any{"item_ids": SeedItemID}},
-		{"sales-summary sales_rep_ids", "PUT", salesSummaryPath, "sales_rep_ids", nil, dashAnalyticsPastWindow(map[string]any{"sales_rep_ids": SeedAccountUserID})},
-		{"new-customers-table customer_group_ids", "PUT", newCustomersPath, "customer_group_ids", nil, dashAnalyticsPastWindow(map[string]any{"customer_group_ids": SeedCustomerGroupID})},
-		{"oee department_ids", "PUT", analyticsOeePath, "department_ids", nil, dashAnalyticsPastWindow(map[string]any{"department_ids": SeedDepartmentID})},
-		{"schedule-attainment machine_ids", "PUT", scheduleAttainmentPath, "machine_ids", nil, dashAnalyticsPastWindow(map[string]any{"machine_ids": SeedMachineID})},
-		{"realized-margins product_line_ids", "PUT", realizedMarginsPath, "product_line_ids", nil, dashAnalyticsPastWindow(map[string]any{"product_line_ids": SeedProductLineID})},
-		{"delivery-performance customer_ids", "PUT", deliveryPerformancePath, "customer_ids", nil, dashAnalyticsPastWindow(map[string]any{"customer_ids": SeedCustomerAccountID})},
-		{"production-costs category_ids", "PUT", productionCostsPath, "category_ids", nil, dashAnalyticsPastWindow(map[string]any{"category_ids": SeedItemCategoryID})},
+		{"customer-pricing customer_ids", "POST", customerPricingPath, "customer_ids", nil, map[string]any{"customer_ids": SeedCustomerAccountID}},
+		{"demand-forecast item_ids", "POST", demandForecastPath, "item_ids", nil, map[string]any{"item_ids": SeedItemID}},
+		{"inventory-receipts location_ids", "POST", inventoryReceiptsPath, "location_ids", nil, map[string]any{"location_ids": SeedLocationID}},
+		{"materials supplier_ids", "POST", analyticsMaterialsPath, "supplier_ids", nil, map[string]any{"supplier_ids": SeedSupplierAccountID}},
+		{"open-batches item_ids of numbers", "POST", openBatchesPath, "item_ids[0]", nil, map[string]any{"item_ids": []int{1, 2}}},
+		{"open-orders-summary customer_ids", "POST", openOrdersSummaryPath, "customer_ids", nil, map[string]any{"customer_ids": SeedCustomerAccountID}},
+		{"quarterly-orders item_ids", "POST", quarterlyOrdersPath, "item_ids", nil, map[string]any{"item_ids": SeedItemID}},
+		{"sales-summary sales_rep_ids", "POST", salesSummaryPath, "sales_rep_ids", nil, dashAnalyticsPastWindow(map[string]any{"sales_rep_ids": SeedAccountUserID})},
+		{"new-customers-table customer_group_ids", "POST", newCustomersPath, "customer_group_ids", nil, dashAnalyticsPastWindow(map[string]any{"customer_group_ids": SeedCustomerGroupID})},
+		{"oee department_ids", "POST", analyticsOeePath, "department_ids", nil, dashAnalyticsPastWindow(map[string]any{"department_ids": SeedDepartmentID})},
+		{"schedule-attainment machine_ids", "POST", scheduleAttainmentPath, "machine_ids", nil, dashAnalyticsPastWindow(map[string]any{"machine_ids": SeedMachineID})},
+		{"realized-margins product_line_ids", "POST", realizedMarginsPath, "product_line_ids", nil, dashAnalyticsPastWindow(map[string]any{"product_line_ids": SeedProductLineID})},
+		{"delivery-performance customer_ids", "POST", deliveryPerformancePath, "customer_ids", nil, dashAnalyticsPastWindow(map[string]any{"customer_ids": SeedCustomerAccountID})},
+		{"production-costs category_ids", "POST", productionCostsPath, "category_ids", nil, dashAnalyticsPastWindow(map[string]any{"category_ids": SeedItemCategoryID})},
 
 		// Optional enums and windows refuse an explicit null.
-		{"schedule-attainment null group_by", "PUT", scheduleAttainmentPath, "group_by", nil, dashAnalyticsPastWindow(map[string]any{"group_by": nil})},
-		{"delivery-performance null granularity", "PUT", deliveryPerformancePath, "granularity", nil, dashAnalyticsPastWindow(map[string]any{"granularity": nil})},
-		{"sales-summary null comparison", "PUT", salesSummaryPath, "comparison_starts_at", nil, dashAnalyticsPastWindow(map[string]any{"comparison_starts_at": nil, "comparison_ends_at": nil})},
-		{"sales-summary offset below range", "PUT", salesSummaryPath, "tz_offset_minutes", nil, dashAnalyticsPastWindow(map[string]any{"tz_offset_minutes": -841})},
+		{"schedule-attainment null group_by", "POST", scheduleAttainmentPath, "group_by", nil, dashAnalyticsPastWindow(map[string]any{"group_by": nil})},
+		{"delivery-performance null granularity", "POST", deliveryPerformancePath, "granularity", nil, dashAnalyticsPastWindow(map[string]any{"granularity": nil})},
+		{"sales-summary null comparison", "POST", salesSummaryPath, "comparison_starts_at", nil, dashAnalyticsPastWindow(map[string]any{"comparison_starts_at": nil, "comparison_ends_at": nil})},
+		{"sales-summary offset below range", "POST", salesSummaryPath, "tz_offset_minutes", nil, dashAnalyticsPastWindow(map[string]any{"tz_offset_minutes": -841})},
 
 		// Page sizes and periods out of range.
-		{"new-customers-table zero limit", "PUT", newCustomersPath, "limit", url.Values{"limit": {"0"}}, dashAnalyticsPastWindow(nil)},
-		{"new-customers-table limit over 1000", "PUT", newCustomersPath, "limit", url.Values{"limit": {"1001"}}, dashAnalyticsPastWindow(nil)},
-		{"new-customers-table forged cursor", "PUT", newCustomersPath, "cursor", url.Values{"cursor": {"not-a-cursor"}}, dashAnalyticsPastWindow(nil)},
-		{"sales-invoices limit over 100", "PUT", salesInvoicesPath, "limit", url.Values{"limit": {"101"}}, dashAnalyticsPastWindow(nil)},
-		{"sales-invoices forged cursor", "PUT", salesInvoicesPath, "cursor", url.Values{"cursor": {"not-a-cursor"}}, dashAnalyticsPastWindow(nil)},
-		{"sales-lines limit over 500", "PUT", salesLinesPath, "limit", url.Values{"limit": {"501"}}, dashAnalyticsPastWindow(nil)},
-		{"open-orders limit over 100", "PUT", openOrdersPath, "limit", url.Values{"limit": {"101"}}, map[string]any{}},
+		{"new-customers-table zero limit", "POST", newCustomersPath, "limit", url.Values{"limit": {"0"}}, dashAnalyticsPastWindow(nil)},
+		{"new-customers-table limit over 100", "POST", newCustomersPath, "limit", url.Values{"limit": {"101"}}, dashAnalyticsPastWindow(nil)},
+		{"new-customers-table forged cursor", "POST", newCustomersPath, "cursor", url.Values{"cursor": {"not-a-cursor"}}, dashAnalyticsPastWindow(nil)},
+		{"sales-invoices limit over 100", "POST", salesInvoicesPath, "limit", url.Values{"limit": {"101"}}, dashAnalyticsPastWindow(nil)},
+		{"sales-invoices forged cursor", "POST", salesInvoicesPath, "cursor", url.Values{"cursor": {"not-a-cursor"}}, dashAnalyticsPastWindow(nil)},
+		{"sales-lines limit over 100", "POST", salesLinesPath, "limit", url.Values{"limit": {"101"}}, dashAnalyticsPastWindow(nil)},
+		{"open-orders limit over 100", "POST", openOrdersPath, "limit", url.Values{"limit": {"101"}}, map[string]any{}},
 		{"weeks-of-sales period over 520", "GET", weeksOfSalesPath, "period_in_weeks", url.Values{"period_in_weeks": {"521"}}, nil},
 		{"weeks-of-sales unknown query parameter", "GET", weeksOfSalesPath, bogusE2EQueryParam, url.Values{bogusE2EQueryParam: {"1"}}, nil},
 	}
@@ -236,7 +236,7 @@ func TestDashAnalytics_MalformedReportRequestsAreRejected(t *testing.T) {
 			if tc.method == "GET" {
 				status, raw, err = apiClient.GetListRaw(tc.path, tc.params)
 			} else {
-				status, raw, err = apiClient.PutRaw(tc.path, tc.params, tc.body)
+				status, raw, err = apiClient.QueryAnalytics(tc.path, tc.params, tc.body)
 			}
 			require.NoError(t, err)
 			requireClientRejection(t, status, raw)
@@ -276,16 +276,16 @@ type dashAnalyticsSalesView struct {
 func dashAnalyticsReadSales(t *testing.T, client *Client, body map[string]any, groupBy string) dashAnalyticsSalesView {
 	t.Helper()
 	var v dashAnalyticsSalesView
-	summary := mustPutAnalytics(t, client, salesSummaryPath, nil, body)
+	summary := mustQueryAnalytics(t, client, salesSummaryPath, nil, body)
 	v.revenue = reportMoneyAmount(t, jsonObject(summary, "overall"), "revenue")
 	v.invoiceCount = jsonField(jsonObject(summary, "overall"), "invoice_count")
-	for _, g := range listRows(t, mustPutAnalytics(t, client, salesBreakdownPath, url.Values{"limit": {"100"}}, dashAnalyticsWith(body, map[string]any{"group_by": groupBy}))) {
+	for _, g := range listRows(t, mustQueryAnalytics(t, client, salesBreakdownPath, url.Values{"limit": {"100"}}, dashAnalyticsWith(body, map[string]any{"group_by": groupBy}))) {
 		v.groupKeys = append(v.groupKeys, jsonField(g, "key"))
 	}
-	for _, inv := range listRows(t, mustPutAnalytics(t, client, salesInvoicesPath, url.Values{"limit": {"100"}}, body)) {
+	for _, inv := range listRows(t, mustQueryAnalytics(t, client, salesInvoicesPath, url.Values{"limit": {"100"}}, body)) {
 		v.invoiceIDs = append(v.invoiceIDs, jsonField(inv, "id"))
 	}
-	for _, line := range listRows(t, mustPutAnalytics(t, client, salesLinesPath, url.Values{"limit": {"500"}}, body)) {
+	for _, line := range listRows(t, mustQueryAnalytics(t, client, salesLinesPath, url.Values{"limit": {"100"}}, body)) {
 		v.lineCustomer = append(v.lineCustomer, jsonField(line, "customer_id"))
 	}
 	return v
@@ -294,7 +294,7 @@ func dashAnalyticsReadSales(t *testing.T, client *Client, body map[string]any, g
 func dashAnalyticsRealizedFindingIDs(t *testing.T, client *Client, body map[string]any) []string {
 	t.Helper()
 	var ids []string
-	for _, f := range listRows(t, jsonObject(mustPutAnalytics(t, client, realizedMarginsPath, nil, body), "findings")) {
+	for _, f := range listRows(t, jsonObject(mustQueryAnalytics(t, client, realizedMarginsPath, nil, body), "findings")) {
 		ids = append(ids, jsonField(f, "id"))
 	}
 	return ids
@@ -354,7 +354,7 @@ func TestDashAnalytics_SalesReportsHonorEveryFilterTheDashboardSends(t *testing.
 	})
 
 	t.Run("lines without a window list every invoiced line", func(t *testing.T) {
-		rows := listRows(t, mustPutAnalytics(t, apiClient, salesLinesPath, nil, map[string]any{"customer_ids": mine, "product_line_ids": []string{SeedProductLineID}}))
+		rows := listRows(t, mustQueryAnalytics(t, apiClient, salesLinesPath, nil, map[string]any{"customer_ids": mine, "product_line_ids": []string{SeedProductLineID}}))
 		require.Len(t, rows, 1)
 		assert.Equal(t, "5", jsonField(rows[0], "quantity_invoiced"))
 	})
@@ -404,7 +404,7 @@ func TestDashAnalytics_SalesReportsShowTenantBNoneOfTheSellersSales(t *testing.T
 
 	t.Run("new customers", func(t *testing.T) {
 		now := time.Now().UTC()
-		list := mustPutAnalytics(t, tenantB, newCustomersPath, url.Values{"limit": {"1000"}}, map[string]any{
+		list := mustQueryAnalytics(t, tenantB, newCustomersPath, url.Values{"limit": {"100"}}, map[string]any{
 			"starts_at": rfc3339(now.Add(-time.Hour)), "ends_at": rfc3339(now.Add(time.Hour)),
 		})
 		assert.Nil(t, newCustomerRow(list, sale.customerID))
@@ -436,14 +436,14 @@ func TestDashAnalytics_OpenOrderReportsShowTenantBNoneOfTheSellersBook(t *testin
 	body := map[string]any{"customer_ids": []string{customer}}
 	tenantB := getTenantBClient()
 
-	assert.Equal(t, "6", reportMoneyAmount(t, mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body), "ordered"), "precondition: the seller sees its order")
+	assert.Equal(t, "6", reportMoneyAmount(t, mustQueryAnalytics(t, apiClient, openOrdersSummaryPath, nil, body), "ordered"), "precondition: the seller sees its order")
 	status, _, raw := openOrderLines(t, apiClient, orderID)
 	requireStatus(t, 200, status, raw)
 
-	assert.Equal(t, "0", reportMoneyAmount(t, mustPutAnalytics(t, tenantB, openOrdersSummaryPath, nil, body), "ordered"))
-	assert.Empty(t, listRows(t, mustPutAnalytics(t, tenantB, openOrdersBreakdownPath, nil, body)))
-	assert.Empty(t, listRows(t, mustPutAnalytics(t, tenantB, openOrdersPath, nil, body)))
-	for _, row := range listRows(t, mustPutAnalytics(t, tenantB, openOrdersPath, url.Values{"limit": {"100"}}, nil)) {
+	assert.Equal(t, "0", reportMoneyAmount(t, mustQueryAnalytics(t, tenantB, openOrdersSummaryPath, nil, body), "ordered"))
+	assert.Empty(t, listRows(t, mustQueryAnalytics(t, tenantB, openOrdersBreakdownPath, nil, body)))
+	assert.Empty(t, listRows(t, mustQueryAnalytics(t, tenantB, openOrdersPath, nil, body)))
+	for _, row := range listRows(t, mustQueryAnalytics(t, tenantB, openOrdersPath, url.Values{"limit": {"100"}}, nil)) {
 		assert.NotEqual(t, orderID, jsonField(jsonObject(row, "order"), "id"))
 	}
 
@@ -496,7 +496,7 @@ func TestDashAnalytics_InventoryReportsShowTenantBNoneOfTheSellersStock(t *testi
 			assert.NotEqual(t, SeedAccountID, entityID(row, "owner_account"))
 			assert.NotEqual(t, SeedAccountID, entityID(row, "holder_account"))
 		}
-		for _, row := range listRows(t, mustPutAnalytics(t, tenantB, analyticsMaterialsPath, nil, map[string]any{"supplier_ids": []string{SeedSupplierAccountID}})) {
+		for _, row := range listRows(t, mustQueryAnalytics(t, tenantB, analyticsMaterialsPath, nil, map[string]any{"supplier_ids": []string{SeedSupplierAccountID}})) {
 			assert.NotContains(t, []string{material, SeedMaterialID}, jsonField(row, "id"))
 		}
 	})
@@ -519,15 +519,15 @@ func TestDashAnalytics_InventoryReportsShowTenantBNoneOfTheSellersStock(t *testi
 
 	t.Run("open batches", func(t *testing.T) {
 		t.Parallel()
-		seller := listRows(t, mustPutAnalytics(t, apiClient, openBatchesPath, nil, nil))
+		seller := listRows(t, mustQueryAnalytics(t, apiClient, openBatchesPath, nil, nil))
 		require.NotEmpty(t, seller, "precondition: the seller has open batches")
 		stations, items := map[string]bool{}, []string{}
 		for _, r := range seller {
 			stations[entityID(r, "scanning_station")] = true
 			items = append(items, entityID(r, "item"))
 		}
-		assert.Empty(t, listRows(t, mustPutAnalytics(t, tenantB, openBatchesPath, nil, map[string]any{"item_ids": items})))
-		for _, r := range listRows(t, mustPutAnalytics(t, tenantB, openBatchesPath, nil, nil)) {
+		assert.Empty(t, listRows(t, mustQueryAnalytics(t, tenantB, openBatchesPath, nil, map[string]any{"item_ids": items})))
+		for _, r := range listRows(t, mustQueryAnalytics(t, tenantB, openBatchesPath, nil, nil)) {
 			assert.False(t, stations[entityID(r, "scanning_station")], "tenant B sees the seller's station %s", entityID(r, "scanning_station"))
 		}
 	})
@@ -536,9 +536,9 @@ func TestDashAnalytics_InventoryReportsShowTenantBNoneOfTheSellersStock(t *testi
 		t.Parallel()
 		body := map[string]any{"item_ids": []string{SeedItemID}}
 		require.NotNil(t, forecastRow(t, SeedItemID, body), "precondition: the seller's socks are forecast")
-		got := mustPutAnalytics(t, tenantB, demandForecastPath, nil, body)
+		got := mustQueryAnalytics(t, tenantB, demandForecastPath, nil, body)
 		assert.Empty(t, listRows(t, jsonObject(got, "data")))
-		for _, r := range listRows(t, jsonObject(mustPutAnalytics(t, tenantB, demandForecastPath, nil, nil), "data")) {
+		for _, r := range listRows(t, jsonObject(mustQueryAnalytics(t, tenantB, demandForecastPath, nil, nil), "data")) {
 			assert.NotEqual(t, SeedItemID, entityID(r, "item"))
 		}
 	})
@@ -550,7 +550,7 @@ func TestDashAnalytics_MaterialsSupplierIDsAddSupplierDetail(t *testing.T) {
 	supplierName := jsonField(parseJSON(mustGet(t, suppliersPath+"/"+SeedSupplierAccountID)), "name")
 	require.NotEmpty(t, supplierName)
 	row := func(body map[string]any) map[string]any {
-		for _, r := range listRows(t, mustPutAnalytics(t, apiClient, analyticsMaterialsPath, nil, body)) {
+		for _, r := range listRows(t, mustQueryAnalytics(t, apiClient, analyticsMaterialsPath, nil, body)) {
 			if jsonField(r, "id") == SeedMaterialID {
 				return r
 			}
@@ -602,8 +602,8 @@ func TestDashAnalytics_ProductionReportsShowTenantBNoneOfTheSellersPlant(t *test
 
 	t.Run("oee", func(t *testing.T) {
 		require.NotNil(t, findOeeDepartment(analyzeOee(t, scoped), SeedDepartmentID), "precondition: the seed department produced in the window")
-		assert.Empty(t, jsonListData(mustPutAnalytics(t, tenantB, analyticsOeePath, nil, scoped), "departments"))
-		for _, raw := range jsonListData(mustPutAnalytics(t, tenantB, analyticsOeePath, nil, window), "departments") {
+		assert.Empty(t, jsonListData(mustQueryAnalytics(t, tenantB, analyticsOeePath, nil, scoped), "departments"))
+		for _, raw := range jsonListData(mustQueryAnalytics(t, tenantB, analyticsOeePath, nil, window), "departments") {
 			assert.NotEqual(t, SeedDepartmentID, entityID(raw.(map[string]any), "department"))
 		}
 	})
@@ -619,7 +619,7 @@ func TestDashAnalytics_ProductionReportsShowTenantBNoneOfTheSellersPlant(t *test
 		}
 		seller := analyzeOeeTrend(t, scoped)
 		require.Positive(t, goodUnits(seller), "precondition: the seed department produced in the window: %v", seller)
-		got := mustPutAnalytics(t, tenantB, analyticsOeeTrendPath, nil, scoped)
+		got := mustQueryAnalytics(t, tenantB, analyticsOeeTrendPath, nil, scoped)
 		assert.Zero(t, goodUnits(got))
 		for _, raw := range jsonListData(got, "periods") {
 			assert.Zero(t, raw.(map[string]any)["scheduled_seconds"])
@@ -645,7 +645,7 @@ func TestDashAnalytics_ScheduleAttainmentFiltersAndTenantIsolation(t *testing.T)
 		"ends_at":   rfc3339(horizon.AddDate(0, 0, 14).Add(-time.Second)),
 	}
 	attainment := func(client *Client, extra map[string]any) map[string]any {
-		got := mustPutAnalytics(t, client, scheduleAttainmentPath, nil, dashAnalyticsWith(week, extra))
+		got := mustQueryAnalytics(t, client, scheduleAttainmentPath, nil, dashAnalyticsWith(week, extra))
 		assert.Equal(t, "analyze_schedule_attainment_response", jsonField(got, "object"))
 		return got
 	}
@@ -720,7 +720,7 @@ func TestDashAnalytics_CustomerPricingFiltersByCustomerAndGroup(t *testing.T) {
 
 	findings := func(client *Client, extra map[string]any) []map[string]any {
 		body := dashAnalyticsWith(map[string]any{"outlier_tolerance": "0.15", "target_gross_margin": "0"}, extra)
-		return listRows(t, jsonObject(mustPutAnalytics(t, client, customerPricingPath, url.Values{"include": {"customer"}}, body), "findings"))
+		return listRows(t, jsonObject(mustQueryAnalytics(t, client, customerPricingPath, url.Values{"include": {"customer"}}, body), "findings"))
 	}
 
 	byCustomer := findings(apiClient, map[string]any{"customer_ids": []string{low}})

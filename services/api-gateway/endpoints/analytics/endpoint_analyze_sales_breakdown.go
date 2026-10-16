@@ -37,13 +37,12 @@ type AnalyzeSalesBreakdownEndpoint struct{}
 func (e *AnalyzeSalesBreakdownEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesBreakdownRequest, *apiresource.List[apiresource.SalesBreakdown]] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesBreakdownRequest, *apiresource.List[apiresource.SalesBreakdown]]{
 		Title:             "Analyze Sales Breakdown",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/sales-breakdown",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/sales-breakdown/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ReadOnly:          true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesBreakdownRequest) (*apiresource.List[apiresource.SalesBreakdown], *apierror.APIError) {

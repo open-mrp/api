@@ -24,6 +24,8 @@ SELECT
     u.email AS sent_by_email,
     ak.type_id AS sent_by_api_key_id,
     ak.name AS sent_by_api_key_name,
+    el.related_type,
+    el.related_id,
     el.created_at,
     el.updated_at
 FROM email_log el
@@ -50,6 +52,8 @@ type GetEmailLogRow struct {
 	SentByEmail      sql.NullString
 	SentByApiKeyID   sql.NullString
 	SentByApiKeyName sql.NullString
+	RelatedType      sql.NullString
+	RelatedID        sql.NullString
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -69,6 +73,8 @@ func (q *Queries) GetEmailLog(ctx context.Context, arg GetEmailLogParams) (GetEm
 		&i.SentByEmail,
 		&i.SentByApiKeyID,
 		&i.SentByApiKeyName,
+		&i.RelatedType,
+		&i.RelatedID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -95,223 +101,6 @@ func (q *Queries) GetEmailRecipientsByEmailLogID(ctx context.Context, emailLogID
 			return nil, err
 		}
 		items = append(items, email)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listEmailLogsBackward = `-- name: ListEmailLogsBackward :many
-SELECT
-    el.id,
-    el.has_sent,
-    el.subject,
-    el.filename,
-    el.ses_message_id,
-    el.sent_by_id,
-    u.name AS sent_by_name,
-    u.username AS sent_by_username,
-    u.email AS sent_by_email,
-    ak.type_id AS sent_by_api_key_id,
-    ak.name AS sent_by_api_key_name,
-    el.created_at,
-    el.updated_at
-FROM email_log el FORCE INDEX (email_log_account_created_idx)
-LEFT JOIN user u ON el.sent_by_id = u.id
-LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
-WHERE el.account_id = ?
-AND (
-    ? IS NULL
-    OR el.subject LIKE ?
-    OR EXISTS (
-        SELECT 1 FROM email_recipient er
-        WHERE er.email_log_id = el.id
-        AND er.email LIKE ?
-    )
-)
-AND (
-    el.created_at >?
-    OR (el.created_at = ? AND el.id > ?)
-)
-ORDER BY el.created_at ASC, el.id ASC
-LIMIT ?
-`
-
-type ListEmailLogsBackwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type ListEmailLogsBackwardRow struct {
-	ID               string
-	HasSent          bool
-	Subject          sql.NullString
-	Filename         sql.NullString
-	SesMessageID     sql.NullString
-	SentByID         sql.NullString
-	SentByName       sql.NullString
-	SentByUsername   sql.NullString
-	SentByEmail      sql.NullString
-	SentByApiKeyID   sql.NullString
-	SentByApiKeyName sql.NullString
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-// See ListEmailLogsForward.
-func (q *Queries) ListEmailLogsBackward(ctx context.Context, arg ListEmailLogsBackwardParams) ([]ListEmailLogsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEmailLogsBackward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListEmailLogsBackwardRow
-	for rows.Next() {
-		var i ListEmailLogsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.HasSent,
-			&i.Subject,
-			&i.Filename,
-			&i.SesMessageID,
-			&i.SentByID,
-			&i.SentByName,
-			&i.SentByUsername,
-			&i.SentByEmail,
-			&i.SentByApiKeyID,
-			&i.SentByApiKeyName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listEmailLogsForward = `-- name: ListEmailLogsForward :many
-SELECT
-    el.id,
-    el.has_sent,
-    el.subject,
-    el.filename,
-    el.ses_message_id,
-    el.sent_by_id,
-    u.name AS sent_by_name,
-    u.username AS sent_by_username,
-    u.email AS sent_by_email,
-    ak.type_id AS sent_by_api_key_id,
-    ak.name AS sent_by_api_key_name,
-    el.created_at,
-    el.updated_at
-FROM email_log el FORCE INDEX (email_log_account_created_idx)
-LEFT JOIN user u ON el.sent_by_id = u.id
-LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
-WHERE el.account_id = ?
-AND (
-    ? IS NULL
-    OR el.subject LIKE ?
-    OR EXISTS (
-        SELECT 1 FROM email_recipient er
-        WHERE er.email_log_id = el.id
-        AND er.email LIKE ?
-    )
-)
-AND (
-    ? IS NULL
-    OR el.created_at < ?
-    OR (el.created_at = ? AND el.id < ?)
-)
-ORDER BY el.created_at DESC, el.id DESC
-LIMIT ?
-`
-
-type ListEmailLogsForwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListEmailLogsForwardRow struct {
-	ID               string
-	HasSent          bool
-	Subject          sql.NullString
-	Filename         sql.NullString
-	SesMessageID     sql.NullString
-	SentByID         sql.NullString
-	SentByName       sql.NullString
-	SentByUsername   sql.NullString
-	SentByEmail      sql.NullString
-	SentByApiKeyID   sql.NullString
-	SentByApiKeyName sql.NullString
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-// FORCE INDEX walks the account's emails in list order. Left free, the planner ranges the account on
-// email_log_account_id_idx and sorts every email it has, even for the first page.
-func (q *Queries) ListEmailLogsForward(ctx context.Context, arg ListEmailLogsForwardParams) ([]ListEmailLogsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEmailLogsForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListEmailLogsForwardRow
-	for rows.Next() {
-		var i ListEmailLogsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.HasSent,
-			&i.Subject,
-			&i.Filename,
-			&i.SesMessageID,
-			&i.SentByID,
-			&i.SentByName,
-			&i.SentByUsername,
-			&i.SentByEmail,
-			&i.SentByApiKeyID,
-			&i.SentByApiKeyName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

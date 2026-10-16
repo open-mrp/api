@@ -166,10 +166,10 @@ func TestBuildAuditEventListQuery_LongListRangesItsKey(t *testing.T) {
 
 func TestBuildAuditEventListQuery_RootAndAccountFiltersUseTheirKeys(t *testing.T) {
 	q, _ := buildAuditList(t, pagination.DirectionForward, &domain.ListAuditEventsFilter{
-		RootResourceType: "sales_order",
-		RootResourceID:   "or_root",
-		TargetAccountIDs: []string{"ac_other"},
-		ActorAccountIDs:  []string{"ac_caller"},
+		RootResourceTypes: []string{"sales_order"},
+		RootResourceIDs:   []string{"or_root"},
+		TargetAccountIDs:  []string{"ac_other"},
+		ActorAccountIDs:   []string{"ac_caller"},
 	}, nil)
 
 	branches := auditBranches(t, q)
@@ -182,7 +182,7 @@ func TestBuildAuditEventListQuery_RootAndAccountFiltersUseTheirKeys(t *testing.T
 		t.Errorf("target branch forced %s; the root key yields a root's events in order without walking the account's", got)
 	}
 	for _, b := range branches {
-		mustContain(t, b, "ae.root_resource_type = ? AND ae.root_resource_id = ?")
+		mustContain(t, b, "ae.root_resource_type IN (?) AND ae.root_resource_id IN (?)")
 		mustContain(t, b, "ae.target_account_id IN (?)")
 		mustContain(t, b, "ae.account_id IN (?)")
 	}

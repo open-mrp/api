@@ -122,7 +122,7 @@ func (m *analyticsSvcImpl) ExportOpenOrderLines(ctx context.Context, req *Export
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // openOrderQuantity renders a quantity in the unit it is counted in, which travels with it.

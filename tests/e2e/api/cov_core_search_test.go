@@ -8,232 +8,106 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/open-mrp/api/shared/id"
 )
 
 // covCoreSearchPath is the unified fan-out search endpoint (/v1/core/search).
 // It is a read-only, GET-only, query-param-only endpoint: no create/update/
-// delete, no request body, no `include` param (Entity has no expandable
-// fields), and no /actions/* routes. See services/api-gateway/endpoints/search.
+// delete, no request body, and no /actions/* routes. Its only include is
+// `resource`, the matched record. See services/api-gateway/endpoints/search.
 const covCoreSearchPath = "/v1/core/search"
 
-// ──────────────────────────────────────────────
-// Response shape / all fields (per searchable type)
-// ──────────────────────────────────────────────
-
-// TestCovCoreSearch_EntityFields_SalesOrder asserts every Entity json field
-// for a sales_order search hit.
-func TestCovCoreSearch_EntityFields_SalesOrder(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"ORD-001"},
-		"types": {"sales_order"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1, "q=ORD-001&types=sales_order should return exactly the seeded order")
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "or")
-	assert.Equal(t, SeedSalesOrderID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "sales_order", jsonField(row, "type"))
-	assert.Equal(t, "ORD-001", jsonField(row, "name"))
-	assert.Equal(t, SeedCustomerName, jsonField(row, "handle"))
+// covSearchCase is one searchable type's seeded hit: the query that finds it, and the entity reference preview.9
+// callers read for it.
+type covSearchCase struct {
+	name     string
+	q        string
+	typ      string
+	id       string
+	idPrefix id.IDPrefix
+	// entityName and entityHandle are the preview.9 entity's name and handle; a nil handle reads as null.
+	entityName   string
+	entityHandle *string
 }
 
-// TestCovCoreSearch_EntityFields_PurchaseOrder asserts every Entity json field
-// for a purchase_order search hit. Purchase orders and sales orders share the
-// sales_order table, so the id prefix is "or" for both.
-func TestCovCoreSearch_EntityFields_PurchaseOrder(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"PO-001"},
-		"types": {"purchase_order"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "or")
-	assert.Equal(t, "or_01seedpurchord1_000", jsonField(row, "id")) // seed shared/db/seed/e2e/0014_e2e_extras.sql:704
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "purchase_order", jsonField(row, "type"))
-	assert.Equal(t, "PO-001", jsonField(row, "name"))
-	assert.Equal(t, "Yarn Supply Co", jsonField(row, "handle"))
+// covSearchCases cover every searchable type. Purchase orders and sales orders share the sales_order table, so the
+// id prefix is "or" for both. The customer's handle is the account-relation customer number ("45678", seed
+// shared/db/seed/0010_customers.sql). A product is named for its item. SeedShipmentID has no master tracking number,
+// so its handle is null. A contact's id is its account_user id and its handle the directory type.
+var covSearchCases = []covSearchCase{
+	{"sales_order", "ORD-001", "sales_order", SeedSalesOrderID, "or", "ORD-001", new(SeedCustomerName)},
+	{"purchase_order", "PO-001", "purchase_order", "or_01seedpurchord1_000", "or", "PO-001", new("Yarn Supply Co")},
+	{"invoice", "INV-001", "invoice", SeedInvoiceID, "iv", "INV-001", new(SeedCustomerName)},
+	{"customer", SeedCustomerName, "customer", SeedCustomerAccountID, "ac", SeedCustomerName, new("45678")},
+	{"item", SeedItemSKU, "item", SeedItemID, "it", SeedItemSKU, new("Small white sock")},
+	{"product", SeedItemSKU, "product", SeedProductID, "pd", SeedItemSKU, new("Small white sock")},
+	{"shipment", "SHP-001", "shipment", SeedShipmentID, "sh", "SHP-001", nil},
+	{"account_user", "Doe", "account_user", SeedAccountUserID, "acus", "John Doe", new("user")},
+	{"agent_definition", "Order Processing Bot", "agent_definition", SeedAgentDefinitionID, "agdf", "Order Processing Bot", new("order_processing_bot")},
 }
 
-// TestCovCoreSearch_EntityFields_Invoice asserts every Entity json field for
-// an invoice search hit.
-func TestCovCoreSearch_EntityFields_Invoice(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"INV-001"},
-		"types": {"invoice"},
-	})
+// covSearchHit searches one type and returns the seeded hit, picked out of the results: search is account-wide, and
+// a test running alongside can add a second match (another "Doe" in the directory, say).
+func covSearchHit(t *testing.T, client *Client, tc covSearchCase, idField string, extra url.Values) map[string]any {
+	t.Helper()
+	params := url.Values{"q": {tc.q}, "types": {tc.typ}}
+	for k, v := range extra {
+		params[k] = v
+	}
+	list, status, err := client.GetList(covCoreSearchPath, params)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "iv")
-	assert.Equal(t, SeedInvoiceID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "invoice", jsonField(row, "type"))
-	assert.Equal(t, "INV-001", jsonField(row, "name"))
-	assert.Equal(t, SeedCustomerName, jsonField(row, "handle"))
-}
-
-// TestCovCoreSearch_EntityFields_Customer asserts every Entity json field for
-// a customer search hit. The handle is the account-relation customer number
-// ("45678", seed shared/db/seed/0010_customers.sql:24) rather than a free
-// field on the customer account itself.
-func TestCovCoreSearch_EntityFields_Customer(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {SeedCustomerName},
-		"types": {"customer"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "ac")
-	assert.Equal(t, SeedCustomerAccountID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "customer", jsonField(row, "type"))
-	assert.Equal(t, SeedCustomerName, jsonField(row, "name"))
-	assert.Equal(t, "45678", jsonField(row, "handle"))
-}
-
-// TestCovCoreSearch_EntityFields_Item asserts every Entity json field for an
-// item search hit. Name is the SKU, handle is the item description.
-func TestCovCoreSearch_EntityFields_Item(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {SeedItemSKU},
-		"types": {"item"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "it")
-	assert.Equal(t, SeedItemID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "item", jsonField(row, "type"))
-	assert.Equal(t, SeedItemSKU, jsonField(row, "name"))
-	assert.Equal(t, "Small white sock", jsonField(row, "handle"))
-}
-
-// TestCovCoreSearch_EntityFields_Product asserts every Entity json field for
-// a product search hit. A product's display name/handle are derived from its
-// linked item's SKU/description, so this shares the item's SKU query term.
-func TestCovCoreSearch_EntityFields_Product(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {SeedItemSKU},
-		"types": {"product"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "pd")
-	assert.Equal(t, SeedProductID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "product", jsonField(row, "type"))
-	assert.Equal(t, SeedItemSKU, jsonField(row, "name"))
-	assert.Equal(t, "Small white sock", jsonField(row, "handle"))
-}
-
-// TestCovCoreSearch_EntityFields_Shipment asserts every Entity json field for
-// a shipment search hit. SeedShipmentID has no master tracking number, so its
-// handle is null — this is the case that proves handle is genuinely nullable.
-func TestCovCoreSearch_EntityFields_Shipment(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"SHP-001"},
-		"types": {"shipment"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "sh")
-	assert.Equal(t, SeedShipmentID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "shipment", jsonField(row, "type"))
-	assert.Equal(t, "SHP-001", jsonField(row, "name"))
-	assertNilField(t, row, "handle")
-}
-
-// TestCovCoreSearch_EntityFields_MessagingContact asserts every Entity json
-// field for a messaging_contact search hit. The contact's addressable id is
-// the account_user id, and handle carries the contact's directory type.
-func TestCovCoreSearch_EntityFields_MessagingContact(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"Doe"},
-		"types": {"messaging_contact"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.NotEmpty(t, list.Data, "q=Doe&types=messaging_contact must surface the seeded contact")
-
-	// The seeded hit is picked out of the results rather than assumed to be the only one.
-	// Search is account-wide, and a test running alongside this one that adds a user to the
-	// acting account can put a second "Doe" in the directory — which says nothing about the
-	// field shape this test exists to pin.
-	var row map[string]any
 	for _, raw := range list.Data {
-		candidate := parseJSON(raw)
-		if jsonField(candidate, "id") == SeedAccountUserID {
-			row = candidate
-			break
+		if row := parseJSON(raw); jsonField(row, idField) == tc.id {
+			return row
 		}
 	}
-	require.NotNil(t, row, "the seeded contact must be among the hits: %v", list.Data)
-
-	assertIDFormat(t, jsonField(row, "id"), "acus")
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "messaging_contact", jsonField(row, "type"))
-	assert.Equal(t, "John Doe", jsonField(row, "name"))
-	assert.Equal(t, "user", jsonField(row, "handle"))
+	t.Fatalf("q=%s&types=%s should surface %s: %v", tc.q, tc.typ, tc.id, list.Data)
+	return nil
 }
 
-// TestCovCoreSearch_EntityFields_AgentDefinition asserts every Entity json
-// field for an agent_definition search hit.
-func TestCovCoreSearch_EntityFields_AgentDefinition(t *testing.T) {
+// TestCovCoreSearch_ResultFields asserts every search_result field for each searchable type, with the matched
+// record's resource null unless included.
+func TestCovCoreSearch_ResultFields(t *testing.T) {
 	t.Parallel()
+	for _, tc := range covSearchCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			row := covSearchHit(t, apiClient, tc, "resource_id", nil)
+			assert.ElementsMatch(t, []string{"object", "type", "resource_id", "resource", "entity"}, mapKeys(row))
+			assertObjectField(t, row, "search_result")
+			assert.Equal(t, tc.typ, jsonField(row, "type"))
+			assertIDFormat(t, jsonField(row, "resource_id"), tc.idPrefix)
+			assertNilField(t, row, "resource")
+			assertNilField(t, row, "entity")
+		})
+	}
+}
 
-	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"q":     {"Order Processing Bot"},
-		"types": {"agent_definition"},
-	})
+// TestCovCoreSearch_IncludeResource asserts include=resource expands each hit to its record, in the record's own shape.
+func TestCovCoreSearch_IncludeResource(t *testing.T) {
+	t.Parallel()
+	for _, tc := range covSearchCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			row := covSearchHit(t, apiClient, tc, "resource_id", url.Values{"include": {"resource"}})
+			resource := jsonObject(row, "resource")
+			require.NotNil(t, resource, "resource is set with include=resource: %v", row)
+			assert.Equal(t, tc.id, jsonField(resource, "id"))
+			assert.Equal(t, tc.typ, jsonField(resource, "object"))
+			assertNilField(t, row, "entity")
+		})
+	}
+}
+
+// messaging_contact was renamed: contacts are account users.
+func TestCovCoreSearch_MessagingContactTypeRejected(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(covCoreSearchPath, url.Values{"q": {"Doe"}, "types": {"messaging_contact"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1)
-
-	row := parseJSON(list.Data[0])
-	assertIDFormat(t, jsonField(row, "id"), "agdf")
-	assert.Equal(t, SeedAgentDefinitionID, jsonField(row, "id"))
-	assertObjectField(t, row, "entity")
-	assert.Equal(t, "agent_definition", jsonField(row, "type"))
-	assert.Equal(t, "Order Processing Bot", jsonField(row, "name"))
-	assert.Equal(t, "order_processing_bot", jsonField(row, "handle"))
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error"), "types")
 }
 
 // TestCovCoreSearch_ResponseShape_ListEnvelope asserts the List[Entity]
@@ -313,13 +187,12 @@ func TestCovCoreSearch_List_QOnly_NoTypes(t *testing.T) {
 	var sawSalesOrder bool
 	for _, raw := range list.Data {
 		row := parseJSON(raw)
-		assertObjectField(t, row, "entity")
-		require.NotEmpty(t, jsonField(row, "id"))
+		assertObjectField(t, row, "search_result")
+		require.NotEmpty(t, jsonField(row, "resource_id"))
 		require.NotEmpty(t, jsonField(row, "type"))
-		if jsonField(row, "id") == SeedSalesOrderID {
+		if jsonField(row, "resource_id") == SeedSalesOrderID {
 			sawSalesOrder = true
 			assert.Equal(t, "sales_order", jsonField(row, "type"))
-			assert.Equal(t, "ORD-001", jsonField(row, "name"))
 		}
 	}
 	assert.True(t, sawSalesOrder, "unscoped q=ORD-001 should surface the seeded sales order")
@@ -364,26 +237,26 @@ func TestCovCoreSearch_List_LimitCapsResultCount(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Customer scoping (?customer=)
+// Customer scoping (?customer_ids=)
 // ──────────────────────────────────────────────
 
 // TestCovCoreSearch_CustomerScope_SafeType_RestrictsToCustomer asserts that a
-// customer-safe type (sales_order) scoped with ?customer= returns only that
+// customer-safe type (sales_order) scoped with ?customer_ids= returns only that
 // customer's matching records.
 func TestCovCoreSearch_CustomerScope_SafeType_RestrictsToCustomer(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"customer": {SeedCustomerAccountID},
-		"q":        {SeedSalesOrderPONumber},
-		"types":    {"sales_order"},
+		"customer_ids": {SeedCustomerAccountID},
+		"q":            {SeedSalesOrderPONumber},
+		"types":        {"sales_order"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
 	require.Len(t, list.Data, 1)
 
 	row := parseJSON(list.Data[0])
-	assert.Equal(t, SeedPOSalesOrderID, jsonField(row, "id"))
+	assert.Equal(t, SeedPOSalesOrderID, jsonField(row, "resource_id"))
 	assert.Equal(t, "sales_order", jsonField(row, "type"))
 }
 
@@ -402,26 +275,26 @@ func TestCovCoreSearch_CustomerScope_UnsafeType_Excluded(t *testing.T) {
 	require.NotEmpty(t, unscoped.Data, "control: unscoped item search should find the seeded item")
 
 	scoped, status2, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"customer": {SeedCustomerAccountID},
-		"q":        {SeedItemSKU},
-		"types":    {"item"},
+		"customer_ids": {SeedCustomerAccountID},
+		"q":            {SeedItemSKU},
+		"types":        {"item"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, nil)
 	assertEmptyListData(t, scoped.Data,
-		"item is not a customer-safe type; a ?customer= scoped search must drop it entirely")
+		"item is not a customer-safe type; a ?customer_ids= scoped search must drop it entirely")
 }
 
 // TestCovCoreSearch_CustomerScope_GarbageID_ReturnsEmptyNotError asserts an
-// unrecognized ?customer= value is not validated/rejected — it just yields no
+// unrecognized ?customer_ids= value is not validated/rejected — it just yields no
 // matches for customer-safe types (no dedicated format check in the handler).
 func TestCovCoreSearch_CustomerScope_GarbageID_ReturnsEmptyNotError(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(covCoreSearchPath, url.Values{
-		"customer": {"ac_bogus_garbage_id_not_real"},
-		"q":        {"ORD-001"},
-		"types":    {"sales_order"},
+		"customer_ids": {"ac_bogus_garbage_id_not_real"},
+		"q":            {"ORD-001"},
+		"types":        {"sales_order"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
@@ -445,7 +318,7 @@ func TestCovCoreSearch_CustomerScope_GarbageID_ReturnsEmptyNotError(t *testing.T
 // empty and the subsequent identity.CheckHasAnyPermission(searchReadPermissions...)
 // fallback also always fails. The result: EVERY request from a relation actor
 // 403s with insufficient_permissions, regardless of `types`/`customer`/`q` —
-// including a self-scoped `?customer=<their own account>` search, which is
+// including a self-scoped `?customer_ids=<their own account>` search, which is
 // the one case the searchScope customerID design (see service.go's doc
 // comment on searchScope) most plausibly intended to support. This is
 // consistent with the endpoint's own coded contract (403 iff the caller holds
@@ -465,7 +338,7 @@ func TestCovCoreSearch_CustomerPortal_RelationActorGetsInsufficientPermissions(t
 	}{
 		{"unscoped_sales_order", url.Values{"q": {"ORD-001"}, "types": {"sales_order"}}},
 		{"self_scoped_customer_param", url.Values{
-			"customer": {SeedCustomerAccountID}, "q": {"ORD-001"}, "types": {"sales_order"},
+			"customer_ids": {SeedCustomerAccountID}, "q": {"ORD-001"}, "types": {"sales_order"},
 		}},
 		{"item_type", url.Values{"q": {SeedItemSKU}, "types": {"item"}}},
 	}
@@ -645,20 +518,17 @@ func TestCovCoreSearch_Validation_UnknownQueryParam(t *testing.T) {
 	assertUnknownQueryParamRejected(t, covCoreSearchPath, status, body)
 }
 
-// TestCovCoreSearch_Validation_IncludeParamRejected asserts `include` is not
-// a recognized query param on this endpoint (Entity has no expandable
-// fields, so there is nothing to gate) — it should 400 like any other
-// unrecognized param, not be silently ignored.
-func TestCovCoreSearch_Validation_IncludeParamRejected(t *testing.T) {
+// TestCovCoreSearch_Validation_UnknownIncludeRejected asserts an include key other than `resource` is rejected,
+// not silently ignored.
+func TestCovCoreSearch_Validation_UnknownIncludeRejected(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.GetListRaw(covCoreSearchPath, url.Values{
 		"q": {"x"}, "include": {"related.sales_order"},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "include should be rejected as unknown, got %d: %s", status, string(body))
-	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
-	assertErrorParam(t, errObj, "include")
+	assert.Equal(t, 400, status, "an unknown include should be rejected, got %d: %s", status, string(body))
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 // TestCovCoreSearch_Validation_CursorGarbage_NoOp asserts a garbage `cursor`

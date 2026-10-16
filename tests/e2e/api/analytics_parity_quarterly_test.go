@@ -17,7 +17,7 @@ import (
 
 func quarterlyOrders(t *testing.T, client *Client, body map[string]any) map[string]any {
 	t.Helper()
-	got := mustPutAnalytics(t, client, quarterlyOrdersPath, nil, body)
+	got := mustQueryAnalytics(t, client, quarterlyOrdersPath, nil, body)
 	assert.Equal(t, "analyze_quarterly_orders_response", jsonField(got, "object"))
 	return jsonObject(got, "data")
 }
@@ -103,7 +103,7 @@ func TestAnalyticsParityQuarterlyOrders_ChildrenGroupsAndRepsScopeIt(t *testing.
 func TestAnalyticsParityQuarterlyOrders_RejectsAnImpossibleWindow(t *testing.T) {
 	t.Parallel()
 	for _, yearsBack := range []any{101, -1, "five"} {
-		status, _, raw := putAnalytics(t, apiClient, quarterlyOrdersPath, url.Values{}, map[string]any{"years_back": yearsBack})
+		status, _, raw := queryAnalytics(t, apiClient, quarterlyOrdersPath, url.Values{}, map[string]any{"years_back": yearsBack})
 		assert.Contains(t, []int{400, 422}, status, "years_back=%v: %s", yearsBack, string(raw))
 	}
 }

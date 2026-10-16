@@ -30,13 +30,13 @@ type AnalyzeNewCustomersEndpoint struct{}
 func (e *AnalyzeNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeNewCustomersRequest, *apiresource.AnalyzeNewCustomersResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeNewCustomersRequest, *apiresource.AnalyzeNewCustomersResponse]{
 		Title:             "Analyze New Customers",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/new-customers",
+		Method:            http.MethodPost,
+		Route:             "/v1/core/analytics/new-customers/actions/query",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ReadOnly:          true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeNewCustomersRequest) (*apiresource.AnalyzeNewCustomersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeNewCustomers

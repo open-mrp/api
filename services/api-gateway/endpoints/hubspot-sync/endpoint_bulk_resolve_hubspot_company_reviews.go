@@ -63,11 +63,7 @@ func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.AP
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
-		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}}},
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).BulkResolveCompanyReviews
 		},

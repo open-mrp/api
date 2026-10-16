@@ -100,6 +100,37 @@ func (s *jobSvcImpl) GetJob(ctx context.Context, jobID string) (*domain.Job, *ap
 	return job, nil
 }
 
+// ListJobs returns a page of the account's jobs. A portal caller sees only the jobs it raised, as GetJob scopes them.
+func (s *jobSvcImpl) ListJobs(ctx context.Context, params domain.ListJobsParams) (*domain.ListJobsResult, *apierror.APIError) {
+	ctx, span := jobSvcTracer.Start(ctx, "service.job.list")
+	defer span.End()
+
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := checkJobReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	accountID := identity.Target.AccountID
+	repoParams := domain.ListJobsRepositoryParams{ListJobsParams: params, AccountID: accountID}
+	if identity.IsRelationActor() {
+		createdByID := jobCreatedByID(ctx, s.repos, accountID, identity)
+		if createdByID == nil {
+			return &domain.ListJobsResult{}, nil
+		}
+		repoParams.CreatedByID = createdByID
+	}
+
+	result, apiErr := s.repos.NewJobRepo().List(ctx, repoParams)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return result, nil
+}
+
 // raisedBy reports whether job was raised by the caller attributed as createdByID.
 func raisedBy(job *domain.Job, createdByID *string) bool {
 	return job.CreatedByID != nil && createdByID != nil && *job.CreatedByID == *createdByID

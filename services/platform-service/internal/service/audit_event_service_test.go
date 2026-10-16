@@ -347,7 +347,7 @@ func TestWithDefaultAuditEventWindow_AnchoredListsAreWhole(t *testing.T) {
 	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
 	for name, filter := range map[string]domain.ListAuditEventsFilter{
 		"resource ids":  {ResourceIDs: []string{"or_1"}},
-		"root resource": {RootResourceType: "sales_order", RootResourceID: "or_1"},
+		"root resource": {RootResourceTypes: []string{"sales_order"}, RootResourceIDs: []string{"or_1"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			withDefaultAuditEventWindow(&filter, now)

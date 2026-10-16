@@ -90,7 +90,7 @@ func TestCovMessagingPreferences_InvalidCategoryRejected(t *testing.T) {
 	t.Parallel()
 	user := chatUser2Client(t)
 
-	resp, err := user.PutFull(preferencesPath, map[string]any{
+	resp, err := asPreview9(user).PutFull(preferencesPath, map[string]any{
 		"category":       "not.a.real.category",
 		"in_app_enabled": true,
 		"digest":         "instant",
@@ -174,7 +174,7 @@ func TestCovMessagingPreferences_PutIdempotentOnIdenticalPayload(t *testing.T) {
 func TestCovMessagingPreferences_APIKeyActorForbiddenOnPut(t *testing.T) {
 	t.Parallel()
 
-	resp, err := apiClient.PutFull(preferencesPath, map[string]any{
+	resp, err := asPreview9(apiClient).PutFull(preferencesPath, map[string]any{
 		"category":       "chat.mention",
 		"in_app_enabled": true,
 		"digest":         "instant",
@@ -189,7 +189,7 @@ func TestCovMessagingPreferences_APIKeyActorForbiddenOnPut(t *testing.T) {
 func TestCovMessagingPreferences_APIKeyActorEmptyListOnGet(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(preferencesPath, nil)
+	list, status, err := asPreview9(apiClient).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status)
 	assert.Equal(t, "list", list.Object)
@@ -207,7 +207,7 @@ func TestCovMessagingPreferences_ListObjectIsList(t *testing.T) {
 		"digest":         "instant",
 	})
 
-	list, status, err := user.GetList(preferencesPath, nil)
+	list, status, err := asPreview9(user).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status)
 	assert.Equal(t, "list", list.Object)

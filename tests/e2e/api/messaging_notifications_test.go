@@ -145,6 +145,13 @@ func unreadNotifTotal(t *testing.T, reader *Client) int {
 	return int(n)
 }
 
+// asPreview9 is c pinned to preview.9, keeping a signed-in user's session cookies.
+func asPreview9(c *Client) *Client {
+	clone := c.WithAPIVersion(preview9Version)
+	clone.cookies = c.cookies
+	return clone
+}
+
 func uniqueTitle(t *testing.T) string {
 	t.Helper()
 	return uniqueName("e2e-notif")
@@ -172,11 +179,22 @@ func TestNotifications_SendAppearsInFeedWithCorrectShape(t *testing.T) {
 
 	n := findNotif(t, user, title, nil)
 	assertObjectField(t, n, "notification")
-	assert.Equal(t, "order.updated", jsonField(n, "category"))
+	notifID(t, n)
+	assert.Equal(t, "order.updated", jsonField(n, "type"))
+	assert.NotContains(t, n, "category")
+	assert.Equal(t, title, jsonField(n, "title"))
 	assert.Equal(t, "high", jsonField(n, "priority"))
 	assert.Equal(t, "Order #1024 was updated.", jsonField(n, "body"))
 	assert.Equal(t, "unseen", jsonField(n, "status"), "a fresh notification is unseen")
+	assert.Equal(t, float64(1), n["occurrences"], "a notification stands for one event")
+	assert.NotContains(t, n, "change_count")
+	assertNilField(t, n, "sender") // expandable, null unless included
+	related := jsonObject(n, "related")
+	require.NotNil(t, related)
+	assert.Equal(t, "notification_related", jsonField(related, "object"))
+	assertNilField(t, related, "record")
 	assertValidTimestamp(t, jsonField(n, "created_at"), "created_at")
+	assertValidTimestamp(t, jsonField(n, "updated_at"), "updated_at")
 	assertNilField(t, n, "seen_at")
 	assertNilField(t, n, "read_at")
 	assertNilField(t, n, "dismissed_at")
@@ -262,12 +280,15 @@ func TestNotifications_MarkDismissedRemovesFromDefaultFeed(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, "dismissed", jsonField(parseJSON(body), "status"))
 
-	// Dismissed notifications are excluded from the default (active) feed...
-	assert.False(t, feedContainsTitle(t, user, title, nil),
-		"dismissed notification should not appear in the default feed")
-	// ...but are returned when explicitly filtering by status=dismissed.
-	assert.True(t, feedContainsTitle(t, user, title, url.Values{"status": {"dismissed"}}),
-		"dismissed notification should appear when status=dismissed")
+	// Dismissed notifications leave the active feed (unseen, seen and read)...
+	active := url.Values{"statuses[]": {"unseen", "seen", "read"}}
+	assert.False(t, feedContainsTitle(t, user, title, active),
+		"dismissed notification should not appear in the active feed")
+	// ...but are listed with statuses[]=dismissed, and when statuses[] is omitted (every state).
+	assert.True(t, feedContainsTitle(t, user, title, url.Values{"statuses[]": {"dismissed"}}),
+		"dismissed notification should appear when statuses[]=dismissed")
+	assert.True(t, feedContainsTitle(t, user, title, nil),
+		"omitting statuses[] lists every state")
 }
 
 // ── Mark all seen ──────────────────────────────────────────────────
@@ -309,11 +330,14 @@ func TestNotifications_FilterByCategory(t *testing.T) {
 	findNotif(t, user, orderTitle, nil)
 	findNotif(t, user, systemTitle, nil)
 
-	params := url.Values{"category": {"order.updated"}}
+	params := url.Values{"types[]": {"order.updated"}}
 	assert.True(t, feedContainsTitle(t, user, orderTitle, params),
-		"order.updated notification should appear when filtering category=order.updated")
+		"order.updated notification should appear when filtering types[]=order.updated")
 	assert.False(t, feedContainsTitle(t, user, systemTitle, params),
-		"system.broadcast notification should be filtered out by category=order.updated")
+		"system.broadcast notification should be filtered out by types[]=order.updated")
+	both := url.Values{"types[]": {"order.updated", "system.broadcast"}}
+	assert.True(t, feedContainsTitle(t, user, orderTitle, both))
+	assert.True(t, feedContainsTitle(t, user, systemTitle, both))
 }
 
 // ── Recipient scoping ──────────────────────────────────────────────
@@ -441,7 +465,7 @@ func TestNotifications_SendToAnotherUser(t *testing.T) {
 	// The targeted user (user2) sees it in her feed.
 	other := loginAsUser(t, seedUser2Email, seedUserPassword, SeedAccountID)
 	n := findNotif(t, other, title, nil)
-	assert.Equal(t, "order.updated", jsonField(n, "category"))
+	assert.Equal(t, "order.updated", jsonField(n, "type"))
 
 	// The sender does not (it was targeted at someone else).
 	assert.False(t, feedContainsTitle(t, admin, title, nil),
@@ -456,16 +480,30 @@ func TestNotifications_LinkedRoundTrip(t *testing.T) {
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, map[string]any{
 		"link_resource_type": "sales_order",
-		"link_resource_id":   "so_e2e_1024",
+		"link_resource_id":   SeedSalesOrderID,
 	})
 
-	n := findNotif(t, user, title, url.Values{"include": {"resource"}})
+	plain := findNotif(t, user, title, nil)
+	assertNilField(t, jsonObject(plain, "related"), "record")
 
-	res := jsonObject(n, "resource")
-	require.NotNil(t, res, "a linked notification should expose a resource entity when included")
+	n := findNotif(t, user, title, url.Values{"include": {"related.record"}})
+	rec := jsonObject(jsonObject(n, "related"), "record")
+	require.NotNil(t, rec, "a linked notification should expose its record stub when included")
+	assert.Equal(t, "record", jsonField(rec, "object"))
+	assert.Equal(t, "sales_order", jsonField(rec, "type"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(rec, "id"))
+	assert.Equal(t, "ORD-001", jsonField(rec, "number"))
+
+	// preview.9 still reads the record as resource.
+	old := findNotif(t, asPreview9(user), title, url.Values{"include": {"resource"}})
+	assert.Equal(t, "order.updated", jsonField(old, "category"))
+	assert.NotContains(t, old, "related")
+	assert.NotContains(t, old, "type")
+	res := jsonObject(old, "resource")
+	require.NotNil(t, res, "preview.9 reads the link as a resource entity")
 	assert.Equal(t, "entity", jsonField(res, "object"))
 	assert.Equal(t, "sales_order", jsonField(res, "type"))
-	assert.Equal(t, "so_e2e_1024", jsonField(res, "id"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(res, "id"))
 }
 
 // ── Status filter exhaustiveness ───────────────────────────────────
@@ -488,18 +526,29 @@ func TestNotifications_StatusFilters(t *testing.T) {
 	mustMark(t, user, readID, "read")
 
 	// status=unseen → only the untouched one.
-	assert.True(t, feedContainsTitle(t, user, unseenTitle, url.Values{"status": {"unseen"}}))
-	assert.False(t, feedContainsTitle(t, user, seenTitle, url.Values{"status": {"unseen"}}))
-	assert.False(t, feedContainsTitle(t, user, readTitle, url.Values{"status": {"unseen"}}))
+	assert.True(t, feedContainsTitle(t, user, unseenTitle, url.Values{"statuses[]": {"unseen"}}))
+	assert.False(t, feedContainsTitle(t, user, seenTitle, url.Values{"statuses[]": {"unseen"}}))
+	assert.False(t, feedContainsTitle(t, user, readTitle, url.Values{"statuses[]": {"unseen"}}))
 
 	// status=seen → seen-but-not-read only (the read one is "read", not "seen").
-	assert.True(t, feedContainsTitle(t, user, seenTitle, url.Values{"status": {"seen"}}))
-	assert.False(t, feedContainsTitle(t, user, unseenTitle, url.Values{"status": {"seen"}}))
-	assert.False(t, feedContainsTitle(t, user, readTitle, url.Values{"status": {"seen"}}))
+	assert.True(t, feedContainsTitle(t, user, seenTitle, url.Values{"statuses[]": {"seen"}}))
+	assert.False(t, feedContainsTitle(t, user, unseenTitle, url.Values{"statuses[]": {"seen"}}))
+	assert.False(t, feedContainsTitle(t, user, readTitle, url.Values{"statuses[]": {"seen"}}))
 
 	// status=read → only the read one.
-	assert.True(t, feedContainsTitle(t, user, readTitle, url.Values{"status": {"read"}}))
-	assert.False(t, feedContainsTitle(t, user, seenTitle, url.Values{"status": {"read"}}))
+	assert.True(t, feedContainsTitle(t, user, readTitle, url.Values{"statuses[]": {"read"}}))
+	assert.False(t, feedContainsTitle(t, user, seenTitle, url.Values{"statuses[]": {"read"}}))
+
+	// Several states at once.
+	seenOrRead := url.Values{"statuses[]": {"seen", "read"}}
+	assert.True(t, feedContainsTitle(t, user, seenTitle, seenOrRead))
+	assert.True(t, feedContainsTitle(t, user, readTitle, seenOrRead))
+	assert.False(t, feedContainsTitle(t, user, unseenTitle, seenOrRead))
+
+	// preview.9's single status filter still works, and no status is the active feed.
+	old := asPreview9(user)
+	assert.True(t, feedContainsTitle(t, old, seenTitle, url.Values{"status": {"seen"}}))
+	assert.False(t, feedContainsTitle(t, old, readTitle, url.Values{"status": {"seen"}}))
 }
 
 func mustMark(t *testing.T, c *Client, id, action string) {

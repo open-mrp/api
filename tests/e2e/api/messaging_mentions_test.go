@@ -18,7 +18,7 @@ import (
 // feedHasBody reports whether the reader's feed for a category contains a notification body.
 func feedHasBody(t *testing.T, reader *Client, category, body string) bool {
 	t.Helper()
-	list, _, err := reader.GetList(notificationsPath, url.Values{"limit": {"100"}, "category": {category}})
+	list, _, err := reader.GetList(notificationsPath, url.Values{"limit": {"100"}, "types[]": {category}})
 	require.NoError(t, err)
 	for _, raw := range list.Data {
 		var m map[string]any

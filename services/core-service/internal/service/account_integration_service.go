@@ -29,6 +29,7 @@ type accountIntegrationSvcImpl struct {
 	encryptionKey   []byte
 	encryptionKeyID string
 	platformMode    constants.PlatformMode
+	checker         domain.IntegrationCredentialChecker
 }
 
 type AccountIntegrationSvcConfig struct {
@@ -49,6 +50,9 @@ type AccountIntegrationSvcConfig struct {
 
 	// PlatformMode is the deployment mode. In development it relaxes the live-key requirement for Stripe credentials so local, production-type accounts can integrate against Stripe's test environment; outside production it requires Shippo test keys, so no other deployment can buy real labels.
 	PlatformMode constants.PlatformMode
+
+	// CredentialChecker (required) asks the provider whether it accepts credentials before they are saved.
+	CredentialChecker domain.IntegrationCredentialChecker
 }
 
 func (c *AccountIntegrationSvcConfig) validate() error {
@@ -67,6 +71,9 @@ func (c *AccountIntegrationSvcConfig) validate() error {
 	if c.EncryptionKeyID == "" {
 		return fmt.Errorf("account integration service: encryption key ID is required")
 	}
+	if c.CredentialChecker == nil {
+		return fmt.Errorf("account integration service: credential checker is required")
+	}
 	return nil
 }
 
@@ -82,6 +89,7 @@ func NewAccountIntegrationSvc(config *AccountIntegrationSvcConfig) domain.Accoun
 		encryptionKey:   config.EncryptionKey,
 		encryptionKeyID: config.EncryptionKeyID,
 		platformMode:    config.PlatformMode,
+		checker:         config.CredentialChecker,
 	}
 }
 
@@ -102,6 +110,7 @@ func (s *accountIntegrationSvcImpl) withTx(ctx context.Context, fn func(context.
 			encryptionKey:   s.encryptionKey,
 			encryptionKeyID: s.encryptionKeyID,
 			platformMode:    s.platformMode,
+			checker:         s.checker,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -170,17 +179,14 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 
 	params.AccountID = identity.Target.AccountID
 
-	// Validate integration code
 	if !params.IntegrationCode.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewFieldError("integration_code", apierror.CodeInvalidFormat, fmt.Sprintf("Invalid integration code: %s. Must be one of: %s", params.IntegrationCode, strings.Join(params.IntegrationCode.EnumValues(), ", "))))
+		return nil, tracing.Trace(span, apierror.NewFieldError("provider", apierror.CodeInvalidFormat, fmt.Sprintf("Invalid provider: %s. Must be one of: %s", params.IntegrationCode, strings.Join(params.IntegrationCode.EnumValues(), ", "))))
 	}
 
-	// Validate and parse credentials
-	if apiErr := s.validateCredentials(ctx, span, params); apiErr != nil {
+	if apiErr := s.validateCredentials(ctx, span, params.AccountID, params.IntegrationCode, params.Credentials); apiErr != nil {
 		return nil, apiErr
 	}
 
-	// Encrypt credentials
 	encryptedCredentials, err := crypto.EncryptAESGCM([]byte(params.Credentials), s.encryptionKey, []byte(params.AccountID), s.encryptionKeyID)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to encrypt credentials."))
@@ -207,54 +213,52 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Foreign read before any write: the provider must accept the credentials.
+		connection, apiErr := s.checkWithProvider(ctx, params.IntegrationCode, params.Credentials)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+		}
+		params.ConnectionStatus = connection
+
 		var result *domain.AccountIntegration
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountIntegrationSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewAccountIntegrationRepo()
 
-			// Check if an integration with this code already exists (upsert)
 			existing, existErr := txRepo.FindByCode(txCtx, params.AccountID, params.IntegrationCode)
-			if existErr != nil {
-				// If not found, create new
-				if apierror.HasCode(existErr, apierror.CodeResourceNotFound) {
-					created, createErr := txRepo.Create(txCtx, integrationID, params, encryptedCredentials)
-					if createErr != nil {
-						return createErr
-					}
-					result = created
-
-					changes := audit.ComputeChanges(nil, created)
-
-					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-						ServiceName:  domain.ServiceName,
-						Action:       constants.AuditActionCreate,
-						ResourceType: constants.ObjectTypeAccountIntegration,
-						ResourceID:   created.ID,
-						Changes:      changes,
-					}); apiErr != nil {
-						return apiErr
-					}
-
-					return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-				}
+			if existErr != nil && !apierror.HasCode(existErr, apierror.CodeResourceNotFound) {
 				return existErr
 			}
 
-			// Existing found — upsert: update credentials and name
-			updated, updateErr := txRepo.UpdateCredentials(txCtx, params.AccountID, existing.ID, params.Name, encryptedCredentials)
-			if updateErr != nil {
-				return updateErr
+			action := constants.AuditActionCreate
+			var before *domain.AccountIntegration
+			switch {
+			case existErr != nil:
+				created, createErr := txRepo.Create(txCtx, integrationID, params, encryptedCredentials)
+				if createErr != nil {
+					return createErr
+				}
+				result = created
+			case params.ReplaceExisting:
+				updated, updateErr := txRepo.UpdateCredentials(txCtx, params.AccountID, existing.ID, params.Name, encryptedCredentials, params.ConnectionStatus)
+				if updateErr != nil {
+					return updateErr
+				}
+				result, before, action = updated, existing, constants.AuditActionUpdate
+			default:
+				return apierror.NewExistsError("provider", fmt.Sprintf("This account already has a %s integration. Rotate its credentials instead of connecting it again.", params.IntegrationCode))
 			}
-			result = updated
 
-			changes := audit.ComputeChanges(existing, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			event := audit.EventData{
 				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				Action:       action,
 				ResourceType: constants.ObjectTypeAccountIntegration,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+				ResourceID:   result.ID,
+				Changes:      audit.ComputeChanges(before, result),
+			}
+			if before != nil {
+				event.Metadata = map[string]any{"credentials_rotated": true}
+			}
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), event); apiErr != nil {
 				return apiErr
 			}
 
@@ -272,22 +276,154 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 	}
 }
 
-func (s *accountIntegrationSvcImpl) validateCredentials(ctx context.Context, span trace.Span, params domain.CreateAccountIntegrationParams) *apierror.APIError {
+func (s *accountIntegrationSvcImpl) RotateAccountIntegrationCredentials(ctx context.Context, params domain.RotateAccountIntegrationCredentialsParams) (*domain.AccountIntegration, *apierror.APIError) {
+	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.rotate_credentials")
+	defer span.End()
+
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckIsAdmin(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	existing, apiErr := s.getIntegration(ctx, params.AccountID, params.ID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := s.validateCredentials(ctx, span, params.AccountID, existing.IntegrationCode, params.Credentials); apiErr != nil {
+		return nil, apiErr
+	}
+
+	encryptedCredentials, err := crypto.EncryptAESGCM([]byte(params.Credentials), s.encryptionKey, []byte(params.AccountID), s.encryptionKeyID)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to encrypt credentials."))
+	}
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountIntegration](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		connection, apiErr := s.checkWithProvider(ctx, existing.IntegrationCode, params.Credentials)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+		}
+
+		var result *domain.AccountIntegration
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountIntegrationSvcImpl) *apierror.APIError {
+			txRepo := txSvc.repos.NewAccountIntegrationRepo()
+			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.ID)
+			if apiErr != nil {
+				return apiErr
+			}
+			updated, apiErr := txRepo.UpdateCredentials(txCtx, params.AccountID, params.ID, old.Name, encryptedCredentials, connection)
+			if apiErr != nil {
+				return apiErr
+			}
+			result = updated
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAccountIntegration,
+				ResourceID:   updated.ID,
+				Changes:      audit.ComputeChanges(old, updated),
+				Metadata:     map[string]any{"credentials_rotated": true},
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// getIntegration reads an integration, answering 410 for one that was deleted.
+func (s *accountIntegrationSvcImpl) getIntegration(ctx context.Context, accountID, integrationID string) (*domain.AccountIntegration, *apierror.APIError) {
+	integration, apiErr := s.repos.NewAccountIntegrationRepo().Get(ctx, accountID, integrationID)
+	if apiErr == nil {
+		return integration, nil
+	}
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountIntegration, integrationID, accountID)
+		if deletedCheckErr != nil {
+			return nil, deletedCheckErr
+		}
+		if wasDeleted {
+			return nil, apierror.NewGoneError("This account integration has already been deleted and can no longer be modified.")
+		}
+	}
+	return nil, apiErr
+}
+
+// checkWithProvider asks the provider about the credentials. A rejection is the caller's to fix (422); no answer at
+// all is the provider's failure and leaves nothing saved.
+func (s *accountIntegrationSvcImpl) checkWithProvider(ctx context.Context, provider constants.IntegrationCode, credentials string) (constants.IntegrationConnectionStatus, *apierror.APIError) {
+	status, apiErr := s.checker.Check(ctx, provider, credentials)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if status == constants.IntegrationConnectionStatusInvalidCredentials {
+		return "", apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, fmt.Sprintf("%s rejected these credentials.", providerName(provider)))
+	}
+	return status, nil
+}
+
+func providerName(provider constants.IntegrationCode) string {
+	switch provider {
+	case constants.IntegrationCodeStripe:
+		return "Stripe"
+	case constants.IntegrationCodeShippo:
+		return "Shippo"
+	case constants.IntegrationCodeHubspot:
+		return "HubSpot"
+	default:
+		return string(provider)
+	}
+}
+
+func (s *accountIntegrationSvcImpl) validateCredentials(ctx context.Context, span trace.Span, accountID string, provider constants.IntegrationCode, credentials string) *apierror.APIError {
 	// Get account context to determine sandbox/production
-	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, params.AccountID)
+	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, accountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	switch params.IntegrationCode {
+	switch provider {
 	case constants.IntegrationCodeStripe:
-		return s.validateStripeCredentials(span, params.Credentials, accountCtx.IsSandbox)
+		return s.validateStripeCredentials(span, credentials, accountCtx.IsSandbox)
 	case constants.IntegrationCodeShippo:
-		return s.validateShippoCredentials(span, params.Credentials, accountCtx.IsSandbox)
+		return s.validateShippoCredentials(span, credentials, accountCtx.IsSandbox)
 	case constants.IntegrationCodeHubspot:
-		return s.validateHubspotCredentials(span, params.Credentials)
+		return s.validateHubspotCredentials(span, credentials)
 	default:
-		return tracing.Trace(span, apierror.NewFieldError("integration_code", apierror.CodeInvalidFormat, "Unsupported integration code."))
+		return tracing.Trace(span, apierror.NewFieldError("provider", apierror.CodeInvalidFormat, "Unsupported provider."))
 	}
 }
 
@@ -298,13 +434,13 @@ func (s *accountIntegrationSvcImpl) validateStripeCredentials(span trace.Span, c
 	}
 
 	if !strings.HasPrefix(creds.PrivateKey, "sk_") {
-		return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Stripe private key must start with 'sk_'."))
+		return tracing.Trace(span, apierror.NewFieldError("credentials.private_key", apierror.CodeInvalidFormat, "Stripe private key must start with 'sk_'."))
 	}
 	if !strings.HasPrefix(creds.PublishableKey, "pk_") {
-		return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Stripe publishable key must start with 'pk_'."))
+		return tracing.Trace(span, apierror.NewFieldError("credentials.publishable_key", apierror.CodeInvalidFormat, "Stripe publishable key must start with 'pk_'."))
 	}
 	if !strings.HasPrefix(creds.WebhookSecret, "whsec_") {
-		return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Stripe webhook secret must start with 'whsec_'."))
+		return tracing.Trace(span, apierror.NewFieldError("credentials.webhook_secret", apierror.CodeInvalidFormat, "Stripe webhook secret must start with 'whsec_'."))
 	}
 
 	// Local development accounts are seeded as production-type (non-sandbox) accounts, which would otherwise force live keys. In development mode accept either test or live keys so integrations can be exercised against Stripe's test environment.
@@ -314,17 +450,17 @@ func (s *accountIntegrationSvcImpl) validateStripeCredentials(span trace.Span, c
 
 	if isSandbox {
 		if !strings.HasPrefix(creds.PrivateKey, "sk_test_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Sandbox accounts must use test Stripe keys (sk_test_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.private_key", apierror.CodeInvalidFormat, "Sandbox accounts must use test Stripe keys (sk_test_)."))
 		}
 		if !strings.HasPrefix(creds.PublishableKey, "pk_test_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Sandbox accounts must use test Stripe keys (pk_test_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.publishable_key", apierror.CodeInvalidFormat, "Sandbox accounts must use test Stripe keys (pk_test_)."))
 		}
 	} else {
 		if !strings.HasPrefix(creds.PrivateKey, "sk_live_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Production accounts must use live Stripe keys (sk_live_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.private_key", apierror.CodeInvalidFormat, "Production accounts must use live Stripe keys (sk_live_)."))
 		}
 		if !strings.HasPrefix(creds.PublishableKey, "pk_live_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Production accounts must use live Stripe keys (pk_live_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.publishable_key", apierror.CodeInvalidFormat, "Production accounts must use live Stripe keys (pk_live_)."))
 		}
 	}
 
@@ -338,22 +474,22 @@ func (s *accountIntegrationSvcImpl) validateShippoCredentials(span trace.Span, c
 	}
 
 	if !strings.HasPrefix(creds.APIKey, "shippo_live_") && !strings.HasPrefix(creds.APIKey, "shippo_test_") {
-		return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Shippo API key must start with 'shippo_live_' or 'shippo_test_'."))
+		return tracing.Trace(span, apierror.NewFieldError("credentials.api_key", apierror.CodeInvalidFormat, "Shippo API key must start with 'shippo_live_' or 'shippo_test_'."))
 	}
 
 	// Legacy's rule: only a production deployment spends with a live key, and never for a sandbox.
 	switch {
 	case isSandbox:
 		if !strings.HasPrefix(creds.APIKey, "shippo_test_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Sandbox accounts must use test Shippo keys (shippo_test_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.api_key", apierror.CodeInvalidFormat, "Sandbox accounts must use test Shippo keys (shippo_test_)."))
 		}
 	case s.platformMode.IsProduction():
 		if !strings.HasPrefix(creds.APIKey, "shippo_live_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Production accounts must use live Shippo keys (shippo_live_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.api_key", apierror.CodeInvalidFormat, "Production accounts must use live Shippo keys (shippo_live_)."))
 		}
 	default:
 		if !strings.HasPrefix(creds.APIKey, "shippo_test_") {
-			return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "Live Shippo keys (shippo_live_) are only accepted in production; use a test key (shippo_test_)."))
+			return tracing.Trace(span, apierror.NewFieldError("credentials.api_key", apierror.CodeInvalidFormat, "Live Shippo keys (shippo_live_) are only accepted in production; use a test key (shippo_test_)."))
 		}
 	}
 
@@ -368,7 +504,7 @@ func (s *accountIntegrationSvcImpl) validateHubspotCredentials(span trace.Span, 
 	}
 
 	if !strings.HasPrefix(creds.AccessToken, "pat-") {
-		return tracing.Trace(span, apierror.NewFieldError("credentials", apierror.CodeInvalidFormat, "HubSpot access token must start with 'pat-'."))
+		return tracing.Trace(span, apierror.NewFieldError("credentials.access_token", apierror.CodeInvalidFormat, "HubSpot access token must start with 'pat-'."))
 	}
 
 	return nil
@@ -467,17 +603,8 @@ func (s *accountIntegrationSvcImpl) DeleteAccountIntegration(ctx context.Context
 
 	params.AccountID = identity.Target.AccountID
 
-	integration, apiErr := s.repos.NewAccountIntegrationRepo().Get(ctx, params.AccountID, params.ID)
+	integration, apiErr := s.getIntegration(ctx, params.AccountID, params.ID)
 	if apiErr != nil {
-		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountIntegration, params.ID, params.AccountID)
-			if deletedCheckErr != nil {
-				return nil, tracing.Trace(span, deletedCheckErr)
-			}
-			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewGoneError("This account integration has already been deleted and can no longer be modified."))
-			}
-		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 

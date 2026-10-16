@@ -14,7 +14,7 @@ import (
 )
 
 const batchGetPortalDomainsByIDs = `-- name: BatchGetPortalDomainsByIDs :many
-SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at FROM portal_domain
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
 WHERE account_id = ? AND id IN (/*SLICE:ids*/?)
 `
 
@@ -52,6 +52,7 @@ func (q *Queries) BatchGetPortalDomainsByIDs(ctx context.Context, arg BatchGetPo
 			&i.VerifiedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CheckedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -68,8 +69,8 @@ func (q *Queries) BatchGetPortalDomainsByIDs(ctx context.Context, arg BatchGetPo
 
 const createPortalDomain = `-- name: CreatePortalDomain :exec
 INSERT INTO portal_domain (
-    id, account_id, domain, status, dns_records, created_at, updated_at
-) VALUES (?, ?, ?, 'pending', NULL, NOW(3), NOW(3))
+    id, account_id, domain, status, dns_records, checked_at, created_at, updated_at
+) VALUES (?, ?, ?, 'pending', NULL, NOW(3), NOW(3), NOW(3))
 `
 
 type CreatePortalDomainParams struct {
@@ -102,7 +103,7 @@ func (q *Queries) DeletePortalDomain(ctx context.Context, arg DeletePortalDomain
 }
 
 const getPortalDomainByAccountID = `-- name: GetPortalDomainByAccountID :one
-SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at FROM portal_domain
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
 WHERE account_id = ?
 `
 
@@ -118,12 +119,13 @@ func (q *Queries) GetPortalDomainByAccountID(ctx context.Context, accountID stri
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CheckedAt,
 	)
 	return i, err
 }
 
 const getPortalDomainByDomain = `-- name: GetPortalDomainByDomain :one
-SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at FROM portal_domain
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
 WHERE domain = ?
 `
 
@@ -139,12 +141,13 @@ func (q *Queries) GetPortalDomainByDomain(ctx context.Context, domain string) (P
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CheckedAt,
 	)
 	return i, err
 }
 
 const getPortalDomainByID = `-- name: GetPortalDomainByID :one
-SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at FROM portal_domain
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
 WHERE id = ? AND account_id = ?
 `
 
@@ -165,12 +168,13 @@ func (q *Queries) GetPortalDomainByID(ctx context.Context, arg GetPortalDomainBy
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CheckedAt,
 	)
 	return i, err
 }
 
 const listPortalDomainsByAccount = `-- name: ListPortalDomainsByAccount :many
-SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at FROM portal_domain
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
 WHERE account_id = ?
 ORDER BY created_at DESC, id DESC
 `
@@ -193,6 +197,54 @@ func (q *Queries) ListPortalDomainsByAccount(ctx context.Context, accountID stri
 			&i.VerifiedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CheckedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPortalDomainsToRecheck = `-- name: ListPortalDomainsToRecheck :many
+SELECT id, account_id, domain, status, dns_records, verified_at, created_at, updated_at, checked_at FROM portal_domain
+WHERE status IN ('pending', 'securing')
+AND (checked_at IS NULL OR checked_at < ?)
+ORDER BY checked_at ASC, id ASC
+LIMIT ?
+`
+
+type ListPortalDomainsToRecheckParams struct {
+	CheckedBefore sql.NullTime
+	Limit         int32
+}
+
+// Domains still on their way to verified whose last background check is older than the cutoff, least recently checked first.
+func (q *Queries) ListPortalDomainsToRecheck(ctx context.Context, arg ListPortalDomainsToRecheckParams) ([]PortalDomain, error) {
+	rows, err := q.db.QueryContext(ctx, listPortalDomainsToRecheck, arg.CheckedBefore, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PortalDomain
+	for rows.Next() {
+		var i PortalDomain
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Domain,
+			&i.Status,
+			&i.DnsRecords,
+			&i.VerifiedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CheckedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -259,9 +311,20 @@ func (q *Queries) ResolveVerifiedPortalHost(ctx context.Context, domain string) 
 	return i, err
 }
 
+const touchPortalDomainChecked = `-- name: TouchPortalDomainChecked :exec
+UPDATE portal_domain
+SET checked_at = NOW(3)
+WHERE id = ?
+`
+
+func (q *Queries) TouchPortalDomainChecked(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, touchPortalDomainChecked, id)
+	return err
+}
+
 const updatePortalDomainProviderState = `-- name: UpdatePortalDomainProviderState :exec
 UPDATE portal_domain
-SET status = ?, dns_records = ?, updated_at = NOW(3)
+SET status = ?, dns_records = ?, checked_at = NOW(3), updated_at = NOW(3)
 WHERE id = ?
 `
 

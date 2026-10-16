@@ -136,14 +136,15 @@ type AccountGroupQuantityDiscount struct {
 }
 
 type AccountIntegration struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	CredentialsV2   string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	CredentialsV2    string
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ConnectionStatus string
 }
 
 type AccountInventorySetting struct {
@@ -1653,6 +1654,7 @@ type PortalDomain struct {
 	VerifiedAt sql.NullTime
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	CheckedAt  sql.NullTime
 }
 
 type PortalRegistrationSession struct {

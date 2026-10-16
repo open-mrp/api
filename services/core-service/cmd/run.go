@@ -16,6 +16,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/grpc"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/hubspot"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/integrationcheck"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/shippo"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -23,6 +24,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/stub"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/vercel"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/services/core-service/internal/portaldomainverify"
 	"github.com/open-mrp/api/services/core-service/internal/service"
 	"github.com/open-mrp/api/services/core-service/internal/stripesync"
 	"github.com/open-mrp/api/shared/audit"
@@ -318,10 +320,12 @@ func Run(
 	var shippoFactory domain.ShippoClientFactory
 	var stripeCheckoutFactory domain.StripeCheckoutClientFactory
 	var hubspotFactory domain.HubspotClientFactory
+	var credentialChecker domain.IntegrationCredentialChecker = integrationcheck.New(nil)
 	if cfg.PlatformMode.IsTest() {
 		shippoFactory = &stub.ShippoClientFactory{}
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
 		hubspotFactory = &stub.HubspotClientFactory{}
+		credentialChecker = stub.IntegrationCredentialChecker{}
 	} else {
 		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore, PlatformMode: cfg.PlatformMode})
 		if err != nil {
@@ -355,12 +359,13 @@ func Run(
 		}
 	}
 	accountIntegrationSvc := service.NewAccountIntegrationSvc(&service.AccountIntegrationSvcConfig{
-		Repos:           repoFactory,
-		MediatorFactory: mediatorFactory,
-		TxManager:       txManager,
-		EncryptionKey:   integrationEncryptionKey,
-		EncryptionKeyID: cfg.IntegrationEncryptionKeyID,
-		PlatformMode:    cfg.PlatformMode,
+		Repos:             repoFactory,
+		MediatorFactory:   mediatorFactory,
+		TxManager:         txManager,
+		EncryptionKey:     integrationEncryptionKey,
+		EncryptionKeyID:   cfg.IntegrationEncryptionKeyID,
+		PlatformMode:      cfg.PlatformMode,
+		CredentialChecker: credentialChecker,
 	})
 
 	hubspotSync := hubspotsync.NewService(repoFactory, hubspotFactory, integrationEncryptionKey, hubspotsync.Config{})
@@ -774,6 +779,13 @@ func Run(
 		return err
 	}
 	defer inboxPurger.Stop()
+
+	portalDomainVerifier, err := portaldomainverify.New(&portaldomainverify.Config{PlatformMode: cfg.PlatformMode}, portalDomainSvc, leaseSvc)
+	if err != nil {
+		return err
+	}
+	portalDomainVerifier.Start(ctx)
+	defer portalDomainVerifier.Stop()
 
 	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
 		return err

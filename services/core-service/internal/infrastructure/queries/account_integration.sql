@@ -1,48 +1,3 @@
--- name: ListAccountIntegrationsForward :many
-SELECT
-    account_integration.id,
-    account_integration.account_id,
-    account_integration.integration_code,
-    account_integration.name,
-    account_integration.is_active,
-    account_integration.created_at,
-    account_integration.updated_at
-FROM account_integration
-WHERE account_integration.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR account_integration.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR account_integration.created_at < sqlc.narg('cursor_created_at')
-    OR (account_integration.created_at = sqlc.narg('cursor_created_at') AND account_integration.id < sqlc.narg('cursor_id'))
-)
-ORDER BY account_integration.created_at DESC, account_integration.id DESC
-LIMIT ?;
-
--- name: ListAccountIntegrationsBackward :many
-SELECT
-    account_integration.id,
-    account_integration.account_id,
-    account_integration.integration_code,
-    account_integration.name,
-    account_integration.is_active,
-    account_integration.created_at,
-    account_integration.updated_at
-FROM account_integration
-WHERE account_integration.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR account_integration.name LIKE sqlc.narg('search_query')
-)
-AND (
-    account_integration.created_at > sqlc.arg('cursor_created_at')
-    OR (account_integration.created_at = sqlc.arg('cursor_created_at') AND account_integration.id > sqlc.arg('cursor_id'))
-)
-ORDER BY account_integration.created_at ASC, account_integration.id ASC
-LIMIT ?;
-
 -- name: GetAccountIntegration :one
 SELECT
     account_integration.id,
@@ -50,6 +5,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -63,6 +19,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -77,6 +34,7 @@ INSERT INTO account_integration (
     name,
     credentials_v2,
     is_active,
+    connection_status,
     created_at,
     updated_at
 ) VALUES (
@@ -85,7 +43,8 @@ INSERT INTO account_integration (
     sqlc.arg('integration_code'),
     sqlc.arg('name'),
     sqlc.arg('credentials_v2'),
-    1,
+    sqlc.arg('is_active'),
+    sqlc.arg('connection_status'),
     NOW(3),
     NOW(3)
 );
@@ -94,6 +53,7 @@ INSERT INTO account_integration (
 UPDATE account_integration SET
     name = sqlc.arg('name'),
     credentials_v2 = sqlc.arg('credentials_v2'),
+    connection_status = sqlc.arg('connection_status'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -120,6 +80,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -138,3 +99,11 @@ AND account_integration.integration_code = sqlc.arg('integration_code');
 SELECT COUNT(*) FROM account_integration
 WHERE account_id = sqlc.arg('account_id')
 AND integration_code = sqlc.arg('integration_code');
+
+-- name: SetAccountIntegrationConnectionStatus :exec
+-- Leaves the row untouched when the status already matches, so a provider call that succeeds as usual costs no write.
+UPDATE account_integration SET
+    connection_status = sqlc.arg('connection_status')
+WHERE account_id = sqlc.arg('account_id')
+AND integration_code = sqlc.arg('integration_code')
+AND connection_status <> sqlc.arg('connection_status');

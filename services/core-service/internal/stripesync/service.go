@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/integrationhealth"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
@@ -164,5 +165,5 @@ func (s *service) clientForAccount(ctx context.Context, accountID string) (domai
 		return nil, false, apierror.NewAuthenticationError("The Stripe integration has no API key. Reconnect the Stripe integration.")
 	}
 
-	return s.clientFactory.Build(creds.PrivateKey), true, nil
+	return integrationhealth.Stripe(s.clientFactory.Build(creds.PrivateKey), integrationhealth.ForAccount(repo, accountID, constants.IntegrationCodeStripe)), true, nil
 }

@@ -1,7 +1,7 @@
 -- name: CreatePortalDomain :exec
 INSERT INTO portal_domain (
-    id, account_id, domain, status, dns_records, created_at, updated_at
-) VALUES (?, ?, ?, 'pending', NULL, NOW(3), NOW(3));
+    id, account_id, domain, status, dns_records, checked_at, created_at, updated_at
+) VALUES (?, ?, ?, 'pending', NULL, NOW(3), NOW(3), NOW(3));
 
 -- name: GetPortalDomainByID :one
 SELECT * FROM portal_domain
@@ -26,7 +26,7 @@ WHERE account_id = sqlc.arg('account_id') AND id IN (sqlc.slice('ids'));
 
 -- name: UpdatePortalDomainProviderState :exec
 UPDATE portal_domain
-SET status = ?, dns_records = ?, updated_at = NOW(3)
+SET status = ?, dns_records = ?, checked_at = NOW(3), updated_at = NOW(3)
 WHERE id = ?;
 
 -- name: MarkPortalDomainVerified :exec
@@ -52,3 +52,16 @@ JOIN account a ON a.id = pd.account_id
 JOIN account_portal ap ON ap.owner_account_id = a.id
 LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
 WHERE pd.domain = sqlc.arg('domain') AND pd.status = 'verified';
+
+-- name: ListPortalDomainsToRecheck :many
+-- Domains still on their way to verified whose last background check is older than the cutoff, least recently checked first.
+SELECT * FROM portal_domain
+WHERE status IN ('pending', 'securing')
+AND (checked_at IS NULL OR checked_at < sqlc.arg('checked_before'))
+ORDER BY checked_at ASC, id ASC
+LIMIT ?;
+
+-- name: TouchPortalDomainChecked :exec
+UPDATE portal_domain
+SET checked_at = NOW(3)
+WHERE id = ?;

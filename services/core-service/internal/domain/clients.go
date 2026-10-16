@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -186,6 +187,13 @@ type PortalDomainProviderState struct {
 	// Serving reports whether the domain answers over HTTPS with a valid TLS certificate. It is only meaningful once the domain is verified and routing (not misconfigured); until the certificate is issued a routed domain is verified+routing but not yet serving.
 	Serving    bool
 	DNSRecords []PortalDNSRecord
+}
+
+// IntegrationCredentialChecker asks a provider whether it accepts a set of integration credentials.
+type IntegrationCredentialChecker interface {
+	// Check returns connected or invalid_credentials for the credentials JSON. An error means the provider could not
+	// give an answer.
+	Check(ctx context.Context, provider constants.IntegrationCode, credentials string) (constants.IntegrationConnectionStatus, *apierror.APIError)
 }
 
 // PortalDomainProvider is the serving/TLS provider (Vercel) for customer portal custom domains. All methods are idempotent so the provider-registration phase of a create can be safely retried.

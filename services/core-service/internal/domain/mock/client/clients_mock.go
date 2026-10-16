@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/open-mrp/api/services/core-service/internal/domain"
+	constants "github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -671,6 +672,45 @@ func (m *MockStripeCheckoutClientFactory) Build(apiKey string) domain.StripeChec
 func (mr *MockStripeCheckoutClientFactoryMockRecorder) Build(apiKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockStripeCheckoutClientFactory)(nil).Build), apiKey)
+}
+
+// MockIntegrationCredentialChecker is a mock of IntegrationCredentialChecker interface.
+type MockIntegrationCredentialChecker struct {
+	ctrl     *gomock.Controller
+	recorder *MockIntegrationCredentialCheckerMockRecorder
+	isgomock struct{}
+}
+
+// MockIntegrationCredentialCheckerMockRecorder is the mock recorder for MockIntegrationCredentialChecker.
+type MockIntegrationCredentialCheckerMockRecorder struct {
+	mock *MockIntegrationCredentialChecker
+}
+
+// NewMockIntegrationCredentialChecker creates a new mock instance.
+func NewMockIntegrationCredentialChecker(ctrl *gomock.Controller) *MockIntegrationCredentialChecker {
+	mock := &MockIntegrationCredentialChecker{ctrl: ctrl}
+	mock.recorder = &MockIntegrationCredentialCheckerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockIntegrationCredentialChecker) EXPECT() *MockIntegrationCredentialCheckerMockRecorder {
+	return m.recorder
+}
+
+// Check mocks base method.
+func (m *MockIntegrationCredentialChecker) Check(ctx context.Context, provider constants.IntegrationCode, credentials string) (constants.IntegrationConnectionStatus, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Check", ctx, provider, credentials)
+	ret0, _ := ret[0].(constants.IntegrationConnectionStatus)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Check indicates an expected call of Check.
+func (mr *MockIntegrationCredentialCheckerMockRecorder) Check(ctx, provider, credentials any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockIntegrationCredentialChecker)(nil).Check), ctx, provider, credentials)
 }
 
 // MockPortalDomainProvider is a mock of PortalDomainProvider interface.

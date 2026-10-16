@@ -124,10 +124,10 @@ func (c *clientImpl) parseError(resp *http.Response) *apierror.APIError {
 		return apierror.NewInternalError(fmt.Errorf("hubspot status %d: %s", resp.StatusCode, msg), "HubSpot API server error.")
 	case resp.StatusCode == http.StatusUnauthorized:
 		// A rejected token is permanent (retrying cannot mint a valid one) but, unlike bad data, it means every sync for this account is dead until someone reconnects. Keep it distinguishable from a validation error so callers can say so rather than reporting an opaque HUBSPOT: message.
-		return apierror.NewAuthenticationError("HubSpot rejected the access token. Reconnect the HubSpot integration with a valid Private App token. (" + msg + ")")
+		return apierror.New(apierror.CodeInvalidCredentials, "HubSpot rejected the access token. Reconnect the HubSpot integration with a valid Private App token. ("+msg+")", apierror.WithInternal(domain.ErrProviderRejectedCredentials))
 	case resp.StatusCode == http.StatusForbidden:
 		// 403 means the token is real but under-scoped, which is a different fix from 401's "get a new token". The token is only prefix-checked when saved, so this is the first point an operator learns a scope box was left unticked — name them rather than echoing HubSpot's generic message.
-		return apierror.NewAuthenticationError("The HubSpot Private App token is missing a required scope. It needs crm.objects.companies/contacts/deals read+write and crm.schemas.deals read+write. (" + msg + ")")
+		return apierror.New(apierror.CodeInvalidCredentials, "The HubSpot Private App token is missing a required scope. It needs crm.objects.companies/contacts/deals read+write and crm.schemas.deals read+write. ("+msg+")", apierror.WithInternal(domain.ErrProviderRejectedCredentials))
 	default:
 		return apierror.NewValidationError("HUBSPOT: " + msg)
 	}

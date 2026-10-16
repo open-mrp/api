@@ -715,6 +715,11 @@ service CoreService {
   rpc CreateSupplierMaterial(CreateSupplierMaterialRequest) returns (CreateSupplierMaterialResponse);
   rpc UpdateSupplierMaterial(UpdateSupplierMaterialRequest) returns (UpdateSupplierMaterialResponse);
   rpc DeleteSupplierMaterial(DeleteSupplierMaterialRequest) returns (DeleteSupplierMaterialResponse);
+  rpc ListSupplierItems(ListSupplierItemsRequest) returns (ListSupplierItemsResponse);
+  rpc GetSupplierItem(GetSupplierItemRequest) returns (SupplierItemResponse);
+  rpc CreateSupplierItem(CreateSupplierItemRequest) returns (SupplierItemResponse);
+  rpc UpdateSupplierItem(UpdateSupplierItemRequest) returns (SupplierItemResponse);
+  rpc DeleteSupplierItem(DeleteSupplierItemRequest) returns (SupplierItemResponse);
 
   // Parts
   rpc CreatePart(CreatePartRequest) returns (CreatePartResponse);

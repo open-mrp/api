@@ -1440,6 +1440,13 @@ type SupplierMaterialRepo interface {
 	Update(ctx context.Context, params UpdateSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
 	ExistsByMaterialAndSupplier(ctx context.Context, ownerAccountID, materialID, supplierAccountID string) (bool, *apierror.APIError)
+	// ListItems pages a supplier's items, newest first.
+	ListItems(ctx context.Context, params ListSupplierItemsParams) (*ListSupplierItemsResult, *apierror.APIError)
+	// GetItem reads one of a supplier's items by its own ID; another supplier's is not found.
+	GetItem(ctx context.Context, ownerAccountID, supplierAccountID, id string) (*SupplierItem, *apierror.APIError)
+	// UpdateItem stores item's code, description and status.
+	UpdateItem(ctx context.Context, ownerAccountID string, item *SupplierItem) *apierror.APIError
+	DeleteItem(ctx context.Context, ownerAccountID, id string) *apierror.APIError
 }
 
 type SalesOrderRepo interface {
@@ -1988,17 +1995,19 @@ type SupplierRepo interface {
 	List(ctx context.Context, params ListSuppliersParams) (*ListSuppliersResult, *apierror.APIError)
 	Get(ctx context.Context, params GetSupplierParams) (*Supplier, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID string, params CreateSupplierParams, billToAddressID, shipToAddressID *string) (*Supplier, *apierror.APIError)
-	Update(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
-	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)
-	BulkDelete(ctx context.Context, ownerAccountID string, supplierAccountIDs []string) *apierror.APIError
+	// Update stores w, every value already merged with the row, and reads the supplier back with includes.
+	Update(ctx context.Context, w SupplierRelationWrite, includes []string) (*Supplier, *apierror.APIError)
+	// InUseBy names what still references the supplier: its purchase orders and supplier items.
+	InUseBy(ctx context.Context, ownerAccountID, supplierAccountID string) ([]string, *apierror.APIError)
+	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) *apierror.APIError
 	// LockNumbers holds the owner's supplier numbers until the transaction ends. Take it before the transaction's first read, then check ExistsByNumber.
 	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	// FindByNames resolves supplier display names to supplier account IDs within the
 	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.
 	FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*SupplierNameMatch, *apierror.APIError)
-	// GetByIDs reads the owner's suppliers among ids as the list shows them; an id that is not one is skipped.
-	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*SupplierSummary, *apierror.APIError)
+	// GetByIDs reads the owner's suppliers among ids in their order; an id that is not one is skipped.
+	GetByIDs(ctx context.Context, ownerAccountID string, ids, includes []string) ([]*Supplier, *apierror.APIError)
 }
 
 type SysPropertyRepo interface {

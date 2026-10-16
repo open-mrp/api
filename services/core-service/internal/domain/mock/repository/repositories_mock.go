@@ -14562,6 +14562,20 @@ func (mr *MockSupplierMaterialRepoMockRecorder) Delete(ctx, params any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).Delete), ctx, params)
 }
 
+// DeleteItem mocks base method.
+func (m *MockSupplierMaterialRepo) DeleteItem(ctx context.Context, ownerAccountID, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteItem", ctx, ownerAccountID, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteItem indicates an expected call of DeleteItem.
+func (mr *MockSupplierMaterialRepoMockRecorder) DeleteItem(ctx, ownerAccountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteItem", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).DeleteItem), ctx, ownerAccountID, id)
+}
+
 // ExistsByMaterialAndSupplier mocks base method.
 func (m *MockSupplierMaterialRepo) ExistsByMaterialAndSupplier(ctx context.Context, ownerAccountID, materialID, supplierAccountID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14592,6 +14606,21 @@ func (mr *MockSupplierMaterialRepoMockRecorder) GetBySupplierAndMaterialID(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySupplierAndMaterialID", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).GetBySupplierAndMaterialID), ctx, ownerAccountID, supplierAccountID, materialID)
 }
 
+// GetItem mocks base method.
+func (m *MockSupplierMaterialRepo) GetItem(ctx context.Context, ownerAccountID, supplierAccountID, id string) (*domain.SupplierItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItem", ctx, ownerAccountID, supplierAccountID, id)
+	ret0, _ := ret[0].(*domain.SupplierItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetItem indicates an expected call of GetItem.
+func (mr *MockSupplierMaterialRepoMockRecorder) GetItem(ctx, ownerAccountID, supplierAccountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).GetItem), ctx, ownerAccountID, supplierAccountID, id)
+}
+
 // List mocks base method.
 func (m *MockSupplierMaterialRepo) List(ctx context.Context, params domain.ListSupplierMaterialsParams) (*domain.ListSupplierMaterialsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14607,6 +14636,21 @@ func (mr *MockSupplierMaterialRepoMockRecorder) List(ctx, params any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).List), ctx, params)
 }
 
+// ListItems mocks base method.
+func (m *MockSupplierMaterialRepo) ListItems(ctx context.Context, params domain.ListSupplierItemsParams) (*domain.ListSupplierItemsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListItems", ctx, params)
+	ret0, _ := ret[0].(*domain.ListSupplierItemsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListItems indicates an expected call of ListItems.
+func (mr *MockSupplierMaterialRepoMockRecorder) ListItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItems", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).ListItems), ctx, params)
+}
+
 // Update mocks base method.
 func (m *MockSupplierMaterialRepo) Update(ctx context.Context, params domain.UpdateSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14620,6 +14664,20 @@ func (m *MockSupplierMaterialRepo) Update(ctx context.Context, params domain.Upd
 func (mr *MockSupplierMaterialRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).Update), ctx, params)
+}
+
+// UpdateItem mocks base method.
+func (m *MockSupplierMaterialRepo) UpdateItem(ctx context.Context, ownerAccountID string, item *domain.SupplierItem) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateItem", ctx, ownerAccountID, item)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateItem indicates an expected call of UpdateItem.
+func (mr *MockSupplierMaterialRepoMockRecorder) UpdateItem(ctx, ownerAccountID, item any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItem", reflect.TypeOf((*MockSupplierMaterialRepo)(nil).UpdateItem), ctx, ownerAccountID, item)
 }
 
 // MockSalesOrderRepo is a mock of SalesOrderRepo interface.
@@ -20630,20 +20688,6 @@ func (m *MockSupplierRepo) EXPECT() *MockSupplierRepoMockRecorder {
 	return m.recorder
 }
 
-// BulkDelete mocks base method.
-func (m *MockSupplierRepo) BulkDelete(ctx context.Context, ownerAccountID string, supplierAccountIDs []string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BulkDelete", ctx, ownerAccountID, supplierAccountIDs)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// BulkDelete indicates an expected call of BulkDelete.
-func (mr *MockSupplierRepoMockRecorder) BulkDelete(ctx, ownerAccountID, supplierAccountIDs any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkDelete", reflect.TypeOf((*MockSupplierRepo)(nil).BulkDelete), ctx, ownerAccountID, supplierAccountIDs)
-}
-
 // Create mocks base method.
 func (m *MockSupplierRepo) Create(ctx context.Context, accountID, relationID string, params domain.CreateSupplierParams, billToAddressID, shipToAddressID *string) (*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -20660,12 +20704,11 @@ func (mr *MockSupplierRepoMockRecorder) Create(ctx, accountID, relationID, param
 }
 
 // Delete mocks base method.
-func (m *MockSupplierRepo) Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*domain.Supplier, *apierror.APIError) {
+func (m *MockSupplierRepo) Delete(ctx context.Context, ownerAccountID, supplierAccountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, ownerAccountID, supplierAccountID)
-	ret0, _ := ret[0].(*domain.Supplier)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
 }
 
 // Delete indicates an expected call of Delete.
@@ -20720,18 +20763,33 @@ func (mr *MockSupplierRepoMockRecorder) Get(ctx, params any) *gomock.Call {
 }
 
 // GetByIDs mocks base method.
-func (m *MockSupplierRepo) GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+func (m *MockSupplierRepo) GetByIDs(ctx context.Context, ownerAccountID string, ids, includes []string) ([]*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByIDs", ctx, ownerAccountID, ids)
-	ret0, _ := ret[0].([]*domain.SupplierSummary)
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, ownerAccountID, ids, includes)
+	ret0, _ := ret[0].([]*domain.Supplier)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetByIDs indicates an expected call of GetByIDs.
-func (mr *MockSupplierRepoMockRecorder) GetByIDs(ctx, ownerAccountID, ids any) *gomock.Call {
+func (mr *MockSupplierRepoMockRecorder) GetByIDs(ctx, ownerAccountID, ids, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockSupplierRepo)(nil).GetByIDs), ctx, ownerAccountID, ids)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockSupplierRepo)(nil).GetByIDs), ctx, ownerAccountID, ids, includes)
+}
+
+// InUseBy mocks base method.
+func (m *MockSupplierRepo) InUseBy(ctx context.Context, ownerAccountID, supplierAccountID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InUseBy", ctx, ownerAccountID, supplierAccountID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// InUseBy indicates an expected call of InUseBy.
+func (mr *MockSupplierRepoMockRecorder) InUseBy(ctx, ownerAccountID, supplierAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InUseBy", reflect.TypeOf((*MockSupplierRepo)(nil).InUseBy), ctx, ownerAccountID, supplierAccountID)
 }
 
 // List mocks base method.
@@ -20764,18 +20822,18 @@ func (mr *MockSupplierRepoMockRecorder) LockNumbers(ctx, ownerAccountID any) *go
 }
 
 // Update mocks base method.
-func (m *MockSupplierRepo) Update(ctx context.Context, params domain.UpdateSupplierParams) (*domain.Supplier, *apierror.APIError) {
+func (m *MockSupplierRepo) Update(ctx context.Context, w domain.SupplierRelationWrite, includes []string) (*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, params)
+	ret := m.ctrl.Call(m, "Update", ctx, w, includes)
 	ret0, _ := ret[0].(*domain.Supplier)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockSupplierRepoMockRecorder) Update(ctx, params any) *gomock.Call {
+func (mr *MockSupplierRepoMockRecorder) Update(ctx, w, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSupplierRepo)(nil).Update), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSupplierRepo)(nil).Update), ctx, w, includes)
 }
 
 // MockSysPropertyRepo is a mock of SysPropertyRepo interface.

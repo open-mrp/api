@@ -8477,6 +8477,21 @@ func (m *MockSupplierMaterialSvc) EXPECT() *MockSupplierMaterialSvcMockRecorder 
 	return m.recorder
 }
 
+// CreateSupplierItem mocks base method.
+func (m *MockSupplierMaterialSvc) CreateSupplierItem(ctx context.Context, params domain.CreateSupplierItemParams) (*domain.SupplierItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSupplierItem", ctx, params)
+	ret0, _ := ret[0].(*domain.SupplierItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateSupplierItem indicates an expected call of CreateSupplierItem.
+func (mr *MockSupplierMaterialSvcMockRecorder) CreateSupplierItem(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSupplierItem", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).CreateSupplierItem), ctx, params)
+}
+
 // CreateSupplierMaterial mocks base method.
 func (m *MockSupplierMaterialSvc) CreateSupplierMaterial(ctx context.Context, params domain.CreateSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8490,6 +8505,21 @@ func (m *MockSupplierMaterialSvc) CreateSupplierMaterial(ctx context.Context, pa
 func (mr *MockSupplierMaterialSvcMockRecorder) CreateSupplierMaterial(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSupplierMaterial", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).CreateSupplierMaterial), ctx, params)
+}
+
+// DeleteSupplierItem mocks base method.
+func (m *MockSupplierMaterialSvc) DeleteSupplierItem(ctx context.Context, supplierAccountID, id string) (*domain.SupplierItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSupplierItem", ctx, supplierAccountID, id)
+	ret0, _ := ret[0].(*domain.SupplierItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeleteSupplierItem indicates an expected call of DeleteSupplierItem.
+func (mr *MockSupplierMaterialSvcMockRecorder) DeleteSupplierItem(ctx, supplierAccountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSupplierItem", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).DeleteSupplierItem), ctx, supplierAccountID, id)
 }
 
 // DeleteSupplierMaterial mocks base method.
@@ -8507,6 +8537,21 @@ func (mr *MockSupplierMaterialSvcMockRecorder) DeleteSupplierMaterial(ctx, param
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSupplierMaterial", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).DeleteSupplierMaterial), ctx, params)
 }
 
+// GetSupplierItem mocks base method.
+func (m *MockSupplierMaterialSvc) GetSupplierItem(ctx context.Context, supplierAccountID, id string) (*domain.SupplierItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSupplierItem", ctx, supplierAccountID, id)
+	ret0, _ := ret[0].(*domain.SupplierItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetSupplierItem indicates an expected call of GetSupplierItem.
+func (mr *MockSupplierMaterialSvcMockRecorder) GetSupplierItem(ctx, supplierAccountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupplierItem", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).GetSupplierItem), ctx, supplierAccountID, id)
+}
+
 // GetSupplierMaterial mocks base method.
 func (m *MockSupplierMaterialSvc) GetSupplierMaterial(ctx context.Context, supplierAccountID, materialID string) (*domain.SupplierMaterial, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8522,6 +8567,21 @@ func (mr *MockSupplierMaterialSvcMockRecorder) GetSupplierMaterial(ctx, supplier
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupplierMaterial", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).GetSupplierMaterial), ctx, supplierAccountID, materialID)
 }
 
+// ListSupplierItems mocks base method.
+func (m *MockSupplierMaterialSvc) ListSupplierItems(ctx context.Context, params domain.ListSupplierItemsParams) (*domain.ListSupplierItemsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSupplierItems", ctx, params)
+	ret0, _ := ret[0].(*domain.ListSupplierItemsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSupplierItems indicates an expected call of ListSupplierItems.
+func (mr *MockSupplierMaterialSvcMockRecorder) ListSupplierItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSupplierItems", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).ListSupplierItems), ctx, params)
+}
+
 // ListSupplierMaterials mocks base method.
 func (m *MockSupplierMaterialSvc) ListSupplierMaterials(ctx context.Context, params domain.ListSupplierMaterialsParams) (*domain.ListSupplierMaterialsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8535,6 +8595,21 @@ func (m *MockSupplierMaterialSvc) ListSupplierMaterials(ctx context.Context, par
 func (mr *MockSupplierMaterialSvcMockRecorder) ListSupplierMaterials(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSupplierMaterials", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).ListSupplierMaterials), ctx, params)
+}
+
+// UpdateSupplierItem mocks base method.
+func (m *MockSupplierMaterialSvc) UpdateSupplierItem(ctx context.Context, params domain.UpdateSupplierItemParams) (*domain.SupplierItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateSupplierItem", ctx, params)
+	ret0, _ := ret[0].(*domain.SupplierItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateSupplierItem indicates an expected call of UpdateSupplierItem.
+func (mr *MockSupplierMaterialSvcMockRecorder) UpdateSupplierItem(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSupplierItem", reflect.TypeOf((*MockSupplierMaterialSvc)(nil).UpdateSupplierItem), ctx, params)
 }
 
 // UpdateSupplierMaterial mocks base method.
@@ -10214,18 +10289,18 @@ func (m *MockSupplierSvc) EXPECT() *MockSupplierSvcMockRecorder {
 }
 
 // BatchGetSuppliersByIDs mocks base method.
-func (m *MockSupplierSvc) BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+func (m *MockSupplierSvc) BatchGetSuppliersByIDs(ctx context.Context, ids, includes []string) ([]*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetSuppliersByIDs", ctx, ids)
-	ret0, _ := ret[0].([]*domain.SupplierSummary)
+	ret := m.ctrl.Call(m, "BatchGetSuppliersByIDs", ctx, ids, includes)
+	ret0, _ := ret[0].([]*domain.Supplier)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // BatchGetSuppliersByIDs indicates an expected call of BatchGetSuppliersByIDs.
-func (mr *MockSupplierSvcMockRecorder) BatchGetSuppliersByIDs(ctx, ids any) *gomock.Call {
+func (mr *MockSupplierSvcMockRecorder) BatchGetSuppliersByIDs(ctx, ids, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSuppliersByIDs", reflect.TypeOf((*MockSupplierSvc)(nil).BatchGetSuppliersByIDs), ctx, ids)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSuppliersByIDs", reflect.TypeOf((*MockSupplierSvc)(nil).BatchGetSuppliersByIDs), ctx, ids, includes)
 }
 
 // BulkDeleteSuppliers mocks base method.

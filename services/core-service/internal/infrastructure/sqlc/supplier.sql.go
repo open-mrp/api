@@ -12,72 +12,60 @@ import (
 	"time"
 )
 
-const bulkDeleteSupplierAccountAddresses = `-- name: BulkDeleteSupplierAccountAddresses :exec
-DELETE FROM account_address
-WHERE account_id IN (/*SLICE:account_ids*/?)
+const countSupplierMaterials = `-- name: CountSupplierMaterials :many
+SELECT smc.supplier_account_id, COUNT(*) AS material_count
+FROM supplier_material smc
+JOIN material mc ON mc.id = smc.material_id
+JOIN item ic ON ic.id = mc.item_id
+WHERE smc.owner_account_id = ?
+  AND smc.supplier_account_id IN (/*SLICE:supplier_ids*/?)
+  AND ic.deleted_at IS NULL
+GROUP BY smc.supplier_account_id
 `
 
-func (q *Queries) BulkDeleteSupplierAccountAddresses(ctx context.Context, accountIds []string) error {
-	query := bulkDeleteSupplierAccountAddresses
-	var queryParams []interface{}
-	if len(accountIds) > 0 {
-		for _, v := range accountIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(accountIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
-	}
-	_, err := q.db.ExecContext(ctx, query, queryParams...)
-	return err
+type CountSupplierMaterialsParams struct {
+	OwnerAccountID string
+	SupplierIds    []string
 }
 
-const bulkDeleteSupplierAccountUsers = `-- name: BulkDeleteSupplierAccountUsers :exec
-DELETE FROM account_user
-WHERE account_id IN (/*SLICE:account_ids*/?)
-`
-
-func (q *Queries) BulkDeleteSupplierAccountUsers(ctx context.Context, accountIds []string) error {
-	query := bulkDeleteSupplierAccountUsers
-	var queryParams []interface{}
-	if len(accountIds) > 0 {
-		for _, v := range accountIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(accountIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
-	}
-	_, err := q.db.ExecContext(ctx, query, queryParams...)
-	return err
+type CountSupplierMaterialsRow struct {
+	SupplierAccountID string
+	MaterialCount     int64
 }
 
-const bulkDeleteSupplierRelations = `-- name: BulkDeleteSupplierRelations :exec
-DELETE FROM account_relation
-WHERE owner_account_id = ?
-  AND counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
-  AND account_relation_role_code = 'supplier'
-`
-
-type BulkDeleteSupplierRelationsParams struct {
-	OwnerAccountID         string
-	CounterpartyAccountIds []string
-}
-
-func (q *Queries) BulkDeleteSupplierRelations(ctx context.Context, arg BulkDeleteSupplierRelationsParams) error {
-	query := bulkDeleteSupplierRelations
+// The supplier items each supplier has, not counting one whose item was deleted. Read only for callers that show it.
+func (q *Queries) CountSupplierMaterials(ctx context.Context, arg CountSupplierMaterialsParams) ([]CountSupplierMaterialsRow, error) {
+	query := countSupplierMaterials
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.OwnerAccountID)
-	if len(arg.CounterpartyAccountIds) > 0 {
-		for _, v := range arg.CounterpartyAccountIds {
+	if len(arg.SupplierIds) > 0 {
+		for _, v := range arg.SupplierIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", strings.Repeat(",?", len(arg.SupplierIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", "NULL", 1)
 	}
-	_, err := q.db.ExecContext(ctx, query, queryParams...)
-	return err
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountSupplierMaterialsRow
+	for rows.Next() {
+		var i CountSupplierMaterialsRow
+		if err := rows.Scan(&i.SupplierAccountID, &i.MaterialCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const deleteSupplierAccountAddresses = `-- name: DeleteSupplierAccountAddresses :exec
@@ -193,7 +181,17 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.notes,
+    ar.is_active,
+    ar.instructions,
+    ab.support_email AS email,
+    ab.phone_number,
+    ab.website_url,
+    ar.carrier_billing_type,
+    ar.carrier_billing_account,
+    ar.default_carrier_id,
+    ar.default_carrier_option_id,
+    ar.payment_term_id,
+    ar.shipping_term_id,
     ba.id AS default_billing_address_id,
     ba.name AS default_billing_address_name,
     ba.phone AS default_billing_address_phone,
@@ -222,19 +220,11 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT STRAIGHT_JOIN COUNT(*)
-        FROM supplier_material smc FORCE INDEX (supplier_material_supplier_account_id_idx)
-        JOIN material mc ON mc.id = smc.material_id
-        JOIN item ic ON ic.id = mc.item_id
-        WHERE smc.supplier_account_id = ar.counterparty_account_id
-          AND smc.owner_account_id = ar.owner_account_id
-          AND ic.deleted_at IS NULL
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
 LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
 LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
@@ -254,7 +244,17 @@ type GetSupplierRow struct {
 	AccountID                       string
 	AccountName                     string
 	ExternalNumber                  string
-	Notes                           sql.NullString
+	IsActive                        bool
+	Instructions                    sql.NullString
+	Email                           sql.NullString
+	PhoneNumber                     sql.NullString
+	WebsiteUrl                      sql.NullString
+	CarrierBillingType              sql.NullString
+	CarrierBillingAccount           sql.NullString
+	DefaultCarrierID                sql.NullString
+	DefaultCarrierOptionID          sql.NullString
+	PaymentTermID                   sql.NullString
+	ShippingTermID                  sql.NullString
 	DefaultBillingAddressID         sql.NullString
 	DefaultBillingAddressName       sql.NullString
 	DefaultBillingAddressPhone      sql.NullString
@@ -283,7 +283,6 @@ type GetSupplierRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
-	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -296,7 +295,17 @@ func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSu
 		&i.AccountID,
 		&i.AccountName,
 		&i.ExternalNumber,
-		&i.Notes,
+		&i.IsActive,
+		&i.Instructions,
+		&i.Email,
+		&i.PhoneNumber,
+		&i.WebsiteUrl,
+		&i.CarrierBillingType,
+		&i.CarrierBillingAccount,
+		&i.DefaultCarrierID,
+		&i.DefaultCarrierOptionID,
+		&i.PaymentTermID,
+		&i.ShippingTermID,
 		&i.DefaultBillingAddressID,
 		&i.DefaultBillingAddressName,
 		&i.DefaultBillingAddressPhone,
@@ -325,7 +334,6 @@ func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSu
 		&i.DefaultShippingCountry,
 		&i.DefaultShippingAddressCreatedAt,
 		&i.DefaultShippingAddressUpdatedAt,
-		&i.MaterialCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -357,12 +365,16 @@ func (q *Queries) InsertSupplierAccount(ctx context.Context, arg InsertSupplierA
 const insertSupplierRelation = `-- name: InsertSupplierRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    alias, external_number, notes, priority_code,
+    alias, external_number, is_active, instructions, priority_code,
+    carrier_billing_type, carrier_billing_account, default_carrier_id, default_carrier_option_id,
+    payment_term_id, shipping_term_id,
     default_billing_address_id, default_shipping_address_id,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'supplier',
-    ?, ?, ?, 'normal',
+    ?, ?, ?, ?, 'normal',
+    ?, ?, ?, ?,
+    ?, ?,
     ?, ?,
     NOW(3), NOW(3)
 )
@@ -374,7 +386,14 @@ type InsertSupplierRelationParams struct {
 	CounterpartyAccountID    string
 	Alias                    sql.NullString
 	ExternalNumber           string
-	Notes                    sql.NullString
+	IsActive                 bool
+	Instructions             sql.NullString
+	CarrierBillingType       sql.NullString
+	CarrierBillingAccount    sql.NullString
+	DefaultCarrierID         sql.NullString
+	DefaultCarrierOptionID   sql.NullString
+	PaymentTermID            sql.NullString
+	ShippingTermID           sql.NullString
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
 }
@@ -386,7 +405,14 @@ func (q *Queries) InsertSupplierRelation(ctx context.Context, arg InsertSupplier
 		arg.CounterpartyAccountID,
 		arg.Alias,
 		arg.ExternalNumber,
-		arg.Notes,
+		arg.IsActive,
+		arg.Instructions,
+		arg.CarrierBillingType,
+		arg.CarrierBillingAccount,
+		arg.DefaultCarrierID,
+		arg.DefaultCarrierOptionID,
+		arg.PaymentTermID,
+		arg.ShippingTermID,
 		arg.DefaultBillingAddressID,
 		arg.DefaultShippingAddressID,
 	)
@@ -399,7 +425,17 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.notes,
+    ar.is_active,
+    ar.instructions,
+    ab.support_email AS email,
+    ab.phone_number,
+    ab.website_url,
+    ar.carrier_billing_type,
+    ar.carrier_billing_account,
+    ar.default_carrier_id,
+    ar.default_carrier_option_id,
+    ar.payment_term_id,
+    ar.shipping_term_id,
     ba.id AS default_billing_address_id,
     ba.name AS default_billing_address_name,
     ba.phone AS default_billing_address_phone,
@@ -428,20 +464,11 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    -- The links the supplier's materials list returns: a material whose item was deleted is not one.
-    (
-        SELECT STRAIGHT_JOIN COUNT(*)
-        FROM supplier_material smc FORCE INDEX (supplier_material_supplier_account_id_idx)
-        JOIN material mc ON mc.id = smc.material_id
-        JOIN item ic ON ic.id = mc.item_id
-        WHERE smc.supplier_account_id = ar.counterparty_account_id
-          AND smc.owner_account_id = ar.owner_account_id
-          AND ic.deleted_at IS NULL
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
 LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
 LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
@@ -461,7 +488,17 @@ type ListSuppliersByIDsRow struct {
 	AccountID                       string
 	AccountName                     string
 	ExternalNumber                  string
-	Notes                           sql.NullString
+	IsActive                        bool
+	Instructions                    sql.NullString
+	Email                           sql.NullString
+	PhoneNumber                     sql.NullString
+	WebsiteUrl                      sql.NullString
+	CarrierBillingType              sql.NullString
+	CarrierBillingAccount           sql.NullString
+	DefaultCarrierID                sql.NullString
+	DefaultCarrierOptionID          sql.NullString
+	PaymentTermID                   sql.NullString
+	ShippingTermID                  sql.NullString
 	DefaultBillingAddressID         sql.NullString
 	DefaultBillingAddressName       sql.NullString
 	DefaultBillingAddressPhone      sql.NullString
@@ -490,12 +527,12 @@ type ListSuppliersByIDsRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
-	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
 
-// Reads the rows of a page buildSupplierListPageQuery chose. Its columns match GetSupplier's, so one mapper reads both.
+// Reads the rows of a page supplierListPageQuery chose, and the suppliers documents name. Its columns match
+// GetSupplier's, so one mapper reads both.
 func (q *Queries) ListSuppliersByIDs(ctx context.Context, arg ListSuppliersByIDsParams) ([]ListSuppliersByIDsRow, error) {
 	query := listSuppliersByIDs
 	var queryParams []interface{}
@@ -521,7 +558,17 @@ func (q *Queries) ListSuppliersByIDs(ctx context.Context, arg ListSuppliersByIDs
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
-			&i.Notes,
+			&i.IsActive,
+			&i.Instructions,
+			&i.Email,
+			&i.PhoneNumber,
+			&i.WebsiteUrl,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.DefaultCarrierID,
+			&i.DefaultCarrierOptionID,
+			&i.PaymentTermID,
+			&i.ShippingTermID,
 			&i.DefaultBillingAddressID,
 			&i.DefaultBillingAddressName,
 			&i.DefaultBillingAddressPhone,
@@ -550,7 +597,6 @@ func (q *Queries) ListSuppliersByIDs(ctx context.Context, arg ListSuppliersByIDs
 			&i.DefaultShippingCountry,
 			&i.DefaultShippingAddressCreatedAt,
 			&i.DefaultShippingAddressUpdatedAt,
-			&i.MaterialCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -609,9 +655,16 @@ func (q *Queries) SupplierExistsByNumber(ctx context.Context, arg SupplierExists
 
 const updateSupplierRelation = `-- name: UpdateSupplierRelation :exec
 UPDATE account_relation SET
-    alias = COALESCE(?, alias),
-    external_number = COALESCE(?, external_number),
-    notes = CASE WHEN ? = true THEN ? ELSE notes END,
+    alias = ?,
+    external_number = ?,
+    is_active = ?,
+    instructions = ?,
+    carrier_billing_type = ?,
+    carrier_billing_account = ?,
+    default_carrier_id = ?,
+    default_carrier_option_id = ?,
+    payment_term_id = ?,
+    shipping_term_id = ?,
     default_billing_address_id = ?,
     default_shipping_address_id = ?,
     updated_at = NOW(3)
@@ -622,22 +675,35 @@ WHERE owner_account_id = ?
 
 type UpdateSupplierRelationParams struct {
 	Alias                    sql.NullString
-	ExternalNumber           sql.NullString
-	UpdateNotes              interface{}
-	Notes                    sql.NullString
+	ExternalNumber           string
+	IsActive                 bool
+	Instructions             sql.NullString
+	CarrierBillingType       sql.NullString
+	CarrierBillingAccount    sql.NullString
+	DefaultCarrierID         sql.NullString
+	DefaultCarrierOptionID   sql.NullString
+	PaymentTermID            sql.NullString
+	ShippingTermID           sql.NullString
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
 	OwnerAccountID           string
 	CounterpartyAccountID    string
 }
 
-// A rename is the owner's name for the supplier, so it lands on the relation's alias, never on the supplier's account.
+// Every column is written with the value the service merged from the request and the row, so the statement has no
+// per-field branches. A rename lands on the relation's alias, never on the supplier's account.
 func (q *Queries) UpdateSupplierRelation(ctx context.Context, arg UpdateSupplierRelationParams) error {
 	_, err := q.db.ExecContext(ctx, updateSupplierRelation,
 		arg.Alias,
 		arg.ExternalNumber,
-		arg.UpdateNotes,
-		arg.Notes,
+		arg.IsActive,
+		arg.Instructions,
+		arg.CarrierBillingType,
+		arg.CarrierBillingAccount,
+		arg.DefaultCarrierID,
+		arg.DefaultCarrierOptionID,
+		arg.PaymentTermID,
+		arg.ShippingTermID,
 		arg.DefaultBillingAddressID,
 		arg.DefaultShippingAddressID,
 		arg.OwnerAccountID,

@@ -32,13 +32,13 @@ func TestSupplierListPageQuery_EveryWordMustMatchOnItsOwn(t *testing.T) {
 	query, args := supplierListPageQuery(domain.ListSuppliersParams{OwnerAccountID: "ac_1", Query: &q}, nil, 11)
 
 	assert.Contains(t, query, "\nJOIN account a ON a.id = ar.counterparty_account_id\n")
-	wordMatch := "(COALESCE(NULLIF(ar.alias, ''), a.name) LIKE ? OR ar.external_number LIKE ? OR ar.notes LIKE ?)"
+	wordMatch := "(COALESCE(NULLIF(ar.alias, ''), a.name) LIKE ? OR ar.external_number LIKE ?)"
 	assert.Equal(t, 3, strings.Count(query, wordMatch), "one predicate per word, AND-ed together")
 	assert.Equal(t, []any{
 		"ac_1",
-		"%Acme%", "%Acme%", "%Acme%",
-		"%sup-001%", "%sup-001%", "%sup-001%",
-		`%100%`, `%100%`, `%100%`,
+		"%Acme%", "%Acme%",
+		"%sup-001%", "%sup-001%",
+		`%100%`, `%100%`,
 		int32(11),
 	}, args, "punctuation around a word is dropped, inside one it is kept")
 	assert.Equal(t, strings.Count(query, "?"), len(args))
@@ -58,17 +58,17 @@ func TestSupplierListPageQuery_FiltersAndBackwardCursor(t *testing.T) {
 
 	query, args := supplierListPageQuery(domain.ListSuppliersParams{
 		OwnerAccountID: "ac_1",
-		StartDate:      &start,
-		EndDate:        &end,
+		Created:        domain.CreatedRange{After: &start, Before: &end},
+		IsActive:       new(false),
 		ItemIDs:        []string{"it_1", "it_2"},
 	}, cursor, 6)
 
-	assert.Contains(t, query, "AND ar.created_at >= ?\nAND ar.created_at <= ?\n")
+	assert.Contains(t, query, "AND ar.is_active = ?\nAND ar.created_at >= ?\nAND ar.created_at < ?\n")
 	assert.Contains(t, query, "AND m.item_id IN (?,?))")
 	assert.Contains(t, query, "sm.owner_account_id = ar.owner_account_id", "only the owner's links can match an item")
 	assert.Contains(t, query, "AND (ar.created_at > ? OR (ar.created_at = ? AND ar.counterparty_account_id > ?))")
 	assert.Contains(t, query, "ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC")
-	assert.Equal(t, []any{"ac_1", start, end, "it_1", "it_2", at, at, "ac_9", int32(6)}, args)
+	assert.Equal(t, []any{"ac_1", false, start, end, "it_1", "it_2", at, at, "ac_9", int32(6)}, args)
 }
 
 func TestSupplierSearchWords(t *testing.T) {

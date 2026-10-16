@@ -85,7 +85,7 @@ var ItemMaterialReferences = RegisterReferences(References{
 	Noun:       "item",
 	Archivable: true,
 	Probes: []ReferenceProbe{
-		{Label: "supplier materials", Table: "supplier_material", Column: "material_id"},
+		{Label: "supplier items", Table: "supplier_material", Column: "material_id"},
 	},
 })
 

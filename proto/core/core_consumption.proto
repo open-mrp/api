@@ -377,6 +377,20 @@ message SupplierSummaryProto {
   CustomerAddressProto ship_to_address = 11;
   // Links to the owner's materials, not counting a material whose item was deleted.
   int64 material_count = 12;
+  // The lifecycle status: active or archived.
+  string status = 13;
+  optional string instructions = 14;
+  optional string email = 15;
+  optional string phone = 16;
+  optional string url = 17;
+  optional string carrier_billing_type = 18;
+  optional string carrier_billing_account = 19;
+  optional string default_carrier_id = 20;
+  optional string default_service_level_id = 21;
+  optional string payment_term_id = 22;
+  optional string shipping_term_id = 23;
+  // Set only when the caller asked for the material count.
+  bool has_material_count = 24;
 }
 message SupplierProto {
   string id = 1;
@@ -388,6 +402,22 @@ message SupplierProto {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   int64 material_count = 10;
+  optional string bill_to_address_id = 11;
+  optional string ship_to_address_id = 12;
+  // The lifecycle status: active or archived.
+  string status = 13;
+  optional string instructions = 14;
+  optional string email = 15;
+  optional string phone = 16;
+  optional string url = 17;
+  optional string carrier_billing_type = 18;
+  optional string carrier_billing_account = 19;
+  optional string default_carrier_id = 20;
+  optional string default_service_level_id = 21;
+  optional string payment_term_id = 22;
+  optional string shipping_term_id = 23;
+  // Set only when the caller asked for the material count.
+  bool has_material_count = 24;
 }
 message CreateSupplierAddressInput {
   string name = 1;
@@ -409,6 +439,8 @@ message ListSuppliersRequest {
   optional google.protobuf.Timestamp end_date = 5;
   repeated string item_ids = 6;
   repeated string includes = 7;
+  // Narrows to active (true) or archived (false) suppliers when set.
+  optional bool is_active = 8;
 }
 message ListSuppliersResponse {
   repeated SupplierSummaryProto suppliers = 1;
@@ -428,6 +460,17 @@ message CreateSupplierRequest {
   optional CreateSupplierAddressInput bill_to_address = 4;
   optional CreateSupplierAddressInput ship_to_address = 5;
   repeated string includes = 6;
+  optional string status = 7;
+  optional string instructions = 8;
+  optional string email = 9;
+  optional string phone = 10;
+  optional string url = 11;
+  optional string carrier_billing_type = 12;
+  optional string carrier_billing_account = 13;
+  optional string default_carrier_id = 14;
+  optional string default_service_level_id = 15;
+  optional string payment_term_id = 16;
+  optional string shipping_term_id = 17;
 }
 message CreateSupplierResponse {
   SupplierProto supplier = 1;
@@ -441,6 +484,20 @@ message UpdateSupplierRequest {
   optional string bill_to_address_id = 6;
   optional string ship_to_address_id = 7;
   repeated string includes = 8;
+  optional string status = 9;
+  optional StringPatch instructions = 10;
+  optional StringPatch email = 11;
+  optional StringPatch phone = 12;
+  optional StringPatch url = 13;
+  optional string carrier_billing_type = 14;
+  optional StringPatch carrier_billing_account = 15;
+  optional StringPatch default_carrier_id = 16;
+  optional StringPatch default_service_level_id = 17;
+  optional StringPatch payment_term_id = 18;
+  optional StringPatch shipping_term_id = 19;
+  // Clearable default addresses; bill_to_address_id / ship_to_address_id (6, 7) set without clearing.
+  optional StringPatch default_bill_to_address_id = 20;
+  optional StringPatch default_ship_to_address_id = 21;
 }
 message UpdateSupplierResponse {
   SupplierProto supplier = 1;

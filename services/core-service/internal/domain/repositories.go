@@ -1397,9 +1397,12 @@ type OrderDiscountRepo interface {
 	List(ctx context.Context, params ListOrderDiscountsParams) (*ListOrderDiscountsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetOrderDiscountParams) (*OrderDiscount, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*OrderDiscount, *apierror.APIError)
-	Create(ctx context.Context, id string, params CreateOrderDiscountParams) (*OrderDiscount, *apierror.APIError)
-	Update(ctx context.Context, params UpdateOrderDiscountParams) (*OrderDiscount, *apierror.APIError)
+	// Create and Update write the whole discount, restating Discount in the legacy columns.
+	Create(ctx context.Context, d *OrderDiscount) *apierror.APIError
+	Update(ctx context.Context, d *OrderDiscount) *apierror.APIError
 	Delete(ctx context.Context, params DeleteOrderDiscountParams) (*OrderDiscount, *apierror.APIError)
+	// AdjustRedemptions moves the discount's redemption counter by delta (never below zero).
+	AdjustRedemptions(ctx context.Context, id string, delta int32) *apierror.APIError
 	ExistsByCode(ctx context.Context, accountID, code string, excludeID *string) (bool, *apierror.APIError)
 	FindByCode(ctx context.Context, accountID, code string) (*OrderDiscount, *apierror.APIError)
 	CheckDuplicateUsage(ctx context.Context, accountID, buyerAccountID, orderDiscountID string, salesOrderID *string) (bool, *apierror.APIError)
@@ -2155,4 +2158,61 @@ type NoteRepo interface {
 	Import(ctx context.Context, notes []ImportNote) (int64, *apierror.APIError)
 	// Recall is account-wide notes except comments plus the notes on params.RecordIDs, unexpired, most important first.
 	Recall(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
+}
+
+// PriceListRepo stores price lists, their rules and their assignments.
+type PriceListRepo interface {
+	List(ctx context.Context, params ListPriceListsParams) (*ListPriceListsResult, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*PriceList, *apierror.APIError)
+	GetBySource(ctx context.Context, accountID string, sourceType constants.PriceListSourceType, sourceID string) (*PriceList, *apierror.APIError)
+	ListBySourceType(ctx context.Context, accountID string, sourceType constants.PriceListSourceType) ([]*PriceList, *apierror.APIError)
+	Insert(ctx context.Context, list *PriceList) *apierror.APIError
+	Update(ctx context.Context, list *PriceList) *apierror.APIError
+	Delete(ctx context.Context, accountID, id string) *apierror.APIError
+
+	// FirstRuleIDs is each list's first PriceListEmbeddedRules rule IDs in list order.
+	FirstRuleIDs(ctx context.Context, listIDs []string) (map[string]PriceListRuleIDs, *apierror.APIError)
+	ListRules(ctx context.Context, params ListPriceListRulesParams) (*ListPriceListRulesResult, *apierror.APIError)
+	GetRulesByIDs(ctx context.Context, accountID string, ids []string) ([]*PriceListRule, *apierror.APIError)
+	GetRulesByListIDs(ctx context.Context, listIDs []string) ([]*PriceListRule, *apierror.APIError)
+	GetRuleBySource(ctx context.Context, listID, sourceID string) (*PriceListRule, *apierror.APIError)
+	// GetRulesBySource is every rule in the account mirrored from one legacy record.
+	GetRulesBySource(ctx context.Context, accountID, sourceID string) ([]*PriceListRule, *apierror.APIError)
+	InsertRule(ctx context.Context, rule *PriceListRule) *apierror.APIError
+	// UpdateRule rewrites the rule's price, tiers and scope.
+	UpdateRule(ctx context.Context, rule *PriceListRule) *apierror.APIError
+	DeleteRule(ctx context.Context, id string) *apierror.APIError
+
+	CustomerListIDs(ctx context.Context, relationIDs []string) (PriceListAssignments, *apierror.APIError)
+	// CustomerListIDsByAccounts maps each customer account to the lists assigned to it directly.
+	CustomerListIDsByAccounts(ctx context.Context, ownerAccountID string, customerAccountIDs []string) (PriceListAssignments, *apierror.APIError)
+	GroupListIDs(ctx context.Context, groupIDs []string) (PriceListAssignments, *apierror.APIError)
+	SetCustomerLists(ctx context.Context, relationID string, listIDs []string) *apierror.APIError
+	SetGroupLists(ctx context.Context, groupID string, listIDs []string) *apierror.APIError
+	AddCustomerList(ctx context.Context, relationID, listID string) *apierror.APIError
+	RemoveCustomerList(ctx context.Context, relationID, listID string) *apierror.APIError
+	// ListCustomerRelations is the account relations a list is assigned to directly.
+	ListCustomerRelations(ctx context.Context, listID string) ([]string, *apierror.APIError)
+	DeleteCustomerAssignments(ctx context.Context, relationIDs []string) *apierror.APIError
+	DeleteGroupAssignments(ctx context.Context, groupID string) *apierror.APIError
+	// ApplicableListIDs is, per customer account, the active lists that apply to it with where they apply from.
+	ApplicableLists(ctx context.Context, ownerAccountID string, customerAccountIDs []string) (map[string]map[string]PriceListSource, *apierror.APIError)
+
+	// ScopeTargets maps each ID of kind the account can use (its own, or a system record) to whether it is active.
+	ScopeTargets(ctx context.Context, kind PriceListScopeKind, accountID string, ids []string) (map[string]bool, *apierror.APIError)
+
+	IsLegacySynced(ctx context.Context, accountID string) (bool, *apierror.APIError)
+	MarkLegacySynced(ctx context.Context, accountID string) *apierror.APIError
+}
+
+// LegacyPricingRepo reads the legacy pricing records for the mirror into price lists.
+type LegacyPricingRepo interface {
+	AccountPrices(ctx context.Context, ownerAccountID string, ids []string) ([]*LegacyAccountPrice, *apierror.APIError)
+	VolumeDiscounts(ctx context.Context, ownerAccountID string, ids []string) ([]*LegacyVolumeDiscount, *apierror.APIError)
+	// PricingGroups is the account's groups that carry volume discounts or price-group members, or the given ones.
+	PricingGroups(ctx context.Context, ownerAccountID string, ids []string) ([]*LegacyPricingGroup, *apierror.APIError)
+	// RelationPriceGroupIDs is the price groups an account relation lists.
+	RelationPriceGroupIDs(ctx context.Context, relationID string) ([]string, *apierror.APIError)
+	// AccountsWithLegacyPricing pages owner account IDs after cursor.
+	AccountIDsAfter(ctx context.Context, cursor string, limit int32) ([]string, *apierror.APIError)
 }

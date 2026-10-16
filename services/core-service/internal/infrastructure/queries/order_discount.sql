@@ -1,84 +1,27 @@
--- name: ListOrderDiscountsForward :many
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR od.name LIKE sqlc.narg('search_query')
-    OR od.code LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR od.created_at < sqlc.narg('cursor_created_at')
-    OR (od.created_at = sqlc.narg('cursor_created_at') AND od.id < sqlc.narg('cursor_id'))
-)
-ORDER BY od.created_at DESC, od.id DESC
-LIMIT ?;
-
--- name: ListOrderDiscountsBackward :many
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR od.name LIKE sqlc.narg('search_query')
-    OR od.code LIKE sqlc.narg('search_query')
-)
-AND (
-    od.created_at > sqlc.arg('cursor_created_at')
-    OR (od.created_at = sqlc.arg('cursor_created_at') AND od.id > sqlc.arg('cursor_id'))
-)
-ORDER BY od.created_at ASC, od.id ASC
-LIMIT ?;
-
 -- name: GetOrderDiscount :one
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.id = sqlc.arg('id')
-AND od.account_id = sqlc.arg('account_id');
+SELECT * FROM order_discount
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
 
 -- name: InsertOrderDiscount :exec
-INSERT INTO order_discount (id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('code'), sqlc.arg('percentage'), sqlc.arg('value'), sqlc.arg('discount_type_code'), sqlc.arg('account_id'), NOW(), NOW());
+INSERT INTO order_discount (id, name, code, percentage, value, discount_type_code, percent_off, amount_off_amount,
+    amount_off_currency, is_active, account_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('code'), sqlc.arg('percentage'), sqlc.arg('value'),
+    sqlc.arg('discount_type_code'), sqlc.narg('percent_off'), sqlc.narg('amount_off_amount'),
+    sqlc.narg('amount_off_currency'), sqlc.arg('is_active'), sqlc.arg('account_id'), NOW(), NOW());
 
--- name: UpdateOrderDiscount :execresult
+-- name: UpdateOrderDiscount :exec
 UPDATE order_discount
 SET
-    name = COALESCE(sqlc.narg('name'), name),
-    code = COALESCE(sqlc.narg('code'), code),
-    percentage = COALESCE(sqlc.narg('percentage'), percentage),
-    value = COALESCE(sqlc.narg('value'), value),
-    discount_type_code = COALESCE(sqlc.narg('discount_type_code'), discount_type_code),
+    name = sqlc.arg('name'),
+    code = sqlc.arg('code'),
+    percentage = sqlc.arg('percentage'),
+    value = sqlc.arg('value'),
+    discount_type_code = sqlc.arg('discount_type_code'),
+    percent_off = sqlc.narg('percent_off'),
+    amount_off_amount = sqlc.narg('amount_off_amount'),
+    amount_off_currency = sqlc.narg('amount_off_currency'),
+    is_active = sqlc.arg('is_active'),
     updated_at = NOW()
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -89,22 +32,10 @@ WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
 -- name: GetOrderDiscountsByIDs :many
--- Returns order discounts matching the given IDs that belong to the caller's
--- account. Order discounts are always account-scoped.
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.id IN (sqlc.slice('ids'))
-AND od.account_id = sqlc.arg('account_id');
+-- Order discounts matching the given IDs that belong to the caller's account.
+SELECT * FROM order_discount
+WHERE id IN (sqlc.slice('ids'))
+AND account_id = sqlc.arg('account_id');
 
 -- name: CountOrderDiscountsByCode :one
 SELECT COUNT(*) AS count
@@ -114,20 +45,14 @@ AND code = sqlc.arg('code')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: FindOrderDiscountByCode :one
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.code = sqlc.arg('code')
-AND od.account_id = sqlc.arg('account_id');
+SELECT * FROM order_discount
+WHERE code = sqlc.arg('code')
+AND account_id = sqlc.arg('account_id');
+
+-- name: AdjustOrderDiscountRedemptions :exec
+UPDATE order_discount
+SET times_redeemed = GREATEST(CAST(times_redeemed AS SIGNED) + sqlc.arg('delta'), 0)
+WHERE id = sqlc.arg('id');
 
 -- name: CheckOrderDiscountDuplicateUsage :one
 SELECT COUNT(*) AS count

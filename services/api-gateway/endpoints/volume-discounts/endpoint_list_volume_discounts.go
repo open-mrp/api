@@ -35,9 +35,8 @@ func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ObjectType:        constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {

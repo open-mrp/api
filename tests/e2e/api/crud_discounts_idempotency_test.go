@@ -52,8 +52,9 @@ func TestAccountPrices_UpdateIsIdempotent(t *testing.T) {
 	status3, body3, err := apiClient.Patch(accountPricesPath+"/"+priceID,
 		map[string]any{"rate": rate("99.00")}, key)
 	require.NoError(t, err)
-	requireStatus(t, 422, status3, body3)
-	requireErrorResponse(t, body3, "idempotency_key_reused", "idempotency_error")
+	// Account prices answer only preview.9 callers, whose reused-key error keeps preview.9's 400.
+	requireStatus(t, 400, status3, body3)
+	assert.Equal(t, "idempotency_error", jsonField(parseJSON(body3)["error"].(map[string]any), "type"))
 
 	persisted := parseJSON(mustGet(t, accountPricesPath+"/"+priceID))
 	assertDecimalEquals(t, 21.00, jsonField(jsonObject(persisted, "rate"), "value"),
@@ -85,8 +86,9 @@ func TestVolumeDiscounts_UpdateIsIdempotent(t *testing.T) {
 	status3, body3, err := apiClient.Patch(volumeDiscountsPath+"/"+discountID,
 		map[string]any{"name": secondName}, key)
 	require.NoError(t, err)
-	requireStatus(t, 422, status3, body3)
-	requireErrorResponse(t, body3, "idempotency_key_reused", "idempotency_error")
+	// Volume discounts answer only preview.9 callers, whose reused-key error keeps preview.9's 400.
+	requireStatus(t, 400, status3, body3)
+	assert.Equal(t, "idempotency_error", jsonField(parseJSON(body3)["error"].(map[string]any), "type"))
 
 	persisted := parseJSON(mustGet(t, volumeDiscountsPath+"/"+discountID))
 	assert.Equal(t, firstName, jsonField(persisted, "name"),
@@ -175,7 +177,11 @@ func TestDiscounts_DeleteIsIdempotentWithoutKey(t *testing.T) {
 			requireClientError(t, repeatStatus, repeatBody)
 			assert.Equal(t, 410, repeatStatus,
 				"a repeat delete should report the tombstone, not a generic 404 or a 5xx")
-			requireErrorResponse(t, repeatBody, "resource_gone", "invalid_request_error")
+			if tc.path == accountPricesPath || tc.path == volumeDiscountsPath {
+				requireRetiredRouteError(t, repeatBody, "resource_gone")
+			} else {
+				requireErrorResponse(t, repeatBody, "resource_gone", "invalid_request_error")
+			}
 
 			getStatus, getBody, err := apiClient.GetListRaw(tc.path+"/"+resourceID, nil)
 			require.NoError(t, err)

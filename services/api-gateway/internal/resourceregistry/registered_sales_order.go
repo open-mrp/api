@@ -35,7 +35,7 @@ func init() {
 			{Key: "freight", Populate: populateFreightOnSO},
 			{Key: "payment_term", Populate: populatePaymentTermOnSO},
 			{Key: "shipping_term", Populate: populateShippingTermOnSO},
-			{Key: "order_discount", Populate: populateOrderDiscountOnSO},
+			{Key: "order_discount", Target: constants.ObjectTypeOrderDiscount, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractOrderDiscountIDFromSO, Populate: populateOrderDiscountOnSO},
 			{Key: "totals", Populate: populateTotalsOnSO},
 			{Key: "contacts", Populate: populateContactsOnSO},
 			{
@@ -324,13 +324,20 @@ func populateShippingTermOnSO(ctx context.Context, parent any, _ map[string]any)
 	so.ShippingTerm = v.(*apiresource.ShippingTerm)
 }
 
-func populateOrderDiscountOnSO(ctx context.Context, parent any, _ map[string]any) {
+func extractOrderDiscountIDFromSO(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "order_discount")
-	if !ok {
-		return
+	if id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "order_discount_id"); id != "" {
+		return []string{id}
 	}
-	so.OrderDiscount = v.(*apiresource.OrderDiscount)
+	return nil
+}
+
+func populateOrderDiscountOnSO(ctx context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "order_discount_id")
+	if v, ok := loaded[id]; ok {
+		so.OrderDiscount = v.(*apiresource.OrderDiscount)
+	}
 }
 
 func extractLineRefsFromSO(_ context.Context, parent any) []any {

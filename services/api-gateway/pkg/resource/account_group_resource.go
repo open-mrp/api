@@ -33,6 +33,8 @@ type AccountGroup struct {
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 	// Values the group's customers inherit when they don't set their own.
 	Defaults *AccountGroupDefaults `json:"defaults" validate:"required"`
+	// Price lists that apply to every customer in this group. `null` unless included.
+	PriceLists *List[PriceList] `json:"price_lists" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

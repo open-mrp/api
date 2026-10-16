@@ -199,12 +199,14 @@ type BulkUpsertItemCategoriesParams struct {
 	ItemCategories []UpsertItemCategoryParams
 }
 
-// ItemCategoryReferences blocks deleting a category that items or prices still use.
+// ItemCategoryReferences blocks deleting a category that items or price-list rules still use. The legacy account
+// prices and volume discounts mirror into rules, so they read as rules too.
 var ItemCategoryReferences = RegisterReferences(References{
 	Noun: "item category",
 	Probes: []ReferenceProbe{
 		{Label: "items", Table: "item", Column: "item_category_id"},
-		{Label: "account prices", Table: "account_price_item_category", Column: "item_category_id"},
-		{Label: "volume discounts", Table: "_item_categories_quantity_discounts", Column: "A"},
+		{Label: "price-list rules", Table: "price_list_rule_item_category", Column: "item_category_id"},
+		{Label: "price-list rules", Table: "account_price_item_category", Column: "item_category_id"},
+		{Label: "price-list rules", Table: "_item_categories_quantity_discounts", Column: "A"},
 	},
 })

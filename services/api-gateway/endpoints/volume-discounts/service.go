@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -55,6 +57,9 @@ func NewVolumeDiscountSvc(config *VolumeDiscountSvcConfig) VolumeDiscountSvc {
 }
 
 func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, volumeDiscountsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListVolumeDiscountsRequest{
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
@@ -75,6 +80,9 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 }
 
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, volumeDiscountsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetVolumeDiscountRequest{
 		Id:       req.VolumeDiscountID,
 		Includes: include.FilterIncludes(ctx, volumeDiscountIncludes...),
@@ -101,6 +109,9 @@ func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *Retr
 }
 
 func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *CreateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, volumeDiscountsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	tiers := make([]*pb.CreateVolumeDiscountTierInput, len(req.Tiers))
 	for i, t := range req.Tiers {
 		tiers[i] = &pb.CreateVolumeDiscountTierInput{
@@ -143,6 +154,9 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 }
 
 func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, volumeDiscountsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	tiers := make([]*pb.UpdateVolumeDiscountTierInput, len(req.Tiers))
 	for i, t := range req.Tiers {
 		tiers[i] = &pb.UpdateVolumeDiscountTierInput{
@@ -193,6 +207,9 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 }
 
 func (m *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, req *DeleteVolumeDiscountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, volumeDiscountsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteVolumeDiscountRequest{
 		Id: req.VolumeDiscountID,
 	}

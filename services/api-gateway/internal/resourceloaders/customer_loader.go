@@ -78,6 +78,7 @@ func HydrateCustomerEntities(ctx context.Context, entities []*apiresource.Entity
 const (
 	CustomerMetaGroupID               = "group_id"
 	CustomerMetaPriceGroups           = "price_groups"
+	CustomerMetaPriceListIDs          = "price_list_ids"
 	CustomerMetaParentCustomerID      = "parent_customer_id"
 	CustomerMetaChildCustomerIDs      = "child_customer_ids"
 	CustomerMetaRecipients            = "notification_recipients"
@@ -206,6 +207,7 @@ func stashCustomerRefs(ctx context.Context, id string, c *pb.CustomerProto) {
 		}
 	}
 	meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaPriceGroups, apiresource.NewList(priceGroups, apiresource.PageInfo{}))
+	meta.Set(constants.ObjectTypeCustomer, id, CustomerMetaPriceListIDs, c.PriceListIds)
 	if c.HasNotificationRecipients {
 		recipients := make([]apiresource.EmailRecipient, len(c.NotificationRecipients))
 		users := make(map[string]*apiresource.AccountUser, len(c.NotificationRecipients))

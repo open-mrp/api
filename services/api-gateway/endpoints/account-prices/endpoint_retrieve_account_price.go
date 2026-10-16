@@ -30,9 +30,8 @@ func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {

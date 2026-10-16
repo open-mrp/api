@@ -29,6 +29,8 @@ type ListCustomersRequest struct {
 	GroupIDs []string `query:"group_ids"`
 	// Only return customers in any of these pricing groups.
 	PricingGroupIDs []string `query:"pricing_group_ids" visibility:"internal"`
+	// Only return customers assigned any of these price lists directly.
+	PriceListIDs []string `query:"price_list_ids" validate:"omitempty,max=100"`
 	// Only return customers whose default sales rep is one of these account users.
 	SalesRepIDs []string `query:"sales_rep_ids"`
 	// Only return customers with any of these default shipping terms.

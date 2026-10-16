@@ -147,9 +147,13 @@ message OrderDiscountInfo {
   string percentage = 4;
   string amount = 5;
   string discount_type = 6;
+  // How many orders the code has been applied to (stored counter).
   int32 order_count = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  Discount discount = 10;
+  // constants.ArchiveStatus.
+  string status = 11;
 }
 
 // SalesOrderStatusInfo represents a sales order status resource returned by the core-service.
@@ -165,6 +169,8 @@ message ListOrderDiscountsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  // constants.ArchiveStatus values; empty returns every discount.
+  repeated string statuses = 4;
 }
 
 message ListOrderDiscountsResponse {
@@ -183,9 +189,9 @@ message GetOrderDiscountResponse {
 message CreateOrderDiscountRequest {
   string name = 1;
   string code = 2;
-  optional string percentage = 3;
-  optional string amount = 4;
-  string discount_type = 5;
+  reserved 3, 4, 5; // formerly percentage, amount, discount_type (discount replaces them)
+  Discount discount = 6;
+  optional string status = 7;
 }
 
 message CreateOrderDiscountResponse {
@@ -196,9 +202,9 @@ message UpdateOrderDiscountRequest {
   string id = 1;
   optional string name = 2;
   optional string code = 3;
-  optional string percentage = 4;
-  optional string amount = 5;
-  optional string discount_type = 6;
+  reserved 4, 5, 6; // formerly percentage, amount, discount_type (discount replaces them)
+  optional Discount discount = 7;
+  optional string status = 8;
 }
 
 message UpdateOrderDiscountResponse {

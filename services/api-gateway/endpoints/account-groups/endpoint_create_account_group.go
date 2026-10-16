@@ -28,6 +28,8 @@ type CreateAccountGroupRequest struct {
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed"`
 	// Values the group's customers inherit when they don't set their own.
 	Defaults field.Optional[AccountGroupDefaultsInput] `json:"defaults,omitzero"`
+	// IDs of the price lists that apply to every customer in the group, at most 100.
+	PriceListIDs []string `json:"price_list_ids,omitzero" validate:"omitempty,max=100"`
 	// Free-form description of the group.
 	Description field.Optional[string] `json:"description,omitzero"`
 }
@@ -69,6 +71,7 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionCreate}}},
 		ObjectType:        constants.ObjectTypeAccountGroup,
+		IncludeConfig:     accountGroupIncludeConfig(),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).CreateAccountGroup
 		},

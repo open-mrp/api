@@ -1581,15 +1581,20 @@ type OperatingCalendarClosure struct {
 }
 
 type OrderDiscount struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                string
+	Name              string
+	Code              string
+	Percentage        float64
+	Value             float64
+	DiscountTypeCode  string
+	AccountID         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	PercentOff        sql.NullString
+	AmountOffAmount   sql.NullString
+	AmountOffCurrency sql.NullString
+	IsActive          bool
+	TimesRedeemed     int32
 }
 
 type OrderEmailContact struct {
@@ -1704,6 +1709,81 @@ type PortalRegistrationSession struct {
 	AbandonedAt        sql.NullTime
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+type PriceList struct {
+	ID          string
+	AccountID   string
+	Name        string
+	Description sql.NullString
+	IsActive    bool
+	Currency    string
+	SourceType  sql.NullString
+	SourceID    sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type PriceListAccountGroup struct {
+	AccountGroupID string
+	PriceListID    string
+	CreatedAt      time.Time
+}
+
+type PriceListCustomer struct {
+	AccountRelationID string
+	PriceListID       string
+	CreatedAt         time.Time
+}
+
+type PriceListLegacySync struct {
+	AccountID string
+	SyncedAt  time.Time
+}
+
+type PriceListRule struct {
+	ID                 string
+	PriceListID        string
+	AccountID          string
+	PriceType          string
+	UnitPriceAmount    sql.NullString
+	UnitPriceCurrency  sql.NullString
+	UnitPricePerUnitID sql.NullString
+	PercentOfBase      sql.NullString
+	TierUnitID         sql.NullString
+	SourceID           sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type PriceListRuleAttribute struct {
+	PriceListRuleID string
+	AttributeID     string
+}
+
+type PriceListRuleItem struct {
+	PriceListRuleID string
+	ItemID          string
+}
+
+type PriceListRuleItemCategory struct {
+	PriceListRuleID string
+	ItemCategoryID  string
+}
+
+type PriceListRuleProductLine struct {
+	PriceListRuleID string
+	ProductLineID   string
+}
+
+type PriceListRuleTier struct {
+	PriceListRuleID    string
+	Position           int16
+	MinQuantity        string
+	PercentOfBase      sql.NullString
+	UnitPriceAmount    sql.NullString
+	UnitPriceCurrency  sql.NullString
+	UnitPricePerUnitID sql.NullString
 }
 
 type Priority struct {

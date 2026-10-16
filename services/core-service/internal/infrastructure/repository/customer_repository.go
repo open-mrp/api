@@ -182,6 +182,19 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		}
 		pricingRelationIDs = ids
 	}
+	if len(params.PriceListIDs) > 0 {
+		ids, err := r.queries.ListPriceListRelationIDs(ctx, params.PriceListIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if pricingRelationIDs != nil {
+			ids = intersectStrings(pricingRelationIDs, ids)
+		}
+		if len(ids) == 0 {
+			return empty, nil
+		}
+		pricingRelationIDs = ids
+	}
 
 	query, args := customerListPageQuery(params, search, pricingRelationIDs, cursor, params.Limit+1)
 	pageIDs, err := selectStrings(ctx, r.queries.DB(), query, args...)

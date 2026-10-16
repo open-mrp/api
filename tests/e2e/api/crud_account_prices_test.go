@@ -30,6 +30,7 @@ var pricingMu sync.RWMutex
 // lockPricingWrite holds the exclusive side for the rest of the test.
 func lockPricingWrite(t *testing.T) {
 	t.Helper()
+	mirrorPricing(t)
 	pricingMu.Lock()
 	t.Cleanup(pricingMu.Unlock)
 }
@@ -37,6 +38,7 @@ func lockPricingWrite(t *testing.T) {
 // lockPricingRead holds the shared side for the rest of the test.
 func lockPricingRead(t *testing.T) {
 	t.Helper()
+	mirrorPricing(t)
 	pricingMu.RLock()
 	t.Cleanup(pricingMu.RUnlock)
 }
@@ -156,8 +158,8 @@ func TestAccountPrices_ListResponseShape(t *testing.T) {
 		rate := jsonObject(m, "rate")
 		require.NotNil(t, rate, "rate should always be present")
 		assert.NotEmpty(t, jsonField(rate, "value"))
-		assert.NotEmpty(t, jsonField(jsonObject(rate, "unit"), "id"), "rate.unit is always present")
-		assert.NotEmpty(t, jsonField(jsonObject(rate, "per_unit"), "id"), "rate.per_unit is always present")
+		assert.NotEmpty(t, jsonField(jsonObject(rate, "numerator_unit"), "id"), "preview.9 names the rate's numerator_unit")
+		assert.NotEmpty(t, jsonField(jsonObject(rate, "denominator_unit"), "id"), "preview.9 names the rate's denominator_unit")
 	}
 }
 
@@ -302,10 +304,9 @@ func TestAccountPrices_CreateAllFieldsAndResponseShape(t *testing.T) {
 
 	rate := jsonObject(got, "rate")
 	require.NotNil(t, rate)
-	assert.NotContains(t, rate, "object", "a rate is a value shape, not an object")
 	assertDecimalEquals(t, 33.33, jsonField(rate, "value"), "rate.value")
-	assert.Equal(t, e2eCurrencyUnitID, jsonField(jsonObject(rate, "unit"), "id"))
-	assert.Equal(t, SeedUnitID, jsonField(jsonObject(rate, "per_unit"), "id"))
+	assert.Equal(t, e2eCurrencyUnitID, jsonField(jsonObject(rate, "numerator_unit"), "id"))
+	assert.Equal(t, SeedUnitID, jsonField(jsonObject(rate, "denominator_unit"), "id"))
 
 	recipient := jsonObject(got, "recipient_account")
 	require.NotNil(t, recipient)
@@ -379,7 +380,7 @@ func TestAccountPrices_CreateRejectsUnknownField(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
+	errObj := requireRetiredRouteError(t, body, "parameter_unknown")
 	assertErrorParam(t, errObj, "rate_value")
 }
 
@@ -503,7 +504,7 @@ func TestAccountPrices_UpdateNonexistentReturns404(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requireRetiredRouteError(t, body, "resource_not_found")
 }
 
 // ──────────────────────────────────────────────
@@ -523,7 +524,7 @@ func TestAccountPrices_DeleteRemovesPrice(t *testing.T) {
 	getStatus, getBody, err := apiClient.GetListRaw(accountPricesPath+"/"+priceID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, getStatus, getBody)
-	requireErrorResponse(t, getBody, "resource_not_found", "invalid_request_error")
+	requireRetiredRouteError(t, getBody, "resource_not_found")
 }
 
 func TestAccountPrices_DeleteNonexistentReturns404(t *testing.T) {
@@ -538,5 +539,19 @@ func TestAccountPrices_RetrieveNonexistentReturns404(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(accountPricesPath+"/"+mustGenID(t, id.AccountPriceIDPrefix), nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requireRetiredRouteError(t, body, "resource_not_found")
+}
+
+// requireRetiredRouteError checks an error from a route only 1.0.forge-preview.9 callers reach: preview.9's error
+// object, whose code is the field's own (missing_field, invalid_format) rather than validation_failed. An empty code
+// checks the shape only.
+func requireRetiredRouteError(t *testing.T, body []byte, code string) map[string]any {
+	t.Helper()
+	errObj, ok := parseJSON(body)["error"].(map[string]any)
+	require.True(t, ok, "response has an error object: %s", body)
+	if code != "" {
+		assert.Equal(t, code, errObj["code"], "error.code (body: %s)", body)
+	}
+	assert.Equal(t, "invalid_request_error", errObj["type"], "error.type (body: %s)", body)
+	return errObj
 }

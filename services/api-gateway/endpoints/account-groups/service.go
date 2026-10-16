@@ -3,7 +3,9 @@ package accountgroupep
 import (
 	"context"
 	"fmt"
+
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -101,6 +103,8 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 		CommissionPolicy: string(commissionPolicy),
 		FreightPolicy:    string(freightPolicy),
 		Description:      req.Description.Ptr(),
+		PriceListIds:     req.PriceListIDs,
+		HasPriceListIds:  req.PriceListIDs != nil,
 	}
 	if defaults, ok := req.Defaults.Value(); ok {
 		patch, apiErr := apirequest.LeadTimeDaysPatch(defaults.LeadTime, "defaults.lead_time")
@@ -128,6 +132,9 @@ func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *Updat
 		Description:      fieldpb.StringClearableToProto(req.Description),
 		CommissionPolicy: req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:    req.FreightPolicy.Ptr().StringPtr(),
+	}
+	if ids, ok := req.PriceListIDs.Value(); ok {
+		pbReq.PriceListIds, pbReq.HasPriceListIds = ids, true
 	}
 	if defaults, ok := req.Defaults.Value(); ok {
 		patch, apiErr := apirequest.LeadTimeDaysPatch(defaults.LeadTime, "defaults.lead_time")
@@ -170,4 +177,9 @@ func loadAccountGroupByID(ctx context.Context, id string) (*apiresource.AccountG
 		return nil, apierror.NewNotFoundError("Account group not found.")
 	}
 	return v.(*apiresource.AccountGroup), nil
+}
+
+// accountGroupIncludeConfig accepts the include keys an account group response offers.
+func accountGroupIncludeConfig() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{ObjectType: constants.ObjectTypeAccountGroup, Fields: []string{"price_lists"}})
 }

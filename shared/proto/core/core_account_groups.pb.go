@@ -38,8 +38,10 @@ type AccountGroupInfo struct {
 	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Inherited by every customer in the group that has not set its own lead time.
 	DefaultLeadTimeDays *int32 `protobuf:"varint,10,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The price lists that apply to every customer in the group.
+	PriceListIds  []string `protobuf:"bytes,11,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AccountGroupInfo) Reset() {
@@ -140,6 +142,13 @@ func (x *AccountGroupInfo) GetDefaultLeadTimeDays() int32 {
 		return *x.DefaultLeadTimeDays
 	}
 	return 0
+}
+
+func (x *AccountGroupInfo) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
 }
 
 type ListAccountGroupsRequest struct {
@@ -358,6 +367,8 @@ type CreateAccountGroupRequest struct {
 	FreightPolicy       string                 `protobuf:"bytes,4,opt,name=freight_policy,json=freightPolicy,proto3" json:"freight_policy,omitempty"`
 	Description         *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	DefaultLeadTimeDays *int32                 `protobuf:"varint,6,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
+	PriceListIds        []string               `protobuf:"bytes,7,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	HasPriceListIds     bool                   `protobuf:"varint,8,opt,name=has_price_list_ids,json=hasPriceListIds,proto3" json:"has_price_list_ids,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -434,6 +445,20 @@ func (x *CreateAccountGroupRequest) GetDefaultLeadTimeDays() int32 {
 	return 0
 }
 
+func (x *CreateAccountGroupRequest) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
+}
+
+func (x *CreateAccountGroupRequest) GetHasPriceListIds() bool {
+	if x != nil {
+		return x.HasPriceListIds
+	}
+	return false
+}
+
 type CreateAccountGroupResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountGroup  *AccountGroupInfo      `protobuf:"bytes,1,opt,name=account_group,json=accountGroup,proto3" json:"account_group,omitempty"`
@@ -486,6 +511,8 @@ type UpdateAccountGroupRequest struct {
 	CommissionPolicy    *string                `protobuf:"bytes,4,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
 	FreightPolicy       *string                `protobuf:"bytes,5,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
 	DefaultLeadTimeDays *Int32Patch            `protobuf:"bytes,6,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
+	PriceListIds        []string               `protobuf:"bytes,7,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	HasPriceListIds     bool                   `protobuf:"varint,8,opt,name=has_price_list_ids,json=hasPriceListIds,proto3" json:"has_price_list_ids,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -560,6 +587,20 @@ func (x *UpdateAccountGroupRequest) GetDefaultLeadTimeDays() *Int32Patch {
 		return x.DefaultLeadTimeDays
 	}
 	return nil
+}
+
+func (x *UpdateAccountGroupRequest) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
+}
+
+func (x *UpdateAccountGroupRequest) GetHasPriceListIds() bool {
+	if x != nil {
+		return x.HasPriceListIds
+	}
+	return false
 }
 
 type UpdateAccountGroupResponse struct {
@@ -5785,7 +5826,7 @@ var File_core_core_account_groups_proto protoreflect.FileDescriptor
 
 const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\x1a\x17core/value_shapes.proto\"\xf0\x03\n" +
+	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\x1a\x17core/value_shapes.proto\"\x96\x04\n" +
 	"\x10AccountGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
@@ -5799,7 +5840,8 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x128\n" +
 	"\x16default_lead_time_days\x18\n" +
-	" \x01(\x05H\x02R\x13defaultLeadTimeDays\x88\x01\x01B\x0e\n" +
+	" \x01(\x05H\x02R\x13defaultLeadTimeDays\x88\x01\x01\x12$\n" +
+	"\x0eprice_list_ids\x18\v \x03(\tR\fpriceListIdsB\x0e\n" +
 	"\f_descriptionB\x17\n" +
 	"\x15_registration_flow_idB\x19\n" +
 	"\x17_default_lead_time_days\"\x9f\x01\n" +
@@ -5817,25 +5859,29 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x16GetAccountGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
 	"\x17GetAccountGroupResponse\x12;\n" +
-	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\xa3\x02\n" +
+	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\xf6\x02\n" +
 	"\x19CreateAccountGroupRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12+\n" +
 	"\x11commission_policy\x18\x03 \x01(\tR\x10commissionPolicy\x12%\n" +
 	"\x0efreight_policy\x18\x04 \x01(\tR\rfreightPolicy\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01\x128\n" +
-	"\x16default_lead_time_days\x18\x06 \x01(\x05H\x01R\x13defaultLeadTimeDays\x88\x01\x01B\x0e\n" +
+	"\x16default_lead_time_days\x18\x06 \x01(\x05H\x01R\x13defaultLeadTimeDays\x88\x01\x01\x12$\n" +
+	"\x0eprice_list_ids\x18\a \x03(\tR\fpriceListIds\x12+\n" +
+	"\x12has_price_list_ids\x18\b \x01(\bR\x0fhasPriceListIdsB\x0e\n" +
 	"\f_descriptionB\x19\n" +
 	"\x17_default_lead_time_days\"Y\n" +
 	"\x1aCreateAccountGroupResponse\x12;\n" +
-	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\x85\x03\n" +
+	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\xd8\x03\n" +
 	"\x19UpdateAccountGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x128\n" +
 	"\vdescription\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\vdescription\x88\x01\x01\x120\n" +
 	"\x11commission_policy\x18\x04 \x01(\tH\x02R\x10commissionPolicy\x88\x01\x01\x12*\n" +
 	"\x0efreight_policy\x18\x05 \x01(\tH\x03R\rfreightPolicy\x88\x01\x01\x12J\n" +
-	"\x16default_lead_time_days\x18\x06 \x01(\v2\x10.core.Int32PatchH\x04R\x13defaultLeadTimeDays\x88\x01\x01B\a\n" +
+	"\x16default_lead_time_days\x18\x06 \x01(\v2\x10.core.Int32PatchH\x04R\x13defaultLeadTimeDays\x88\x01\x01\x12$\n" +
+	"\x0eprice_list_ids\x18\a \x03(\tR\fpriceListIds\x12+\n" +
+	"\x12has_price_list_ids\x18\b \x01(\bR\x0fhasPriceListIdsB\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\x14\n" +
 	"\x12_commission_policyB\x11\n" +

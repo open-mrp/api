@@ -9,8 +9,23 @@ import (
 	"context"
 	"database/sql"
 	"strings"
-	"time"
 )
+
+const adjustOrderDiscountRedemptions = `-- name: AdjustOrderDiscountRedemptions :exec
+UPDATE order_discount
+SET times_redeemed = GREATEST(CAST(times_redeemed AS SIGNED) + ?, 0)
+WHERE id = ?
+`
+
+type AdjustOrderDiscountRedemptionsParams struct {
+	Delta int32
+	ID    string
+}
+
+func (q *Queries) AdjustOrderDiscountRedemptions(ctx context.Context, arg AdjustOrderDiscountRedemptionsParams) error {
+	_, err := q.db.ExecContext(ctx, adjustOrderDiscountRedemptions, arg.Delta, arg.ID)
+	return err
+}
 
 const checkOrderDiscountDuplicateUsage = `-- name: CheckOrderDiscountDuplicateUsage :one
 SELECT COUNT(*) AS count
@@ -86,20 +101,9 @@ func (q *Queries) DeleteOrderDiscount(ctx context.Context, arg DeleteOrderDiscou
 }
 
 const findOrderDiscountByCode = `-- name: FindOrderDiscountByCode :one
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.code = ?
-AND od.account_id = ?
+SELECT id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at, percent_off, amount_off_amount, amount_off_currency, is_active, times_redeemed FROM order_discount
+WHERE code = ?
+AND account_id = ?
 `
 
 type FindOrderDiscountByCodeParams struct {
@@ -107,22 +111,9 @@ type FindOrderDiscountByCodeParams struct {
 	AccountID string
 }
 
-type FindOrderDiscountByCodeRow struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	OrderCount       int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-func (q *Queries) FindOrderDiscountByCode(ctx context.Context, arg FindOrderDiscountByCodeParams) (FindOrderDiscountByCodeRow, error) {
+func (q *Queries) FindOrderDiscountByCode(ctx context.Context, arg FindOrderDiscountByCodeParams) (OrderDiscount, error) {
 	row := q.db.QueryRowContext(ctx, findOrderDiscountByCode, arg.Code, arg.AccountID)
-	var i FindOrderDiscountByCodeRow
+	var i OrderDiscount
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -131,28 +122,21 @@ func (q *Queries) FindOrderDiscountByCode(ctx context.Context, arg FindOrderDisc
 		&i.Value,
 		&i.DiscountTypeCode,
 		&i.AccountID,
-		&i.OrderCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PercentOff,
+		&i.AmountOffAmount,
+		&i.AmountOffCurrency,
+		&i.IsActive,
+		&i.TimesRedeemed,
 	)
 	return i, err
 }
 
 const getOrderDiscount = `-- name: GetOrderDiscount :one
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.id = ?
-AND od.account_id = ?
+SELECT id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at, percent_off, amount_off_amount, amount_off_currency, is_active, times_redeemed FROM order_discount
+WHERE id = ?
+AND account_id = ?
 `
 
 type GetOrderDiscountParams struct {
@@ -160,22 +144,9 @@ type GetOrderDiscountParams struct {
 	AccountID string
 }
 
-type GetOrderDiscountRow struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	OrderCount       int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-func (q *Queries) GetOrderDiscount(ctx context.Context, arg GetOrderDiscountParams) (GetOrderDiscountRow, error) {
+func (q *Queries) GetOrderDiscount(ctx context.Context, arg GetOrderDiscountParams) (OrderDiscount, error) {
 	row := q.db.QueryRowContext(ctx, getOrderDiscount, arg.ID, arg.AccountID)
-	var i GetOrderDiscountRow
+	var i OrderDiscount
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -184,28 +155,21 @@ func (q *Queries) GetOrderDiscount(ctx context.Context, arg GetOrderDiscountPara
 		&i.Value,
 		&i.DiscountTypeCode,
 		&i.AccountID,
-		&i.OrderCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PercentOff,
+		&i.AmountOffAmount,
+		&i.AmountOffCurrency,
+		&i.IsActive,
+		&i.TimesRedeemed,
 	)
 	return i, err
 }
 
 const getOrderDiscountsByIDs = `-- name: GetOrderDiscountsByIDs :many
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.id IN (/*SLICE:ids*/?)
-AND od.account_id = ?
+SELECT id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at, percent_off, amount_off_amount, amount_off_currency, is_active, times_redeemed FROM order_discount
+WHERE id IN (/*SLICE:ids*/?)
+AND account_id = ?
 `
 
 type GetOrderDiscountsByIDsParams struct {
@@ -213,22 +177,8 @@ type GetOrderDiscountsByIDsParams struct {
 	AccountID string
 }
 
-type GetOrderDiscountsByIDsRow struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	OrderCount       int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-// Returns order discounts matching the given IDs that belong to the caller's
-// account. Order discounts are always account-scoped.
-func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscountsByIDsParams) ([]GetOrderDiscountsByIDsRow, error) {
+// Order discounts matching the given IDs that belong to the caller's account.
+func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscountsByIDsParams) ([]OrderDiscount, error) {
 	query := getOrderDiscountsByIDs
 	var queryParams []interface{}
 	if len(arg.Ids) > 0 {
@@ -245,9 +195,9 @@ func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscou
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOrderDiscountsByIDsRow
+	var items []OrderDiscount
 	for rows.Next() {
-		var i GetOrderDiscountsByIDsRow
+		var i OrderDiscount
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -256,9 +206,13 @@ func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscou
 			&i.Value,
 			&i.DiscountTypeCode,
 			&i.AccountID,
-			&i.OrderCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PercentOff,
+			&i.AmountOffAmount,
+			&i.AmountOffCurrency,
+			&i.IsActive,
+			&i.TimesRedeemed,
 		); err != nil {
 			return nil, err
 		}
@@ -274,18 +228,25 @@ func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscou
 }
 
 const insertOrderDiscount = `-- name: InsertOrderDiscount :exec
-INSERT INTO order_discount (id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+INSERT INTO order_discount (id, name, code, percentage, value, discount_type_code, percent_off, amount_off_amount,
+    amount_off_currency, is_active, account_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?, NOW(), NOW())
 `
 
 type InsertOrderDiscountParams struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
+	ID                string
+	Name              string
+	Code              string
+	Percentage        float64
+	Value             float64
+	DiscountTypeCode  string
+	PercentOff        sql.NullString
+	AmountOffAmount   sql.NullString
+	AmountOffCurrency sql.NullString
+	IsActive          bool
+	AccountID         string
 }
 
 func (q *Queries) InsertOrderDiscount(ctx context.Context, arg InsertOrderDiscountParams) error {
@@ -296,226 +257,59 @@ func (q *Queries) InsertOrderDiscount(ctx context.Context, arg InsertOrderDiscou
 		arg.Percentage,
 		arg.Value,
 		arg.DiscountTypeCode,
+		arg.PercentOff,
+		arg.AmountOffAmount,
+		arg.AmountOffCurrency,
+		arg.IsActive,
 		arg.AccountID,
 	)
 	return err
 }
 
-const listOrderDiscountsBackward = `-- name: ListOrderDiscountsBackward :many
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.account_id = ?
-AND (
-    ? IS NULL
-    OR od.name LIKE ?
-    OR od.code LIKE ?
-)
-AND (
-    od.created_at > ?
-    OR (od.created_at = ? AND od.id > ?)
-)
-ORDER BY od.created_at ASC, od.id ASC
-LIMIT ?
-`
-
-type ListOrderDiscountsBackwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type ListOrderDiscountsBackwardRow struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	OrderCount       int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-func (q *Queries) ListOrderDiscountsBackward(ctx context.Context, arg ListOrderDiscountsBackwardParams) ([]ListOrderDiscountsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listOrderDiscountsBackward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListOrderDiscountsBackwardRow
-	for rows.Next() {
-		var i ListOrderDiscountsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Percentage,
-			&i.Value,
-			&i.DiscountTypeCode,
-			&i.AccountID,
-			&i.OrderCount,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOrderDiscountsForward = `-- name: ListOrderDiscountsForward :many
-SELECT
-    od.id,
-    od.name,
-    od.code,
-    od.percentage,
-    od.value,
-    od.discount_type_code,
-    od.account_id,
-    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
-    od.created_at,
-    od.updated_at
-FROM order_discount od
-WHERE od.account_id = ?
-AND (
-    ? IS NULL
-    OR od.name LIKE ?
-    OR od.code LIKE ?
-)
-AND (
-    ? IS NULL
-    OR od.created_at < ?
-    OR (od.created_at = ? AND od.id < ?)
-)
-ORDER BY od.created_at DESC, od.id DESC
-LIMIT ?
-`
-
-type ListOrderDiscountsForwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListOrderDiscountsForwardRow struct {
-	ID               string
-	Name             string
-	Code             string
-	Percentage       float64
-	Value            float64
-	DiscountTypeCode string
-	AccountID        string
-	OrderCount       int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-func (q *Queries) ListOrderDiscountsForward(ctx context.Context, arg ListOrderDiscountsForwardParams) ([]ListOrderDiscountsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listOrderDiscountsForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListOrderDiscountsForwardRow
-	for rows.Next() {
-		var i ListOrderDiscountsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Percentage,
-			&i.Value,
-			&i.DiscountTypeCode,
-			&i.AccountID,
-			&i.OrderCount,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const updateOrderDiscount = `-- name: UpdateOrderDiscount :execresult
+const updateOrderDiscount = `-- name: UpdateOrderDiscount :exec
 UPDATE order_discount
 SET
-    name = COALESCE(?, name),
-    code = COALESCE(?, code),
-    percentage = COALESCE(?, percentage),
-    value = COALESCE(?, value),
-    discount_type_code = COALESCE(?, discount_type_code),
+    name = ?,
+    code = ?,
+    percentage = ?,
+    value = ?,
+    discount_type_code = ?,
+    percent_off = ?,
+    amount_off_amount = ?,
+    amount_off_currency = ?,
+    is_active = ?,
     updated_at = NOW()
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateOrderDiscountParams struct {
-	Name             sql.NullString
-	Code             sql.NullString
-	Percentage       sql.NullFloat64
-	Value            sql.NullFloat64
-	DiscountTypeCode sql.NullString
-	ID               string
-	AccountID        string
+	Name              string
+	Code              string
+	Percentage        float64
+	Value             float64
+	DiscountTypeCode  string
+	PercentOff        sql.NullString
+	AmountOffAmount   sql.NullString
+	AmountOffCurrency sql.NullString
+	IsActive          bool
+	ID                string
+	AccountID         string
 }
 
-func (q *Queries) UpdateOrderDiscount(ctx context.Context, arg UpdateOrderDiscountParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, updateOrderDiscount,
+func (q *Queries) UpdateOrderDiscount(ctx context.Context, arg UpdateOrderDiscountParams) error {
+	_, err := q.db.ExecContext(ctx, updateOrderDiscount,
 		arg.Name,
 		arg.Code,
 		arg.Percentage,
 		arg.Value,
 		arg.DiscountTypeCode,
+		arg.PercentOff,
+		arg.AmountOffAmount,
+		arg.AmountOffCurrency,
+		arg.IsActive,
 		arg.ID,
 		arg.AccountID,
 	)
+	return err
 }

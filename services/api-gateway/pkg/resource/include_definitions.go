@@ -204,6 +204,35 @@ func init() {
 	})
 
 	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypeAccountGroup,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "price_lists", ObjectType: constants.ObjectTypePriceList},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypePriceList,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{Key: "rules", ObjectType: constants.ObjectTypePriceListRule},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
+		ObjectType: constants.ObjectTypePriceListRule,
+		Fields: []apiendpoint.IncludeFieldDef{
+			{
+				Key: "scope",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "items", ObjectType: constants.ObjectTypeItem},
+					{Key: "product_lines", ObjectType: constants.ObjectTypeProductLine},
+					{Key: "categories", ObjectType: constants.ObjectTypeItemCategory},
+					{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
+				},
+			},
+		},
+	})
+
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeWorkCenter,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "location", ObjectType: constants.ObjectTypeLocation},
@@ -224,6 +253,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "group", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
+			{Key: "price_lists", ObjectType: constants.ObjectTypePriceList},
 			{Key: "parent_customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "child_customers", ObjectType: constants.ObjectTypeCustomer},
 			{

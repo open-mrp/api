@@ -63,6 +63,8 @@ type Customer struct {
 	Group *AccountGroup `json:"group" expandable:"true"`
 	// Pricing account groups this customer belongs to. `null` unless included.
 	PriceGroups *List[AccountGroup] `json:"price_groups" expandable:"true" visibility:"internal"`
+	// Price lists assigned directly to this customer; they take precedence over its parent's and group's lists on equally specific rules. `null` unless included.
+	PriceLists *List[PriceList] `json:"price_lists" expandable:"true"`
 	// The customer this one belongs to, when it is a child customer. `null` unless included.
 	ParentCustomer *Customer `json:"parent_customer" expandable:"true"`
 	// The customers that belong to this one. `null` unless included.

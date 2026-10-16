@@ -43,7 +43,6 @@ func orderDiscountToProto(d *domain.OrderDiscount) *pb.OrderDiscountInfo {
 	if d == nil {
 		return nil
 	}
-
 	return &pb.OrderDiscountInfo{
 		Id:           d.ID,
 		Name:         d.Name,
@@ -51,9 +50,11 @@ func orderDiscountToProto(d *domain.OrderDiscount) *pb.OrderDiscountInfo {
 		Percentage:   d.Percentage,
 		Amount:       d.Amount,
 		DiscountType: d.DiscountTypeCode,
-		OrderCount:   d.OrderCount,
+		OrderCount:   d.TimesRedeemed,
 		CreatedAt:    timestamppb.New(d.CreatedAt),
 		UpdatedAt:    timestamppb.New(d.UpdatedAt),
+		Discount:     d.Discount.ToProto(),
+		Status:       string(d.Status),
 	}
 }
 
@@ -95,9 +96,10 @@ func (h *salesGRPCHandler) ListOrderDiscounts(ctx context.Context, req *pb.ListO
 	}
 
 	params := domain.ListOrderDiscountsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Statuses: archiveStatuses(req.Statuses),
 	}
 
 	result, apiErr := h.orderDiscountSvc.ListOrderDiscounts(ctx, params)
@@ -159,12 +161,15 @@ func (h *salesGRPCHandler) CreateOrderDiscount(ctx context.Context, req *pb.Crea
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	requested, apiErr := domain.DiscountFromProto("discount", req.Discount)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
 	params := domain.CreateOrderDiscountParams{
-		Name:         req.Name,
-		Code:         req.Code,
-		Percentage:   req.Percentage,
-		Amount:       req.Amount,
-		DiscountType: req.DiscountType,
+		Name:     req.Name,
+		Code:     req.Code,
+		Discount: requested,
+		Status:   archiveStatusPtr(req.Status),
 	}
 
 	discount, apiErr := h.orderDiscountSvc.CreateOrderDiscount(ctx, params)
@@ -185,13 +190,16 @@ func (h *salesGRPCHandler) UpdateOrderDiscount(ctx context.Context, req *pb.Upda
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	requested, apiErr := domain.DiscountFromProto("discount", req.Discount)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
 	params := domain.UpdateOrderDiscountParams{
 		OrderDiscountID: req.Id,
 		Name:            req.Name,
 		Code:            req.Code,
-		Percentage:      req.Percentage,
-		Amount:          req.Amount,
-		DiscountType:    req.DiscountType,
+		Discount:        requested,
+		Status:          archiveStatusPtr(req.Status),
 	}
 
 	discount, apiErr := h.orderDiscountSvc.UpdateOrderDiscount(ctx, params)

@@ -38,9 +38,9 @@ func (*FindOrderDiscountByCodeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleFindOrderDiscountByCodeRequest)
 }
 
-// Validates a discount code and returns the matching order discount, so a code a buyer typed can be attached to an order.
+// Retrieves an order discount by its code.
 //
-// When `buyer_account_id` is provided, or the caller is a customer user, the lookup also verifies that the buyer has not already redeemed the discount on another order, and reports an already-redeemed code as not found. Pass `sales_order_id` to exclude an order the buyer is currently editing from that check.
+// Use it to check a code a buyer typed before applying it to an order. Matching ignores letter case. For a buyer (or with `buyer_account_id`), a code the buyer already redeemed on another order, or an archived code, is not found; pass `sales_order_id` to ignore the order being edited.
 type FindOrderDiscountByCodeEndpoint struct{}
 
 func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount] {
@@ -52,7 +52,6 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
 		}},

@@ -17,7 +17,7 @@ import (
 const (
 	customerPricingPath = "/v1/core/analytics/customer-pricing"
 	realizedMarginsPath = "/v1/core/analytics/realized-margins"
-	priceListPath       = "/v1/sales/account-prices/actions/export-price-list"
+	priceListPath       = "/v1/sales/price-lists/actions/export-customer-prices"
 
 	// The seeded dollar unit is a global system unit; pairs are the seeded per-unit basis.
 	seedCurrencyUnitID = "dollar"

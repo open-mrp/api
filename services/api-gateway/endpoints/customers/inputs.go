@@ -19,7 +19,7 @@ func init() {
 
 // customerIncludeFields are the include keys every customer endpoint accepts.
 var customerIncludeFields = []string{
-	"group", "price_groups", "parent_customer", "child_customers",
+	"group", "price_groups", "price_lists", "parent_customer", "child_customers",
 	"notification_recipients", "notification_recipients.account_user",
 	"defaults.carrier", "defaults.carrier.service_levels", "defaults.service_level", "defaults.payment_term",
 	"defaults.shipping_term", "defaults.sales_rep", "defaults.sales_rep.user", "defaults.bill_to_address",

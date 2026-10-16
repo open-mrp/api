@@ -884,7 +884,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrd
 	suite.orderDiscountRepo.EXPECT().Get(gomock.Any(), domain.GetOrderDiscountParams{
 		AccountID:       "ac_target",
 		OrderDiscountID: "discount-code",
-	}).Return(&domain.OrderDiscount{ID: "od_used"}, nil).Times(1)
+	}).Return(&domain.OrderDiscount{ID: "od_used", Status: constants.ArchiveStatusActive}, nil).Times(1)
 	suite.orderDiscountRepo.EXPECT().
 		CheckDuplicateUsage(gomock.Any(), "ac_target", "ac_customer", "od_used", (*string)(nil)).
 		Return(true, nil).Times(1)

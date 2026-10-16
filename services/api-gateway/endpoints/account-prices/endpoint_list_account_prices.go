@@ -39,9 +39,8 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError) {

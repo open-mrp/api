@@ -168,7 +168,8 @@ func resolveSalesOrderCreateLines(
 	return out, nil
 }
 
-// computeUnitPrice ports the pricing algorithm for a single line.
+// computeUnitPrice prices a single line: from price lists once the account's legacy prices are mirrored into them,
+// else through the legacy account-price and volume-discount stages.
 func computeUnitPrice(
 	bundle *domain.PricingBundle,
 	line domain.SalesOrderPriceLineInput,
@@ -182,6 +183,10 @@ func computeUnitPrice(
 			NumeratorUnitID:   "",
 			DenominatorUnitID: line.QuantityUnitID,
 		}
+	}
+
+	if bundle.UsesPriceLists {
+		return computeListUnitPrice(bundle, product, line, allLines)
 	}
 
 	currencyUnitID := product.UnitValueNumeratorUnitID

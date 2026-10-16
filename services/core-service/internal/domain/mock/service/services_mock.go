@@ -4771,6 +4771,21 @@ func (mr *MockCustomerSvcMockRecorder) MergeCustomers(ctx, params any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).MergeCustomers), ctx, params)
 }
 
+// PriceListIDs mocks base method.
+func (m *MockCustomerSvc) PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PriceListIDs", ctx, customerAccountIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PriceListIDs indicates an expected call of PriceListIDs.
+func (mr *MockCustomerSvcMockRecorder) PriceListIDs(ctx, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PriceListIDs", reflect.TypeOf((*MockCustomerSvc)(nil).PriceListIDs), ctx, customerAccountIDs)
+}
+
 // UpdateCustomer mocks base method.
 func (m *MockCustomerSvc) UpdateCustomer(ctx context.Context, params domain.UpdateCustomerParams) (*domain.Customer, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -12123,4 +12138,209 @@ func (m *MockNoteSvc) UpdateNote(ctx context.Context, params domain.UpdateNotePa
 func (mr *MockNoteSvcMockRecorder) UpdateNote(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNote", reflect.TypeOf((*MockNoteSvc)(nil).UpdateNote), ctx, params)
+}
+
+// MockPriceListSvc is a mock of PriceListSvc interface.
+type MockPriceListSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockPriceListSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockPriceListSvcMockRecorder is the mock recorder for MockPriceListSvc.
+type MockPriceListSvcMockRecorder struct {
+	mock *MockPriceListSvc
+}
+
+// NewMockPriceListSvc creates a new mock instance.
+func NewMockPriceListSvc(ctrl *gomock.Controller) *MockPriceListSvc {
+	mock := &MockPriceListSvc{ctrl: ctrl}
+	mock.recorder = &MockPriceListSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPriceListSvc) EXPECT() *MockPriceListSvcMockRecorder {
+	return m.recorder
+}
+
+// BatchGetPriceListRules mocks base method.
+func (m *MockPriceListSvc) BatchGetPriceListRules(ctx context.Context, ids []string) ([]*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPriceListRules", ctx, ids)
+	ret0, _ := ret[0].([]*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPriceListRules indicates an expected call of BatchGetPriceListRules.
+func (mr *MockPriceListSvcMockRecorder) BatchGetPriceListRules(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPriceListRules", reflect.TypeOf((*MockPriceListSvc)(nil).BatchGetPriceListRules), ctx, ids)
+}
+
+// BatchGetPriceLists mocks base method.
+func (m *MockPriceListSvc) BatchGetPriceLists(ctx context.Context, ids []string, withRules bool) ([]*domain.PriceList, map[string]domain.PriceListRuleIDs, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPriceLists", ctx, ids, withRules)
+	ret0, _ := ret[0].([]*domain.PriceList)
+	ret1, _ := ret[1].(map[string]domain.PriceListRuleIDs)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// BatchGetPriceLists indicates an expected call of BatchGetPriceLists.
+func (mr *MockPriceListSvcMockRecorder) BatchGetPriceLists(ctx, ids, withRules any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPriceLists", reflect.TypeOf((*MockPriceListSvc)(nil).BatchGetPriceLists), ctx, ids, withRules)
+}
+
+// CreatePriceList mocks base method.
+func (m *MockPriceListSvc) CreatePriceList(ctx context.Context, params domain.CreatePriceListParams) (*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePriceList", ctx, params)
+	ret0, _ := ret[0].(*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreatePriceList indicates an expected call of CreatePriceList.
+func (mr *MockPriceListSvcMockRecorder) CreatePriceList(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePriceList", reflect.TypeOf((*MockPriceListSvc)(nil).CreatePriceList), ctx, params)
+}
+
+// CreatePriceListRule mocks base method.
+func (m *MockPriceListSvc) CreatePriceListRule(ctx context.Context, params domain.CreatePriceListRuleParams) (*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePriceListRule", ctx, params)
+	ret0, _ := ret[0].(*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreatePriceListRule indicates an expected call of CreatePriceListRule.
+func (mr *MockPriceListSvcMockRecorder) CreatePriceListRule(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePriceListRule", reflect.TypeOf((*MockPriceListSvc)(nil).CreatePriceListRule), ctx, params)
+}
+
+// DeletePriceList mocks base method.
+func (m *MockPriceListSvc) DeletePriceList(ctx context.Context, listID string) (*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePriceList", ctx, listID)
+	ret0, _ := ret[0].(*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeletePriceList indicates an expected call of DeletePriceList.
+func (mr *MockPriceListSvcMockRecorder) DeletePriceList(ctx, listID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePriceList", reflect.TypeOf((*MockPriceListSvc)(nil).DeletePriceList), ctx, listID)
+}
+
+// DeletePriceListRule mocks base method.
+func (m *MockPriceListSvc) DeletePriceListRule(ctx context.Context, listID, ruleID string) (*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePriceListRule", ctx, listID, ruleID)
+	ret0, _ := ret[0].(*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeletePriceListRule indicates an expected call of DeletePriceListRule.
+func (mr *MockPriceListSvcMockRecorder) DeletePriceListRule(ctx, listID, ruleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePriceListRule", reflect.TypeOf((*MockPriceListSvc)(nil).DeletePriceListRule), ctx, listID, ruleID)
+}
+
+// GetPriceList mocks base method.
+func (m *MockPriceListSvc) GetPriceList(ctx context.Context, listID string) (*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPriceList", ctx, listID)
+	ret0, _ := ret[0].(*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetPriceList indicates an expected call of GetPriceList.
+func (mr *MockPriceListSvcMockRecorder) GetPriceList(ctx, listID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceList", reflect.TypeOf((*MockPriceListSvc)(nil).GetPriceList), ctx, listID)
+}
+
+// GetPriceListRule mocks base method.
+func (m *MockPriceListSvc) GetPriceListRule(ctx context.Context, listID, ruleID string) (*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPriceListRule", ctx, listID, ruleID)
+	ret0, _ := ret[0].(*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetPriceListRule indicates an expected call of GetPriceListRule.
+func (mr *MockPriceListSvcMockRecorder) GetPriceListRule(ctx, listID, ruleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceListRule", reflect.TypeOf((*MockPriceListSvc)(nil).GetPriceListRule), ctx, listID, ruleID)
+}
+
+// ListPriceListRules mocks base method.
+func (m *MockPriceListSvc) ListPriceListRules(ctx context.Context, params domain.ListPriceListRulesParams) (*domain.ListPriceListRulesResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPriceListRules", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPriceListRulesResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListPriceListRules indicates an expected call of ListPriceListRules.
+func (mr *MockPriceListSvcMockRecorder) ListPriceListRules(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPriceListRules", reflect.TypeOf((*MockPriceListSvc)(nil).ListPriceListRules), ctx, params)
+}
+
+// ListPriceLists mocks base method.
+func (m *MockPriceListSvc) ListPriceLists(ctx context.Context, params domain.ListPriceListsParams) (*domain.ListPriceListsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPriceLists", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPriceListsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListPriceLists indicates an expected call of ListPriceLists.
+func (mr *MockPriceListSvcMockRecorder) ListPriceLists(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPriceLists", reflect.TypeOf((*MockPriceListSvc)(nil).ListPriceLists), ctx, params)
+}
+
+// UpdatePriceList mocks base method.
+func (m *MockPriceListSvc) UpdatePriceList(ctx context.Context, params domain.UpdatePriceListParams) (*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePriceList", ctx, params)
+	ret0, _ := ret[0].(*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdatePriceList indicates an expected call of UpdatePriceList.
+func (mr *MockPriceListSvcMockRecorder) UpdatePriceList(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePriceList", reflect.TypeOf((*MockPriceListSvc)(nil).UpdatePriceList), ctx, params)
+}
+
+// UpdatePriceListRule mocks base method.
+func (m *MockPriceListSvc) UpdatePriceListRule(ctx context.Context, params domain.UpdatePriceListRuleParams) (*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePriceListRule", ctx, params)
+	ret0, _ := ret[0].(*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdatePriceListRule indicates an expected call of UpdatePriceListRule.
+func (mr *MockPriceListSvcMockRecorder) UpdatePriceListRule(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePriceListRule", reflect.TypeOf((*MockPriceListSvc)(nil).UpdatePriceListRule), ctx, params)
 }

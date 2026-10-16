@@ -268,6 +268,9 @@ var excludedPaths = []string{
 	"/v1/ai/memories", // 1.0.forge-preview.9 only, over notes; covered by the agent memory and notes tests.
 	// 1.0.forge-preview.9 only: supplier items replaced them. Covered by the supplier material and supplier item tests.
 	"/v1/operations/suppliers/{supplier_id}/materials",
+	// 1.0.forge-preview.9 only: price lists replace them. Covered by their crud tests.
+	"/v1/sales/account-prices",
+	"/v1/sales/volume-discounts",
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support
@@ -316,6 +319,9 @@ var excludedPaginationOperations = map[string]bool{
 var excludedListOperations = map[string]bool{
 	"list-carrier-options":     true,
 	"list-address-suggestions": true, // requires mandatory `input` query param
+	// Retrieves whose names contain "list"; they return one price list or rule, not a list.
+	"retrieve-price-list":      true,
+	"retrieve-price-list-rule": true,
 	// Per-user notification feed: scoped to the caller's account_user, which the API-key
 	// harness has none of, so the generic tests (which assume API-key-visible seed data)
 	// don't apply. Covered end-to-end by messaging_notifications_test.go.

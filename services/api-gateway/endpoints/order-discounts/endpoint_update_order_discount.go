@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -14,45 +15,32 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update an order discount.
+// Request to update an order discount.
 type UpdateOrderDiscountRequest struct {
 	// Order discount ID.
 	OrderDiscountID string `path:"id" validate:"required"`
 	// Display name of the discount.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// The code a buyer enters to apply this discount to an order.
-	//
-	// Codes are unique within your account and are compared without regard to letter case.
+	// The code a buyer enters. Unique within your account, matched case-insensitively.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
-	// The fraction of the order total to take off, as a decimal string.
-	//
-	// This is a multiplier, not a whole percent: send `0.1` to take 10% off. Only read when `discount_type` is `percentage`.
-	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// The flat amount to take off the order total, as a decimal string.
-	//
-	// Only read when `discount_type` is `amount`.
-	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
-	// How the discount is calculated.
-	//
-	// - `percentage`: the order total is reduced by the fraction in `percentage`.
-	// - `amount`: the order total is reduced by the flat amount in `amount`.
-	//
-	// Switching the type does not move the stored figure across, so send the matching `percentage` or `amount` in the same request or the discount will take nothing off.
-	DiscountType field.Optional[constants.OrderDiscountType] `json:"discount_type,omitzero"`
+	// How much comes off. Replaces the whole discount.
+	Discount field.Optional[apirequest.DiscountInput] `json:"discount,omitzero"`
+	// Whether the code can be applied to new orders.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleUpdateOrderDiscountRequest = &UpdateOrderDiscountRequest{
-	Name: field.Some("15% Off"),
-	Code: field.Some("SAVE15"),
+	Name:   field.Some("15% Off"),
+	Status: field.Some(constants.ArchiveStatusArchived),
 }
 
 func (*UpdateOrderDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateOrderDiscountRequest)
 }
 
-// Partially updates an order discount.
+// Updates an order discount.
 //
-// Only the fields you send are changed; the rest keep their current values. Changing `code` to one another discount already holds returns a conflict error. Edits apply to future orders only — orders that already used this discount keep the reduction they were given.
+// Only fields you send are changed. Orders that already used the code keep their discount. Archive a code by setting `status` to `archived`.
 type UpdateOrderDiscountEndpoint struct{}
 
 func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateOrderDiscountRequest, *apiresource.OrderDiscount] {
@@ -64,7 +52,6 @@ func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionUpdate},

@@ -136,6 +136,7 @@ func Run(
 	resourceloaders.SetMachineDowntimeClient(coreClient.MachineDowntime)
 	resourceloaders.SetDemandOverrideClient(coreClient.DemandOverride)
 	resourceloaders.SetNoteClient(coreClient.Note)
+	resourceloaders.SetPriceListClient(coreClient.PriceList)
 	resourceloaders.SetPortalDomainClient(coreClient.PortalDomain)
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)

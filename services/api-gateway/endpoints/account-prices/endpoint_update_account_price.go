@@ -39,7 +39,7 @@ type UpdateAccountPriceRequest struct {
 
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{
 	Rate: field.Some(apirequest.RateInput{
-		Value:             "30.000000000000000000000000000000",
+		Value:     "30.000000000000000000000000000000",
 		UnitID:    apiresource.SampleUnitID,
 		PerUnitID: apiresource.SampleUnitID,
 	}),
@@ -63,9 +63,8 @@ func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionUpdate},

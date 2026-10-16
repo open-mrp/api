@@ -139,7 +139,22 @@ func (s *accountGroupSvcImpl) BatchGetAccountGroupsByIDs(ctx context.Context, id
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return s.repos.NewAccountGroupRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	groups, apiErr := s.repos.NewAccountGroupRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	groupIDs := make([]string, len(groups))
+	for i, g := range groups {
+		groupIDs[i] = g.ID
+	}
+	assigned, apiErr := s.repos.NewPriceListRepo().GroupListIDs(ctx, groupIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, g := range groups {
+		g.PriceListIDs = nonNil(assigned[g.ID])
+	}
+	return groups, nil
 }
 
 func (s *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, params domain.CreateAccountGroupParams) (*domain.AccountGroup, *apierror.APIError) {
@@ -198,6 +213,19 @@ func (s *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, params dom
 				return apiErr
 			}
 			result = created
+			if created.AccountGroupTypeCode == string(constants.AccountGroupTypePricingGroup) {
+				if apiErr := syncLegacyGroup(txCtx, txSvc.repos, params.AccountID, created.ID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.PriceListIDs != nil {
+				if apiErr := checkAssignableLists(txCtx, txSvc.repos, params.AccountID, "price_list_ids", params.PriceListIDs, nil); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := assignGroupLists(txCtx, txSvc.repos, params.AccountID, created.ID, params.PriceListIDs); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(nil, created)
 
@@ -286,6 +314,21 @@ func (s *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, params dom
 				return apiErr
 			}
 			result = updated
+			if apiErr := syncLegacyGroup(txCtx, txSvc.repos, params.AccountID, updated.ID); apiErr != nil {
+				return apiErr
+			}
+			if params.HasPriceListIDs {
+				held, apiErr := txSvc.repos.NewPriceListRepo().GroupListIDs(txCtx, []string{updated.ID})
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := checkAssignableLists(txCtx, txSvc.repos, params.AccountID, "price_list_ids", params.PriceListIDs, held[updated.ID]); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := assignGroupLists(txCtx, txSvc.repos, params.AccountID, updated.ID, params.PriceListIDs); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 
@@ -369,6 +412,12 @@ func (s *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, accountGro
 			AccountID:      accountID,
 			AccountGroupID: accountGroupID,
 		}); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txSvc.repos.NewPriceListRepo().DeleteGroupAssignments(txCtx, accountGroupID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := syncLegacyGroup(txCtx, txSvc.repos, accountID, accountGroupID); apiErr != nil {
 			return apiErr
 		}
 

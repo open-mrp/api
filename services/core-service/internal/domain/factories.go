@@ -113,6 +113,8 @@ type RepoFactory interface {
 	NewLocationRepo() LocationRepo
 	NewScanningStationRepo() ScanningStationRepo
 	NewPricingRepo() PricingRepo
+	NewPriceListRepo() PriceListRepo
+	NewLegacyPricingRepo() LegacyPricingRepo
 	NewJobRepo() JobRepo
 	NewPortalDomainRepo() PortalDomainRepo
 	NewPortalRegistrationSessionRepo() PortalRegistrationSessionRepo

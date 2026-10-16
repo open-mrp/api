@@ -421,6 +421,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(machinesGroup.APIEndpointGroup)
 	}
 
+	// Price Lists
+	priceListsGroup := (&httpgroup.PriceListsEndpointGroup{}).Materialize(&httpgroup.PriceListsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if priceListsGroup != nil {
+		registry.RegisterGroup(priceListsGroup.APIEndpointGroup)
+	}
+
 	// Order Discounts
 	orderDiscountsGroup := (&httpgroup.OrderDiscountsEndpointGroup{}).Materialize(&httpgroup.OrderDiscountsEndpointGroupConfig{
 		CoreClient: config.CoreClient,

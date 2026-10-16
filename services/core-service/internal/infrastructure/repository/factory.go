@@ -447,6 +447,14 @@ func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
 	return NewPricingRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewPriceListRepo() domain.PriceListRepo {
+	return NewPriceListRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewLegacyPricingRepo() domain.LegacyPricingRepo {
+	return NewLegacyPricingRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewJobRepo() domain.JobRepo {
 	return NewJobRepo(r.queries, r.payloads.store())
 }

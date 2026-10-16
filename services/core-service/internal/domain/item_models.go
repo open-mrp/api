@@ -68,6 +68,7 @@ var ItemReferences = RegisterReferences(References{
 		{Label: "production steps", Table: "consumption", Column: "item_id"},
 		{Label: "planned orders", Table: "production_schedule_line", Column: "item_id"},
 		{Label: "downtime events", Table: "machine_downtime_event", Column: "item_id"},
+		{Label: "price-list rules", Table: "price_list_rule_item", Column: "item_id"},
 	},
 })
 

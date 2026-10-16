@@ -854,6 +854,8 @@ type ProductionFlowSvc interface {
 }
 
 type CustomerSvc interface {
+	// PriceListIDs maps each of the caller account's customers to the price lists assigned to it directly.
+	PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError)
 	// ListCustomers returns a paginated list of customers for the caller's account.
 	ListCustomers(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
 
@@ -1915,4 +1917,21 @@ type NoteSvc interface {
 	ImportNotes(ctx context.Context, notes []ImportNote) (int64, *apierror.APIError)
 	// RecallNotes is what an agent reads before it works. It is for OpenMRP's own services, never exposed.
 	RecallNotes(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
+}
+
+// PriceListSvc manages price lists and their rules.
+type PriceListSvc interface {
+	ListPriceLists(ctx context.Context, params ListPriceListsParams) (*ListPriceListsResult, *apierror.APIError)
+	GetPriceList(ctx context.Context, listID string) (*PriceList, *apierror.APIError)
+	// BatchGetPriceLists also returns each list's first rule IDs when withRules.
+	BatchGetPriceLists(ctx context.Context, ids []string, withRules bool) ([]*PriceList, map[string]PriceListRuleIDs, *apierror.APIError)
+	CreatePriceList(ctx context.Context, params CreatePriceListParams) (*PriceList, *apierror.APIError)
+	UpdatePriceList(ctx context.Context, params UpdatePriceListParams) (*PriceList, *apierror.APIError)
+	DeletePriceList(ctx context.Context, listID string) (*PriceList, *apierror.APIError)
+	ListPriceListRules(ctx context.Context, params ListPriceListRulesParams) (*ListPriceListRulesResult, *apierror.APIError)
+	GetPriceListRule(ctx context.Context, listID, ruleID string) (*PriceListRule, *apierror.APIError)
+	BatchGetPriceListRules(ctx context.Context, ids []string) ([]*PriceListRule, *apierror.APIError)
+	CreatePriceListRule(ctx context.Context, params CreatePriceListRuleParams) (*PriceListRule, *apierror.APIError)
+	UpdatePriceListRule(ctx context.Context, params UpdatePriceListRuleParams) (*PriceListRule, *apierror.APIError)
+	DeletePriceListRule(ctx context.Context, listID, ruleID string) (*PriceListRule, *apierror.APIError)
 }

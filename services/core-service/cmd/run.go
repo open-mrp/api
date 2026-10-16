@@ -692,6 +692,12 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	priceListSvc := service.NewPriceListSvc(&service.PriceListSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
 	roleSvc := service.NewRoleSvc(&service.RoleSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1001,6 +1007,20 @@ func Run(
 		go itemUnitsBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 	}
 
+	// Legacy account prices, volume discounts and price groups mirror into price lists (00107), one account at a time;
+	// an account's orders price from its lists once it is mirrored. PRICE_LIST_SYNC_BACKFILL_DISABLED=true stops it.
+	if !cfg.PriceListSyncBackfillDisabled {
+		priceListSyncBackfill, err := backfill.New(&backfill.Config{
+			Name:     service.PriceListSyncBackfillName,
+			Batch:    service.NewPriceListSyncBackfill(repository.NewLegacyPricingRepo(sqlc.New(reportDB)), txManager).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go priceListSyncBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+	}
+
 	// Money is copying onto the columns of the rows that own it (00088 operations, 00089 commercial). These fill
 	// the rows written before the columns existed, one paced backfill per table per pod holding its lease.
 	// MONEY_COLUMN_BACKFILL_DISABLED=true stops them; reads keep working from the legacy rows meanwhile.
@@ -1128,6 +1148,7 @@ func Run(
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
 	grpc.RegisterNoteService(srv, noteSvc)
+	grpc.RegisterPriceListService(srv, priceListSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)

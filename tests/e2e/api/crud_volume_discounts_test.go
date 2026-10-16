@@ -255,7 +255,7 @@ func TestVolumeDiscounts_CreateDuplicateNameConflict(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	errObj := requireRetiredRouteError(t, body, "")
 	assertErrorParam(t, errObj, "name")
 }
 
@@ -408,7 +408,7 @@ func TestVolumeDiscounts_UpdateDuplicateNameConflict(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
-	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "name")
+	assertErrorParam(t, requireRetiredRouteError(t, body, ""), "name")
 }
 
 func TestVolumeDiscounts_UpdateNonexistentReturns404(t *testing.T) {
@@ -454,5 +454,5 @@ func TestVolumeDiscounts_RetrieveNonexistentReturns404(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(volumeDiscountsPath+"/"+mustGenID(t, id.QuantityDiscountIDPrefix), nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	requireRetiredRouteError(t, body, "resource_not_found")
 }

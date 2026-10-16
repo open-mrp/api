@@ -279,6 +279,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		}
 	}
 	p.PriceGroups = priceGroups
+	p.PriceListIds = c.PriceListIDs
 
 	if c.ParentAccountID != nil {
 		pa := &pb.CustomerLightCustomerProto{
@@ -349,6 +350,7 @@ func (h *gRPCHandler) ListCustomers(ctx context.Context, req *pb.ListCustomersRe
 
 	params.CustomerGroupIDs = req.CustomerGroupIds
 	params.PricingGroupIDs = req.PricingGroupIds
+	params.PriceListIDs = req.PriceListIds
 	params.SalesRepIDs = req.SalesRepIds
 	params.StatusCodes = req.StatusCodes
 	params.ShippingTermIDs = req.ShippingTermIds
@@ -370,6 +372,9 @@ func (h *gRPCHandler) ListCustomers(ctx context.Context, req *pb.ListCustomersRe
 	customers := make([]*pb.CustomerProto, len(result.Items))
 	for i, c := range result.Items {
 		customers[i] = customerToProto(c)
+	}
+	if err := h.withPriceListIDs(ctx, customers...); err != nil {
+		return nil, err
 	}
 
 	return &pb.ListCustomersResponse{
@@ -393,9 +398,11 @@ func (h *gRPCHandler) GetCustomer(ctx context.Context, req *pb.GetCustomerReques
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.GetCustomerResponse{
-		Customer: customerToProto(customer),
-	}, nil
+	out := customerToProto(customer)
+	if err := h.withPriceListIDs(ctx, out); err != nil {
+		return nil, err
+	}
+	return &pb.GetCustomerResponse{Customer: out}, nil
 }
 
 // BatchGetCustomersByIDs returns customers by ID for the api-gateway include resolver. Ids the caller
@@ -451,6 +458,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		DefaultShippingTermID: req.DefaultShippingTermId,
 		DefaultSalesRepID:     req.DefaultSalesRepId,
 		CustomerPriceGroupIDs: req.CustomerPriceGroupIds,
+		PriceListIDs:          priceListIDsIfSent(req.PriceListIds, req.HasPriceListIds),
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
@@ -480,9 +488,11 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.CreateCustomerResponse{
-		Customer: customerToProto(customer),
-	}, nil
+	out := customerToProto(customer)
+	if err := h.withPriceListIDs(ctx, out); err != nil {
+		return nil, err
+	}
+	return &pb.CreateCustomerResponse{Customer: out}, nil
 }
 
 func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomerRequest) (*pb.UpdateCustomerResponse, error) {
@@ -520,6 +530,8 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		ShipToAddressID:          fieldpb.StringClearableFromProto(req.ShipToAddressId),
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
 		HasCustomerPriceGroupIDs: req.HasCustomerPriceGroupIds,
+		PriceListIDs:             req.PriceListIds,
+		HasPriceListIDs:          req.HasPriceListIds,
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
 		CarrierBillingAccount:    fieldpb.StringClearableFromProto(req.CarrierBillingAccount),
@@ -540,9 +552,11 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.UpdateCustomerResponse{
-		Customer: customerToProto(customer),
-	}, nil
+	out := customerToProto(customer)
+	if err := h.withPriceListIDs(ctx, out); err != nil {
+		return nil, err
+	}
+	return &pb.UpdateCustomerResponse{Customer: out}, nil
 }
 
 func (h *gRPCHandler) DeleteCustomer(ctx context.Context, req *pb.DeleteCustomerRequest) (*emptypb.Empty, error) {
@@ -762,4 +776,27 @@ func relationshipTypes(in []string) []constants.CustomerRelationshipType {
 		out[i] = constants.CustomerRelationshipType(v)
 	}
 	return out
+}
+
+// withPriceListIDs sets each customer's directly assigned price lists, read in one query.
+func (h *gRPCHandler) withPriceListIDs(ctx context.Context, customers ...*pb.CustomerProto) error {
+	ids := make([]string, 0, len(customers))
+	for _, c := range customers {
+		if c != nil {
+			ids = append(ids, c.Id)
+		}
+	}
+	assigned, apiErr := h.customerSvc.PriceListIDs(ctx, ids)
+	if apiErr != nil {
+		return contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	for _, c := range customers {
+		if c != nil {
+			c.PriceListIds = assigned[c.Id]
+			if c.PriceListIds == nil {
+				c.PriceListIds = []string{}
+			}
+		}
+	}
+	return nil
 }

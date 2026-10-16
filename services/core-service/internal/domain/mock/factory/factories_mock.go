@@ -573,6 +573,20 @@ func (mr *MockRepoFactoryMockRecorder) NewJobRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewJobRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewJobRepo))
 }
 
+// NewLegacyPricingRepo mocks base method.
+func (m *MockRepoFactory) NewLegacyPricingRepo() domain.LegacyPricingRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewLegacyPricingRepo")
+	ret0, _ := ret[0].(domain.LegacyPricingRepo)
+	return ret0
+}
+
+// NewLegacyPricingRepo indicates an expected call of NewLegacyPricingRepo.
+func (mr *MockRepoFactoryMockRecorder) NewLegacyPricingRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewLegacyPricingRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewLegacyPricingRepo))
+}
+
 // NewLocationRepo mocks base method.
 func (m *MockRepoFactory) NewLocationRepo() domain.LocationRepo {
 	m.ctrl.T.Helper()
@@ -837,6 +851,20 @@ func (m *MockRepoFactory) NewPortalRegistrationSessionRepo() domain.PortalRegist
 func (mr *MockRepoFactoryMockRecorder) NewPortalRegistrationSessionRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewPortalRegistrationSessionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewPortalRegistrationSessionRepo))
+}
+
+// NewPriceListRepo mocks base method.
+func (m *MockRepoFactory) NewPriceListRepo() domain.PriceListRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewPriceListRepo")
+	ret0, _ := ret[0].(domain.PriceListRepo)
+	return ret0
+}
+
+// NewPriceListRepo indicates an expected call of NewPriceListRepo.
+func (mr *MockRepoFactoryMockRecorder) NewPriceListRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewPriceListRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewPriceListRepo))
 }
 
 // NewPricingRepo mocks base method.

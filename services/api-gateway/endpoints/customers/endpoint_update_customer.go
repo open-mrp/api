@@ -45,6 +45,8 @@ type UpdateCustomerRequest struct {
 	GroupID field.Optional[string] `json:"group_id,omitzero"`
 	// IDs of the pricing account groups the customer belongs to. Replaces the current set.
 	PriceGroupIDs field.Optional[[]string] `json:"price_group_ids,omitzero" visibility:"internal"`
+	// IDs of the price lists assigned directly to the customer, at most 100. Replaces the current set; send `[]` for none.
+	PriceListIDs field.Optional[[]string] `json:"price_list_ids,omitzero" validate:"omitempty,max=100"`
 	// ID of the customer this one belongs to. Send `null` to make it a standalone customer.
 	ParentCustomerID field.Clearable[string] `json:"parent_customer_id,omitzero"`
 	// Who receives this customer's documents by email. Replaces the current list; send `[]` for none.

@@ -407,6 +407,8 @@ const (
 
 	// Discounts/Pricing (seeded in 0010/0011)
 	SeedOrderDiscountID     = "ords_01seedpct10discount"
+	SeedPriceListID         = "prls_01seedpricelist0"
+	SeedPriceListRuleID     = "prlsrw_01seedpricerule0"
 	SeedAccountPriceID      = "acpr_01seedaccprice0000"
 	SeedVolumeDiscountID    = "quds_01seedvoldiscount0"
 	SeedProductLineAccessID = "acrepdln_01seedcustpl0"
@@ -513,6 +515,7 @@ var pathParamSeeds = map[string]string{
 	"pick_id":            SeedPickID,
 	"invoice_id":         SeedInvoiceID,
 	"account_group_id":   SeedCustomerGroupID,
+	"price_list_id":      SeedPriceListID,
 	"location_id":        SeedLocationID,
 	"account_id":         SeedCustomerAccountID,
 	"carrier_id":         SeedCarrierID,
@@ -618,6 +621,8 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/account-prices/":                                          SeedAccountPriceID,
 	"/v1/core/addresses/":                                                SeedReceivingDockAddressID,
 	"/v1/sales/order-discounts/":                                         SeedOrderDiscountID,
+	"/v1/sales/price-lists/{price_list_id}/rules/":                       SeedPriceListRuleID,
+	"/v1/sales/price-lists/":                                             SeedPriceListID,
 	"/v1/sales/product-line-access/":                                     SeedProductLineAccessID,
 	"/v1/sales/registration-flows/":                                      SeedRegistrationFlowID,
 	"/v1/sales/sales-orders/":                                            SeedSalesOrderID,

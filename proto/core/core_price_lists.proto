@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+// CorePriceListService handles price lists and their rules.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+import "core/core_patch.proto";
+import "core/value_shapes.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CorePriceListService {
+  rpc ListPriceLists(ListPriceListsRequest) returns (ListPriceListsResponse);
+  rpc GetPriceList(GetPriceListRequest) returns (PriceListInfo);
+  rpc BatchGetPriceListsByIDs(BatchGetPriceListsByIDsRequest) returns (BatchGetPriceListsByIDsResponse);
+  rpc CreatePriceList(CreatePriceListRequest) returns (PriceListInfo);
+  rpc UpdatePriceList(UpdatePriceListRequest) returns (PriceListInfo);
+  rpc DeletePriceList(DeletePriceListRequest) returns (PriceListInfo);
+
+  rpc ListPriceListRules(ListPriceListRulesRequest) returns (ListPriceListRulesResponse);
+  rpc GetPriceListRule(GetPriceListRuleRequest) returns (PriceListRuleInfo);
+  rpc BatchGetPriceListRulesByIDs(BatchGetPriceListRulesByIDsRequest) returns (BatchGetPriceListRulesByIDsResponse);
+  rpc CreatePriceListRule(CreatePriceListRuleRequest) returns (PriceListRuleInfo);
+  rpc UpdatePriceListRule(UpdatePriceListRuleRequest) returns (PriceListRuleInfo);
+  rpc DeletePriceListRule(DeletePriceListRuleRequest) returns (PriceListRuleInfo);
+}
+
+message PriceListInfo {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  // constants.ArchiveStatus.
+  string status = 4;
+  string currency = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  // The first rule IDs (one more than an embedded list shows), set when rules were asked for.
+  repeated string rule_ids = 8;
+  // The list cursor after the last embedded rule, when more exist.
+  string rules_next_cursor = 9;
+}
+
+message PriceListRuleScope {
+  repeated string item_ids = 1;
+  repeated string product_line_ids = 2;
+  repeated string category_ids = 3;
+  repeated string attribute_ids = 4;
+}
+
+message PriceListTier {
+  string min_quantity = 1;
+  optional string percent_of_base = 2;
+  UnitPrice unit_price = 3;
+}
+
+message PriceListPrice {
+  // constants.PriceListPriceType.
+  string type = 1;
+  UnitPrice unit_price = 2;
+  optional string percent_of_base = 3;
+  string unit_id = 4;
+  repeated PriceListTier tiers = 5;
+}
+
+message PriceListRuleInfo {
+  string id = 1;
+  string price_list_id = 2;
+  PriceListRuleScope scope = 3;
+  PriceListPrice price = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListPriceListsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string statuses = 4;
+  repeated string customer_ids = 5;
+}
+
+message ListPriceListsResponse {
+  repeated PriceListInfo price_lists = 1;
+  PageInfo page_info = 2;
+}
+
+message GetPriceListRequest {
+  string id = 1;
+}
+
+message BatchGetPriceListsByIDsRequest {
+  repeated string ids = 1;
+  bool with_rules = 2;
+}
+
+message BatchGetPriceListsByIDsResponse {
+  repeated PriceListInfo price_lists = 1;
+}
+
+message CreatePriceListRequest {
+  string name = 1;
+  optional string description = 2;
+  optional string status = 3;
+  optional string currency = 4;
+}
+
+message UpdatePriceListRequest {
+  string id = 1;
+  optional string name = 2;
+  StringPatch description = 3;
+  optional string status = 4;
+}
+
+message DeletePriceListRequest {
+  string id = 1;
+}
+
+message ListPriceListRulesRequest {
+  string price_list_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  repeated string item_ids = 4;
+  repeated string product_line_ids = 5;
+}
+
+message ListPriceListRulesResponse {
+  repeated PriceListRuleInfo rules = 1;
+  PageInfo page_info = 2;
+}
+
+message GetPriceListRuleRequest {
+  string price_list_id = 1;
+  string id = 2;
+}
+
+message BatchGetPriceListRulesByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetPriceListRulesByIDsResponse {
+  repeated PriceListRuleInfo rules = 1;
+}
+
+message CreatePriceListRuleRequest {
+  string price_list_id = 1;
+  PriceListRuleScope scope = 2;
+  PriceListPrice price = 3;
+}
+
+// A scope list replaces that dimension when its has_ flag is set.
+message UpdatePriceListRuleRequest {
+  string price_list_id = 1;
+  string id = 2;
+  repeated string item_ids = 3;
+  bool has_item_ids = 4;
+  repeated string product_line_ids = 5;
+  bool has_product_line_ids = 6;
+  repeated string category_ids = 7;
+  bool has_category_ids = 8;
+  repeated string attribute_ids = 9;
+  bool has_attribute_ids = 10;
+  PriceListPrice price = 11;
+}
+
+message DeletePriceListRuleRequest {
+  string price_list_id = 1;
+  string id = 2;
+}

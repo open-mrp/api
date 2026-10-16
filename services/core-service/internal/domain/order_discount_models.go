@@ -4,16 +4,23 @@ import (
 	"time"
 
 	"github.com/open-mrp/apikit/pagination"
+
+	"github.com/open-mrp/api/shared/constants"
 )
 
+// OrderDiscount is a code a buyer enters to take money off an order.
 type OrderDiscount struct {
-	ID               string
-	Name             string `audit:"name"`
-	Code             string `audit:"code"`
-	Percentage       string `audit:"percentage"`
-	Amount           string `audit:"amount"`
-	DiscountTypeCode string `audit:"discount_type_code"`
-	OrderCount       int32  `audit:"order_count"`
+	ID       string
+	Name     string                  `audit:"name"`
+	Code     string                  `audit:"code"`
+	Status   constants.ArchiveStatus `audit:"status"`
+	Discount Discount                `audit:"discount"`
+	// TimesRedeemed is how many orders the code has been applied to.
+	TimesRedeemed int32 `audit:"-"`
+	// Percentage (a fraction), Amount and DiscountTypeCode restate Discount in the legacy columns order totals read.
+	Percentage       string `audit:"-"`
+	Amount           string `audit:"-"`
+	DiscountTypeCode string `audit:"-"`
 	AccountID        string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -21,6 +28,7 @@ type OrderDiscount struct {
 
 type ListOrderDiscountsParams struct {
 	AccountID string
+	Statuses  []constants.ArchiveStatus
 	Cursor    *string
 	Limit     int32
 	Query     *string
@@ -37,12 +45,11 @@ type GetOrderDiscountParams struct {
 }
 
 type CreateOrderDiscountParams struct {
-	AccountID    string
-	Name         string
-	Code         string
-	Percentage   *string
-	Amount       *string
-	DiscountType string
+	AccountID string
+	Name      string
+	Code      string
+	Discount  *Discount
+	Status    *constants.ArchiveStatus
 }
 
 type UpdateOrderDiscountParams struct {
@@ -50,9 +57,8 @@ type UpdateOrderDiscountParams struct {
 	OrderDiscountID string
 	Name            *string
 	Code            *string
-	Percentage      *string
-	Amount          *string
-	DiscountType    *string
+	Discount        *Discount
+	Status          *constants.ArchiveStatus
 }
 
 type DeleteOrderDiscountParams struct {

@@ -28,6 +28,8 @@ type UpdateAccountGroupRequest struct {
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 	// Values the group's customers inherit. Only fields you send are changed.
 	Defaults field.Optional[AccountGroupDefaultsInput] `json:"defaults,omitzero"`
+	// IDs of the price lists that apply to every customer in the group, at most 100. Replaces the current set; send `[]` for none.
+	PriceListIDs field.Optional[[]string] `json:"price_list_ids,omitzero" validate:"omitempty,max=100"`
 }
 
 var sampleUpdateAccountGroupDescription = "Customers who buy in bulk at wholesale pricing."
@@ -58,6 +60,7 @@ func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionUpdate}}},
 		ObjectType:        constants.ObjectTypeAccountGroup,
+		IncludeConfig:     accountGroupIncludeConfig(),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).UpdateAccountGroup
 		},

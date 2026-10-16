@@ -54,6 +54,11 @@ func newCustomerSvcSetup(t *testing.T) *customerSvcSetup {
 	repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
 	s.addresses = repositorymock.NewMockAddressRepo(ctrl)
 	repos.EXPECT().NewAddressRepo().Return(s.addresses).AnyTimes()
+	// A deleted customer's own price list goes with it; these customers have none.
+	priceLists := repositorymock.NewMockPriceListRepo(ctrl)
+	priceLists.EXPECT().GetBySource(gomock.Any(), gomock.Any(), constants.PriceListSourceCustomer, gomock.Any()).Return(nil, nil).AnyTimes()
+	priceLists.EXPECT().DeleteCustomerAssignments(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	repos.EXPECT().NewPriceListRepo().Return(priceLists).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
 	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency, Site: s.sites}).AnyTimes()
 	jobs := factorymock.NewMockJobSvcFactory(ctrl)
@@ -171,6 +176,7 @@ func TestBulkDeleteCustomers_RecordsEachSnapshotUnderTheOwner(t *testing.T) {
 		customer := &domain.Customer{ID: customerID}
 		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", customerID, gomock.Any()).Return(customer, nil)
 		s.deleted.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, customerID, "ac_seller", customer).Return(nil)
+		s.customers.EXPECT().GetRelationID(gomock.Any(), "ac_seller", customerID).Return("acre_"+customerID, nil)
 	}
 	s.salesOrders.EXPECT().CountSalesOrdersForBuyerAccounts(gomock.Any(), "ac_seller", []string{"ac_a", "ac_b"}).Return(int64(0), nil)
 	s.customers.EXPECT().BulkDelete(gomock.Any(), "ac_seller", []string{"ac_a", "ac_b"}).Return(nil)

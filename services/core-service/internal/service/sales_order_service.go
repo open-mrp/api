@@ -633,6 +633,9 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			if apiErr != nil {
 				return apiErr
 			}
+			if apiErr := adjustOrderDiscountRedemptions(txCtx, txSvc.repos, nil, params.OrderDiscountID); apiErr != nil {
+				return apiErr
+			}
 
 			// Create email contacts (matches Dashboard behavior)
 			if apiErr := createOrderEmailContacts(txCtx, txOrderRepo, orderID, params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
@@ -921,6 +924,13 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 			result = updated
+			var discountAfter *string
+			if v, ok := params.OrderDiscountID.Value(); ok {
+				discountAfter = &v
+			}
+			if apiErr := adjustOrderDiscountRedemptions(txCtx, txSvc.repos, existing.OrderDiscountID, discountAfter); apiErr != nil {
+				return apiErr
+			}
 
 			// Renegotiating a date on a live order moves the commitment with it, and clearing one hands the order back to the customer's standing lead time. Re-routing the order does the same, but only where routing is what the date was built from: a promised delivery date is worked back through the carrier's transit for one lane, so changing the carrier, the service level, or the destination leaves the stamped date derived from a journey the order no longer takes. The other bases name a ship date directly and never consult transit, so re-routing them changes nothing worth rewriting a promise over.
 			//
@@ -1097,6 +1107,9 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		}
 
 		if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := adjustOrderDiscountRedemptions(txCtx, txSvc.repos, order.OrderDiscountID, nil); apiErr != nil {
 			return apiErr
 		}
 
@@ -2308,16 +2321,20 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, params d
 // resolveOrderDiscountID resolves a caller-supplied order-discount reference — which may be either the discount's ID or its unique code — to the discount's ID.
 func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountID, idOrCode string) (string, *apierror.APIError) {
 	discountRepo := s.repos.NewOrderDiscountRepo()
-	if d, apiErr := discountRepo.Get(ctx, domain.GetOrderDiscountParams{AccountID: accountID, OrderDiscountID: idOrCode}); apiErr == nil {
-		return d.ID, nil
-	} else if !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+	d, apiErr := discountRepo.Get(ctx, domain.GetOrderDiscountParams{AccountID: accountID, OrderDiscountID: idOrCode})
+	if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return "", apiErr
 	}
-	d, apiErr := discountRepo.FindByCode(ctx, accountID, idOrCode)
 	if apiErr != nil {
-		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
-			return "", apierror.NewFieldError("order_discount_id", apierror.CodeInvalidFormat, "Order discount not found.")
+		d, apiErr = discountRepo.FindByCode(ctx, accountID, idOrCode)
+		if apiErr != nil {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return "", apierror.NewFieldError("order_discount_id", apierror.CodeInvalidFormat, "Order discount not found.")
+			}
+			return "", apiErr
 		}
+	}
+	if apiErr := domain.RequireAssignable("order_discount_id", "order discount", d.Status); apiErr != nil {
 		return "", apiErr
 	}
 	return d.ID, nil
@@ -2422,10 +2439,14 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 	}
 
 	if discountID, ok := params.OrderDiscountID.Value(); ok && !equalStringPtr(&discountID, existing.OrderDiscountID) {
-		if _, apiErr := repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: discountID}); apiErr != nil {
+		d, apiErr := repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: discountID})
+		if apiErr != nil {
 			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return apierror.NewNotFoundError("No order discount found with the provided ID.").WithParam("order_discount_id")
 			}
+			return apiErr
+		}
+		if apiErr := domain.RequireAssignable("order_discount_id", "order discount", d.Status); apiErr != nil {
 			return apiErr
 		}
 	}
@@ -4040,4 +4061,21 @@ func checkCustomerTakesOrders(ctx context.Context, repos domain.RepoFactory, acc
 		return apiErr
 	}
 	return domain.RequireAssignable("customer_id", "customer", constants.ArchiveStatusArchived)
+}
+
+// adjustOrderDiscountRedemptions moves the redemption counters when an order's discount changes from before to after.
+func adjustOrderDiscountRedemptions(ctx context.Context, repos domain.RepoFactory, before, after *string) *apierror.APIError {
+	if equalStringPtr(before, after) {
+		return nil
+	}
+	repo := repos.NewOrderDiscountRepo()
+	if before != nil && *before != "" {
+		if apiErr := repo.AdjustRedemptions(ctx, *before, -1); apiErr != nil {
+			return apiErr
+		}
+	}
+	if after != nil && *after != "" {
+		return repo.AdjustRedemptions(ctx, *after, 1)
+	}
+	return nil
 }

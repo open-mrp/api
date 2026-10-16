@@ -40,7 +40,7 @@ var sampleCreateAccountPriceRequest = &CreateAccountPriceRequest{
 	RecipientAccountID: apiresource.SampleAccountID,
 	ProductLineID:      apiresource.SampleProductLineID,
 	Rate: apirequest.RateInput{
-		Value:             "25.50",
+		Value:     "25.50",
 		UnitID:    apiresource.SampleUnitID,
 		PerUnitID: apiresource.SampleUnitID,
 	},
@@ -64,9 +64,8 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},

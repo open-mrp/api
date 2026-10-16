@@ -18,8 +18,10 @@ type AccountGroup struct {
 	// DefaultLeadTimeDays is inherited by every customer in the group that has not set its own. Nil falls through to the account default.
 	DefaultLeadTimeDays *int32 `audit:"default_lead_time_days"`
 	RegistrationFlowID  *string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	// PriceListIDs are the price lists assigned to the group; set by batch reads.
+	PriceListIDs []string `audit:"-"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type ListAccountGroupsParams struct {
@@ -43,6 +45,8 @@ type CreateAccountGroupParams struct {
 	CommissionPolicyCode string
 	FreightPolicyCode    string
 	DefaultLeadTimeDays  *int32
+	// PriceListIDs, when non-nil, are the price lists that apply to every customer in the group.
+	PriceListIDs []string
 }
 
 type UpdateAccountGroupParams struct {
@@ -53,6 +57,9 @@ type UpdateAccountGroupParams struct {
 	CommissionPolicyCode *string
 	FreightPolicyCode    *string
 	DefaultLeadTimeDays  field.Clearable[int32]
+	// PriceListIDs, when HasPriceListIDs, replaces the price lists assigned to the group.
+	PriceListIDs    []string
+	HasPriceListIDs bool
 }
 
 type DeleteAccountGroupParams struct {

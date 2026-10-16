@@ -233,6 +233,20 @@ func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccount
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if len(customers) == 0 {
+		return customers, nil
+	}
+	customerIDs := make([]string, len(customers))
+	for i, c := range customers {
+		customerIDs[i] = c.ID
+	}
+	assigned, apiErr := s.repos.NewPriceListRepo().CustomerListIDsByAccounts(ctx, identity.Target.AccountID, customerIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, c := range customers {
+		c.PriceListIDs = nonNil(assigned[c.ID])
+	}
 	return customers, nil
 }
 
@@ -418,6 +432,19 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 					return apiErr
 				}
 				if apiErr := txCustomerRepo.InsertPriceGroup(txCtx, priceGroupRelID, relationID, pgID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if len(params.CustomerPriceGroupIDs) > 0 {
+				if apiErr := syncLegacyCustomerPriceGroups(txCtx, txSvc.repos, params.OwnerAccountID, relationID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.PriceListIDs != nil {
+				if apiErr := checkAssignableLists(txCtx, txSvc.repos, params.OwnerAccountID, "price_list_ids", params.PriceListIDs, nil); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := assignCustomerLists(txCtx, txSvc.repos, params.OwnerAccountID, relationID, params.PriceListIDs); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -669,6 +696,21 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 						return apiErr
 					}
 				}
+				if apiErr := syncLegacyCustomerPriceGroups(txCtx, txSvc.repos, params.OwnerAccountID, relationID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.HasPriceListIDs {
+				held, apiErr := txSvc.repos.NewPriceListRepo().CustomerListIDs(txCtx, []string{relationID})
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := checkAssignableLists(txCtx, txSvc.repos, params.OwnerAccountID, "price_list_ids", params.PriceListIDs, held[relationID]); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := assignCustomerLists(txCtx, txSvc.repos, params.OwnerAccountID, relationID, params.PriceListIDs); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Re-fetch customer to include all updated data for audit and response.
@@ -781,6 +823,9 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 			return apiErr
 		}
 
+		if apiErr := dropCustomerPriceLists(txCtx, txSvc.repos, params.OwnerAccountID, []string{relationID}); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txSvc.repos.NewCustomerRepo().Delete(txCtx, params.OwnerAccountID, params.CustomerAccountID); apiErr != nil {
 			return apiErr
 		}
@@ -855,6 +900,17 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 			}
 		}
 
+		var relationIDs []string
+		for _, customerID := range params.CustomerIDs {
+			relationID, apiErr := txSvc.repos.NewCustomerRepo().GetRelationID(txCtx, params.OwnerAccountID, customerID)
+			if apiErr != nil {
+				return apiErr
+			}
+			relationIDs = append(relationIDs, relationID)
+		}
+		if apiErr := dropCustomerPriceLists(txCtx, txSvc.repos, params.OwnerAccountID, relationIDs); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txSvc.repos.NewCustomerRepo().BulkDelete(txCtx, params.OwnerAccountID, params.CustomerIDs); apiErr != nil {
 			return apiErr
 		}
@@ -1531,8 +1587,15 @@ func mergeCustomersInTx(ctx context.Context, repos domain.RepoFactory, ownerAcco
 		}
 	}
 
-	// Phase 4: Delete source notification preferences (user-bound, can't transfer).
+	// Phase 4: Delete source notification preferences (user-bound, can't transfer). The sources' own price lists
+	// and list assignments are discarded; the target's price groups may have grown.
 	if apiErr := customerRepo.DeleteNotificationPreferences(ctx, sourceRelationIDs); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := dropCustomerPriceLists(ctx, repos, ownerAccountID, sourceRelationIDs); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := syncLegacyCustomerPriceGroups(ctx, repos, ownerAccountID, targetRelationID); apiErr != nil {
 		return nil, apiErr
 	}
 
@@ -1836,4 +1899,16 @@ func managedRecipientsAuditValue(refs []domain.NotificationRecipientRef) []manag
 	}
 	slices.SortFunc(out, func(a, b managedRecipientAuditValue) int { return strings.Compare(a.AccountUserID, b.AccountUserID) })
 	return out
+}
+
+func (s *customerSvcImpl) PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError) {
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil {
+		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+	if len(customerAccountIDs) == 0 || !identity.IsTargetAccountSet() {
+		return map[string][]string{}, nil
+	}
+	assigned, apiErr := s.repos.NewPriceListRepo().CustomerListIDsByAccounts(ctx, identity.Target.AccountID, customerAccountIDs)
+	return assigned, apiErr
 }

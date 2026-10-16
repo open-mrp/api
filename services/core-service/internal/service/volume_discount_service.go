@@ -242,6 +242,9 @@ func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params
 				return apiErr
 			}
 			result = created
+			if apiErr := syncLegacyVolumeDiscount(txCtx, txSvc.repos, params.AccountID, discountID); apiErr != nil {
+				return apiErr
+			}
 
 			created, apiErr = txRepo.Get(txCtx, domain.GetVolumeDiscountParams{
 				AccountID:        params.AccountID,
@@ -360,6 +363,9 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 				return apiErr
 			}
 			result = updated
+			if apiErr := syncLegacyVolumeDiscount(txCtx, txSvc.repos, params.AccountID, params.VolumeDiscountID); apiErr != nil {
+				return apiErr
+			}
 
 			// Diffed against a snapshot loaded with the same includes as `old`, not against
 			// `updated` — the repository only hydrates the associations the caller asked for,
@@ -445,6 +451,9 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 			AccountID:        accountID,
 			VolumeDiscountID: volumeDiscountID,
 		}); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := syncLegacyVolumeDiscount(txCtx, txSvc.repos, accountID, volumeDiscountID); apiErr != nil {
 			return apiErr
 		}
 

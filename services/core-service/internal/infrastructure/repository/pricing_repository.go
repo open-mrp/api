@@ -94,10 +94,29 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 	}
 	bundle.ItemUnits = itemUnits
 
+	// --- Price-list rules, once the account's legacy prices are mirrored -----
+	synced, apiErr := NewPriceListRepo(r.queries).IsLegacySynced(ctx, params.OwnerAccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if synced {
+		bundle.UsesPriceLists = true
+		rules, apiErr := r.loadPricingRules(ctx, params.OwnerAccountID, params.BuyerAccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		bundle.Rules = rules
+	}
+
 	// --- Units (conversion data) --------------------------------------------
-	// Collect every unit id we may need: each line's ordered unit, every product's base denominator unit and every
-	// item's stocking unit.
+	// Collect every unit id we may need: each line's ordered unit, every product's base denominator unit, every
+	// item's stocking unit and the units rules are priced or counted in.
 	unitIDSet := make(map[string]struct{})
+	for _, rule := range bundle.Rules {
+		for _, id := range rule.Price.UnitIDs() {
+			unitIDSet[id] = struct{}{}
+		}
+	}
 	for _, u := range itemUnits {
 		if u.StockingUnitID != "" {
 			unitIDSet[u.StockingUnitID] = struct{}{}
@@ -129,6 +148,10 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 				IsBaseUnit:        row.IsBaseUnit,
 			}
 		}
+	}
+
+	if synced {
+		return bundle, nil
 	}
 
 	// --- Account prices (buyer + parent account) ----------------------------
@@ -265,6 +288,32 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 	}
 
 	return bundle, nil
+}
+
+// loadPricingRules is every rule of the active lists that apply to the buyer, with where each list applies from.
+func (r *pricingRepoImpl) loadPricingRules(ctx context.Context, ownerAccountID, buyerAccountID string) ([]*domain.PricingRule, *apierror.APIError) {
+	repo := NewPriceListRepo(r.queries)
+	applicable, apiErr := repo.ApplicableLists(ctx, ownerAccountID, []string{buyerAccountID})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	sources := applicable[buyerAccountID]
+	if len(sources) == 0 {
+		return nil, nil
+	}
+	listIDs := make([]string, 0, len(sources))
+	for id := range sources {
+		listIDs = append(listIDs, id)
+	}
+	rules, apiErr := repo.GetRulesByListIDs(ctx, listIDs)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	out := make([]*domain.PricingRule, len(rules))
+	for i, rule := range rules {
+		out[i] = &domain.PricingRule{PriceListRule: rule, Source: sources[rule.PriceListID]}
+	}
+	return out, nil
 }
 
 func dedupe(in []string) []string {

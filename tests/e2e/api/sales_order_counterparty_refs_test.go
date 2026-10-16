@@ -77,7 +77,7 @@ func TestSalesOrderCounterpartyRefs_UpdateRefusesOnesTheAccountCannotUse(t *test
 	}
 	foreignAddress := post(addressesPath, map[string]any{"name": uniqueName("e2e-foreign-addr"), "country": "US"})
 	foreignDiscount := post(orderDiscountsPath, map[string]any{
-		"name": uniqueName("e2e-foreign-ords"), "code": uniqueName("E2EFOREIGN"), "discount_type": "percentage", "percentage": "0.1",
+		"name": uniqueName("e2e-foreign-ords"), "code": uniqueName("E2EFOREIGN"), "discount": percentOff("10"),
 	})
 	foreignCustomer := tenantBCustomer(t)
 	otherCustomersAddress := customerBillToAddressID(t, setupOrderCustomer(t))

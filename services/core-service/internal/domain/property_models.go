@@ -168,13 +168,15 @@ var PropertyReferences = RegisterReferences(References{
 	},
 })
 
-// AttributeReferences blocks deleting an attribute that is assigned or that scopes a price.
+// AttributeReferences blocks deleting an attribute that is assigned or that scopes a price-list rule (legacy account
+// prices and volume discounts mirror into rules).
 var AttributeReferences = RegisterReferences(References{
 	Noun:       "attribute",
 	Archivable: true,
 	Probes: []ReferenceProbe{
 		{Label: "items", Table: "_item_attributes", Column: "A"},
-		{Label: "account prices", Table: "account_price_attribute", Column: "attribute_id"},
-		{Label: "volume discounts", Table: "_quantity_discounts_attributes", Column: "A"},
+		{Label: "price-list rules", Table: "price_list_rule_attribute", Column: "attribute_id"},
+		{Label: "price-list rules", Table: "account_price_attribute", Column: "attribute_id"},
+		{Label: "price-list rules", Table: "_quantity_discounts_attributes", Column: "A"},
 	},
 })

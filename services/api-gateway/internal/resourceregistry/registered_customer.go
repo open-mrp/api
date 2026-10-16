@@ -19,6 +19,17 @@ func init() {
 				c.Group = v.(*apiresource.AccountGroup)
 			}),
 			{Key: "price_groups", Populate: populatePriceGroupsOnCustomer},
+			{
+				Key:         "price_lists",
+				Target:      constants.ObjectTypePriceList,
+				Cardinality: include.CardinalityList,
+				ExtractIDs:  metaIDs(constants.ObjectTypeCustomer, func(p any) string { return p.(*apiresource.Customer).ID }, resourceloaders.CustomerMetaPriceListIDs),
+				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
+					c := parent.(*apiresource.Customer)
+					ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, resourceloaders.CustomerMetaPriceListIDs)
+					c.PriceLists = apiresource.NewList(loadedInOrder[apiresource.PriceList](ids, loaded), apiresource.PageInfo{})
+				},
+			},
 			customerRef("parent_customer", constants.ObjectTypeCustomer, resourceloaders.CustomerMetaParentCustomerID, func(c *apiresource.Customer, v any) {
 				c.ParentCustomer = v.(*apiresource.Customer)
 			}),

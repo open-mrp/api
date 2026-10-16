@@ -22,6 +22,8 @@ message AccountGroupInfo {
   google.protobuf.Timestamp updated_at = 9;
   // Inherited by every customer in the group that has not set its own lead time.
   optional int32 default_lead_time_days = 10;
+  // The price lists that apply to every customer in the group.
+  repeated string price_list_ids = 11;
 }
 message ListAccountGroupsRequest {
   optional string cursor = 1;
@@ -46,6 +48,8 @@ message CreateAccountGroupRequest {
   string freight_policy = 4;
   optional string description = 5;
   optional int32 default_lead_time_days = 6;
+  repeated string price_list_ids = 7;
+  bool has_price_list_ids = 8;
 }
 message CreateAccountGroupResponse {
   AccountGroupInfo account_group = 1;
@@ -57,6 +61,8 @@ message UpdateAccountGroupRequest {
   optional string commission_policy = 4;
   optional string freight_policy = 5;
   optional Int32Patch default_lead_time_days = 6;
+  repeated string price_list_ids = 7;
+  bool has_price_list_ids = 8;
 }
 message UpdateAccountGroupResponse {
   AccountGroupInfo account_group = 1;

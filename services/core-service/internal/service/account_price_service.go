@@ -280,6 +280,9 @@ func (s *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, params dom
 				return apiErr
 			}
 			result = created
+			if apiErr := syncLegacyAccountPrice(txCtx, txSvc.repos, params.AccountID, created.ID); apiErr != nil {
+				return apiErr
+			}
 
 			changes := audit.ComputeChanges(nil, created)
 
@@ -361,6 +364,9 @@ func (s *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, params dom
 				return apiErr
 			}
 			result = updated
+			if apiErr := syncLegacyAccountPrice(txCtx, txSvc.repos, params.AccountID, updated.ID); apiErr != nil {
+				return apiErr
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 
@@ -434,6 +440,9 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 		}
 
 		if apiErr := txSvc.repos.NewAccountPriceRepo().Delete(txCtx, accountID, accountPriceID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := syncLegacyAccountPrice(txCtx, txSvc.repos, accountID, accountPriceID); apiErr != nil {
 			return apiErr
 		}
 

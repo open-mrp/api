@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+
 	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -64,6 +66,9 @@ func NewAccountPriceSvc(config *AccountPriceSvcConfig) AccountPriceSvc {
 }
 
 func (m *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListAccountPricesRequest{
 		Cursor:             req.Cursor,
 		Limit:              req.Limit,
@@ -91,6 +96,9 @@ func (m *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, req *ListAc
 }
 
 func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetAccountPriceRequest{
 		Id: req.AccountPriceID,
 	}
@@ -111,6 +119,9 @@ func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *Retrieve
 }
 
 func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreateAccountPriceRequest{
 		RecipientAccountId:    req.RecipientAccountID,
 		ProductLineId:         req.ProductLineID,
@@ -137,6 +148,9 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 }
 
 func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdateAccountPriceRequest{
 		Id:                 req.AccountPriceID,
 		RecipientAccountId: req.RecipientAccountID.Ptr(),
@@ -173,6 +187,9 @@ func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *Updat
 }
 
 func (m *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteAccountPriceRequest{
 		Id: req.AccountPriceID,
 	}
@@ -255,6 +272,9 @@ func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 
 // ExportPriceList accepts the export and returns the job that tracks it. The document is built by the export worker, which prices the whole catalog against one pricing bundle rather than a request's worth of round trips.
 func (m *accountPriceSvcImpl) ExportPriceList(ctx context.Context, req *ExportPriceListRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, accountPricesRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountPriceSvcTracer, "service.account_prices.export_price_list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportPriceListResponse, error) {
 			return m.coreClient.ExportPriceList(ctx, &pb.ExportPriceListRequest{CustomerAccountId: req.CustomerID}, opts...)

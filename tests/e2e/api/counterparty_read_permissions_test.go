@@ -61,8 +61,6 @@ var counterpartyReads = []counterpartyRead{
 	counterpartyList("list picks", "picks:read", "/v1/operations/picks"),
 	counterpartySellerRecord("list shipment lines", "shipments:read", "/v1/operations/shipments/"+SeedShipmentID+"/lines"),
 	counterpartySellerRecord("retrieve shipment line", "shipments:read", "/v1/operations/shipments/"+SeedShipmentID+"/lines/"+SeedShipmentLineID),
-	counterpartyList("list account prices", "discounts:read", "/v1/sales/account-prices"),
-	counterpartySellerRecord("retrieve account price", "discounts:read", "/v1/sales/account-prices/"+SeedAccountPriceID),
 	counterpartyList("list addresses", "addresses:read", addressesPath),
 	{name: "retrieve address", own: "addresses:read", path: addressesPath + "/" + SeedAddressID,
 		inCustomer: counterpartyTarget{addressesPath + "/" + SeedAddressID, http.StatusOK},
@@ -73,8 +71,6 @@ var counterpartyReads = []counterpartyRead{
 	counterpartyList("list order discounts", "discounts:read", "/v1/sales/order-discounts"),
 	counterpartyList("list sales orders", "sales_orders:read", salesOrdersPath),
 	counterpartySellerRecord("retrieve sales order", "sales_orders:read", salesOrdersPath+"/"+SeedSalesOrderID),
-	counterpartyList("list volume discounts", "discounts:read", "/v1/sales/volume-discounts"),
-	counterpartySellerRecord("retrieve volume discount", "discounts:read", "/v1/sales/volume-discounts/"+SeedVolumeDiscountID),
 }
 
 // counterpartyRoles hands out one role-scoped client per permission set, shared by the subtests that need it.

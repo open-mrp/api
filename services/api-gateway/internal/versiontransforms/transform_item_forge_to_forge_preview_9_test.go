@@ -1,6 +1,8 @@
 package versiontransforms
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -91,11 +93,30 @@ func TestPreview9_ItemListFilters(t *testing.T) {
 	assert.Equal(t, "2026-01-01T00:00:00Z", q.Get("created_after"))
 	assert.Equal(t, "2026-02-01T00:00:00Z", q.Get("created_before"))
 	assert.Equal(t, []string{"ac_sup"}, q["supplier_ids[]"])
-	assert.Equal(t, []string{"active"}, q["statuses[]"], "archived items are the ones preview.9 hid as deleted")
 	for _, k := range []string{"starts_at", "ends_at", "supplier_id"} {
 		assert.False(t, q.Has(k))
 	}
+	assert.False(t, q.Has("statuses[]"), "the status default is the wrapper's, which can tell the list from create")
+}
 
-	other := version.TransformQuery(apiversion.V1_0_Forge_Preview9, apiversion.V1_0_Forge, constants.ObjectTypeItem, "/v1/catalog/items/{id}", url.Values{})
-	assert.False(t, other.Has("statuses[]"), "only the list is filtered")
+func TestPreview9_ItemListActiveOnly(t *testing.T) {
+	t.Parallel()
+
+	serve := func(method, target, ver string) url.Values {
+		var seen url.Values
+		h := Preview9ItemListActiveOnly(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { seen = r.URL.Query() }))
+		r := httptest.NewRequest(method, target, nil)
+		if ver != "" {
+			r.Header.Set(apiversion.Header, ver)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+		return seen
+	}
+	p9 := apiversion.V1_0_Forge_Preview9.String()
+
+	assert.Equal(t, []string{"active"}, serve(http.MethodGet, itemsRoute, p9)["statuses[]"], "archived items are the ones preview.9 hid as deleted")
+	assert.Equal(t, []string{"archived"}, serve(http.MethodGet, itemsRoute+"?statuses[]=archived", p9)["statuses[]"], "a status the caller names is kept")
+	assert.False(t, serve(http.MethodPost, itemsRoute, p9).Has("statuses[]"), "create refuses a statuses parameter")
+	assert.False(t, serve(http.MethodGet, itemsRoute+"/itm_1", p9).Has("statuses[]"), "only the list is filtered")
+	assert.False(t, serve(http.MethodGet, itemsRoute, apiversion.V1_0_Forge.String()).Has("statuses[]"), "forge lists every status")
 }

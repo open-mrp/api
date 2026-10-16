@@ -15,8 +15,12 @@ import (
 	"github.com/open-mrp/apikit/db"
 )
 
-// maxSetOrderUnitsItems bounds how many items one Set Order Units job writes in its one transaction.
-const maxSetOrderUnitsItems = 10000
+// maxSetOrderUnitsItems bounds how many items one Set Order Units job writes.
+const maxSetOrderUnitsItems = 1000
+
+// setOrderUnitsChunkSize is how many items one Set Order Units transaction writes. Each item costs a handful of
+// short statements, so a chunk commits in about a second.
+const setOrderUnitsChunkSize = 100
 
 // SetItemOrderUnits validates the request, matches the items and records them on a job to poll.
 func (s *itemSvcImpl) SetItemOrderUnits(ctx context.Context, params domain.SetOrderUnitsParams) (*domain.Job, *apierror.APIError) {
@@ -39,6 +43,7 @@ func (s *itemSvcImpl) setOrderUnitsSpec() bulkOperationSpec[domain.SetOrderUnits
 		Validate:         validateSetOrderUnits,
 		Resolve:          resolveSetOrderUnits,
 		Write:            writeSetOrderUnits,
+		ChunkSize:        setOrderUnitsChunkSize,
 	}
 }
 
@@ -133,7 +138,8 @@ func resolveSetOrderUnits(ctx context.Context, repos domain.RepoFactory, account
 }
 
 // writeSetOrderUnits replaces each matched item's order units in its own savepoint, so an item they don't suit fails
-// alone.
+// alone. An item that already has the requested units is reported without being written again, so a job re-run after
+// failing part-way skips the chunks it already committed.
 func writeSetOrderUnits(txCtx context.Context, txRepos domain.RepoFactory, sp db.SavepointRunner, accountID string, rows []domain.ResolvedSetOrderUnitsRow) (BulkWriteResult, *apierror.APIError) {
 	results := make([]domain.RowResult, 0, len(rows))
 	var rowErrors []apierror.RowError
@@ -153,6 +159,9 @@ func writeSetOrderUnits(txCtx context.Context, txRepos domain.RepoFactory, sp db
 			if apiErr != nil {
 				return apiErr
 			}
+			if itemUnitsUnchanged(before.Units, plan) {
+				return nil
+			}
 			if apiErr := storeItemUnits(spCtx, txRepos, accountID, row.ItemID, plan); apiErr != nil {
 				return apiErr
 			}
@@ -165,6 +174,12 @@ func writeSetOrderUnits(txCtx context.Context, txRepos domain.RepoFactory, sp db
 		results = append(results, newRowResult(i, row.ItemID, false))
 	}
 	return BulkWriteResult{Results: results, Errors: rowErrors, WrittenIDs: resultIDs(results)}, nil
+}
+
+// itemUnitsUnchanged reports whether storing plan would leave the item's stored units as they are. Units still
+// derived from unit groups are never unchanged: storing them is the write.
+func itemUnitsUnchanged(current, plan *domain.ItemUnits) bool {
+	return current != nil && current.Stored && len(audit.ComputeChanges(current, plan)) == 0
 }
 
 // publishItemUnitsAudit records an update event for the item's changes since before.

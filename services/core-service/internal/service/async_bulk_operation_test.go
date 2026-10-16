@@ -499,3 +499,136 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_SettledJobIsSkipped() {
 	suite.Nil(apiErr)
 	suite.False(writeCalled)
 }
+
+// A chunked spec writes each chunk in its own transaction, in order, and completes the job
+// once with every row's outcome indexed as the request numbered it.
+func (suite *AsyncBulkEngineTestSuite) TestExecute_ChunksWriteSeparatelyAndCompleteOnce() {
+	accountID := genTestID(suite.T(), id.AccountIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
+	ctx := internalProductionStepCtx(accountID)
+	rows := []fakeRow{{Name: "a"}, {Name: "b"}, {Name: "c"}, {Name: "d"}, {Name: "e"}}
+
+	suite.loadJob(jobID, accountID, rows, nil)
+	suite.jobSvc.EXPECT().StartJob(gomock.Any(), gomock.Any()).Return(time.Now(), nil).Times(1)
+	var completeResults []domain.RowResult
+	suite.jobSvc.EXPECT().CompleteJob(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CompleteJobParams) *apierror.APIError {
+			completeResults = params.Results
+			return nil
+		}).Times(1)
+
+	var chunks [][]fakeRow
+	var afterSeen []string
+	spec := fakeSpec(nil, nil, nil, nil, nil, nil, &afterSeen)
+	spec.ChunkSize = 2
+	spec.Write = func(_ context.Context, _ domain.RepoFactory, _ db.SavepointRunner, _ string, chunk []fakeRow) (BulkWriteResult, *apierror.APIError) {
+		chunks = append(chunks, chunk)
+		var res BulkWriteResult
+		for i, r := range chunk {
+			if r.Name == "d" {
+				res.Errors = append(res.Errors, apierror.RowError{Index: i, Error: apierror.NewValidationError("d failed").Object()})
+				continue
+			}
+			res.Results = append(res.Results, newRowResult(i, "id_"+r.Name, false))
+		}
+		res.WrittenIDs = resultIDs(res.Results)
+		return res, nil
+	}
+
+	apiErr := executeBulkOperation(ctx, suite.deps, spec, domain.BulkOperationJobEvent{JobID: jobID})
+
+	suite.Nil(apiErr)
+	suite.Equal([][]fakeRow{{{Name: "a"}, {Name: "b"}}, {{Name: "c"}, {Name: "d"}}, {{Name: "e"}}}, chunks)
+	suite.Require().Len(completeResults, 5)
+	for i, r := range completeResults {
+		suite.Equal(i, r.Index)
+	}
+	suite.Equal("id_e", completeResults[4].ID)
+	suite.True(completeResults[3].Failed())
+	suite.Equal([]string{"id_a", "id_b", "id_c", "id_e"}, afterSeen)
+}
+
+// A chunk that fails fails the job and stops: the chunks before it stay committed and the
+// rest are not attempted, so a redelivery re-runs the job from the first chunk.
+func (suite *AsyncBulkEngineTestSuite) TestExecute_ChunkFailureFailsTheJobAndStops() {
+	accountID := genTestID(suite.T(), id.AccountIDPrefix)
+	jobID := genTestID(suite.T(), id.AsyncJobIDPrefix)
+	ctx := internalProductionStepCtx(accountID)
+	writeErr := apierror.NewInternalError(nil, "connection lost")
+
+	suite.loadJob(jobID, accountID, []fakeRow{{Name: "a"}, {Name: "b"}, {Name: "c"}}, nil)
+	suite.jobSvc.EXPECT().StartJob(gomock.Any(), gomock.Any()).Return(time.Now(), nil).Times(1)
+	// No CompleteJob is stubbed: reaching it would fail this test.
+	suite.jobSvc.EXPECT().FailJob(gomock.Any(), gomock.Any()).Times(1)
+
+	calls := 0
+	spec := fakeSpec(nil, nil, nil, nil, nil, nil, nil)
+	spec.ChunkSize = 1
+	spec.Write = func(context.Context, domain.RepoFactory, db.SavepointRunner, string, []fakeRow) (BulkWriteResult, *apierror.APIError) {
+		calls++
+		if calls == 2 {
+			return BulkWriteResult{}, writeErr
+		}
+		return BulkWriteResult{Results: []domain.RowResult{}}, nil
+	}
+
+	apiErr := executeBulkOperation(ctx, suite.deps, spec, domain.BulkOperationJobEvent{JobID: jobID})
+
+	suite.Same(writeErr, apiErr)
+	suite.Equal(2, calls)
+}
+
+func TestChunkBounds(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		n, size int
+		want    []chunkRange
+	}{
+		{0, 100, []chunkRange{{0, 0}}},
+		{5, 0, []chunkRange{{0, 5}}},
+		{5, 5, []chunkRange{{0, 5}}},
+		{5, 2, []chunkRange{{0, 2}, {2, 4}, {4, 5}}},
+		{1000, 100, nil},
+	}
+	for _, c := range cases {
+		got := chunkBounds(c.n, c.size)
+		if c.want == nil {
+			if len(got) != 10 || got[9] != (chunkRange{900, 1000}) {
+				t.Fatalf("chunkBounds(%d, %d) = %v", c.n, c.size, got)
+			}
+			continue
+		}
+		if len(got) != len(c.want) {
+			t.Fatalf("chunkBounds(%d, %d) = %v, want %v", c.n, c.size, got, c.want)
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Fatalf("chunkBounds(%d, %d) = %v, want %v", c.n, c.size, got, c.want)
+			}
+		}
+	}
+}
+
+func TestItemUnitsUnchanged(t *testing.T) {
+	t.Parallel()
+	stored := &domain.ItemUnits{StockingUnitID: "unit_ea", DefaultOrderUnitID: "unit_ea", Stored: true,
+		OrderUnits: []domain.ItemOrderUnit{{UnitID: "unit_bx", PortalVisibility: constants.CustomerPortalVisibilityVisible}}}
+	same := &domain.ItemUnits{StockingUnitID: "unit_ea", DefaultOrderUnitID: "unit_ea",
+		OrderUnits: []domain.ItemOrderUnit{{UnitID: "unit_bx", PortalVisibility: constants.CustomerPortalVisibilityVisible}}}
+	if !itemUnitsUnchanged(stored, same) {
+		t.Fatal("an item already holding the plan should be skipped")
+	}
+	hidden := &domain.ItemUnits{StockingUnitID: "unit_ea", DefaultOrderUnitID: "unit_ea",
+		OrderUnits: []domain.ItemOrderUnit{{UnitID: "unit_bx", PortalVisibility: constants.CustomerPortalVisibilityHidden}}}
+	if itemUnitsUnchanged(stored, hidden) {
+		t.Fatal("a changed order unit must be written")
+	}
+	derived := *stored
+	derived.Stored = false
+	if itemUnitsUnchanged(&derived, same) {
+		t.Fatal("units still derived from unit groups must be stored")
+	}
+	if itemUnitsUnchanged(nil, same) {
+		t.Fatal("an item with no units must be written")
+	}
+}

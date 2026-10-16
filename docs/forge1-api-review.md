@@ -232,7 +232,7 @@ Items (materials, parts, products, generic items)
 - [x] Purchasing (receiving, inventory adjustments) uses the same allowed set as orders.
 
 New endpoints
-- [x] `POST /v1/catalog/items/actions/set-order-units` — `{ filter: { item_ids | product_line_ids | category_ids | attribute filters }, order_units, default_order_unit_id }` → 202 job. Replaces both on every matching item. *(ITM2: filters combine (all must match), at most 10,000 items; an item the units don't suit fails its own result row.)*
+- [x] `POST /v1/catalog/items/actions/set-order-units` — `{ filter: { item_ids | product_line_ids | category_ids | attribute filters }, order_units, default_order_unit_id }` → 202 job. Replaces both on every matching item. *(ITM2: filters combine (all must match), at most 1,000 items (FIX-itm2: written in committed batches of 100); an item the units don't suit fails its own result row.)*
 - [x] `POST /v1/catalog/items/{id}/actions/change-stocking-unit` — `{ stocking_unit_id, mode: convert | relabel }` → **always 202 + async job** (some items restate 100K+ rows). `convert`: same dimension only; restates levels, lots, rates by ratio. `relabel`: numbers kept, any dimension; order units of another dimension are removed and reported in the async job result. One audit event on the item, mode in metadata. *(ITM2: restates the inventory ledger and logs, production quantities, the order point and the item's price, cost and burn rate in 500-row statements; convert keeps the old unit as an order unit. Order, invoice and pick lines keep their own units.)*
 
 Later, additive

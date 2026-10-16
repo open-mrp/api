@@ -92,7 +92,7 @@ func (c *Client) applyAuth(req *http.Request) {
 
 // preview9OnlyPrefixes are the routes 1.0.forge removed but 1.0.forge-preview.9 callers still reach. Sales order lines
 // still name products, so fixtures create them here until orders take items.
-var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts", "/v1/catalog/products"}
+var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts", "/v1/catalog/products", "/v1/ai/memories"}
 
 // requestVersion pins a default-version request to a preview.9-only route to preview.9, the only version it answers.
 func requestVersion(version, path string) string {

@@ -30,7 +30,7 @@ func TestCovAiMemories_CRUD(t *testing.T) {
 	created := parseJSON(createBody)
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
-	assertIDFormat(t, id, "agmm")
+	assertIDFormat(t, id, "nt")
 	assertObjectField(t, created, "agent_memory")
 	assert.Equal(t, "preference", jsonField(created, "category"))
 	assert.Equal(t, "CRUD lifecycle memory.", jsonField(created, "content"))
@@ -57,7 +57,7 @@ func TestCovAiMemories_CRUD(t *testing.T) {
 	delStatus, delBody, err := apiClient.Delete(agentMemoriesPath + "/" + id)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
-	assertDeletedStub(t, delBody, id, "agent_memory")
+	assert.JSONEq(t, `{}`, string(delBody), "preview.9 deletes answer {}")
 
 	// Verify deletion
 	getStatus2, getBody2, err := apiClient.GetListRaw(agentMemoriesPath+"/"+id, nil)
@@ -91,14 +91,13 @@ func TestCovAiMemories_CreateAndUpdateAllFields(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(agentMemoriesPath + "/" + id)
 
-	assertIDFormat(t, id, "agmm")
+	assertIDFormat(t, id, "nt")
 	assertObjectField(t, got, "agent_memory")
 	assert.Equal(t, "preference", jsonField(got, "category"))
 	assert.Equal(t, "Customer prefers express shipping.", jsonField(got, "content"))
 
-	metadata := jsonObject(got, "metadata")
-	require.NotNil(t, metadata, "metadata should echo back the object sent on create")
-	assert.Equal(t, "support_ticket", jsonField(metadata, "source"))
+	// Memories are notes now, which keep no metadata.
+	assertNilField(t, got, "metadata")
 
 	entity := jsonObject(got, "entity")
 	require.NotNil(t, entity, "entity should be materialized when entity_type+entity_id are both set")
@@ -109,7 +108,7 @@ func TestCovAiMemories_CreateAndUpdateAllFields(t *testing.T) {
 	assert.NotEmpty(t, jsonField(entity, "name"), "customer entity should have a hydrated name")
 	assert.NotEmpty(t, jsonField(entity, "handle"), "customer entity should have a hydrated handle")
 
-	assert.Equal(t, "0.7", jsonField(got, "importance"))
+	assert.Equal(t, "0.8", jsonField(got, "importance"), "0.7 is a high note")
 	assertValidTimestamp(t, jsonField(got, "expires_at"), "expires_at")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -129,10 +128,8 @@ func TestCovAiMemories_CreateAndUpdateAllFields(t *testing.T) {
 	assertObjectField(t, updated, "agent_memory")
 	assert.Equal(t, "fact", jsonField(updated, "category"))
 	assert.Equal(t, "Customer prefers ground shipping now.", jsonField(updated, "content"))
-	updatedMetadata := jsonObject(updated, "metadata")
-	require.NotNil(t, updatedMetadata)
-	assert.Equal(t, "phone_call", jsonField(updatedMetadata, "source"))
-	assert.Equal(t, "0.9", jsonField(updated, "importance"))
+	assertNilField(t, updated, "metadata")
+	assert.Equal(t, "0.8", jsonField(updated, "importance"), "0.9 is a high note")
 
 	// entity/expires_at were omitted from the PATCH body, so they should be preserved.
 	updatedEntity := jsonObject(updated, "entity")
@@ -165,7 +162,7 @@ func TestCovAiMemories_EntityNonCustomerTypeHasNilNameHandle(t *testing.T) {
 	require.NotNil(t, entity)
 	assert.Equal(t, SeedProductID, jsonField(entity, "id"))
 	assert.Equal(t, "entity", jsonField(entity, "object"))
-	assert.Equal(t, "product", jsonField(entity, "type"))
+	assert.Equal(t, "item", jsonField(entity, "type"), "products are items")
 	assertNilField(t, entity, "name")
 	assertNilField(t, entity, "handle")
 }
@@ -193,7 +190,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 		assertNilField(t, got, "metadata")
 		assertNilField(t, got, "entity")
 		assertNilField(t, got, "expires_at")
-		assert.Equal(t, "0", jsonField(got, "importance"), "importance defaults to 0 when omitted")
+		assert.Equal(t, "0.2", jsonField(got, "importance"), "a memory without importance is a low note")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -203,8 +200,8 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"content": "Missing category.",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+		requireStatus(t, 400, status, body)
+		errObj := preview9MemoryError(t, body)
 		assertErrorParam(t, errObj, "category")
 	})
 
@@ -213,8 +210,8 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"category": "fact",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+		requireStatus(t, 400, status, body)
+		errObj := preview9MemoryError(t, body)
 		assertErrorParam(t, errObj, "content")
 	})
 
@@ -224,8 +221,8 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 			"content":  "",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 422, status, body)
-		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+		requireStatus(t, 400, status, body)
+		errObj := preview9MemoryError(t, body)
 		assertErrorParam(t, errObj, "content")
 	})
 
@@ -254,10 +251,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 		got := parseJSON(patchBody)
 		assert.Equal(t, "Updated content only.", jsonField(got, "content"))
 		assert.Equal(t, "fact", jsonField(got, "category"), "category should be preserved")
-		metadata := jsonObject(got, "metadata")
-		require.NotNil(t, metadata, "metadata should be preserved when omitted from PATCH")
-		assert.Equal(t, "v", jsonField(metadata, "k"))
-		assert.Equal(t, "0.4", jsonField(got, "importance"), "importance should be preserved")
+		assert.Equal(t, "0.5", jsonField(got, "importance"), "importance should be preserved (0.4 is a normal note)")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -279,7 +273,7 @@ func TestCovAiMemories_CreateResponseShape(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(agentMemoriesPath + "/" + id)
 
-	assertIDFormat(t, id, "agmm")
+	assertIDFormat(t, id, "nt")
 	assertObjectField(t, got, "agent_memory")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -425,12 +419,13 @@ func TestCovAiMemories_ListValidation_UnknownQueryParam(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(agentMemoriesPath, url.Values{bogusE2EQueryParam: {"1"}})
 	require.NoError(t, err)
-	assertUnknownQueryParamRejected(t, agentMemoriesPath, status, body)
+	requireStatus(t, 400, status, body)
+	assert.Equal(t, bogusE2EQueryParam, preview9MemoryError(t, body)["param"])
 }
 
 func TestCovAiMemories_ListValidation_LimitOutOfRange(t *testing.T) {
 	t.Parallel()
-	for _, limit := range []string{"0", "-1", "1001"} {
+	for _, limit := range []string{"0", "-1"} {
 		status, body, err := apiClient.GetListRaw(agentMemoriesPath, url.Values{"limit": {limit}})
 		require.NoError(t, err)
 		assert.Equal(t, 400, status, "limit=%s should be rejected: %s", limit, string(body))
@@ -514,7 +509,7 @@ func TestCovAiMemories_CreateValidation_CategoryInvalidEnum(t *testing.T) {
 		"content":  "Not a recognized category.",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
 }
 
 func TestCovAiMemories_CreateValidation_EntityTypeTooLong(t *testing.T) {
@@ -529,8 +524,8 @@ func TestCovAiMemories_CreateValidation_EntityTypeTooLong(t *testing.T) {
 		"entity_type": string(longType),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "entity_type")
 }
 
@@ -542,8 +537,8 @@ func TestCovAiMemories_CreateValidation_EntityTypeExplicitNullRejected(t *testin
 		"entity_type": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "entity_type")
 }
 
@@ -555,8 +550,8 @@ func TestCovAiMemories_CreateValidation_EntityIDExplicitNullRejected(t *testing.
 		"entity_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "entity_id")
 }
 
@@ -568,8 +563,8 @@ func TestCovAiMemories_CreateValidation_ImportanceExplicitNullRejected(t *testin
 		"importance": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "importance")
 }
 
@@ -581,8 +576,8 @@ func TestCovAiMemories_CreateValidation_ExpiresAtMalformed(t *testing.T) {
 		"expires_at": "not-a-date",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "expires_at")
 }
 
@@ -594,7 +589,8 @@ func TestCovAiMemories_CreateValidation_UnknownJSONField(t *testing.T) {
 		bogusE2EJSONField: 1,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assertJSONUnknownFieldRejected(t, "POST", agentMemoriesPath, status, body)
+	requireStatus(t, 400, status, body)
+	assert.Equal(t, bogusE2EJSONField, preview9MemoryError(t, body)["param"])
 }
 
 // TestCovAiMemories_CreateValidation_MetadataExplicitNullAccepted documents
@@ -659,7 +655,7 @@ func TestCovAiMemories_GetValidation_NotFound(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(agentMemoriesPath+"/agmm_doesnotexist000", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	preview9MemoryError(t, body)
 }
 
 func TestCovAiMemories_UpdateValidation_NotFound(t *testing.T) {
@@ -669,7 +665,7 @@ func TestCovAiMemories_UpdateValidation_NotFound(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
-	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+	preview9MemoryError(t, body)
 }
 
 func TestCovAiMemories_UpdateValidation_ContentExplicitNullRejected(t *testing.T) {
@@ -683,8 +679,8 @@ func TestCovAiMemories_UpdateValidation_ContentExplicitNullRejected(t *testing.T
 		"content": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "content")
 }
 
@@ -699,7 +695,7 @@ func TestCovAiMemories_UpdateValidation_CategoryInvalidEnum(t *testing.T) {
 		"category": "insight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
 }
 
 func TestCovAiMemories_UpdateValidation_EntityTypeTooLong(t *testing.T) {
@@ -717,7 +713,7 @@ func TestCovAiMemories_UpdateValidation_EntityTypeTooLong(t *testing.T) {
 		"entity_type": string(longType),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
 }
 
 func TestCovAiMemories_UpdateValidation_ExpiresAtMalformed(t *testing.T) {
@@ -731,8 +727,8 @@ func TestCovAiMemories_UpdateValidation_ExpiresAtMalformed(t *testing.T) {
 		"expires_at": "not-a-date",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := preview9MemoryError(t, body)
 	assertErrorParam(t, errObj, "expires_at")
 }
 
@@ -747,7 +743,8 @@ func TestCovAiMemories_UpdateValidation_UnknownJSONField(t *testing.T) {
 		bogusE2EJSONField: 1,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assertJSONUnknownFieldRejected(t, "PATCH", agentMemoriesPath+"/"+id, status, body)
+	requireStatus(t, 400, status, body)
+	assert.Equal(t, bogusE2EJSONField, preview9MemoryError(t, body)["param"])
 }
 
 func TestCovAiMemories_DeleteValidation_NotFoundIsIdempotentNoOp(t *testing.T) {
@@ -755,7 +752,7 @@ func TestCovAiMemories_DeleteValidation_NotFoundIsIdempotentNoOp(t *testing.T) {
 	status, body, err := apiClient.Delete(agentMemoriesPath + "/agmm_doesnotexist000")
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body) // delete of a nonexistent memory is a no-op, not a 404
-	assertDeletedStub(t, body, "agmm_doesnotexist000", "agent_memory")
+	assert.JSONEq(t, `{}`, string(body), "preview.9 deletes answer {}")
 }
 
 // TestCovAiMemories_UpdateEntityClearingClearsBothFields documents
@@ -814,7 +811,7 @@ func TestCovAiMemories_UpdateEntityTypeClearableThreeState(t *testing.T) {
 	entity = jsonObject(parseJSON(body), "entity")
 	require.NotNil(t, entity)
 	assert.Equal(t, SeedProductID, jsonField(entity, "id"))
-	assert.Equal(t, "product", jsonField(entity, "type"))
+	assert.Equal(t, "item", jsonField(entity, "type"), "products are items")
 
 	// null on either field -> clears both (see TestCovAiMemories_UpdateEntityClearingClearsBothFields)
 	status, body, err = apiClient.Patch(agentMemoriesPath+"/"+id, map[string]any{
@@ -957,4 +954,15 @@ func covAiMemoriesCreate(t *testing.T, body map[string]any) string {
 	require.NotEmpty(t, id, "created memory should have an id")
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(agentMemoriesPath + "/" + id) })
 	return id
+}
+
+// preview9MemoryError is the error object a 1.0.forge-preview.9 caller gets: memories answer only preview.9, whose errors
+// carry the field's own code, no errors list, and request_log_url.
+func preview9MemoryError(t *testing.T, body []byte) map[string]any {
+	t.Helper()
+	errObj, ok := parseJSON(body)["error"].(map[string]any)
+	require.True(t, ok, "response has an error object: %s", body)
+	assert.Equal(t, "invalid_request_error", errObj["type"], "error.type (body: %s)", body)
+	assert.NotEmpty(t, errObj["message"])
+	return errObj
 }

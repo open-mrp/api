@@ -261,6 +261,7 @@ var excludedPaths = []string{
 	"/v1/catalog/items/{id}/attributes",
 	"/v1/catalog/items/{id}/category",
 	"/v1/catalog/items/actions/bulk-create",
+	"/v1/ai/memories", // 1.0.forge-preview.9 only, over notes; covered by the agent memory and notes tests.
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

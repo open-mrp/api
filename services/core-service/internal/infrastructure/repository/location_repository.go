@@ -78,7 +78,8 @@ func (r *locationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids [
 	return locations, nil
 }
 
-// loadChildren sets each location's children, newest first, keeping at most limit per location (0 keeps all).
+// loadChildren sets each location's children, newest first, keeping at most limit per location (0 keeps all), and
+// with a full load the list cursor where the rest continue.
 func (r *locationRepoImpl) loadChildren(ctx context.Context, accountID string, locations []*domain.Location, limit int) *apierror.APIError {
 	if len(locations) == 0 {
 		return nil
@@ -103,13 +104,17 @@ func (r *locationRepoImpl) loadChildren(ctx context.Context, accountID string, l
 			continue
 		}
 		childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
-			ID:       cr.ID,
-			Name:     cr.Name,
-			TypeCode: cr.TypeCode,
+			ID:        cr.ID,
+			Name:      cr.Name,
+			TypeCode:  cr.TypeCode,
+			CreatedAt: cr.CreatedAt,
 		})
 	}
 	for _, loc := range locations {
 		loc.Children = childrenByParent[loc.ID]
+		loc.ChildrenNextCursor = embeddedNextCursor(loc.Children, limit,
+			func(c domain.LocationChild) time.Time { return c.CreatedAt },
+			func(c domain.LocationChild) string { return c.ID })
 	}
 	return nil
 }

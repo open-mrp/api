@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -150,4 +151,19 @@ func groupIsLarge(ctx context.Context, q sqlc.DBTX, accountID string, groupIDs [
     WHERE gr.owner_account_id = ? AND gr.account_group_id IN (`+placeholders(len(groupIDs))+`)
     LIMIT ?) probe`, append(append([]any{accountID}, stringArgs(groupIDs)...), groupOrderProbe)...).Scan(&n)
 	return n >= groupOrderProbe, err
+}
+
+// embeddedNextCursor is the list cursor after the last embedded item of a load that keeps limit items, one more than
+// it embeds: set when the load filled up, so following it continues newest first with no gap or repeat. Nil otherwise.
+func embeddedNextCursor[T any](items []T, limit int, createdAt func(T) time.Time, id func(T) string) *string {
+	if limit < 2 || len(items) < limit {
+		return nil
+	}
+	last := items[limit-2]
+	c := pagination.EncodeStringCursor(pagination.StringCursor{
+		OccurredAt: createdAt(last),
+		ID:         id(last),
+		Direction:  pagination.DirectionForward,
+	})
+	return &c
 }

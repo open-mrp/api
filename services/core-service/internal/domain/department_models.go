@@ -47,9 +47,13 @@ type Department struct {
 	LaborRateRowID   *string
 	ScanningStations []DepartmentScanningStation `audit:"scanning_stations"`
 	Machines         []DepartmentMachine         `audit:"machines"`
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	// ScanningStationsNextCursor and MachinesNextCursor continue the scanning station and machine lists after the
+	// loaded members; nil when every member was loaded.
+	ScanningStationsNextCursor *string
+	MachinesNextCursor         *string
+	AccountID                  string
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
 }
 
 // EmbeddedDepartmentMembers is how many machines and scanning stations a loaded department carries: one more than an

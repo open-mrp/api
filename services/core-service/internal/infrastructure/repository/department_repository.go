@@ -120,7 +120,7 @@ func mapGetDepartmentRow(row sqlc.GetDepartmentRow) *domain.Department {
 }
 
 // attachMembers loads the departments' scanning stations and machines, newest first, in one query apiece. A positive
-// limit keeps that many of each per department.
+// limit keeps that many of each per department, and with a full load the list cursor where the rest continue.
 func (r *departmentRepoImpl) attachMembers(ctx context.Context, accountID string, departments []*domain.Department, limit int) *apierror.APIError {
 	if len(departments) == 0 {
 		return nil
@@ -176,6 +176,12 @@ func (r *departmentRepoImpl) attachMembers(ctx context.Context, accountID string
 	for _, dept := range departments {
 		dept.ScanningStations = stationsByDept[dept.ID]
 		dept.Machines = machinesByDept[dept.ID]
+		dept.ScanningStationsNextCursor = embeddedNextCursor(dept.ScanningStations, limit,
+			func(s domain.DepartmentScanningStation) time.Time { return s.CreatedAt },
+			func(s domain.DepartmentScanningStation) string { return s.ID })
+		dept.MachinesNextCursor = embeddedNextCursor(dept.Machines, limit,
+			func(m domain.DepartmentMachine) time.Time { return m.CreatedAt },
+			func(m domain.DepartmentMachine) string { return m.ID })
 	}
 	return nil
 }

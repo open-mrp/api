@@ -18,6 +18,9 @@ import (
 
 var locationLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.location")
 
+// LocationChildrenCursorKey is the load meta key holding the list cursor after a location's embedded children.
+const LocationChildrenCursorKey = "children_next_cursor"
+
 func LoadLocations(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -43,6 +46,7 @@ func LoadLocations(ctx context.Context, ids []string) (map[string]any, *apierror
 			childIDs[i] = c.Id
 		}
 		meta.Set(constants.ObjectTypeLocation, loc.Id, "child_ids", childIDs)
+		meta.Set(constants.ObjectTypeLocation, loc.Id, LocationChildrenCursorKey, loc.GetChildrenNextCursor())
 	}
 	return out, nil
 }

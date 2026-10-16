@@ -263,6 +263,8 @@ message LocationInfo {
   optional string parent_type_code = 10;
   string status = 11;
   optional string address_id = 12;
+  // Location list cursor for the page after the embedded children; absent when they are all embedded.
+  optional string children_next_cursor = 13;
 }
 message LocationTypeInfo {
   string id = 1;

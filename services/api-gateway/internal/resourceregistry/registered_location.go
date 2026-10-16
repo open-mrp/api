@@ -74,7 +74,7 @@ func extractChildIDsFromLocation(ctx context.Context, parent any) []string {
 }
 
 // populateChildrenOnLocation embeds the first children; the loader carries one more than fit, so a longer list links
-// to the location list filtered to this parent.
+// to the location list filtered to this parent, continuing after the last embedded child.
 func populateChildrenOnLocation(ctx context.Context, parent any, loaded map[string]any) {
 	loc := parent.(*apiresource.Location)
 	ids, _ := include.GetLoadMeta(ctx).
@@ -87,5 +87,6 @@ func populateChildrenOnLocation(ctx context.Context, parent any, loaded map[stri
 		}
 	}
 
-	loc.Children = apiresource.NewEmbeddedList(items, false, resourceloaders.LocationChildrenListPath(loc.ID), nil)
+	loc.Children = apiresource.NewEmbeddedList(items, false, resourceloaders.LocationChildrenListPath(loc.ID),
+		metaCursor[apiresource.Location](ctx, constants.ObjectTypeLocation, loc.ID, resourceloaders.LocationChildrenCursorKey))
 }

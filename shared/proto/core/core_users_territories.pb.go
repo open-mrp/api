@@ -9,13 +9,12 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -2223,9 +2222,13 @@ type DepartmentInfo struct {
 	UpdatedAt        *timestamppb.Timestamp      `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	LocationTypeCode *string                     `protobuf:"bytes,10,opt,name=location_type_code,json=locationTypeCode,proto3,oneof" json:"location_type_code,omitempty"`
 	// Hourly labor rate for work done in this department; absent when none is set.
-	LaborRate     *UnitPrice `protobuf:"bytes,12,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	LaborRate *UnitPrice `protobuf:"bytes,12,opt,name=labor_rate,json=laborRate,proto3" json:"labor_rate,omitempty"`
+	// Machine list cursor for the page after the embedded machines; absent when they are all embedded.
+	MachinesNextCursor *string `protobuf:"bytes,13,opt,name=machines_next_cursor,json=machinesNextCursor,proto3,oneof" json:"machines_next_cursor,omitempty"`
+	// Scanning station list cursor for the page after the embedded stations; absent when they are all embedded.
+	ScanningStationsNextCursor *string `protobuf:"bytes,14,opt,name=scanning_stations_next_cursor,json=scanningStationsNextCursor,proto3,oneof" json:"scanning_stations_next_cursor,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *DepartmentInfo) Reset() {
@@ -2333,6 +2336,20 @@ func (x *DepartmentInfo) GetLaborRate() *UnitPrice {
 		return x.LaborRate
 	}
 	return nil
+}
+
+func (x *DepartmentInfo) GetMachinesNextCursor() string {
+	if x != nil && x.MachinesNextCursor != nil {
+		return *x.MachinesNextCursor
+	}
+	return ""
+}
+
+func (x *DepartmentInfo) GetScanningStationsNextCursor() string {
+	if x != nil && x.ScanningStationsNextCursor != nil {
+		return *x.ScanningStationsNextCursor
+	}
+	return ""
 }
 
 type ListDepartmentsRequest struct {
@@ -5474,7 +5491,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\f_lookup_typeB\x10\n" +
 	"\x0e_lookup_numberB\x15\n" +
 	"\x13_lookup_postal_code\"\x1a\n" +
-	"\x18RegisterCustomerResponse\"\xc2\x04\n" +
+	"\x18RegisterCustomerResponse\"\xfc\x05\n" +
 	"\x0eDepartmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -5491,11 +5508,15 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x12location_type_code\x18\n" +
 	" \x01(\tH\x03R\x10locationTypeCode\x88\x01\x01\x12.\n" +
 	"\n" +
-	"labor_rate\x18\f \x01(\v2\x0f.core.UnitPriceR\tlaborRateB\b\n" +
+	"labor_rate\x18\f \x01(\v2\x0f.core.UnitPriceR\tlaborRate\x125\n" +
+	"\x14machines_next_cursor\x18\r \x01(\tH\x04R\x12machinesNextCursor\x88\x01\x01\x12F\n" +
+	"\x1dscanning_stations_next_cursor\x18\x0e \x01(\tH\x05R\x1ascanningStationsNextCursor\x88\x01\x01B\b\n" +
 	"\x06_notesB\x0e\n" +
 	"\f_location_idB\x10\n" +
 	"\x0e_location_nameB\x15\n" +
-	"\x13_location_type_codeJ\x04\b\v\x10\f\"{\n" +
+	"\x13_location_type_codeB\x17\n" +
+	"\x15_machines_next_cursorB \n" +
+	"\x1e_scanning_stations_next_cursorJ\x04\b\v\x10\f\"{\n" +
 	"\x16ListDepartmentsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +

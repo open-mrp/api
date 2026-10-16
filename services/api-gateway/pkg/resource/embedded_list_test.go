@@ -32,6 +32,15 @@ func TestNewEmbeddedList(t *testing.T) {
 	require.NotNil(t, told.PageInfo.NextPageURL)
 	assert.Equal(t, path, *told.PageInfo.NextPageURL, "without a cursor the link opens the list")
 
+	const filtered = "/v1/operations/machines?work_center_ids%5B%5D=wkcc_1"
+	withQuery := NewEmbeddedList(nums(11), false, filtered, func(int) string { return "a+b" })
+	require.NotNil(t, withQuery.PageInfo.NextPageURL)
+	assert.Equal(t, filtered+"&cursor=a%2Bb", *withQuery.PageInfo.NextPageURL, "a filtered path keeps its filter and adds the cursor")
+
+	noCursor := NewEmbeddedList(nums(11), false, filtered, func(int) string { return "" })
+	require.NotNil(t, noCursor.PageInfo.NextPageURL)
+	assert.Equal(t, filtered, *noCursor.PageInfo.NextPageURL, "an unknown cursor opens the filtered list")
+
 	empty := NewEmbeddedList[int](nil, false, path, nil)
 	assert.NotNil(t, empty.Data)
 	assert.Empty(t, empty.Data)

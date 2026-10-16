@@ -58,6 +58,8 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 		}
 	}
 	info.Machines = machines
+	info.MachinesNextCursor = d.MachinesNextCursor
+	info.ScanningStationsNextCursor = d.ScanningStationsNextCursor
 
 	return info
 }

@@ -28,6 +28,8 @@ type Client struct {
 	apiKey     string
 	accountID  string
 	apiVersion string
+	// pinned is set by WithAPIVersion: the request carries apiVersion whatever its route.
+	pinned     bool
 	httpClient *http.Client
 	retries    int
 	// cookies, when set, authenticate the request in place of the Authorization
@@ -60,6 +62,7 @@ func (c *Client) WithAccountID(accountID string) *Client {
 func (c *Client) WithAPIVersion(version string) *Client {
 	clone := NewClient(c.baseURL, c.apiKey, c.accountID)
 	clone.apiVersion = version
+	clone.pinned = true
 	return clone
 }
 
@@ -70,6 +73,7 @@ func (c *Client) WithAPIVersion(version string) *Client {
 func (c *Client) WithCookies(cookies []*http.Cookie, accountID string) *Client {
 	clone := NewClient(c.baseURL, "", accountID)
 	clone.apiVersion = c.apiVersion
+	clone.pinned = c.pinned
 	clone.cookies = cookies
 	return clone
 }
@@ -86,7 +90,11 @@ func (c *Client) applyAuth(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
 	req.Header.Set("OpenMRP-Account", c.accountID)
-	req.Header.Set("OpenMRP-Version", requestVersion(c.apiVersion, req.URL.Path))
+	version := c.apiVersion
+	if !c.pinned {
+		version = requestVersion(version, req.URL.Path)
+	}
+	req.Header.Set("OpenMRP-Version", version)
 	req.Header.Set("Accept", "application/json")
 }
 
@@ -106,6 +114,11 @@ func requestVersion(version, path string) string {
 		}
 	}
 	if isSupplierMaterialsPath(path) {
+		return preview9Version
+	}
+	// Suites that only set up sales orders for other resources still write and read them in the preview.9 shape;
+	// the sales order suites pin 1.0.forge with forgeClient.
+	if path == salesOrdersPath || strings.HasPrefix(path, salesOrdersPath+"/") {
 		return preview9Version
 	}
 	return version

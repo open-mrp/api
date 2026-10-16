@@ -496,7 +496,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return nil, cacheErr(apiErr)
 			}
 			if isDup {
-				return nil, cacheErr(apierror.NewConflictErrorWithParam("customer_po_number", "A sales order with this customer PO number already exists."))
+				return nil, cacheErr(apierror.NewConflictErrorWithParam("customer_purchase_order_number", "A sales order with this customer PO number already exists."))
 			}
 		}
 

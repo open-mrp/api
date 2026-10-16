@@ -1025,7 +1025,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONum
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.NotNil(apiErr)
 	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
-	suite.Equal("customer_po_number", apiErr.Param)
+	suite.Equal("customer_purchase_order_number", apiErr.Param)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCustomerDefault() {

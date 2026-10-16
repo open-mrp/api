@@ -1203,7 +1203,7 @@ func (s *conversationSvcImpl) fanoutMessageRealtime(ctx context.Context, f domai
 	return nil
 }
 
-// fanoutMessageNotifications writes a bell-feed notification row per eligible recipient and, when the recipient's email channel is enabled with an instant digest, enqueues a chat-notification email. Recipients who muted the conversation are skipped entirely; the in-app channel is gated by the recipient's notification_preference for the chat.message category (default: on).
+// fanoutMessageNotifications writes a bell-feed notification row per eligible recipient and, when the recipient's email channel is enabled with an instant digest, enqueues a chat-notification email. Recipients who muted the conversation are skipped entirely; the in-app channel follows the recipient's resolved notification settings for the message's type (default: on).
 func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f domain.RepoFactory, msg *domain.Message, accountID, senderAcus string) *apierror.APIError {
 	participants, apiErr := f.NewParticipantRepo().List(ctx, msg.ConversationID)
 	if apiErr != nil {
@@ -1211,7 +1211,8 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	}
 
 	notifRepo := f.NewNotificationRepo()
-	prefRepo := f.NewNotificationPreferenceRepo()
+	settings := newSettingsCache(f, accountID)
+	now := time.Now()
 	outbox := f.NewOutboxRepo()
 
 	senderType, senderID, senderName := s.messageSenderAttribution(ctx, f, msg, senderAcus)
@@ -1253,7 +1254,7 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 		if isMention {
 			category = string(constants.NotificationCategoryChatMention)
 		}
-		eff := s.effectivePreference(ctx, prefRepo, *p.AccountUserID, category)
+		eff := settings.get(ctx, *p.AccountUserID).effective(constants.NotificationCategory(category), now)
 
 		// A mention pierces both mute and the in-app preference so the recipient is always alerted.
 		if eff.InAppEnabled || isMention {
@@ -1333,15 +1334,6 @@ func (s *conversationSvcImpl) messageSenderAttribution(ctx context.Context, f do
 		name = contact.Name
 	}
 	return string(constants.NotificationSenderTypeUser), senderAcus, name
-}
-
-// effectivePreference resolves a recipient's channel preference for a category, defaulting to in-app on; email/push off; digest off when no preference row exists.
-func (s *conversationSvcImpl) effectivePreference(ctx context.Context, prefRepo domain.NotificationPreferenceRepo, accountUserID, category string) domain.EffectiveNotificationPreference {
-	eff, apiErr := prefRepo.GetEffective(ctx, accountUserID, category)
-	if apiErr != nil || eff == nil {
-		return domain.DefaultEffectiveNotificationPreference()
-	}
-	return *eff
 }
 
 // enqueueChatEmail writes a chat-notification email command to the (transaction-bound) outbox for a recipient whose email channel is enabled. A recipient without a resolvable email is skipped.

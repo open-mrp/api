@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -370,6 +371,31 @@ type NotificationPreferenceRepo interface {
 	Upsert(ctx context.Context, id, accountID, accountUserID string, input *UpsertNotificationPreferenceInput) *apierror.APIError
 	// GetByUserCategory returns the stored row for (account_user, category), or not-found.
 	GetByUserCategory(ctx context.Context, accountUserID, category string) (*NotificationPreference, *apierror.APIError)
+	// Delete removes the person's row for a category (empty = their default); a missing row is not an error.
+	Delete(ctx context.Context, accountUserID, category string) *apierror.APIError
+}
+
+// NotificationSettingRepo persists a person's or the account's non-per-type notification settings.
+type NotificationSettingRepo interface {
+	// Get returns the settings row, or empty settings when none is stored.
+	Get(ctx context.Context, accountID, accountUserID string) (*NotificationSetting, *apierror.APIError)
+	Upsert(ctx context.Context, setting *NotificationSetting) *apierror.APIError
+	// RoleDefaults returns the notification defaults of the person's role (empty when they have none).
+	RoleDefaults(ctx context.Context, accountUserID string) (notifyprefs.Defaults, *apierror.APIError)
+}
+
+// SubscriptionRepo persists who is notified about which record.
+type SubscriptionRepo interface {
+	Get(ctx context.Context, id, accountUserID string) (*Subscription, *apierror.APIError)
+	GetByRecord(ctx context.Context, accountUserID, recordID string) (*Subscription, *apierror.APIError)
+	// Insert adds the row unless the person already has one for the record; reports whether it inserted.
+	Insert(ctx context.Context, sub *Subscription) (bool, *apierror.APIError)
+	SetStatus(ctx context.Context, id, accountUserID, status, reason string) *apierror.APIError
+	List(ctx context.Context, filter SubscriptionListFilter) ([]*Subscription, *apierror.APIError)
+	// Subscribers returns the account users subscribed to a record.
+	Subscribers(ctx context.Context, accountID, recordType, recordID string) ([]string, *apierror.APIError)
+	// HasAny reports whether anyone has a row for the record, subscribed or not.
+	HasAny(ctx context.Context, accountID, recordType, recordID string) (bool, *apierror.APIError)
 }
 
 // DeletedRecordRepo snapshots a row into deleted_record before a hard delete so the record is recoverable and repeat/racing deletes are distinguishable from "never existed".

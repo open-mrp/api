@@ -62,6 +62,14 @@ func (f *repoFactoryImpl) NewNotificationPreferenceRepo() domain.NotificationPre
 	return NewNotificationPreferenceRepo(f.db)
 }
 
+func (f *repoFactoryImpl) NewNotificationSettingRepo() domain.NotificationSettingRepo {
+	return NewNotificationSettingRepo(f.db)
+}
+
+func (f *repoFactoryImpl) NewSubscriptionRepo() domain.SubscriptionRepo {
+	return NewSubscriptionRepo(f.db)
+}
+
 func (f *repoFactoryImpl) NewMessageAttachmentRepo() domain.MessageAttachmentRepo {
 	return NewMessageAttachmentRepo(f.db)
 }

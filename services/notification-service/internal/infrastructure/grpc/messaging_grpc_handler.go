@@ -52,11 +52,19 @@ func (h *messagingGRPCHandler) ListNotifications(ctx context.Context, req *pb.Li
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	// A caller still sending the single category/status gets them as one-value filters.
+	types, statuses := req.Types, req.Statuses
+	if req.Category != nil && *req.Category != "" {
+		types = append(types, *req.Category)
+	}
+	if req.Status != nil && *req.Status != "" {
+		statuses = append(statuses, *req.Status)
+	}
 	page, apiErr := h.messagingSvc.ListNotifications(ctx, domain.ListNotificationsInput{
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
-		Category:    req.Category,
-		Status:      req.Status,
+		Types:       types,
+		Statuses:    statuses,
 		Search:      req.Search,
 		SenderIDs:   req.SenderIds,
 		SenderTypes: req.SenderTypes,

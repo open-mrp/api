@@ -15,6 +15,8 @@ type RepoFactory interface {
 	NewBlockRepo() BlockRepo
 	NewMessageReportRepo() MessageReportRepo
 	NewNotificationPreferenceRepo() NotificationPreferenceRepo
+	NewNotificationSettingRepo() NotificationSettingRepo
+	NewSubscriptionRepo() SubscriptionRepo
 	NewMessageAttachmentRepo() MessageAttachmentRepo
 	NewEmailDomainRepo() EmailDomainRepo
 	NewEmailInboxRepo() EmailInboxRepo

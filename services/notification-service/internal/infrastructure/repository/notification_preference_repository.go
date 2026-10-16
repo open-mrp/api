@@ -90,6 +90,16 @@ func (r *notificationPreferenceRepoImpl) GetByUserCategory(ctx context.Context, 
 	return notificationPreferenceFromRow(row), nil
 }
 
+func (r *notificationPreferenceRepoImpl) Delete(ctx context.Context, accountUserID, category string) *apierror.APIError {
+	ctx, span := notificationPreferenceRepoTracer.Start(ctx, "repository.notification_preference.delete")
+	defer span.End()
+	err := r.db.DeleteNotificationPreference(ctx, sqlc.DeleteNotificationPreferenceParams{AccountUserID: accountUserID, Category: category})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func notificationPreferenceFromRow(row sqlc.NotificationPreference) *domain.NotificationPreference {
 	return &domain.NotificationPreference{
 		ID:            row.ID,

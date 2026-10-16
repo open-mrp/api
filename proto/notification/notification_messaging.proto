@@ -55,6 +55,97 @@ service MessagingService {
   rpc ListNotificationPreferences(ListNotificationPreferencesRequest) returns (ListNotificationPreferencesResponse);
   // UpsertNotificationPreference creates or replaces the caller's preference for a category.
   rpc UpsertNotificationPreference(UpsertNotificationPreferenceRequest) returns (NotificationPreferenceInfo);
+
+  // GetNotificationPreferences returns the caller's effective notification settings.
+  rpc GetNotificationPreferences(GetNotificationPreferencesRequest) returns (NotificationPreferencesInfo);
+  // UpdateNotificationPreferences merges a patch into the caller's settings.
+  rpc UpdateNotificationPreferences(UpdateNotificationPreferencesRequest) returns (NotificationPreferencesInfo);
+  // GetNotificationDefaults returns the account's notification defaults.
+  rpc GetNotificationDefaults(GetNotificationDefaultsRequest) returns (NotificationDefaultsInfo);
+  // UpdateNotificationDefaults merges a patch into the account's notification defaults.
+  rpc UpdateNotificationDefaults(UpdateNotificationDefaultsRequest) returns (NotificationDefaultsInfo);
+
+  // ListSubscriptions returns the caller's record subscriptions (cursor-paginated).
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+  // GetSubscription returns one of the caller's subscriptions.
+  rpc GetSubscription(GetSubscriptionRequest) returns (SubscriptionInfo);
+  // FollowRecord subscribes the caller to a record (idempotent).
+  rpc FollowRecord(FollowRecordRequest) returns (FollowRecordResponse);
+  // SetSubscriptionStatus subscribes or unsubscribes the caller's subscription.
+  rpc SetSubscriptionStatus(SetSubscriptionStatusRequest) returns (SubscriptionInfo);
+}
+
+// Notification settings travel as the JSON of shared/notifyprefs: Defaults ({default, types, auto_subscribe}) and
+// Patch.
+message GetNotificationPreferencesRequest {}
+
+message NotificationPreferencesInfo {
+  // notifyprefs.Defaults: default is the caller's effective default, types their own overrides, auto_subscribe
+  // their effective list.
+  bytes settings_json = 1;
+  optional google.protobuf.Timestamp paused_until = 2;
+}
+
+message UpdateNotificationPreferencesRequest {
+  bytes patch_json = 1;
+  // paused_until_set with no paused_until resumes notifications.
+  bool paused_until_set = 2;
+  optional google.protobuf.Timestamp paused_until = 3;
+}
+
+message GetNotificationDefaultsRequest {}
+
+message NotificationDefaultsInfo {
+  bytes settings_json = 1;
+}
+
+message UpdateNotificationDefaultsRequest {
+  bytes patch_json = 1;
+}
+
+message SubscriptionInfo {
+  string id = 1;
+  string account_id = 2;
+  string account_user_id = 3;
+  string record_type = 4;
+  string record_id = 5;
+  string reason = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListSubscriptionsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string record_ids = 3;
+  repeated string record_types = 4;
+  repeated string statuses = 5;
+}
+
+message ListSubscriptionsResponse {
+  repeated SubscriptionInfo subscriptions = 1;
+  PageInfo page_info = 2;
+}
+
+message GetSubscriptionRequest {
+  string id = 1;
+}
+
+message FollowRecordRequest {
+  string record_type = 1;
+  string record_id = 2;
+}
+
+message FollowRecordResponse {
+  SubscriptionInfo subscription = 1;
+  // created is true when the caller had no subscription to the record before.
+  bool created = 2;
+}
+
+message SetSubscriptionStatusRequest {
+  string id = 1;
+  string status = 2;
 }
 
 message NotificationPreferenceInfo {
@@ -155,6 +246,10 @@ message ListNotificationsRequest {
   repeated string sender_ids = 6;
   // Filter by sender type(s): user | group | system | agent | apikey.
   repeated string sender_types = 7;
+  // Keep notifications of any of these types; empty = all. Supersedes category.
+  repeated string types = 8;
+  // Keep notifications in any of these states; empty = all. Supersedes status.
+  repeated string statuses = 9;
 }
 
 message ListNotificationsResponse {

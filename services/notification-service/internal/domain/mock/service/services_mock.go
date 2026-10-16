@@ -16,6 +16,7 @@ import (
 
 	domain "github.com/open-mrp/api/services/notification-service/internal/domain"
 	messaging "github.com/open-mrp/api/shared/messaging"
+	notifyprefs "github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -1136,6 +1137,22 @@ func (mr *MockMessagingSvcMockRecorder) FanOut(ctx, dedupeSeed, data any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FanOut", reflect.TypeOf((*MockMessagingSvc)(nil).FanOut), ctx, dedupeSeed, data)
 }
 
+// FollowRecord mocks base method.
+func (m *MockMessagingSvc) FollowRecord(ctx context.Context, recordType, recordID string) (*domain.Subscription, bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FollowRecord", ctx, recordType, recordID)
+	ret0, _ := ret[0].(*domain.Subscription)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// FollowRecord indicates an expected call of FollowRecord.
+func (mr *MockMessagingSvcMockRecorder) FollowRecord(ctx, recordType, recordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FollowRecord", reflect.TypeOf((*MockMessagingSvc)(nil).FollowRecord), ctx, recordType, recordID)
+}
+
 // GetAnnouncement mocks base method.
 func (m *MockMessagingSvc) GetAnnouncement(ctx context.Context, id string) (*domain.Announcement, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1164,6 +1181,51 @@ func (m *MockMessagingSvc) GetNotification(ctx context.Context, id string) (*dom
 func (mr *MockMessagingSvcMockRecorder) GetNotification(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotification", reflect.TypeOf((*MockMessagingSvc)(nil).GetNotification), ctx, id)
+}
+
+// GetNotificationDefaults mocks base method.
+func (m *MockMessagingSvc) GetNotificationDefaults(ctx context.Context) (notifyprefs.Defaults, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNotificationDefaults", ctx)
+	ret0, _ := ret[0].(notifyprefs.Defaults)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetNotificationDefaults indicates an expected call of GetNotificationDefaults.
+func (mr *MockMessagingSvcMockRecorder) GetNotificationDefaults(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotificationDefaults", reflect.TypeOf((*MockMessagingSvc)(nil).GetNotificationDefaults), ctx)
+}
+
+// GetNotificationPreferences mocks base method.
+func (m *MockMessagingSvc) GetNotificationPreferences(ctx context.Context) (*domain.NotificationPreferences, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNotificationPreferences", ctx)
+	ret0, _ := ret[0].(*domain.NotificationPreferences)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetNotificationPreferences indicates an expected call of GetNotificationPreferences.
+func (mr *MockMessagingSvcMockRecorder) GetNotificationPreferences(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotificationPreferences", reflect.TypeOf((*MockMessagingSvc)(nil).GetNotificationPreferences), ctx)
+}
+
+// GetSubscription mocks base method.
+func (m *MockMessagingSvc) GetSubscription(ctx context.Context, id string) (*domain.Subscription, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubscription", ctx, id)
+	ret0, _ := ret[0].(*domain.Subscription)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetSubscription indicates an expected call of GetSubscription.
+func (mr *MockMessagingSvcMockRecorder) GetSubscription(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscription", reflect.TypeOf((*MockMessagingSvc)(nil).GetSubscription), ctx, id)
 }
 
 // GetUnreadCount mocks base method.
@@ -1239,6 +1301,21 @@ func (m *MockMessagingSvc) ListNotifications(ctx context.Context, input domain.L
 func (mr *MockMessagingSvcMockRecorder) ListNotifications(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotifications", reflect.TypeOf((*MockMessagingSvc)(nil).ListNotifications), ctx, input)
+}
+
+// ListSubscriptions mocks base method.
+func (m *MockMessagingSvc) ListSubscriptions(ctx context.Context, input domain.ListSubscriptionsInput) (*domain.SubscriptionPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSubscriptions", ctx, input)
+	ret0, _ := ret[0].(*domain.SubscriptionPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSubscriptions indicates an expected call of ListSubscriptions.
+func (mr *MockMessagingSvcMockRecorder) ListSubscriptions(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubscriptions", reflect.TypeOf((*MockMessagingSvc)(nil).ListSubscriptions), ctx, input)
 }
 
 // MarkAllSeen mocks base method.
@@ -1373,6 +1450,51 @@ func (m *MockMessagingSvc) SendNotification(ctx context.Context, input domain.Se
 func (mr *MockMessagingSvcMockRecorder) SendNotification(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendNotification", reflect.TypeOf((*MockMessagingSvc)(nil).SendNotification), ctx, input)
+}
+
+// SetSubscriptionStatus mocks base method.
+func (m *MockMessagingSvc) SetSubscriptionStatus(ctx context.Context, id, status string) (*domain.Subscription, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetSubscriptionStatus", ctx, id, status)
+	ret0, _ := ret[0].(*domain.Subscription)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetSubscriptionStatus indicates an expected call of SetSubscriptionStatus.
+func (mr *MockMessagingSvcMockRecorder) SetSubscriptionStatus(ctx, id, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSubscriptionStatus", reflect.TypeOf((*MockMessagingSvc)(nil).SetSubscriptionStatus), ctx, id, status)
+}
+
+// UpdateNotificationDefaults mocks base method.
+func (m *MockMessagingSvc) UpdateNotificationDefaults(ctx context.Context, patch notifyprefs.Patch) (notifyprefs.Defaults, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateNotificationDefaults", ctx, patch)
+	ret0, _ := ret[0].(notifyprefs.Defaults)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateNotificationDefaults indicates an expected call of UpdateNotificationDefaults.
+func (mr *MockMessagingSvcMockRecorder) UpdateNotificationDefaults(ctx, patch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotificationDefaults", reflect.TypeOf((*MockMessagingSvc)(nil).UpdateNotificationDefaults), ctx, patch)
+}
+
+// UpdateNotificationPreferences mocks base method.
+func (m *MockMessagingSvc) UpdateNotificationPreferences(ctx context.Context, input domain.UpdateNotificationPreferencesInput) (*domain.NotificationPreferences, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateNotificationPreferences", ctx, input)
+	ret0, _ := ret[0].(*domain.NotificationPreferences)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateNotificationPreferences indicates an expected call of UpdateNotificationPreferences.
+func (mr *MockMessagingSvcMockRecorder) UpdateNotificationPreferences(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotificationPreferences", reflect.TypeOf((*MockMessagingSvc)(nil).UpdateNotificationPreferences), ctx, input)
 }
 
 // UpsertNotificationPreference mocks base method.

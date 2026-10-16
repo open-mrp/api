@@ -141,32 +141,7 @@ func (r *notificationRepoImpl) List(ctx context.Context, filter domain.Notificat
 	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.list")
 	defer span.End()
 
-	var status any
-	if filter.Status != nil {
-		status = *filter.Status
-	}
-
-	var search sql.NullString
-	if filter.Search != nil && *filter.Search != "" {
-		search = sql.NullString{String: "%" + *filter.Search + "%", Valid: true}
-	}
-
-	senderIDs := toNullStrings(filter.SenderIDs)
-	senderTypes := toNullStrings(filter.SenderTypes)
-
-	rows, err := r.db.ListNotifications(ctx, sqlc.ListNotificationsParams{
-		RecipientAccountUserID:  filter.RecipientAccountUserID,
-		Category:                db.NullStringPtr(filter.Category),
-		Status:                  status,
-		Search:                  search,
-		IncludeSenderFilter:     boolToInt(len(senderIDs) > 0),
-		SenderIds:               senderIDs,
-		IncludeSenderTypeFilter: boolToInt(len(senderTypes) > 0),
-		SenderTypes:             senderTypes,
-		CursorCreatedAt:         db.NullTimePtr(filter.CursorCreatedAt),
-		CursorID:                db.NullStringPtr(filter.CursorID),
-		Limit:                   filter.Limit,
-	})
+	rows, err := listNotificationRows(ctx, r.db, filter)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -386,24 +361,4 @@ func toDomainNotification(row sqlc.Notification) *domain.Notification {
 		CreatedAt:              row.CreatedAt,
 		UpdatedAt:              row.UpdatedAt,
 	}
-}
-
-// toNullStrings converts a string slice to a []sql.NullString for sqlc IN-slice params.
-func toNullStrings(values []string) []sql.NullString {
-	if len(values) == 0 {
-		return nil
-	}
-	out := make([]sql.NullString, 0, len(values))
-	for _, v := range values {
-		out = append(out, sql.NullString{String: v, Valid: true})
-	}
-	return out
-}
-
-// boolToInt maps a filter-enabled flag to the 1/0 sentinel the ListNotifications query uses to short-circuit its IN clauses.
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }

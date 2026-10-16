@@ -51,9 +51,9 @@ type Notification struct {
 // NotificationListFilter parameterizes a keyset-paginated feed query. A nil filter pointer means "no constraint"; Seen/Read filter on presence of the respective timestamp. The cursor is (CursorCreatedAt, CursorID); both nil means the first page.
 type NotificationListFilter struct {
 	RecipientAccountUserID string
-	Category               *string
-	// Status filters by lifecycle state ("unseen"/"seen"/"read"/"dismissed"); nil = the default active feed (all non-dismissed).
-	Status *string
+	// Types and Statuses keep notifications of any of the given types and lifecycle states; empty = all.
+	Types    []string
+	Statuses []string
 	// Search is a free-text term matched against title/body (LIKE). nil = no search.
 	Search *string
 	// SenderIDs / SenderTypes filter by sender attribution (multi-value, IN). Empty = no filter.

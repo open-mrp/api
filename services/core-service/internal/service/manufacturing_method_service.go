@@ -878,7 +878,7 @@ func (s *manufacturingMethodSvcImpl) writeValueRows(ctx context.Context, op *dom
 		if apiErr != nil {
 			return "", apiErr
 		}
-		return newRate(domain.RateValue{Value: legacy.Value, NumeratorUnitID: legacy.NumeratorUnitID, DenominatorUnitID: legacy.DenominatorUnitID})
+		return newRate(domain.RateValue(legacy))
 	}
 	var apiErr *apierror.APIError
 	if op.LaborRateID, apiErr = money(op.LaborRate, "labor_rate"); apiErr != nil {

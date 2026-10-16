@@ -52,6 +52,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -65,13 +66,14 @@ type FindAccountIntegrationByCodeParams struct {
 }
 
 type FindAccountIntegrationByCodeRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	IsActive         bool
+	ConnectionStatus string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) FindAccountIntegrationByCode(ctx context.Context, arg FindAccountIntegrationByCodeParams) (FindAccountIntegrationByCodeRow, error) {
@@ -83,6 +85,7 @@ func (q *Queries) FindAccountIntegrationByCode(ctx context.Context, arg FindAcco
 		&i.IntegrationCode,
 		&i.Name,
 		&i.IsActive,
+		&i.ConnectionStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -96,6 +99,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -109,13 +113,14 @@ type GetAccountIntegrationParams struct {
 }
 
 type GetAccountIntegrationRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	IsActive         bool
+	ConnectionStatus string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountIntegrationParams) (GetAccountIntegrationRow, error) {
@@ -127,6 +132,7 @@ func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountInteg
 		&i.IntegrationCode,
 		&i.Name,
 		&i.IsActive,
+		&i.ConnectionStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -166,6 +172,7 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.connection_status,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -179,13 +186,14 @@ type GetAccountIntegrationsByIDsParams struct {
 }
 
 type GetAccountIntegrationsByIDsRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	IsActive         bool
+	ConnectionStatus string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // Returns account integrations matching the given IDs that belong to the
@@ -216,6 +224,7 @@ func (q *Queries) GetAccountIntegrationsByIDs(ctx context.Context, arg GetAccoun
 			&i.IntegrationCode,
 			&i.Name,
 			&i.IsActive,
+			&i.ConnectionStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -240,6 +249,7 @@ INSERT INTO account_integration (
     name,
     credentials_v2,
     is_active,
+    connection_status,
     created_at,
     updated_at
 ) VALUES (
@@ -248,18 +258,21 @@ INSERT INTO account_integration (
     ?,
     ?,
     ?,
-    1,
+    ?,
+    ?,
     NOW(3),
     NOW(3)
 )
 `
 
 type InsertAccountIntegrationParams struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	CredentialsV2   string
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	CredentialsV2    string
+	IsActive         bool
+	ConnectionStatus string
 }
 
 func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccountIntegrationParams) error {
@@ -269,170 +282,38 @@ func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccoun
 		arg.IntegrationCode,
 		arg.Name,
 		arg.CredentialsV2,
+		arg.IsActive,
+		arg.ConnectionStatus,
 	)
 	return err
 }
 
-const listAccountIntegrationsBackward = `-- name: ListAccountIntegrationsBackward :many
-SELECT
-    account_integration.id,
-    account_integration.account_id,
-    account_integration.integration_code,
-    account_integration.name,
-    account_integration.is_active,
-    account_integration.created_at,
-    account_integration.updated_at
-FROM account_integration
-WHERE account_integration.account_id = ?
-AND (
-    ? IS NULL
-    OR account_integration.name LIKE ?
-)
-AND (
-    account_integration.created_at > ?
-    OR (account_integration.created_at = ? AND account_integration.id > ?)
-)
-ORDER BY account_integration.created_at ASC, account_integration.id ASC
-LIMIT ?
+const setAccountIntegrationConnectionStatus = `-- name: SetAccountIntegrationConnectionStatus :execrows
+UPDATE account_integration SET
+    connection_status = ?
+WHERE account_id = ?
+AND integration_code = ?
+AND connection_status <> ?
 `
 
-type ListAccountIntegrationsBackwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
+type SetAccountIntegrationConnectionStatusParams struct {
+	ConnectionStatus string
+	AccountID        string
+	IntegrationCode  string
 }
 
-type ListAccountIntegrationsBackwardRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
-
-func (q *Queries) ListAccountIntegrationsBackward(ctx context.Context, arg ListAccountIntegrationsBackwardParams) ([]ListAccountIntegrationsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountIntegrationsBackward,
+// Leaves the row untouched when the status already matches, so a provider call that succeeds as usual costs no write.
+func (q *Queries) SetAccountIntegrationConnectionStatus(ctx context.Context, arg SetAccountIntegrationConnectionStatusParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setAccountIntegrationConnectionStatus,
+		arg.ConnectionStatus,
 		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
+		arg.IntegrationCode,
+		arg.ConnectionStatus,
 	)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer rows.Close()
-	var items []ListAccountIntegrationsBackwardRow
-	for rows.Next() {
-		var i ListAccountIntegrationsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.AccountID,
-			&i.IntegrationCode,
-			&i.Name,
-			&i.IsActive,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountIntegrationsForward = `-- name: ListAccountIntegrationsForward :many
-SELECT
-    account_integration.id,
-    account_integration.account_id,
-    account_integration.integration_code,
-    account_integration.name,
-    account_integration.is_active,
-    account_integration.created_at,
-    account_integration.updated_at
-FROM account_integration
-WHERE account_integration.account_id = ?
-AND (
-    ? IS NULL
-    OR account_integration.name LIKE ?
-)
-AND (
-    ? IS NULL
-    OR account_integration.created_at < ?
-    OR (account_integration.created_at = ? AND account_integration.id < ?)
-)
-ORDER BY account_integration.created_at DESC, account_integration.id DESC
-LIMIT ?
-`
-
-type ListAccountIntegrationsForwardParams struct {
-	AccountID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListAccountIntegrationsForwardRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
-
-func (q *Queries) ListAccountIntegrationsForward(ctx context.Context, arg ListAccountIntegrationsForwardParams) ([]ListAccountIntegrationsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountIntegrationsForward,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountIntegrationsForwardRow
-	for rows.Next() {
-		var i ListAccountIntegrationsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.AccountID,
-			&i.IntegrationCode,
-			&i.Name,
-			&i.IsActive,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+	return result.RowsAffected()
 }
 
 const updateAccountIntegration = `-- name: UpdateAccountIntegration :execresult
@@ -464,22 +345,25 @@ const updateAccountIntegrationCredentials = `-- name: UpdateAccountIntegrationCr
 UPDATE account_integration SET
     name = ?,
     credentials_v2 = ?,
+    connection_status = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateAccountIntegrationCredentialsParams struct {
-	Name          string
-	CredentialsV2 string
-	ID            string
-	AccountID     string
+	Name             string
+	CredentialsV2    string
+	ConnectionStatus string
+	ID               string
+	AccountID        string
 }
 
 func (q *Queries) UpdateAccountIntegrationCredentials(ctx context.Context, arg UpdateAccountIntegrationCredentialsParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountIntegrationCredentials,
 		arg.Name,
 		arg.CredentialsV2,
+		arg.ConnectionStatus,
 		arg.ID,
 		arg.AccountID,
 	)

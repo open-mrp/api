@@ -39,6 +39,7 @@ func newHarness(t *testing.T) *harness {
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewCustomerRepo().Return(customerRepo).AnyTimes()
 	repos.EXPECT().NewAccountIntegrationRepo().Return(integrationRepo).AnyTimes()
+	integrationRepo.EXPECT().FindByCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.AccountIntegration{ConnectionStatus: constants.IntegrationConnectionStatusConnected}, nil).AnyTimes()
 
 	client := clientmock.NewMockStripeCheckoutClient(ctrl)
 	factory := clientmock.NewMockStripeCheckoutClientFactory(ctrl)

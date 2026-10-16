@@ -12,15 +12,15 @@ import (
 	"github.com/open-mrp/apikit/object"
 )
 
-// Request to delete an account integration.
+// Request to delete an integration.
 type DeleteAccountIntegrationRequest struct {
 	// Account integration ID.
 	AccountIntegrationID string `path:"id" validate:"required"`
 }
 
-// Disconnects a third-party provider from the account and returns the deleted integration.
+// Deletes an integration.
 //
-// The stored credentials go with it, so any feature that relies on the provider stops working until the integration is created again. Deleting an integration that is already deleted returns an error rather than succeeding silently. To pause a provider without discarding its credentials, set the integration's status to `inactive` instead.
+// Disconnects the provider and discards its credentials; features that use the provider stop until it is connected again. To pause an integration and keep its credentials, set its `status` to `disabled` instead. Deleting an integration that is already deleted returns 410.
 type DeleteAccountIntegrationEndpoint struct{}
 
 func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *object.Deleted] {
@@ -33,7 +33,6 @@ func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountIntegrationRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(AccountIntegrationSvc).DeleteAccountIntegration, constants.ObjectTypeAccountIntegration, "id")

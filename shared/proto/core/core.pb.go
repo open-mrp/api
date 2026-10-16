@@ -32,7 +32,7 @@ var File_core_core_proto protoreflect.FileDescriptor
 
 const file_core_core_proto_rawDesc = "" +
 	"\n" +
-	"\x0fcore/core.proto\x12\x04core\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a\x1ecore/core_account_groups.proto\x1a!core/core_accounts_carriers.proto\x1a\x16core/core_portal.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a!core/core_users_territories.proto\x1a\x18core/core_invoices.proto\x1a\x17core/core_lookups.proto\x1a!core/core_document_settings.proto2ԝ\x02\n" +
+	"\x0fcore/core.proto\x12\x04core\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a\x1ecore/core_account_groups.proto\x1a!core/core_accounts_carriers.proto\x1a\x16core/core_portal.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a!core/core_users_territories.proto\x1a\x18core/core_invoices.proto\x1a\x17core/core_lookups.proto\x1a!core/core_document_settings.proto2\xe1\x9e\x02\n" +
 	"\vCoreService\x12T\n" +
 	"\x11GetAccountContext\x12\x1e.core.GetAccountContextRequest\x1a\x1f.core.GetAccountContextResponse\x12N\n" +
 	"\x0fGetAccountNames\x12\x1c.core.GetAccountNamesRequest\x1a\x1d.core.GetAccountNamesResponse\x12`\n" +
@@ -131,7 +131,8 @@ const file_core_core_proto_rawDesc = "" +
 	"\x12DeleteAccountPrice\x12\x1f.core.DeleteAccountPriceRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
 	"\x0fExportPriceList\x12\x1c.core.ExportPriceListRequest\x1a\x1d.core.ExportPriceListResponse\x12f\n" +
 	"\x17ListAccountIntegrations\x12$.core.ListAccountIntegrationsRequest\x1a%.core.ListAccountIntegrationsResponse\x12i\n" +
-	"\x18CreateAccountIntegration\x12%.core.CreateAccountIntegrationRequest\x1a&.core.CreateAccountIntegrationResponse\x12i\n" +
+	"\x18CreateAccountIntegration\x12%.core.CreateAccountIntegrationRequest\x1a&.core.CreateAccountIntegrationResponse\x12\x8a\x01\n" +
+	"#RotateAccountIntegrationCredentials\x120.core.RotateAccountIntegrationCredentialsRequest\x1a1.core.RotateAccountIntegrationCredentialsResponse\x12i\n" +
 	"\x18UpdateAccountIntegration\x12%.core.UpdateAccountIntegrationRequest\x1a&.core.UpdateAccountIntegrationResponse\x12i\n" +
 	"\x18DeleteAccountIntegration\x12%.core.DeleteAccountIntegrationRequest\x1a&.core.DeleteAccountIntegrationResponse\x12\x81\x01\n" +
 	" BatchGetAccountIntegrationsByIDs\x12-.core.BatchGetAccountIntegrationsByIDsRequest\x1a..core.BatchGetAccountIntegrationsByIDsResponse\x12f\n" +
@@ -566,694 +567,696 @@ var file_core_core_proto_goTypes = []any{
 	(*ExportPriceListRequest)(nil),                             // 90: core.ExportPriceListRequest
 	(*ListAccountIntegrationsRequest)(nil),                     // 91: core.ListAccountIntegrationsRequest
 	(*CreateAccountIntegrationRequest)(nil),                    // 92: core.CreateAccountIntegrationRequest
-	(*UpdateAccountIntegrationRequest)(nil),                    // 93: core.UpdateAccountIntegrationRequest
-	(*DeleteAccountIntegrationRequest)(nil),                    // 94: core.DeleteAccountIntegrationRequest
-	(*BatchGetAccountIntegrationsByIDsRequest)(nil),            // 95: core.BatchGetAccountIntegrationsByIDsRequest
-	(*GetStripePublishableKeyRequest)(nil),                     // 96: core.GetStripePublishableKeyRequest
-	(*GetStripeStatusRequest)(nil),                             // 97: core.GetStripeStatusRequest
-	(*ListAdjustmentTypesRequest)(nil),                         // 98: core.ListAdjustmentTypesRequest
-	(*BatchGetAdjustmentTypesByIDsRequest)(nil),                // 99: core.BatchGetAdjustmentTypesByIDsRequest
-	(*GetAccountRequest)(nil),                                  // 100: core.GetAccountRequest
-	(*GetAccountBySlugRequest)(nil),                            // 101: core.GetAccountBySlugRequest
-	(*GetPortalProfileBySlugRequest)(nil),                      // 102: core.GetPortalProfileBySlugRequest
-	(*CreateOrResumePortalRegistrationSessionRequest)(nil),     // 103: core.CreateOrResumePortalRegistrationSessionRequest
-	(*GetPortalRegistrationSessionRequest)(nil),                // 104: core.GetPortalRegistrationSessionRequest
-	(*UpdatePortalRegistrationSessionRequest)(nil),             // 105: core.UpdatePortalRegistrationSessionRequest
-	(*CompletePortalRegistrationSessionRequest)(nil),           // 106: core.CompletePortalRegistrationSessionRequest
-	(*AbandonPortalRegistrationSessionRequest)(nil),            // 107: core.AbandonPortalRegistrationSessionRequest
-	(*ListPortalRegistrationSessionsRequest)(nil),              // 108: core.ListPortalRegistrationSessionsRequest
-	(*UpdateAccountRequest)(nil),                               // 109: core.UpdateAccountRequest
-	(*UploadAccountPhotoRequest)(nil),                          // 110: core.UploadAccountPhotoRequest
-	(*GetAccountLogoURLRequest)(nil),                           // 111: core.GetAccountLogoURLRequest
-	(*UploadAccountFaviconRequest)(nil),                        // 112: core.UploadAccountFaviconRequest
-	(*GetAccountFaviconURLRequest)(nil),                        // 113: core.GetAccountFaviconURLRequest
-	(*ListPropertiesRequest)(nil),                              // 114: core.ListPropertiesRequest
-	(*GetPropertyRequest)(nil),                                 // 115: core.GetPropertyRequest
-	(*CreatePropertyRequest)(nil),                              // 116: core.CreatePropertyRequest
-	(*UpdatePropertyRequest)(nil),                              // 117: core.UpdatePropertyRequest
-	(*DeletePropertyRequest)(nil),                              // 118: core.DeletePropertyRequest
-	(*BulkUpsertPropertiesRequest)(nil),                        // 119: core.BulkUpsertPropertiesRequest
-	(*ExportPropertiesRequest)(nil),                            // 120: core.ExportPropertiesRequest
-	(*ListAttributesRequest)(nil),                              // 121: core.ListAttributesRequest
-	(*GetAttributeRequest)(nil),                                // 122: core.GetAttributeRequest
-	(*CreateAttributeRequest)(nil),                             // 123: core.CreateAttributeRequest
-	(*UpdateAttributeRequest)(nil),                             // 124: core.UpdateAttributeRequest
-	(*DeleteAttributeRequest)(nil),                             // 125: core.DeleteAttributeRequest
-	(*BatchGetAttributesByIDsRequest)(nil),                     // 126: core.BatchGetAttributesByIDsRequest
-	(*BatchGetPropertiesByIDsRequest)(nil),                     // 127: core.BatchGetPropertiesByIDsRequest
-	(*BatchGetItemCategoriesByIDsRequest)(nil),                 // 128: core.BatchGetItemCategoriesByIDsRequest
-	(*BatchGetItemsByIDsRequest)(nil),                          // 129: core.BatchGetItemsByIDsRequest
-	(*ListCarriersRequest)(nil),                                // 130: core.ListCarriersRequest
-	(*GetCarrierRequest)(nil),                                  // 131: core.GetCarrierRequest
-	(*BatchGetCarriersByIDsRequest)(nil),                       // 132: core.BatchGetCarriersByIDsRequest
-	(*CreateCarrierRequest)(nil),                               // 133: core.CreateCarrierRequest
-	(*UpdateCarrierRequest)(nil),                               // 134: core.UpdateCarrierRequest
-	(*DeleteCarrierRequest)(nil),                               // 135: core.DeleteCarrierRequest
-	(*InitiateCarrierOAuthRequest)(nil),                        // 136: core.InitiateCarrierOAuthRequest
-	(*GetCarrierOAuthStatusRequest)(nil),                       // 137: core.GetCarrierOAuthStatusRequest
-	(*SyncServiceLevelsRequest)(nil),                           // 138: core.SyncServiceLevelsRequest
-	(*ListServiceLevelsRequest)(nil),                           // 139: core.ListServiceLevelsRequest
-	(*GetServiceLevelRequest)(nil),                             // 140: core.GetServiceLevelRequest
-	(*BatchGetServiceLevelsByIDsRequest)(nil),                  // 141: core.BatchGetServiceLevelsByIDsRequest
-	(*CreateServiceLevelRequest)(nil),                          // 142: core.CreateServiceLevelRequest
-	(*UpdateServiceLevelRequest)(nil),                          // 143: core.UpdateServiceLevelRequest
-	(*DeleteServiceLevelRequest)(nil),                          // 144: core.DeleteServiceLevelRequest
-	(*ListItemsRequest)(nil),                                   // 145: core.ListItemsRequest
-	(*GetItemRequest)(nil),                                     // 146: core.GetItemRequest
-	(*GetItemInventoryRequest)(nil),                            // 147: core.GetItemInventoryRequest
-	(*GetItemLotDefaultRequest)(nil),                           // 148: core.GetItemLotDefaultRequest
-	(*GetItemCostsRequest)(nil),                                // 149: core.GetItemCostsRequest
-	(*GetItemTrendsRequest)(nil),                               // 150: core.GetItemTrendsRequest
-	(*ExportItemsRequest)(nil),                                 // 151: core.ExportItemsRequest
-	(*CreateItemRequest)(nil),                                  // 152: core.CreateItemRequest
-	(*UpdateItemRequest)(nil),                                  // 153: core.UpdateItemRequest
-	(*DeleteItemRequest)(nil),                                  // 154: core.DeleteItemRequest
-	(*BulkUpsertItemsRequest)(nil),                             // 155: core.BulkUpsertItemsRequest
-	(*SetItemOrderUnitsRequest)(nil),                           // 156: core.SetItemOrderUnitsRequest
-	(*ChangeItemStockingUnitRequest)(nil),                      // 157: core.ChangeItemStockingUnitRequest
-	(*AddItemAttributeRequest)(nil),                            // 158: core.AddItemAttributeRequest
-	(*RemoveItemAttributeRequest)(nil),                         // 159: core.RemoveItemAttributeRequest
-	(*ChangeItemCategoryRequest)(nil),                          // 160: core.ChangeItemCategoryRequest
-	(*UpdateItemInventoryRequest)(nil),                         // 161: core.UpdateItemInventoryRequest
-	(*BulkCreateItemsRequest)(nil),                             // 162: core.BulkCreateItemsRequest
-	(*BulkUpsertPartsRequest)(nil),                             // 163: core.BulkUpsertPartsRequest
-	(*BulkUpsertProductsRequest)(nil),                          // 164: core.BulkUpsertProductsRequest
-	(*BulkUpsertMaterialsRequest)(nil),                         // 165: core.BulkUpsertMaterialsRequest
-	(*BulkReconcileItemsRequest)(nil),                          // 166: core.BulkReconcileItemsRequest
-	(*ListInventoriesRequest)(nil),                             // 167: core.ListInventoriesRequest
-	(*AnalyzeWeeksOfSalesRequest)(nil),                         // 168: core.AnalyzeWeeksOfSalesRequest
-	(*ListChildAccountsRequest)(nil),                           // 169: core.ListChildAccountsRequest
-	(*AddChildAccountRequest)(nil),                             // 170: core.AddChildAccountRequest
-	(*RemoveChildAccountRequest)(nil),                          // 171: core.RemoveChildAccountRequest
-	(*BatchGetChildAccountsByIDsRequest)(nil),                  // 172: core.BatchGetChildAccountsByIDsRequest
-	(*GetBatchFlowRequest)(nil),                                // 173: core.GetBatchFlowRequest
-	(*ListBatchesByScanningStationRequest)(nil),                // 174: core.ListBatchesByScanningStationRequest
-	(*GetBatchPossibleNextStepsRequest)(nil),                   // 175: core.GetBatchPossibleNextStepsRequest
-	(*GetBatchPossibleInitStepsRequest)(nil),                   // 176: core.GetBatchPossibleInitStepsRequest
-	(*AnalyzeOpenBatchesRequest)(nil),                          // 177: core.AnalyzeOpenBatchesRequest
-	(*InitializeBatchRequest)(nil),                             // 178: core.InitializeBatchRequest
-	(*MoveBatchesRequest)(nil),                                 // 179: core.MoveBatchesRequest
-	(*MergeBatchesRequest)(nil),                                // 180: core.MergeBatchesRequest
-	(*SplitBatchRequest)(nil),                                  // 181: core.SplitBatchRequest
-	(*GetRemainingQuantityToSplitRequest)(nil),                 // 182: core.GetRemainingQuantityToSplitRequest
-	(*GetScanningStationConsumptionRequest)(nil),               // 183: core.GetScanningStationConsumptionRequest
-	(*CloseBatchRequest)(nil),                                  // 184: core.CloseBatchRequest
-	(*DeleteBatchRequest)(nil),                                 // 185: core.DeleteBatchRequest
-	(*DeleteManyBatchesRequest)(nil),                           // 186: core.DeleteManyBatchesRequest
-	(*ListItemCategoriesRequest)(nil),                          // 187: core.ListItemCategoriesRequest
-	(*GetItemCategoryRequest)(nil),                             // 188: core.GetItemCategoryRequest
-	(*CreateItemCategoryRequest)(nil),                          // 189: core.CreateItemCategoryRequest
-	(*UpdateItemCategoryRequest)(nil),                          // 190: core.UpdateItemCategoryRequest
-	(*DeleteItemCategoryRequest)(nil),                          // 191: core.DeleteItemCategoryRequest
-	(*AddItemCategoryPropertyRequest)(nil),                     // 192: core.AddItemCategoryPropertyRequest
-	(*CreateItemCategoryPropertyRequest)(nil),                  // 193: core.CreateItemCategoryPropertyRequest
-	(*RemoveItemCategoryPropertyRequest)(nil),                  // 194: core.RemoveItemCategoryPropertyRequest
-	(*ChangeItemCategoryUnitGroupRequest)(nil),                 // 195: core.ChangeItemCategoryUnitGroupRequest
-	(*BulkUpsertItemCategoriesRequest)(nil),                    // 196: core.BulkUpsertItemCategoriesRequest
-	(*ExportItemCategoriesRequest)(nil),                        // 197: core.ExportItemCategoriesRequest
-	(*ListProductsFullRequest)(nil),                            // 198: core.ListProductsFullRequest
-	(*ExportProductsRequest)(nil),                              // 199: core.ExportProductsRequest
-	(*GetProductRequest)(nil),                                  // 200: core.GetProductRequest
-	(*CreateProductRequest)(nil),                               // 201: core.CreateProductRequest
-	(*UpdateProductRequest)(nil),                               // 202: core.UpdateProductRequest
-	(*DeleteProductRequest)(nil),                               // 203: core.DeleteProductRequest
-	(*ChangeProductProductLineRequest)(nil),                    // 204: core.ChangeProductProductLineRequest
-	(*ValidateProductsRequest)(nil),                            // 205: core.ValidateProductsRequest
-	(*BatchGetProductsByIDsRequest)(nil),                       // 206: core.BatchGetProductsByIDsRequest
-	(*ListProductLinesRequest)(nil),                            // 207: core.ListProductLinesRequest
-	(*GetProductLineRequest)(nil),                              // 208: core.GetProductLineRequest
-	(*CreateProductLineRequest)(nil),                           // 209: core.CreateProductLineRequest
-	(*UpdateProductLineRequest)(nil),                           // 210: core.UpdateProductLineRequest
-	(*DeleteProductLineRequest)(nil),                           // 211: core.DeleteProductLineRequest
-	(*BatchGetProductLinesByIDsRequest)(nil),                   // 212: core.BatchGetProductLinesByIDsRequest
-	(*BulkUpsertProductLinesRequest)(nil),                      // 213: core.BulkUpsertProductLinesRequest
-	(*ExportProductLinesRequest)(nil),                          // 214: core.ExportProductLinesRequest
-	(*GetConsumptionRequest)(nil),                              // 215: core.GetConsumptionRequest
-	(*CreateConsumptionRequest)(nil),                           // 216: core.CreateConsumptionRequest
-	(*UpdateConsumptionRequest)(nil),                           // 217: core.UpdateConsumptionRequest
-	(*DeleteConsumptionRequest)(nil),                           // 218: core.DeleteConsumptionRequest
-	(*GetProductionFlowRequest)(nil),                           // 219: core.GetProductionFlowRequest
-	(*ConnectProductionStepsRequest)(nil),                      // 220: core.ConnectProductionStepsRequest
-	(*ListCustomersRequest)(nil),                               // 221: core.ListCustomersRequest
-	(*GetCustomerRequest)(nil),                                 // 222: core.GetCustomerRequest
-	(*BatchGetCustomersByIDsRequest)(nil),                      // 223: core.BatchGetCustomersByIDsRequest
-	(*CreateCustomerRequest)(nil),                              // 224: core.CreateCustomerRequest
-	(*GetCustomerLeadTimeRequest)(nil),                         // 225: core.GetCustomerLeadTimeRequest
-	(*DeleteCustomerRequest)(nil),                              // 226: core.DeleteCustomerRequest
-	(*BulkDeleteCustomersRequest)(nil),                         // 227: core.BulkDeleteCustomersRequest
-	(*GetFrequentlyOrderedProductsRequest)(nil),                // 228: core.GetFrequentlyOrderedProductsRequest
-	(*ListCustomerNotificationRecipientsRequest)(nil),          // 229: core.ListCustomerNotificationRecipientsRequest
-	(*UpdateCustomerNotificationRecipientsRequest)(nil),        // 230: core.UpdateCustomerNotificationRecipientsRequest
-	(*UpdateCustomerRequest)(nil),                              // 231: core.UpdateCustomerRequest
-	(*MergeCustomersRequest)(nil),                              // 232: core.MergeCustomersRequest
-	(*ExportCustomersRequest)(nil),                             // 233: core.ExportCustomersRequest
-	(*AnalyzeSalesRequest)(nil),                                // 234: core.AnalyzeSalesRequest
-	(*AnalyzeSalesSummaryRequest)(nil),                         // 235: core.AnalyzeSalesSummaryRequest
-	(*AnalyzeSalesBreakdownRequest)(nil),                       // 236: core.AnalyzeSalesBreakdownRequest
-	(*AnalyzeSalesInvoicesRequest)(nil),                        // 237: core.AnalyzeSalesInvoicesRequest
-	(*ListNewCustomersRequest)(nil),                            // 238: core.ListNewCustomersRequest
-	(*ListSalesLinesRequest)(nil),                              // 239: core.ListSalesLinesRequest
-	(*ExportSalesLinesRequest)(nil),                            // 240: core.ExportSalesLinesRequest
-	(*AnalyzeOpenOrdersSummaryRequest)(nil),                    // 241: core.AnalyzeOpenOrdersSummaryRequest
-	(*AnalyzeOpenOrderProductsRequest)(nil),                    // 242: core.AnalyzeOpenOrderProductsRequest
-	(*ListOpenOrdersRequest)(nil),                              // 243: core.ListOpenOrdersRequest
-	(*ListOpenOrderLinesRequest)(nil),                          // 244: core.ListOpenOrderLinesRequest
-	(*ExportOpenOrderLinesRequest)(nil),                        // 245: core.ExportOpenOrderLinesRequest
-	(*AnalyzeRealizedMarginsRequest)(nil),                      // 246: core.AnalyzeRealizedMarginsRequest
-	(*AnalyzeCustomerPricingRequest)(nil),                      // 247: core.AnalyzeCustomerPricingRequest
-	(*AnalyzeProductionCostsRequest)(nil),                      // 248: core.AnalyzeProductionCostsRequest
-	(*AnalyzeDeliveriesRequest)(nil),                           // 249: core.AnalyzeDeliveriesRequest
-	(*AnalyzeManufacturingRequest)(nil),                        // 250: core.AnalyzeManufacturingRequest
-	(*AnalyzeManufacturingBatchRequest)(nil),                   // 251: core.AnalyzeManufacturingBatchRequest
-	(*AnalyzeOrdersRequest)(nil),                               // 252: core.AnalyzeOrdersRequest
-	(*AnalyzeQuarterlyOrdersRequest)(nil),                      // 253: core.AnalyzeQuarterlyOrdersRequest
-	(*AnalyzeMaterialsRequest)(nil),                            // 254: core.AnalyzeMaterialsRequest
-	(*AnalyzeInventoryReceiptsRequest)(nil),                    // 255: core.AnalyzeInventoryReceiptsRequest
-	(*AnalyzeNewCustomersRequest)(nil),                         // 256: core.AnalyzeNewCustomersRequest
-	(*AnalyzeDemandForecastRequest)(nil),                       // 257: core.AnalyzeDemandForecastRequest
-	(*AnalyzeOeeRequest)(nil),                                  // 258: core.AnalyzeOeeRequest
-	(*AnalyzeOeeTrendRequest)(nil),                             // 259: core.AnalyzeOeeTrendRequest
-	(*AnalyzeScheduleAttainmentRequest)(nil),                   // 260: core.AnalyzeScheduleAttainmentRequest
-	(*AnalyzeDeliveryPerformanceRequest)(nil),                  // 261: core.AnalyzeDeliveryPerformanceRequest
-	(*ListDeliveriesRequest)(nil),                              // 262: core.ListDeliveriesRequest
-	(*GetDeliveryRequest)(nil),                                 // 263: core.GetDeliveryRequest
-	(*ListDepartmentsRequest)(nil),                             // 264: core.ListDepartmentsRequest
-	(*GetDepartmentRequest)(nil),                               // 265: core.GetDepartmentRequest
-	(*CreateDepartmentRequest)(nil),                            // 266: core.CreateDepartmentRequest
-	(*UpdateDepartmentRequest)(nil),                            // 267: core.UpdateDepartmentRequest
-	(*DeleteDepartmentRequest)(nil),                            // 268: core.DeleteDepartmentRequest
-	(*BatchGetDepartmentsByIDsRequest)(nil),                    // 269: core.BatchGetDepartmentsByIDsRequest
-	(*BulkUpsertDepartmentsRequest)(nil),                       // 270: core.BulkUpsertDepartmentsRequest
-	(*ExportDepartmentsRequest)(nil),                           // 271: core.ExportDepartmentsRequest
-	(*ListEmailLogsRequest)(nil),                               // 272: core.ListEmailLogsRequest
-	(*GetEmailLogRequest)(nil),                                 // 273: core.GetEmailLogRequest
-	(*ListInventoryChangeLogsRequest)(nil),                     // 274: core.ListInventoryChangeLogsRequest
-	(*GetInventoryChangeLogRequest)(nil),                       // 275: core.GetInventoryChangeLogRequest
-	(*ExportInventoryChangeLogsRequest)(nil),                   // 276: core.ExportInventoryChangeLogsRequest
-	(*StartInventoryChangeLogsExportRequest)(nil),              // 277: core.StartInventoryChangeLogsExportRequest
-	(*ListInvoicesRequest)(nil),                                // 278: core.ListInvoicesRequest
-	(*GetInvoiceRequest)(nil),                                  // 279: core.GetInvoiceRequest
-	(*UpdateInvoiceRequest)(nil),                               // 280: core.UpdateInvoiceRequest
-	(*ListCustomerInvoicesRequest)(nil),                        // 281: core.ListCustomerInvoicesRequest
-	(*ListMaterialsRequest)(nil),                               // 282: core.ListMaterialsRequest
-	(*ExportMaterialsRequest)(nil),                             // 283: core.ExportMaterialsRequest
-	(*GetMaterialRequest)(nil),                                 // 284: core.GetMaterialRequest
-	(*CreateMaterialRequest)(nil),                              // 285: core.CreateMaterialRequest
-	(*UpdateMaterialRequest)(nil),                              // 286: core.UpdateMaterialRequest
-	(*DeleteMaterialRequest)(nil),                              // 287: core.DeleteMaterialRequest
-	(*BatchGetMaterialsByIDsRequest)(nil),                      // 288: core.BatchGetMaterialsByIDsRequest
-	(*ListSupplierMaterialsRequest)(nil),                       // 289: core.ListSupplierMaterialsRequest
-	(*GetSupplierMaterialRequest)(nil),                         // 290: core.GetSupplierMaterialRequest
-	(*CreateSupplierMaterialRequest)(nil),                      // 291: core.CreateSupplierMaterialRequest
-	(*UpdateSupplierMaterialRequest)(nil),                      // 292: core.UpdateSupplierMaterialRequest
-	(*DeleteSupplierMaterialRequest)(nil),                      // 293: core.DeleteSupplierMaterialRequest
-	(*CreatePartRequest)(nil),                                  // 294: core.CreatePartRequest
-	(*GetPartRequest)(nil),                                     // 295: core.GetPartRequest
-	(*ListPartsRequest)(nil),                                   // 296: core.ListPartsRequest
-	(*ExportPartsRequest)(nil),                                 // 297: core.ExportPartsRequest
-	(*UpdatePartRequest)(nil),                                  // 298: core.UpdatePartRequest
-	(*DeletePartRequest)(nil),                                  // 299: core.DeletePartRequest
-	(*BatchGetPartsByIDsRequest)(nil),                          // 300: core.BatchGetPartsByIDsRequest
-	(*ListPermissionGroupsRequest)(nil),                        // 301: core.ListPermissionGroupsRequest
-	(*BatchGetPermissionGroupsByIDsRequest)(nil),               // 302: core.BatchGetPermissionGroupsByIDsRequest
-	(*ListPrioritiesRequest)(nil),                              // 303: core.ListPrioritiesRequest
-	(*GetPriorityRequest)(nil),                                 // 304: core.GetPriorityRequest
-	(*BatchGetPrioritiesByIDsRequest)(nil),                     // 305: core.BatchGetPrioritiesByIDsRequest
-	(*ListProductTypesRequest)(nil),                            // 306: core.ListProductTypesRequest
-	(*GetProductTypeRequest)(nil),                              // 307: core.GetProductTypeRequest
-	(*CreateProductTypeRequest)(nil),                           // 308: core.CreateProductTypeRequest
-	(*UpdateProductTypeRequest)(nil),                           // 309: core.UpdateProductTypeRequest
-	(*DeleteProductTypeRequest)(nil),                           // 310: core.DeleteProductTypeRequest
-	(*BatchGetProductTypesByIDsRequest)(nil),                   // 311: core.BatchGetProductTypesByIDsRequest
-	(*ListReceivablesRequest)(nil),                             // 312: core.ListReceivablesRequest
-	(*ListReceivablesByCustomerRequest)(nil),                   // 313: core.ListReceivablesByCustomerRequest
-	(*ExportReceivablesByCustomerRequest)(nil),                 // 314: core.ExportReceivablesByCustomerRequest
-	(*EmailReceivablesForCustomerRequest)(nil),                 // 315: core.EmailReceivablesForCustomerRequest
-	(*ListUnitGroupsRequest)(nil),                              // 316: core.ListUnitGroupsRequest
-	(*GetUnitGroupRequest)(nil),                                // 317: core.GetUnitGroupRequest
-	(*CreateUnitGroupRequest)(nil),                             // 318: core.CreateUnitGroupRequest
-	(*UpdateUnitGroupRequest)(nil),                             // 319: core.UpdateUnitGroupRequest
-	(*DeleteUnitGroupRequest)(nil),                             // 320: core.DeleteUnitGroupRequest
-	(*UpsertUnitGroupUnitRequest)(nil),                         // 321: core.UpsertUnitGroupUnitRequest
-	(*DeleteUnitGroupUnitRequest)(nil),                         // 322: core.DeleteUnitGroupUnitRequest
-	(*ListUnitGroupUnitsRequest)(nil),                          // 323: core.ListUnitGroupUnitsRequest
-	(*GetUnitGroupUnitRequest)(nil),                            // 324: core.GetUnitGroupUnitRequest
-	(*BatchGetUnitGroupsByIDsRequest)(nil),                     // 325: core.BatchGetUnitGroupsByIDsRequest
-	(*BatchGetUnitGroupUnitsByIDsRequest)(nil),                 // 326: core.BatchGetUnitGroupUnitsByIDsRequest
-	(*ValidateUnitsRequest)(nil),                               // 327: core.ValidateUnitsRequest
-	(*BulkUpsertUnitGroupsRequest)(nil),                        // 328: core.BulkUpsertUnitGroupsRequest
-	(*ExportUnitGroupsRequest)(nil),                            // 329: core.ExportUnitGroupsRequest
-	(*ListTransactionsRequest)(nil),                            // 330: core.ListTransactionsRequest
-	(*GetTransactionRequest)(nil),                              // 331: core.GetTransactionRequest
-	(*CreateTransactionRequest)(nil),                           // 332: core.CreateTransactionRequest
-	(*UpdateTransactionRequest)(nil),                           // 333: core.UpdateTransactionRequest
-	(*DeleteTransactionRequest)(nil),                           // 334: core.DeleteTransactionRequest
-	(*ListAccountTransactionsRequest)(nil),                     // 335: core.ListAccountTransactionsRequest
-	(*ListSettlementsRequest)(nil),                             // 336: core.ListSettlementsRequest
-	(*GetSettlementRequest)(nil),                               // 337: core.GetSettlementRequest
-	(*CreateSettlementRequest)(nil),                            // 338: core.CreateSettlementRequest
-	(*UpdateSettlementRequest)(nil),                            // 339: core.UpdateSettlementRequest
-	(*DeleteSettlementRequest)(nil),                            // 340: core.DeleteSettlementRequest
-	(*ListAllocationEntriesRequest)(nil),                       // 341: core.ListAllocationEntriesRequest
-	(*UpdateTransactionAllocationRequest)(nil),                 // 342: core.UpdateTransactionAllocationRequest
-	(*DeleteTransactionAllocationRequest)(nil),                 // 343: core.DeleteTransactionAllocationRequest
-	(*ListOpenCreditsRequest)(nil),                             // 344: core.ListOpenCreditsRequest
-	(*GetUserRequest)(nil),                                     // 345: core.GetUserRequest
-	(*BatchGetUsersByIDsRequest)(nil),                          // 346: core.BatchGetUsersByIDsRequest
-	(*UpdateUserRequest)(nil),                                  // 347: core.UpdateUserRequest
-	(*UploadUserPhotoRequest)(nil),                             // 348: core.UploadUserPhotoRequest
-	(*GetUserPhotoURLRequest)(nil),                             // 349: core.GetUserPhotoURLRequest
-	(*CheckDuplicateRequest)(nil),                              // 350: core.CheckDuplicateRequest
-	(*EmailRecordRequest)(nil),                                 // 351: core.EmailRecordRequest
-	(*RequestDemoRequest)(nil),                                 // 352: core.RequestDemoRequest
-	(*SubmitFeedbackRequest)(nil),                              // 353: core.SubmitFeedbackRequest
-	(*ListCatalogProductLinesRequest)(nil),                     // 354: core.ListCatalogProductLinesRequest
-	(*ListCatalogProductsRequest)(nil),                         // 355: core.ListCatalogProductsRequest
-	(*ListRolesRequest)(nil),                                   // 356: core.ListRolesRequest
-	(*GetRoleRequest)(nil),                                     // 357: core.GetRoleRequest
-	(*CreateRoleRequest)(nil),                                  // 358: core.CreateRoleRequest
-	(*UpdateRoleRequest)(nil),                                  // 359: core.UpdateRoleRequest
-	(*DeleteRoleRequest)(nil),                                  // 360: core.DeleteRoleRequest
-	(*BatchGetRolesByIDsRequest)(nil),                          // 361: core.BatchGetRolesByIDsRequest
-	(*ListRegistrationFlowsRequest)(nil),                       // 362: core.ListRegistrationFlowsRequest
-	(*GetRegistrationFlowRequest)(nil),                         // 363: core.GetRegistrationFlowRequest
-	(*CreateRegistrationFlowRequest)(nil),                      // 364: core.CreateRegistrationFlowRequest
-	(*UpdateRegistrationFlowRequest)(nil),                      // 365: core.UpdateRegistrationFlowRequest
-	(*DeleteRegistrationFlowRequest)(nil),                      // 366: core.DeleteRegistrationFlowRequest
-	(*GetRegistrationFlowBySlugRequest)(nil),                   // 367: core.GetRegistrationFlowBySlugRequest
-	(*RegisterCustomerRequest)(nil),                            // 368: core.RegisterCustomerRequest
-	(*ListScanningStationsRequest)(nil),                        // 369: core.ListScanningStationsRequest
-	(*GetScanningStationRequest)(nil),                          // 370: core.GetScanningStationRequest
-	(*CreateScanningStationRequest)(nil),                       // 371: core.CreateScanningStationRequest
-	(*UpdateScanningStationRequest)(nil),                       // 372: core.UpdateScanningStationRequest
-	(*DeleteScanningStationRequest)(nil),                       // 373: core.DeleteScanningStationRequest
-	(*ConnectProductionStepsByScanningStationRequest)(nil),     // 374: core.ConnectProductionStepsByScanningStationRequest
-	(*BatchGetScanningStationsByIDsRequest)(nil),               // 375: core.BatchGetScanningStationsByIDsRequest
-	(*BulkUpsertScanningStationsRequest)(nil),                  // 376: core.BulkUpsertScanningStationsRequest
-	(*ExportScanningStationsRequest)(nil),                      // 377: core.ExportScanningStationsRequest
-	(*ListLocationsRequest)(nil),                               // 378: core.ListLocationsRequest
-	(*GetLocationRequest)(nil),                                 // 379: core.GetLocationRequest
-	(*CreateLocationRequest)(nil),                              // 380: core.CreateLocationRequest
-	(*UpdateLocationRequest)(nil),                              // 381: core.UpdateLocationRequest
-	(*DeleteLocationRequest)(nil),                              // 382: core.DeleteLocationRequest
-	(*ListLocationTypesRequest)(nil),                           // 383: core.ListLocationTypesRequest
-	(*GetLocationTypeRequest)(nil),                             // 384: core.GetLocationTypeRequest
-	(*BatchGetLocationsByIDsRequest)(nil),                      // 385: core.BatchGetLocationsByIDsRequest
-	(*BulkUpsertLocationsRequest)(nil),                         // 386: core.BulkUpsertLocationsRequest
-	(*ExportLocationsRequest)(nil),                             // 387: core.ExportLocationsRequest
-	(*ListSuppliersRequest)(nil),                               // 388: core.ListSuppliersRequest
-	(*GetSupplierRequest)(nil),                                 // 389: core.GetSupplierRequest
-	(*CreateSupplierRequest)(nil),                              // 390: core.CreateSupplierRequest
-	(*UpdateSupplierRequest)(nil),                              // 391: core.UpdateSupplierRequest
-	(*DeleteSupplierRequest)(nil),                              // 392: core.DeleteSupplierRequest
-	(*BulkDeleteSuppliersRequest)(nil),                         // 393: core.BulkDeleteSuppliersRequest
-	(*BatchGetSuppliersByIDsRequest)(nil),                      // 394: core.BatchGetSuppliersByIDsRequest
-	(*ListSysPropertiesRequest)(nil),                           // 395: core.ListSysPropertiesRequest
-	(*GetSysPropertyRequest)(nil),                              // 396: core.GetSysPropertyRequest
-	(*UpdateSysPropertyRequest)(nil),                           // 397: core.UpdateSysPropertyRequest
-	(*GetLatestSysPropertyValueRequest)(nil),                   // 398: core.GetLatestSysPropertyValueRequest
-	(*BatchGetSysPropertiesByIDsRequest)(nil),                  // 399: core.BatchGetSysPropertiesByIDsRequest
-	(*GetTenancyRequest)(nil),                                  // 400: core.GetTenancyRequest
-	(*SwitchTenancyAccountRequest)(nil),                        // 401: core.SwitchTenancyAccountRequest
-	(*GetCurrentUserRequest)(nil),                              // 402: core.GetCurrentUserRequest
-	(*ListCustomerAccountsForUserRequest)(nil),                 // 403: core.ListCustomerAccountsForUserRequest
-	(*ListTerritoriesRequest)(nil),                             // 404: core.ListTerritoriesRequest
-	(*GetTerritoryRequest)(nil),                                // 405: core.GetTerritoryRequest
-	(*CreateTerritoryRequest)(nil),                             // 406: core.CreateTerritoryRequest
-	(*UpdateTerritoryRequest)(nil),                             // 407: core.UpdateTerritoryRequest
-	(*DeleteTerritoryRequest)(nil),                             // 408: core.DeleteTerritoryRequest
-	(*BatchGetTerritoriesByIDsRequest)(nil),                    // 409: core.BatchGetTerritoriesByIDsRequest
-	(*ListDocumentSettingsRequest)(nil),                        // 410: core.ListDocumentSettingsRequest
-	(*GetDocumentSettingRequest)(nil),                          // 411: core.GetDocumentSettingRequest
-	(*UpdateDocumentSettingRequest)(nil),                       // 412: core.UpdateDocumentSettingRequest
-	(*GetAccountContextResponse)(nil),                          // 413: core.GetAccountContextResponse
-	(*GetAccountNamesResponse)(nil),                            // 414: core.GetAccountNamesResponse
-	(*BatchGetAccountsByIDsResponse)(nil),                      // 415: core.BatchGetAccountsByIDsResponse
-	(*GetUserAccountAccessResponse)(nil),                       // 416: core.GetUserAccountAccessResponse
-	(*GetRolePermissionsResponse)(nil),                         // 417: core.GetRolePermissionsResponse
-	(*GetRoleInfoResponse)(nil),                                // 418: core.GetRoleInfoResponse
-	(*GetAccountRelationResponse)(nil),                         // 419: core.GetAccountRelationResponse
-	(*ListUserAccountAffiliationsResponse)(nil),                // 420: core.ListUserAccountAffiliationsResponse
-	(*GetSandboxAccountByOwnerResponse)(nil),                   // 421: core.GetSandboxAccountByOwnerResponse
-	(*GetAdminRoleResponse)(nil),                               // 422: core.GetAdminRoleResponse
-	(*ListSandboxAccountsResponse)(nil),                        // 423: core.ListSandboxAccountsResponse
-	(*CreateSandboxResponse)(nil),                              // 424: core.CreateSandboxResponse
-	(*GetSandboxResponse)(nil),                                 // 425: core.GetSandboxResponse
-	(*BatchGetSandboxesByIDsResponse)(nil),                     // 426: core.BatchGetSandboxesByIDsResponse
-	(*UpdateAgentSpendingCapResponse)(nil),                     // 427: core.UpdateAgentSpendingCapResponse
-	(*GetAccountByStripeCustomerIDResponse)(nil),               // 428: core.GetAccountByStripeCustomerIDResponse
-	(*CompleteRegistrationResponse)(nil),                       // 429: core.CompleteRegistrationResponse
-	(*ListUnitsResponse)(nil),                                  // 430: core.ListUnitsResponse
-	(*GetUnitResponse)(nil),                                    // 431: core.GetUnitResponse
-	(*CreateUnitResponse)(nil),                                 // 432: core.CreateUnitResponse
-	(*UpdateUnitResponse)(nil),                                 // 433: core.UpdateUnitResponse
-	(*BatchGetUnitsByIDsResponse)(nil),                         // 434: core.BatchGetUnitsByIDsResponse
-	(*BulkUpsertUnitsResponse)(nil),                            // 435: core.BulkUpsertUnitsResponse
-	(*ExportUnitsResponse)(nil),                                // 436: core.ExportUnitsResponse
-	(*SearchProductsResponse)(nil),                             // 437: core.SearchProductsResponse
-	(*ListProductsResponse)(nil),                               // 438: core.ListProductsResponse
-	(*GetCustomerByEmailResponse)(nil),                         // 439: core.GetCustomerByEmailResponse
-	(*FindContactsByEmailResponse)(nil),                        // 440: core.FindContactsByEmailResponse
-	(*ListPaymentTermsResponse)(nil),                           // 441: core.ListPaymentTermsResponse
-	(*GetPaymentTermResponse)(nil),                             // 442: core.GetPaymentTermResponse
-	(*CreatePaymentTermResponse)(nil),                          // 443: core.CreatePaymentTermResponse
-	(*UpdatePaymentTermResponse)(nil),                          // 444: core.UpdatePaymentTermResponse
-	(*BatchGetPaymentTermsByIDsResponse)(nil),                  // 445: core.BatchGetPaymentTermsByIDsResponse
-	(*ListShippingTermsResponse)(nil),                          // 446: core.ListShippingTermsResponse
-	(*GetShippingTermResponse)(nil),                            // 447: core.GetShippingTermResponse
-	(*CreateShippingTermResponse)(nil),                         // 448: core.CreateShippingTermResponse
-	(*UpdateShippingTermResponse)(nil),                         // 449: core.UpdateShippingTermResponse
-	(*BatchGetShippingTermsByIDsResponse)(nil),                 // 450: core.BatchGetShippingTermsByIDsResponse
-	(*GetAddressResponse)(nil),                                 // 451: core.GetAddressResponse
-	(*ListAddressesResponse)(nil),                              // 452: core.ListAddressesResponse
-	(*CreateAddressResponse)(nil),                              // 453: core.CreateAddressResponse
-	(*UpdateAddressResponse)(nil),                              // 454: core.UpdateAddressResponse
-	(*BatchGetAddressesByIDsResponse)(nil),                     // 455: core.BatchGetAddressesByIDsResponse
-	(*AutocompleteAddressResponse)(nil),                        // 456: core.AutocompleteAddressResponse
-	(*GetAddressDetailsResponse)(nil),                          // 457: core.GetAddressDetailsResponse
-	(*ValidateAddressResponse)(nil),                            // 458: core.ValidateAddressResponse
-	(*ListAccountStatusesResponse)(nil),                        // 459: core.ListAccountStatusesResponse
-	(*GetAccountStatusResponse)(nil),                           // 460: core.GetAccountStatusResponse
-	(*BatchGetAccountStatusesByIDsResponse)(nil),               // 461: core.BatchGetAccountStatusesByIDsResponse
-	(*ListAccountGroupsResponse)(nil),                          // 462: core.ListAccountGroupsResponse
-	(*GetAccountGroupResponse)(nil),                            // 463: core.GetAccountGroupResponse
-	(*CreateAccountGroupResponse)(nil),                         // 464: core.CreateAccountGroupResponse
-	(*UpdateAccountGroupResponse)(nil),                         // 465: core.UpdateAccountGroupResponse
-	(*BatchGetAccountGroupsByIDsResponse)(nil),                 // 466: core.BatchGetAccountGroupsByIDsResponse
-	(*ListAccountGroupProductLineAccessResponse)(nil),          // 467: core.ListAccountGroupProductLineAccessResponse
-	(*GetAccountGroupProductLineAccessResponse)(nil),           // 468: core.GetAccountGroupProductLineAccessResponse
-	(*CreateAccountGroupProductLineAccessResponse)(nil),        // 469: core.CreateAccountGroupProductLineAccessResponse
-	(*UpdateAccountGroupProductLineAccessResponse)(nil),        // 470: core.UpdateAccountGroupProductLineAccessResponse
-	(*BatchGetAccountGroupProductLineAccessByIDsResponse)(nil), // 471: core.BatchGetAccountGroupProductLineAccessByIDsResponse
-	(*ListCustomerProductLineAccessResponse)(nil),              // 472: core.ListCustomerProductLineAccessResponse
-	(*GetCustomerProductLineAccessResponse)(nil),               // 473: core.GetCustomerProductLineAccessResponse
-	(*CreateCustomerProductLineAccessResponse)(nil),            // 474: core.CreateCustomerProductLineAccessResponse
-	(*UpdateCustomerProductLineAccessResponse)(nil),            // 475: core.UpdateCustomerProductLineAccessResponse
-	(*BatchGetCustomerProductLineAccessByIDsResponse)(nil),     // 476: core.BatchGetCustomerProductLineAccessByIDsResponse
-	(*ListAccountUsersResponse)(nil),                           // 477: core.ListAccountUsersResponse
-	(*GetAccountUserResponse)(nil),                             // 478: core.GetAccountUserResponse
-	(*CreateAccountUserResponse)(nil),                          // 479: core.CreateAccountUserResponse
-	(*UpdateAccountUserResponse)(nil),                          // 480: core.UpdateAccountUserResponse
-	(*BatchGetAccountUsersByIDsResponse)(nil),                  // 481: core.BatchGetAccountUsersByIDsResponse
-	(*ListSalesTargetsResponse)(nil),                           // 482: core.ListSalesTargetsResponse
-	(*CreateSalesTargetResponse)(nil),                          // 483: core.CreateSalesTargetResponse
-	(*UpsertSalesTargetResponse)(nil),                          // 484: core.UpsertSalesTargetResponse
-	(*ListAccountPricesResponse)(nil),                          // 485: core.ListAccountPricesResponse
-	(*GetAccountPriceResponse)(nil),                            // 486: core.GetAccountPriceResponse
-	(*CreateAccountPriceResponse)(nil),                         // 487: core.CreateAccountPriceResponse
-	(*UpdateAccountPriceResponse)(nil),                         // 488: core.UpdateAccountPriceResponse
-	(*ExportPriceListResponse)(nil),                            // 489: core.ExportPriceListResponse
-	(*ListAccountIntegrationsResponse)(nil),                    // 490: core.ListAccountIntegrationsResponse
-	(*CreateAccountIntegrationResponse)(nil),                   // 491: core.CreateAccountIntegrationResponse
-	(*UpdateAccountIntegrationResponse)(nil),                   // 492: core.UpdateAccountIntegrationResponse
-	(*DeleteAccountIntegrationResponse)(nil),                   // 493: core.DeleteAccountIntegrationResponse
-	(*BatchGetAccountIntegrationsByIDsResponse)(nil),           // 494: core.BatchGetAccountIntegrationsByIDsResponse
-	(*GetStripePublishableKeyResponse)(nil),                    // 495: core.GetStripePublishableKeyResponse
-	(*GetStripeStatusResponse)(nil),                            // 496: core.GetStripeStatusResponse
-	(*ListAdjustmentTypesResponse)(nil),                        // 497: core.ListAdjustmentTypesResponse
-	(*BatchGetAdjustmentTypesByIDsResponse)(nil),               // 498: core.BatchGetAdjustmentTypesByIDsResponse
-	(*GetAccountResponse)(nil),                                 // 499: core.GetAccountResponse
-	(*GetAccountBySlugResponse)(nil),                           // 500: core.GetAccountBySlugResponse
-	(*GetPortalProfileBySlugResponse)(nil),                     // 501: core.GetPortalProfileBySlugResponse
-	(*PortalRegistrationSessionResponse)(nil),                  // 502: core.PortalRegistrationSessionResponse
-	(*ListPortalRegistrationSessionsResponse)(nil),             // 503: core.ListPortalRegistrationSessionsResponse
-	(*UpdateAccountResponse)(nil),                              // 504: core.UpdateAccountResponse
-	(*UploadAccountPhotoResponse)(nil),                         // 505: core.UploadAccountPhotoResponse
-	(*GetAccountLogoURLResponse)(nil),                          // 506: core.GetAccountLogoURLResponse
-	(*UploadAccountFaviconResponse)(nil),                       // 507: core.UploadAccountFaviconResponse
-	(*GetAccountFaviconURLResponse)(nil),                       // 508: core.GetAccountFaviconURLResponse
-	(*ListPropertiesResponse)(nil),                             // 509: core.ListPropertiesResponse
-	(*GetPropertyResponse)(nil),                                // 510: core.GetPropertyResponse
-	(*CreatePropertyResponse)(nil),                             // 511: core.CreatePropertyResponse
-	(*UpdatePropertyResponse)(nil),                             // 512: core.UpdatePropertyResponse
-	(*BulkUpsertPropertiesResponse)(nil),                       // 513: core.BulkUpsertPropertiesResponse
-	(*ExportPropertiesResponse)(nil),                           // 514: core.ExportPropertiesResponse
-	(*ListAttributesResponse)(nil),                             // 515: core.ListAttributesResponse
-	(*GetAttributeResponse)(nil),                               // 516: core.GetAttributeResponse
-	(*CreateAttributeResponse)(nil),                            // 517: core.CreateAttributeResponse
-	(*UpdateAttributeResponse)(nil),                            // 518: core.UpdateAttributeResponse
-	(*BatchGetAttributesByIDsResponse)(nil),                    // 519: core.BatchGetAttributesByIDsResponse
-	(*BatchGetPropertiesByIDsResponse)(nil),                    // 520: core.BatchGetPropertiesByIDsResponse
-	(*BatchGetItemCategoriesByIDsResponse)(nil),                // 521: core.BatchGetItemCategoriesByIDsResponse
-	(*BatchGetItemsByIDsResponse)(nil),                         // 522: core.BatchGetItemsByIDsResponse
-	(*ListCarriersResponse)(nil),                               // 523: core.ListCarriersResponse
-	(*GetCarrierResponse)(nil),                                 // 524: core.GetCarrierResponse
-	(*BatchGetCarriersByIDsResponse)(nil),                      // 525: core.BatchGetCarriersByIDsResponse
-	(*CreateCarrierResponse)(nil),                              // 526: core.CreateCarrierResponse
-	(*UpdateCarrierResponse)(nil),                              // 527: core.UpdateCarrierResponse
-	(*InitiateCarrierOAuthResponse)(nil),                       // 528: core.InitiateCarrierOAuthResponse
-	(*GetCarrierOAuthStatusResponse)(nil),                      // 529: core.GetCarrierOAuthStatusResponse
-	(*SyncServiceLevelsResponse)(nil),                          // 530: core.SyncServiceLevelsResponse
-	(*ListServiceLevelsResponse)(nil),                          // 531: core.ListServiceLevelsResponse
-	(*GetServiceLevelResponse)(nil),                            // 532: core.GetServiceLevelResponse
-	(*BatchGetServiceLevelsByIDsResponse)(nil),                 // 533: core.BatchGetServiceLevelsByIDsResponse
-	(*CreateServiceLevelResponse)(nil),                         // 534: core.CreateServiceLevelResponse
-	(*UpdateServiceLevelResponse)(nil),                         // 535: core.UpdateServiceLevelResponse
-	(*ListItemsResponse)(nil),                                  // 536: core.ListItemsResponse
-	(*GetItemResponse)(nil),                                    // 537: core.GetItemResponse
-	(*GetItemInventoryResponse)(nil),                           // 538: core.GetItemInventoryResponse
-	(*GetItemLotDefaultResponse)(nil),                          // 539: core.GetItemLotDefaultResponse
-	(*GetItemCostsResponse)(nil),                               // 540: core.GetItemCostsResponse
-	(*GetItemTrendsResponse)(nil),                              // 541: core.GetItemTrendsResponse
-	(*ExportItemsResponse)(nil),                                // 542: core.ExportItemsResponse
-	(*CreateItemResponse)(nil),                                 // 543: core.CreateItemResponse
-	(*UpdateItemResponse)(nil),                                 // 544: core.UpdateItemResponse
-	(*BulkUpsertItemsResponse)(nil),                            // 545: core.BulkUpsertItemsResponse
-	(*SetItemOrderUnitsResponse)(nil),                          // 546: core.SetItemOrderUnitsResponse
-	(*ChangeItemStockingUnitResponse)(nil),                     // 547: core.ChangeItemStockingUnitResponse
-	(*AddItemAttributeResponse)(nil),                           // 548: core.AddItemAttributeResponse
-	(*RemoveItemAttributeResponse)(nil),                        // 549: core.RemoveItemAttributeResponse
-	(*ChangeItemCategoryResponse)(nil),                         // 550: core.ChangeItemCategoryResponse
-	(*UpdateItemInventoryResponse)(nil),                        // 551: core.UpdateItemInventoryResponse
-	(*BulkCreateItemsResponse)(nil),                            // 552: core.BulkCreateItemsResponse
-	(*BulkUpsertPartsResponse)(nil),                            // 553: core.BulkUpsertPartsResponse
-	(*BulkUpsertProductsResponse)(nil),                         // 554: core.BulkUpsertProductsResponse
-	(*BulkUpsertMaterialsResponse)(nil),                        // 555: core.BulkUpsertMaterialsResponse
-	(*BulkReconcileItemsResponse)(nil),                         // 556: core.BulkReconcileItemsResponse
-	(*ListInventoriesResponse)(nil),                            // 557: core.ListInventoriesResponse
-	(*AnalyzeWeeksOfSalesResponse)(nil),                        // 558: core.AnalyzeWeeksOfSalesResponse
-	(*ListChildAccountsResponse)(nil),                          // 559: core.ListChildAccountsResponse
-	(*AddChildAccountResponse)(nil),                            // 560: core.AddChildAccountResponse
-	(*BatchGetChildAccountsByIDsResponse)(nil),                 // 561: core.BatchGetChildAccountsByIDsResponse
-	(*GetBatchFlowResponse)(nil),                               // 562: core.GetBatchFlowResponse
-	(*ListBatchesByScanningStationResponse)(nil),               // 563: core.ListBatchesByScanningStationResponse
-	(*GetBatchPossibleNextStepsResponse)(nil),                  // 564: core.GetBatchPossibleNextStepsResponse
-	(*GetBatchPossibleInitStepsResponse)(nil),                  // 565: core.GetBatchPossibleInitStepsResponse
-	(*AnalyzeOpenBatchesResponse)(nil),                         // 566: core.AnalyzeOpenBatchesResponse
-	(*InitializeBatchResponse)(nil),                            // 567: core.InitializeBatchResponse
-	(*MoveBatchesResponse)(nil),                                // 568: core.MoveBatchesResponse
-	(*MergeBatchesResponse)(nil),                               // 569: core.MergeBatchesResponse
-	(*SplitBatchResponse)(nil),                                 // 570: core.SplitBatchResponse
-	(*GetRemainingQuantityToSplitResponse)(nil),                // 571: core.GetRemainingQuantityToSplitResponse
-	(*GetScanningStationConsumptionResponse)(nil),              // 572: core.GetScanningStationConsumptionResponse
-	(*CloseBatchResponse)(nil),                                 // 573: core.CloseBatchResponse
-	(*DeleteBatchResponse)(nil),                                // 574: core.DeleteBatchResponse
-	(*ListItemCategoriesResponse)(nil),                         // 575: core.ListItemCategoriesResponse
-	(*GetItemCategoryResponse)(nil),                            // 576: core.GetItemCategoryResponse
-	(*CreateItemCategoryResponse)(nil),                         // 577: core.CreateItemCategoryResponse
-	(*UpdateItemCategoryResponse)(nil),                         // 578: core.UpdateItemCategoryResponse
-	(*CreateItemCategoryPropertyResponse)(nil),                 // 579: core.CreateItemCategoryPropertyResponse
-	(*BulkUpsertItemCategoriesResponse)(nil),                   // 580: core.BulkUpsertItemCategoriesResponse
-	(*ExportItemCategoriesResponse)(nil),                       // 581: core.ExportItemCategoriesResponse
-	(*ListProductsFullResponse)(nil),                           // 582: core.ListProductsFullResponse
-	(*ExportProductsResponse)(nil),                             // 583: core.ExportProductsResponse
-	(*GetProductResponse)(nil),                                 // 584: core.GetProductResponse
-	(*CreateProductResponse)(nil),                              // 585: core.CreateProductResponse
-	(*UpdateProductResponse)(nil),                              // 586: core.UpdateProductResponse
-	(*DeleteProductResponse)(nil),                              // 587: core.DeleteProductResponse
-	(*ChangeProductProductLineResponse)(nil),                   // 588: core.ChangeProductProductLineResponse
-	(*ValidateProductsResponse)(nil),                           // 589: core.ValidateProductsResponse
-	(*BatchGetProductsByIDsResponse)(nil),                      // 590: core.BatchGetProductsByIDsResponse
-	(*ListProductLinesResponse)(nil),                           // 591: core.ListProductLinesResponse
-	(*GetProductLineResponse)(nil),                             // 592: core.GetProductLineResponse
-	(*CreateProductLineResponse)(nil),                          // 593: core.CreateProductLineResponse
-	(*UpdateProductLineResponse)(nil),                          // 594: core.UpdateProductLineResponse
-	(*BatchGetProductLinesByIDsResponse)(nil),                  // 595: core.BatchGetProductLinesByIDsResponse
-	(*BulkUpsertProductLinesResponse)(nil),                     // 596: core.BulkUpsertProductLinesResponse
-	(*ExportProductLinesResponse)(nil),                         // 597: core.ExportProductLinesResponse
-	(*GetConsumptionResponse)(nil),                             // 598: core.GetConsumptionResponse
-	(*CreateConsumptionResponse)(nil),                          // 599: core.CreateConsumptionResponse
-	(*UpdateConsumptionResponse)(nil),                          // 600: core.UpdateConsumptionResponse
-	(*DeleteConsumptionResponse)(nil),                          // 601: core.DeleteConsumptionResponse
-	(*GetProductionFlowResponse)(nil),                          // 602: core.GetProductionFlowResponse
-	(*ListCustomersResponse)(nil),                              // 603: core.ListCustomersResponse
-	(*GetCustomerResponse)(nil),                                // 604: core.GetCustomerResponse
-	(*BatchGetCustomersByIDsResponse)(nil),                     // 605: core.BatchGetCustomersByIDsResponse
-	(*CreateCustomerResponse)(nil),                             // 606: core.CreateCustomerResponse
-	(*GetCustomerLeadTimeResponse)(nil),                        // 607: core.GetCustomerLeadTimeResponse
-	(*GetFrequentlyOrderedProductsResponse)(nil),               // 608: core.GetFrequentlyOrderedProductsResponse
-	(*ListCustomerNotificationRecipientsResponse)(nil),         // 609: core.ListCustomerNotificationRecipientsResponse
-	(*UpdateCustomerNotificationRecipientsResponse)(nil),       // 610: core.UpdateCustomerNotificationRecipientsResponse
-	(*UpdateCustomerResponse)(nil),                             // 611: core.UpdateCustomerResponse
-	(*MergeCustomersResponse)(nil),                             // 612: core.MergeCustomersResponse
-	(*ExportCustomersResponse)(nil),                            // 613: core.ExportCustomersResponse
-	(*AnalyzeSalesResponse)(nil),                               // 614: core.AnalyzeSalesResponse
-	(*AnalyzeSalesSummaryResponse)(nil),                        // 615: core.AnalyzeSalesSummaryResponse
-	(*AnalyzeSalesBreakdownResponse)(nil),                      // 616: core.AnalyzeSalesBreakdownResponse
-	(*AnalyzeSalesInvoicesResponse)(nil),                       // 617: core.AnalyzeSalesInvoicesResponse
-	(*ListNewCustomersResponse)(nil),                           // 618: core.ListNewCustomersResponse
-	(*ListSalesLinesResponse)(nil),                             // 619: core.ListSalesLinesResponse
-	(*ExportSalesLinesResponse)(nil),                           // 620: core.ExportSalesLinesResponse
-	(*AnalyzeOpenOrdersSummaryResponse)(nil),                   // 621: core.AnalyzeOpenOrdersSummaryResponse
-	(*AnalyzeOpenOrderProductsResponse)(nil),                   // 622: core.AnalyzeOpenOrderProductsResponse
-	(*ListOpenOrdersResponse)(nil),                             // 623: core.ListOpenOrdersResponse
-	(*ListOpenOrderLinesResponse)(nil),                         // 624: core.ListOpenOrderLinesResponse
-	(*ExportOpenOrderLinesResponse)(nil),                       // 625: core.ExportOpenOrderLinesResponse
-	(*AnalyzeRealizedMarginsResponse)(nil),                     // 626: core.AnalyzeRealizedMarginsResponse
-	(*AnalyzeCustomerPricingResponse)(nil),                     // 627: core.AnalyzeCustomerPricingResponse
-	(*AnalyzeProductionCostsResponse)(nil),                     // 628: core.AnalyzeProductionCostsResponse
-	(*AnalyzeDeliveriesResponse)(nil),                          // 629: core.AnalyzeDeliveriesResponse
-	(*AnalyzeManufacturingResponse)(nil),                       // 630: core.AnalyzeManufacturingResponse
-	(*AnalyzeManufacturingBatchResponse)(nil),                  // 631: core.AnalyzeManufacturingBatchResponse
-	(*AnalyzeOrdersResponse)(nil),                              // 632: core.AnalyzeOrdersResponse
-	(*AnalyzeQuarterlyOrdersResponse)(nil),                     // 633: core.AnalyzeQuarterlyOrdersResponse
-	(*AnalyzeMaterialsResponse)(nil),                           // 634: core.AnalyzeMaterialsResponse
-	(*AnalyzeInventoryReceiptsResponse)(nil),                   // 635: core.AnalyzeInventoryReceiptsResponse
-	(*AnalyzeNewCustomersResponse)(nil),                        // 636: core.AnalyzeNewCustomersResponse
-	(*AnalyzeDemandForecastResponse)(nil),                      // 637: core.AnalyzeDemandForecastResponse
-	(*AnalyzeOeeResponse)(nil),                                 // 638: core.AnalyzeOeeResponse
-	(*AnalyzeOeeTrendResponse)(nil),                            // 639: core.AnalyzeOeeTrendResponse
-	(*AnalyzeScheduleAttainmentResponse)(nil),                  // 640: core.AnalyzeScheduleAttainmentResponse
-	(*AnalyzeDeliveryPerformanceResponse)(nil),                 // 641: core.AnalyzeDeliveryPerformanceResponse
-	(*ListDeliveriesResponse)(nil),                             // 642: core.ListDeliveriesResponse
-	(*GetDeliveryResponse)(nil),                                // 643: core.GetDeliveryResponse
-	(*ListDepartmentsResponse)(nil),                            // 644: core.ListDepartmentsResponse
-	(*GetDepartmentResponse)(nil),                              // 645: core.GetDepartmentResponse
-	(*CreateDepartmentResponse)(nil),                           // 646: core.CreateDepartmentResponse
-	(*UpdateDepartmentResponse)(nil),                           // 647: core.UpdateDepartmentResponse
-	(*BatchGetDepartmentsByIDsResponse)(nil),                   // 648: core.BatchGetDepartmentsByIDsResponse
-	(*BulkUpsertDepartmentsResponse)(nil),                      // 649: core.BulkUpsertDepartmentsResponse
-	(*ExportDepartmentsResponse)(nil),                          // 650: core.ExportDepartmentsResponse
-	(*ListEmailLogsResponse)(nil),                              // 651: core.ListEmailLogsResponse
-	(*GetEmailLogResponse)(nil),                                // 652: core.GetEmailLogResponse
-	(*ListInventoryChangeLogsResponse)(nil),                    // 653: core.ListInventoryChangeLogsResponse
-	(*GetInventoryChangeLogResponse)(nil),                      // 654: core.GetInventoryChangeLogResponse
-	(*ExportInventoryChangeLogsResponse)(nil),                  // 655: core.ExportInventoryChangeLogsResponse
-	(*StartInventoryChangeLogsExportResponse)(nil),             // 656: core.StartInventoryChangeLogsExportResponse
-	(*ListInvoicesResponse)(nil),                               // 657: core.ListInvoicesResponse
-	(*GetInvoiceResponse)(nil),                                 // 658: core.GetInvoiceResponse
-	(*UpdateInvoiceResponse)(nil),                              // 659: core.UpdateInvoiceResponse
-	(*ListCustomerInvoicesResponse)(nil),                       // 660: core.ListCustomerInvoicesResponse
-	(*ListMaterialsResponse)(nil),                              // 661: core.ListMaterialsResponse
-	(*ExportMaterialsResponse)(nil),                            // 662: core.ExportMaterialsResponse
-	(*GetMaterialResponse)(nil),                                // 663: core.GetMaterialResponse
-	(*CreateMaterialResponse)(nil),                             // 664: core.CreateMaterialResponse
-	(*UpdateMaterialResponse)(nil),                             // 665: core.UpdateMaterialResponse
-	(*DeleteMaterialResponse)(nil),                             // 666: core.DeleteMaterialResponse
-	(*BatchGetMaterialsByIDsResponse)(nil),                     // 667: core.BatchGetMaterialsByIDsResponse
-	(*ListSupplierMaterialsResponse)(nil),                      // 668: core.ListSupplierMaterialsResponse
-	(*GetSupplierMaterialResponse)(nil),                        // 669: core.GetSupplierMaterialResponse
-	(*CreateSupplierMaterialResponse)(nil),                     // 670: core.CreateSupplierMaterialResponse
-	(*UpdateSupplierMaterialResponse)(nil),                     // 671: core.UpdateSupplierMaterialResponse
-	(*DeleteSupplierMaterialResponse)(nil),                     // 672: core.DeleteSupplierMaterialResponse
-	(*CreatePartResponse)(nil),                                 // 673: core.CreatePartResponse
-	(*GetPartResponse)(nil),                                    // 674: core.GetPartResponse
-	(*ListPartsResponse)(nil),                                  // 675: core.ListPartsResponse
-	(*ExportPartsResponse)(nil),                                // 676: core.ExportPartsResponse
-	(*UpdatePartResponse)(nil),                                 // 677: core.UpdatePartResponse
-	(*DeletePartResponse)(nil),                                 // 678: core.DeletePartResponse
-	(*BatchGetPartsByIDsResponse)(nil),                         // 679: core.BatchGetPartsByIDsResponse
-	(*ListPermissionGroupsResponse)(nil),                       // 680: core.ListPermissionGroupsResponse
-	(*BatchGetPermissionGroupsByIDsResponse)(nil),              // 681: core.BatchGetPermissionGroupsByIDsResponse
-	(*ListPrioritiesResponse)(nil),                             // 682: core.ListPrioritiesResponse
-	(*GetPriorityResponse)(nil),                                // 683: core.GetPriorityResponse
-	(*BatchGetPrioritiesByIDsResponse)(nil),                    // 684: core.BatchGetPrioritiesByIDsResponse
-	(*ListProductTypesResponse)(nil),                           // 685: core.ListProductTypesResponse
-	(*GetProductTypeResponse)(nil),                             // 686: core.GetProductTypeResponse
-	(*CreateProductTypeResponse)(nil),                          // 687: core.CreateProductTypeResponse
-	(*UpdateProductTypeResponse)(nil),                          // 688: core.UpdateProductTypeResponse
-	(*BatchGetProductTypesByIDsResponse)(nil),                  // 689: core.BatchGetProductTypesByIDsResponse
-	(*ListReceivablesResponse)(nil),                            // 690: core.ListReceivablesResponse
-	(*ListReceivablesByCustomerResponse)(nil),                  // 691: core.ListReceivablesByCustomerResponse
-	(*ExportReceivablesByCustomerResponse)(nil),                // 692: core.ExportReceivablesByCustomerResponse
-	(*EmailReceivablesForCustomerResponse)(nil),                // 693: core.EmailReceivablesForCustomerResponse
-	(*ListUnitGroupsResponse)(nil),                             // 694: core.ListUnitGroupsResponse
-	(*GetUnitGroupResponse)(nil),                               // 695: core.GetUnitGroupResponse
-	(*CreateUnitGroupResponse)(nil),                            // 696: core.CreateUnitGroupResponse
-	(*UpdateUnitGroupResponse)(nil),                            // 697: core.UpdateUnitGroupResponse
-	(*UpsertUnitGroupUnitResponse)(nil),                        // 698: core.UpsertUnitGroupUnitResponse
-	(*ListUnitGroupUnitsResponse)(nil),                         // 699: core.ListUnitGroupUnitsResponse
-	(*GetUnitGroupUnitResponse)(nil),                           // 700: core.GetUnitGroupUnitResponse
-	(*BatchGetUnitGroupsByIDsResponse)(nil),                    // 701: core.BatchGetUnitGroupsByIDsResponse
-	(*BatchGetUnitGroupUnitsByIDsResponse)(nil),                // 702: core.BatchGetUnitGroupUnitsByIDsResponse
-	(*ValidateUnitsResponse)(nil),                              // 703: core.ValidateUnitsResponse
-	(*BulkUpsertUnitGroupsResponse)(nil),                       // 704: core.BulkUpsertUnitGroupsResponse
-	(*ExportUnitGroupsResponse)(nil),                           // 705: core.ExportUnitGroupsResponse
-	(*ListTransactionsResponse)(nil),                           // 706: core.ListTransactionsResponse
-	(*GetTransactionResponse)(nil),                             // 707: core.GetTransactionResponse
-	(*CreateTransactionResponse)(nil),                          // 708: core.CreateTransactionResponse
-	(*UpdateTransactionResponse)(nil),                          // 709: core.UpdateTransactionResponse
-	(*DeleteTransactionResponse)(nil),                          // 710: core.DeleteTransactionResponse
-	(*ListAccountTransactionsResponse)(nil),                    // 711: core.ListAccountTransactionsResponse
-	(*ListSettlementsResponse)(nil),                            // 712: core.ListSettlementsResponse
-	(*GetSettlementResponse)(nil),                              // 713: core.GetSettlementResponse
-	(*CreateSettlementResponse)(nil),                           // 714: core.CreateSettlementResponse
-	(*UpdateSettlementResponse)(nil),                           // 715: core.UpdateSettlementResponse
-	(*DeleteSettlementResponse)(nil),                           // 716: core.DeleteSettlementResponse
-	(*ListAllocationEntriesResponse)(nil),                      // 717: core.ListAllocationEntriesResponse
-	(*UpdateTransactionAllocationResponse)(nil),                // 718: core.UpdateTransactionAllocationResponse
-	(*DeleteTransactionAllocationResponse)(nil),                // 719: core.DeleteTransactionAllocationResponse
-	(*ListOpenCreditsResponse)(nil),                            // 720: core.ListOpenCreditsResponse
-	(*GetUserResponse)(nil),                                    // 721: core.GetUserResponse
-	(*BatchGetUsersByIDsResponse)(nil),                         // 722: core.BatchGetUsersByIDsResponse
-	(*UpdateUserResponse)(nil),                                 // 723: core.UpdateUserResponse
-	(*UploadUserPhotoResponse)(nil),                            // 724: core.UploadUserPhotoResponse
-	(*GetUserPhotoURLResponse)(nil),                            // 725: core.GetUserPhotoURLResponse
-	(*CheckDuplicateResponse)(nil),                             // 726: core.CheckDuplicateResponse
-	(*EmailRecordResponse)(nil),                                // 727: core.EmailRecordResponse
-	(*RequestDemoResponse)(nil),                                // 728: core.RequestDemoResponse
-	(*SubmitFeedbackResponse)(nil),                             // 729: core.SubmitFeedbackResponse
-	(*ListCatalogProductLinesResponse)(nil),                    // 730: core.ListCatalogProductLinesResponse
-	(*ListCatalogProductsResponse)(nil),                        // 731: core.ListCatalogProductsResponse
-	(*ListRolesResponse)(nil),                                  // 732: core.ListRolesResponse
-	(*GetRoleResponse)(nil),                                    // 733: core.GetRoleResponse
-	(*CreateRoleResponse)(nil),                                 // 734: core.CreateRoleResponse
-	(*UpdateRoleResponse)(nil),                                 // 735: core.UpdateRoleResponse
-	(*BatchGetRolesByIDsResponse)(nil),                         // 736: core.BatchGetRolesByIDsResponse
-	(*ListRegistrationFlowsResponse)(nil),                      // 737: core.ListRegistrationFlowsResponse
-	(*GetRegistrationFlowResponse)(nil),                        // 738: core.GetRegistrationFlowResponse
-	(*CreateRegistrationFlowResponse)(nil),                     // 739: core.CreateRegistrationFlowResponse
-	(*UpdateRegistrationFlowResponse)(nil),                     // 740: core.UpdateRegistrationFlowResponse
-	(*GetRegistrationFlowBySlugResponse)(nil),                  // 741: core.GetRegistrationFlowBySlugResponse
-	(*RegisterCustomerResponse)(nil),                           // 742: core.RegisterCustomerResponse
-	(*ListScanningStationsResponse)(nil),                       // 743: core.ListScanningStationsResponse
-	(*GetScanningStationResponse)(nil),                         // 744: core.GetScanningStationResponse
-	(*CreateScanningStationResponse)(nil),                      // 745: core.CreateScanningStationResponse
-	(*UpdateScanningStationResponse)(nil),                      // 746: core.UpdateScanningStationResponse
-	(*BatchGetScanningStationsByIDsResponse)(nil),              // 747: core.BatchGetScanningStationsByIDsResponse
-	(*BulkUpsertScanningStationsResponse)(nil),                 // 748: core.BulkUpsertScanningStationsResponse
-	(*ExportScanningStationsResponse)(nil),                     // 749: core.ExportScanningStationsResponse
-	(*ListLocationsResponse)(nil),                              // 750: core.ListLocationsResponse
-	(*GetLocationResponse)(nil),                                // 751: core.GetLocationResponse
-	(*CreateLocationResponse)(nil),                             // 752: core.CreateLocationResponse
-	(*UpdateLocationResponse)(nil),                             // 753: core.UpdateLocationResponse
-	(*ListLocationTypesResponse)(nil),                          // 754: core.ListLocationTypesResponse
-	(*GetLocationTypeResponse)(nil),                            // 755: core.GetLocationTypeResponse
-	(*BatchGetLocationsByIDsResponse)(nil),                     // 756: core.BatchGetLocationsByIDsResponse
-	(*BulkUpsertLocationsResponse)(nil),                        // 757: core.BulkUpsertLocationsResponse
-	(*ExportLocationsResponse)(nil),                            // 758: core.ExportLocationsResponse
-	(*ListSuppliersResponse)(nil),                              // 759: core.ListSuppliersResponse
-	(*GetSupplierResponse)(nil),                                // 760: core.GetSupplierResponse
-	(*CreateSupplierResponse)(nil),                             // 761: core.CreateSupplierResponse
-	(*UpdateSupplierResponse)(nil),                             // 762: core.UpdateSupplierResponse
-	(*DeleteSupplierResponse)(nil),                             // 763: core.DeleteSupplierResponse
-	(*BatchGetSuppliersByIDsResponse)(nil),                     // 764: core.BatchGetSuppliersByIDsResponse
-	(*ListSysPropertiesResponse)(nil),                          // 765: core.ListSysPropertiesResponse
-	(*GetSysPropertyResponse)(nil),                             // 766: core.GetSysPropertyResponse
-	(*UpdateSysPropertyResponse)(nil),                          // 767: core.UpdateSysPropertyResponse
-	(*GetLatestSysPropertyValueResponse)(nil),                  // 768: core.GetLatestSysPropertyValueResponse
-	(*BatchGetSysPropertiesByIDsResponse)(nil),                 // 769: core.BatchGetSysPropertiesByIDsResponse
-	(*GetTenancyResponse)(nil),                                 // 770: core.GetTenancyResponse
-	(*GetCurrentUserResponse)(nil),                             // 771: core.GetCurrentUserResponse
-	(*ListCustomerAccountsForUserResponse)(nil),                // 772: core.ListCustomerAccountsForUserResponse
-	(*ListTerritoriesResponse)(nil),                            // 773: core.ListTerritoriesResponse
-	(*GetTerritoryResponse)(nil),                               // 774: core.GetTerritoryResponse
-	(*CreateTerritoryResponse)(nil),                            // 775: core.CreateTerritoryResponse
-	(*UpdateTerritoryResponse)(nil),                            // 776: core.UpdateTerritoryResponse
-	(*BatchGetTerritoriesByIDsResponse)(nil),                   // 777: core.BatchGetTerritoriesByIDsResponse
-	(*ListDocumentSettingsResponse)(nil),                       // 778: core.ListDocumentSettingsResponse
-	(*GetDocumentSettingResponse)(nil),                         // 779: core.GetDocumentSettingResponse
-	(*UpdateDocumentSettingResponse)(nil),                      // 780: core.UpdateDocumentSettingResponse
+	(*RotateAccountIntegrationCredentialsRequest)(nil),         // 93: core.RotateAccountIntegrationCredentialsRequest
+	(*UpdateAccountIntegrationRequest)(nil),                    // 94: core.UpdateAccountIntegrationRequest
+	(*DeleteAccountIntegrationRequest)(nil),                    // 95: core.DeleteAccountIntegrationRequest
+	(*BatchGetAccountIntegrationsByIDsRequest)(nil),            // 96: core.BatchGetAccountIntegrationsByIDsRequest
+	(*GetStripePublishableKeyRequest)(nil),                     // 97: core.GetStripePublishableKeyRequest
+	(*GetStripeStatusRequest)(nil),                             // 98: core.GetStripeStatusRequest
+	(*ListAdjustmentTypesRequest)(nil),                         // 99: core.ListAdjustmentTypesRequest
+	(*BatchGetAdjustmentTypesByIDsRequest)(nil),                // 100: core.BatchGetAdjustmentTypesByIDsRequest
+	(*GetAccountRequest)(nil),                                  // 101: core.GetAccountRequest
+	(*GetAccountBySlugRequest)(nil),                            // 102: core.GetAccountBySlugRequest
+	(*GetPortalProfileBySlugRequest)(nil),                      // 103: core.GetPortalProfileBySlugRequest
+	(*CreateOrResumePortalRegistrationSessionRequest)(nil),     // 104: core.CreateOrResumePortalRegistrationSessionRequest
+	(*GetPortalRegistrationSessionRequest)(nil),                // 105: core.GetPortalRegistrationSessionRequest
+	(*UpdatePortalRegistrationSessionRequest)(nil),             // 106: core.UpdatePortalRegistrationSessionRequest
+	(*CompletePortalRegistrationSessionRequest)(nil),           // 107: core.CompletePortalRegistrationSessionRequest
+	(*AbandonPortalRegistrationSessionRequest)(nil),            // 108: core.AbandonPortalRegistrationSessionRequest
+	(*ListPortalRegistrationSessionsRequest)(nil),              // 109: core.ListPortalRegistrationSessionsRequest
+	(*UpdateAccountRequest)(nil),                               // 110: core.UpdateAccountRequest
+	(*UploadAccountPhotoRequest)(nil),                          // 111: core.UploadAccountPhotoRequest
+	(*GetAccountLogoURLRequest)(nil),                           // 112: core.GetAccountLogoURLRequest
+	(*UploadAccountFaviconRequest)(nil),                        // 113: core.UploadAccountFaviconRequest
+	(*GetAccountFaviconURLRequest)(nil),                        // 114: core.GetAccountFaviconURLRequest
+	(*ListPropertiesRequest)(nil),                              // 115: core.ListPropertiesRequest
+	(*GetPropertyRequest)(nil),                                 // 116: core.GetPropertyRequest
+	(*CreatePropertyRequest)(nil),                              // 117: core.CreatePropertyRequest
+	(*UpdatePropertyRequest)(nil),                              // 118: core.UpdatePropertyRequest
+	(*DeletePropertyRequest)(nil),                              // 119: core.DeletePropertyRequest
+	(*BulkUpsertPropertiesRequest)(nil),                        // 120: core.BulkUpsertPropertiesRequest
+	(*ExportPropertiesRequest)(nil),                            // 121: core.ExportPropertiesRequest
+	(*ListAttributesRequest)(nil),                              // 122: core.ListAttributesRequest
+	(*GetAttributeRequest)(nil),                                // 123: core.GetAttributeRequest
+	(*CreateAttributeRequest)(nil),                             // 124: core.CreateAttributeRequest
+	(*UpdateAttributeRequest)(nil),                             // 125: core.UpdateAttributeRequest
+	(*DeleteAttributeRequest)(nil),                             // 126: core.DeleteAttributeRequest
+	(*BatchGetAttributesByIDsRequest)(nil),                     // 127: core.BatchGetAttributesByIDsRequest
+	(*BatchGetPropertiesByIDsRequest)(nil),                     // 128: core.BatchGetPropertiesByIDsRequest
+	(*BatchGetItemCategoriesByIDsRequest)(nil),                 // 129: core.BatchGetItemCategoriesByIDsRequest
+	(*BatchGetItemsByIDsRequest)(nil),                          // 130: core.BatchGetItemsByIDsRequest
+	(*ListCarriersRequest)(nil),                                // 131: core.ListCarriersRequest
+	(*GetCarrierRequest)(nil),                                  // 132: core.GetCarrierRequest
+	(*BatchGetCarriersByIDsRequest)(nil),                       // 133: core.BatchGetCarriersByIDsRequest
+	(*CreateCarrierRequest)(nil),                               // 134: core.CreateCarrierRequest
+	(*UpdateCarrierRequest)(nil),                               // 135: core.UpdateCarrierRequest
+	(*DeleteCarrierRequest)(nil),                               // 136: core.DeleteCarrierRequest
+	(*InitiateCarrierOAuthRequest)(nil),                        // 137: core.InitiateCarrierOAuthRequest
+	(*GetCarrierOAuthStatusRequest)(nil),                       // 138: core.GetCarrierOAuthStatusRequest
+	(*SyncServiceLevelsRequest)(nil),                           // 139: core.SyncServiceLevelsRequest
+	(*ListServiceLevelsRequest)(nil),                           // 140: core.ListServiceLevelsRequest
+	(*GetServiceLevelRequest)(nil),                             // 141: core.GetServiceLevelRequest
+	(*BatchGetServiceLevelsByIDsRequest)(nil),                  // 142: core.BatchGetServiceLevelsByIDsRequest
+	(*CreateServiceLevelRequest)(nil),                          // 143: core.CreateServiceLevelRequest
+	(*UpdateServiceLevelRequest)(nil),                          // 144: core.UpdateServiceLevelRequest
+	(*DeleteServiceLevelRequest)(nil),                          // 145: core.DeleteServiceLevelRequest
+	(*ListItemsRequest)(nil),                                   // 146: core.ListItemsRequest
+	(*GetItemRequest)(nil),                                     // 147: core.GetItemRequest
+	(*GetItemInventoryRequest)(nil),                            // 148: core.GetItemInventoryRequest
+	(*GetItemLotDefaultRequest)(nil),                           // 149: core.GetItemLotDefaultRequest
+	(*GetItemCostsRequest)(nil),                                // 150: core.GetItemCostsRequest
+	(*GetItemTrendsRequest)(nil),                               // 151: core.GetItemTrendsRequest
+	(*ExportItemsRequest)(nil),                                 // 152: core.ExportItemsRequest
+	(*CreateItemRequest)(nil),                                  // 153: core.CreateItemRequest
+	(*UpdateItemRequest)(nil),                                  // 154: core.UpdateItemRequest
+	(*DeleteItemRequest)(nil),                                  // 155: core.DeleteItemRequest
+	(*BulkUpsertItemsRequest)(nil),                             // 156: core.BulkUpsertItemsRequest
+	(*SetItemOrderUnitsRequest)(nil),                           // 157: core.SetItemOrderUnitsRequest
+	(*ChangeItemStockingUnitRequest)(nil),                      // 158: core.ChangeItemStockingUnitRequest
+	(*AddItemAttributeRequest)(nil),                            // 159: core.AddItemAttributeRequest
+	(*RemoveItemAttributeRequest)(nil),                         // 160: core.RemoveItemAttributeRequest
+	(*ChangeItemCategoryRequest)(nil),                          // 161: core.ChangeItemCategoryRequest
+	(*UpdateItemInventoryRequest)(nil),                         // 162: core.UpdateItemInventoryRequest
+	(*BulkCreateItemsRequest)(nil),                             // 163: core.BulkCreateItemsRequest
+	(*BulkUpsertPartsRequest)(nil),                             // 164: core.BulkUpsertPartsRequest
+	(*BulkUpsertProductsRequest)(nil),                          // 165: core.BulkUpsertProductsRequest
+	(*BulkUpsertMaterialsRequest)(nil),                         // 166: core.BulkUpsertMaterialsRequest
+	(*BulkReconcileItemsRequest)(nil),                          // 167: core.BulkReconcileItemsRequest
+	(*ListInventoriesRequest)(nil),                             // 168: core.ListInventoriesRequest
+	(*AnalyzeWeeksOfSalesRequest)(nil),                         // 169: core.AnalyzeWeeksOfSalesRequest
+	(*ListChildAccountsRequest)(nil),                           // 170: core.ListChildAccountsRequest
+	(*AddChildAccountRequest)(nil),                             // 171: core.AddChildAccountRequest
+	(*RemoveChildAccountRequest)(nil),                          // 172: core.RemoveChildAccountRequest
+	(*BatchGetChildAccountsByIDsRequest)(nil),                  // 173: core.BatchGetChildAccountsByIDsRequest
+	(*GetBatchFlowRequest)(nil),                                // 174: core.GetBatchFlowRequest
+	(*ListBatchesByScanningStationRequest)(nil),                // 175: core.ListBatchesByScanningStationRequest
+	(*GetBatchPossibleNextStepsRequest)(nil),                   // 176: core.GetBatchPossibleNextStepsRequest
+	(*GetBatchPossibleInitStepsRequest)(nil),                   // 177: core.GetBatchPossibleInitStepsRequest
+	(*AnalyzeOpenBatchesRequest)(nil),                          // 178: core.AnalyzeOpenBatchesRequest
+	(*InitializeBatchRequest)(nil),                             // 179: core.InitializeBatchRequest
+	(*MoveBatchesRequest)(nil),                                 // 180: core.MoveBatchesRequest
+	(*MergeBatchesRequest)(nil),                                // 181: core.MergeBatchesRequest
+	(*SplitBatchRequest)(nil),                                  // 182: core.SplitBatchRequest
+	(*GetRemainingQuantityToSplitRequest)(nil),                 // 183: core.GetRemainingQuantityToSplitRequest
+	(*GetScanningStationConsumptionRequest)(nil),               // 184: core.GetScanningStationConsumptionRequest
+	(*CloseBatchRequest)(nil),                                  // 185: core.CloseBatchRequest
+	(*DeleteBatchRequest)(nil),                                 // 186: core.DeleteBatchRequest
+	(*DeleteManyBatchesRequest)(nil),                           // 187: core.DeleteManyBatchesRequest
+	(*ListItemCategoriesRequest)(nil),                          // 188: core.ListItemCategoriesRequest
+	(*GetItemCategoryRequest)(nil),                             // 189: core.GetItemCategoryRequest
+	(*CreateItemCategoryRequest)(nil),                          // 190: core.CreateItemCategoryRequest
+	(*UpdateItemCategoryRequest)(nil),                          // 191: core.UpdateItemCategoryRequest
+	(*DeleteItemCategoryRequest)(nil),                          // 192: core.DeleteItemCategoryRequest
+	(*AddItemCategoryPropertyRequest)(nil),                     // 193: core.AddItemCategoryPropertyRequest
+	(*CreateItemCategoryPropertyRequest)(nil),                  // 194: core.CreateItemCategoryPropertyRequest
+	(*RemoveItemCategoryPropertyRequest)(nil),                  // 195: core.RemoveItemCategoryPropertyRequest
+	(*ChangeItemCategoryUnitGroupRequest)(nil),                 // 196: core.ChangeItemCategoryUnitGroupRequest
+	(*BulkUpsertItemCategoriesRequest)(nil),                    // 197: core.BulkUpsertItemCategoriesRequest
+	(*ExportItemCategoriesRequest)(nil),                        // 198: core.ExportItemCategoriesRequest
+	(*ListProductsFullRequest)(nil),                            // 199: core.ListProductsFullRequest
+	(*ExportProductsRequest)(nil),                              // 200: core.ExportProductsRequest
+	(*GetProductRequest)(nil),                                  // 201: core.GetProductRequest
+	(*CreateProductRequest)(nil),                               // 202: core.CreateProductRequest
+	(*UpdateProductRequest)(nil),                               // 203: core.UpdateProductRequest
+	(*DeleteProductRequest)(nil),                               // 204: core.DeleteProductRequest
+	(*ChangeProductProductLineRequest)(nil),                    // 205: core.ChangeProductProductLineRequest
+	(*ValidateProductsRequest)(nil),                            // 206: core.ValidateProductsRequest
+	(*BatchGetProductsByIDsRequest)(nil),                       // 207: core.BatchGetProductsByIDsRequest
+	(*ListProductLinesRequest)(nil),                            // 208: core.ListProductLinesRequest
+	(*GetProductLineRequest)(nil),                              // 209: core.GetProductLineRequest
+	(*CreateProductLineRequest)(nil),                           // 210: core.CreateProductLineRequest
+	(*UpdateProductLineRequest)(nil),                           // 211: core.UpdateProductLineRequest
+	(*DeleteProductLineRequest)(nil),                           // 212: core.DeleteProductLineRequest
+	(*BatchGetProductLinesByIDsRequest)(nil),                   // 213: core.BatchGetProductLinesByIDsRequest
+	(*BulkUpsertProductLinesRequest)(nil),                      // 214: core.BulkUpsertProductLinesRequest
+	(*ExportProductLinesRequest)(nil),                          // 215: core.ExportProductLinesRequest
+	(*GetConsumptionRequest)(nil),                              // 216: core.GetConsumptionRequest
+	(*CreateConsumptionRequest)(nil),                           // 217: core.CreateConsumptionRequest
+	(*UpdateConsumptionRequest)(nil),                           // 218: core.UpdateConsumptionRequest
+	(*DeleteConsumptionRequest)(nil),                           // 219: core.DeleteConsumptionRequest
+	(*GetProductionFlowRequest)(nil),                           // 220: core.GetProductionFlowRequest
+	(*ConnectProductionStepsRequest)(nil),                      // 221: core.ConnectProductionStepsRequest
+	(*ListCustomersRequest)(nil),                               // 222: core.ListCustomersRequest
+	(*GetCustomerRequest)(nil),                                 // 223: core.GetCustomerRequest
+	(*BatchGetCustomersByIDsRequest)(nil),                      // 224: core.BatchGetCustomersByIDsRequest
+	(*CreateCustomerRequest)(nil),                              // 225: core.CreateCustomerRequest
+	(*GetCustomerLeadTimeRequest)(nil),                         // 226: core.GetCustomerLeadTimeRequest
+	(*DeleteCustomerRequest)(nil),                              // 227: core.DeleteCustomerRequest
+	(*BulkDeleteCustomersRequest)(nil),                         // 228: core.BulkDeleteCustomersRequest
+	(*GetFrequentlyOrderedProductsRequest)(nil),                // 229: core.GetFrequentlyOrderedProductsRequest
+	(*ListCustomerNotificationRecipientsRequest)(nil),          // 230: core.ListCustomerNotificationRecipientsRequest
+	(*UpdateCustomerNotificationRecipientsRequest)(nil),        // 231: core.UpdateCustomerNotificationRecipientsRequest
+	(*UpdateCustomerRequest)(nil),                              // 232: core.UpdateCustomerRequest
+	(*MergeCustomersRequest)(nil),                              // 233: core.MergeCustomersRequest
+	(*ExportCustomersRequest)(nil),                             // 234: core.ExportCustomersRequest
+	(*AnalyzeSalesRequest)(nil),                                // 235: core.AnalyzeSalesRequest
+	(*AnalyzeSalesSummaryRequest)(nil),                         // 236: core.AnalyzeSalesSummaryRequest
+	(*AnalyzeSalesBreakdownRequest)(nil),                       // 237: core.AnalyzeSalesBreakdownRequest
+	(*AnalyzeSalesInvoicesRequest)(nil),                        // 238: core.AnalyzeSalesInvoicesRequest
+	(*ListNewCustomersRequest)(nil),                            // 239: core.ListNewCustomersRequest
+	(*ListSalesLinesRequest)(nil),                              // 240: core.ListSalesLinesRequest
+	(*ExportSalesLinesRequest)(nil),                            // 241: core.ExportSalesLinesRequest
+	(*AnalyzeOpenOrdersSummaryRequest)(nil),                    // 242: core.AnalyzeOpenOrdersSummaryRequest
+	(*AnalyzeOpenOrderProductsRequest)(nil),                    // 243: core.AnalyzeOpenOrderProductsRequest
+	(*ListOpenOrdersRequest)(nil),                              // 244: core.ListOpenOrdersRequest
+	(*ListOpenOrderLinesRequest)(nil),                          // 245: core.ListOpenOrderLinesRequest
+	(*ExportOpenOrderLinesRequest)(nil),                        // 246: core.ExportOpenOrderLinesRequest
+	(*AnalyzeRealizedMarginsRequest)(nil),                      // 247: core.AnalyzeRealizedMarginsRequest
+	(*AnalyzeCustomerPricingRequest)(nil),                      // 248: core.AnalyzeCustomerPricingRequest
+	(*AnalyzeProductionCostsRequest)(nil),                      // 249: core.AnalyzeProductionCostsRequest
+	(*AnalyzeDeliveriesRequest)(nil),                           // 250: core.AnalyzeDeliveriesRequest
+	(*AnalyzeManufacturingRequest)(nil),                        // 251: core.AnalyzeManufacturingRequest
+	(*AnalyzeManufacturingBatchRequest)(nil),                   // 252: core.AnalyzeManufacturingBatchRequest
+	(*AnalyzeOrdersRequest)(nil),                               // 253: core.AnalyzeOrdersRequest
+	(*AnalyzeQuarterlyOrdersRequest)(nil),                      // 254: core.AnalyzeQuarterlyOrdersRequest
+	(*AnalyzeMaterialsRequest)(nil),                            // 255: core.AnalyzeMaterialsRequest
+	(*AnalyzeInventoryReceiptsRequest)(nil),                    // 256: core.AnalyzeInventoryReceiptsRequest
+	(*AnalyzeNewCustomersRequest)(nil),                         // 257: core.AnalyzeNewCustomersRequest
+	(*AnalyzeDemandForecastRequest)(nil),                       // 258: core.AnalyzeDemandForecastRequest
+	(*AnalyzeOeeRequest)(nil),                                  // 259: core.AnalyzeOeeRequest
+	(*AnalyzeOeeTrendRequest)(nil),                             // 260: core.AnalyzeOeeTrendRequest
+	(*AnalyzeScheduleAttainmentRequest)(nil),                   // 261: core.AnalyzeScheduleAttainmentRequest
+	(*AnalyzeDeliveryPerformanceRequest)(nil),                  // 262: core.AnalyzeDeliveryPerformanceRequest
+	(*ListDeliveriesRequest)(nil),                              // 263: core.ListDeliveriesRequest
+	(*GetDeliveryRequest)(nil),                                 // 264: core.GetDeliveryRequest
+	(*ListDepartmentsRequest)(nil),                             // 265: core.ListDepartmentsRequest
+	(*GetDepartmentRequest)(nil),                               // 266: core.GetDepartmentRequest
+	(*CreateDepartmentRequest)(nil),                            // 267: core.CreateDepartmentRequest
+	(*UpdateDepartmentRequest)(nil),                            // 268: core.UpdateDepartmentRequest
+	(*DeleteDepartmentRequest)(nil),                            // 269: core.DeleteDepartmentRequest
+	(*BatchGetDepartmentsByIDsRequest)(nil),                    // 270: core.BatchGetDepartmentsByIDsRequest
+	(*BulkUpsertDepartmentsRequest)(nil),                       // 271: core.BulkUpsertDepartmentsRequest
+	(*ExportDepartmentsRequest)(nil),                           // 272: core.ExportDepartmentsRequest
+	(*ListEmailLogsRequest)(nil),                               // 273: core.ListEmailLogsRequest
+	(*GetEmailLogRequest)(nil),                                 // 274: core.GetEmailLogRequest
+	(*ListInventoryChangeLogsRequest)(nil),                     // 275: core.ListInventoryChangeLogsRequest
+	(*GetInventoryChangeLogRequest)(nil),                       // 276: core.GetInventoryChangeLogRequest
+	(*ExportInventoryChangeLogsRequest)(nil),                   // 277: core.ExportInventoryChangeLogsRequest
+	(*StartInventoryChangeLogsExportRequest)(nil),              // 278: core.StartInventoryChangeLogsExportRequest
+	(*ListInvoicesRequest)(nil),                                // 279: core.ListInvoicesRequest
+	(*GetInvoiceRequest)(nil),                                  // 280: core.GetInvoiceRequest
+	(*UpdateInvoiceRequest)(nil),                               // 281: core.UpdateInvoiceRequest
+	(*ListCustomerInvoicesRequest)(nil),                        // 282: core.ListCustomerInvoicesRequest
+	(*ListMaterialsRequest)(nil),                               // 283: core.ListMaterialsRequest
+	(*ExportMaterialsRequest)(nil),                             // 284: core.ExportMaterialsRequest
+	(*GetMaterialRequest)(nil),                                 // 285: core.GetMaterialRequest
+	(*CreateMaterialRequest)(nil),                              // 286: core.CreateMaterialRequest
+	(*UpdateMaterialRequest)(nil),                              // 287: core.UpdateMaterialRequest
+	(*DeleteMaterialRequest)(nil),                              // 288: core.DeleteMaterialRequest
+	(*BatchGetMaterialsByIDsRequest)(nil),                      // 289: core.BatchGetMaterialsByIDsRequest
+	(*ListSupplierMaterialsRequest)(nil),                       // 290: core.ListSupplierMaterialsRequest
+	(*GetSupplierMaterialRequest)(nil),                         // 291: core.GetSupplierMaterialRequest
+	(*CreateSupplierMaterialRequest)(nil),                      // 292: core.CreateSupplierMaterialRequest
+	(*UpdateSupplierMaterialRequest)(nil),                      // 293: core.UpdateSupplierMaterialRequest
+	(*DeleteSupplierMaterialRequest)(nil),                      // 294: core.DeleteSupplierMaterialRequest
+	(*CreatePartRequest)(nil),                                  // 295: core.CreatePartRequest
+	(*GetPartRequest)(nil),                                     // 296: core.GetPartRequest
+	(*ListPartsRequest)(nil),                                   // 297: core.ListPartsRequest
+	(*ExportPartsRequest)(nil),                                 // 298: core.ExportPartsRequest
+	(*UpdatePartRequest)(nil),                                  // 299: core.UpdatePartRequest
+	(*DeletePartRequest)(nil),                                  // 300: core.DeletePartRequest
+	(*BatchGetPartsByIDsRequest)(nil),                          // 301: core.BatchGetPartsByIDsRequest
+	(*ListPermissionGroupsRequest)(nil),                        // 302: core.ListPermissionGroupsRequest
+	(*BatchGetPermissionGroupsByIDsRequest)(nil),               // 303: core.BatchGetPermissionGroupsByIDsRequest
+	(*ListPrioritiesRequest)(nil),                              // 304: core.ListPrioritiesRequest
+	(*GetPriorityRequest)(nil),                                 // 305: core.GetPriorityRequest
+	(*BatchGetPrioritiesByIDsRequest)(nil),                     // 306: core.BatchGetPrioritiesByIDsRequest
+	(*ListProductTypesRequest)(nil),                            // 307: core.ListProductTypesRequest
+	(*GetProductTypeRequest)(nil),                              // 308: core.GetProductTypeRequest
+	(*CreateProductTypeRequest)(nil),                           // 309: core.CreateProductTypeRequest
+	(*UpdateProductTypeRequest)(nil),                           // 310: core.UpdateProductTypeRequest
+	(*DeleteProductTypeRequest)(nil),                           // 311: core.DeleteProductTypeRequest
+	(*BatchGetProductTypesByIDsRequest)(nil),                   // 312: core.BatchGetProductTypesByIDsRequest
+	(*ListReceivablesRequest)(nil),                             // 313: core.ListReceivablesRequest
+	(*ListReceivablesByCustomerRequest)(nil),                   // 314: core.ListReceivablesByCustomerRequest
+	(*ExportReceivablesByCustomerRequest)(nil),                 // 315: core.ExportReceivablesByCustomerRequest
+	(*EmailReceivablesForCustomerRequest)(nil),                 // 316: core.EmailReceivablesForCustomerRequest
+	(*ListUnitGroupsRequest)(nil),                              // 317: core.ListUnitGroupsRequest
+	(*GetUnitGroupRequest)(nil),                                // 318: core.GetUnitGroupRequest
+	(*CreateUnitGroupRequest)(nil),                             // 319: core.CreateUnitGroupRequest
+	(*UpdateUnitGroupRequest)(nil),                             // 320: core.UpdateUnitGroupRequest
+	(*DeleteUnitGroupRequest)(nil),                             // 321: core.DeleteUnitGroupRequest
+	(*UpsertUnitGroupUnitRequest)(nil),                         // 322: core.UpsertUnitGroupUnitRequest
+	(*DeleteUnitGroupUnitRequest)(nil),                         // 323: core.DeleteUnitGroupUnitRequest
+	(*ListUnitGroupUnitsRequest)(nil),                          // 324: core.ListUnitGroupUnitsRequest
+	(*GetUnitGroupUnitRequest)(nil),                            // 325: core.GetUnitGroupUnitRequest
+	(*BatchGetUnitGroupsByIDsRequest)(nil),                     // 326: core.BatchGetUnitGroupsByIDsRequest
+	(*BatchGetUnitGroupUnitsByIDsRequest)(nil),                 // 327: core.BatchGetUnitGroupUnitsByIDsRequest
+	(*ValidateUnitsRequest)(nil),                               // 328: core.ValidateUnitsRequest
+	(*BulkUpsertUnitGroupsRequest)(nil),                        // 329: core.BulkUpsertUnitGroupsRequest
+	(*ExportUnitGroupsRequest)(nil),                            // 330: core.ExportUnitGroupsRequest
+	(*ListTransactionsRequest)(nil),                            // 331: core.ListTransactionsRequest
+	(*GetTransactionRequest)(nil),                              // 332: core.GetTransactionRequest
+	(*CreateTransactionRequest)(nil),                           // 333: core.CreateTransactionRequest
+	(*UpdateTransactionRequest)(nil),                           // 334: core.UpdateTransactionRequest
+	(*DeleteTransactionRequest)(nil),                           // 335: core.DeleteTransactionRequest
+	(*ListAccountTransactionsRequest)(nil),                     // 336: core.ListAccountTransactionsRequest
+	(*ListSettlementsRequest)(nil),                             // 337: core.ListSettlementsRequest
+	(*GetSettlementRequest)(nil),                               // 338: core.GetSettlementRequest
+	(*CreateSettlementRequest)(nil),                            // 339: core.CreateSettlementRequest
+	(*UpdateSettlementRequest)(nil),                            // 340: core.UpdateSettlementRequest
+	(*DeleteSettlementRequest)(nil),                            // 341: core.DeleteSettlementRequest
+	(*ListAllocationEntriesRequest)(nil),                       // 342: core.ListAllocationEntriesRequest
+	(*UpdateTransactionAllocationRequest)(nil),                 // 343: core.UpdateTransactionAllocationRequest
+	(*DeleteTransactionAllocationRequest)(nil),                 // 344: core.DeleteTransactionAllocationRequest
+	(*ListOpenCreditsRequest)(nil),                             // 345: core.ListOpenCreditsRequest
+	(*GetUserRequest)(nil),                                     // 346: core.GetUserRequest
+	(*BatchGetUsersByIDsRequest)(nil),                          // 347: core.BatchGetUsersByIDsRequest
+	(*UpdateUserRequest)(nil),                                  // 348: core.UpdateUserRequest
+	(*UploadUserPhotoRequest)(nil),                             // 349: core.UploadUserPhotoRequest
+	(*GetUserPhotoURLRequest)(nil),                             // 350: core.GetUserPhotoURLRequest
+	(*CheckDuplicateRequest)(nil),                              // 351: core.CheckDuplicateRequest
+	(*EmailRecordRequest)(nil),                                 // 352: core.EmailRecordRequest
+	(*RequestDemoRequest)(nil),                                 // 353: core.RequestDemoRequest
+	(*SubmitFeedbackRequest)(nil),                              // 354: core.SubmitFeedbackRequest
+	(*ListCatalogProductLinesRequest)(nil),                     // 355: core.ListCatalogProductLinesRequest
+	(*ListCatalogProductsRequest)(nil),                         // 356: core.ListCatalogProductsRequest
+	(*ListRolesRequest)(nil),                                   // 357: core.ListRolesRequest
+	(*GetRoleRequest)(nil),                                     // 358: core.GetRoleRequest
+	(*CreateRoleRequest)(nil),                                  // 359: core.CreateRoleRequest
+	(*UpdateRoleRequest)(nil),                                  // 360: core.UpdateRoleRequest
+	(*DeleteRoleRequest)(nil),                                  // 361: core.DeleteRoleRequest
+	(*BatchGetRolesByIDsRequest)(nil),                          // 362: core.BatchGetRolesByIDsRequest
+	(*ListRegistrationFlowsRequest)(nil),                       // 363: core.ListRegistrationFlowsRequest
+	(*GetRegistrationFlowRequest)(nil),                         // 364: core.GetRegistrationFlowRequest
+	(*CreateRegistrationFlowRequest)(nil),                      // 365: core.CreateRegistrationFlowRequest
+	(*UpdateRegistrationFlowRequest)(nil),                      // 366: core.UpdateRegistrationFlowRequest
+	(*DeleteRegistrationFlowRequest)(nil),                      // 367: core.DeleteRegistrationFlowRequest
+	(*GetRegistrationFlowBySlugRequest)(nil),                   // 368: core.GetRegistrationFlowBySlugRequest
+	(*RegisterCustomerRequest)(nil),                            // 369: core.RegisterCustomerRequest
+	(*ListScanningStationsRequest)(nil),                        // 370: core.ListScanningStationsRequest
+	(*GetScanningStationRequest)(nil),                          // 371: core.GetScanningStationRequest
+	(*CreateScanningStationRequest)(nil),                       // 372: core.CreateScanningStationRequest
+	(*UpdateScanningStationRequest)(nil),                       // 373: core.UpdateScanningStationRequest
+	(*DeleteScanningStationRequest)(nil),                       // 374: core.DeleteScanningStationRequest
+	(*ConnectProductionStepsByScanningStationRequest)(nil),     // 375: core.ConnectProductionStepsByScanningStationRequest
+	(*BatchGetScanningStationsByIDsRequest)(nil),               // 376: core.BatchGetScanningStationsByIDsRequest
+	(*BulkUpsertScanningStationsRequest)(nil),                  // 377: core.BulkUpsertScanningStationsRequest
+	(*ExportScanningStationsRequest)(nil),                      // 378: core.ExportScanningStationsRequest
+	(*ListLocationsRequest)(nil),                               // 379: core.ListLocationsRequest
+	(*GetLocationRequest)(nil),                                 // 380: core.GetLocationRequest
+	(*CreateLocationRequest)(nil),                              // 381: core.CreateLocationRequest
+	(*UpdateLocationRequest)(nil),                              // 382: core.UpdateLocationRequest
+	(*DeleteLocationRequest)(nil),                              // 383: core.DeleteLocationRequest
+	(*ListLocationTypesRequest)(nil),                           // 384: core.ListLocationTypesRequest
+	(*GetLocationTypeRequest)(nil),                             // 385: core.GetLocationTypeRequest
+	(*BatchGetLocationsByIDsRequest)(nil),                      // 386: core.BatchGetLocationsByIDsRequest
+	(*BulkUpsertLocationsRequest)(nil),                         // 387: core.BulkUpsertLocationsRequest
+	(*ExportLocationsRequest)(nil),                             // 388: core.ExportLocationsRequest
+	(*ListSuppliersRequest)(nil),                               // 389: core.ListSuppliersRequest
+	(*GetSupplierRequest)(nil),                                 // 390: core.GetSupplierRequest
+	(*CreateSupplierRequest)(nil),                              // 391: core.CreateSupplierRequest
+	(*UpdateSupplierRequest)(nil),                              // 392: core.UpdateSupplierRequest
+	(*DeleteSupplierRequest)(nil),                              // 393: core.DeleteSupplierRequest
+	(*BulkDeleteSuppliersRequest)(nil),                         // 394: core.BulkDeleteSuppliersRequest
+	(*BatchGetSuppliersByIDsRequest)(nil),                      // 395: core.BatchGetSuppliersByIDsRequest
+	(*ListSysPropertiesRequest)(nil),                           // 396: core.ListSysPropertiesRequest
+	(*GetSysPropertyRequest)(nil),                              // 397: core.GetSysPropertyRequest
+	(*UpdateSysPropertyRequest)(nil),                           // 398: core.UpdateSysPropertyRequest
+	(*GetLatestSysPropertyValueRequest)(nil),                   // 399: core.GetLatestSysPropertyValueRequest
+	(*BatchGetSysPropertiesByIDsRequest)(nil),                  // 400: core.BatchGetSysPropertiesByIDsRequest
+	(*GetTenancyRequest)(nil),                                  // 401: core.GetTenancyRequest
+	(*SwitchTenancyAccountRequest)(nil),                        // 402: core.SwitchTenancyAccountRequest
+	(*GetCurrentUserRequest)(nil),                              // 403: core.GetCurrentUserRequest
+	(*ListCustomerAccountsForUserRequest)(nil),                 // 404: core.ListCustomerAccountsForUserRequest
+	(*ListTerritoriesRequest)(nil),                             // 405: core.ListTerritoriesRequest
+	(*GetTerritoryRequest)(nil),                                // 406: core.GetTerritoryRequest
+	(*CreateTerritoryRequest)(nil),                             // 407: core.CreateTerritoryRequest
+	(*UpdateTerritoryRequest)(nil),                             // 408: core.UpdateTerritoryRequest
+	(*DeleteTerritoryRequest)(nil),                             // 409: core.DeleteTerritoryRequest
+	(*BatchGetTerritoriesByIDsRequest)(nil),                    // 410: core.BatchGetTerritoriesByIDsRequest
+	(*ListDocumentSettingsRequest)(nil),                        // 411: core.ListDocumentSettingsRequest
+	(*GetDocumentSettingRequest)(nil),                          // 412: core.GetDocumentSettingRequest
+	(*UpdateDocumentSettingRequest)(nil),                       // 413: core.UpdateDocumentSettingRequest
+	(*GetAccountContextResponse)(nil),                          // 414: core.GetAccountContextResponse
+	(*GetAccountNamesResponse)(nil),                            // 415: core.GetAccountNamesResponse
+	(*BatchGetAccountsByIDsResponse)(nil),                      // 416: core.BatchGetAccountsByIDsResponse
+	(*GetUserAccountAccessResponse)(nil),                       // 417: core.GetUserAccountAccessResponse
+	(*GetRolePermissionsResponse)(nil),                         // 418: core.GetRolePermissionsResponse
+	(*GetRoleInfoResponse)(nil),                                // 419: core.GetRoleInfoResponse
+	(*GetAccountRelationResponse)(nil),                         // 420: core.GetAccountRelationResponse
+	(*ListUserAccountAffiliationsResponse)(nil),                // 421: core.ListUserAccountAffiliationsResponse
+	(*GetSandboxAccountByOwnerResponse)(nil),                   // 422: core.GetSandboxAccountByOwnerResponse
+	(*GetAdminRoleResponse)(nil),                               // 423: core.GetAdminRoleResponse
+	(*ListSandboxAccountsResponse)(nil),                        // 424: core.ListSandboxAccountsResponse
+	(*CreateSandboxResponse)(nil),                              // 425: core.CreateSandboxResponse
+	(*GetSandboxResponse)(nil),                                 // 426: core.GetSandboxResponse
+	(*BatchGetSandboxesByIDsResponse)(nil),                     // 427: core.BatchGetSandboxesByIDsResponse
+	(*UpdateAgentSpendingCapResponse)(nil),                     // 428: core.UpdateAgentSpendingCapResponse
+	(*GetAccountByStripeCustomerIDResponse)(nil),               // 429: core.GetAccountByStripeCustomerIDResponse
+	(*CompleteRegistrationResponse)(nil),                       // 430: core.CompleteRegistrationResponse
+	(*ListUnitsResponse)(nil),                                  // 431: core.ListUnitsResponse
+	(*GetUnitResponse)(nil),                                    // 432: core.GetUnitResponse
+	(*CreateUnitResponse)(nil),                                 // 433: core.CreateUnitResponse
+	(*UpdateUnitResponse)(nil),                                 // 434: core.UpdateUnitResponse
+	(*BatchGetUnitsByIDsResponse)(nil),                         // 435: core.BatchGetUnitsByIDsResponse
+	(*BulkUpsertUnitsResponse)(nil),                            // 436: core.BulkUpsertUnitsResponse
+	(*ExportUnitsResponse)(nil),                                // 437: core.ExportUnitsResponse
+	(*SearchProductsResponse)(nil),                             // 438: core.SearchProductsResponse
+	(*ListProductsResponse)(nil),                               // 439: core.ListProductsResponse
+	(*GetCustomerByEmailResponse)(nil),                         // 440: core.GetCustomerByEmailResponse
+	(*FindContactsByEmailResponse)(nil),                        // 441: core.FindContactsByEmailResponse
+	(*ListPaymentTermsResponse)(nil),                           // 442: core.ListPaymentTermsResponse
+	(*GetPaymentTermResponse)(nil),                             // 443: core.GetPaymentTermResponse
+	(*CreatePaymentTermResponse)(nil),                          // 444: core.CreatePaymentTermResponse
+	(*UpdatePaymentTermResponse)(nil),                          // 445: core.UpdatePaymentTermResponse
+	(*BatchGetPaymentTermsByIDsResponse)(nil),                  // 446: core.BatchGetPaymentTermsByIDsResponse
+	(*ListShippingTermsResponse)(nil),                          // 447: core.ListShippingTermsResponse
+	(*GetShippingTermResponse)(nil),                            // 448: core.GetShippingTermResponse
+	(*CreateShippingTermResponse)(nil),                         // 449: core.CreateShippingTermResponse
+	(*UpdateShippingTermResponse)(nil),                         // 450: core.UpdateShippingTermResponse
+	(*BatchGetShippingTermsByIDsResponse)(nil),                 // 451: core.BatchGetShippingTermsByIDsResponse
+	(*GetAddressResponse)(nil),                                 // 452: core.GetAddressResponse
+	(*ListAddressesResponse)(nil),                              // 453: core.ListAddressesResponse
+	(*CreateAddressResponse)(nil),                              // 454: core.CreateAddressResponse
+	(*UpdateAddressResponse)(nil),                              // 455: core.UpdateAddressResponse
+	(*BatchGetAddressesByIDsResponse)(nil),                     // 456: core.BatchGetAddressesByIDsResponse
+	(*AutocompleteAddressResponse)(nil),                        // 457: core.AutocompleteAddressResponse
+	(*GetAddressDetailsResponse)(nil),                          // 458: core.GetAddressDetailsResponse
+	(*ValidateAddressResponse)(nil),                            // 459: core.ValidateAddressResponse
+	(*ListAccountStatusesResponse)(nil),                        // 460: core.ListAccountStatusesResponse
+	(*GetAccountStatusResponse)(nil),                           // 461: core.GetAccountStatusResponse
+	(*BatchGetAccountStatusesByIDsResponse)(nil),               // 462: core.BatchGetAccountStatusesByIDsResponse
+	(*ListAccountGroupsResponse)(nil),                          // 463: core.ListAccountGroupsResponse
+	(*GetAccountGroupResponse)(nil),                            // 464: core.GetAccountGroupResponse
+	(*CreateAccountGroupResponse)(nil),                         // 465: core.CreateAccountGroupResponse
+	(*UpdateAccountGroupResponse)(nil),                         // 466: core.UpdateAccountGroupResponse
+	(*BatchGetAccountGroupsByIDsResponse)(nil),                 // 467: core.BatchGetAccountGroupsByIDsResponse
+	(*ListAccountGroupProductLineAccessResponse)(nil),          // 468: core.ListAccountGroupProductLineAccessResponse
+	(*GetAccountGroupProductLineAccessResponse)(nil),           // 469: core.GetAccountGroupProductLineAccessResponse
+	(*CreateAccountGroupProductLineAccessResponse)(nil),        // 470: core.CreateAccountGroupProductLineAccessResponse
+	(*UpdateAccountGroupProductLineAccessResponse)(nil),        // 471: core.UpdateAccountGroupProductLineAccessResponse
+	(*BatchGetAccountGroupProductLineAccessByIDsResponse)(nil), // 472: core.BatchGetAccountGroupProductLineAccessByIDsResponse
+	(*ListCustomerProductLineAccessResponse)(nil),              // 473: core.ListCustomerProductLineAccessResponse
+	(*GetCustomerProductLineAccessResponse)(nil),               // 474: core.GetCustomerProductLineAccessResponse
+	(*CreateCustomerProductLineAccessResponse)(nil),            // 475: core.CreateCustomerProductLineAccessResponse
+	(*UpdateCustomerProductLineAccessResponse)(nil),            // 476: core.UpdateCustomerProductLineAccessResponse
+	(*BatchGetCustomerProductLineAccessByIDsResponse)(nil),     // 477: core.BatchGetCustomerProductLineAccessByIDsResponse
+	(*ListAccountUsersResponse)(nil),                           // 478: core.ListAccountUsersResponse
+	(*GetAccountUserResponse)(nil),                             // 479: core.GetAccountUserResponse
+	(*CreateAccountUserResponse)(nil),                          // 480: core.CreateAccountUserResponse
+	(*UpdateAccountUserResponse)(nil),                          // 481: core.UpdateAccountUserResponse
+	(*BatchGetAccountUsersByIDsResponse)(nil),                  // 482: core.BatchGetAccountUsersByIDsResponse
+	(*ListSalesTargetsResponse)(nil),                           // 483: core.ListSalesTargetsResponse
+	(*CreateSalesTargetResponse)(nil),                          // 484: core.CreateSalesTargetResponse
+	(*UpsertSalesTargetResponse)(nil),                          // 485: core.UpsertSalesTargetResponse
+	(*ListAccountPricesResponse)(nil),                          // 486: core.ListAccountPricesResponse
+	(*GetAccountPriceResponse)(nil),                            // 487: core.GetAccountPriceResponse
+	(*CreateAccountPriceResponse)(nil),                         // 488: core.CreateAccountPriceResponse
+	(*UpdateAccountPriceResponse)(nil),                         // 489: core.UpdateAccountPriceResponse
+	(*ExportPriceListResponse)(nil),                            // 490: core.ExportPriceListResponse
+	(*ListAccountIntegrationsResponse)(nil),                    // 491: core.ListAccountIntegrationsResponse
+	(*CreateAccountIntegrationResponse)(nil),                   // 492: core.CreateAccountIntegrationResponse
+	(*RotateAccountIntegrationCredentialsResponse)(nil),        // 493: core.RotateAccountIntegrationCredentialsResponse
+	(*UpdateAccountIntegrationResponse)(nil),                   // 494: core.UpdateAccountIntegrationResponse
+	(*DeleteAccountIntegrationResponse)(nil),                   // 495: core.DeleteAccountIntegrationResponse
+	(*BatchGetAccountIntegrationsByIDsResponse)(nil),           // 496: core.BatchGetAccountIntegrationsByIDsResponse
+	(*GetStripePublishableKeyResponse)(nil),                    // 497: core.GetStripePublishableKeyResponse
+	(*GetStripeStatusResponse)(nil),                            // 498: core.GetStripeStatusResponse
+	(*ListAdjustmentTypesResponse)(nil),                        // 499: core.ListAdjustmentTypesResponse
+	(*BatchGetAdjustmentTypesByIDsResponse)(nil),               // 500: core.BatchGetAdjustmentTypesByIDsResponse
+	(*GetAccountResponse)(nil),                                 // 501: core.GetAccountResponse
+	(*GetAccountBySlugResponse)(nil),                           // 502: core.GetAccountBySlugResponse
+	(*GetPortalProfileBySlugResponse)(nil),                     // 503: core.GetPortalProfileBySlugResponse
+	(*PortalRegistrationSessionResponse)(nil),                  // 504: core.PortalRegistrationSessionResponse
+	(*ListPortalRegistrationSessionsResponse)(nil),             // 505: core.ListPortalRegistrationSessionsResponse
+	(*UpdateAccountResponse)(nil),                              // 506: core.UpdateAccountResponse
+	(*UploadAccountPhotoResponse)(nil),                         // 507: core.UploadAccountPhotoResponse
+	(*GetAccountLogoURLResponse)(nil),                          // 508: core.GetAccountLogoURLResponse
+	(*UploadAccountFaviconResponse)(nil),                       // 509: core.UploadAccountFaviconResponse
+	(*GetAccountFaviconURLResponse)(nil),                       // 510: core.GetAccountFaviconURLResponse
+	(*ListPropertiesResponse)(nil),                             // 511: core.ListPropertiesResponse
+	(*GetPropertyResponse)(nil),                                // 512: core.GetPropertyResponse
+	(*CreatePropertyResponse)(nil),                             // 513: core.CreatePropertyResponse
+	(*UpdatePropertyResponse)(nil),                             // 514: core.UpdatePropertyResponse
+	(*BulkUpsertPropertiesResponse)(nil),                       // 515: core.BulkUpsertPropertiesResponse
+	(*ExportPropertiesResponse)(nil),                           // 516: core.ExportPropertiesResponse
+	(*ListAttributesResponse)(nil),                             // 517: core.ListAttributesResponse
+	(*GetAttributeResponse)(nil),                               // 518: core.GetAttributeResponse
+	(*CreateAttributeResponse)(nil),                            // 519: core.CreateAttributeResponse
+	(*UpdateAttributeResponse)(nil),                            // 520: core.UpdateAttributeResponse
+	(*BatchGetAttributesByIDsResponse)(nil),                    // 521: core.BatchGetAttributesByIDsResponse
+	(*BatchGetPropertiesByIDsResponse)(nil),                    // 522: core.BatchGetPropertiesByIDsResponse
+	(*BatchGetItemCategoriesByIDsResponse)(nil),                // 523: core.BatchGetItemCategoriesByIDsResponse
+	(*BatchGetItemsByIDsResponse)(nil),                         // 524: core.BatchGetItemsByIDsResponse
+	(*ListCarriersResponse)(nil),                               // 525: core.ListCarriersResponse
+	(*GetCarrierResponse)(nil),                                 // 526: core.GetCarrierResponse
+	(*BatchGetCarriersByIDsResponse)(nil),                      // 527: core.BatchGetCarriersByIDsResponse
+	(*CreateCarrierResponse)(nil),                              // 528: core.CreateCarrierResponse
+	(*UpdateCarrierResponse)(nil),                              // 529: core.UpdateCarrierResponse
+	(*InitiateCarrierOAuthResponse)(nil),                       // 530: core.InitiateCarrierOAuthResponse
+	(*GetCarrierOAuthStatusResponse)(nil),                      // 531: core.GetCarrierOAuthStatusResponse
+	(*SyncServiceLevelsResponse)(nil),                          // 532: core.SyncServiceLevelsResponse
+	(*ListServiceLevelsResponse)(nil),                          // 533: core.ListServiceLevelsResponse
+	(*GetServiceLevelResponse)(nil),                            // 534: core.GetServiceLevelResponse
+	(*BatchGetServiceLevelsByIDsResponse)(nil),                 // 535: core.BatchGetServiceLevelsByIDsResponse
+	(*CreateServiceLevelResponse)(nil),                         // 536: core.CreateServiceLevelResponse
+	(*UpdateServiceLevelResponse)(nil),                         // 537: core.UpdateServiceLevelResponse
+	(*ListItemsResponse)(nil),                                  // 538: core.ListItemsResponse
+	(*GetItemResponse)(nil),                                    // 539: core.GetItemResponse
+	(*GetItemInventoryResponse)(nil),                           // 540: core.GetItemInventoryResponse
+	(*GetItemLotDefaultResponse)(nil),                          // 541: core.GetItemLotDefaultResponse
+	(*GetItemCostsResponse)(nil),                               // 542: core.GetItemCostsResponse
+	(*GetItemTrendsResponse)(nil),                              // 543: core.GetItemTrendsResponse
+	(*ExportItemsResponse)(nil),                                // 544: core.ExportItemsResponse
+	(*CreateItemResponse)(nil),                                 // 545: core.CreateItemResponse
+	(*UpdateItemResponse)(nil),                                 // 546: core.UpdateItemResponse
+	(*BulkUpsertItemsResponse)(nil),                            // 547: core.BulkUpsertItemsResponse
+	(*SetItemOrderUnitsResponse)(nil),                          // 548: core.SetItemOrderUnitsResponse
+	(*ChangeItemStockingUnitResponse)(nil),                     // 549: core.ChangeItemStockingUnitResponse
+	(*AddItemAttributeResponse)(nil),                           // 550: core.AddItemAttributeResponse
+	(*RemoveItemAttributeResponse)(nil),                        // 551: core.RemoveItemAttributeResponse
+	(*ChangeItemCategoryResponse)(nil),                         // 552: core.ChangeItemCategoryResponse
+	(*UpdateItemInventoryResponse)(nil),                        // 553: core.UpdateItemInventoryResponse
+	(*BulkCreateItemsResponse)(nil),                            // 554: core.BulkCreateItemsResponse
+	(*BulkUpsertPartsResponse)(nil),                            // 555: core.BulkUpsertPartsResponse
+	(*BulkUpsertProductsResponse)(nil),                         // 556: core.BulkUpsertProductsResponse
+	(*BulkUpsertMaterialsResponse)(nil),                        // 557: core.BulkUpsertMaterialsResponse
+	(*BulkReconcileItemsResponse)(nil),                         // 558: core.BulkReconcileItemsResponse
+	(*ListInventoriesResponse)(nil),                            // 559: core.ListInventoriesResponse
+	(*AnalyzeWeeksOfSalesResponse)(nil),                        // 560: core.AnalyzeWeeksOfSalesResponse
+	(*ListChildAccountsResponse)(nil),                          // 561: core.ListChildAccountsResponse
+	(*AddChildAccountResponse)(nil),                            // 562: core.AddChildAccountResponse
+	(*BatchGetChildAccountsByIDsResponse)(nil),                 // 563: core.BatchGetChildAccountsByIDsResponse
+	(*GetBatchFlowResponse)(nil),                               // 564: core.GetBatchFlowResponse
+	(*ListBatchesByScanningStationResponse)(nil),               // 565: core.ListBatchesByScanningStationResponse
+	(*GetBatchPossibleNextStepsResponse)(nil),                  // 566: core.GetBatchPossibleNextStepsResponse
+	(*GetBatchPossibleInitStepsResponse)(nil),                  // 567: core.GetBatchPossibleInitStepsResponse
+	(*AnalyzeOpenBatchesResponse)(nil),                         // 568: core.AnalyzeOpenBatchesResponse
+	(*InitializeBatchResponse)(nil),                            // 569: core.InitializeBatchResponse
+	(*MoveBatchesResponse)(nil),                                // 570: core.MoveBatchesResponse
+	(*MergeBatchesResponse)(nil),                               // 571: core.MergeBatchesResponse
+	(*SplitBatchResponse)(nil),                                 // 572: core.SplitBatchResponse
+	(*GetRemainingQuantityToSplitResponse)(nil),                // 573: core.GetRemainingQuantityToSplitResponse
+	(*GetScanningStationConsumptionResponse)(nil),              // 574: core.GetScanningStationConsumptionResponse
+	(*CloseBatchResponse)(nil),                                 // 575: core.CloseBatchResponse
+	(*DeleteBatchResponse)(nil),                                // 576: core.DeleteBatchResponse
+	(*ListItemCategoriesResponse)(nil),                         // 577: core.ListItemCategoriesResponse
+	(*GetItemCategoryResponse)(nil),                            // 578: core.GetItemCategoryResponse
+	(*CreateItemCategoryResponse)(nil),                         // 579: core.CreateItemCategoryResponse
+	(*UpdateItemCategoryResponse)(nil),                         // 580: core.UpdateItemCategoryResponse
+	(*CreateItemCategoryPropertyResponse)(nil),                 // 581: core.CreateItemCategoryPropertyResponse
+	(*BulkUpsertItemCategoriesResponse)(nil),                   // 582: core.BulkUpsertItemCategoriesResponse
+	(*ExportItemCategoriesResponse)(nil),                       // 583: core.ExportItemCategoriesResponse
+	(*ListProductsFullResponse)(nil),                           // 584: core.ListProductsFullResponse
+	(*ExportProductsResponse)(nil),                             // 585: core.ExportProductsResponse
+	(*GetProductResponse)(nil),                                 // 586: core.GetProductResponse
+	(*CreateProductResponse)(nil),                              // 587: core.CreateProductResponse
+	(*UpdateProductResponse)(nil),                              // 588: core.UpdateProductResponse
+	(*DeleteProductResponse)(nil),                              // 589: core.DeleteProductResponse
+	(*ChangeProductProductLineResponse)(nil),                   // 590: core.ChangeProductProductLineResponse
+	(*ValidateProductsResponse)(nil),                           // 591: core.ValidateProductsResponse
+	(*BatchGetProductsByIDsResponse)(nil),                      // 592: core.BatchGetProductsByIDsResponse
+	(*ListProductLinesResponse)(nil),                           // 593: core.ListProductLinesResponse
+	(*GetProductLineResponse)(nil),                             // 594: core.GetProductLineResponse
+	(*CreateProductLineResponse)(nil),                          // 595: core.CreateProductLineResponse
+	(*UpdateProductLineResponse)(nil),                          // 596: core.UpdateProductLineResponse
+	(*BatchGetProductLinesByIDsResponse)(nil),                  // 597: core.BatchGetProductLinesByIDsResponse
+	(*BulkUpsertProductLinesResponse)(nil),                     // 598: core.BulkUpsertProductLinesResponse
+	(*ExportProductLinesResponse)(nil),                         // 599: core.ExportProductLinesResponse
+	(*GetConsumptionResponse)(nil),                             // 600: core.GetConsumptionResponse
+	(*CreateConsumptionResponse)(nil),                          // 601: core.CreateConsumptionResponse
+	(*UpdateConsumptionResponse)(nil),                          // 602: core.UpdateConsumptionResponse
+	(*DeleteConsumptionResponse)(nil),                          // 603: core.DeleteConsumptionResponse
+	(*GetProductionFlowResponse)(nil),                          // 604: core.GetProductionFlowResponse
+	(*ListCustomersResponse)(nil),                              // 605: core.ListCustomersResponse
+	(*GetCustomerResponse)(nil),                                // 606: core.GetCustomerResponse
+	(*BatchGetCustomersByIDsResponse)(nil),                     // 607: core.BatchGetCustomersByIDsResponse
+	(*CreateCustomerResponse)(nil),                             // 608: core.CreateCustomerResponse
+	(*GetCustomerLeadTimeResponse)(nil),                        // 609: core.GetCustomerLeadTimeResponse
+	(*GetFrequentlyOrderedProductsResponse)(nil),               // 610: core.GetFrequentlyOrderedProductsResponse
+	(*ListCustomerNotificationRecipientsResponse)(nil),         // 611: core.ListCustomerNotificationRecipientsResponse
+	(*UpdateCustomerNotificationRecipientsResponse)(nil),       // 612: core.UpdateCustomerNotificationRecipientsResponse
+	(*UpdateCustomerResponse)(nil),                             // 613: core.UpdateCustomerResponse
+	(*MergeCustomersResponse)(nil),                             // 614: core.MergeCustomersResponse
+	(*ExportCustomersResponse)(nil),                            // 615: core.ExportCustomersResponse
+	(*AnalyzeSalesResponse)(nil),                               // 616: core.AnalyzeSalesResponse
+	(*AnalyzeSalesSummaryResponse)(nil),                        // 617: core.AnalyzeSalesSummaryResponse
+	(*AnalyzeSalesBreakdownResponse)(nil),                      // 618: core.AnalyzeSalesBreakdownResponse
+	(*AnalyzeSalesInvoicesResponse)(nil),                       // 619: core.AnalyzeSalesInvoicesResponse
+	(*ListNewCustomersResponse)(nil),                           // 620: core.ListNewCustomersResponse
+	(*ListSalesLinesResponse)(nil),                             // 621: core.ListSalesLinesResponse
+	(*ExportSalesLinesResponse)(nil),                           // 622: core.ExportSalesLinesResponse
+	(*AnalyzeOpenOrdersSummaryResponse)(nil),                   // 623: core.AnalyzeOpenOrdersSummaryResponse
+	(*AnalyzeOpenOrderProductsResponse)(nil),                   // 624: core.AnalyzeOpenOrderProductsResponse
+	(*ListOpenOrdersResponse)(nil),                             // 625: core.ListOpenOrdersResponse
+	(*ListOpenOrderLinesResponse)(nil),                         // 626: core.ListOpenOrderLinesResponse
+	(*ExportOpenOrderLinesResponse)(nil),                       // 627: core.ExportOpenOrderLinesResponse
+	(*AnalyzeRealizedMarginsResponse)(nil),                     // 628: core.AnalyzeRealizedMarginsResponse
+	(*AnalyzeCustomerPricingResponse)(nil),                     // 629: core.AnalyzeCustomerPricingResponse
+	(*AnalyzeProductionCostsResponse)(nil),                     // 630: core.AnalyzeProductionCostsResponse
+	(*AnalyzeDeliveriesResponse)(nil),                          // 631: core.AnalyzeDeliveriesResponse
+	(*AnalyzeManufacturingResponse)(nil),                       // 632: core.AnalyzeManufacturingResponse
+	(*AnalyzeManufacturingBatchResponse)(nil),                  // 633: core.AnalyzeManufacturingBatchResponse
+	(*AnalyzeOrdersResponse)(nil),                              // 634: core.AnalyzeOrdersResponse
+	(*AnalyzeQuarterlyOrdersResponse)(nil),                     // 635: core.AnalyzeQuarterlyOrdersResponse
+	(*AnalyzeMaterialsResponse)(nil),                           // 636: core.AnalyzeMaterialsResponse
+	(*AnalyzeInventoryReceiptsResponse)(nil),                   // 637: core.AnalyzeInventoryReceiptsResponse
+	(*AnalyzeNewCustomersResponse)(nil),                        // 638: core.AnalyzeNewCustomersResponse
+	(*AnalyzeDemandForecastResponse)(nil),                      // 639: core.AnalyzeDemandForecastResponse
+	(*AnalyzeOeeResponse)(nil),                                 // 640: core.AnalyzeOeeResponse
+	(*AnalyzeOeeTrendResponse)(nil),                            // 641: core.AnalyzeOeeTrendResponse
+	(*AnalyzeScheduleAttainmentResponse)(nil),                  // 642: core.AnalyzeScheduleAttainmentResponse
+	(*AnalyzeDeliveryPerformanceResponse)(nil),                 // 643: core.AnalyzeDeliveryPerformanceResponse
+	(*ListDeliveriesResponse)(nil),                             // 644: core.ListDeliveriesResponse
+	(*GetDeliveryResponse)(nil),                                // 645: core.GetDeliveryResponse
+	(*ListDepartmentsResponse)(nil),                            // 646: core.ListDepartmentsResponse
+	(*GetDepartmentResponse)(nil),                              // 647: core.GetDepartmentResponse
+	(*CreateDepartmentResponse)(nil),                           // 648: core.CreateDepartmentResponse
+	(*UpdateDepartmentResponse)(nil),                           // 649: core.UpdateDepartmentResponse
+	(*BatchGetDepartmentsByIDsResponse)(nil),                   // 650: core.BatchGetDepartmentsByIDsResponse
+	(*BulkUpsertDepartmentsResponse)(nil),                      // 651: core.BulkUpsertDepartmentsResponse
+	(*ExportDepartmentsResponse)(nil),                          // 652: core.ExportDepartmentsResponse
+	(*ListEmailLogsResponse)(nil),                              // 653: core.ListEmailLogsResponse
+	(*GetEmailLogResponse)(nil),                                // 654: core.GetEmailLogResponse
+	(*ListInventoryChangeLogsResponse)(nil),                    // 655: core.ListInventoryChangeLogsResponse
+	(*GetInventoryChangeLogResponse)(nil),                      // 656: core.GetInventoryChangeLogResponse
+	(*ExportInventoryChangeLogsResponse)(nil),                  // 657: core.ExportInventoryChangeLogsResponse
+	(*StartInventoryChangeLogsExportResponse)(nil),             // 658: core.StartInventoryChangeLogsExportResponse
+	(*ListInvoicesResponse)(nil),                               // 659: core.ListInvoicesResponse
+	(*GetInvoiceResponse)(nil),                                 // 660: core.GetInvoiceResponse
+	(*UpdateInvoiceResponse)(nil),                              // 661: core.UpdateInvoiceResponse
+	(*ListCustomerInvoicesResponse)(nil),                       // 662: core.ListCustomerInvoicesResponse
+	(*ListMaterialsResponse)(nil),                              // 663: core.ListMaterialsResponse
+	(*ExportMaterialsResponse)(nil),                            // 664: core.ExportMaterialsResponse
+	(*GetMaterialResponse)(nil),                                // 665: core.GetMaterialResponse
+	(*CreateMaterialResponse)(nil),                             // 666: core.CreateMaterialResponse
+	(*UpdateMaterialResponse)(nil),                             // 667: core.UpdateMaterialResponse
+	(*DeleteMaterialResponse)(nil),                             // 668: core.DeleteMaterialResponse
+	(*BatchGetMaterialsByIDsResponse)(nil),                     // 669: core.BatchGetMaterialsByIDsResponse
+	(*ListSupplierMaterialsResponse)(nil),                      // 670: core.ListSupplierMaterialsResponse
+	(*GetSupplierMaterialResponse)(nil),                        // 671: core.GetSupplierMaterialResponse
+	(*CreateSupplierMaterialResponse)(nil),                     // 672: core.CreateSupplierMaterialResponse
+	(*UpdateSupplierMaterialResponse)(nil),                     // 673: core.UpdateSupplierMaterialResponse
+	(*DeleteSupplierMaterialResponse)(nil),                     // 674: core.DeleteSupplierMaterialResponse
+	(*CreatePartResponse)(nil),                                 // 675: core.CreatePartResponse
+	(*GetPartResponse)(nil),                                    // 676: core.GetPartResponse
+	(*ListPartsResponse)(nil),                                  // 677: core.ListPartsResponse
+	(*ExportPartsResponse)(nil),                                // 678: core.ExportPartsResponse
+	(*UpdatePartResponse)(nil),                                 // 679: core.UpdatePartResponse
+	(*DeletePartResponse)(nil),                                 // 680: core.DeletePartResponse
+	(*BatchGetPartsByIDsResponse)(nil),                         // 681: core.BatchGetPartsByIDsResponse
+	(*ListPermissionGroupsResponse)(nil),                       // 682: core.ListPermissionGroupsResponse
+	(*BatchGetPermissionGroupsByIDsResponse)(nil),              // 683: core.BatchGetPermissionGroupsByIDsResponse
+	(*ListPrioritiesResponse)(nil),                             // 684: core.ListPrioritiesResponse
+	(*GetPriorityResponse)(nil),                                // 685: core.GetPriorityResponse
+	(*BatchGetPrioritiesByIDsResponse)(nil),                    // 686: core.BatchGetPrioritiesByIDsResponse
+	(*ListProductTypesResponse)(nil),                           // 687: core.ListProductTypesResponse
+	(*GetProductTypeResponse)(nil),                             // 688: core.GetProductTypeResponse
+	(*CreateProductTypeResponse)(nil),                          // 689: core.CreateProductTypeResponse
+	(*UpdateProductTypeResponse)(nil),                          // 690: core.UpdateProductTypeResponse
+	(*BatchGetProductTypesByIDsResponse)(nil),                  // 691: core.BatchGetProductTypesByIDsResponse
+	(*ListReceivablesResponse)(nil),                            // 692: core.ListReceivablesResponse
+	(*ListReceivablesByCustomerResponse)(nil),                  // 693: core.ListReceivablesByCustomerResponse
+	(*ExportReceivablesByCustomerResponse)(nil),                // 694: core.ExportReceivablesByCustomerResponse
+	(*EmailReceivablesForCustomerResponse)(nil),                // 695: core.EmailReceivablesForCustomerResponse
+	(*ListUnitGroupsResponse)(nil),                             // 696: core.ListUnitGroupsResponse
+	(*GetUnitGroupResponse)(nil),                               // 697: core.GetUnitGroupResponse
+	(*CreateUnitGroupResponse)(nil),                            // 698: core.CreateUnitGroupResponse
+	(*UpdateUnitGroupResponse)(nil),                            // 699: core.UpdateUnitGroupResponse
+	(*UpsertUnitGroupUnitResponse)(nil),                        // 700: core.UpsertUnitGroupUnitResponse
+	(*ListUnitGroupUnitsResponse)(nil),                         // 701: core.ListUnitGroupUnitsResponse
+	(*GetUnitGroupUnitResponse)(nil),                           // 702: core.GetUnitGroupUnitResponse
+	(*BatchGetUnitGroupsByIDsResponse)(nil),                    // 703: core.BatchGetUnitGroupsByIDsResponse
+	(*BatchGetUnitGroupUnitsByIDsResponse)(nil),                // 704: core.BatchGetUnitGroupUnitsByIDsResponse
+	(*ValidateUnitsResponse)(nil),                              // 705: core.ValidateUnitsResponse
+	(*BulkUpsertUnitGroupsResponse)(nil),                       // 706: core.BulkUpsertUnitGroupsResponse
+	(*ExportUnitGroupsResponse)(nil),                           // 707: core.ExportUnitGroupsResponse
+	(*ListTransactionsResponse)(nil),                           // 708: core.ListTransactionsResponse
+	(*GetTransactionResponse)(nil),                             // 709: core.GetTransactionResponse
+	(*CreateTransactionResponse)(nil),                          // 710: core.CreateTransactionResponse
+	(*UpdateTransactionResponse)(nil),                          // 711: core.UpdateTransactionResponse
+	(*DeleteTransactionResponse)(nil),                          // 712: core.DeleteTransactionResponse
+	(*ListAccountTransactionsResponse)(nil),                    // 713: core.ListAccountTransactionsResponse
+	(*ListSettlementsResponse)(nil),                            // 714: core.ListSettlementsResponse
+	(*GetSettlementResponse)(nil),                              // 715: core.GetSettlementResponse
+	(*CreateSettlementResponse)(nil),                           // 716: core.CreateSettlementResponse
+	(*UpdateSettlementResponse)(nil),                           // 717: core.UpdateSettlementResponse
+	(*DeleteSettlementResponse)(nil),                           // 718: core.DeleteSettlementResponse
+	(*ListAllocationEntriesResponse)(nil),                      // 719: core.ListAllocationEntriesResponse
+	(*UpdateTransactionAllocationResponse)(nil),                // 720: core.UpdateTransactionAllocationResponse
+	(*DeleteTransactionAllocationResponse)(nil),                // 721: core.DeleteTransactionAllocationResponse
+	(*ListOpenCreditsResponse)(nil),                            // 722: core.ListOpenCreditsResponse
+	(*GetUserResponse)(nil),                                    // 723: core.GetUserResponse
+	(*BatchGetUsersByIDsResponse)(nil),                         // 724: core.BatchGetUsersByIDsResponse
+	(*UpdateUserResponse)(nil),                                 // 725: core.UpdateUserResponse
+	(*UploadUserPhotoResponse)(nil),                            // 726: core.UploadUserPhotoResponse
+	(*GetUserPhotoURLResponse)(nil),                            // 727: core.GetUserPhotoURLResponse
+	(*CheckDuplicateResponse)(nil),                             // 728: core.CheckDuplicateResponse
+	(*EmailRecordResponse)(nil),                                // 729: core.EmailRecordResponse
+	(*RequestDemoResponse)(nil),                                // 730: core.RequestDemoResponse
+	(*SubmitFeedbackResponse)(nil),                             // 731: core.SubmitFeedbackResponse
+	(*ListCatalogProductLinesResponse)(nil),                    // 732: core.ListCatalogProductLinesResponse
+	(*ListCatalogProductsResponse)(nil),                        // 733: core.ListCatalogProductsResponse
+	(*ListRolesResponse)(nil),                                  // 734: core.ListRolesResponse
+	(*GetRoleResponse)(nil),                                    // 735: core.GetRoleResponse
+	(*CreateRoleResponse)(nil),                                 // 736: core.CreateRoleResponse
+	(*UpdateRoleResponse)(nil),                                 // 737: core.UpdateRoleResponse
+	(*BatchGetRolesByIDsResponse)(nil),                         // 738: core.BatchGetRolesByIDsResponse
+	(*ListRegistrationFlowsResponse)(nil),                      // 739: core.ListRegistrationFlowsResponse
+	(*GetRegistrationFlowResponse)(nil),                        // 740: core.GetRegistrationFlowResponse
+	(*CreateRegistrationFlowResponse)(nil),                     // 741: core.CreateRegistrationFlowResponse
+	(*UpdateRegistrationFlowResponse)(nil),                     // 742: core.UpdateRegistrationFlowResponse
+	(*GetRegistrationFlowBySlugResponse)(nil),                  // 743: core.GetRegistrationFlowBySlugResponse
+	(*RegisterCustomerResponse)(nil),                           // 744: core.RegisterCustomerResponse
+	(*ListScanningStationsResponse)(nil),                       // 745: core.ListScanningStationsResponse
+	(*GetScanningStationResponse)(nil),                         // 746: core.GetScanningStationResponse
+	(*CreateScanningStationResponse)(nil),                      // 747: core.CreateScanningStationResponse
+	(*UpdateScanningStationResponse)(nil),                      // 748: core.UpdateScanningStationResponse
+	(*BatchGetScanningStationsByIDsResponse)(nil),              // 749: core.BatchGetScanningStationsByIDsResponse
+	(*BulkUpsertScanningStationsResponse)(nil),                 // 750: core.BulkUpsertScanningStationsResponse
+	(*ExportScanningStationsResponse)(nil),                     // 751: core.ExportScanningStationsResponse
+	(*ListLocationsResponse)(nil),                              // 752: core.ListLocationsResponse
+	(*GetLocationResponse)(nil),                                // 753: core.GetLocationResponse
+	(*CreateLocationResponse)(nil),                             // 754: core.CreateLocationResponse
+	(*UpdateLocationResponse)(nil),                             // 755: core.UpdateLocationResponse
+	(*ListLocationTypesResponse)(nil),                          // 756: core.ListLocationTypesResponse
+	(*GetLocationTypeResponse)(nil),                            // 757: core.GetLocationTypeResponse
+	(*BatchGetLocationsByIDsResponse)(nil),                     // 758: core.BatchGetLocationsByIDsResponse
+	(*BulkUpsertLocationsResponse)(nil),                        // 759: core.BulkUpsertLocationsResponse
+	(*ExportLocationsResponse)(nil),                            // 760: core.ExportLocationsResponse
+	(*ListSuppliersResponse)(nil),                              // 761: core.ListSuppliersResponse
+	(*GetSupplierResponse)(nil),                                // 762: core.GetSupplierResponse
+	(*CreateSupplierResponse)(nil),                             // 763: core.CreateSupplierResponse
+	(*UpdateSupplierResponse)(nil),                             // 764: core.UpdateSupplierResponse
+	(*DeleteSupplierResponse)(nil),                             // 765: core.DeleteSupplierResponse
+	(*BatchGetSuppliersByIDsResponse)(nil),                     // 766: core.BatchGetSuppliersByIDsResponse
+	(*ListSysPropertiesResponse)(nil),                          // 767: core.ListSysPropertiesResponse
+	(*GetSysPropertyResponse)(nil),                             // 768: core.GetSysPropertyResponse
+	(*UpdateSysPropertyResponse)(nil),                          // 769: core.UpdateSysPropertyResponse
+	(*GetLatestSysPropertyValueResponse)(nil),                  // 770: core.GetLatestSysPropertyValueResponse
+	(*BatchGetSysPropertiesByIDsResponse)(nil),                 // 771: core.BatchGetSysPropertiesByIDsResponse
+	(*GetTenancyResponse)(nil),                                 // 772: core.GetTenancyResponse
+	(*GetCurrentUserResponse)(nil),                             // 773: core.GetCurrentUserResponse
+	(*ListCustomerAccountsForUserResponse)(nil),                // 774: core.ListCustomerAccountsForUserResponse
+	(*ListTerritoriesResponse)(nil),                            // 775: core.ListTerritoriesResponse
+	(*GetTerritoryResponse)(nil),                               // 776: core.GetTerritoryResponse
+	(*CreateTerritoryResponse)(nil),                            // 777: core.CreateTerritoryResponse
+	(*UpdateTerritoryResponse)(nil),                            // 778: core.UpdateTerritoryResponse
+	(*BatchGetTerritoriesByIDsResponse)(nil),                   // 779: core.BatchGetTerritoriesByIDsResponse
+	(*ListDocumentSettingsResponse)(nil),                       // 780: core.ListDocumentSettingsResponse
+	(*GetDocumentSettingResponse)(nil),                         // 781: core.GetDocumentSettingResponse
+	(*UpdateDocumentSettingResponse)(nil),                      // 782: core.UpdateDocumentSettingResponse
 }
 var file_core_core_proto_depIdxs = []int32{
 	0,   // 0: core.CoreService.GetAccountContext:input_type -> core.GetAccountContextRequest
@@ -1349,741 +1352,743 @@ var file_core_core_proto_depIdxs = []int32{
 	90,  // 90: core.CoreService.ExportPriceList:input_type -> core.ExportPriceListRequest
 	91,  // 91: core.CoreService.ListAccountIntegrations:input_type -> core.ListAccountIntegrationsRequest
 	92,  // 92: core.CoreService.CreateAccountIntegration:input_type -> core.CreateAccountIntegrationRequest
-	93,  // 93: core.CoreService.UpdateAccountIntegration:input_type -> core.UpdateAccountIntegrationRequest
-	94,  // 94: core.CoreService.DeleteAccountIntegration:input_type -> core.DeleteAccountIntegrationRequest
-	95,  // 95: core.CoreService.BatchGetAccountIntegrationsByIDs:input_type -> core.BatchGetAccountIntegrationsByIDsRequest
-	96,  // 96: core.CoreService.GetStripePublishableKey:input_type -> core.GetStripePublishableKeyRequest
-	97,  // 97: core.CoreService.GetStripeStatus:input_type -> core.GetStripeStatusRequest
-	98,  // 98: core.CoreService.ListAdjustmentTypes:input_type -> core.ListAdjustmentTypesRequest
-	99,  // 99: core.CoreService.BatchGetAdjustmentTypesByIDs:input_type -> core.BatchGetAdjustmentTypesByIDsRequest
-	100, // 100: core.CoreService.GetAccount:input_type -> core.GetAccountRequest
-	101, // 101: core.CoreService.GetAccountBySlug:input_type -> core.GetAccountBySlugRequest
-	102, // 102: core.CoreService.GetPortalProfileBySlug:input_type -> core.GetPortalProfileBySlugRequest
-	103, // 103: core.CoreService.CreateOrResumePortalRegistrationSession:input_type -> core.CreateOrResumePortalRegistrationSessionRequest
-	104, // 104: core.CoreService.GetPortalRegistrationSession:input_type -> core.GetPortalRegistrationSessionRequest
-	105, // 105: core.CoreService.UpdatePortalRegistrationSession:input_type -> core.UpdatePortalRegistrationSessionRequest
-	106, // 106: core.CoreService.CompletePortalRegistrationSession:input_type -> core.CompletePortalRegistrationSessionRequest
-	107, // 107: core.CoreService.AbandonPortalRegistrationSession:input_type -> core.AbandonPortalRegistrationSessionRequest
-	108, // 108: core.CoreService.ListPortalRegistrationSessions:input_type -> core.ListPortalRegistrationSessionsRequest
-	109, // 109: core.CoreService.UpdateAccount:input_type -> core.UpdateAccountRequest
-	110, // 110: core.CoreService.UploadAccountPhoto:input_type -> core.UploadAccountPhotoRequest
-	111, // 111: core.CoreService.GetAccountLogoURL:input_type -> core.GetAccountLogoURLRequest
-	112, // 112: core.CoreService.UploadAccountFavicon:input_type -> core.UploadAccountFaviconRequest
-	113, // 113: core.CoreService.GetAccountFaviconURL:input_type -> core.GetAccountFaviconURLRequest
-	114, // 114: core.CoreService.ListProperties:input_type -> core.ListPropertiesRequest
-	115, // 115: core.CoreService.GetProperty:input_type -> core.GetPropertyRequest
-	116, // 116: core.CoreService.CreateProperty:input_type -> core.CreatePropertyRequest
-	117, // 117: core.CoreService.UpdateProperty:input_type -> core.UpdatePropertyRequest
-	118, // 118: core.CoreService.DeleteProperty:input_type -> core.DeletePropertyRequest
-	119, // 119: core.CoreService.BulkUpsertProperties:input_type -> core.BulkUpsertPropertiesRequest
-	120, // 120: core.CoreService.ExportProperties:input_type -> core.ExportPropertiesRequest
-	121, // 121: core.CoreService.ListAttributes:input_type -> core.ListAttributesRequest
-	122, // 122: core.CoreService.GetAttribute:input_type -> core.GetAttributeRequest
-	123, // 123: core.CoreService.CreateAttribute:input_type -> core.CreateAttributeRequest
-	124, // 124: core.CoreService.UpdateAttribute:input_type -> core.UpdateAttributeRequest
-	125, // 125: core.CoreService.DeleteAttribute:input_type -> core.DeleteAttributeRequest
-	126, // 126: core.CoreService.BatchGetAttributesByIDs:input_type -> core.BatchGetAttributesByIDsRequest
-	127, // 127: core.CoreService.BatchGetPropertiesByIDs:input_type -> core.BatchGetPropertiesByIDsRequest
-	128, // 128: core.CoreService.BatchGetItemCategoriesByIDs:input_type -> core.BatchGetItemCategoriesByIDsRequest
-	129, // 129: core.CoreService.BatchGetItemsByIDs:input_type -> core.BatchGetItemsByIDsRequest
-	130, // 130: core.CoreService.ListCarriers:input_type -> core.ListCarriersRequest
-	131, // 131: core.CoreService.GetCarrier:input_type -> core.GetCarrierRequest
-	132, // 132: core.CoreService.BatchGetCarriersByIDs:input_type -> core.BatchGetCarriersByIDsRequest
-	133, // 133: core.CoreService.CreateCarrier:input_type -> core.CreateCarrierRequest
-	134, // 134: core.CoreService.UpdateCarrier:input_type -> core.UpdateCarrierRequest
-	135, // 135: core.CoreService.DeleteCarrier:input_type -> core.DeleteCarrierRequest
-	136, // 136: core.CoreService.InitiateCarrierOAuth:input_type -> core.InitiateCarrierOAuthRequest
-	137, // 137: core.CoreService.GetCarrierOAuthStatus:input_type -> core.GetCarrierOAuthStatusRequest
-	138, // 138: core.CoreService.SyncServiceLevels:input_type -> core.SyncServiceLevelsRequest
-	139, // 139: core.CoreService.ListServiceLevels:input_type -> core.ListServiceLevelsRequest
-	140, // 140: core.CoreService.GetServiceLevel:input_type -> core.GetServiceLevelRequest
-	141, // 141: core.CoreService.BatchGetServiceLevelsByIDs:input_type -> core.BatchGetServiceLevelsByIDsRequest
-	142, // 142: core.CoreService.CreateServiceLevel:input_type -> core.CreateServiceLevelRequest
-	143, // 143: core.CoreService.UpdateServiceLevel:input_type -> core.UpdateServiceLevelRequest
-	144, // 144: core.CoreService.DeleteServiceLevel:input_type -> core.DeleteServiceLevelRequest
-	145, // 145: core.CoreService.ListItems:input_type -> core.ListItemsRequest
-	146, // 146: core.CoreService.GetItem:input_type -> core.GetItemRequest
-	147, // 147: core.CoreService.GetItemInventory:input_type -> core.GetItemInventoryRequest
-	148, // 148: core.CoreService.GetItemLotDefault:input_type -> core.GetItemLotDefaultRequest
-	149, // 149: core.CoreService.GetItemCosts:input_type -> core.GetItemCostsRequest
-	150, // 150: core.CoreService.GetItemTrends:input_type -> core.GetItemTrendsRequest
-	151, // 151: core.CoreService.ExportItems:input_type -> core.ExportItemsRequest
-	152, // 152: core.CoreService.CreateItem:input_type -> core.CreateItemRequest
-	153, // 153: core.CoreService.UpdateItem:input_type -> core.UpdateItemRequest
-	154, // 154: core.CoreService.DeleteItem:input_type -> core.DeleteItemRequest
-	155, // 155: core.CoreService.BulkUpsertItems:input_type -> core.BulkUpsertItemsRequest
-	156, // 156: core.CoreService.SetItemOrderUnits:input_type -> core.SetItemOrderUnitsRequest
-	157, // 157: core.CoreService.ChangeItemStockingUnit:input_type -> core.ChangeItemStockingUnitRequest
-	158, // 158: core.CoreService.AddItemAttribute:input_type -> core.AddItemAttributeRequest
-	159, // 159: core.CoreService.RemoveItemAttribute:input_type -> core.RemoveItemAttributeRequest
-	160, // 160: core.CoreService.ChangeItemCategory:input_type -> core.ChangeItemCategoryRequest
-	161, // 161: core.CoreService.UpdateItemInventory:input_type -> core.UpdateItemInventoryRequest
-	162, // 162: core.CoreService.BulkCreateItems:input_type -> core.BulkCreateItemsRequest
-	163, // 163: core.CoreService.BulkUpsertParts:input_type -> core.BulkUpsertPartsRequest
-	164, // 164: core.CoreService.BulkUpsertProducts:input_type -> core.BulkUpsertProductsRequest
-	165, // 165: core.CoreService.BulkUpsertMaterials:input_type -> core.BulkUpsertMaterialsRequest
-	166, // 166: core.CoreService.BulkReconcileItems:input_type -> core.BulkReconcileItemsRequest
-	167, // 167: core.CoreService.ListInventories:input_type -> core.ListInventoriesRequest
-	168, // 168: core.CoreService.AnalyzeWeeksOfSales:input_type -> core.AnalyzeWeeksOfSalesRequest
-	169, // 169: core.CoreService.ListChildAccounts:input_type -> core.ListChildAccountsRequest
-	170, // 170: core.CoreService.AddChildAccount:input_type -> core.AddChildAccountRequest
-	171, // 171: core.CoreService.RemoveChildAccount:input_type -> core.RemoveChildAccountRequest
-	172, // 172: core.CoreService.BatchGetChildAccountsByIDs:input_type -> core.BatchGetChildAccountsByIDsRequest
-	173, // 173: core.CoreService.GetBatchFlow:input_type -> core.GetBatchFlowRequest
-	174, // 174: core.CoreService.ListBatchesByScanningStation:input_type -> core.ListBatchesByScanningStationRequest
-	175, // 175: core.CoreService.GetBatchPossibleNextSteps:input_type -> core.GetBatchPossibleNextStepsRequest
-	176, // 176: core.CoreService.GetBatchPossibleInitSteps:input_type -> core.GetBatchPossibleInitStepsRequest
-	177, // 177: core.CoreService.AnalyzeOpenBatches:input_type -> core.AnalyzeOpenBatchesRequest
-	178, // 178: core.CoreService.InitializeBatch:input_type -> core.InitializeBatchRequest
-	179, // 179: core.CoreService.MoveBatches:input_type -> core.MoveBatchesRequest
-	180, // 180: core.CoreService.MergeBatches:input_type -> core.MergeBatchesRequest
-	181, // 181: core.CoreService.SplitBatch:input_type -> core.SplitBatchRequest
-	182, // 182: core.CoreService.GetRemainingQuantityToSplit:input_type -> core.GetRemainingQuantityToSplitRequest
-	183, // 183: core.CoreService.GetScanningStationConsumption:input_type -> core.GetScanningStationConsumptionRequest
-	184, // 184: core.CoreService.CloseBatch:input_type -> core.CloseBatchRequest
-	185, // 185: core.CoreService.DeleteBatch:input_type -> core.DeleteBatchRequest
-	186, // 186: core.CoreService.DeleteManyBatches:input_type -> core.DeleteManyBatchesRequest
-	187, // 187: core.CoreService.ListItemCategories:input_type -> core.ListItemCategoriesRequest
-	188, // 188: core.CoreService.GetItemCategory:input_type -> core.GetItemCategoryRequest
-	189, // 189: core.CoreService.CreateItemCategory:input_type -> core.CreateItemCategoryRequest
-	190, // 190: core.CoreService.UpdateItemCategory:input_type -> core.UpdateItemCategoryRequest
-	191, // 191: core.CoreService.DeleteItemCategory:input_type -> core.DeleteItemCategoryRequest
-	192, // 192: core.CoreService.AddItemCategoryProperty:input_type -> core.AddItemCategoryPropertyRequest
-	193, // 193: core.CoreService.CreateItemCategoryProperty:input_type -> core.CreateItemCategoryPropertyRequest
-	194, // 194: core.CoreService.RemoveItemCategoryProperty:input_type -> core.RemoveItemCategoryPropertyRequest
-	195, // 195: core.CoreService.ChangeItemCategoryUnitGroup:input_type -> core.ChangeItemCategoryUnitGroupRequest
-	196, // 196: core.CoreService.BulkUpsertItemCategories:input_type -> core.BulkUpsertItemCategoriesRequest
-	197, // 197: core.CoreService.ExportItemCategories:input_type -> core.ExportItemCategoriesRequest
-	198, // 198: core.CoreService.ListProductsFull:input_type -> core.ListProductsFullRequest
-	199, // 199: core.CoreService.ExportProducts:input_type -> core.ExportProductsRequest
-	200, // 200: core.CoreService.GetProduct:input_type -> core.GetProductRequest
-	201, // 201: core.CoreService.CreateProduct:input_type -> core.CreateProductRequest
-	202, // 202: core.CoreService.UpdateProduct:input_type -> core.UpdateProductRequest
-	203, // 203: core.CoreService.DeleteProduct:input_type -> core.DeleteProductRequest
-	204, // 204: core.CoreService.ChangeProductProductLine:input_type -> core.ChangeProductProductLineRequest
-	205, // 205: core.CoreService.ValidateProducts:input_type -> core.ValidateProductsRequest
-	206, // 206: core.CoreService.BatchGetProductsByIDs:input_type -> core.BatchGetProductsByIDsRequest
-	207, // 207: core.CoreService.ListProductLines:input_type -> core.ListProductLinesRequest
-	208, // 208: core.CoreService.GetProductLine:input_type -> core.GetProductLineRequest
-	209, // 209: core.CoreService.CreateProductLine:input_type -> core.CreateProductLineRequest
-	210, // 210: core.CoreService.UpdateProductLine:input_type -> core.UpdateProductLineRequest
-	211, // 211: core.CoreService.DeleteProductLine:input_type -> core.DeleteProductLineRequest
-	212, // 212: core.CoreService.BatchGetProductLinesByIDs:input_type -> core.BatchGetProductLinesByIDsRequest
-	213, // 213: core.CoreService.BulkUpsertProductLines:input_type -> core.BulkUpsertProductLinesRequest
-	214, // 214: core.CoreService.ExportProductLines:input_type -> core.ExportProductLinesRequest
-	215, // 215: core.CoreService.GetConsumption:input_type -> core.GetConsumptionRequest
-	216, // 216: core.CoreService.CreateConsumption:input_type -> core.CreateConsumptionRequest
-	217, // 217: core.CoreService.UpdateConsumption:input_type -> core.UpdateConsumptionRequest
-	218, // 218: core.CoreService.DeleteConsumption:input_type -> core.DeleteConsumptionRequest
-	219, // 219: core.CoreService.GetProductionFlow:input_type -> core.GetProductionFlowRequest
-	220, // 220: core.CoreService.ConnectProductionSteps:input_type -> core.ConnectProductionStepsRequest
-	221, // 221: core.CoreService.ListCustomers:input_type -> core.ListCustomersRequest
-	222, // 222: core.CoreService.GetCustomer:input_type -> core.GetCustomerRequest
-	223, // 223: core.CoreService.BatchGetCustomersByIDs:input_type -> core.BatchGetCustomersByIDsRequest
-	224, // 224: core.CoreService.CreateCustomer:input_type -> core.CreateCustomerRequest
-	225, // 225: core.CoreService.GetCustomerLeadTime:input_type -> core.GetCustomerLeadTimeRequest
-	226, // 226: core.CoreService.DeleteCustomer:input_type -> core.DeleteCustomerRequest
-	227, // 227: core.CoreService.BulkDeleteCustomers:input_type -> core.BulkDeleteCustomersRequest
-	228, // 228: core.CoreService.GetFrequentlyOrderedProducts:input_type -> core.GetFrequentlyOrderedProductsRequest
-	229, // 229: core.CoreService.ListCustomerNotificationRecipients:input_type -> core.ListCustomerNotificationRecipientsRequest
-	230, // 230: core.CoreService.UpdateCustomerNotificationRecipients:input_type -> core.UpdateCustomerNotificationRecipientsRequest
-	231, // 231: core.CoreService.UpdateCustomer:input_type -> core.UpdateCustomerRequest
-	232, // 232: core.CoreService.MergeCustomers:input_type -> core.MergeCustomersRequest
-	233, // 233: core.CoreService.ExportCustomers:input_type -> core.ExportCustomersRequest
-	234, // 234: core.CoreService.AnalyzeSales:input_type -> core.AnalyzeSalesRequest
-	235, // 235: core.CoreService.AnalyzeSalesSummary:input_type -> core.AnalyzeSalesSummaryRequest
-	236, // 236: core.CoreService.AnalyzeSalesBreakdown:input_type -> core.AnalyzeSalesBreakdownRequest
-	237, // 237: core.CoreService.AnalyzeSalesInvoices:input_type -> core.AnalyzeSalesInvoicesRequest
-	238, // 238: core.CoreService.ListNewCustomers:input_type -> core.ListNewCustomersRequest
-	239, // 239: core.CoreService.ListSalesLines:input_type -> core.ListSalesLinesRequest
-	240, // 240: core.CoreService.ExportSalesLines:input_type -> core.ExportSalesLinesRequest
-	241, // 241: core.CoreService.AnalyzeOpenOrdersSummary:input_type -> core.AnalyzeOpenOrdersSummaryRequest
-	242, // 242: core.CoreService.AnalyzeOpenOrderProducts:input_type -> core.AnalyzeOpenOrderProductsRequest
-	243, // 243: core.CoreService.ListOpenOrders:input_type -> core.ListOpenOrdersRequest
-	244, // 244: core.CoreService.ListOpenOrderLines:input_type -> core.ListOpenOrderLinesRequest
-	245, // 245: core.CoreService.ExportOpenOrderLines:input_type -> core.ExportOpenOrderLinesRequest
-	246, // 246: core.CoreService.AnalyzeRealizedMargins:input_type -> core.AnalyzeRealizedMarginsRequest
-	247, // 247: core.CoreService.AnalyzeCustomerPricing:input_type -> core.AnalyzeCustomerPricingRequest
-	248, // 248: core.CoreService.AnalyzeProductionCosts:input_type -> core.AnalyzeProductionCostsRequest
-	249, // 249: core.CoreService.AnalyzeDeliveries:input_type -> core.AnalyzeDeliveriesRequest
-	250, // 250: core.CoreService.AnalyzeManufacturing:input_type -> core.AnalyzeManufacturingRequest
-	251, // 251: core.CoreService.AnalyzeManufacturingBatch:input_type -> core.AnalyzeManufacturingBatchRequest
-	252, // 252: core.CoreService.AnalyzeOrders:input_type -> core.AnalyzeOrdersRequest
-	253, // 253: core.CoreService.AnalyzeQuarterlyOrders:input_type -> core.AnalyzeQuarterlyOrdersRequest
-	254, // 254: core.CoreService.AnalyzeMaterials:input_type -> core.AnalyzeMaterialsRequest
-	255, // 255: core.CoreService.AnalyzeInventoryReceipts:input_type -> core.AnalyzeInventoryReceiptsRequest
-	256, // 256: core.CoreService.AnalyzeNewCustomers:input_type -> core.AnalyzeNewCustomersRequest
-	257, // 257: core.CoreService.AnalyzeDemandForecast:input_type -> core.AnalyzeDemandForecastRequest
-	258, // 258: core.CoreService.AnalyzeOee:input_type -> core.AnalyzeOeeRequest
-	259, // 259: core.CoreService.AnalyzeOeeTrend:input_type -> core.AnalyzeOeeTrendRequest
-	260, // 260: core.CoreService.AnalyzeScheduleAttainment:input_type -> core.AnalyzeScheduleAttainmentRequest
-	261, // 261: core.CoreService.AnalyzeDeliveryPerformance:input_type -> core.AnalyzeDeliveryPerformanceRequest
-	262, // 262: core.CoreService.ListDeliveries:input_type -> core.ListDeliveriesRequest
-	263, // 263: core.CoreService.GetDelivery:input_type -> core.GetDeliveryRequest
-	264, // 264: core.CoreService.ListDepartments:input_type -> core.ListDepartmentsRequest
-	265, // 265: core.CoreService.GetDepartment:input_type -> core.GetDepartmentRequest
-	266, // 266: core.CoreService.CreateDepartment:input_type -> core.CreateDepartmentRequest
-	267, // 267: core.CoreService.UpdateDepartment:input_type -> core.UpdateDepartmentRequest
-	268, // 268: core.CoreService.DeleteDepartment:input_type -> core.DeleteDepartmentRequest
-	269, // 269: core.CoreService.BatchGetDepartmentsByIDs:input_type -> core.BatchGetDepartmentsByIDsRequest
-	270, // 270: core.CoreService.BulkUpsertDepartments:input_type -> core.BulkUpsertDepartmentsRequest
-	271, // 271: core.CoreService.ExportDepartments:input_type -> core.ExportDepartmentsRequest
-	272, // 272: core.CoreService.ListEmailLogs:input_type -> core.ListEmailLogsRequest
-	273, // 273: core.CoreService.GetEmailLog:input_type -> core.GetEmailLogRequest
-	274, // 274: core.CoreService.ListInventoryChangeLogs:input_type -> core.ListInventoryChangeLogsRequest
-	275, // 275: core.CoreService.GetInventoryChangeLog:input_type -> core.GetInventoryChangeLogRequest
-	276, // 276: core.CoreService.ExportInventoryChangeLogs:input_type -> core.ExportInventoryChangeLogsRequest
-	277, // 277: core.CoreService.StartInventoryChangeLogsExport:input_type -> core.StartInventoryChangeLogsExportRequest
-	278, // 278: core.CoreService.ListInvoices:input_type -> core.ListInvoicesRequest
-	279, // 279: core.CoreService.GetInvoice:input_type -> core.GetInvoiceRequest
-	280, // 280: core.CoreService.UpdateInvoice:input_type -> core.UpdateInvoiceRequest
-	281, // 281: core.CoreService.ListCustomerInvoices:input_type -> core.ListCustomerInvoicesRequest
-	282, // 282: core.CoreService.ListMaterials:input_type -> core.ListMaterialsRequest
-	283, // 283: core.CoreService.ExportMaterials:input_type -> core.ExportMaterialsRequest
-	284, // 284: core.CoreService.GetMaterial:input_type -> core.GetMaterialRequest
-	285, // 285: core.CoreService.CreateMaterial:input_type -> core.CreateMaterialRequest
-	286, // 286: core.CoreService.UpdateMaterial:input_type -> core.UpdateMaterialRequest
-	287, // 287: core.CoreService.DeleteMaterial:input_type -> core.DeleteMaterialRequest
-	288, // 288: core.CoreService.BatchGetMaterialsByIDs:input_type -> core.BatchGetMaterialsByIDsRequest
-	289, // 289: core.CoreService.ListSupplierMaterials:input_type -> core.ListSupplierMaterialsRequest
-	290, // 290: core.CoreService.GetSupplierMaterial:input_type -> core.GetSupplierMaterialRequest
-	291, // 291: core.CoreService.CreateSupplierMaterial:input_type -> core.CreateSupplierMaterialRequest
-	292, // 292: core.CoreService.UpdateSupplierMaterial:input_type -> core.UpdateSupplierMaterialRequest
-	293, // 293: core.CoreService.DeleteSupplierMaterial:input_type -> core.DeleteSupplierMaterialRequest
-	294, // 294: core.CoreService.CreatePart:input_type -> core.CreatePartRequest
-	295, // 295: core.CoreService.GetPart:input_type -> core.GetPartRequest
-	296, // 296: core.CoreService.ListParts:input_type -> core.ListPartsRequest
-	297, // 297: core.CoreService.ExportParts:input_type -> core.ExportPartsRequest
-	298, // 298: core.CoreService.UpdatePart:input_type -> core.UpdatePartRequest
-	299, // 299: core.CoreService.DeletePart:input_type -> core.DeletePartRequest
-	300, // 300: core.CoreService.BatchGetPartsByIDs:input_type -> core.BatchGetPartsByIDsRequest
-	301, // 301: core.CoreService.ListPermissionGroups:input_type -> core.ListPermissionGroupsRequest
-	302, // 302: core.CoreService.BatchGetPermissionGroupsByIDs:input_type -> core.BatchGetPermissionGroupsByIDsRequest
-	303, // 303: core.CoreService.ListPriorities:input_type -> core.ListPrioritiesRequest
-	304, // 304: core.CoreService.GetPriority:input_type -> core.GetPriorityRequest
-	305, // 305: core.CoreService.BatchGetPrioritiesByIDs:input_type -> core.BatchGetPrioritiesByIDsRequest
-	306, // 306: core.CoreService.ListProductTypes:input_type -> core.ListProductTypesRequest
-	307, // 307: core.CoreService.GetProductType:input_type -> core.GetProductTypeRequest
-	308, // 308: core.CoreService.CreateProductType:input_type -> core.CreateProductTypeRequest
-	309, // 309: core.CoreService.UpdateProductType:input_type -> core.UpdateProductTypeRequest
-	310, // 310: core.CoreService.DeleteProductType:input_type -> core.DeleteProductTypeRequest
-	311, // 311: core.CoreService.BatchGetProductTypesByIDs:input_type -> core.BatchGetProductTypesByIDsRequest
-	312, // 312: core.CoreService.ListReceivables:input_type -> core.ListReceivablesRequest
-	313, // 313: core.CoreService.ListReceivablesByCustomer:input_type -> core.ListReceivablesByCustomerRequest
-	314, // 314: core.CoreService.ExportReceivablesByCustomer:input_type -> core.ExportReceivablesByCustomerRequest
-	315, // 315: core.CoreService.EmailReceivablesForCustomer:input_type -> core.EmailReceivablesForCustomerRequest
-	316, // 316: core.CoreService.ListUnitGroups:input_type -> core.ListUnitGroupsRequest
-	317, // 317: core.CoreService.GetUnitGroup:input_type -> core.GetUnitGroupRequest
-	318, // 318: core.CoreService.CreateUnitGroup:input_type -> core.CreateUnitGroupRequest
-	319, // 319: core.CoreService.UpdateUnitGroup:input_type -> core.UpdateUnitGroupRequest
-	320, // 320: core.CoreService.DeleteUnitGroup:input_type -> core.DeleteUnitGroupRequest
-	321, // 321: core.CoreService.UpsertUnitGroupUnit:input_type -> core.UpsertUnitGroupUnitRequest
-	322, // 322: core.CoreService.DeleteUnitGroupUnit:input_type -> core.DeleteUnitGroupUnitRequest
-	323, // 323: core.CoreService.ListUnitGroupUnits:input_type -> core.ListUnitGroupUnitsRequest
-	324, // 324: core.CoreService.GetUnitGroupUnit:input_type -> core.GetUnitGroupUnitRequest
-	325, // 325: core.CoreService.BatchGetUnitGroupsByIDs:input_type -> core.BatchGetUnitGroupsByIDsRequest
-	326, // 326: core.CoreService.BatchGetUnitGroupUnitsByIDs:input_type -> core.BatchGetUnitGroupUnitsByIDsRequest
-	327, // 327: core.CoreService.ValidateUnits:input_type -> core.ValidateUnitsRequest
-	328, // 328: core.CoreService.BulkUpsertUnitGroups:input_type -> core.BulkUpsertUnitGroupsRequest
-	329, // 329: core.CoreService.ExportUnitGroups:input_type -> core.ExportUnitGroupsRequest
-	330, // 330: core.CoreService.ListTransactions:input_type -> core.ListTransactionsRequest
-	331, // 331: core.CoreService.GetTransaction:input_type -> core.GetTransactionRequest
-	332, // 332: core.CoreService.CreateTransaction:input_type -> core.CreateTransactionRequest
-	333, // 333: core.CoreService.UpdateTransaction:input_type -> core.UpdateTransactionRequest
-	334, // 334: core.CoreService.DeleteTransaction:input_type -> core.DeleteTransactionRequest
-	335, // 335: core.CoreService.ListAccountTransactions:input_type -> core.ListAccountTransactionsRequest
-	336, // 336: core.CoreService.ListSettlements:input_type -> core.ListSettlementsRequest
-	337, // 337: core.CoreService.GetSettlement:input_type -> core.GetSettlementRequest
-	338, // 338: core.CoreService.CreateSettlement:input_type -> core.CreateSettlementRequest
-	339, // 339: core.CoreService.UpdateSettlement:input_type -> core.UpdateSettlementRequest
-	340, // 340: core.CoreService.DeleteSettlement:input_type -> core.DeleteSettlementRequest
-	341, // 341: core.CoreService.ListAllocationEntries:input_type -> core.ListAllocationEntriesRequest
-	342, // 342: core.CoreService.UpdateTransactionAllocation:input_type -> core.UpdateTransactionAllocationRequest
-	343, // 343: core.CoreService.DeleteTransactionAllocation:input_type -> core.DeleteTransactionAllocationRequest
-	344, // 344: core.CoreService.ListOpenCredits:input_type -> core.ListOpenCreditsRequest
-	345, // 345: core.CoreService.GetUser:input_type -> core.GetUserRequest
-	346, // 346: core.CoreService.BatchGetUsersByIDs:input_type -> core.BatchGetUsersByIDsRequest
-	347, // 347: core.CoreService.UpdateUser:input_type -> core.UpdateUserRequest
-	348, // 348: core.CoreService.UploadUserPhoto:input_type -> core.UploadUserPhotoRequest
-	349, // 349: core.CoreService.GetUserPhotoURL:input_type -> core.GetUserPhotoURLRequest
-	350, // 350: core.CoreService.CheckDuplicate:input_type -> core.CheckDuplicateRequest
-	351, // 351: core.CoreService.EmailRecord:input_type -> core.EmailRecordRequest
-	352, // 352: core.CoreService.RequestDemo:input_type -> core.RequestDemoRequest
-	353, // 353: core.CoreService.SubmitFeedback:input_type -> core.SubmitFeedbackRequest
-	354, // 354: core.CoreService.ListCatalogProductLines:input_type -> core.ListCatalogProductLinesRequest
-	355, // 355: core.CoreService.ListCatalogProducts:input_type -> core.ListCatalogProductsRequest
-	356, // 356: core.CoreService.ListRoles:input_type -> core.ListRolesRequest
-	357, // 357: core.CoreService.GetRole:input_type -> core.GetRoleRequest
-	358, // 358: core.CoreService.CreateRole:input_type -> core.CreateRoleRequest
-	359, // 359: core.CoreService.UpdateRole:input_type -> core.UpdateRoleRequest
-	360, // 360: core.CoreService.DeleteRole:input_type -> core.DeleteRoleRequest
-	361, // 361: core.CoreService.BatchGetRolesByIDs:input_type -> core.BatchGetRolesByIDsRequest
-	362, // 362: core.CoreService.ListRegistrationFlows:input_type -> core.ListRegistrationFlowsRequest
-	363, // 363: core.CoreService.GetRegistrationFlow:input_type -> core.GetRegistrationFlowRequest
-	364, // 364: core.CoreService.CreateRegistrationFlow:input_type -> core.CreateRegistrationFlowRequest
-	365, // 365: core.CoreService.UpdateRegistrationFlow:input_type -> core.UpdateRegistrationFlowRequest
-	366, // 366: core.CoreService.DeleteRegistrationFlow:input_type -> core.DeleteRegistrationFlowRequest
-	367, // 367: core.CoreService.GetRegistrationFlowBySlug:input_type -> core.GetRegistrationFlowBySlugRequest
-	368, // 368: core.CoreService.RegisterCustomer:input_type -> core.RegisterCustomerRequest
-	369, // 369: core.CoreService.ListScanningStations:input_type -> core.ListScanningStationsRequest
-	370, // 370: core.CoreService.GetScanningStation:input_type -> core.GetScanningStationRequest
-	371, // 371: core.CoreService.CreateScanningStation:input_type -> core.CreateScanningStationRequest
-	372, // 372: core.CoreService.UpdateScanningStation:input_type -> core.UpdateScanningStationRequest
-	373, // 373: core.CoreService.DeleteScanningStation:input_type -> core.DeleteScanningStationRequest
-	374, // 374: core.CoreService.ConnectProductionStepsByScanningStation:input_type -> core.ConnectProductionStepsByScanningStationRequest
-	375, // 375: core.CoreService.BatchGetScanningStationsByIDs:input_type -> core.BatchGetScanningStationsByIDsRequest
-	376, // 376: core.CoreService.BulkUpsertScanningStations:input_type -> core.BulkUpsertScanningStationsRequest
-	377, // 377: core.CoreService.ExportScanningStations:input_type -> core.ExportScanningStationsRequest
-	378, // 378: core.CoreService.ListLocations:input_type -> core.ListLocationsRequest
-	379, // 379: core.CoreService.GetLocation:input_type -> core.GetLocationRequest
-	380, // 380: core.CoreService.CreateLocation:input_type -> core.CreateLocationRequest
-	381, // 381: core.CoreService.UpdateLocation:input_type -> core.UpdateLocationRequest
-	382, // 382: core.CoreService.DeleteLocation:input_type -> core.DeleteLocationRequest
-	383, // 383: core.CoreService.ListLocationTypes:input_type -> core.ListLocationTypesRequest
-	384, // 384: core.CoreService.GetLocationType:input_type -> core.GetLocationTypeRequest
-	385, // 385: core.CoreService.BatchGetLocationsByIDs:input_type -> core.BatchGetLocationsByIDsRequest
-	386, // 386: core.CoreService.BulkUpsertLocations:input_type -> core.BulkUpsertLocationsRequest
-	387, // 387: core.CoreService.ExportLocations:input_type -> core.ExportLocationsRequest
-	388, // 388: core.CoreService.ListSuppliers:input_type -> core.ListSuppliersRequest
-	389, // 389: core.CoreService.GetSupplier:input_type -> core.GetSupplierRequest
-	390, // 390: core.CoreService.CreateSupplier:input_type -> core.CreateSupplierRequest
-	391, // 391: core.CoreService.UpdateSupplier:input_type -> core.UpdateSupplierRequest
-	392, // 392: core.CoreService.DeleteSupplier:input_type -> core.DeleteSupplierRequest
-	393, // 393: core.CoreService.BulkDeleteSuppliers:input_type -> core.BulkDeleteSuppliersRequest
-	394, // 394: core.CoreService.BatchGetSuppliersByIDs:input_type -> core.BatchGetSuppliersByIDsRequest
-	395, // 395: core.CoreService.ListSysProperties:input_type -> core.ListSysPropertiesRequest
-	396, // 396: core.CoreService.GetSysProperty:input_type -> core.GetSysPropertyRequest
-	397, // 397: core.CoreService.UpdateSysProperty:input_type -> core.UpdateSysPropertyRequest
-	398, // 398: core.CoreService.GetLatestSysPropertyValue:input_type -> core.GetLatestSysPropertyValueRequest
-	399, // 399: core.CoreService.BatchGetSysPropertiesByIDs:input_type -> core.BatchGetSysPropertiesByIDsRequest
-	400, // 400: core.CoreService.GetTenancy:input_type -> core.GetTenancyRequest
-	401, // 401: core.CoreService.SwitchAccount:input_type -> core.SwitchTenancyAccountRequest
-	402, // 402: core.CoreService.GetCurrentUser:input_type -> core.GetCurrentUserRequest
-	403, // 403: core.CoreService.ListCustomerAccountsForUser:input_type -> core.ListCustomerAccountsForUserRequest
-	404, // 404: core.CoreService.ListTerritories:input_type -> core.ListTerritoriesRequest
-	405, // 405: core.CoreService.GetTerritory:input_type -> core.GetTerritoryRequest
-	406, // 406: core.CoreService.CreateTerritory:input_type -> core.CreateTerritoryRequest
-	407, // 407: core.CoreService.UpdateTerritory:input_type -> core.UpdateTerritoryRequest
-	408, // 408: core.CoreService.DeleteTerritory:input_type -> core.DeleteTerritoryRequest
-	409, // 409: core.CoreService.BatchGetTerritoriesByIDs:input_type -> core.BatchGetTerritoriesByIDsRequest
-	410, // 410: core.CoreService.ListDocumentSettings:input_type -> core.ListDocumentSettingsRequest
-	411, // 411: core.CoreService.GetDocumentSetting:input_type -> core.GetDocumentSettingRequest
-	412, // 412: core.CoreService.UpdateDocumentSetting:input_type -> core.UpdateDocumentSettingRequest
-	413, // 413: core.CoreService.GetAccountContext:output_type -> core.GetAccountContextResponse
-	414, // 414: core.CoreService.GetAccountNames:output_type -> core.GetAccountNamesResponse
-	415, // 415: core.CoreService.BatchGetAccountsByIDs:output_type -> core.BatchGetAccountsByIDsResponse
-	416, // 416: core.CoreService.GetUserAccountAccess:output_type -> core.GetUserAccountAccessResponse
-	417, // 417: core.CoreService.GetRolePermissions:output_type -> core.GetRolePermissionsResponse
-	418, // 418: core.CoreService.GetRoleInfo:output_type -> core.GetRoleInfoResponse
-	419, // 419: core.CoreService.GetAccountRelation:output_type -> core.GetAccountRelationResponse
-	10,  // 420: core.CoreService.MarkAccountUserUsed:output_type -> google.protobuf.Empty
-	420, // 421: core.CoreService.ListUserAccountAffiliations:output_type -> core.ListUserAccountAffiliationsResponse
-	421, // 422: core.CoreService.GetSandboxAccountByOwner:output_type -> core.GetSandboxAccountByOwnerResponse
-	422, // 423: core.CoreService.GetAdminRole:output_type -> core.GetAdminRoleResponse
-	423, // 424: core.CoreService.ListSandboxAccounts:output_type -> core.ListSandboxAccountsResponse
-	424, // 425: core.CoreService.CreateSandbox:output_type -> core.CreateSandboxResponse
-	425, // 426: core.CoreService.GetSandbox:output_type -> core.GetSandboxResponse
-	10,  // 427: core.CoreService.DeleteSandbox:output_type -> google.protobuf.Empty
-	426, // 428: core.CoreService.BatchGetSandboxesByIDs:output_type -> core.BatchGetSandboxesByIDsResponse
-	10,  // 429: core.CoreService.UpdateAccountSubscription:output_type -> google.protobuf.Empty
-	10,  // 430: core.CoreService.ClearAccountStripeCustomer:output_type -> google.protobuf.Empty
-	427, // 431: core.CoreService.UpdateAgentSpendingCap:output_type -> core.UpdateAgentSpendingCapResponse
-	428, // 432: core.CoreService.GetAccountByStripeCustomerID:output_type -> core.GetAccountByStripeCustomerIDResponse
-	429, // 433: core.CoreService.CompleteRegistration:output_type -> core.CompleteRegistrationResponse
-	430, // 434: core.CoreService.ListUnits:output_type -> core.ListUnitsResponse
-	431, // 435: core.CoreService.GetUnit:output_type -> core.GetUnitResponse
-	432, // 436: core.CoreService.CreateUnit:output_type -> core.CreateUnitResponse
-	433, // 437: core.CoreService.UpdateUnit:output_type -> core.UpdateUnitResponse
-	10,  // 438: core.CoreService.DeleteUnit:output_type -> google.protobuf.Empty
-	434, // 439: core.CoreService.BatchGetUnitsByIDs:output_type -> core.BatchGetUnitsByIDsResponse
-	435, // 440: core.CoreService.BulkUpsertUnits:output_type -> core.BulkUpsertUnitsResponse
-	436, // 441: core.CoreService.ExportUnits:output_type -> core.ExportUnitsResponse
-	437, // 442: core.CoreService.SearchProducts:output_type -> core.SearchProductsResponse
-	438, // 443: core.CoreService.ListProducts:output_type -> core.ListProductsResponse
-	439, // 444: core.CoreService.GetCustomerByEmail:output_type -> core.GetCustomerByEmailResponse
-	440, // 445: core.CoreService.FindContactsByEmail:output_type -> core.FindContactsByEmailResponse
-	441, // 446: core.CoreService.ListPaymentTerms:output_type -> core.ListPaymentTermsResponse
-	442, // 447: core.CoreService.GetPaymentTerm:output_type -> core.GetPaymentTermResponse
-	443, // 448: core.CoreService.CreatePaymentTerm:output_type -> core.CreatePaymentTermResponse
-	444, // 449: core.CoreService.UpdatePaymentTerm:output_type -> core.UpdatePaymentTermResponse
-	10,  // 450: core.CoreService.DeletePaymentTerm:output_type -> google.protobuf.Empty
-	445, // 451: core.CoreService.BatchGetPaymentTermsByIDs:output_type -> core.BatchGetPaymentTermsByIDsResponse
-	446, // 452: core.CoreService.ListShippingTerms:output_type -> core.ListShippingTermsResponse
-	447, // 453: core.CoreService.GetShippingTerm:output_type -> core.GetShippingTermResponse
-	448, // 454: core.CoreService.CreateShippingTerm:output_type -> core.CreateShippingTermResponse
-	449, // 455: core.CoreService.UpdateShippingTerm:output_type -> core.UpdateShippingTermResponse
-	10,  // 456: core.CoreService.DeleteShippingTerm:output_type -> google.protobuf.Empty
-	450, // 457: core.CoreService.BatchGetShippingTermsByIDs:output_type -> core.BatchGetShippingTermsByIDsResponse
-	451, // 458: core.CoreService.GetAddress:output_type -> core.GetAddressResponse
-	452, // 459: core.CoreService.ListAddresses:output_type -> core.ListAddressesResponse
-	453, // 460: core.CoreService.CreateAddress:output_type -> core.CreateAddressResponse
-	454, // 461: core.CoreService.UpdateAddress:output_type -> core.UpdateAddressResponse
-	10,  // 462: core.CoreService.DeleteAddress:output_type -> google.protobuf.Empty
-	455, // 463: core.CoreService.BatchGetAddressesByIDs:output_type -> core.BatchGetAddressesByIDsResponse
-	456, // 464: core.CoreService.AutocompleteAddress:output_type -> core.AutocompleteAddressResponse
-	457, // 465: core.CoreService.GetAddressDetails:output_type -> core.GetAddressDetailsResponse
-	458, // 466: core.CoreService.ValidateAddress:output_type -> core.ValidateAddressResponse
-	459, // 467: core.CoreService.ListAccountStatuses:output_type -> core.ListAccountStatusesResponse
-	460, // 468: core.CoreService.GetAccountStatus:output_type -> core.GetAccountStatusResponse
-	461, // 469: core.CoreService.BatchGetAccountStatusesByIDs:output_type -> core.BatchGetAccountStatusesByIDsResponse
-	462, // 470: core.CoreService.ListAccountGroups:output_type -> core.ListAccountGroupsResponse
-	463, // 471: core.CoreService.GetAccountGroup:output_type -> core.GetAccountGroupResponse
-	464, // 472: core.CoreService.CreateAccountGroup:output_type -> core.CreateAccountGroupResponse
-	465, // 473: core.CoreService.UpdateAccountGroup:output_type -> core.UpdateAccountGroupResponse
-	10,  // 474: core.CoreService.DeleteAccountGroup:output_type -> google.protobuf.Empty
-	466, // 475: core.CoreService.BatchGetAccountGroupsByIDs:output_type -> core.BatchGetAccountGroupsByIDsResponse
-	467, // 476: core.CoreService.ListAccountGroupProductLineAccess:output_type -> core.ListAccountGroupProductLineAccessResponse
-	468, // 477: core.CoreService.GetAccountGroupProductLineAccess:output_type -> core.GetAccountGroupProductLineAccessResponse
-	469, // 478: core.CoreService.CreateAccountGroupProductLineAccess:output_type -> core.CreateAccountGroupProductLineAccessResponse
-	470, // 479: core.CoreService.UpdateAccountGroupProductLineAccess:output_type -> core.UpdateAccountGroupProductLineAccessResponse
-	10,  // 480: core.CoreService.DeleteAccountGroupProductLineAccess:output_type -> google.protobuf.Empty
-	471, // 481: core.CoreService.BatchGetAccountGroupProductLineAccessByIDs:output_type -> core.BatchGetAccountGroupProductLineAccessByIDsResponse
-	472, // 482: core.CoreService.ListCustomerProductLineAccess:output_type -> core.ListCustomerProductLineAccessResponse
-	473, // 483: core.CoreService.GetCustomerProductLineAccess:output_type -> core.GetCustomerProductLineAccessResponse
-	474, // 484: core.CoreService.CreateCustomerProductLineAccess:output_type -> core.CreateCustomerProductLineAccessResponse
-	475, // 485: core.CoreService.UpdateCustomerProductLineAccess:output_type -> core.UpdateCustomerProductLineAccessResponse
-	10,  // 486: core.CoreService.DeleteCustomerProductLineAccess:output_type -> google.protobuf.Empty
-	476, // 487: core.CoreService.BatchGetCustomerProductLineAccessByIDs:output_type -> core.BatchGetCustomerProductLineAccessByIDsResponse
-	477, // 488: core.CoreService.ListAccountUsers:output_type -> core.ListAccountUsersResponse
-	478, // 489: core.CoreService.GetAccountUser:output_type -> core.GetAccountUserResponse
-	479, // 490: core.CoreService.CreateAccountUser:output_type -> core.CreateAccountUserResponse
-	480, // 491: core.CoreService.UpdateAccountUser:output_type -> core.UpdateAccountUserResponse
-	10,  // 492: core.CoreService.UpdateAccountUserStatus:output_type -> google.protobuf.Empty
-	10,  // 493: core.CoreService.UpdateAccountUserPassword:output_type -> google.protobuf.Empty
-	481, // 494: core.CoreService.BatchGetAccountUsersByIDs:output_type -> core.BatchGetAccountUsersByIDsResponse
-	482, // 495: core.CoreService.ListSalesTargets:output_type -> core.ListSalesTargetsResponse
-	483, // 496: core.CoreService.CreateSalesTarget:output_type -> core.CreateSalesTargetResponse
-	484, // 497: core.CoreService.UpsertSalesTarget:output_type -> core.UpsertSalesTargetResponse
-	485, // 498: core.CoreService.ListAccountPrices:output_type -> core.ListAccountPricesResponse
-	486, // 499: core.CoreService.GetAccountPrice:output_type -> core.GetAccountPriceResponse
-	487, // 500: core.CoreService.CreateAccountPrice:output_type -> core.CreateAccountPriceResponse
-	488, // 501: core.CoreService.UpdateAccountPrice:output_type -> core.UpdateAccountPriceResponse
-	10,  // 502: core.CoreService.DeleteAccountPrice:output_type -> google.protobuf.Empty
-	489, // 503: core.CoreService.ExportPriceList:output_type -> core.ExportPriceListResponse
-	490, // 504: core.CoreService.ListAccountIntegrations:output_type -> core.ListAccountIntegrationsResponse
-	491, // 505: core.CoreService.CreateAccountIntegration:output_type -> core.CreateAccountIntegrationResponse
-	492, // 506: core.CoreService.UpdateAccountIntegration:output_type -> core.UpdateAccountIntegrationResponse
-	493, // 507: core.CoreService.DeleteAccountIntegration:output_type -> core.DeleteAccountIntegrationResponse
-	494, // 508: core.CoreService.BatchGetAccountIntegrationsByIDs:output_type -> core.BatchGetAccountIntegrationsByIDsResponse
-	495, // 509: core.CoreService.GetStripePublishableKey:output_type -> core.GetStripePublishableKeyResponse
-	496, // 510: core.CoreService.GetStripeStatus:output_type -> core.GetStripeStatusResponse
-	497, // 511: core.CoreService.ListAdjustmentTypes:output_type -> core.ListAdjustmentTypesResponse
-	498, // 512: core.CoreService.BatchGetAdjustmentTypesByIDs:output_type -> core.BatchGetAdjustmentTypesByIDsResponse
-	499, // 513: core.CoreService.GetAccount:output_type -> core.GetAccountResponse
-	500, // 514: core.CoreService.GetAccountBySlug:output_type -> core.GetAccountBySlugResponse
-	501, // 515: core.CoreService.GetPortalProfileBySlug:output_type -> core.GetPortalProfileBySlugResponse
-	502, // 516: core.CoreService.CreateOrResumePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
-	502, // 517: core.CoreService.GetPortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
-	502, // 518: core.CoreService.UpdatePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
-	502, // 519: core.CoreService.CompletePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
-	502, // 520: core.CoreService.AbandonPortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
-	503, // 521: core.CoreService.ListPortalRegistrationSessions:output_type -> core.ListPortalRegistrationSessionsResponse
-	504, // 522: core.CoreService.UpdateAccount:output_type -> core.UpdateAccountResponse
-	505, // 523: core.CoreService.UploadAccountPhoto:output_type -> core.UploadAccountPhotoResponse
-	506, // 524: core.CoreService.GetAccountLogoURL:output_type -> core.GetAccountLogoURLResponse
-	507, // 525: core.CoreService.UploadAccountFavicon:output_type -> core.UploadAccountFaviconResponse
-	508, // 526: core.CoreService.GetAccountFaviconURL:output_type -> core.GetAccountFaviconURLResponse
-	509, // 527: core.CoreService.ListProperties:output_type -> core.ListPropertiesResponse
-	510, // 528: core.CoreService.GetProperty:output_type -> core.GetPropertyResponse
-	511, // 529: core.CoreService.CreateProperty:output_type -> core.CreatePropertyResponse
-	512, // 530: core.CoreService.UpdateProperty:output_type -> core.UpdatePropertyResponse
-	10,  // 531: core.CoreService.DeleteProperty:output_type -> google.protobuf.Empty
-	513, // 532: core.CoreService.BulkUpsertProperties:output_type -> core.BulkUpsertPropertiesResponse
-	514, // 533: core.CoreService.ExportProperties:output_type -> core.ExportPropertiesResponse
-	515, // 534: core.CoreService.ListAttributes:output_type -> core.ListAttributesResponse
-	516, // 535: core.CoreService.GetAttribute:output_type -> core.GetAttributeResponse
-	517, // 536: core.CoreService.CreateAttribute:output_type -> core.CreateAttributeResponse
-	518, // 537: core.CoreService.UpdateAttribute:output_type -> core.UpdateAttributeResponse
-	10,  // 538: core.CoreService.DeleteAttribute:output_type -> google.protobuf.Empty
-	519, // 539: core.CoreService.BatchGetAttributesByIDs:output_type -> core.BatchGetAttributesByIDsResponse
-	520, // 540: core.CoreService.BatchGetPropertiesByIDs:output_type -> core.BatchGetPropertiesByIDsResponse
-	521, // 541: core.CoreService.BatchGetItemCategoriesByIDs:output_type -> core.BatchGetItemCategoriesByIDsResponse
-	522, // 542: core.CoreService.BatchGetItemsByIDs:output_type -> core.BatchGetItemsByIDsResponse
-	523, // 543: core.CoreService.ListCarriers:output_type -> core.ListCarriersResponse
-	524, // 544: core.CoreService.GetCarrier:output_type -> core.GetCarrierResponse
-	525, // 545: core.CoreService.BatchGetCarriersByIDs:output_type -> core.BatchGetCarriersByIDsResponse
-	526, // 546: core.CoreService.CreateCarrier:output_type -> core.CreateCarrierResponse
-	527, // 547: core.CoreService.UpdateCarrier:output_type -> core.UpdateCarrierResponse
-	10,  // 548: core.CoreService.DeleteCarrier:output_type -> google.protobuf.Empty
-	528, // 549: core.CoreService.InitiateCarrierOAuth:output_type -> core.InitiateCarrierOAuthResponse
-	529, // 550: core.CoreService.GetCarrierOAuthStatus:output_type -> core.GetCarrierOAuthStatusResponse
-	530, // 551: core.CoreService.SyncServiceLevels:output_type -> core.SyncServiceLevelsResponse
-	531, // 552: core.CoreService.ListServiceLevels:output_type -> core.ListServiceLevelsResponse
-	532, // 553: core.CoreService.GetServiceLevel:output_type -> core.GetServiceLevelResponse
-	533, // 554: core.CoreService.BatchGetServiceLevelsByIDs:output_type -> core.BatchGetServiceLevelsByIDsResponse
-	534, // 555: core.CoreService.CreateServiceLevel:output_type -> core.CreateServiceLevelResponse
-	535, // 556: core.CoreService.UpdateServiceLevel:output_type -> core.UpdateServiceLevelResponse
-	10,  // 557: core.CoreService.DeleteServiceLevel:output_type -> google.protobuf.Empty
-	536, // 558: core.CoreService.ListItems:output_type -> core.ListItemsResponse
-	537, // 559: core.CoreService.GetItem:output_type -> core.GetItemResponse
-	538, // 560: core.CoreService.GetItemInventory:output_type -> core.GetItemInventoryResponse
-	539, // 561: core.CoreService.GetItemLotDefault:output_type -> core.GetItemLotDefaultResponse
-	540, // 562: core.CoreService.GetItemCosts:output_type -> core.GetItemCostsResponse
-	541, // 563: core.CoreService.GetItemTrends:output_type -> core.GetItemTrendsResponse
-	542, // 564: core.CoreService.ExportItems:output_type -> core.ExportItemsResponse
-	543, // 565: core.CoreService.CreateItem:output_type -> core.CreateItemResponse
-	544, // 566: core.CoreService.UpdateItem:output_type -> core.UpdateItemResponse
-	10,  // 567: core.CoreService.DeleteItem:output_type -> google.protobuf.Empty
-	545, // 568: core.CoreService.BulkUpsertItems:output_type -> core.BulkUpsertItemsResponse
-	546, // 569: core.CoreService.SetItemOrderUnits:output_type -> core.SetItemOrderUnitsResponse
-	547, // 570: core.CoreService.ChangeItemStockingUnit:output_type -> core.ChangeItemStockingUnitResponse
-	548, // 571: core.CoreService.AddItemAttribute:output_type -> core.AddItemAttributeResponse
-	549, // 572: core.CoreService.RemoveItemAttribute:output_type -> core.RemoveItemAttributeResponse
-	550, // 573: core.CoreService.ChangeItemCategory:output_type -> core.ChangeItemCategoryResponse
-	551, // 574: core.CoreService.UpdateItemInventory:output_type -> core.UpdateItemInventoryResponse
-	552, // 575: core.CoreService.BulkCreateItems:output_type -> core.BulkCreateItemsResponse
-	553, // 576: core.CoreService.BulkUpsertParts:output_type -> core.BulkUpsertPartsResponse
-	554, // 577: core.CoreService.BulkUpsertProducts:output_type -> core.BulkUpsertProductsResponse
-	555, // 578: core.CoreService.BulkUpsertMaterials:output_type -> core.BulkUpsertMaterialsResponse
-	556, // 579: core.CoreService.BulkReconcileItems:output_type -> core.BulkReconcileItemsResponse
-	557, // 580: core.CoreService.ListInventories:output_type -> core.ListInventoriesResponse
-	558, // 581: core.CoreService.AnalyzeWeeksOfSales:output_type -> core.AnalyzeWeeksOfSalesResponse
-	559, // 582: core.CoreService.ListChildAccounts:output_type -> core.ListChildAccountsResponse
-	560, // 583: core.CoreService.AddChildAccount:output_type -> core.AddChildAccountResponse
-	10,  // 584: core.CoreService.RemoveChildAccount:output_type -> google.protobuf.Empty
-	561, // 585: core.CoreService.BatchGetChildAccountsByIDs:output_type -> core.BatchGetChildAccountsByIDsResponse
-	562, // 586: core.CoreService.GetBatchFlow:output_type -> core.GetBatchFlowResponse
-	563, // 587: core.CoreService.ListBatchesByScanningStation:output_type -> core.ListBatchesByScanningStationResponse
-	564, // 588: core.CoreService.GetBatchPossibleNextSteps:output_type -> core.GetBatchPossibleNextStepsResponse
-	565, // 589: core.CoreService.GetBatchPossibleInitSteps:output_type -> core.GetBatchPossibleInitStepsResponse
-	566, // 590: core.CoreService.AnalyzeOpenBatches:output_type -> core.AnalyzeOpenBatchesResponse
-	567, // 591: core.CoreService.InitializeBatch:output_type -> core.InitializeBatchResponse
-	568, // 592: core.CoreService.MoveBatches:output_type -> core.MoveBatchesResponse
-	569, // 593: core.CoreService.MergeBatches:output_type -> core.MergeBatchesResponse
-	570, // 594: core.CoreService.SplitBatch:output_type -> core.SplitBatchResponse
-	571, // 595: core.CoreService.GetRemainingQuantityToSplit:output_type -> core.GetRemainingQuantityToSplitResponse
-	572, // 596: core.CoreService.GetScanningStationConsumption:output_type -> core.GetScanningStationConsumptionResponse
-	573, // 597: core.CoreService.CloseBatch:output_type -> core.CloseBatchResponse
-	574, // 598: core.CoreService.DeleteBatch:output_type -> core.DeleteBatchResponse
-	10,  // 599: core.CoreService.DeleteManyBatches:output_type -> google.protobuf.Empty
-	575, // 600: core.CoreService.ListItemCategories:output_type -> core.ListItemCategoriesResponse
-	576, // 601: core.CoreService.GetItemCategory:output_type -> core.GetItemCategoryResponse
-	577, // 602: core.CoreService.CreateItemCategory:output_type -> core.CreateItemCategoryResponse
-	578, // 603: core.CoreService.UpdateItemCategory:output_type -> core.UpdateItemCategoryResponse
-	10,  // 604: core.CoreService.DeleteItemCategory:output_type -> google.protobuf.Empty
-	10,  // 605: core.CoreService.AddItemCategoryProperty:output_type -> google.protobuf.Empty
-	579, // 606: core.CoreService.CreateItemCategoryProperty:output_type -> core.CreateItemCategoryPropertyResponse
-	10,  // 607: core.CoreService.RemoveItemCategoryProperty:output_type -> google.protobuf.Empty
-	10,  // 608: core.CoreService.ChangeItemCategoryUnitGroup:output_type -> google.protobuf.Empty
-	580, // 609: core.CoreService.BulkUpsertItemCategories:output_type -> core.BulkUpsertItemCategoriesResponse
-	581, // 610: core.CoreService.ExportItemCategories:output_type -> core.ExportItemCategoriesResponse
-	582, // 611: core.CoreService.ListProductsFull:output_type -> core.ListProductsFullResponse
-	583, // 612: core.CoreService.ExportProducts:output_type -> core.ExportProductsResponse
-	584, // 613: core.CoreService.GetProduct:output_type -> core.GetProductResponse
-	585, // 614: core.CoreService.CreateProduct:output_type -> core.CreateProductResponse
-	586, // 615: core.CoreService.UpdateProduct:output_type -> core.UpdateProductResponse
-	587, // 616: core.CoreService.DeleteProduct:output_type -> core.DeleteProductResponse
-	588, // 617: core.CoreService.ChangeProductProductLine:output_type -> core.ChangeProductProductLineResponse
-	589, // 618: core.CoreService.ValidateProducts:output_type -> core.ValidateProductsResponse
-	590, // 619: core.CoreService.BatchGetProductsByIDs:output_type -> core.BatchGetProductsByIDsResponse
-	591, // 620: core.CoreService.ListProductLines:output_type -> core.ListProductLinesResponse
-	592, // 621: core.CoreService.GetProductLine:output_type -> core.GetProductLineResponse
-	593, // 622: core.CoreService.CreateProductLine:output_type -> core.CreateProductLineResponse
-	594, // 623: core.CoreService.UpdateProductLine:output_type -> core.UpdateProductLineResponse
-	10,  // 624: core.CoreService.DeleteProductLine:output_type -> google.protobuf.Empty
-	595, // 625: core.CoreService.BatchGetProductLinesByIDs:output_type -> core.BatchGetProductLinesByIDsResponse
-	596, // 626: core.CoreService.BulkUpsertProductLines:output_type -> core.BulkUpsertProductLinesResponse
-	597, // 627: core.CoreService.ExportProductLines:output_type -> core.ExportProductLinesResponse
-	598, // 628: core.CoreService.GetConsumption:output_type -> core.GetConsumptionResponse
-	599, // 629: core.CoreService.CreateConsumption:output_type -> core.CreateConsumptionResponse
-	600, // 630: core.CoreService.UpdateConsumption:output_type -> core.UpdateConsumptionResponse
-	601, // 631: core.CoreService.DeleteConsumption:output_type -> core.DeleteConsumptionResponse
-	602, // 632: core.CoreService.GetProductionFlow:output_type -> core.GetProductionFlowResponse
-	10,  // 633: core.CoreService.ConnectProductionSteps:output_type -> google.protobuf.Empty
-	603, // 634: core.CoreService.ListCustomers:output_type -> core.ListCustomersResponse
-	604, // 635: core.CoreService.GetCustomer:output_type -> core.GetCustomerResponse
-	605, // 636: core.CoreService.BatchGetCustomersByIDs:output_type -> core.BatchGetCustomersByIDsResponse
-	606, // 637: core.CoreService.CreateCustomer:output_type -> core.CreateCustomerResponse
-	607, // 638: core.CoreService.GetCustomerLeadTime:output_type -> core.GetCustomerLeadTimeResponse
-	10,  // 639: core.CoreService.DeleteCustomer:output_type -> google.protobuf.Empty
-	10,  // 640: core.CoreService.BulkDeleteCustomers:output_type -> google.protobuf.Empty
-	608, // 641: core.CoreService.GetFrequentlyOrderedProducts:output_type -> core.GetFrequentlyOrderedProductsResponse
-	609, // 642: core.CoreService.ListCustomerNotificationRecipients:output_type -> core.ListCustomerNotificationRecipientsResponse
-	610, // 643: core.CoreService.UpdateCustomerNotificationRecipients:output_type -> core.UpdateCustomerNotificationRecipientsResponse
-	611, // 644: core.CoreService.UpdateCustomer:output_type -> core.UpdateCustomerResponse
-	612, // 645: core.CoreService.MergeCustomers:output_type -> core.MergeCustomersResponse
-	613, // 646: core.CoreService.ExportCustomers:output_type -> core.ExportCustomersResponse
-	614, // 647: core.CoreService.AnalyzeSales:output_type -> core.AnalyzeSalesResponse
-	615, // 648: core.CoreService.AnalyzeSalesSummary:output_type -> core.AnalyzeSalesSummaryResponse
-	616, // 649: core.CoreService.AnalyzeSalesBreakdown:output_type -> core.AnalyzeSalesBreakdownResponse
-	617, // 650: core.CoreService.AnalyzeSalesInvoices:output_type -> core.AnalyzeSalesInvoicesResponse
-	618, // 651: core.CoreService.ListNewCustomers:output_type -> core.ListNewCustomersResponse
-	619, // 652: core.CoreService.ListSalesLines:output_type -> core.ListSalesLinesResponse
-	620, // 653: core.CoreService.ExportSalesLines:output_type -> core.ExportSalesLinesResponse
-	621, // 654: core.CoreService.AnalyzeOpenOrdersSummary:output_type -> core.AnalyzeOpenOrdersSummaryResponse
-	622, // 655: core.CoreService.AnalyzeOpenOrderProducts:output_type -> core.AnalyzeOpenOrderProductsResponse
-	623, // 656: core.CoreService.ListOpenOrders:output_type -> core.ListOpenOrdersResponse
-	624, // 657: core.CoreService.ListOpenOrderLines:output_type -> core.ListOpenOrderLinesResponse
-	625, // 658: core.CoreService.ExportOpenOrderLines:output_type -> core.ExportOpenOrderLinesResponse
-	626, // 659: core.CoreService.AnalyzeRealizedMargins:output_type -> core.AnalyzeRealizedMarginsResponse
-	627, // 660: core.CoreService.AnalyzeCustomerPricing:output_type -> core.AnalyzeCustomerPricingResponse
-	628, // 661: core.CoreService.AnalyzeProductionCosts:output_type -> core.AnalyzeProductionCostsResponse
-	629, // 662: core.CoreService.AnalyzeDeliveries:output_type -> core.AnalyzeDeliveriesResponse
-	630, // 663: core.CoreService.AnalyzeManufacturing:output_type -> core.AnalyzeManufacturingResponse
-	631, // 664: core.CoreService.AnalyzeManufacturingBatch:output_type -> core.AnalyzeManufacturingBatchResponse
-	632, // 665: core.CoreService.AnalyzeOrders:output_type -> core.AnalyzeOrdersResponse
-	633, // 666: core.CoreService.AnalyzeQuarterlyOrders:output_type -> core.AnalyzeQuarterlyOrdersResponse
-	634, // 667: core.CoreService.AnalyzeMaterials:output_type -> core.AnalyzeMaterialsResponse
-	635, // 668: core.CoreService.AnalyzeInventoryReceipts:output_type -> core.AnalyzeInventoryReceiptsResponse
-	636, // 669: core.CoreService.AnalyzeNewCustomers:output_type -> core.AnalyzeNewCustomersResponse
-	637, // 670: core.CoreService.AnalyzeDemandForecast:output_type -> core.AnalyzeDemandForecastResponse
-	638, // 671: core.CoreService.AnalyzeOee:output_type -> core.AnalyzeOeeResponse
-	639, // 672: core.CoreService.AnalyzeOeeTrend:output_type -> core.AnalyzeOeeTrendResponse
-	640, // 673: core.CoreService.AnalyzeScheduleAttainment:output_type -> core.AnalyzeScheduleAttainmentResponse
-	641, // 674: core.CoreService.AnalyzeDeliveryPerformance:output_type -> core.AnalyzeDeliveryPerformanceResponse
-	642, // 675: core.CoreService.ListDeliveries:output_type -> core.ListDeliveriesResponse
-	643, // 676: core.CoreService.GetDelivery:output_type -> core.GetDeliveryResponse
-	644, // 677: core.CoreService.ListDepartments:output_type -> core.ListDepartmentsResponse
-	645, // 678: core.CoreService.GetDepartment:output_type -> core.GetDepartmentResponse
-	646, // 679: core.CoreService.CreateDepartment:output_type -> core.CreateDepartmentResponse
-	647, // 680: core.CoreService.UpdateDepartment:output_type -> core.UpdateDepartmentResponse
-	10,  // 681: core.CoreService.DeleteDepartment:output_type -> google.protobuf.Empty
-	648, // 682: core.CoreService.BatchGetDepartmentsByIDs:output_type -> core.BatchGetDepartmentsByIDsResponse
-	649, // 683: core.CoreService.BulkUpsertDepartments:output_type -> core.BulkUpsertDepartmentsResponse
-	650, // 684: core.CoreService.ExportDepartments:output_type -> core.ExportDepartmentsResponse
-	651, // 685: core.CoreService.ListEmailLogs:output_type -> core.ListEmailLogsResponse
-	652, // 686: core.CoreService.GetEmailLog:output_type -> core.GetEmailLogResponse
-	653, // 687: core.CoreService.ListInventoryChangeLogs:output_type -> core.ListInventoryChangeLogsResponse
-	654, // 688: core.CoreService.GetInventoryChangeLog:output_type -> core.GetInventoryChangeLogResponse
-	655, // 689: core.CoreService.ExportInventoryChangeLogs:output_type -> core.ExportInventoryChangeLogsResponse
-	656, // 690: core.CoreService.StartInventoryChangeLogsExport:output_type -> core.StartInventoryChangeLogsExportResponse
-	657, // 691: core.CoreService.ListInvoices:output_type -> core.ListInvoicesResponse
-	658, // 692: core.CoreService.GetInvoice:output_type -> core.GetInvoiceResponse
-	659, // 693: core.CoreService.UpdateInvoice:output_type -> core.UpdateInvoiceResponse
-	660, // 694: core.CoreService.ListCustomerInvoices:output_type -> core.ListCustomerInvoicesResponse
-	661, // 695: core.CoreService.ListMaterials:output_type -> core.ListMaterialsResponse
-	662, // 696: core.CoreService.ExportMaterials:output_type -> core.ExportMaterialsResponse
-	663, // 697: core.CoreService.GetMaterial:output_type -> core.GetMaterialResponse
-	664, // 698: core.CoreService.CreateMaterial:output_type -> core.CreateMaterialResponse
-	665, // 699: core.CoreService.UpdateMaterial:output_type -> core.UpdateMaterialResponse
-	666, // 700: core.CoreService.DeleteMaterial:output_type -> core.DeleteMaterialResponse
-	667, // 701: core.CoreService.BatchGetMaterialsByIDs:output_type -> core.BatchGetMaterialsByIDsResponse
-	668, // 702: core.CoreService.ListSupplierMaterials:output_type -> core.ListSupplierMaterialsResponse
-	669, // 703: core.CoreService.GetSupplierMaterial:output_type -> core.GetSupplierMaterialResponse
-	670, // 704: core.CoreService.CreateSupplierMaterial:output_type -> core.CreateSupplierMaterialResponse
-	671, // 705: core.CoreService.UpdateSupplierMaterial:output_type -> core.UpdateSupplierMaterialResponse
-	672, // 706: core.CoreService.DeleteSupplierMaterial:output_type -> core.DeleteSupplierMaterialResponse
-	673, // 707: core.CoreService.CreatePart:output_type -> core.CreatePartResponse
-	674, // 708: core.CoreService.GetPart:output_type -> core.GetPartResponse
-	675, // 709: core.CoreService.ListParts:output_type -> core.ListPartsResponse
-	676, // 710: core.CoreService.ExportParts:output_type -> core.ExportPartsResponse
-	677, // 711: core.CoreService.UpdatePart:output_type -> core.UpdatePartResponse
-	678, // 712: core.CoreService.DeletePart:output_type -> core.DeletePartResponse
-	679, // 713: core.CoreService.BatchGetPartsByIDs:output_type -> core.BatchGetPartsByIDsResponse
-	680, // 714: core.CoreService.ListPermissionGroups:output_type -> core.ListPermissionGroupsResponse
-	681, // 715: core.CoreService.BatchGetPermissionGroupsByIDs:output_type -> core.BatchGetPermissionGroupsByIDsResponse
-	682, // 716: core.CoreService.ListPriorities:output_type -> core.ListPrioritiesResponse
-	683, // 717: core.CoreService.GetPriority:output_type -> core.GetPriorityResponse
-	684, // 718: core.CoreService.BatchGetPrioritiesByIDs:output_type -> core.BatchGetPrioritiesByIDsResponse
-	685, // 719: core.CoreService.ListProductTypes:output_type -> core.ListProductTypesResponse
-	686, // 720: core.CoreService.GetProductType:output_type -> core.GetProductTypeResponse
-	687, // 721: core.CoreService.CreateProductType:output_type -> core.CreateProductTypeResponse
-	688, // 722: core.CoreService.UpdateProductType:output_type -> core.UpdateProductTypeResponse
-	10,  // 723: core.CoreService.DeleteProductType:output_type -> google.protobuf.Empty
-	689, // 724: core.CoreService.BatchGetProductTypesByIDs:output_type -> core.BatchGetProductTypesByIDsResponse
-	690, // 725: core.CoreService.ListReceivables:output_type -> core.ListReceivablesResponse
-	691, // 726: core.CoreService.ListReceivablesByCustomer:output_type -> core.ListReceivablesByCustomerResponse
-	692, // 727: core.CoreService.ExportReceivablesByCustomer:output_type -> core.ExportReceivablesByCustomerResponse
-	693, // 728: core.CoreService.EmailReceivablesForCustomer:output_type -> core.EmailReceivablesForCustomerResponse
-	694, // 729: core.CoreService.ListUnitGroups:output_type -> core.ListUnitGroupsResponse
-	695, // 730: core.CoreService.GetUnitGroup:output_type -> core.GetUnitGroupResponse
-	696, // 731: core.CoreService.CreateUnitGroup:output_type -> core.CreateUnitGroupResponse
-	697, // 732: core.CoreService.UpdateUnitGroup:output_type -> core.UpdateUnitGroupResponse
-	10,  // 733: core.CoreService.DeleteUnitGroup:output_type -> google.protobuf.Empty
-	698, // 734: core.CoreService.UpsertUnitGroupUnit:output_type -> core.UpsertUnitGroupUnitResponse
-	10,  // 735: core.CoreService.DeleteUnitGroupUnit:output_type -> google.protobuf.Empty
-	699, // 736: core.CoreService.ListUnitGroupUnits:output_type -> core.ListUnitGroupUnitsResponse
-	700, // 737: core.CoreService.GetUnitGroupUnit:output_type -> core.GetUnitGroupUnitResponse
-	701, // 738: core.CoreService.BatchGetUnitGroupsByIDs:output_type -> core.BatchGetUnitGroupsByIDsResponse
-	702, // 739: core.CoreService.BatchGetUnitGroupUnitsByIDs:output_type -> core.BatchGetUnitGroupUnitsByIDsResponse
-	703, // 740: core.CoreService.ValidateUnits:output_type -> core.ValidateUnitsResponse
-	704, // 741: core.CoreService.BulkUpsertUnitGroups:output_type -> core.BulkUpsertUnitGroupsResponse
-	705, // 742: core.CoreService.ExportUnitGroups:output_type -> core.ExportUnitGroupsResponse
-	706, // 743: core.CoreService.ListTransactions:output_type -> core.ListTransactionsResponse
-	707, // 744: core.CoreService.GetTransaction:output_type -> core.GetTransactionResponse
-	708, // 745: core.CoreService.CreateTransaction:output_type -> core.CreateTransactionResponse
-	709, // 746: core.CoreService.UpdateTransaction:output_type -> core.UpdateTransactionResponse
-	710, // 747: core.CoreService.DeleteTransaction:output_type -> core.DeleteTransactionResponse
-	711, // 748: core.CoreService.ListAccountTransactions:output_type -> core.ListAccountTransactionsResponse
-	712, // 749: core.CoreService.ListSettlements:output_type -> core.ListSettlementsResponse
-	713, // 750: core.CoreService.GetSettlement:output_type -> core.GetSettlementResponse
-	714, // 751: core.CoreService.CreateSettlement:output_type -> core.CreateSettlementResponse
-	715, // 752: core.CoreService.UpdateSettlement:output_type -> core.UpdateSettlementResponse
-	716, // 753: core.CoreService.DeleteSettlement:output_type -> core.DeleteSettlementResponse
-	717, // 754: core.CoreService.ListAllocationEntries:output_type -> core.ListAllocationEntriesResponse
-	718, // 755: core.CoreService.UpdateTransactionAllocation:output_type -> core.UpdateTransactionAllocationResponse
-	719, // 756: core.CoreService.DeleteTransactionAllocation:output_type -> core.DeleteTransactionAllocationResponse
-	720, // 757: core.CoreService.ListOpenCredits:output_type -> core.ListOpenCreditsResponse
-	721, // 758: core.CoreService.GetUser:output_type -> core.GetUserResponse
-	722, // 759: core.CoreService.BatchGetUsersByIDs:output_type -> core.BatchGetUsersByIDsResponse
-	723, // 760: core.CoreService.UpdateUser:output_type -> core.UpdateUserResponse
-	724, // 761: core.CoreService.UploadUserPhoto:output_type -> core.UploadUserPhotoResponse
-	725, // 762: core.CoreService.GetUserPhotoURL:output_type -> core.GetUserPhotoURLResponse
-	726, // 763: core.CoreService.CheckDuplicate:output_type -> core.CheckDuplicateResponse
-	727, // 764: core.CoreService.EmailRecord:output_type -> core.EmailRecordResponse
-	728, // 765: core.CoreService.RequestDemo:output_type -> core.RequestDemoResponse
-	729, // 766: core.CoreService.SubmitFeedback:output_type -> core.SubmitFeedbackResponse
-	730, // 767: core.CoreService.ListCatalogProductLines:output_type -> core.ListCatalogProductLinesResponse
-	731, // 768: core.CoreService.ListCatalogProducts:output_type -> core.ListCatalogProductsResponse
-	732, // 769: core.CoreService.ListRoles:output_type -> core.ListRolesResponse
-	733, // 770: core.CoreService.GetRole:output_type -> core.GetRoleResponse
-	734, // 771: core.CoreService.CreateRole:output_type -> core.CreateRoleResponse
-	735, // 772: core.CoreService.UpdateRole:output_type -> core.UpdateRoleResponse
-	10,  // 773: core.CoreService.DeleteRole:output_type -> google.protobuf.Empty
-	736, // 774: core.CoreService.BatchGetRolesByIDs:output_type -> core.BatchGetRolesByIDsResponse
-	737, // 775: core.CoreService.ListRegistrationFlows:output_type -> core.ListRegistrationFlowsResponse
-	738, // 776: core.CoreService.GetRegistrationFlow:output_type -> core.GetRegistrationFlowResponse
-	739, // 777: core.CoreService.CreateRegistrationFlow:output_type -> core.CreateRegistrationFlowResponse
-	740, // 778: core.CoreService.UpdateRegistrationFlow:output_type -> core.UpdateRegistrationFlowResponse
-	10,  // 779: core.CoreService.DeleteRegistrationFlow:output_type -> google.protobuf.Empty
-	741, // 780: core.CoreService.GetRegistrationFlowBySlug:output_type -> core.GetRegistrationFlowBySlugResponse
-	742, // 781: core.CoreService.RegisterCustomer:output_type -> core.RegisterCustomerResponse
-	743, // 782: core.CoreService.ListScanningStations:output_type -> core.ListScanningStationsResponse
-	744, // 783: core.CoreService.GetScanningStation:output_type -> core.GetScanningStationResponse
-	745, // 784: core.CoreService.CreateScanningStation:output_type -> core.CreateScanningStationResponse
-	746, // 785: core.CoreService.UpdateScanningStation:output_type -> core.UpdateScanningStationResponse
-	10,  // 786: core.CoreService.DeleteScanningStation:output_type -> google.protobuf.Empty
-	10,  // 787: core.CoreService.ConnectProductionStepsByScanningStation:output_type -> google.protobuf.Empty
-	747, // 788: core.CoreService.BatchGetScanningStationsByIDs:output_type -> core.BatchGetScanningStationsByIDsResponse
-	748, // 789: core.CoreService.BulkUpsertScanningStations:output_type -> core.BulkUpsertScanningStationsResponse
-	749, // 790: core.CoreService.ExportScanningStations:output_type -> core.ExportScanningStationsResponse
-	750, // 791: core.CoreService.ListLocations:output_type -> core.ListLocationsResponse
-	751, // 792: core.CoreService.GetLocation:output_type -> core.GetLocationResponse
-	752, // 793: core.CoreService.CreateLocation:output_type -> core.CreateLocationResponse
-	753, // 794: core.CoreService.UpdateLocation:output_type -> core.UpdateLocationResponse
-	10,  // 795: core.CoreService.DeleteLocation:output_type -> google.protobuf.Empty
-	754, // 796: core.CoreService.ListLocationTypes:output_type -> core.ListLocationTypesResponse
-	755, // 797: core.CoreService.GetLocationType:output_type -> core.GetLocationTypeResponse
-	756, // 798: core.CoreService.BatchGetLocationsByIDs:output_type -> core.BatchGetLocationsByIDsResponse
-	757, // 799: core.CoreService.BulkUpsertLocations:output_type -> core.BulkUpsertLocationsResponse
-	758, // 800: core.CoreService.ExportLocations:output_type -> core.ExportLocationsResponse
-	759, // 801: core.CoreService.ListSuppliers:output_type -> core.ListSuppliersResponse
-	760, // 802: core.CoreService.GetSupplier:output_type -> core.GetSupplierResponse
-	761, // 803: core.CoreService.CreateSupplier:output_type -> core.CreateSupplierResponse
-	762, // 804: core.CoreService.UpdateSupplier:output_type -> core.UpdateSupplierResponse
-	763, // 805: core.CoreService.DeleteSupplier:output_type -> core.DeleteSupplierResponse
-	10,  // 806: core.CoreService.BulkDeleteSuppliers:output_type -> google.protobuf.Empty
-	764, // 807: core.CoreService.BatchGetSuppliersByIDs:output_type -> core.BatchGetSuppliersByIDsResponse
-	765, // 808: core.CoreService.ListSysProperties:output_type -> core.ListSysPropertiesResponse
-	766, // 809: core.CoreService.GetSysProperty:output_type -> core.GetSysPropertyResponse
-	767, // 810: core.CoreService.UpdateSysProperty:output_type -> core.UpdateSysPropertyResponse
-	768, // 811: core.CoreService.GetLatestSysPropertyValue:output_type -> core.GetLatestSysPropertyValueResponse
-	769, // 812: core.CoreService.BatchGetSysPropertiesByIDs:output_type -> core.BatchGetSysPropertiesByIDsResponse
-	770, // 813: core.CoreService.GetTenancy:output_type -> core.GetTenancyResponse
-	770, // 814: core.CoreService.SwitchAccount:output_type -> core.GetTenancyResponse
-	771, // 815: core.CoreService.GetCurrentUser:output_type -> core.GetCurrentUserResponse
-	772, // 816: core.CoreService.ListCustomerAccountsForUser:output_type -> core.ListCustomerAccountsForUserResponse
-	773, // 817: core.CoreService.ListTerritories:output_type -> core.ListTerritoriesResponse
-	774, // 818: core.CoreService.GetTerritory:output_type -> core.GetTerritoryResponse
-	775, // 819: core.CoreService.CreateTerritory:output_type -> core.CreateTerritoryResponse
-	776, // 820: core.CoreService.UpdateTerritory:output_type -> core.UpdateTerritoryResponse
-	10,  // 821: core.CoreService.DeleteTerritory:output_type -> google.protobuf.Empty
-	777, // 822: core.CoreService.BatchGetTerritoriesByIDs:output_type -> core.BatchGetTerritoriesByIDsResponse
-	778, // 823: core.CoreService.ListDocumentSettings:output_type -> core.ListDocumentSettingsResponse
-	779, // 824: core.CoreService.GetDocumentSetting:output_type -> core.GetDocumentSettingResponse
-	780, // 825: core.CoreService.UpdateDocumentSetting:output_type -> core.UpdateDocumentSettingResponse
-	413, // [413:826] is the sub-list for method output_type
-	0,   // [0:413] is the sub-list for method input_type
+	93,  // 93: core.CoreService.RotateAccountIntegrationCredentials:input_type -> core.RotateAccountIntegrationCredentialsRequest
+	94,  // 94: core.CoreService.UpdateAccountIntegration:input_type -> core.UpdateAccountIntegrationRequest
+	95,  // 95: core.CoreService.DeleteAccountIntegration:input_type -> core.DeleteAccountIntegrationRequest
+	96,  // 96: core.CoreService.BatchGetAccountIntegrationsByIDs:input_type -> core.BatchGetAccountIntegrationsByIDsRequest
+	97,  // 97: core.CoreService.GetStripePublishableKey:input_type -> core.GetStripePublishableKeyRequest
+	98,  // 98: core.CoreService.GetStripeStatus:input_type -> core.GetStripeStatusRequest
+	99,  // 99: core.CoreService.ListAdjustmentTypes:input_type -> core.ListAdjustmentTypesRequest
+	100, // 100: core.CoreService.BatchGetAdjustmentTypesByIDs:input_type -> core.BatchGetAdjustmentTypesByIDsRequest
+	101, // 101: core.CoreService.GetAccount:input_type -> core.GetAccountRequest
+	102, // 102: core.CoreService.GetAccountBySlug:input_type -> core.GetAccountBySlugRequest
+	103, // 103: core.CoreService.GetPortalProfileBySlug:input_type -> core.GetPortalProfileBySlugRequest
+	104, // 104: core.CoreService.CreateOrResumePortalRegistrationSession:input_type -> core.CreateOrResumePortalRegistrationSessionRequest
+	105, // 105: core.CoreService.GetPortalRegistrationSession:input_type -> core.GetPortalRegistrationSessionRequest
+	106, // 106: core.CoreService.UpdatePortalRegistrationSession:input_type -> core.UpdatePortalRegistrationSessionRequest
+	107, // 107: core.CoreService.CompletePortalRegistrationSession:input_type -> core.CompletePortalRegistrationSessionRequest
+	108, // 108: core.CoreService.AbandonPortalRegistrationSession:input_type -> core.AbandonPortalRegistrationSessionRequest
+	109, // 109: core.CoreService.ListPortalRegistrationSessions:input_type -> core.ListPortalRegistrationSessionsRequest
+	110, // 110: core.CoreService.UpdateAccount:input_type -> core.UpdateAccountRequest
+	111, // 111: core.CoreService.UploadAccountPhoto:input_type -> core.UploadAccountPhotoRequest
+	112, // 112: core.CoreService.GetAccountLogoURL:input_type -> core.GetAccountLogoURLRequest
+	113, // 113: core.CoreService.UploadAccountFavicon:input_type -> core.UploadAccountFaviconRequest
+	114, // 114: core.CoreService.GetAccountFaviconURL:input_type -> core.GetAccountFaviconURLRequest
+	115, // 115: core.CoreService.ListProperties:input_type -> core.ListPropertiesRequest
+	116, // 116: core.CoreService.GetProperty:input_type -> core.GetPropertyRequest
+	117, // 117: core.CoreService.CreateProperty:input_type -> core.CreatePropertyRequest
+	118, // 118: core.CoreService.UpdateProperty:input_type -> core.UpdatePropertyRequest
+	119, // 119: core.CoreService.DeleteProperty:input_type -> core.DeletePropertyRequest
+	120, // 120: core.CoreService.BulkUpsertProperties:input_type -> core.BulkUpsertPropertiesRequest
+	121, // 121: core.CoreService.ExportProperties:input_type -> core.ExportPropertiesRequest
+	122, // 122: core.CoreService.ListAttributes:input_type -> core.ListAttributesRequest
+	123, // 123: core.CoreService.GetAttribute:input_type -> core.GetAttributeRequest
+	124, // 124: core.CoreService.CreateAttribute:input_type -> core.CreateAttributeRequest
+	125, // 125: core.CoreService.UpdateAttribute:input_type -> core.UpdateAttributeRequest
+	126, // 126: core.CoreService.DeleteAttribute:input_type -> core.DeleteAttributeRequest
+	127, // 127: core.CoreService.BatchGetAttributesByIDs:input_type -> core.BatchGetAttributesByIDsRequest
+	128, // 128: core.CoreService.BatchGetPropertiesByIDs:input_type -> core.BatchGetPropertiesByIDsRequest
+	129, // 129: core.CoreService.BatchGetItemCategoriesByIDs:input_type -> core.BatchGetItemCategoriesByIDsRequest
+	130, // 130: core.CoreService.BatchGetItemsByIDs:input_type -> core.BatchGetItemsByIDsRequest
+	131, // 131: core.CoreService.ListCarriers:input_type -> core.ListCarriersRequest
+	132, // 132: core.CoreService.GetCarrier:input_type -> core.GetCarrierRequest
+	133, // 133: core.CoreService.BatchGetCarriersByIDs:input_type -> core.BatchGetCarriersByIDsRequest
+	134, // 134: core.CoreService.CreateCarrier:input_type -> core.CreateCarrierRequest
+	135, // 135: core.CoreService.UpdateCarrier:input_type -> core.UpdateCarrierRequest
+	136, // 136: core.CoreService.DeleteCarrier:input_type -> core.DeleteCarrierRequest
+	137, // 137: core.CoreService.InitiateCarrierOAuth:input_type -> core.InitiateCarrierOAuthRequest
+	138, // 138: core.CoreService.GetCarrierOAuthStatus:input_type -> core.GetCarrierOAuthStatusRequest
+	139, // 139: core.CoreService.SyncServiceLevels:input_type -> core.SyncServiceLevelsRequest
+	140, // 140: core.CoreService.ListServiceLevels:input_type -> core.ListServiceLevelsRequest
+	141, // 141: core.CoreService.GetServiceLevel:input_type -> core.GetServiceLevelRequest
+	142, // 142: core.CoreService.BatchGetServiceLevelsByIDs:input_type -> core.BatchGetServiceLevelsByIDsRequest
+	143, // 143: core.CoreService.CreateServiceLevel:input_type -> core.CreateServiceLevelRequest
+	144, // 144: core.CoreService.UpdateServiceLevel:input_type -> core.UpdateServiceLevelRequest
+	145, // 145: core.CoreService.DeleteServiceLevel:input_type -> core.DeleteServiceLevelRequest
+	146, // 146: core.CoreService.ListItems:input_type -> core.ListItemsRequest
+	147, // 147: core.CoreService.GetItem:input_type -> core.GetItemRequest
+	148, // 148: core.CoreService.GetItemInventory:input_type -> core.GetItemInventoryRequest
+	149, // 149: core.CoreService.GetItemLotDefault:input_type -> core.GetItemLotDefaultRequest
+	150, // 150: core.CoreService.GetItemCosts:input_type -> core.GetItemCostsRequest
+	151, // 151: core.CoreService.GetItemTrends:input_type -> core.GetItemTrendsRequest
+	152, // 152: core.CoreService.ExportItems:input_type -> core.ExportItemsRequest
+	153, // 153: core.CoreService.CreateItem:input_type -> core.CreateItemRequest
+	154, // 154: core.CoreService.UpdateItem:input_type -> core.UpdateItemRequest
+	155, // 155: core.CoreService.DeleteItem:input_type -> core.DeleteItemRequest
+	156, // 156: core.CoreService.BulkUpsertItems:input_type -> core.BulkUpsertItemsRequest
+	157, // 157: core.CoreService.SetItemOrderUnits:input_type -> core.SetItemOrderUnitsRequest
+	158, // 158: core.CoreService.ChangeItemStockingUnit:input_type -> core.ChangeItemStockingUnitRequest
+	159, // 159: core.CoreService.AddItemAttribute:input_type -> core.AddItemAttributeRequest
+	160, // 160: core.CoreService.RemoveItemAttribute:input_type -> core.RemoveItemAttributeRequest
+	161, // 161: core.CoreService.ChangeItemCategory:input_type -> core.ChangeItemCategoryRequest
+	162, // 162: core.CoreService.UpdateItemInventory:input_type -> core.UpdateItemInventoryRequest
+	163, // 163: core.CoreService.BulkCreateItems:input_type -> core.BulkCreateItemsRequest
+	164, // 164: core.CoreService.BulkUpsertParts:input_type -> core.BulkUpsertPartsRequest
+	165, // 165: core.CoreService.BulkUpsertProducts:input_type -> core.BulkUpsertProductsRequest
+	166, // 166: core.CoreService.BulkUpsertMaterials:input_type -> core.BulkUpsertMaterialsRequest
+	167, // 167: core.CoreService.BulkReconcileItems:input_type -> core.BulkReconcileItemsRequest
+	168, // 168: core.CoreService.ListInventories:input_type -> core.ListInventoriesRequest
+	169, // 169: core.CoreService.AnalyzeWeeksOfSales:input_type -> core.AnalyzeWeeksOfSalesRequest
+	170, // 170: core.CoreService.ListChildAccounts:input_type -> core.ListChildAccountsRequest
+	171, // 171: core.CoreService.AddChildAccount:input_type -> core.AddChildAccountRequest
+	172, // 172: core.CoreService.RemoveChildAccount:input_type -> core.RemoveChildAccountRequest
+	173, // 173: core.CoreService.BatchGetChildAccountsByIDs:input_type -> core.BatchGetChildAccountsByIDsRequest
+	174, // 174: core.CoreService.GetBatchFlow:input_type -> core.GetBatchFlowRequest
+	175, // 175: core.CoreService.ListBatchesByScanningStation:input_type -> core.ListBatchesByScanningStationRequest
+	176, // 176: core.CoreService.GetBatchPossibleNextSteps:input_type -> core.GetBatchPossibleNextStepsRequest
+	177, // 177: core.CoreService.GetBatchPossibleInitSteps:input_type -> core.GetBatchPossibleInitStepsRequest
+	178, // 178: core.CoreService.AnalyzeOpenBatches:input_type -> core.AnalyzeOpenBatchesRequest
+	179, // 179: core.CoreService.InitializeBatch:input_type -> core.InitializeBatchRequest
+	180, // 180: core.CoreService.MoveBatches:input_type -> core.MoveBatchesRequest
+	181, // 181: core.CoreService.MergeBatches:input_type -> core.MergeBatchesRequest
+	182, // 182: core.CoreService.SplitBatch:input_type -> core.SplitBatchRequest
+	183, // 183: core.CoreService.GetRemainingQuantityToSplit:input_type -> core.GetRemainingQuantityToSplitRequest
+	184, // 184: core.CoreService.GetScanningStationConsumption:input_type -> core.GetScanningStationConsumptionRequest
+	185, // 185: core.CoreService.CloseBatch:input_type -> core.CloseBatchRequest
+	186, // 186: core.CoreService.DeleteBatch:input_type -> core.DeleteBatchRequest
+	187, // 187: core.CoreService.DeleteManyBatches:input_type -> core.DeleteManyBatchesRequest
+	188, // 188: core.CoreService.ListItemCategories:input_type -> core.ListItemCategoriesRequest
+	189, // 189: core.CoreService.GetItemCategory:input_type -> core.GetItemCategoryRequest
+	190, // 190: core.CoreService.CreateItemCategory:input_type -> core.CreateItemCategoryRequest
+	191, // 191: core.CoreService.UpdateItemCategory:input_type -> core.UpdateItemCategoryRequest
+	192, // 192: core.CoreService.DeleteItemCategory:input_type -> core.DeleteItemCategoryRequest
+	193, // 193: core.CoreService.AddItemCategoryProperty:input_type -> core.AddItemCategoryPropertyRequest
+	194, // 194: core.CoreService.CreateItemCategoryProperty:input_type -> core.CreateItemCategoryPropertyRequest
+	195, // 195: core.CoreService.RemoveItemCategoryProperty:input_type -> core.RemoveItemCategoryPropertyRequest
+	196, // 196: core.CoreService.ChangeItemCategoryUnitGroup:input_type -> core.ChangeItemCategoryUnitGroupRequest
+	197, // 197: core.CoreService.BulkUpsertItemCategories:input_type -> core.BulkUpsertItemCategoriesRequest
+	198, // 198: core.CoreService.ExportItemCategories:input_type -> core.ExportItemCategoriesRequest
+	199, // 199: core.CoreService.ListProductsFull:input_type -> core.ListProductsFullRequest
+	200, // 200: core.CoreService.ExportProducts:input_type -> core.ExportProductsRequest
+	201, // 201: core.CoreService.GetProduct:input_type -> core.GetProductRequest
+	202, // 202: core.CoreService.CreateProduct:input_type -> core.CreateProductRequest
+	203, // 203: core.CoreService.UpdateProduct:input_type -> core.UpdateProductRequest
+	204, // 204: core.CoreService.DeleteProduct:input_type -> core.DeleteProductRequest
+	205, // 205: core.CoreService.ChangeProductProductLine:input_type -> core.ChangeProductProductLineRequest
+	206, // 206: core.CoreService.ValidateProducts:input_type -> core.ValidateProductsRequest
+	207, // 207: core.CoreService.BatchGetProductsByIDs:input_type -> core.BatchGetProductsByIDsRequest
+	208, // 208: core.CoreService.ListProductLines:input_type -> core.ListProductLinesRequest
+	209, // 209: core.CoreService.GetProductLine:input_type -> core.GetProductLineRequest
+	210, // 210: core.CoreService.CreateProductLine:input_type -> core.CreateProductLineRequest
+	211, // 211: core.CoreService.UpdateProductLine:input_type -> core.UpdateProductLineRequest
+	212, // 212: core.CoreService.DeleteProductLine:input_type -> core.DeleteProductLineRequest
+	213, // 213: core.CoreService.BatchGetProductLinesByIDs:input_type -> core.BatchGetProductLinesByIDsRequest
+	214, // 214: core.CoreService.BulkUpsertProductLines:input_type -> core.BulkUpsertProductLinesRequest
+	215, // 215: core.CoreService.ExportProductLines:input_type -> core.ExportProductLinesRequest
+	216, // 216: core.CoreService.GetConsumption:input_type -> core.GetConsumptionRequest
+	217, // 217: core.CoreService.CreateConsumption:input_type -> core.CreateConsumptionRequest
+	218, // 218: core.CoreService.UpdateConsumption:input_type -> core.UpdateConsumptionRequest
+	219, // 219: core.CoreService.DeleteConsumption:input_type -> core.DeleteConsumptionRequest
+	220, // 220: core.CoreService.GetProductionFlow:input_type -> core.GetProductionFlowRequest
+	221, // 221: core.CoreService.ConnectProductionSteps:input_type -> core.ConnectProductionStepsRequest
+	222, // 222: core.CoreService.ListCustomers:input_type -> core.ListCustomersRequest
+	223, // 223: core.CoreService.GetCustomer:input_type -> core.GetCustomerRequest
+	224, // 224: core.CoreService.BatchGetCustomersByIDs:input_type -> core.BatchGetCustomersByIDsRequest
+	225, // 225: core.CoreService.CreateCustomer:input_type -> core.CreateCustomerRequest
+	226, // 226: core.CoreService.GetCustomerLeadTime:input_type -> core.GetCustomerLeadTimeRequest
+	227, // 227: core.CoreService.DeleteCustomer:input_type -> core.DeleteCustomerRequest
+	228, // 228: core.CoreService.BulkDeleteCustomers:input_type -> core.BulkDeleteCustomersRequest
+	229, // 229: core.CoreService.GetFrequentlyOrderedProducts:input_type -> core.GetFrequentlyOrderedProductsRequest
+	230, // 230: core.CoreService.ListCustomerNotificationRecipients:input_type -> core.ListCustomerNotificationRecipientsRequest
+	231, // 231: core.CoreService.UpdateCustomerNotificationRecipients:input_type -> core.UpdateCustomerNotificationRecipientsRequest
+	232, // 232: core.CoreService.UpdateCustomer:input_type -> core.UpdateCustomerRequest
+	233, // 233: core.CoreService.MergeCustomers:input_type -> core.MergeCustomersRequest
+	234, // 234: core.CoreService.ExportCustomers:input_type -> core.ExportCustomersRequest
+	235, // 235: core.CoreService.AnalyzeSales:input_type -> core.AnalyzeSalesRequest
+	236, // 236: core.CoreService.AnalyzeSalesSummary:input_type -> core.AnalyzeSalesSummaryRequest
+	237, // 237: core.CoreService.AnalyzeSalesBreakdown:input_type -> core.AnalyzeSalesBreakdownRequest
+	238, // 238: core.CoreService.AnalyzeSalesInvoices:input_type -> core.AnalyzeSalesInvoicesRequest
+	239, // 239: core.CoreService.ListNewCustomers:input_type -> core.ListNewCustomersRequest
+	240, // 240: core.CoreService.ListSalesLines:input_type -> core.ListSalesLinesRequest
+	241, // 241: core.CoreService.ExportSalesLines:input_type -> core.ExportSalesLinesRequest
+	242, // 242: core.CoreService.AnalyzeOpenOrdersSummary:input_type -> core.AnalyzeOpenOrdersSummaryRequest
+	243, // 243: core.CoreService.AnalyzeOpenOrderProducts:input_type -> core.AnalyzeOpenOrderProductsRequest
+	244, // 244: core.CoreService.ListOpenOrders:input_type -> core.ListOpenOrdersRequest
+	245, // 245: core.CoreService.ListOpenOrderLines:input_type -> core.ListOpenOrderLinesRequest
+	246, // 246: core.CoreService.ExportOpenOrderLines:input_type -> core.ExportOpenOrderLinesRequest
+	247, // 247: core.CoreService.AnalyzeRealizedMargins:input_type -> core.AnalyzeRealizedMarginsRequest
+	248, // 248: core.CoreService.AnalyzeCustomerPricing:input_type -> core.AnalyzeCustomerPricingRequest
+	249, // 249: core.CoreService.AnalyzeProductionCosts:input_type -> core.AnalyzeProductionCostsRequest
+	250, // 250: core.CoreService.AnalyzeDeliveries:input_type -> core.AnalyzeDeliveriesRequest
+	251, // 251: core.CoreService.AnalyzeManufacturing:input_type -> core.AnalyzeManufacturingRequest
+	252, // 252: core.CoreService.AnalyzeManufacturingBatch:input_type -> core.AnalyzeManufacturingBatchRequest
+	253, // 253: core.CoreService.AnalyzeOrders:input_type -> core.AnalyzeOrdersRequest
+	254, // 254: core.CoreService.AnalyzeQuarterlyOrders:input_type -> core.AnalyzeQuarterlyOrdersRequest
+	255, // 255: core.CoreService.AnalyzeMaterials:input_type -> core.AnalyzeMaterialsRequest
+	256, // 256: core.CoreService.AnalyzeInventoryReceipts:input_type -> core.AnalyzeInventoryReceiptsRequest
+	257, // 257: core.CoreService.AnalyzeNewCustomers:input_type -> core.AnalyzeNewCustomersRequest
+	258, // 258: core.CoreService.AnalyzeDemandForecast:input_type -> core.AnalyzeDemandForecastRequest
+	259, // 259: core.CoreService.AnalyzeOee:input_type -> core.AnalyzeOeeRequest
+	260, // 260: core.CoreService.AnalyzeOeeTrend:input_type -> core.AnalyzeOeeTrendRequest
+	261, // 261: core.CoreService.AnalyzeScheduleAttainment:input_type -> core.AnalyzeScheduleAttainmentRequest
+	262, // 262: core.CoreService.AnalyzeDeliveryPerformance:input_type -> core.AnalyzeDeliveryPerformanceRequest
+	263, // 263: core.CoreService.ListDeliveries:input_type -> core.ListDeliveriesRequest
+	264, // 264: core.CoreService.GetDelivery:input_type -> core.GetDeliveryRequest
+	265, // 265: core.CoreService.ListDepartments:input_type -> core.ListDepartmentsRequest
+	266, // 266: core.CoreService.GetDepartment:input_type -> core.GetDepartmentRequest
+	267, // 267: core.CoreService.CreateDepartment:input_type -> core.CreateDepartmentRequest
+	268, // 268: core.CoreService.UpdateDepartment:input_type -> core.UpdateDepartmentRequest
+	269, // 269: core.CoreService.DeleteDepartment:input_type -> core.DeleteDepartmentRequest
+	270, // 270: core.CoreService.BatchGetDepartmentsByIDs:input_type -> core.BatchGetDepartmentsByIDsRequest
+	271, // 271: core.CoreService.BulkUpsertDepartments:input_type -> core.BulkUpsertDepartmentsRequest
+	272, // 272: core.CoreService.ExportDepartments:input_type -> core.ExportDepartmentsRequest
+	273, // 273: core.CoreService.ListEmailLogs:input_type -> core.ListEmailLogsRequest
+	274, // 274: core.CoreService.GetEmailLog:input_type -> core.GetEmailLogRequest
+	275, // 275: core.CoreService.ListInventoryChangeLogs:input_type -> core.ListInventoryChangeLogsRequest
+	276, // 276: core.CoreService.GetInventoryChangeLog:input_type -> core.GetInventoryChangeLogRequest
+	277, // 277: core.CoreService.ExportInventoryChangeLogs:input_type -> core.ExportInventoryChangeLogsRequest
+	278, // 278: core.CoreService.StartInventoryChangeLogsExport:input_type -> core.StartInventoryChangeLogsExportRequest
+	279, // 279: core.CoreService.ListInvoices:input_type -> core.ListInvoicesRequest
+	280, // 280: core.CoreService.GetInvoice:input_type -> core.GetInvoiceRequest
+	281, // 281: core.CoreService.UpdateInvoice:input_type -> core.UpdateInvoiceRequest
+	282, // 282: core.CoreService.ListCustomerInvoices:input_type -> core.ListCustomerInvoicesRequest
+	283, // 283: core.CoreService.ListMaterials:input_type -> core.ListMaterialsRequest
+	284, // 284: core.CoreService.ExportMaterials:input_type -> core.ExportMaterialsRequest
+	285, // 285: core.CoreService.GetMaterial:input_type -> core.GetMaterialRequest
+	286, // 286: core.CoreService.CreateMaterial:input_type -> core.CreateMaterialRequest
+	287, // 287: core.CoreService.UpdateMaterial:input_type -> core.UpdateMaterialRequest
+	288, // 288: core.CoreService.DeleteMaterial:input_type -> core.DeleteMaterialRequest
+	289, // 289: core.CoreService.BatchGetMaterialsByIDs:input_type -> core.BatchGetMaterialsByIDsRequest
+	290, // 290: core.CoreService.ListSupplierMaterials:input_type -> core.ListSupplierMaterialsRequest
+	291, // 291: core.CoreService.GetSupplierMaterial:input_type -> core.GetSupplierMaterialRequest
+	292, // 292: core.CoreService.CreateSupplierMaterial:input_type -> core.CreateSupplierMaterialRequest
+	293, // 293: core.CoreService.UpdateSupplierMaterial:input_type -> core.UpdateSupplierMaterialRequest
+	294, // 294: core.CoreService.DeleteSupplierMaterial:input_type -> core.DeleteSupplierMaterialRequest
+	295, // 295: core.CoreService.CreatePart:input_type -> core.CreatePartRequest
+	296, // 296: core.CoreService.GetPart:input_type -> core.GetPartRequest
+	297, // 297: core.CoreService.ListParts:input_type -> core.ListPartsRequest
+	298, // 298: core.CoreService.ExportParts:input_type -> core.ExportPartsRequest
+	299, // 299: core.CoreService.UpdatePart:input_type -> core.UpdatePartRequest
+	300, // 300: core.CoreService.DeletePart:input_type -> core.DeletePartRequest
+	301, // 301: core.CoreService.BatchGetPartsByIDs:input_type -> core.BatchGetPartsByIDsRequest
+	302, // 302: core.CoreService.ListPermissionGroups:input_type -> core.ListPermissionGroupsRequest
+	303, // 303: core.CoreService.BatchGetPermissionGroupsByIDs:input_type -> core.BatchGetPermissionGroupsByIDsRequest
+	304, // 304: core.CoreService.ListPriorities:input_type -> core.ListPrioritiesRequest
+	305, // 305: core.CoreService.GetPriority:input_type -> core.GetPriorityRequest
+	306, // 306: core.CoreService.BatchGetPrioritiesByIDs:input_type -> core.BatchGetPrioritiesByIDsRequest
+	307, // 307: core.CoreService.ListProductTypes:input_type -> core.ListProductTypesRequest
+	308, // 308: core.CoreService.GetProductType:input_type -> core.GetProductTypeRequest
+	309, // 309: core.CoreService.CreateProductType:input_type -> core.CreateProductTypeRequest
+	310, // 310: core.CoreService.UpdateProductType:input_type -> core.UpdateProductTypeRequest
+	311, // 311: core.CoreService.DeleteProductType:input_type -> core.DeleteProductTypeRequest
+	312, // 312: core.CoreService.BatchGetProductTypesByIDs:input_type -> core.BatchGetProductTypesByIDsRequest
+	313, // 313: core.CoreService.ListReceivables:input_type -> core.ListReceivablesRequest
+	314, // 314: core.CoreService.ListReceivablesByCustomer:input_type -> core.ListReceivablesByCustomerRequest
+	315, // 315: core.CoreService.ExportReceivablesByCustomer:input_type -> core.ExportReceivablesByCustomerRequest
+	316, // 316: core.CoreService.EmailReceivablesForCustomer:input_type -> core.EmailReceivablesForCustomerRequest
+	317, // 317: core.CoreService.ListUnitGroups:input_type -> core.ListUnitGroupsRequest
+	318, // 318: core.CoreService.GetUnitGroup:input_type -> core.GetUnitGroupRequest
+	319, // 319: core.CoreService.CreateUnitGroup:input_type -> core.CreateUnitGroupRequest
+	320, // 320: core.CoreService.UpdateUnitGroup:input_type -> core.UpdateUnitGroupRequest
+	321, // 321: core.CoreService.DeleteUnitGroup:input_type -> core.DeleteUnitGroupRequest
+	322, // 322: core.CoreService.UpsertUnitGroupUnit:input_type -> core.UpsertUnitGroupUnitRequest
+	323, // 323: core.CoreService.DeleteUnitGroupUnit:input_type -> core.DeleteUnitGroupUnitRequest
+	324, // 324: core.CoreService.ListUnitGroupUnits:input_type -> core.ListUnitGroupUnitsRequest
+	325, // 325: core.CoreService.GetUnitGroupUnit:input_type -> core.GetUnitGroupUnitRequest
+	326, // 326: core.CoreService.BatchGetUnitGroupsByIDs:input_type -> core.BatchGetUnitGroupsByIDsRequest
+	327, // 327: core.CoreService.BatchGetUnitGroupUnitsByIDs:input_type -> core.BatchGetUnitGroupUnitsByIDsRequest
+	328, // 328: core.CoreService.ValidateUnits:input_type -> core.ValidateUnitsRequest
+	329, // 329: core.CoreService.BulkUpsertUnitGroups:input_type -> core.BulkUpsertUnitGroupsRequest
+	330, // 330: core.CoreService.ExportUnitGroups:input_type -> core.ExportUnitGroupsRequest
+	331, // 331: core.CoreService.ListTransactions:input_type -> core.ListTransactionsRequest
+	332, // 332: core.CoreService.GetTransaction:input_type -> core.GetTransactionRequest
+	333, // 333: core.CoreService.CreateTransaction:input_type -> core.CreateTransactionRequest
+	334, // 334: core.CoreService.UpdateTransaction:input_type -> core.UpdateTransactionRequest
+	335, // 335: core.CoreService.DeleteTransaction:input_type -> core.DeleteTransactionRequest
+	336, // 336: core.CoreService.ListAccountTransactions:input_type -> core.ListAccountTransactionsRequest
+	337, // 337: core.CoreService.ListSettlements:input_type -> core.ListSettlementsRequest
+	338, // 338: core.CoreService.GetSettlement:input_type -> core.GetSettlementRequest
+	339, // 339: core.CoreService.CreateSettlement:input_type -> core.CreateSettlementRequest
+	340, // 340: core.CoreService.UpdateSettlement:input_type -> core.UpdateSettlementRequest
+	341, // 341: core.CoreService.DeleteSettlement:input_type -> core.DeleteSettlementRequest
+	342, // 342: core.CoreService.ListAllocationEntries:input_type -> core.ListAllocationEntriesRequest
+	343, // 343: core.CoreService.UpdateTransactionAllocation:input_type -> core.UpdateTransactionAllocationRequest
+	344, // 344: core.CoreService.DeleteTransactionAllocation:input_type -> core.DeleteTransactionAllocationRequest
+	345, // 345: core.CoreService.ListOpenCredits:input_type -> core.ListOpenCreditsRequest
+	346, // 346: core.CoreService.GetUser:input_type -> core.GetUserRequest
+	347, // 347: core.CoreService.BatchGetUsersByIDs:input_type -> core.BatchGetUsersByIDsRequest
+	348, // 348: core.CoreService.UpdateUser:input_type -> core.UpdateUserRequest
+	349, // 349: core.CoreService.UploadUserPhoto:input_type -> core.UploadUserPhotoRequest
+	350, // 350: core.CoreService.GetUserPhotoURL:input_type -> core.GetUserPhotoURLRequest
+	351, // 351: core.CoreService.CheckDuplicate:input_type -> core.CheckDuplicateRequest
+	352, // 352: core.CoreService.EmailRecord:input_type -> core.EmailRecordRequest
+	353, // 353: core.CoreService.RequestDemo:input_type -> core.RequestDemoRequest
+	354, // 354: core.CoreService.SubmitFeedback:input_type -> core.SubmitFeedbackRequest
+	355, // 355: core.CoreService.ListCatalogProductLines:input_type -> core.ListCatalogProductLinesRequest
+	356, // 356: core.CoreService.ListCatalogProducts:input_type -> core.ListCatalogProductsRequest
+	357, // 357: core.CoreService.ListRoles:input_type -> core.ListRolesRequest
+	358, // 358: core.CoreService.GetRole:input_type -> core.GetRoleRequest
+	359, // 359: core.CoreService.CreateRole:input_type -> core.CreateRoleRequest
+	360, // 360: core.CoreService.UpdateRole:input_type -> core.UpdateRoleRequest
+	361, // 361: core.CoreService.DeleteRole:input_type -> core.DeleteRoleRequest
+	362, // 362: core.CoreService.BatchGetRolesByIDs:input_type -> core.BatchGetRolesByIDsRequest
+	363, // 363: core.CoreService.ListRegistrationFlows:input_type -> core.ListRegistrationFlowsRequest
+	364, // 364: core.CoreService.GetRegistrationFlow:input_type -> core.GetRegistrationFlowRequest
+	365, // 365: core.CoreService.CreateRegistrationFlow:input_type -> core.CreateRegistrationFlowRequest
+	366, // 366: core.CoreService.UpdateRegistrationFlow:input_type -> core.UpdateRegistrationFlowRequest
+	367, // 367: core.CoreService.DeleteRegistrationFlow:input_type -> core.DeleteRegistrationFlowRequest
+	368, // 368: core.CoreService.GetRegistrationFlowBySlug:input_type -> core.GetRegistrationFlowBySlugRequest
+	369, // 369: core.CoreService.RegisterCustomer:input_type -> core.RegisterCustomerRequest
+	370, // 370: core.CoreService.ListScanningStations:input_type -> core.ListScanningStationsRequest
+	371, // 371: core.CoreService.GetScanningStation:input_type -> core.GetScanningStationRequest
+	372, // 372: core.CoreService.CreateScanningStation:input_type -> core.CreateScanningStationRequest
+	373, // 373: core.CoreService.UpdateScanningStation:input_type -> core.UpdateScanningStationRequest
+	374, // 374: core.CoreService.DeleteScanningStation:input_type -> core.DeleteScanningStationRequest
+	375, // 375: core.CoreService.ConnectProductionStepsByScanningStation:input_type -> core.ConnectProductionStepsByScanningStationRequest
+	376, // 376: core.CoreService.BatchGetScanningStationsByIDs:input_type -> core.BatchGetScanningStationsByIDsRequest
+	377, // 377: core.CoreService.BulkUpsertScanningStations:input_type -> core.BulkUpsertScanningStationsRequest
+	378, // 378: core.CoreService.ExportScanningStations:input_type -> core.ExportScanningStationsRequest
+	379, // 379: core.CoreService.ListLocations:input_type -> core.ListLocationsRequest
+	380, // 380: core.CoreService.GetLocation:input_type -> core.GetLocationRequest
+	381, // 381: core.CoreService.CreateLocation:input_type -> core.CreateLocationRequest
+	382, // 382: core.CoreService.UpdateLocation:input_type -> core.UpdateLocationRequest
+	383, // 383: core.CoreService.DeleteLocation:input_type -> core.DeleteLocationRequest
+	384, // 384: core.CoreService.ListLocationTypes:input_type -> core.ListLocationTypesRequest
+	385, // 385: core.CoreService.GetLocationType:input_type -> core.GetLocationTypeRequest
+	386, // 386: core.CoreService.BatchGetLocationsByIDs:input_type -> core.BatchGetLocationsByIDsRequest
+	387, // 387: core.CoreService.BulkUpsertLocations:input_type -> core.BulkUpsertLocationsRequest
+	388, // 388: core.CoreService.ExportLocations:input_type -> core.ExportLocationsRequest
+	389, // 389: core.CoreService.ListSuppliers:input_type -> core.ListSuppliersRequest
+	390, // 390: core.CoreService.GetSupplier:input_type -> core.GetSupplierRequest
+	391, // 391: core.CoreService.CreateSupplier:input_type -> core.CreateSupplierRequest
+	392, // 392: core.CoreService.UpdateSupplier:input_type -> core.UpdateSupplierRequest
+	393, // 393: core.CoreService.DeleteSupplier:input_type -> core.DeleteSupplierRequest
+	394, // 394: core.CoreService.BulkDeleteSuppliers:input_type -> core.BulkDeleteSuppliersRequest
+	395, // 395: core.CoreService.BatchGetSuppliersByIDs:input_type -> core.BatchGetSuppliersByIDsRequest
+	396, // 396: core.CoreService.ListSysProperties:input_type -> core.ListSysPropertiesRequest
+	397, // 397: core.CoreService.GetSysProperty:input_type -> core.GetSysPropertyRequest
+	398, // 398: core.CoreService.UpdateSysProperty:input_type -> core.UpdateSysPropertyRequest
+	399, // 399: core.CoreService.GetLatestSysPropertyValue:input_type -> core.GetLatestSysPropertyValueRequest
+	400, // 400: core.CoreService.BatchGetSysPropertiesByIDs:input_type -> core.BatchGetSysPropertiesByIDsRequest
+	401, // 401: core.CoreService.GetTenancy:input_type -> core.GetTenancyRequest
+	402, // 402: core.CoreService.SwitchAccount:input_type -> core.SwitchTenancyAccountRequest
+	403, // 403: core.CoreService.GetCurrentUser:input_type -> core.GetCurrentUserRequest
+	404, // 404: core.CoreService.ListCustomerAccountsForUser:input_type -> core.ListCustomerAccountsForUserRequest
+	405, // 405: core.CoreService.ListTerritories:input_type -> core.ListTerritoriesRequest
+	406, // 406: core.CoreService.GetTerritory:input_type -> core.GetTerritoryRequest
+	407, // 407: core.CoreService.CreateTerritory:input_type -> core.CreateTerritoryRequest
+	408, // 408: core.CoreService.UpdateTerritory:input_type -> core.UpdateTerritoryRequest
+	409, // 409: core.CoreService.DeleteTerritory:input_type -> core.DeleteTerritoryRequest
+	410, // 410: core.CoreService.BatchGetTerritoriesByIDs:input_type -> core.BatchGetTerritoriesByIDsRequest
+	411, // 411: core.CoreService.ListDocumentSettings:input_type -> core.ListDocumentSettingsRequest
+	412, // 412: core.CoreService.GetDocumentSetting:input_type -> core.GetDocumentSettingRequest
+	413, // 413: core.CoreService.UpdateDocumentSetting:input_type -> core.UpdateDocumentSettingRequest
+	414, // 414: core.CoreService.GetAccountContext:output_type -> core.GetAccountContextResponse
+	415, // 415: core.CoreService.GetAccountNames:output_type -> core.GetAccountNamesResponse
+	416, // 416: core.CoreService.BatchGetAccountsByIDs:output_type -> core.BatchGetAccountsByIDsResponse
+	417, // 417: core.CoreService.GetUserAccountAccess:output_type -> core.GetUserAccountAccessResponse
+	418, // 418: core.CoreService.GetRolePermissions:output_type -> core.GetRolePermissionsResponse
+	419, // 419: core.CoreService.GetRoleInfo:output_type -> core.GetRoleInfoResponse
+	420, // 420: core.CoreService.GetAccountRelation:output_type -> core.GetAccountRelationResponse
+	10,  // 421: core.CoreService.MarkAccountUserUsed:output_type -> google.protobuf.Empty
+	421, // 422: core.CoreService.ListUserAccountAffiliations:output_type -> core.ListUserAccountAffiliationsResponse
+	422, // 423: core.CoreService.GetSandboxAccountByOwner:output_type -> core.GetSandboxAccountByOwnerResponse
+	423, // 424: core.CoreService.GetAdminRole:output_type -> core.GetAdminRoleResponse
+	424, // 425: core.CoreService.ListSandboxAccounts:output_type -> core.ListSandboxAccountsResponse
+	425, // 426: core.CoreService.CreateSandbox:output_type -> core.CreateSandboxResponse
+	426, // 427: core.CoreService.GetSandbox:output_type -> core.GetSandboxResponse
+	10,  // 428: core.CoreService.DeleteSandbox:output_type -> google.protobuf.Empty
+	427, // 429: core.CoreService.BatchGetSandboxesByIDs:output_type -> core.BatchGetSandboxesByIDsResponse
+	10,  // 430: core.CoreService.UpdateAccountSubscription:output_type -> google.protobuf.Empty
+	10,  // 431: core.CoreService.ClearAccountStripeCustomer:output_type -> google.protobuf.Empty
+	428, // 432: core.CoreService.UpdateAgentSpendingCap:output_type -> core.UpdateAgentSpendingCapResponse
+	429, // 433: core.CoreService.GetAccountByStripeCustomerID:output_type -> core.GetAccountByStripeCustomerIDResponse
+	430, // 434: core.CoreService.CompleteRegistration:output_type -> core.CompleteRegistrationResponse
+	431, // 435: core.CoreService.ListUnits:output_type -> core.ListUnitsResponse
+	432, // 436: core.CoreService.GetUnit:output_type -> core.GetUnitResponse
+	433, // 437: core.CoreService.CreateUnit:output_type -> core.CreateUnitResponse
+	434, // 438: core.CoreService.UpdateUnit:output_type -> core.UpdateUnitResponse
+	10,  // 439: core.CoreService.DeleteUnit:output_type -> google.protobuf.Empty
+	435, // 440: core.CoreService.BatchGetUnitsByIDs:output_type -> core.BatchGetUnitsByIDsResponse
+	436, // 441: core.CoreService.BulkUpsertUnits:output_type -> core.BulkUpsertUnitsResponse
+	437, // 442: core.CoreService.ExportUnits:output_type -> core.ExportUnitsResponse
+	438, // 443: core.CoreService.SearchProducts:output_type -> core.SearchProductsResponse
+	439, // 444: core.CoreService.ListProducts:output_type -> core.ListProductsResponse
+	440, // 445: core.CoreService.GetCustomerByEmail:output_type -> core.GetCustomerByEmailResponse
+	441, // 446: core.CoreService.FindContactsByEmail:output_type -> core.FindContactsByEmailResponse
+	442, // 447: core.CoreService.ListPaymentTerms:output_type -> core.ListPaymentTermsResponse
+	443, // 448: core.CoreService.GetPaymentTerm:output_type -> core.GetPaymentTermResponse
+	444, // 449: core.CoreService.CreatePaymentTerm:output_type -> core.CreatePaymentTermResponse
+	445, // 450: core.CoreService.UpdatePaymentTerm:output_type -> core.UpdatePaymentTermResponse
+	10,  // 451: core.CoreService.DeletePaymentTerm:output_type -> google.protobuf.Empty
+	446, // 452: core.CoreService.BatchGetPaymentTermsByIDs:output_type -> core.BatchGetPaymentTermsByIDsResponse
+	447, // 453: core.CoreService.ListShippingTerms:output_type -> core.ListShippingTermsResponse
+	448, // 454: core.CoreService.GetShippingTerm:output_type -> core.GetShippingTermResponse
+	449, // 455: core.CoreService.CreateShippingTerm:output_type -> core.CreateShippingTermResponse
+	450, // 456: core.CoreService.UpdateShippingTerm:output_type -> core.UpdateShippingTermResponse
+	10,  // 457: core.CoreService.DeleteShippingTerm:output_type -> google.protobuf.Empty
+	451, // 458: core.CoreService.BatchGetShippingTermsByIDs:output_type -> core.BatchGetShippingTermsByIDsResponse
+	452, // 459: core.CoreService.GetAddress:output_type -> core.GetAddressResponse
+	453, // 460: core.CoreService.ListAddresses:output_type -> core.ListAddressesResponse
+	454, // 461: core.CoreService.CreateAddress:output_type -> core.CreateAddressResponse
+	455, // 462: core.CoreService.UpdateAddress:output_type -> core.UpdateAddressResponse
+	10,  // 463: core.CoreService.DeleteAddress:output_type -> google.protobuf.Empty
+	456, // 464: core.CoreService.BatchGetAddressesByIDs:output_type -> core.BatchGetAddressesByIDsResponse
+	457, // 465: core.CoreService.AutocompleteAddress:output_type -> core.AutocompleteAddressResponse
+	458, // 466: core.CoreService.GetAddressDetails:output_type -> core.GetAddressDetailsResponse
+	459, // 467: core.CoreService.ValidateAddress:output_type -> core.ValidateAddressResponse
+	460, // 468: core.CoreService.ListAccountStatuses:output_type -> core.ListAccountStatusesResponse
+	461, // 469: core.CoreService.GetAccountStatus:output_type -> core.GetAccountStatusResponse
+	462, // 470: core.CoreService.BatchGetAccountStatusesByIDs:output_type -> core.BatchGetAccountStatusesByIDsResponse
+	463, // 471: core.CoreService.ListAccountGroups:output_type -> core.ListAccountGroupsResponse
+	464, // 472: core.CoreService.GetAccountGroup:output_type -> core.GetAccountGroupResponse
+	465, // 473: core.CoreService.CreateAccountGroup:output_type -> core.CreateAccountGroupResponse
+	466, // 474: core.CoreService.UpdateAccountGroup:output_type -> core.UpdateAccountGroupResponse
+	10,  // 475: core.CoreService.DeleteAccountGroup:output_type -> google.protobuf.Empty
+	467, // 476: core.CoreService.BatchGetAccountGroupsByIDs:output_type -> core.BatchGetAccountGroupsByIDsResponse
+	468, // 477: core.CoreService.ListAccountGroupProductLineAccess:output_type -> core.ListAccountGroupProductLineAccessResponse
+	469, // 478: core.CoreService.GetAccountGroupProductLineAccess:output_type -> core.GetAccountGroupProductLineAccessResponse
+	470, // 479: core.CoreService.CreateAccountGroupProductLineAccess:output_type -> core.CreateAccountGroupProductLineAccessResponse
+	471, // 480: core.CoreService.UpdateAccountGroupProductLineAccess:output_type -> core.UpdateAccountGroupProductLineAccessResponse
+	10,  // 481: core.CoreService.DeleteAccountGroupProductLineAccess:output_type -> google.protobuf.Empty
+	472, // 482: core.CoreService.BatchGetAccountGroupProductLineAccessByIDs:output_type -> core.BatchGetAccountGroupProductLineAccessByIDsResponse
+	473, // 483: core.CoreService.ListCustomerProductLineAccess:output_type -> core.ListCustomerProductLineAccessResponse
+	474, // 484: core.CoreService.GetCustomerProductLineAccess:output_type -> core.GetCustomerProductLineAccessResponse
+	475, // 485: core.CoreService.CreateCustomerProductLineAccess:output_type -> core.CreateCustomerProductLineAccessResponse
+	476, // 486: core.CoreService.UpdateCustomerProductLineAccess:output_type -> core.UpdateCustomerProductLineAccessResponse
+	10,  // 487: core.CoreService.DeleteCustomerProductLineAccess:output_type -> google.protobuf.Empty
+	477, // 488: core.CoreService.BatchGetCustomerProductLineAccessByIDs:output_type -> core.BatchGetCustomerProductLineAccessByIDsResponse
+	478, // 489: core.CoreService.ListAccountUsers:output_type -> core.ListAccountUsersResponse
+	479, // 490: core.CoreService.GetAccountUser:output_type -> core.GetAccountUserResponse
+	480, // 491: core.CoreService.CreateAccountUser:output_type -> core.CreateAccountUserResponse
+	481, // 492: core.CoreService.UpdateAccountUser:output_type -> core.UpdateAccountUserResponse
+	10,  // 493: core.CoreService.UpdateAccountUserStatus:output_type -> google.protobuf.Empty
+	10,  // 494: core.CoreService.UpdateAccountUserPassword:output_type -> google.protobuf.Empty
+	482, // 495: core.CoreService.BatchGetAccountUsersByIDs:output_type -> core.BatchGetAccountUsersByIDsResponse
+	483, // 496: core.CoreService.ListSalesTargets:output_type -> core.ListSalesTargetsResponse
+	484, // 497: core.CoreService.CreateSalesTarget:output_type -> core.CreateSalesTargetResponse
+	485, // 498: core.CoreService.UpsertSalesTarget:output_type -> core.UpsertSalesTargetResponse
+	486, // 499: core.CoreService.ListAccountPrices:output_type -> core.ListAccountPricesResponse
+	487, // 500: core.CoreService.GetAccountPrice:output_type -> core.GetAccountPriceResponse
+	488, // 501: core.CoreService.CreateAccountPrice:output_type -> core.CreateAccountPriceResponse
+	489, // 502: core.CoreService.UpdateAccountPrice:output_type -> core.UpdateAccountPriceResponse
+	10,  // 503: core.CoreService.DeleteAccountPrice:output_type -> google.protobuf.Empty
+	490, // 504: core.CoreService.ExportPriceList:output_type -> core.ExportPriceListResponse
+	491, // 505: core.CoreService.ListAccountIntegrations:output_type -> core.ListAccountIntegrationsResponse
+	492, // 506: core.CoreService.CreateAccountIntegration:output_type -> core.CreateAccountIntegrationResponse
+	493, // 507: core.CoreService.RotateAccountIntegrationCredentials:output_type -> core.RotateAccountIntegrationCredentialsResponse
+	494, // 508: core.CoreService.UpdateAccountIntegration:output_type -> core.UpdateAccountIntegrationResponse
+	495, // 509: core.CoreService.DeleteAccountIntegration:output_type -> core.DeleteAccountIntegrationResponse
+	496, // 510: core.CoreService.BatchGetAccountIntegrationsByIDs:output_type -> core.BatchGetAccountIntegrationsByIDsResponse
+	497, // 511: core.CoreService.GetStripePublishableKey:output_type -> core.GetStripePublishableKeyResponse
+	498, // 512: core.CoreService.GetStripeStatus:output_type -> core.GetStripeStatusResponse
+	499, // 513: core.CoreService.ListAdjustmentTypes:output_type -> core.ListAdjustmentTypesResponse
+	500, // 514: core.CoreService.BatchGetAdjustmentTypesByIDs:output_type -> core.BatchGetAdjustmentTypesByIDsResponse
+	501, // 515: core.CoreService.GetAccount:output_type -> core.GetAccountResponse
+	502, // 516: core.CoreService.GetAccountBySlug:output_type -> core.GetAccountBySlugResponse
+	503, // 517: core.CoreService.GetPortalProfileBySlug:output_type -> core.GetPortalProfileBySlugResponse
+	504, // 518: core.CoreService.CreateOrResumePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
+	504, // 519: core.CoreService.GetPortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
+	504, // 520: core.CoreService.UpdatePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
+	504, // 521: core.CoreService.CompletePortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
+	504, // 522: core.CoreService.AbandonPortalRegistrationSession:output_type -> core.PortalRegistrationSessionResponse
+	505, // 523: core.CoreService.ListPortalRegistrationSessions:output_type -> core.ListPortalRegistrationSessionsResponse
+	506, // 524: core.CoreService.UpdateAccount:output_type -> core.UpdateAccountResponse
+	507, // 525: core.CoreService.UploadAccountPhoto:output_type -> core.UploadAccountPhotoResponse
+	508, // 526: core.CoreService.GetAccountLogoURL:output_type -> core.GetAccountLogoURLResponse
+	509, // 527: core.CoreService.UploadAccountFavicon:output_type -> core.UploadAccountFaviconResponse
+	510, // 528: core.CoreService.GetAccountFaviconURL:output_type -> core.GetAccountFaviconURLResponse
+	511, // 529: core.CoreService.ListProperties:output_type -> core.ListPropertiesResponse
+	512, // 530: core.CoreService.GetProperty:output_type -> core.GetPropertyResponse
+	513, // 531: core.CoreService.CreateProperty:output_type -> core.CreatePropertyResponse
+	514, // 532: core.CoreService.UpdateProperty:output_type -> core.UpdatePropertyResponse
+	10,  // 533: core.CoreService.DeleteProperty:output_type -> google.protobuf.Empty
+	515, // 534: core.CoreService.BulkUpsertProperties:output_type -> core.BulkUpsertPropertiesResponse
+	516, // 535: core.CoreService.ExportProperties:output_type -> core.ExportPropertiesResponse
+	517, // 536: core.CoreService.ListAttributes:output_type -> core.ListAttributesResponse
+	518, // 537: core.CoreService.GetAttribute:output_type -> core.GetAttributeResponse
+	519, // 538: core.CoreService.CreateAttribute:output_type -> core.CreateAttributeResponse
+	520, // 539: core.CoreService.UpdateAttribute:output_type -> core.UpdateAttributeResponse
+	10,  // 540: core.CoreService.DeleteAttribute:output_type -> google.protobuf.Empty
+	521, // 541: core.CoreService.BatchGetAttributesByIDs:output_type -> core.BatchGetAttributesByIDsResponse
+	522, // 542: core.CoreService.BatchGetPropertiesByIDs:output_type -> core.BatchGetPropertiesByIDsResponse
+	523, // 543: core.CoreService.BatchGetItemCategoriesByIDs:output_type -> core.BatchGetItemCategoriesByIDsResponse
+	524, // 544: core.CoreService.BatchGetItemsByIDs:output_type -> core.BatchGetItemsByIDsResponse
+	525, // 545: core.CoreService.ListCarriers:output_type -> core.ListCarriersResponse
+	526, // 546: core.CoreService.GetCarrier:output_type -> core.GetCarrierResponse
+	527, // 547: core.CoreService.BatchGetCarriersByIDs:output_type -> core.BatchGetCarriersByIDsResponse
+	528, // 548: core.CoreService.CreateCarrier:output_type -> core.CreateCarrierResponse
+	529, // 549: core.CoreService.UpdateCarrier:output_type -> core.UpdateCarrierResponse
+	10,  // 550: core.CoreService.DeleteCarrier:output_type -> google.protobuf.Empty
+	530, // 551: core.CoreService.InitiateCarrierOAuth:output_type -> core.InitiateCarrierOAuthResponse
+	531, // 552: core.CoreService.GetCarrierOAuthStatus:output_type -> core.GetCarrierOAuthStatusResponse
+	532, // 553: core.CoreService.SyncServiceLevels:output_type -> core.SyncServiceLevelsResponse
+	533, // 554: core.CoreService.ListServiceLevels:output_type -> core.ListServiceLevelsResponse
+	534, // 555: core.CoreService.GetServiceLevel:output_type -> core.GetServiceLevelResponse
+	535, // 556: core.CoreService.BatchGetServiceLevelsByIDs:output_type -> core.BatchGetServiceLevelsByIDsResponse
+	536, // 557: core.CoreService.CreateServiceLevel:output_type -> core.CreateServiceLevelResponse
+	537, // 558: core.CoreService.UpdateServiceLevel:output_type -> core.UpdateServiceLevelResponse
+	10,  // 559: core.CoreService.DeleteServiceLevel:output_type -> google.protobuf.Empty
+	538, // 560: core.CoreService.ListItems:output_type -> core.ListItemsResponse
+	539, // 561: core.CoreService.GetItem:output_type -> core.GetItemResponse
+	540, // 562: core.CoreService.GetItemInventory:output_type -> core.GetItemInventoryResponse
+	541, // 563: core.CoreService.GetItemLotDefault:output_type -> core.GetItemLotDefaultResponse
+	542, // 564: core.CoreService.GetItemCosts:output_type -> core.GetItemCostsResponse
+	543, // 565: core.CoreService.GetItemTrends:output_type -> core.GetItemTrendsResponse
+	544, // 566: core.CoreService.ExportItems:output_type -> core.ExportItemsResponse
+	545, // 567: core.CoreService.CreateItem:output_type -> core.CreateItemResponse
+	546, // 568: core.CoreService.UpdateItem:output_type -> core.UpdateItemResponse
+	10,  // 569: core.CoreService.DeleteItem:output_type -> google.protobuf.Empty
+	547, // 570: core.CoreService.BulkUpsertItems:output_type -> core.BulkUpsertItemsResponse
+	548, // 571: core.CoreService.SetItemOrderUnits:output_type -> core.SetItemOrderUnitsResponse
+	549, // 572: core.CoreService.ChangeItemStockingUnit:output_type -> core.ChangeItemStockingUnitResponse
+	550, // 573: core.CoreService.AddItemAttribute:output_type -> core.AddItemAttributeResponse
+	551, // 574: core.CoreService.RemoveItemAttribute:output_type -> core.RemoveItemAttributeResponse
+	552, // 575: core.CoreService.ChangeItemCategory:output_type -> core.ChangeItemCategoryResponse
+	553, // 576: core.CoreService.UpdateItemInventory:output_type -> core.UpdateItemInventoryResponse
+	554, // 577: core.CoreService.BulkCreateItems:output_type -> core.BulkCreateItemsResponse
+	555, // 578: core.CoreService.BulkUpsertParts:output_type -> core.BulkUpsertPartsResponse
+	556, // 579: core.CoreService.BulkUpsertProducts:output_type -> core.BulkUpsertProductsResponse
+	557, // 580: core.CoreService.BulkUpsertMaterials:output_type -> core.BulkUpsertMaterialsResponse
+	558, // 581: core.CoreService.BulkReconcileItems:output_type -> core.BulkReconcileItemsResponse
+	559, // 582: core.CoreService.ListInventories:output_type -> core.ListInventoriesResponse
+	560, // 583: core.CoreService.AnalyzeWeeksOfSales:output_type -> core.AnalyzeWeeksOfSalesResponse
+	561, // 584: core.CoreService.ListChildAccounts:output_type -> core.ListChildAccountsResponse
+	562, // 585: core.CoreService.AddChildAccount:output_type -> core.AddChildAccountResponse
+	10,  // 586: core.CoreService.RemoveChildAccount:output_type -> google.protobuf.Empty
+	563, // 587: core.CoreService.BatchGetChildAccountsByIDs:output_type -> core.BatchGetChildAccountsByIDsResponse
+	564, // 588: core.CoreService.GetBatchFlow:output_type -> core.GetBatchFlowResponse
+	565, // 589: core.CoreService.ListBatchesByScanningStation:output_type -> core.ListBatchesByScanningStationResponse
+	566, // 590: core.CoreService.GetBatchPossibleNextSteps:output_type -> core.GetBatchPossibleNextStepsResponse
+	567, // 591: core.CoreService.GetBatchPossibleInitSteps:output_type -> core.GetBatchPossibleInitStepsResponse
+	568, // 592: core.CoreService.AnalyzeOpenBatches:output_type -> core.AnalyzeOpenBatchesResponse
+	569, // 593: core.CoreService.InitializeBatch:output_type -> core.InitializeBatchResponse
+	570, // 594: core.CoreService.MoveBatches:output_type -> core.MoveBatchesResponse
+	571, // 595: core.CoreService.MergeBatches:output_type -> core.MergeBatchesResponse
+	572, // 596: core.CoreService.SplitBatch:output_type -> core.SplitBatchResponse
+	573, // 597: core.CoreService.GetRemainingQuantityToSplit:output_type -> core.GetRemainingQuantityToSplitResponse
+	574, // 598: core.CoreService.GetScanningStationConsumption:output_type -> core.GetScanningStationConsumptionResponse
+	575, // 599: core.CoreService.CloseBatch:output_type -> core.CloseBatchResponse
+	576, // 600: core.CoreService.DeleteBatch:output_type -> core.DeleteBatchResponse
+	10,  // 601: core.CoreService.DeleteManyBatches:output_type -> google.protobuf.Empty
+	577, // 602: core.CoreService.ListItemCategories:output_type -> core.ListItemCategoriesResponse
+	578, // 603: core.CoreService.GetItemCategory:output_type -> core.GetItemCategoryResponse
+	579, // 604: core.CoreService.CreateItemCategory:output_type -> core.CreateItemCategoryResponse
+	580, // 605: core.CoreService.UpdateItemCategory:output_type -> core.UpdateItemCategoryResponse
+	10,  // 606: core.CoreService.DeleteItemCategory:output_type -> google.protobuf.Empty
+	10,  // 607: core.CoreService.AddItemCategoryProperty:output_type -> google.protobuf.Empty
+	581, // 608: core.CoreService.CreateItemCategoryProperty:output_type -> core.CreateItemCategoryPropertyResponse
+	10,  // 609: core.CoreService.RemoveItemCategoryProperty:output_type -> google.protobuf.Empty
+	10,  // 610: core.CoreService.ChangeItemCategoryUnitGroup:output_type -> google.protobuf.Empty
+	582, // 611: core.CoreService.BulkUpsertItemCategories:output_type -> core.BulkUpsertItemCategoriesResponse
+	583, // 612: core.CoreService.ExportItemCategories:output_type -> core.ExportItemCategoriesResponse
+	584, // 613: core.CoreService.ListProductsFull:output_type -> core.ListProductsFullResponse
+	585, // 614: core.CoreService.ExportProducts:output_type -> core.ExportProductsResponse
+	586, // 615: core.CoreService.GetProduct:output_type -> core.GetProductResponse
+	587, // 616: core.CoreService.CreateProduct:output_type -> core.CreateProductResponse
+	588, // 617: core.CoreService.UpdateProduct:output_type -> core.UpdateProductResponse
+	589, // 618: core.CoreService.DeleteProduct:output_type -> core.DeleteProductResponse
+	590, // 619: core.CoreService.ChangeProductProductLine:output_type -> core.ChangeProductProductLineResponse
+	591, // 620: core.CoreService.ValidateProducts:output_type -> core.ValidateProductsResponse
+	592, // 621: core.CoreService.BatchGetProductsByIDs:output_type -> core.BatchGetProductsByIDsResponse
+	593, // 622: core.CoreService.ListProductLines:output_type -> core.ListProductLinesResponse
+	594, // 623: core.CoreService.GetProductLine:output_type -> core.GetProductLineResponse
+	595, // 624: core.CoreService.CreateProductLine:output_type -> core.CreateProductLineResponse
+	596, // 625: core.CoreService.UpdateProductLine:output_type -> core.UpdateProductLineResponse
+	10,  // 626: core.CoreService.DeleteProductLine:output_type -> google.protobuf.Empty
+	597, // 627: core.CoreService.BatchGetProductLinesByIDs:output_type -> core.BatchGetProductLinesByIDsResponse
+	598, // 628: core.CoreService.BulkUpsertProductLines:output_type -> core.BulkUpsertProductLinesResponse
+	599, // 629: core.CoreService.ExportProductLines:output_type -> core.ExportProductLinesResponse
+	600, // 630: core.CoreService.GetConsumption:output_type -> core.GetConsumptionResponse
+	601, // 631: core.CoreService.CreateConsumption:output_type -> core.CreateConsumptionResponse
+	602, // 632: core.CoreService.UpdateConsumption:output_type -> core.UpdateConsumptionResponse
+	603, // 633: core.CoreService.DeleteConsumption:output_type -> core.DeleteConsumptionResponse
+	604, // 634: core.CoreService.GetProductionFlow:output_type -> core.GetProductionFlowResponse
+	10,  // 635: core.CoreService.ConnectProductionSteps:output_type -> google.protobuf.Empty
+	605, // 636: core.CoreService.ListCustomers:output_type -> core.ListCustomersResponse
+	606, // 637: core.CoreService.GetCustomer:output_type -> core.GetCustomerResponse
+	607, // 638: core.CoreService.BatchGetCustomersByIDs:output_type -> core.BatchGetCustomersByIDsResponse
+	608, // 639: core.CoreService.CreateCustomer:output_type -> core.CreateCustomerResponse
+	609, // 640: core.CoreService.GetCustomerLeadTime:output_type -> core.GetCustomerLeadTimeResponse
+	10,  // 641: core.CoreService.DeleteCustomer:output_type -> google.protobuf.Empty
+	10,  // 642: core.CoreService.BulkDeleteCustomers:output_type -> google.protobuf.Empty
+	610, // 643: core.CoreService.GetFrequentlyOrderedProducts:output_type -> core.GetFrequentlyOrderedProductsResponse
+	611, // 644: core.CoreService.ListCustomerNotificationRecipients:output_type -> core.ListCustomerNotificationRecipientsResponse
+	612, // 645: core.CoreService.UpdateCustomerNotificationRecipients:output_type -> core.UpdateCustomerNotificationRecipientsResponse
+	613, // 646: core.CoreService.UpdateCustomer:output_type -> core.UpdateCustomerResponse
+	614, // 647: core.CoreService.MergeCustomers:output_type -> core.MergeCustomersResponse
+	615, // 648: core.CoreService.ExportCustomers:output_type -> core.ExportCustomersResponse
+	616, // 649: core.CoreService.AnalyzeSales:output_type -> core.AnalyzeSalesResponse
+	617, // 650: core.CoreService.AnalyzeSalesSummary:output_type -> core.AnalyzeSalesSummaryResponse
+	618, // 651: core.CoreService.AnalyzeSalesBreakdown:output_type -> core.AnalyzeSalesBreakdownResponse
+	619, // 652: core.CoreService.AnalyzeSalesInvoices:output_type -> core.AnalyzeSalesInvoicesResponse
+	620, // 653: core.CoreService.ListNewCustomers:output_type -> core.ListNewCustomersResponse
+	621, // 654: core.CoreService.ListSalesLines:output_type -> core.ListSalesLinesResponse
+	622, // 655: core.CoreService.ExportSalesLines:output_type -> core.ExportSalesLinesResponse
+	623, // 656: core.CoreService.AnalyzeOpenOrdersSummary:output_type -> core.AnalyzeOpenOrdersSummaryResponse
+	624, // 657: core.CoreService.AnalyzeOpenOrderProducts:output_type -> core.AnalyzeOpenOrderProductsResponse
+	625, // 658: core.CoreService.ListOpenOrders:output_type -> core.ListOpenOrdersResponse
+	626, // 659: core.CoreService.ListOpenOrderLines:output_type -> core.ListOpenOrderLinesResponse
+	627, // 660: core.CoreService.ExportOpenOrderLines:output_type -> core.ExportOpenOrderLinesResponse
+	628, // 661: core.CoreService.AnalyzeRealizedMargins:output_type -> core.AnalyzeRealizedMarginsResponse
+	629, // 662: core.CoreService.AnalyzeCustomerPricing:output_type -> core.AnalyzeCustomerPricingResponse
+	630, // 663: core.CoreService.AnalyzeProductionCosts:output_type -> core.AnalyzeProductionCostsResponse
+	631, // 664: core.CoreService.AnalyzeDeliveries:output_type -> core.AnalyzeDeliveriesResponse
+	632, // 665: core.CoreService.AnalyzeManufacturing:output_type -> core.AnalyzeManufacturingResponse
+	633, // 666: core.CoreService.AnalyzeManufacturingBatch:output_type -> core.AnalyzeManufacturingBatchResponse
+	634, // 667: core.CoreService.AnalyzeOrders:output_type -> core.AnalyzeOrdersResponse
+	635, // 668: core.CoreService.AnalyzeQuarterlyOrders:output_type -> core.AnalyzeQuarterlyOrdersResponse
+	636, // 669: core.CoreService.AnalyzeMaterials:output_type -> core.AnalyzeMaterialsResponse
+	637, // 670: core.CoreService.AnalyzeInventoryReceipts:output_type -> core.AnalyzeInventoryReceiptsResponse
+	638, // 671: core.CoreService.AnalyzeNewCustomers:output_type -> core.AnalyzeNewCustomersResponse
+	639, // 672: core.CoreService.AnalyzeDemandForecast:output_type -> core.AnalyzeDemandForecastResponse
+	640, // 673: core.CoreService.AnalyzeOee:output_type -> core.AnalyzeOeeResponse
+	641, // 674: core.CoreService.AnalyzeOeeTrend:output_type -> core.AnalyzeOeeTrendResponse
+	642, // 675: core.CoreService.AnalyzeScheduleAttainment:output_type -> core.AnalyzeScheduleAttainmentResponse
+	643, // 676: core.CoreService.AnalyzeDeliveryPerformance:output_type -> core.AnalyzeDeliveryPerformanceResponse
+	644, // 677: core.CoreService.ListDeliveries:output_type -> core.ListDeliveriesResponse
+	645, // 678: core.CoreService.GetDelivery:output_type -> core.GetDeliveryResponse
+	646, // 679: core.CoreService.ListDepartments:output_type -> core.ListDepartmentsResponse
+	647, // 680: core.CoreService.GetDepartment:output_type -> core.GetDepartmentResponse
+	648, // 681: core.CoreService.CreateDepartment:output_type -> core.CreateDepartmentResponse
+	649, // 682: core.CoreService.UpdateDepartment:output_type -> core.UpdateDepartmentResponse
+	10,  // 683: core.CoreService.DeleteDepartment:output_type -> google.protobuf.Empty
+	650, // 684: core.CoreService.BatchGetDepartmentsByIDs:output_type -> core.BatchGetDepartmentsByIDsResponse
+	651, // 685: core.CoreService.BulkUpsertDepartments:output_type -> core.BulkUpsertDepartmentsResponse
+	652, // 686: core.CoreService.ExportDepartments:output_type -> core.ExportDepartmentsResponse
+	653, // 687: core.CoreService.ListEmailLogs:output_type -> core.ListEmailLogsResponse
+	654, // 688: core.CoreService.GetEmailLog:output_type -> core.GetEmailLogResponse
+	655, // 689: core.CoreService.ListInventoryChangeLogs:output_type -> core.ListInventoryChangeLogsResponse
+	656, // 690: core.CoreService.GetInventoryChangeLog:output_type -> core.GetInventoryChangeLogResponse
+	657, // 691: core.CoreService.ExportInventoryChangeLogs:output_type -> core.ExportInventoryChangeLogsResponse
+	658, // 692: core.CoreService.StartInventoryChangeLogsExport:output_type -> core.StartInventoryChangeLogsExportResponse
+	659, // 693: core.CoreService.ListInvoices:output_type -> core.ListInvoicesResponse
+	660, // 694: core.CoreService.GetInvoice:output_type -> core.GetInvoiceResponse
+	661, // 695: core.CoreService.UpdateInvoice:output_type -> core.UpdateInvoiceResponse
+	662, // 696: core.CoreService.ListCustomerInvoices:output_type -> core.ListCustomerInvoicesResponse
+	663, // 697: core.CoreService.ListMaterials:output_type -> core.ListMaterialsResponse
+	664, // 698: core.CoreService.ExportMaterials:output_type -> core.ExportMaterialsResponse
+	665, // 699: core.CoreService.GetMaterial:output_type -> core.GetMaterialResponse
+	666, // 700: core.CoreService.CreateMaterial:output_type -> core.CreateMaterialResponse
+	667, // 701: core.CoreService.UpdateMaterial:output_type -> core.UpdateMaterialResponse
+	668, // 702: core.CoreService.DeleteMaterial:output_type -> core.DeleteMaterialResponse
+	669, // 703: core.CoreService.BatchGetMaterialsByIDs:output_type -> core.BatchGetMaterialsByIDsResponse
+	670, // 704: core.CoreService.ListSupplierMaterials:output_type -> core.ListSupplierMaterialsResponse
+	671, // 705: core.CoreService.GetSupplierMaterial:output_type -> core.GetSupplierMaterialResponse
+	672, // 706: core.CoreService.CreateSupplierMaterial:output_type -> core.CreateSupplierMaterialResponse
+	673, // 707: core.CoreService.UpdateSupplierMaterial:output_type -> core.UpdateSupplierMaterialResponse
+	674, // 708: core.CoreService.DeleteSupplierMaterial:output_type -> core.DeleteSupplierMaterialResponse
+	675, // 709: core.CoreService.CreatePart:output_type -> core.CreatePartResponse
+	676, // 710: core.CoreService.GetPart:output_type -> core.GetPartResponse
+	677, // 711: core.CoreService.ListParts:output_type -> core.ListPartsResponse
+	678, // 712: core.CoreService.ExportParts:output_type -> core.ExportPartsResponse
+	679, // 713: core.CoreService.UpdatePart:output_type -> core.UpdatePartResponse
+	680, // 714: core.CoreService.DeletePart:output_type -> core.DeletePartResponse
+	681, // 715: core.CoreService.BatchGetPartsByIDs:output_type -> core.BatchGetPartsByIDsResponse
+	682, // 716: core.CoreService.ListPermissionGroups:output_type -> core.ListPermissionGroupsResponse
+	683, // 717: core.CoreService.BatchGetPermissionGroupsByIDs:output_type -> core.BatchGetPermissionGroupsByIDsResponse
+	684, // 718: core.CoreService.ListPriorities:output_type -> core.ListPrioritiesResponse
+	685, // 719: core.CoreService.GetPriority:output_type -> core.GetPriorityResponse
+	686, // 720: core.CoreService.BatchGetPrioritiesByIDs:output_type -> core.BatchGetPrioritiesByIDsResponse
+	687, // 721: core.CoreService.ListProductTypes:output_type -> core.ListProductTypesResponse
+	688, // 722: core.CoreService.GetProductType:output_type -> core.GetProductTypeResponse
+	689, // 723: core.CoreService.CreateProductType:output_type -> core.CreateProductTypeResponse
+	690, // 724: core.CoreService.UpdateProductType:output_type -> core.UpdateProductTypeResponse
+	10,  // 725: core.CoreService.DeleteProductType:output_type -> google.protobuf.Empty
+	691, // 726: core.CoreService.BatchGetProductTypesByIDs:output_type -> core.BatchGetProductTypesByIDsResponse
+	692, // 727: core.CoreService.ListReceivables:output_type -> core.ListReceivablesResponse
+	693, // 728: core.CoreService.ListReceivablesByCustomer:output_type -> core.ListReceivablesByCustomerResponse
+	694, // 729: core.CoreService.ExportReceivablesByCustomer:output_type -> core.ExportReceivablesByCustomerResponse
+	695, // 730: core.CoreService.EmailReceivablesForCustomer:output_type -> core.EmailReceivablesForCustomerResponse
+	696, // 731: core.CoreService.ListUnitGroups:output_type -> core.ListUnitGroupsResponse
+	697, // 732: core.CoreService.GetUnitGroup:output_type -> core.GetUnitGroupResponse
+	698, // 733: core.CoreService.CreateUnitGroup:output_type -> core.CreateUnitGroupResponse
+	699, // 734: core.CoreService.UpdateUnitGroup:output_type -> core.UpdateUnitGroupResponse
+	10,  // 735: core.CoreService.DeleteUnitGroup:output_type -> google.protobuf.Empty
+	700, // 736: core.CoreService.UpsertUnitGroupUnit:output_type -> core.UpsertUnitGroupUnitResponse
+	10,  // 737: core.CoreService.DeleteUnitGroupUnit:output_type -> google.protobuf.Empty
+	701, // 738: core.CoreService.ListUnitGroupUnits:output_type -> core.ListUnitGroupUnitsResponse
+	702, // 739: core.CoreService.GetUnitGroupUnit:output_type -> core.GetUnitGroupUnitResponse
+	703, // 740: core.CoreService.BatchGetUnitGroupsByIDs:output_type -> core.BatchGetUnitGroupsByIDsResponse
+	704, // 741: core.CoreService.BatchGetUnitGroupUnitsByIDs:output_type -> core.BatchGetUnitGroupUnitsByIDsResponse
+	705, // 742: core.CoreService.ValidateUnits:output_type -> core.ValidateUnitsResponse
+	706, // 743: core.CoreService.BulkUpsertUnitGroups:output_type -> core.BulkUpsertUnitGroupsResponse
+	707, // 744: core.CoreService.ExportUnitGroups:output_type -> core.ExportUnitGroupsResponse
+	708, // 745: core.CoreService.ListTransactions:output_type -> core.ListTransactionsResponse
+	709, // 746: core.CoreService.GetTransaction:output_type -> core.GetTransactionResponse
+	710, // 747: core.CoreService.CreateTransaction:output_type -> core.CreateTransactionResponse
+	711, // 748: core.CoreService.UpdateTransaction:output_type -> core.UpdateTransactionResponse
+	712, // 749: core.CoreService.DeleteTransaction:output_type -> core.DeleteTransactionResponse
+	713, // 750: core.CoreService.ListAccountTransactions:output_type -> core.ListAccountTransactionsResponse
+	714, // 751: core.CoreService.ListSettlements:output_type -> core.ListSettlementsResponse
+	715, // 752: core.CoreService.GetSettlement:output_type -> core.GetSettlementResponse
+	716, // 753: core.CoreService.CreateSettlement:output_type -> core.CreateSettlementResponse
+	717, // 754: core.CoreService.UpdateSettlement:output_type -> core.UpdateSettlementResponse
+	718, // 755: core.CoreService.DeleteSettlement:output_type -> core.DeleteSettlementResponse
+	719, // 756: core.CoreService.ListAllocationEntries:output_type -> core.ListAllocationEntriesResponse
+	720, // 757: core.CoreService.UpdateTransactionAllocation:output_type -> core.UpdateTransactionAllocationResponse
+	721, // 758: core.CoreService.DeleteTransactionAllocation:output_type -> core.DeleteTransactionAllocationResponse
+	722, // 759: core.CoreService.ListOpenCredits:output_type -> core.ListOpenCreditsResponse
+	723, // 760: core.CoreService.GetUser:output_type -> core.GetUserResponse
+	724, // 761: core.CoreService.BatchGetUsersByIDs:output_type -> core.BatchGetUsersByIDsResponse
+	725, // 762: core.CoreService.UpdateUser:output_type -> core.UpdateUserResponse
+	726, // 763: core.CoreService.UploadUserPhoto:output_type -> core.UploadUserPhotoResponse
+	727, // 764: core.CoreService.GetUserPhotoURL:output_type -> core.GetUserPhotoURLResponse
+	728, // 765: core.CoreService.CheckDuplicate:output_type -> core.CheckDuplicateResponse
+	729, // 766: core.CoreService.EmailRecord:output_type -> core.EmailRecordResponse
+	730, // 767: core.CoreService.RequestDemo:output_type -> core.RequestDemoResponse
+	731, // 768: core.CoreService.SubmitFeedback:output_type -> core.SubmitFeedbackResponse
+	732, // 769: core.CoreService.ListCatalogProductLines:output_type -> core.ListCatalogProductLinesResponse
+	733, // 770: core.CoreService.ListCatalogProducts:output_type -> core.ListCatalogProductsResponse
+	734, // 771: core.CoreService.ListRoles:output_type -> core.ListRolesResponse
+	735, // 772: core.CoreService.GetRole:output_type -> core.GetRoleResponse
+	736, // 773: core.CoreService.CreateRole:output_type -> core.CreateRoleResponse
+	737, // 774: core.CoreService.UpdateRole:output_type -> core.UpdateRoleResponse
+	10,  // 775: core.CoreService.DeleteRole:output_type -> google.protobuf.Empty
+	738, // 776: core.CoreService.BatchGetRolesByIDs:output_type -> core.BatchGetRolesByIDsResponse
+	739, // 777: core.CoreService.ListRegistrationFlows:output_type -> core.ListRegistrationFlowsResponse
+	740, // 778: core.CoreService.GetRegistrationFlow:output_type -> core.GetRegistrationFlowResponse
+	741, // 779: core.CoreService.CreateRegistrationFlow:output_type -> core.CreateRegistrationFlowResponse
+	742, // 780: core.CoreService.UpdateRegistrationFlow:output_type -> core.UpdateRegistrationFlowResponse
+	10,  // 781: core.CoreService.DeleteRegistrationFlow:output_type -> google.protobuf.Empty
+	743, // 782: core.CoreService.GetRegistrationFlowBySlug:output_type -> core.GetRegistrationFlowBySlugResponse
+	744, // 783: core.CoreService.RegisterCustomer:output_type -> core.RegisterCustomerResponse
+	745, // 784: core.CoreService.ListScanningStations:output_type -> core.ListScanningStationsResponse
+	746, // 785: core.CoreService.GetScanningStation:output_type -> core.GetScanningStationResponse
+	747, // 786: core.CoreService.CreateScanningStation:output_type -> core.CreateScanningStationResponse
+	748, // 787: core.CoreService.UpdateScanningStation:output_type -> core.UpdateScanningStationResponse
+	10,  // 788: core.CoreService.DeleteScanningStation:output_type -> google.protobuf.Empty
+	10,  // 789: core.CoreService.ConnectProductionStepsByScanningStation:output_type -> google.protobuf.Empty
+	749, // 790: core.CoreService.BatchGetScanningStationsByIDs:output_type -> core.BatchGetScanningStationsByIDsResponse
+	750, // 791: core.CoreService.BulkUpsertScanningStations:output_type -> core.BulkUpsertScanningStationsResponse
+	751, // 792: core.CoreService.ExportScanningStations:output_type -> core.ExportScanningStationsResponse
+	752, // 793: core.CoreService.ListLocations:output_type -> core.ListLocationsResponse
+	753, // 794: core.CoreService.GetLocation:output_type -> core.GetLocationResponse
+	754, // 795: core.CoreService.CreateLocation:output_type -> core.CreateLocationResponse
+	755, // 796: core.CoreService.UpdateLocation:output_type -> core.UpdateLocationResponse
+	10,  // 797: core.CoreService.DeleteLocation:output_type -> google.protobuf.Empty
+	756, // 798: core.CoreService.ListLocationTypes:output_type -> core.ListLocationTypesResponse
+	757, // 799: core.CoreService.GetLocationType:output_type -> core.GetLocationTypeResponse
+	758, // 800: core.CoreService.BatchGetLocationsByIDs:output_type -> core.BatchGetLocationsByIDsResponse
+	759, // 801: core.CoreService.BulkUpsertLocations:output_type -> core.BulkUpsertLocationsResponse
+	760, // 802: core.CoreService.ExportLocations:output_type -> core.ExportLocationsResponse
+	761, // 803: core.CoreService.ListSuppliers:output_type -> core.ListSuppliersResponse
+	762, // 804: core.CoreService.GetSupplier:output_type -> core.GetSupplierResponse
+	763, // 805: core.CoreService.CreateSupplier:output_type -> core.CreateSupplierResponse
+	764, // 806: core.CoreService.UpdateSupplier:output_type -> core.UpdateSupplierResponse
+	765, // 807: core.CoreService.DeleteSupplier:output_type -> core.DeleteSupplierResponse
+	10,  // 808: core.CoreService.BulkDeleteSuppliers:output_type -> google.protobuf.Empty
+	766, // 809: core.CoreService.BatchGetSuppliersByIDs:output_type -> core.BatchGetSuppliersByIDsResponse
+	767, // 810: core.CoreService.ListSysProperties:output_type -> core.ListSysPropertiesResponse
+	768, // 811: core.CoreService.GetSysProperty:output_type -> core.GetSysPropertyResponse
+	769, // 812: core.CoreService.UpdateSysProperty:output_type -> core.UpdateSysPropertyResponse
+	770, // 813: core.CoreService.GetLatestSysPropertyValue:output_type -> core.GetLatestSysPropertyValueResponse
+	771, // 814: core.CoreService.BatchGetSysPropertiesByIDs:output_type -> core.BatchGetSysPropertiesByIDsResponse
+	772, // 815: core.CoreService.GetTenancy:output_type -> core.GetTenancyResponse
+	772, // 816: core.CoreService.SwitchAccount:output_type -> core.GetTenancyResponse
+	773, // 817: core.CoreService.GetCurrentUser:output_type -> core.GetCurrentUserResponse
+	774, // 818: core.CoreService.ListCustomerAccountsForUser:output_type -> core.ListCustomerAccountsForUserResponse
+	775, // 819: core.CoreService.ListTerritories:output_type -> core.ListTerritoriesResponse
+	776, // 820: core.CoreService.GetTerritory:output_type -> core.GetTerritoryResponse
+	777, // 821: core.CoreService.CreateTerritory:output_type -> core.CreateTerritoryResponse
+	778, // 822: core.CoreService.UpdateTerritory:output_type -> core.UpdateTerritoryResponse
+	10,  // 823: core.CoreService.DeleteTerritory:output_type -> google.protobuf.Empty
+	779, // 824: core.CoreService.BatchGetTerritoriesByIDs:output_type -> core.BatchGetTerritoriesByIDsResponse
+	780, // 825: core.CoreService.ListDocumentSettings:output_type -> core.ListDocumentSettingsResponse
+	781, // 826: core.CoreService.GetDocumentSetting:output_type -> core.GetDocumentSettingResponse
+	782, // 827: core.CoreService.UpdateDocumentSetting:output_type -> core.UpdateDocumentSettingResponse
+	414, // [414:828] is the sub-list for method output_type
+	0,   // [0:414] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
 	0,   // [0:0] is the sub-list for extension extendee
 	0,   // [0:0] is the sub-list for field type_name

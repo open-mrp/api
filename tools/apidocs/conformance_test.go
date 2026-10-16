@@ -17,6 +17,8 @@ const conformanceBaselinePath = "testdata/conformance_baseline.txt"
 func init() {
 	// Change Stocking Unit changes one field's meaning rather than updating the item, so it reads "Changes".
 	conformance.DocVerbs = append(conformance.DocVerbs, "Changes")
+	// Create Integration "Connects a provider to your account."
+	conformance.DocVerbs = append(conformance.DocVerbs, "Connects")
 }
 
 // TestConformance holds every endpoint to every forge.1 rule. Endpoints that broke a rule before the forge.1 sweep are

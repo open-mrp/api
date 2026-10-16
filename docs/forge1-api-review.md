@@ -1096,13 +1096,13 @@ Removed
 ## Settings — integrations & portal domains ✅ finalized
 
 Integrations (public)
-- [ ] **T1** `credentials` (a JSON string) → typed object discriminated by `provider`: `stripe { private_key, publishable_key, webhook_secret }`, `shippo { api_key }`, `hubspot { access_token }`. Write-only (never returned or logged); live-vs-test key check kept.
-- [ ] **T2** Create no longer upserts: a second integration for a connected provider → 409 `resource_exists`. New `POST /v1/settings/integrations/{id}/actions/rotate-credentials { credentials }` (validated against the provider before saving). `PUT /integrations/{id}` → `PATCH` (`name`, `status`). Delete disconnects and discards credentials; returns the stub.
-- [ ] **T3** `status: active | inactive` → `active | disabled` (deliberate exception to `archived`: integrations are paused and resumed, not retired). New read-only `connection_status: connected | invalid_credentials | unknown` from the last provider call.
+- [x] **T1** `credentials` (a JSON string) → typed object discriminated by `provider`: `stripe { private_key, publishable_key, webhook_secret }`, `shippo { api_key }`, `hubspot { access_token }`. Write-only (never returned or logged); live-vs-test key check kept.
+- [x] **T2** Create no longer upserts: a second integration for a connected provider → 409 `resource_exists`. New `POST /v1/settings/integrations/{id}/actions/rotate-credentials { credentials }` (validated against the provider before saving). `PUT /integrations/{id}` → `PATCH` (`name`, `status`). Delete disconnects and discards credentials; returns the stub.
+- [x] **T3** `status: active | inactive` → `active | disabled` (deliberate exception to `archived`: integrations are paused and resumed, not retired). New read-only `connection_status: connected | invalid_credentials | unknown` from the last provider call.
 - Internal (unchanged): Stripe status/publishable-key, HubSpot sync, billing, system properties, support routes.
 
 Portal domains (public)
-- [ ] **T4** Shape kept (`domain`, `status: pending | securing | verified | failed`, `dns_records`, `verified_at`; one per account). OpenMRP re-checks pending domains in the background; `POST …/actions/verify` stays as "check now". `dns_records` is a plain array of `{ type, name, value }` (not an expandable List), the same shape as email domains (M1).
+- [x] **T4** Shape kept (`domain`, `status: pending | securing | verified | failed`, `dns_records`, `verified_at`; one per account). OpenMRP re-checks pending domains in the background; `POST …/actions/verify` stays as "check now". `dns_records` is a plain array of `{ type, name, value }` (not an expandable List), the same shape as email domains (M1).
 
 Docstrings
 
@@ -1560,7 +1560,7 @@ Sales orders (the order)
 - Lines: `type` (`item | shipping`), `item_id` (no `product`), `sku`, `description`, `quantity`, `line_number`; `unit_price`/`unit_cost` as UnitPrice and `amount` as Money (not expandable); per-line `fulfillment` quantities replace money stage totals; no credit or negative discount lines; lines can't be deleted once packed/shipped (no admin override).
 
 Settings
-- Integration forms send typed `credentials` objects (not JSON strings); reconnecting uses `actions/rotate-credentials` (create on a connected provider → 409); status `inactive` → `disabled`; show `connection_status`. Portal domain verification no longer needs polling.
+- Integration forms send typed `credentials` objects (not JSON strings); reconnecting uses `actions/rotate-credentials` (create on a connected provider → 409); status `inactive` → `disabled`; show `connection_status`. Portal domain verification no longer needs polling. Updates use `PATCH`; credential errors name the key (`credentials.private_key`, not `credentials`); `dns_records` is a plain array. (preview.9 keeps the string credentials, `inactive`, PUT, create-as-upsert and the `dns_records` list.)
 
 Messaging
 - Conversation/message/notification `topic`/`resource` objects → `related` stubs; `unread` → `unread_count`; preference booleans → `channels`; preferences and email sender use PATCH; email sender's `domain`/`domain_status` → include `email_domain`; email domain `dkim_tokens`/`mail_from_*` → `dns_records`; deleted messages arrive as `status: deleted` with null body; notification `change_count` → `occurrences`.

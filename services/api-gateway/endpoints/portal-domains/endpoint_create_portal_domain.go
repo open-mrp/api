@@ -15,9 +15,9 @@ import (
 
 // Request to connect a custom domain to the account's customer portal.
 type CreatePortalDomainRequest struct {
-	// The fully-qualified domain name to connect (e.g. `shop.acme.com`).
+	// The fully qualified domain name, such as `shop.acme.com`.
 	//
-	// A subdomain such as `shop.acme.com` is routed with a CNAME record and an apex domain such as `acme.com` with an A record; either way the records to publish come back on the response. The value is lowercased and any trailing dot is stripped before it is stored, and OpenMRP-owned hostnames are rejected.
+	// A subdomain is routed with a `CNAME` record and an apex domain with an `A` record. The name is lowercased and a trailing dot is dropped. OpenMRP hostnames are rejected.
 	Domain string `json:"domain" validate:"required"`
 }
 
@@ -29,9 +29,9 @@ func (*CreatePortalDomainRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreatePortalDomainRequest)
 }
 
-// Connects a custom domain to the account's customer portal and returns the DNS records to publish.
+// Adds a custom domain to your customer portal.
 //
-// An account can only have one custom domain at a time: adding a second one — or claiming a domain another account already uses — returns a conflict error. The new domain starts in `pending`; publish the returned records at your DNS provider, then run the verify action to move it towards serving.
+// An account has one portal domain: adding a second, or a domain another account uses, is a 409. The domain starts `pending`; publish its `dns_records` at your DNS provider and OpenMRP checks it automatically.
 type CreatePortalDomainEndpoint struct{}
 
 func (e *CreatePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePortalDomainRequest, *apiresource.PortalDomain] {
@@ -43,7 +43,6 @@ func (e *CreatePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePortalDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePortalDomainRequest) (*apiresource.PortalDomain, *apierror.APIError) {

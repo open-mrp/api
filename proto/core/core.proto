@@ -302,8 +302,11 @@ service CoreService {
   // Returns a paginated list of account integrations (credentials excluded).
   rpc ListAccountIntegrations(ListAccountIntegrationsRequest) returns (ListAccountIntegrationsResponse);
 
-  // Creates or upserts an integration; updates existing if same code exists.
+  // Connects a provider once it accepts the credentials; a second integration for a provider is refused unless replace_existing.
   rpc CreateAccountIntegration(CreateAccountIntegrationRequest) returns (CreateAccountIntegrationResponse);
+
+  // Replaces an integration's credentials once the provider accepts them.
+  rpc RotateAccountIntegrationCredentials(RotateAccountIntegrationCredentialsRequest) returns (RotateAccountIntegrationCredentialsResponse);
 
   // Updates name and/or is_active on an integration; credentials cannot be changed.
   rpc UpdateAccountIntegration(UpdateAccountIntegrationRequest) returns (UpdateAccountIntegrationResponse);

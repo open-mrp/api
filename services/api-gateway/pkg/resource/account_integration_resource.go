@@ -11,9 +11,9 @@ import (
 const SampleAccountIntegrationID = "acig_5ilahyezrs63"
 const SampleAccountIntegrationName = "My Stripe Integration"
 
-// Third-party integration connected to an account.
+// A provider connected to your account.
 //
-// An account can have at most one integration per provider. The credentials supplied when the integration was connected are encrypted at rest and are never returned by the API.
+// One connection per provider. Its credentials are encrypted at rest and never returned.
 type AccountIntegration struct {
 	// Account integration ID.
 	ID string `json:"id" validate:"required"`
@@ -21,16 +21,22 @@ type AccountIntegration struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_integration"`
 	// Display name of the integration.
 	Name string `json:"name" validate:"required"`
-	// Integration provider code.
+	// The connected provider.
 	//
 	// - `stripe`: Stripe payment processing.
-	// - `shippo`: Shippo shipping and label generation.
+	// - `shippo`: Shippo shipping rates and labels.
 	// - `hubspot`: HubSpot CRM.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
-	// Lifecycle status of the integration.
+	// Whether OpenMRP uses this integration: `active` or `disabled`.
 	//
-	// Integrations are created `active`. Setting an integration to `inactive` keeps its stored credentials but stops it from being used (for example, the Stripe publishable key cannot be retrieved while the Stripe integration is inactive).
-	Status constants.AccountIntegrationStatus `json:"status" validate:"required"`
+	// A disabled integration keeps its credentials but isn't used until it is set back to `active`.
+	Status constants.PauseStatus `json:"status" validate:"required"`
+	// Whether the last call to the provider succeeded.
+	//
+	// - `connected`: the provider accepted the credentials.
+	// - `invalid_credentials`: the provider rejected them; rotate the credentials.
+	// - `unknown`: OpenMRP hasn't called the provider yet.
+	ConnectionStatus constants.IntegrationConnectionStatus `json:"connection_status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -38,13 +44,14 @@ type AccountIntegration struct {
 }
 
 var SampleAccountIntegration = &AccountIntegration{
-	ID:              SampleAccountIntegrationID,
-	Object:          constants.ObjectTypeAccountIntegration,
-	Name:            SampleAccountIntegrationName,
-	IntegrationCode: constants.IntegrationCodeStripe,
-	Status:          constants.AccountIntegrationStatusActive,
-	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:               SampleAccountIntegrationID,
+	Object:           constants.ObjectTypeAccountIntegration,
+	Name:             SampleAccountIntegrationName,
+	IntegrationCode:  constants.IntegrationCodeStripe,
+	Status:           constants.PauseStatusActive,
+	ConnectionStatus: constants.IntegrationConnectionStatusConnected,
+	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountIntegration) SchemaExample() any {

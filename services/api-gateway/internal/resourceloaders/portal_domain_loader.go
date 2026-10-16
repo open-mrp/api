@@ -31,21 +31,19 @@ func LoadPortalDomains(ctx context.Context, ids []string) (map[string]any, *apie
 
 	out := make(map[string]any, len(resp.PortalDomains))
 	for _, d := range resp.PortalDomains {
-		out[d.Id] = portalDomainBaseFromProto(d)
+		out[d.Id] = PortalDomainFromProto(d)
 	}
 	return out, nil
 }
 
-// portalDomainBaseFromProto maps a portal domain proto to its API resource. It mirrors portalDomainFromProto in the portal-domains endpoint package, duplicated here because that package would otherwise form an import cycle with resourceloaders.
-func portalDomainBaseFromProto(d *pb.PortalDomainInfo) *apiresource.PortalDomain {
-	records := make([]apiresource.DNSRecord, 0, len(d.DnsRecords))
+// PortalDomainFromProto maps a portal domain proto to its API resource.
+func PortalDomainFromProto(d *pb.PortalDomainInfo) *apiresource.PortalDomain {
+	records := make([]apiresource.PortalDNSRecord, 0, len(d.DnsRecords))
 	for _, r := range d.DnsRecords {
-		records = append(records, apiresource.DNSRecord{
-			Object: constants.ObjectTypeDNSRecord,
-			Type:   constants.DNSRecordType(r.Type),
-			Name:   r.Name,
-			Value:  r.Value,
-			Reason: constants.DNSRecordReason(r.Reason),
+		records = append(records, apiresource.PortalDNSRecord{
+			Type:  constants.DNSRecordType(r.Type),
+			Name:  r.Name,
+			Value: r.Value,
 		})
 	}
 
@@ -54,7 +52,7 @@ func portalDomainBaseFromProto(d *pb.PortalDomainInfo) *apiresource.PortalDomain
 		Object:     constants.ObjectTypePortalDomain,
 		Domain:     d.Domain,
 		Status:     constants.PortalDomainStatus(d.Status),
-		DNSRecords: apiresource.NewList(records, apiresource.PageInfo{}),
+		DNSRecords: records,
 		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
 		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),

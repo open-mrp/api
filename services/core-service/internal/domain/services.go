@@ -351,8 +351,11 @@ type AccountIntegrationSvc interface {
 	// ListAccountIntegrations returns a paginated list of integrations for the caller's account.
 	ListAccountIntegrations(ctx context.Context, params ListAccountIntegrationsParams) (*ListAccountIntegrationsResult, *apierror.APIError)
 
-	// CreateAccountIntegration creates or upserts an integration. If one with the same code exists, it updates name and credentials instead of inserting.
+	// CreateAccountIntegration connects a provider after checking its credentials with it. A second integration for a provider is refused unless params.ReplaceExisting.
 	CreateAccountIntegration(ctx context.Context, params CreateAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
+
+	// RotateAccountIntegrationCredentials replaces an integration's credentials once the provider accepts them.
+	RotateAccountIntegrationCredentials(ctx context.Context, params RotateAccountIntegrationCredentialsParams) (*AccountIntegration, *apierror.APIError)
 
 	// UpdateAccountIntegration updates name and/or is_active on an integration.
 	UpdateAccountIntegration(ctx context.Context, params UpdateAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
@@ -1837,6 +1840,9 @@ type PortalDomainSvc interface {
 	DeletePortalDomain(ctx context.Context, portalDomainID string) *apierror.APIError
 	ResolvePortalHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
 	BatchGetPortalDomainsByIDs(ctx context.Context, ids []string) ([]*PortalDomain, *apierror.APIError)
+	// RecheckPendingDomains checks pending and securing domains that have waited at least interval since their last
+	// check, and returns how many became verified.
+	RecheckPendingDomains(ctx context.Context, interval time.Duration, limit int32) (int, *apierror.APIError)
 }
 
 // CustomerRegistrar registers the authenticated buyer as a customer of a seller account. Implemented by the registration-flow service; injected into the portal registration-session service so completion reuses the existing one-shot registration logic.

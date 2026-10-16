@@ -450,11 +450,14 @@ type AccountIntegrationRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*AccountIntegration, *apierror.APIError)
 	FindByCode(ctx context.Context, accountID string, code constants.IntegrationCode) (*AccountIntegration, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateAccountIntegrationParams, encryptedCredentials string) (*AccountIntegration, *apierror.APIError)
-	UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*AccountIntegration, *apierror.APIError)
+	UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, connection constants.IntegrationConnectionStatus) (*AccountIntegration, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	GetEncryptedCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (credentials string, isActive bool, err *apierror.APIError)
 	HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError)
+	// SetConnectionStatus records the outcome of a provider call, reporting whether the status changed; it writes only
+	// when it does.
+	SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError)
 }
 
 // HubspotSyncRepo persists the HubSpot backfill state: jobs (state machine), the generic OpenMRP->HubSpot id mapping, and the company-match review queue.
@@ -2087,6 +2090,10 @@ type PortalDomainRepo interface {
 	// UpdateProviderState persists the latest required DNS records and status reported by the serving provider.
 	UpdateProviderState(ctx context.Context, portalDomainID string, status constants.PortalDomainStatus, dnsRecords []PortalDNSRecord) *apierror.APIError
 	MarkVerified(ctx context.Context, portalDomainID string) *apierror.APIError
+	// ListToRecheck returns pending or securing domains, of any account, last checked before checkedBefore.
+	ListToRecheck(ctx context.Context, checkedBefore time.Time, limit int32) ([]*PortalDomain, *apierror.APIError)
+	// TouchChecked stamps the domain's background check time.
+	TouchChecked(ctx context.Context, portalDomainID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, portalDomainID string) (bool, *apierror.APIError)
 	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
 	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)

@@ -11,8 +11,6 @@ services/core-service/internal/infrastructure/sqlc/account_group.sql.go:listAcco
 services/core-service/internal/infrastructure/sqlc/account_group.sql.go:listAccountGroupsForward 3
 services/core-service/internal/infrastructure/sqlc/account_group_product_line_access.sql.go:listAccountGroupProductLineAccessBackward 1
 services/core-service/internal/infrastructure/sqlc/account_group_product_line_access.sql.go:listAccountGroupProductLineAccessForward 2
-services/core-service/internal/infrastructure/sqlc/account_integration.sql.go:listAccountIntegrationsBackward 1
-services/core-service/internal/infrastructure/sqlc/account_integration.sql.go:listAccountIntegrationsForward 2
 services/core-service/internal/infrastructure/sqlc/account_price.sql.go:listAccountPricesBackward 2
 services/core-service/internal/infrastructure/sqlc/account_price.sql.go:listAccountPricesForward 3
 services/core-service/internal/infrastructure/sqlc/account_status.sql.go:listAccountStatusesBackward 1

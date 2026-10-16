@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -4957,8 +4958,10 @@ type AccountIntegrationInfo struct {
 	IsActive        bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// connected | invalid_credentials | unknown: whether the provider accepted the last call.
+	ConnectionStatus string `protobuf:"bytes,7,opt,name=connection_status,json=connectionStatus,proto3" json:"connection_status,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AccountIntegrationInfo) Reset() {
@@ -5033,11 +5036,20 @@ func (x *AccountIntegrationInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AccountIntegrationInfo) GetConnectionStatus() string {
+	if x != nil {
+		return x.ConnectionStatus
+	}
+	return ""
+}
+
 type ListAccountIntegrationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query  *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Unset lists active and disabled integrations.
+	IsActive      *bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5091,6 +5103,13 @@ func (x *ListAccountIntegrationsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListAccountIntegrationsRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
 }
 
 type ListAccountIntegrationsResponse struct {
@@ -5150,9 +5169,13 @@ type CreateAccountIntegrationRequest struct {
 	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	IntegrationCode string                 `protobuf:"bytes,2,opt,name=integration_code,json=integrationCode,proto3" json:"integration_code,omitempty"`
 	// JSON-encoded credentials specific to the integration type.
-	Credentials   string `protobuf:"bytes,3,opt,name=credentials,proto3" json:"credentials,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Credentials string `protobuf:"bytes,3,opt,name=credentials,proto3" json:"credentials,omitempty"`
+	// Unset starts the integration active.
+	IsActive *bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// Rotates the provider's existing integration in place instead of refusing a second one (1.0.forge-preview.9's upsert).
+	ReplaceExisting bool `protobuf:"varint,5,opt,name=replace_existing,json=replaceExisting,proto3" json:"replace_existing,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateAccountIntegrationRequest) Reset() {
@@ -5204,6 +5227,20 @@ func (x *CreateAccountIntegrationRequest) GetCredentials() string {
 		return x.Credentials
 	}
 	return ""
+}
+
+func (x *CreateAccountIntegrationRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+func (x *CreateAccountIntegrationRequest) GetReplaceExisting() bool {
+	if x != nil {
+		return x.ReplaceExisting
+	}
+	return false
 }
 
 type CreateAccountIntegrationResponse struct {
@@ -5354,6 +5391,103 @@ func (x *UpdateAccountIntegrationResponse) GetAccountIntegration() *AccountInteg
 	return nil
 }
 
+type RotateAccountIntegrationCredentialsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// JSON-encoded credentials for the integration's provider.
+	Credentials   string `protobuf:"bytes,2,opt,name=credentials,proto3" json:"credentials,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateAccountIntegrationCredentialsRequest) Reset() {
+	*x = RotateAccountIntegrationCredentialsRequest{}
+	mi := &file_core_core_account_groups_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateAccountIntegrationCredentialsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateAccountIntegrationCredentialsRequest) ProtoMessage() {}
+
+func (x *RotateAccountIntegrationCredentialsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_account_groups_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateAccountIntegrationCredentialsRequest.ProtoReflect.Descriptor instead.
+func (*RotateAccountIntegrationCredentialsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *RotateAccountIntegrationCredentialsRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RotateAccountIntegrationCredentialsRequest) GetCredentials() string {
+	if x != nil {
+		return x.Credentials
+	}
+	return ""
+}
+
+type RotateAccountIntegrationCredentialsResponse struct {
+	state              protoimpl.MessageState  `protogen:"open.v1"`
+	AccountIntegration *AccountIntegrationInfo `protobuf:"bytes,1,opt,name=account_integration,json=accountIntegration,proto3" json:"account_integration,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *RotateAccountIntegrationCredentialsResponse) Reset() {
+	*x = RotateAccountIntegrationCredentialsResponse{}
+	mi := &file_core_core_account_groups_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateAccountIntegrationCredentialsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateAccountIntegrationCredentialsResponse) ProtoMessage() {}
+
+func (x *RotateAccountIntegrationCredentialsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_account_groups_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateAccountIntegrationCredentialsResponse.ProtoReflect.Descriptor instead.
+func (*RotateAccountIntegrationCredentialsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *RotateAccountIntegrationCredentialsResponse) GetAccountIntegration() *AccountIntegrationInfo {
+	if x != nil {
+		return x.AccountIntegration
+	}
+	return nil
+}
+
 type DeleteAccountIntegrationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -5363,7 +5497,7 @@ type DeleteAccountIntegrationRequest struct {
 
 func (x *DeleteAccountIntegrationRequest) Reset() {
 	*x = DeleteAccountIntegrationRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[89]
+	mi := &file_core_core_account_groups_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5375,7 +5509,7 @@ func (x *DeleteAccountIntegrationRequest) String() string {
 func (*DeleteAccountIntegrationRequest) ProtoMessage() {}
 
 func (x *DeleteAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[89]
+	mi := &file_core_core_account_groups_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5388,7 +5522,7 @@ func (x *DeleteAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountIntegrationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAccountIntegrationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{89}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *DeleteAccountIntegrationRequest) GetId() string {
@@ -5407,7 +5541,7 @@ type DeleteAccountIntegrationResponse struct {
 
 func (x *DeleteAccountIntegrationResponse) Reset() {
 	*x = DeleteAccountIntegrationResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[90]
+	mi := &file_core_core_account_groups_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5419,7 +5553,7 @@ func (x *DeleteAccountIntegrationResponse) String() string {
 func (*DeleteAccountIntegrationResponse) ProtoMessage() {}
 
 func (x *DeleteAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[90]
+	mi := &file_core_core_account_groups_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5432,7 +5566,7 @@ func (x *DeleteAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountIntegrationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAccountIntegrationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{90}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *DeleteAccountIntegrationResponse) GetAccountIntegration() *AccountIntegrationInfo {
@@ -5452,7 +5586,7 @@ type BatchGetAccountIntegrationsByIDsRequest struct {
 
 func (x *BatchGetAccountIntegrationsByIDsRequest) Reset() {
 	*x = BatchGetAccountIntegrationsByIDsRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[91]
+	mi := &file_core_core_account_groups_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5464,7 +5598,7 @@ func (x *BatchGetAccountIntegrationsByIDsRequest) String() string {
 func (*BatchGetAccountIntegrationsByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetAccountIntegrationsByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[91]
+	mi := &file_core_core_account_groups_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5477,7 +5611,7 @@ func (x *BatchGetAccountIntegrationsByIDsRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use BatchGetAccountIntegrationsByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetAccountIntegrationsByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{91}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *BatchGetAccountIntegrationsByIDsRequest) GetIds() []string {
@@ -5496,7 +5630,7 @@ type BatchGetAccountIntegrationsByIDsResponse struct {
 
 func (x *BatchGetAccountIntegrationsByIDsResponse) Reset() {
 	*x = BatchGetAccountIntegrationsByIDsResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[92]
+	mi := &file_core_core_account_groups_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5508,7 +5642,7 @@ func (x *BatchGetAccountIntegrationsByIDsResponse) String() string {
 func (*BatchGetAccountIntegrationsByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetAccountIntegrationsByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[92]
+	mi := &file_core_core_account_groups_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5521,7 +5655,7 @@ func (x *BatchGetAccountIntegrationsByIDsResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use BatchGetAccountIntegrationsByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetAccountIntegrationsByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{92}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *BatchGetAccountIntegrationsByIDsResponse) GetAccountIntegrations() []*AccountIntegrationInfo {
@@ -5539,7 +5673,7 @@ type GetStripePublishableKeyRequest struct {
 
 func (x *GetStripePublishableKeyRequest) Reset() {
 	*x = GetStripePublishableKeyRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[93]
+	mi := &file_core_core_account_groups_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5551,7 +5685,7 @@ func (x *GetStripePublishableKeyRequest) String() string {
 func (*GetStripePublishableKeyRequest) ProtoMessage() {}
 
 func (x *GetStripePublishableKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[93]
+	mi := &file_core_core_account_groups_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5564,7 +5698,7 @@ func (x *GetStripePublishableKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePublishableKeyRequest.ProtoReflect.Descriptor instead.
 func (*GetStripePublishableKeyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{93}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{95}
 }
 
 type GetStripePublishableKeyResponse struct {
@@ -5576,7 +5710,7 @@ type GetStripePublishableKeyResponse struct {
 
 func (x *GetStripePublishableKeyResponse) Reset() {
 	*x = GetStripePublishableKeyResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[94]
+	mi := &file_core_core_account_groups_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5588,7 +5722,7 @@ func (x *GetStripePublishableKeyResponse) String() string {
 func (*GetStripePublishableKeyResponse) ProtoMessage() {}
 
 func (x *GetStripePublishableKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[94]
+	mi := &file_core_core_account_groups_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5601,7 +5735,7 @@ func (x *GetStripePublishableKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePublishableKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetStripePublishableKeyResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{94}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *GetStripePublishableKeyResponse) GetPublishableKey() string {
@@ -5619,7 +5753,7 @@ type GetStripeStatusRequest struct {
 
 func (x *GetStripeStatusRequest) Reset() {
 	*x = GetStripeStatusRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[95]
+	mi := &file_core_core_account_groups_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5631,7 +5765,7 @@ func (x *GetStripeStatusRequest) String() string {
 func (*GetStripeStatusRequest) ProtoMessage() {}
 
 func (x *GetStripeStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[95]
+	mi := &file_core_core_account_groups_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5644,7 +5778,7 @@ func (x *GetStripeStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripeStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStripeStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{95}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{97}
 }
 
 var File_core_core_account_groups_proto protoreflect.FileDescriptor
@@ -6081,7 +6215,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"-BatchGetCustomerProductLineAccessByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"k\n" +
 	".BatchGetCustomerProductLineAccessByIDsResponse\x129\n" +
-	"\x05items\x18\x01 \x03(\v2#.core.CustomerProductLineAccessInfoR\x05items\"\xfa\x01\n" +
+	"\x05items\x18\x01 \x03(\v2#.core.CustomerProductLineAccessInfoR\x05items\"\xa7\x02\n" +
 	"\x16AccountIntegrationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12)\n" +
@@ -6090,20 +6224,28 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x83\x01\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12+\n" +
+	"\x11connection_status\x18\a \x01(\tR\x10connectionStatus\"\xb3\x01\n" +
 	"\x1eListAccountIntegrationsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\x9f\x01\n" +
+	"\x06_queryB\f\n" +
+	"\n" +
+	"_is_active\"\x9f\x01\n" +
 	"\x1fListAccountIntegrationsResponse\x12O\n" +
 	"\x14account_integrations\x18\x01 \x03(\v2\x1c.core.AccountIntegrationInfoR\x13accountIntegrations\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x82\x01\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xdd\x01\n" +
 	"\x1fCreateAccountIntegrationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12)\n" +
 	"\x10integration_code\x18\x02 \x01(\tR\x0fintegrationCode\x12 \n" +
-	"\vcredentials\x18\x03 \x01(\tR\vcredentials\"q\n" +
+	"\vcredentials\x18\x03 \x01(\tR\vcredentials\x12 \n" +
+	"\tis_active\x18\x04 \x01(\bH\x00R\bisActive\x88\x01\x01\x12)\n" +
+	"\x10replace_existing\x18\x05 \x01(\bR\x0freplaceExistingB\f\n" +
+	"\n" +
+	"_is_active\"q\n" +
 	" CreateAccountIntegrationResponse\x12M\n" +
 	"\x13account_integration\x18\x01 \x01(\v2\x1c.core.AccountIntegrationInfoR\x12accountIntegration\"\x83\x01\n" +
 	"\x1fUpdateAccountIntegrationRequest\x12\x0e\n" +
@@ -6114,6 +6256,11 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"_is_active\"q\n" +
 	" UpdateAccountIntegrationResponse\x12M\n" +
+	"\x13account_integration\x18\x01 \x01(\v2\x1c.core.AccountIntegrationInfoR\x12accountIntegration\"^\n" +
+	"*RotateAccountIntegrationCredentialsRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
+	"\vcredentials\x18\x02 \x01(\tR\vcredentials\"|\n" +
+	"+RotateAccountIntegrationCredentialsResponse\x12M\n" +
 	"\x13account_integration\x18\x01 \x01(\v2\x1c.core.AccountIntegrationInfoR\x12accountIntegration\"1\n" +
 	"\x1fDeleteAccountIntegrationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"q\n" +
@@ -6140,7 +6287,7 @@ func file_core_core_account_groups_proto_rawDescGZIP() []byte {
 	return file_core_core_account_groups_proto_rawDescData
 }
 
-var file_core_core_account_groups_proto_msgTypes = make([]protoimpl.MessageInfo, 96)
+var file_core_core_account_groups_proto_msgTypes = make([]protoimpl.MessageInfo, 98)
 var file_core_core_account_groups_proto_goTypes = []any{
 	(*AccountGroupInfo)(nil),                                   // 0: core.AccountGroupInfo
 	(*ListAccountGroupsRequest)(nil),                           // 1: core.ListAccountGroupsRequest
@@ -6231,112 +6378,115 @@ var file_core_core_account_groups_proto_goTypes = []any{
 	(*CreateAccountIntegrationResponse)(nil),                   // 86: core.CreateAccountIntegrationResponse
 	(*UpdateAccountIntegrationRequest)(nil),                    // 87: core.UpdateAccountIntegrationRequest
 	(*UpdateAccountIntegrationResponse)(nil),                   // 88: core.UpdateAccountIntegrationResponse
-	(*DeleteAccountIntegrationRequest)(nil),                    // 89: core.DeleteAccountIntegrationRequest
-	(*DeleteAccountIntegrationResponse)(nil),                   // 90: core.DeleteAccountIntegrationResponse
-	(*BatchGetAccountIntegrationsByIDsRequest)(nil),            // 91: core.BatchGetAccountIntegrationsByIDsRequest
-	(*BatchGetAccountIntegrationsByIDsResponse)(nil),           // 92: core.BatchGetAccountIntegrationsByIDsResponse
-	(*GetStripePublishableKeyRequest)(nil),                     // 93: core.GetStripePublishableKeyRequest
-	(*GetStripePublishableKeyResponse)(nil),                    // 94: core.GetStripePublishableKeyResponse
-	(*GetStripeStatusRequest)(nil),                             // 95: core.GetStripeStatusRequest
-	(*timestamppb.Timestamp)(nil),                              // 96: google.protobuf.Timestamp
-	(*PageInfo)(nil),                                           // 97: core.PageInfo
-	(*StringPatch)(nil),                                        // 98: core.StringPatch
-	(*Int32Patch)(nil),                                         // 99: core.Int32Patch
-	(*AccountUserDetail)(nil),                                  // 100: core.AccountUserDetail
-	(*Money)(nil),                                              // 101: core.Money
-	(*JobInfo)(nil),                                            // 102: core.JobInfo
+	(*RotateAccountIntegrationCredentialsRequest)(nil),         // 89: core.RotateAccountIntegrationCredentialsRequest
+	(*RotateAccountIntegrationCredentialsResponse)(nil),        // 90: core.RotateAccountIntegrationCredentialsResponse
+	(*DeleteAccountIntegrationRequest)(nil),                    // 91: core.DeleteAccountIntegrationRequest
+	(*DeleteAccountIntegrationResponse)(nil),                   // 92: core.DeleteAccountIntegrationResponse
+	(*BatchGetAccountIntegrationsByIDsRequest)(nil),            // 93: core.BatchGetAccountIntegrationsByIDsRequest
+	(*BatchGetAccountIntegrationsByIDsResponse)(nil),           // 94: core.BatchGetAccountIntegrationsByIDsResponse
+	(*GetStripePublishableKeyRequest)(nil),                     // 95: core.GetStripePublishableKeyRequest
+	(*GetStripePublishableKeyResponse)(nil),                    // 96: core.GetStripePublishableKeyResponse
+	(*GetStripeStatusRequest)(nil),                             // 97: core.GetStripeStatusRequest
+	(*timestamppb.Timestamp)(nil),                              // 98: google.protobuf.Timestamp
+	(*PageInfo)(nil),                                           // 99: core.PageInfo
+	(*StringPatch)(nil),                                        // 100: core.StringPatch
+	(*Int32Patch)(nil),                                         // 101: core.Int32Patch
+	(*AccountUserDetail)(nil),                                  // 102: core.AccountUserDetail
+	(*Money)(nil),                                              // 103: core.Money
+	(*JobInfo)(nil),                                            // 104: core.JobInfo
 }
 var file_core_core_account_groups_proto_depIdxs = []int32{
-	96,  // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 1: core.AccountGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 1: core.AccountGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
 	0,   // 2: core.ListAccountGroupsResponse.account_groups:type_name -> core.AccountGroupInfo
-	97,  // 3: core.ListAccountGroupsResponse.page_info:type_name -> core.PageInfo
+	99,  // 3: core.ListAccountGroupsResponse.page_info:type_name -> core.PageInfo
 	0,   // 4: core.GetAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
 	0,   // 5: core.CreateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
-	98,  // 6: core.UpdateAccountGroupRequest.description:type_name -> core.StringPatch
-	99,  // 7: core.UpdateAccountGroupRequest.default_lead_time_days:type_name -> core.Int32Patch
+	100, // 6: core.UpdateAccountGroupRequest.description:type_name -> core.StringPatch
+	101, // 7: core.UpdateAccountGroupRequest.default_lead_time_days:type_name -> core.Int32Patch
 	0,   // 8: core.UpdateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
 	0,   // 9: core.BatchGetAccountGroupsByIDsResponse.account_groups:type_name -> core.AccountGroupInfo
-	100, // 10: core.CustomerNotificationRecipientProto.account_user:type_name -> core.AccountUserDetail
+	102, // 10: core.CustomerNotificationRecipientProto.account_user:type_name -> core.AccountUserDetail
 	13,  // 11: core.ListCustomerNotificationRecipientsResponse.recipients:type_name -> core.CustomerNotificationRecipientProto
 	12,  // 12: core.UpdateCustomerNotificationRecipientsRequest.recipients:type_name -> core.CustomerNotificationRecipientInputProto
 	13,  // 13: core.UpdateCustomerNotificationRecipientsResponse.recipients:type_name -> core.CustomerNotificationRecipientProto
-	100, // 14: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
-	97,  // 15: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
-	100, // 16: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	102, // 14: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
+	99,  // 15: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
+	102, // 16: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
 	22,  // 17: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	100, // 18: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	98,  // 19: core.UpdateAccountUserRequest.role_id:type_name -> core.StringPatch
-	98,  // 20: core.UpdateAccountUserRequest.department_id:type_name -> core.StringPatch
+	102, // 18: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	100, // 19: core.UpdateAccountUserRequest.role_id:type_name -> core.StringPatch
+	100, // 20: core.UpdateAccountUserRequest.department_id:type_name -> core.StringPatch
 	22,  // 21: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	100, // 22: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	100, // 23: core.BatchGetAccountUsersByIDsResponse.account_users:type_name -> core.AccountUserDetail
-	101, // 24: core.SalesTargetProto.amount:type_name -> core.Money
+	102, // 22: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	102, // 23: core.BatchGetAccountUsersByIDsResponse.account_users:type_name -> core.AccountUserDetail
+	103, // 24: core.SalesTargetProto.amount:type_name -> core.Money
 	31,  // 25: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
-	101, // 26: core.CreateSalesTargetRequest.amount:type_name -> core.Money
+	103, // 26: core.CreateSalesTargetRequest.amount:type_name -> core.Money
 	31,  // 27: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	101, // 28: core.UpsertSalesTargetRequest.amount:type_name -> core.Money
+	103, // 28: core.UpsertSalesTargetRequest.amount:type_name -> core.Money
 	31,  // 29: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
 	39,  // 30: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
 	40,  // 31: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
 	41,  // 32: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
 	43,  // 33: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
 	44,  // 34: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
-	96,  // 35: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 36: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 37: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 38: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 39: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 40: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 35: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 36: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 37: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 38: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 39: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 40: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
 	42,  // 41: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
 	42,  // 42: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
-	96,  // 43: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 44: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 45: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 46: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 47: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 48: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 49: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 50: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	102, // 51: core.ExportPriceListResponse.job:type_name -> core.JobInfo
+	98,  // 43: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 44: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 45: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 46: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 47: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 48: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 49: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 50: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 51: core.ExportPriceListResponse.job:type_name -> core.JobInfo
 	38,  // 52: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
-	97,  // 53: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
+	99,  // 53: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
 	38,  // 54: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
 	38,  // 55: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
 	54,  // 56: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
 	54,  // 57: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
 	38,  // 58: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
 	58,  // 59: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	96,  // 60: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 61: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 60: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 61: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
 	57,  // 62: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	97,  // 63: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	99,  // 63: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
 	57,  // 64: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
 	57,  // 65: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
 	57,  // 66: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
 	57,  // 67: core.BatchGetAccountGroupProductLineAccessByIDsResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
 	58,  // 68: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	96,  // 69: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 70: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 69: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 70: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
 	70,  // 71: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	97,  // 72: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	99,  // 72: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
 	70,  // 73: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
 	70,  // 74: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
 	70,  // 75: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
 	70,  // 76: core.BatchGetCustomerProductLineAccessByIDsResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	96,  // 77: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 78: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 77: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 78: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
 	82,  // 79: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	97,  // 80: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
+	99,  // 80: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
 	82,  // 81: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
 	82,  // 82: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	82,  // 83: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	82,  // 84: core.BatchGetAccountIntegrationsByIDsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	85,  // [85:85] is the sub-list for method output_type
-	85,  // [85:85] is the sub-list for method input_type
-	85,  // [85:85] is the sub-list for extension type_name
-	85,  // [85:85] is the sub-list for extension extendee
-	0,   // [0:85] is the sub-list for field type_name
+	82,  // 83: core.RotateAccountIntegrationCredentialsResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	82,  // 84: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	82,  // 85: core.BatchGetAccountIntegrationsByIDsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	86,  // [86:86] is the sub-list for method output_type
+	86,  // [86:86] is the sub-list for method input_type
+	86,  // [86:86] is the sub-list for extension type_name
+	86,  // [86:86] is the sub-list for extension extendee
+	0,   // [0:86] is the sub-list for field type_name
 }
 
 func init() { file_core_core_account_groups_proto_init() }
@@ -6361,6 +6511,7 @@ func file_core_core_account_groups_proto_init() {
 	file_core_core_account_groups_proto_msgTypes[59].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[71].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[83].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[85].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[87].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -6368,7 +6519,7 @@ func file_core_core_account_groups_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_account_groups_proto_rawDesc), len(file_core_core_account_groups_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   96,
+			NumMessages:   98,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

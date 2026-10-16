@@ -98,6 +98,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.portalDomainRepo = repositorymock.NewMockPortalDomainRepo(suite.ctrl)
 	suite.accountUserRepo = repositorymock.NewMockAccountUserRepo(suite.ctrl)
 	suite.accountIntegrationRepo = repositorymock.NewMockAccountIntegrationRepo(suite.ctrl)
+	suite.accountIntegrationRepo.EXPECT().FindByCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.AccountIntegration{ConnectionStatus: constants.IntegrationConnectionStatusConnected}, nil).AnyTimes()
 	suite.addressRepo = repositorymock.NewMockAddressRepo(suite.ctrl)
 	suite.batchRepo = repositorymock.NewMockBatchRepo(suite.ctrl)
 	suite.customerRepo = repositorymock.NewMockCustomerRepo(suite.ctrl)

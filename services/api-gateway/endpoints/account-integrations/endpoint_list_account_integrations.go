@@ -13,18 +13,18 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Request to list account integrations.
+// Request to list integrations.
 type ListAccountIntegrationsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return integrations with one of these statuses. Omit to return all statuses.
+	Statuses []constants.PauseStatus `query:"statuses"`
 }
 
-// Returns a paginated list of the third-party providers connected to the target account.
+// Returns a list of your account's integrations.
 //
-// Stored credentials are never included in the response.
+// Credentials are never included. Integrations are sorted by creation date, newest first.
 type ListAccountIntegrationsEndpoint struct{}
 
 func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountIntegrationsRequest, *apiresource.List[apiresource.AccountIntegration]] {
@@ -37,7 +37,6 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).ListAccountIntegrations

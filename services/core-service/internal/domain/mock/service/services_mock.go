@@ -2058,6 +2058,21 @@ func (mr *MockAccountIntegrationSvcMockRecorder) ListAccountIntegrations(ctx, pa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountIntegrations", reflect.TypeOf((*MockAccountIntegrationSvc)(nil).ListAccountIntegrations), ctx, params)
 }
 
+// RotateAccountIntegrationCredentials mocks base method.
+func (m *MockAccountIntegrationSvc) RotateAccountIntegrationCredentials(ctx context.Context, params domain.RotateAccountIntegrationCredentialsParams) (*domain.AccountIntegration, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RotateAccountIntegrationCredentials", ctx, params)
+	ret0, _ := ret[0].(*domain.AccountIntegration)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RotateAccountIntegrationCredentials indicates an expected call of RotateAccountIntegrationCredentials.
+func (mr *MockAccountIntegrationSvcMockRecorder) RotateAccountIntegrationCredentials(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateAccountIntegrationCredentials", reflect.TypeOf((*MockAccountIntegrationSvc)(nil).RotateAccountIntegrationCredentials), ctx, params)
+}
+
 // UpdateAccountIntegration mocks base method.
 func (m *MockAccountIntegrationSvc) UpdateAccountIntegration(ctx context.Context, params domain.UpdateAccountIntegrationParams) (*domain.AccountIntegration, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11536,6 +11551,21 @@ func (m *MockPortalDomainSvc) ListPortalDomains(ctx context.Context) ([]*domain.
 func (mr *MockPortalDomainSvcMockRecorder) ListPortalDomains(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPortalDomains", reflect.TypeOf((*MockPortalDomainSvc)(nil).ListPortalDomains), ctx)
+}
+
+// RecheckPendingDomains mocks base method.
+func (m *MockPortalDomainSvc) RecheckPendingDomains(ctx context.Context, interval time.Duration, limit int32) (int, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecheckPendingDomains", ctx, interval, limit)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RecheckPendingDomains indicates an expected call of RecheckPendingDomains.
+func (mr *MockPortalDomainSvcMockRecorder) RecheckPendingDomains(ctx, interval, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecheckPendingDomains", reflect.TypeOf((*MockPortalDomainSvc)(nil).RecheckPendingDomains), ctx, interval, limit)
 }
 
 // ResolvePortalHost mocks base method.

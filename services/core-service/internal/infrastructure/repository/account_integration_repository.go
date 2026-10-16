@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -28,78 +29,66 @@ func (r *accountIntegrationRepoImpl) List(ctx context.Context, params domain.Lis
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.list")
 	defer span.End()
 
-	var searchQuery sql.NullString
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = sql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
-	}
-
+	dir := pagination.DirectionForward
+	var cursor *pagination.StringCursor
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListAccountIntegrationsBackward(ctx, sqlc.ListAccountIntegrationsBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-
-			integrations := make([]*domain.AccountIntegration, len(rows))
-			for i, row := range rows {
-				integrations[i] = mapBackwardIntegrationRow(row)
-			}
-
-			items, pageInfo := pagination.BuildPageString(integrations, params.Limit, cursorDir, integrationCreatedAt, integrationID)
-			return &domain.ListAccountIntegrationsResult{AccountIntegrations: items, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListAccountIntegrationsForward(ctx, sqlc.ListAccountIntegrationsForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: sql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        sql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		integrations := make([]*domain.AccountIntegration, len(rows))
-		for i, row := range rows {
-			integrations[i] = mapForwardIntegrationRow(row)
-		}
-
-		items, pageInfo := pagination.BuildPageString(integrations, params.Limit, cursorDir, integrationCreatedAt, integrationID)
-		return &domain.ListAccountIntegrationsResult{AccountIntegrations: items, PageInfo: pageInfo}, nil
+		cursor, cursorDir, dir = &cur, &cur.Direction, cur.Direction
 	}
 
-	// No cursor — forward query
-	rows, err := r.queries.ListAccountIntegrationsForward(ctx, sqlc.ListAccountIntegrationsForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
-	})
+	query, args := buildAccountIntegrationListQuery(params, dir, cursor, params.Limit+1)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	integrations := make([]*domain.AccountIntegration, len(rows))
-	for i, row := range rows {
-		integrations[i] = mapForwardIntegrationRow(row)
+	defer func() { _ = rows.Close() }()
+	var integrations []*domain.AccountIntegration
+	for rows.Next() {
+		var ai domain.AccountIntegration
+		var code, connection string
+		if err := rows.Scan(&ai.ID, &ai.AccountID, &code, &ai.Name, &ai.IsActive, &connection, &ai.CreatedAt, &ai.UpdatedAt); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		ai.IntegrationCode = constants.IntegrationCode(code)
+		ai.ConnectionStatus = constants.IntegrationConnectionStatus(connection)
+		integrations = append(integrations, &ai)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	items, pageInfo := pagination.BuildPageString(integrations, params.Limit, cursorDir, integrationCreatedAt, integrationID)
 	return &domain.ListAccountIntegrationsResult{AccountIntegrations: items, PageInfo: pageInfo}, nil
+}
+
+// buildAccountIntegrationListQuery emits only the filters the caller supplied. An account has one integration per
+// provider, so the scope's unique key reads at most a handful of rows.
+func buildAccountIntegrationListQuery(params domain.ListAccountIntegrationsParams, dir pagination.Direction, cursor *pagination.StringCursor, limit int32) (string, []any) {
+	where := []string{"account_id = ?"}
+	args := []any{params.AccountID}
+	if params.Query != nil && *params.Query != "" {
+		where, args = append(where, "name LIKE ?"), append(args, "%"+db.EscapeLike(*params.Query)+"%")
+	}
+	if params.IsActive != nil {
+		where, args = append(where, "is_active = ?"), append(args, *params.IsActive)
+	}
+	order := " ORDER BY created_at DESC, id DESC"
+	if cursor != nil {
+		if dir == pagination.DirectionBackward {
+			where = append(where, "(created_at > ? OR (created_at = ? AND id > ?))")
+			order = " ORDER BY created_at ASC, id ASC"
+		} else {
+			where = append(where, "(created_at < ? OR (created_at = ? AND id < ?))")
+		}
+		args = append(args, cursor.OccurredAt, cursor.OccurredAt, cursor.ID)
+	}
+	args = append(args, limit)
+	return "SELECT id, account_id, integration_code, name, is_active, connection_status, created_at, updated_at" +
+		" FROM account_integration WHERE " + strings.Join(where, " AND ") + order + " LIMIT ?", args
 }
 
 func integrationCreatedAt(item *domain.AccountIntegration) time.Time {
@@ -108,30 +97,6 @@ func integrationCreatedAt(item *domain.AccountIntegration) time.Time {
 
 func integrationID(item *domain.AccountIntegration) string {
 	return item.ID
-}
-
-func mapForwardIntegrationRow(row sqlc.ListAccountIntegrationsForwardRow) *domain.AccountIntegration {
-	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}
-}
-
-func mapBackwardIntegrationRow(row sqlc.ListAccountIntegrationsBackwardRow) *domain.AccountIntegration {
-	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}
 }
 
 func (r *accountIntegrationRepoImpl) Get(ctx context.Context, accountID, id string) (*domain.AccountIntegration, *apierror.APIError) {
@@ -147,13 +112,14 @@ func (r *accountIntegrationRepoImpl) Get(ctx context.Context, accountID, id stri
 	}
 
 	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+		ID:               row.ID,
+		AccountID:        row.AccountID,
+		IntegrationCode:  constants.IntegrationCode(row.IntegrationCode),
+		Name:             row.Name,
+		IsActive:         row.IsActive,
+		ConnectionStatus: constants.IntegrationConnectionStatus(row.ConnectionStatus),
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
 	}, nil
 }
 
@@ -174,13 +140,14 @@ func (r *accountIntegrationRepoImpl) GetByIDs(ctx context.Context, accountID str
 	out := make([]*domain.AccountIntegration, len(rows))
 	for i, row := range rows {
 		out[i] = &domain.AccountIntegration{
-			ID:              row.ID,
-			AccountID:       row.AccountID,
-			IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-			Name:            row.Name,
-			IsActive:        row.IsActive,
-			CreatedAt:       row.CreatedAt,
-			UpdatedAt:       row.UpdatedAt,
+			ID:               row.ID,
+			AccountID:        row.AccountID,
+			IntegrationCode:  constants.IntegrationCode(row.IntegrationCode),
+			Name:             row.Name,
+			IsActive:         row.IsActive,
+			ConnectionStatus: constants.IntegrationConnectionStatus(row.ConnectionStatus),
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
 		}
 	}
 	return out, nil
@@ -199,13 +166,14 @@ func (r *accountIntegrationRepoImpl) FindByCode(ctx context.Context, accountID s
 	}
 
 	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+		ID:               row.ID,
+		AccountID:        row.AccountID,
+		IntegrationCode:  constants.IntegrationCode(row.IntegrationCode),
+		Name:             row.Name,
+		IsActive:         row.IsActive,
+		ConnectionStatus: constants.IntegrationConnectionStatus(row.ConnectionStatus),
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
 	}, nil
 }
 
@@ -213,12 +181,15 @@ func (r *accountIntegrationRepoImpl) Create(ctx context.Context, id string, para
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.create")
 	defer span.End()
 
+	isActive := params.IsActive == nil || *params.IsActive
 	err := r.queries.InsertAccountIntegration(ctx, sqlc.InsertAccountIntegrationParams{
-		ID:              id,
-		AccountID:       params.AccountID,
-		IntegrationCode: string(params.IntegrationCode),
-		Name:            params.Name,
-		CredentialsV2:   encryptedCredentials,
+		ID:               id,
+		AccountID:        params.AccountID,
+		IntegrationCode:  string(params.IntegrationCode),
+		Name:             params.Name,
+		CredentialsV2:    encryptedCredentials,
+		IsActive:         isActive,
+		ConnectionStatus: string(params.ConnectionStatus),
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -227,15 +198,16 @@ func (r *accountIntegrationRepoImpl) Create(ctx context.Context, id string, para
 	return r.Get(ctx, params.AccountID, id)
 }
 
-func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*domain.AccountIntegration, *apierror.APIError) {
+func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, connection constants.IntegrationConnectionStatus) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.update_credentials")
 	defer span.End()
 
 	result, err := r.queries.UpdateAccountIntegrationCredentials(ctx, sqlc.UpdateAccountIntegrationCredentialsParams{
-		ID:            id,
-		AccountID:     accountID,
-		Name:          name,
-		CredentialsV2: encryptedCredentials,
+		ID:               id,
+		AccountID:        accountID,
+		Name:             name,
+		CredentialsV2:    encryptedCredentials,
+		ConnectionStatus: string(connection),
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -347,4 +319,19 @@ func (r *accountIntegrationRepoImpl) HasIntegration(ctx context.Context, account
 	}
 
 	return count > 0, nil
+}
+
+func (r *accountIntegrationRepoImpl) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError) {
+	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.set_connection_status")
+	defer span.End()
+
+	n, err := r.queries.SetAccountIntegrationConnectionStatus(ctx, sqlc.SetAccountIntegrationConnectionStatusParams{
+		ConnectionStatus: string(status),
+		AccountID:        accountID,
+		IntegrationCode:  string(code),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return n > 0, nil
 }

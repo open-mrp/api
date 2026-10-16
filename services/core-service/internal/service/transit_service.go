@@ -188,7 +188,7 @@ func (s *salesOrderSvcImpl) fetchLaneRates(ctx context.Context, accountID string
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	shippoClient, apiErr := s.shippoFactory.Build(apiKey)
+	shippoClient, apiErr := buildShippoClient(s.shippoFactory, s.repos, accountID, apiKey)
 	if apiErr != nil {
 		return nil, apiErr
 	}

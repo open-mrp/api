@@ -17,17 +17,15 @@ import (
 // Request to list roles.
 type ListRolesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Matches roles whose `name` has a word starting with the term.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter results to roles whose type matches any of the given values.
+	// Only return roles with any of these types.
 	RoleType []constants.RoleType `query:"types"`
 }
 
-// Lists the roles that can be assigned to users in your account, newest first.
+// Returns a list of the roles you can assign in your account.
 //
-// Results combine the roles your account owns with the system-owned roles shared by every account. Text search matches the role name.
+// Sorted by creation date, newest first. Includes your account's roles and the system roles OpenMRP shares with every account.
 type ListRolesEndpoint struct{}
 
 func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesRequest, *apiresource.List[apiresource.Role]] {
@@ -40,7 +38,6 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRolesRequest) (*apiresource.List[apiresource.Role], *apierror.APIError) {
 			return svc.(RoleSvc).ListRoles
 		},

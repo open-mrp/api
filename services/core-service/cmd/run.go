@@ -279,6 +279,7 @@ func Run(
 		FrontendURL:           cfg.FrontendURL,
 		PortalURL:             cfg.PortalURL,
 		PlatformMode:          cfg.PlatformMode,
+		AuthClient:            authClient,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
 		Repos:           repoFactory,

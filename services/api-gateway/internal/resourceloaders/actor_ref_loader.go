@@ -67,7 +67,7 @@ func ActorRefFromBareID(actorID string) *apiresource.ActorRef {
 
 // ResolveActorRefs fills each actor's display name in one batch per actor type: a person's name, an agent's name, an API key's or device's label. An actor that no longer exists keeps a null name. It is best-effort, so a failed lookup leaves names null rather than failing the response. Nils and duplicates are fine.
 //
-// `client` is filled only when the RPC already carried it: API keys gain a client with forge.1's agent work (G7).
+// An API key's `client` is filled from the key too, when the RPC didn't carry it.
 func ResolveActorRefs(ctx context.Context, refs []*apiresource.ActorRef) {
 	ids := map[string]map[string]struct{}{}
 	add := func(kind, v string) {
@@ -77,7 +77,10 @@ func ResolveActorRefs(ctx context.Context, refs []*apiresource.ActorRef) {
 		ids[kind][v] = struct{}{}
 	}
 	for _, r := range refs {
-		if r == nil || r.ID == nil || *r.ID == "" || r.Name != nil {
+		if r == nil || r.ID == nil || *r.ID == "" {
+			continue
+		}
+		if r.Name != nil && (r.Type != constants.ActorTypeAPIKey || r.Client != nil) {
 			continue
 		}
 		switch r.Type {
@@ -96,6 +99,7 @@ func ResolveActorRefs(ctx context.Context, refs []*apiresource.ActorRef) {
 	}
 
 	names := map[string]string{}
+	clients := map[string]string{}
 	if loaded, apiErr := LoadUsers(ctx, setToSlice(ids["user"])); apiErr == nil {
 		for k, v := range loaded {
 			if u, ok := v.(*apiresource.User); ok && u.Name != nil {
@@ -112,8 +116,15 @@ func ResolveActorRefs(ctx context.Context, refs []*apiresource.ActorRef) {
 	}
 	if loaded, apiErr := LoadAPIKeys(ctx, setToSlice(ids[string(constants.ActorTypeAPIKey)])); apiErr == nil {
 		for k, v := range loaded {
-			if key, ok := v.(*apiresource.APIKey); ok && key.Name != "" {
+			key, ok := v.(*apiresource.APIKey)
+			if !ok {
+				continue
+			}
+			if key.Name != "" {
 				names[k] = key.Name
+			}
+			if key.Client != nil {
+				clients[k] = key.Client.Name
 			}
 		}
 	}
@@ -134,11 +145,14 @@ func ResolveActorRefs(ctx context.Context, refs []*apiresource.ActorRef) {
 	}
 
 	for _, r := range refs {
-		if r == nil || r.ID == nil || r.Name != nil {
+		if r == nil || r.ID == nil {
 			continue
 		}
-		if n, ok := names[*r.ID]; ok {
+		if n, ok := names[*r.ID]; ok && r.Name == nil {
 			r.Name = new(n)
+		}
+		if c, ok := clients[*r.ID]; ok && r.Type == constants.ActorTypeAPIKey && r.Client == nil {
+			r.Client = new(c)
 		}
 	}
 }

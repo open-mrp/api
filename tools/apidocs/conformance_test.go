@@ -19,6 +19,8 @@ func init() {
 	conformance.DocVerbs = append(conformance.DocVerbs, "Changes")
 	// Create Integration "Connects a provider to your account."
 	conformance.DocVerbs = append(conformance.DocVerbs, "Connects")
+	// Account user actions name the status they produce: "Activates an account user", "Disables an account user".
+	conformance.DocVerbs = append(conformance.DocVerbs, "Activates", "Disables")
 }
 
 // TestConformance holds every endpoint to every forge.1 rule. Endpoints that broke a rule before the forge.1 sweep are

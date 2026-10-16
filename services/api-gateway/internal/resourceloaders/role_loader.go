@@ -2,12 +2,13 @@ package resourceloaders
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -34,41 +35,36 @@ func LoadRoles(ctx context.Context, ids []string) (map[string]any, *apierror.API
 	for _, r := range resp.Roles {
 		out[r.Id] = roleFromProto(r)
 		meta.Set(constants.ObjectTypeRole, r.Id, "owner_account_id", r.AccountId)
-		perms := formatRolePermissions(r.Permissions)
-		meta.Set(constants.ObjectTypeRole, r.Id, "permissions", perms)
+		meta.Set(constants.ObjectTypeRole, r.Id, "permissions", nonNilStrings(r.EffectivePermissions))
 	}
 	return out, nil
 }
 
 func roleFromProto(r *pb.RoleDetail) *apiresource.Role {
-	return &apiresource.Role{
+	access := types.RoleAccess{}
+	for k, v := range r.Access {
+		access[constants.PermissionArea(k)] = constants.AccessLevel(v)
+	}
+	role := &apiresource.Role{
 		ID:        r.Id,
 		Object:    constants.ObjectTypeRole,
 		Name:      r.Name,
 		TypeCode:  constants.RoleType(r.RoleTypeCode),
+		Access:    apiresource.RoleAccessOf(access),
+		Grants:    nonNilStrings(r.Grants),
+		Revokes:   nonNilStrings(r.Revokes),
 		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
 	}
+	if r.TemplateCode != nil {
+		role.Template = new(constants.RoleTemplate(*r.TemplateCode))
+	}
+	return role
 }
 
-func formatRolePermissions(protos []*pb.RolePermissionDetail) []string {
-	var perms []string
-	for _, rp := range protos {
-		if rp == nil {
-			continue
-		}
-		if rp.Create {
-			perms = append(perms, fmt.Sprintf("%s:create", rp.PermissionCode))
-		}
-		if rp.Read {
-			perms = append(perms, fmt.Sprintf("%s:read", rp.PermissionCode))
-		}
-		if rp.Update {
-			perms = append(perms, fmt.Sprintf("%s:update", rp.PermissionCode))
-		}
-		if rp.Delete {
-			perms = append(perms, fmt.Sprintf("%s:delete", rp.PermissionCode))
-		}
+func nonNilStrings(in []string) []string {
+	if in == nil {
+		return []string{}
 	}
-	return perms
+	return in
 }

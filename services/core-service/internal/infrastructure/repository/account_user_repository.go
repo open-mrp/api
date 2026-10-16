@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"slices"
 	"strconv"
 	"time"
@@ -236,171 +235,38 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.list")
 	defer span.End()
 
-	searchQuery, queryLike := buildAccountUserSearchParams(params.Query)
-
-	countResult, err := r.queries.CountAccountUsersFiltered(ctx, sqlc.CountAccountUsersFilteredParams{
-		AccountID:            params.AccountID,
-		IncludeRemoved:       params.IncludeRemoved,
-		RoleType:             db.NullStringPtr(params.RoleType),
-		Query:                searchQuery,
-		QueryLike:            queryLike,
-		IsCommissionEligible: nullBoolFromPtr(params.IsCommissionEligible),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	base := sqlc.ListAccountUsersForwardBaseParams{
-		AccountID:            params.AccountID,
-		IncludeRemoved:       params.IncludeRemoved,
-		RoleType:             db.NullStringPtr(params.RoleType),
-		Query:                searchQuery,
-		QueryLike:            queryLike,
-		Limit:                params.Limit + 1,
-		IsCommissionEligible: nullBoolFromPtr(params.IsCommissionEligible),
-	}
-
+	dir := pagination.DirectionForward
+	var cursor *pagination.StringCursor
 	var cursorDir *pagination.Direction
-	var items []*domain.AccountUserDetail
-	var pageInfo pagination.PageInfo
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			brows, err := r.queries.ListAccountUsersBackwardBase(ctx, sqlc.ListAccountUsersBackwardBaseParams{
-				AccountID:            base.AccountID,
-				IncludeRemoved:       base.IncludeRemoved,
-				RoleType:             base.RoleType,
-				IsCommissionEligible: base.IsCommissionEligible,
-				Query:                base.Query,
-				QueryLike:            base.QueryLike,
-				CursorCreatedAt:      cur.OccurredAt,
-				CursorID:             cur.ID,
-				Limit:                base.Limit,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			details := make([]*domain.AccountUserDetail, len(brows))
-			for i := range brows {
-				details[i] = mapAccountUserBaseBackwardRow(brows[i])
-			}
-			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
-		} else {
-			frows, err := r.queries.ListAccountUsersForwardBase(ctx, sqlc.ListAccountUsersForwardBaseParams{
-				AccountID:            base.AccountID,
-				IncludeRemoved:       base.IncludeRemoved,
-				RoleType:             base.RoleType,
-				IsCommissionEligible: base.IsCommissionEligible,
-				Query:                base.Query,
-				QueryLike:            base.QueryLike,
-				CursorCreatedAt:      sql.NullTime{Time: cur.OccurredAt, Valid: true},
-				CursorID:             sql.NullString{String: cur.ID, Valid: true},
-				Limit:                base.Limit,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			details := make([]*domain.AccountUserDetail, len(frows))
-			for i := range frows {
-				details[i] = mapAccountUserBaseForwardRow(frows[i])
-			}
-			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
-		}
-	} else {
-		frows, err := r.queries.ListAccountUsersForwardBase(ctx, base)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		details := make([]*domain.AccountUserDetail, len(frows))
-		for i := range frows {
-			details[i] = mapAccountUserBaseForwardRow(frows[i])
-		}
-		items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
+		cursor, cursorDir, dir = &cur, &cur.Direction, cur.Direction
 	}
+
+	query, args := buildAccountUserListQuery(buildAccountUserListPage(params, dir, cursor, params.Limit+1), dir)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
+	details, err := scanAccountUserListRows(rows)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	items, pageInfo := pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
 
 	if apiErr := r.stitchAccountUsers(ctx, items, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.ListAccountUsersResult{
-		Items:      items,
-		PageInfo:   pageInfo,
-		TotalCount: countResult,
-	}, nil
-}
-
-func buildAccountUserSearchParams(query *string) (sql.NullString, any) {
-	if query == nil || *query == "" {
-		return sql.NullString{}, nil
-	}
-	ft := db.NewFulltextSearch(query)
-	queryLike := accountUserQueryLike(query)
-	if ft.Fulltext.Valid {
-		return ft.Fulltext, queryLike
-	}
-	if ft.Like.Valid {
-		// LIKE-only (short query): use a non-null guard so username/email LIKE runs.
-		return sql.NullString{String: "", Valid: true}, queryLike
-	}
-	return sql.NullString{}, nil
-}
-
-func accountUserQueryLike(query *string) any {
-	if query == nil {
-		return nil
-	}
-	if *query == "" {
-		return nil
-	}
-	return db.EscapeLike(*query)
+	return &domain.ListAccountUsersResult{Items: items, PageInfo: pageInfo}, nil
 }
 
 func accountUserDetailCreatedAt(d *domain.AccountUserDetail) time.Time { return d.CreatedAt }
 func accountUserDetailID(d *domain.AccountUserDetail) string           { return d.ID }
-
-func mapAccountUserBaseForwardRow(row sqlc.ListAccountUsersForwardBaseRow) *domain.AccountUserDetail {
-	return &domain.AccountUserDetail{
-		ID:                   row.ID,
-		UserID:               row.UserID,
-		Name:                 db.StringFromNullString(row.Name),
-		Email:                db.StringFromNullString(row.Email),
-		Username:             db.StringFromNullString(row.Username),
-		ImageURL:             db.StringFromNullString(row.ImageUrl),
-		EmailVerified:        row.EmailVerified.Valid,
-		RoleID:               db.StringFromNullString(row.RoleID),
-		DepartmentID:         db.StringFromNullString(row.DepartmentID),
-		StatusCode:           constants.AccountUserStatus(row.StatusCode),
-		IsCommissionEligible: row.IsCommissionEligible,
-		LastUsedAt:           db.TimeFromNullTime(row.LastUsedAt),
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
-	}
-}
-
-func mapAccountUserBaseBackwardRow(row sqlc.ListAccountUsersBackwardBaseRow) *domain.AccountUserDetail {
-	return &domain.AccountUserDetail{
-		ID:                   row.ID,
-		UserID:               row.UserID,
-		Name:                 db.StringFromNullString(row.Name),
-		Email:                db.StringFromNullString(row.Email),
-		Username:             db.StringFromNullString(row.Username),
-		ImageURL:             db.StringFromNullString(row.ImageUrl),
-		EmailVerified:        row.EmailVerified.Valid,
-		RoleID:               db.StringFromNullString(row.RoleID),
-		DepartmentID:         db.StringFromNullString(row.DepartmentID),
-		StatusCode:           constants.AccountUserStatus(row.StatusCode),
-		IsCommissionEligible: row.IsCommissionEligible,
-		LastUsedAt:           db.TimeFromNullTime(row.LastUsedAt),
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
-	}
-}
 
 func mapAccountUserBaseDetailRow(row sqlc.GetAccountUserDetailBaseRow) *domain.AccountUserDetail {
 	return &domain.AccountUserDetail{
@@ -416,6 +282,7 @@ func mapAccountUserBaseDetailRow(row sqlc.GetAccountUserDetailBaseRow) *domain.A
 		StatusCode:           constants.AccountUserStatus(row.StatusCode),
 		IsCommissionEligible: row.IsCommissionEligible,
 		LastUsedAt:           db.TimeFromNullTime(row.LastUsedAt),
+		InvitedAt:            db.TimeFromNullTime(row.InvitedAt),
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
 	}
@@ -436,6 +303,7 @@ func mapAccountUserBaseByIDRow(row sqlc.GetAccountUserDetailBaseByIDRow) *domain
 		StatusCode:           constants.AccountUserStatus(row.StatusCode),
 		IsCommissionEligible: row.IsCommissionEligible,
 		LastUsedAt:           db.TimeFromNullTime(row.LastUsedAt),
+		InvitedAt:            db.TimeFromNullTime(row.InvitedAt),
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
 	}
@@ -582,6 +450,14 @@ func (r *accountUserRepoImpl) UpdateStatus(ctx context.Context, accountUserID st
 	}
 
 	return nil
+}
+
+func (r *accountUserRepoImpl) SetInvitedAt(ctx context.Context, accountUserID string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.set_invited_at")
+	defer span.End()
+
+	err := r.queries.SetAccountUserInvitedAt(ctx, accountUserID)
+	return tracing.Trace(span, db.MapSQLError(err))
 }
 
 func (r *accountUserRepoImpl) RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError {
@@ -786,16 +662,10 @@ func (r *accountUserRepoImpl) GetByIDs(ctx context.Context, accountID string, id
 		if row.LastUsedAt.Valid {
 			au.LastUsedAt = &row.LastUsedAt.Time
 		}
+		au.InvitedAt = db.TimeFromNullTime(row.InvitedAt)
 		au.IsCommissionEligible = row.IsCommissionEligible
 		items[i] = au
 	}
 
 	return items, nil
-}
-
-func nullBoolFromPtr(b *bool) sql.NullBool {
-	if b == nil {
-		return sql.NullBool{}
-	}
-	return sql.NullBool{Bool: *b, Valid: true}
 }

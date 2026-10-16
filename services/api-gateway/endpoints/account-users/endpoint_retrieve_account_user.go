@@ -18,9 +18,9 @@ type RetrieveAccountUserRequest struct {
 	AccountUserID string `path:"id" validate:"required"`
 }
 
-// Returns an account user by ID.
+// Retrieves an account user, whatever their status.
 //
-// The lookup is scoped to the account you are acting in, so an ID belonging to another account is reported as not found.
+// Only members of the account you are acting in are found; another account's member is a 404.
 type RetrieveAccountUserEndpoint struct{}
 
 func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountUserRequest, *apiresource.AccountUser] {
@@ -33,14 +33,10 @@ func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).GetAccountUser
 		},
-		ObjectType: constants.ObjectTypeAccountUser,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAccountUser,
-			Fields:     []string{"user", "role", "department"},
-		}),
+		ObjectType:    constants.ObjectTypeAccountUser,
+		IncludeConfig: accountUserIncludes(),
 	})
 }

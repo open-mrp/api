@@ -296,8 +296,11 @@ type AccountUserSvc interface {
 	// UpdateAccountUser partially updates an account user, optionally including notification preferences.
 	UpdateAccountUser(ctx context.Context, params UpdateAccountUserParams, includes []string) (*AccountUserDetail, *apierror.APIError)
 
-	// UpdateAccountUserStatus transitions an account user to the given target status.
-	UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError
+	// UpdateAccountUserStatus transitions an account user to the given target status and returns it.
+	UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) (*AccountUserDetail, *apierror.APIError)
+
+	// InviteAccountUser emails an account user a sign-in link and records that they were invited.
+	InviteAccountUser(ctx context.Context, accountUserID string) (*AccountUserDetail, *apierror.APIError)
 
 	// UpdateAccountUserPassword sets the password for a non-admin account user who has no email address.
 	UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError

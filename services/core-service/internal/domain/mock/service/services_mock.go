@@ -1635,6 +1635,21 @@ func (mr *MockAccountUserSvcMockRecorder) GetAccountUser(ctx, accountUserID, inc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).GetAccountUser), ctx, accountUserID, includes)
 }
 
+// InviteAccountUser mocks base method.
+func (m *MockAccountUserSvc) InviteAccountUser(ctx context.Context, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InviteAccountUser", ctx, accountUserID)
+	ret0, _ := ret[0].(*domain.AccountUserDetail)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// InviteAccountUser indicates an expected call of InviteAccountUser.
+func (mr *MockAccountUserSvcMockRecorder) InviteAccountUser(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InviteAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).InviteAccountUser), ctx, accountUserID)
+}
+
 // ListAccountUsers mocks base method.
 func (m *MockAccountUserSvc) ListAccountUsers(ctx context.Context, params domain.ListAccountUsersParams) (*domain.ListAccountUsersResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1680,11 +1695,12 @@ func (mr *MockAccountUserSvcMockRecorder) UpdateAccountUserPassword(ctx, account
 }
 
 // UpdateAccountUserStatus mocks base method.
-func (m *MockAccountUserSvc) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError {
+func (m *MockAccountUserSvc) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) (*domain.AccountUserDetail, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAccountUserStatus", ctx, accountUserID, targetStatus)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
+	ret0, _ := ret[0].(*domain.AccountUserDetail)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // UpdateAccountUserStatus indicates an expected call of UpdateAccountUserStatus.

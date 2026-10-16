@@ -24,6 +24,7 @@ type RoleSvcTestSuite struct {
 	rolePermissionRepo *repositorymock.MockRolePermissionRepo
 	accountUserRepo    *repositorymock.MockAccountUserRepo
 	deletedRecordRepo  *repositorymock.MockDeletedRecordRepo
+	referenceRepo      *repositorymock.MockReferenceRepo
 	repoFactory        *factorymock.MockRepoFactory
 	idempotencyMed     *mediatormock.MockIdempotencyMed
 	ctrl               *gomock.Controller
@@ -49,6 +50,8 @@ func (suite *RoleSvcTestSuite) SetupSuite() {
 	suite.repoFactory.EXPECT().NewAccountUserRepo().Return(suite.accountUserRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
+	suite.referenceRepo = repositorymock.NewMockReferenceRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewReferenceRepo().Return(suite.referenceRepo).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	mediatorFactory := &roleTestMediatorFactory{mediators: domain.Mediators{
@@ -243,10 +246,7 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_Success() {
 		}, nil).
 		Times(1)
 
-	suite.accountUserRepo.EXPECT().
-		CountByRoleID(gomock.Any(), "acct_test", "rl_1").
-		Return(int64(0), nil).
-		Times(1)
+	suite.referenceRepo.EXPECT().InUseBy(gomock.Any(), "rl_1", domain.RoleReferences.Probes).Return(nil, nil)
 
 	suite.deletedRecordRepo.EXPECT().
 		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeRole, "rl_1", "acct_test", gomock.Any()).
@@ -267,7 +267,7 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_Success() {
 	suite.Nil(apiErr)
 }
 
-// TestDeleteRole_BlockedWhenAssigned verifies delete is blocked when role has assigned users.
+// TestDeleteRole_BlockedWhenAssigned verifies delete is a 409 resource_in_use while members hold the role.
 func (suite *RoleSvcTestSuite) TestDeleteRole_BlockedWhenAssigned() {
 	ctx := roleIdentityCtx("acct_test")
 	accountID := "acct_test"
@@ -282,12 +282,9 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_BlockedWhenAssigned() {
 		}, nil).
 		Times(1)
 
-	suite.accountUserRepo.EXPECT().
-		CountByRoleID(gomock.Any(), "acct_test", "rl_1").
-		Return(int64(1), nil).
-		Times(1)
+	suite.referenceRepo.EXPECT().InUseBy(gomock.Any(), "rl_1", domain.RoleReferences.Probes).Return([]string{"account users"}, nil)
 
 	apiErr := suite.roleSvc.DeleteRole(ctx, "rl_1")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceInUse, apiErr.Code)
 }

@@ -67,7 +67,7 @@ func populateRoleOnAPIKey(ctx context.Context, parent any, loaded map[string]any
 func extractRoleIDFromCreatedAPIKey(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.CreatedAPIKey)
 	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeAPIKey, c.APIKeyInfo.ID, "role_id")
+		GetString(constants.ObjectTypeAPIKey, c.APIKey.ID, "role_id")
 	if id == "" {
 		return nil
 	}
@@ -77,11 +77,11 @@ func extractRoleIDFromCreatedAPIKey(ctx context.Context, parent any) []string {
 func populateRoleOnCreatedAPIKey(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.CreatedAPIKey)
 	id, _ := include.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeAPIKey, c.APIKeyInfo.ID, "role_id")
+		GetString(constants.ObjectTypeAPIKey, c.APIKey.ID, "role_id")
 	if id == "" {
 		return
 	}
 	if v, ok := loaded[id]; ok {
-		c.APIKeyInfo.Role = v.(*apiresource.Role)
+		c.APIKey.Role = v.(*apiresource.Role)
 	}
 }

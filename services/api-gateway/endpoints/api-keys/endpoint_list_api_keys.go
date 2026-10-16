@@ -16,9 +16,7 @@ import (
 // Request to list API keys.
 type ListAPIKeysRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
 	// API key statuses to filter by.
 	//
@@ -32,7 +30,7 @@ type ListAPIKeysRequest struct {
 
 // Returns a paginated list of [API keys](https://docs.openmrp.ai/api/api-keys), newest first.
 //
-// Only keys belonging to the account making the request are returned. The search term matches against the key name.
+// Only keys belonging to the account making the request are returned.
 type ListAPIKeysEndpoint struct{}
 
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {
@@ -45,7 +43,6 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
 			return svc.(APIKeySvc).ListAPIKeys

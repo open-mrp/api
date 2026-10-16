@@ -30,72 +30,6 @@ func (q *Queries) CountAccountUsersByRoleID(ctx context.Context, arg CountAccoun
 	return cnt, err
 }
 
-const countAccountUsersFiltered = `-- name: CountAccountUsersFiltered :one
-SELECT COUNT(*) AS cnt
-FROM account_user au
-JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        ? IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
-    )
-    AND (
-        ? IS NULL
-        OR (
-            ? = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            ? = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (? IS NULL OR (
-        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', ?, '%')
-        OR u.email LIKE CONCAT('%', ?, '%')
-    ))
-`
-
-type CountAccountUsersFilteredParams struct {
-	AccountID            string
-	IncludeRemoved       interface{}
-	RoleType             sql.NullString
-	IsCommissionEligible interface{}
-	Query                sql.NullString
-	QueryLike            interface{}
-}
-
-func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccountUsersFilteredParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAccountUsersFiltered,
-		arg.AccountID,
-		arg.IncludeRemoved,
-		arg.RoleType,
-		arg.RoleType,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.Query,
-		arg.Query,
-		arg.QueryLike,
-		arg.QueryLike,
-	)
-	var cnt int64
-	err := row.Scan(&cnt)
-	return cnt, err
-}
-
 const countActiveAccountUsers = `-- name: CountActiveAccountUsers :one
 SELECT COUNT(*) AS cnt
 FROM account_user
@@ -438,6 +372,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -470,6 +405,7 @@ type GetAccountUserDetailRow struct {
 	DepartmentUpdatedAt  sql.NullTime
 	StatusCode           string
 	LastUsedAt           sql.NullTime
+	InvitedAt            sql.NullTime
 	IsCommissionEligible bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -495,6 +431,7 @@ func (q *Queries) GetAccountUserDetail(ctx context.Context, arg GetAccountUserDe
 		&i.DepartmentUpdatedAt,
 		&i.StatusCode,
 		&i.LastUsedAt,
+		&i.InvitedAt,
 		&i.IsCommissionEligible,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -515,6 +452,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -542,6 +480,7 @@ type GetAccountUserDetailBaseRow struct {
 	DepartmentID         sql.NullString
 	StatusCode           string
 	LastUsedAt           sql.NullTime
+	InvitedAt            sql.NullTime
 	IsCommissionEligible bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -562,6 +501,7 @@ func (q *Queries) GetAccountUserDetailBase(ctx context.Context, arg GetAccountUs
 		&i.DepartmentID,
 		&i.StatusCode,
 		&i.LastUsedAt,
+		&i.InvitedAt,
 		&i.IsCommissionEligible,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -586,6 +526,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -618,6 +559,7 @@ type GetAccountUserDetailBaseByIDRow struct {
 	DepartmentUpdatedAt  sql.NullTime
 	StatusCode           string
 	LastUsedAt           sql.NullTime
+	InvitedAt            sql.NullTime
 	IsCommissionEligible bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -642,6 +584,7 @@ func (q *Queries) GetAccountUserDetailBaseByID(ctx context.Context, arg GetAccou
 		&i.DepartmentUpdatedAt,
 		&i.StatusCode,
 		&i.LastUsedAt,
+		&i.InvitedAt,
 		&i.IsCommissionEligible,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -667,6 +610,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -699,6 +643,7 @@ type GetAccountUserDetailByAccountAndIDRow struct {
 	DepartmentUpdatedAt  sql.NullTime
 	StatusCode           string
 	LastUsedAt           sql.NullTime
+	InvitedAt            sql.NullTime
 	IsCommissionEligible bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -724,6 +669,7 @@ func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg Ge
 		&i.DepartmentUpdatedAt,
 		&i.StatusCode,
 		&i.LastUsedAt,
+		&i.InvitedAt,
 		&i.IsCommissionEligible,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -744,6 +690,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -770,6 +717,7 @@ type GetAccountUserDetailsByIDsRow struct {
 	DepartmentID         sql.NullString
 	StatusCode           string
 	LastUsedAt           sql.NullTime
+	InvitedAt            sql.NullTime
 	IsCommissionEligible bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -807,6 +755,7 @@ func (q *Queries) GetAccountUserDetailsByIDs(ctx context.Context, arg GetAccount
 			&i.DepartmentID,
 			&i.StatusCode,
 			&i.LastUsedAt,
+			&i.InvitedAt,
 			&i.IsCommissionEligible,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -888,592 +837,6 @@ func (q *Queries) ListAccountUserSeatStatusesForUpdate(ctx context.Context, acco
 	for rows.Next() {
 		var i ListAccountUserSeatStatusesForUpdateRow
 		if err := rows.Scan(&i.ID, &i.StatusCode); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountUsersBackward = `-- name: ListAccountUsersBackward :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    r.name AS role_name,
-    r.role_type_code,
-    au.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
-WHERE au.account_id = ?
-    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
-    AND (
-        ? IS NULL
-        OR (
-            ? = true
-            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
-        )
-        OR (
-            ? = false
-            AND au.is_commission_eligible = false
-            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
-        )
-    )
-    AND (? IS NULL OR (
-        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', ?, '%')
-        OR u.email LIKE CONCAT('%', ?, '%')
-        OR r.name LIKE CONCAT('%', ?, '%')
-        OR d.name LIKE CONCAT('%', ?, '%')
-    ))
-    AND (
-        au.created_at > ?
-        OR (au.created_at = ? AND au.id > ?)
-    )
-ORDER BY au.created_at ASC, au.id ASC
-LIMIT ?
-`
-
-type ListAccountUsersBackwardParams struct {
-	AccountID            string
-	IncludeRemoved       interface{}
-	RoleType             sql.NullString
-	IsCommissionEligible interface{}
-	Query                sql.NullString
-	QueryLike            interface{}
-	CursorCreatedAt      time.Time
-	CursorID             string
-	Limit                int32
-}
-
-type ListAccountUsersBackwardRow struct {
-	ID                   string
-	UserID               string
-	Name                 sql.NullString
-	Email                sql.NullString
-	Username             sql.NullString
-	ImageUrl             sql.NullString
-	EmailVerified        sql.NullTime
-	RoleID               sql.NullString
-	RoleName             sql.NullString
-	RoleTypeCode         sql.NullString
-	DepartmentID         sql.NullString
-	DepartmentName       sql.NullString
-	DepartmentCreatedAt  sql.NullTime
-	DepartmentUpdatedAt  sql.NullTime
-	StatusCode           string
-	LastUsedAt           sql.NullTime
-	IsCommissionEligible bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-}
-
-func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountUsersBackwardParams) ([]ListAccountUsersBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountUsersBackward,
-		arg.AccountID,
-		arg.IncludeRemoved,
-		arg.RoleType,
-		arg.RoleType,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.Query,
-		arg.Query,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountUsersBackwardRow
-	for rows.Next() {
-		var i ListAccountUsersBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Email,
-			&i.Username,
-			&i.ImageUrl,
-			&i.EmailVerified,
-			&i.RoleID,
-			&i.RoleName,
-			&i.RoleTypeCode,
-			&i.DepartmentID,
-			&i.DepartmentName,
-			&i.DepartmentCreatedAt,
-			&i.DepartmentUpdatedAt,
-			&i.StatusCode,
-			&i.LastUsedAt,
-			&i.IsCommissionEligible,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountUsersBackwardBase = `-- name: ListAccountUsersBackwardBase :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    au.department_id,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        ? IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
-    )
-    AND (
-        ? IS NULL
-        OR (
-            ? = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            ? = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (? IS NULL OR (
-        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', ?, '%')
-        OR u.email LIKE CONCAT('%', ?, '%')
-    ))
-    AND (
-        au.created_at > ?
-        OR (au.created_at = ? AND au.id > ?)
-    )
-ORDER BY au.created_at ASC, au.id ASC
-LIMIT ?
-`
-
-type ListAccountUsersBackwardBaseParams struct {
-	AccountID            string
-	IncludeRemoved       interface{}
-	RoleType             sql.NullString
-	IsCommissionEligible interface{}
-	Query                sql.NullString
-	QueryLike            interface{}
-	CursorCreatedAt      time.Time
-	CursorID             string
-	Limit                int32
-}
-
-type ListAccountUsersBackwardBaseRow struct {
-	ID                   string
-	UserID               string
-	Name                 sql.NullString
-	Email                sql.NullString
-	Username             sql.NullString
-	ImageUrl             sql.NullString
-	EmailVerified        sql.NullTime
-	RoleID               sql.NullString
-	DepartmentID         sql.NullString
-	StatusCode           string
-	LastUsedAt           sql.NullTime
-	IsCommissionEligible bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-}
-
-func (q *Queries) ListAccountUsersBackwardBase(ctx context.Context, arg ListAccountUsersBackwardBaseParams) ([]ListAccountUsersBackwardBaseRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountUsersBackwardBase,
-		arg.AccountID,
-		arg.IncludeRemoved,
-		arg.RoleType,
-		arg.RoleType,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.Query,
-		arg.Query,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountUsersBackwardBaseRow
-	for rows.Next() {
-		var i ListAccountUsersBackwardBaseRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Email,
-			&i.Username,
-			&i.ImageUrl,
-			&i.EmailVerified,
-			&i.RoleID,
-			&i.DepartmentID,
-			&i.StatusCode,
-			&i.LastUsedAt,
-			&i.IsCommissionEligible,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountUsersForward = `-- name: ListAccountUsersForward :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    r.name AS role_name,
-    r.role_type_code,
-    au.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
-WHERE au.account_id = ?
-    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
-    AND (
-        ? IS NULL
-        OR (
-            ? = true
-            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
-        )
-        OR (
-            ? = false
-            AND au.is_commission_eligible = false
-            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
-        )
-    )
-    AND (? IS NULL OR (
-        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', ?, '%')
-        OR u.email LIKE CONCAT('%', ?, '%')
-        OR r.name LIKE CONCAT('%', ?, '%')
-        OR d.name LIKE CONCAT('%', ?, '%')
-    ))
-    AND (
-        ? IS NULL
-        OR au.created_at < ?
-        OR (au.created_at = ? AND au.id < ?)
-    )
-ORDER BY au.created_at DESC, au.id DESC
-LIMIT ?
-`
-
-type ListAccountUsersForwardParams struct {
-	AccountID            string
-	IncludeRemoved       interface{}
-	RoleType             sql.NullString
-	IsCommissionEligible interface{}
-	Query                sql.NullString
-	QueryLike            interface{}
-	CursorCreatedAt      sql.NullTime
-	CursorID             sql.NullString
-	Limit                int32
-}
-
-type ListAccountUsersForwardRow struct {
-	ID                   string
-	UserID               string
-	Name                 sql.NullString
-	Email                sql.NullString
-	Username             sql.NullString
-	ImageUrl             sql.NullString
-	EmailVerified        sql.NullTime
-	RoleID               sql.NullString
-	RoleName             sql.NullString
-	RoleTypeCode         sql.NullString
-	DepartmentID         sql.NullString
-	DepartmentName       sql.NullString
-	DepartmentCreatedAt  sql.NullTime
-	DepartmentUpdatedAt  sql.NullTime
-	StatusCode           string
-	LastUsedAt           sql.NullTime
-	IsCommissionEligible bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-}
-
-func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUsersForwardParams) ([]ListAccountUsersForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountUsersForward,
-		arg.AccountID,
-		arg.IncludeRemoved,
-		arg.RoleType,
-		arg.RoleType,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.Query,
-		arg.Query,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountUsersForwardRow
-	for rows.Next() {
-		var i ListAccountUsersForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Email,
-			&i.Username,
-			&i.ImageUrl,
-			&i.EmailVerified,
-			&i.RoleID,
-			&i.RoleName,
-			&i.RoleTypeCode,
-			&i.DepartmentID,
-			&i.DepartmentName,
-			&i.DepartmentCreatedAt,
-			&i.DepartmentUpdatedAt,
-			&i.StatusCode,
-			&i.LastUsedAt,
-			&i.IsCommissionEligible,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountUsersForwardBase = `-- name: ListAccountUsersForwardBase :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    au.department_id,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        ? IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
-    )
-    AND (
-        ? IS NULL
-        OR (
-            ? = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            ? = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (? IS NULL OR (
-        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', ?, '%')
-        OR u.email LIKE CONCAT('%', ?, '%')
-    ))
-    AND (
-        ? IS NULL
-        OR au.created_at < ?
-        OR (au.created_at = ? AND au.id < ?)
-    )
-ORDER BY au.created_at DESC, au.id DESC
-LIMIT ?
-`
-
-type ListAccountUsersForwardBaseParams struct {
-	AccountID            string
-	IncludeRemoved       interface{}
-	RoleType             sql.NullString
-	IsCommissionEligible interface{}
-	Query                sql.NullString
-	QueryLike            interface{}
-	CursorCreatedAt      sql.NullTime
-	CursorID             sql.NullString
-	Limit                int32
-}
-
-type ListAccountUsersForwardBaseRow struct {
-	ID                   string
-	UserID               string
-	Name                 sql.NullString
-	Email                sql.NullString
-	Username             sql.NullString
-	ImageUrl             sql.NullString
-	EmailVerified        sql.NullTime
-	RoleID               sql.NullString
-	DepartmentID         sql.NullString
-	StatusCode           string
-	LastUsedAt           sql.NullTime
-	IsCommissionEligible bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-}
-
-func (q *Queries) ListAccountUsersForwardBase(ctx context.Context, arg ListAccountUsersForwardBaseParams) ([]ListAccountUsersForwardBaseRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountUsersForwardBase,
-		arg.AccountID,
-		arg.IncludeRemoved,
-		arg.RoleType,
-		arg.RoleType,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.IsCommissionEligible,
-		arg.Query,
-		arg.Query,
-		arg.QueryLike,
-		arg.QueryLike,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountUsersForwardBaseRow
-	for rows.Next() {
-		var i ListAccountUsersForwardBaseRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Email,
-			&i.Username,
-			&i.ImageUrl,
-			&i.EmailVerified,
-			&i.RoleID,
-			&i.DepartmentID,
-			&i.StatusCode,
-			&i.LastUsedAt,
-			&i.IsCommissionEligible,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1580,6 +943,17 @@ WHERE user_id = ? AND revoked_at IS NULL
 
 func (q *Queries) RevokeRefreshTokensByUserID(ctx context.Context, userID string) error {
 	_, err := q.db.ExecContext(ctx, revokeRefreshTokensByUserID, userID)
+	return err
+}
+
+const setAccountUserInvitedAt = `-- name: SetAccountUserInvitedAt :exec
+UPDATE account_user
+SET invited_at = NOW(3), updated_at = NOW(3)
+WHERE id = ?
+`
+
+func (q *Queries) SetAccountUserInvitedAt(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, setAccountUserInvitedAt, id)
 	return err
 }
 

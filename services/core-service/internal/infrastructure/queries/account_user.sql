@@ -89,267 +89,6 @@ FROM account_user
 WHERE account_id = ? AND status_code IN ('active', 'disabled')
 FOR UPDATE;
 
--- name: ListAccountUsersForwardBase :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    au.department_id,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN `user` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        sqlc.narg(role_type) IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
-    )
-    AND (
-        sqlc.narg(is_commission_eligible) IS NULL
-        OR (
-            sqlc.narg(is_commission_eligible) = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            sqlc.narg(is_commission_eligible) = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (sqlc.narg(query) IS NULL OR (
-        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-    ))
-    AND (
-        sqlc.narg(cursor_created_at) IS NULL
-        OR au.created_at < sqlc.narg(cursor_created_at)
-        OR (au.created_at = sqlc.narg(cursor_created_at) AND au.id < sqlc.narg(cursor_id))
-    )
-ORDER BY au.created_at DESC, au.id DESC
-LIMIT ?;
-
--- name: ListAccountUsersBackwardBase :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    au.department_id,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN `user` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        sqlc.narg(role_type) IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
-    )
-    AND (
-        sqlc.narg(is_commission_eligible) IS NULL
-        OR (
-            sqlc.narg(is_commission_eligible) = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            sqlc.narg(is_commission_eligible) = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (sqlc.narg(query) IS NULL OR (
-        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-    ))
-    AND (
-        au.created_at > sqlc.arg(cursor_created_at)
-        OR (au.created_at = sqlc.arg(cursor_created_at) AND au.id > sqlc.arg(cursor_id))
-    )
-ORDER BY au.created_at ASC, au.id ASC
-LIMIT ?;
-
--- name: ListAccountUsersForward :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    r.name AS role_name,
-    r.role_type_code,
-    au.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN `user` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
-WHERE au.account_id = ?
-    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN sqlc.narg(role_type) IS NOT NULL THEN r.role_type_code = sqlc.narg(role_type) ELSE true END)
-    AND (
-        sqlc.narg(is_commission_eligible) IS NULL
-        OR (
-            sqlc.narg(is_commission_eligible) = true
-            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
-        )
-        OR (
-            sqlc.narg(is_commission_eligible) = false
-            AND au.is_commission_eligible = false
-            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
-        )
-    )
-    AND (sqlc.narg(query) IS NULL OR (
-        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR r.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR d.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
-    ))
-    AND (
-        sqlc.narg(cursor_created_at) IS NULL
-        OR au.created_at < sqlc.narg(cursor_created_at)
-        OR (au.created_at = sqlc.narg(cursor_created_at) AND au.id < sqlc.narg(cursor_id))
-    )
-ORDER BY au.created_at DESC, au.id DESC
-LIMIT ?;
-
--- name: ListAccountUsersBackward :many
-SELECT
-    au.id,
-    au.user_id,
-    u.name,
-    u.email,
-    u.username,
-    u.image_url,
-    u.email_verified,
-    au.role_id,
-    r.name AS role_name,
-    r.role_type_code,
-    au.department_id,
-    d.name AS department_name,
-    d.created_at AS department_created_at,
-    d.updated_at AS department_updated_at,
-    au.status_code,
-    au.last_used_at,
-    au.is_commission_eligible,
-    au.created_at,
-    au.updated_at
-FROM account_user au
-JOIN `user` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
-WHERE au.account_id = ?
-    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN sqlc.narg(role_type) IS NOT NULL THEN r.role_type_code = sqlc.narg(role_type) ELSE true END)
-    AND (
-        sqlc.narg(is_commission_eligible) IS NULL
-        OR (
-            sqlc.narg(is_commission_eligible) = true
-            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
-        )
-        OR (
-            sqlc.narg(is_commission_eligible) = false
-            AND au.is_commission_eligible = false
-            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
-        )
-    )
-    AND (sqlc.narg(query) IS NULL OR (
-        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR r.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR d.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
-    ))
-    AND (
-        au.created_at > sqlc.arg(cursor_created_at)
-        OR (au.created_at = sqlc.arg(cursor_created_at) AND au.id > sqlc.arg(cursor_id))
-    )
-ORDER BY au.created_at ASC, au.id ASC
-LIMIT ?;
-
--- name: CountAccountUsersFiltered :one
-SELECT COUNT(*) AS cnt
-FROM account_user au
-JOIN `user` u ON au.user_id = u.id
-WHERE au.account_id = ?
-    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (
-        sqlc.narg(role_type) IS NULL
-        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
-    )
-    AND (
-        sqlc.narg(is_commission_eligible) IS NULL
-        OR (
-            sqlc.narg(is_commission_eligible) = true
-            AND (
-                au.is_commission_eligible = true
-                OR EXISTS (
-                    SELECT 1 FROM role r_comm
-                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-                )
-            )
-        )
-        OR (
-            sqlc.narg(is_commission_eligible) = false
-            AND au.is_commission_eligible = false
-            AND NOT EXISTS (
-                SELECT 1 FROM role r_comm
-                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
-            )
-        )
-    )
-    AND (sqlc.narg(query) IS NULL OR (
-        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
-        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-    ));
-
 -- name: GetAccountUserDetailBase :one
 SELECT
     au.id,
@@ -363,6 +102,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -389,6 +129,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -417,6 +158,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -444,6 +186,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -476,6 +219,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.invited_at,
     au.is_commission_eligible,
     au.created_at,
     au.updated_at
@@ -569,3 +313,8 @@ SELECT COUNT(*) AS cnt
 FROM account_user
 WHERE role_id = ? AND account_id = ? AND status_code != 'removed';
 
+
+-- name: SetAccountUserInvitedAt :exec
+UPDATE account_user
+SET invited_at = NOW(3), updated_at = NOW(3)
+WHERE id = ?;

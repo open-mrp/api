@@ -269,6 +269,8 @@ func parseGatewayHandlerTargets(t *testing.T, root string) map[string]map[string
 //     already-completed or shipped order), so the guard's flat "requires admin" read
 //     is wrong. Declaring RequiredRoleType admin would false-reject the ordinary case.
 var unverifiableEndpoints = map[string]string{
+	"catalogs":                 "gateway-static catalog: the permission catalog and role templates are computed in the gateway from auth-service/pkg/types; the declared permission is enforced at the gate",
+	"preview_role":             "gateway-static computation: the effective permissions are computed in the gateway and nothing is read or written; roles:read is enforced at the gate",
 	"validate":                 "public-by-design: ValidateAddress calls Google Address Validation with no tenant identity (pre-auth utility)",
 	"list_address_suggestions": "public-by-design: AutocompleteAddress calls Google Places with no tenant identity (pre-auth utility)",
 

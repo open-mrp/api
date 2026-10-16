@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,31 +18,20 @@ import (
 // Request to list account users.
 type ListAccountUsersRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	apirequest.CreatedRange
+	// Case-insensitive substring match on the person's `name`, `email` or `username`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter by role type.
-	//
-	// - `admin`: account administrators.
-	// - `user`: users with a custom role.
-	// - `scanner`: scanning station users.
-	// - `sales_rep`: sales representatives.
-	// - `agent`: automated agents.
+	// Only return members with any of these statuses: `active`, `disabled` or `removed`. Leave it out to list every status.
+	Statuses []constants.AccountUserStatus `query:"statuses"`
+	// Only return members whose role has this type: `admin`, `user`, `scanner`, `sales_rep` or `agent`.
 	RoleType *constants.RoleType `query:"role_type"`
-	// Filter by commission eligibility.
-	//
-	// Exact match on the column. Pass `true` to list users who can be assigned as sales representatives, including dedicated `sales_rep` users.
-	IsCommissionEligible *bool `query:"is_commission_eligible"`
-	// Controls whether removed (soft-deleted) account users appear in the list.
-	//
-	// Removed users are left out unless you pass `included`, so a user removed with the remove action disappears from the default listing.
-	RemovedScope *constants.RemovedResourceScope `query:"removed_scope"`
+	// Only return members who can (`eligible`) or can't (`ineligible`) be named as a sales rep.
+	CommissionEligibility *constants.CommissionEligibility `query:"commission_eligibility"`
 }
 
-// Returns a paginated list of the users who belong to the account you are acting in.
+// Returns a list of the people in the account you are acting in.
 //
-// When the account you are acting in is a customer or supplier account you manage, this lists that account's users rather than your own team, each with the `notification_types` you send them.
+// Sorted by creation date, newest first. Acting in a customer or supplier account you manage lists that account's contacts rather than your own team.
 type ListAccountUsersEndpoint struct{}
 
 func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]] {
@@ -54,14 +44,20 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountUsersRequest) (*apiresource.List[apiresource.AccountUser], *apierror.APIError) {
 			return svc.(AccountUserSvc).ListAccountUsers
 		},
+		ObjectType:    constants.ObjectTypeAccountUser,
+		IncludeConfig: accountUserIncludes(),
+	})
+}
+
+// accountUserIncludeFields are the include keys every account-user endpoint offers.
+var accountUserIncludeFields = []string{"user", "role", "work_center"}
+
+func accountUserIncludes() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 		ObjectType: constants.ObjectTypeAccountUser,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAccountUser,
-			Fields:     []string{"user", "role", "department"},
-		}),
+		Fields:     accountUserIncludeFields,
 	})
 }

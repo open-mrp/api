@@ -85,14 +85,27 @@ func LoadAccountUserNames(ctx context.Context, ids []string) (map[string]Account
 
 func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 	return &apiresource.AccountUser{
-		ID:                   au.Id,
-		Object:               constants.ObjectTypeAccountUser,
-		Status:               constants.AccountUserStatus(au.StatusCode),
-		IsCommissionEligible: new(au.IsCommissionEligible),
-		NotificationTypes:    notificationTypesFromProto(au.NotificationTypes),
-		LastUsedAt:           grpcutil.TimestampToTimePtr(au.LastUsedAt),
-		CreatedAt:            grpcutil.TimestampToTime(au.CreatedAt),
-		UpdatedAt:            grpcutil.TimestampToTime(au.UpdatedAt),
+		ID:                    au.Id,
+		Object:                constants.ObjectTypeAccountUser,
+		Status:                constants.AccountUserStatus(au.StatusCode),
+		PortalAccess:          portalAccessFromProto(au),
+		CommissionEligibility: new(constants.CommissionEligibilityOf(au.IsCommissionEligible)),
+		NotificationTypes:     notificationTypesFromProto(au.NotificationTypes),
+		LastUsedAt:            grpcutil.TimestampToTimePtr(au.LastUsedAt),
+		CreatedAt:             grpcutil.TimestampToTime(au.CreatedAt),
+		UpdatedAt:             grpcutil.TimestampToTime(au.UpdatedAt),
+	}
+}
+
+// portalAccessFromProto is active once the member has used the account, invited once they were sent a sign-in link.
+func portalAccessFromProto(au *pb.AccountUserDetail) constants.PortalAccess {
+	switch {
+	case au.LastUsedAt != nil:
+		return constants.PortalAccessActive
+	case au.InvitedAt != nil:
+		return constants.PortalAccessInvited
+	default:
+		return constants.PortalAccessNone
 	}
 }
 

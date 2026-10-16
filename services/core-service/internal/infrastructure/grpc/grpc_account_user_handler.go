@@ -19,15 +19,24 @@ func (h *gRPCHandler) ListAccountUsers(ctx context.Context, req *pb.ListAccountU
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.accountUserSvc.ListAccountUsers(ctx, domain.ListAccountUsersParams{
-		Cursor:               req.Cursor,
-		Limit:                req.Limit,
-		Query:                req.Query,
-		RoleType:             req.RoleType,
-		IsCommissionEligible: req.IsCommissionEligible,
-		IncludeRemoved:       req.IncludeRemoved,
-		Includes:             req.Includes,
-	})
+	statuses := make([]constants.AccountUserStatus, len(req.Statuses))
+	for i, st := range req.Statuses {
+		statuses[i] = constants.AccountUserStatus(st)
+	}
+	params := domain.ListAccountUsersParams{
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		RoleType: req.RoleType,
+		Statuses: statuses,
+		Created:  createdRangeFromProto(req.Created),
+		Includes: req.Includes,
+	}
+	if req.CommissionEligibility != nil {
+		ce := constants.CommissionEligibility(*req.CommissionEligibility)
+		params.CommissionEligibility = &ce
+	}
+	result, apiErr := h.accountUserSvc.ListAccountUsers(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -45,7 +54,6 @@ func (h *gRPCHandler) ListAccountUsers(ctx context.Context, req *pb.ListAccountU
 			HasNextPage: result.PageInfo.HasNextPage,
 			HasPrevPage: result.PageInfo.HasPrevPage,
 		},
-		TotalCount: result.TotalCount,
 	}, nil
 }
 
@@ -124,17 +132,36 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 	}, nil
 }
 
-func (h *gRPCHandler) UpdateAccountUserStatus(ctx context.Context, req *pb.UpdateAccountUserStatusRequest) (*emptypb.Empty, error) {
+func (h *gRPCHandler) UpdateAccountUserStatus(ctx context.Context, req *pb.UpdateAccountUserStatusRequest) (*pb.UpdateAccountUserResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountUserSvc.UpdateAccountUserStatus(ctx, req.AccountUserId, constants.AccountUserStatus(req.StatusCode))
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	detail, apiErr := h.accountUserSvc.UpdateAccountUserStatus(ctx, req.AccountUserId, constants.AccountUserStatus(req.StatusCode))
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &emptypb.Empty{}, nil
+	return &pb.UpdateAccountUserResponse{AccountUser: accountUserDetailToProto(detail)}, nil
+}
+
+func (h *gRPCHandler) InviteAccountUser(ctx context.Context, req *pb.InviteAccountUserRequest) (*pb.UpdateAccountUserResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	detail, apiErr := h.accountUserSvc.InviteAccountUser(ctx, req.AccountUserId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UpdateAccountUserResponse{AccountUser: accountUserDetailToProto(detail)}, nil
 }
 
 func (h *gRPCHandler) UpdateAccountUserPassword(ctx context.Context, req *pb.UpdateAccountUserPasswordRequest) (*emptypb.Empty, error) {
@@ -190,6 +217,9 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 
 	if d.LastUsedAt != nil {
 		proto.LastUsedAt = timestamppb.New(*d.LastUsedAt)
+	}
+	if d.InvitedAt != nil {
+		proto.InvitedAt = timestamppb.New(*d.InvitedAt)
 	}
 	if d.DepartmentCreatedAt != nil {
 		proto.DepartmentCreatedAt = timestamppb.New(*d.DepartmentCreatedAt)

@@ -9,6 +9,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -114,6 +115,7 @@ func TestUpdateAccountUserPassword_TargetEligibility(t *testing.T) {
 				BillingPublisher:      publishermock.NewMockBillingPublisher(ctrl),
 				S3Client:              &capturingObjectStore{},
 				PlatformMode:          constants.PlatformModeTest,
+				AuthClient:            clientmock.NewMockCoreAuthClient(ctrl),
 			})
 
 			apiErr := svc.UpdateAccountUserPassword(passwordTestCtx(), passwordTestAccountUserID, passwordTestRequesterPass, passwordTestNewPass)

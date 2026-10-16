@@ -11,6 +11,9 @@ import (
 
 type RolesEndpointGroup struct {
 	*apiendpoint.APIEndpointGroup
+	// Permissions and Templates are the permission catalog and role templates, served from the role service.
+	Permissions *apiendpoint.APIEndpointGroup
+	Templates   *apiendpoint.APIEndpointGroup
 }
 
 type RolesEndpointGroupConfig struct {
@@ -36,7 +39,7 @@ func (*RolesEndpointGroup) Materialize(config *RolesEndpointGroupConfig) *RolesE
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Roles",
-		Description:  "List and manage roles.",
+		Description:  "What people, devices, API keys and agents may do.",
 		ResourceType: &apiresource.Role{},
 	}
 
@@ -45,6 +48,7 @@ func (*RolesEndpointGroup) Materialize(config *RolesEndpointGroupConfig) *RolesE
 	createRoleEndpoint := apiendpoint.From(&roleep.CreateRoleEndpoint{}).WithService(inner, roleSvc)
 	updateRoleEndpoint := apiendpoint.From(&roleep.UpdateRoleEndpoint{}).WithService(inner, roleSvc)
 	deleteRoleEndpoint := apiendpoint.From(&roleep.DeleteRoleEndpoint{}).WithService(inner, roleSvc)
+	previewRoleEndpoint := apiendpoint.From(&roleep.PreviewRoleEndpoint{}).WithService(inner, roleSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listRolesEndpoint,
@@ -52,7 +56,26 @@ func (*RolesEndpointGroup) Materialize(config *RolesEndpointGroupConfig) *RolesE
 		createRoleEndpoint,
 		updateRoleEndpoint,
 		deleteRoleEndpoint,
+		previewRoleEndpoint,
 	}
 
-	return &RolesEndpointGroup{inner}
+	permissions := &apiendpoint.APIEndpointGroup{
+		Title:        "Permissions",
+		Description:  "The permission catalog roles are built from.",
+		ResourceType: &apiresource.Permission{},
+	}
+	permissions.Endpoints = []apiendpoint.APIEndpointer{
+		apiendpoint.From(&roleep.ListPermissionsEndpoint{}).WithService(permissions, roleSvc),
+	}
+
+	templates := &apiendpoint.APIEndpointGroup{
+		Title:        "Role Templates",
+		Description:  "Starting points for roles.",
+		ResourceType: &apiresource.RoleTemplate{},
+	}
+	templates.Endpoints = []apiendpoint.APIEndpointer{
+		apiendpoint.From(&roleep.ListRoleTemplatesEndpoint{}).WithService(templates, roleSvc),
+	}
+
+	return &RolesEndpointGroup{APIEndpointGroup: inner, Permissions: permissions, Templates: templates}
 }

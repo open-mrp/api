@@ -36,7 +36,7 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Account Users",
-		Description:  "List and manage account users.",
+		Description:  "Your team and your customers' and suppliers' contacts.",
 		ResourceType: &apiresource.AccountUser{},
 	}
 
@@ -47,6 +47,7 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 	activateEndpoint := apiendpoint.From(&accountuserep.ActivateAccountUserEndpoint{}).WithService(inner, svc)
 	disableEndpoint := apiendpoint.From(&accountuserep.DisableAccountUserEndpoint{}).WithService(inner, svc)
 	removeEndpoint := apiendpoint.From(&accountuserep.RemoveAccountUserEndpoint{}).WithService(inner, svc)
+	inviteEndpoint := apiendpoint.From(&accountuserep.InviteAccountUserEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -56,6 +57,7 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 		activateEndpoint,
 		disableEndpoint,
 		removeEndpoint,
+		inviteEndpoint,
 	}
 
 	return &AccountUsersEndpointGroup{inner}

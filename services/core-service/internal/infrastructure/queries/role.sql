@@ -5,7 +5,7 @@ SELECT id, name, role_type_code, account_id FROM role WHERE id = ?;
 SELECT id, name, role_type_code FROM role WHERE id IN (sqlc.slice('ids'));
 
 -- name: GetRolesFullByIDs :many
-SELECT id, name, role_type_code, account_id, created_at, updated_at
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
 FROM role
 WHERE id IN (sqlc.slice('ids'))
 AND (account_id = sqlc.arg('account_id') OR account_id IS NULL);
@@ -18,7 +18,7 @@ ORDER BY account_id IS NULL, created_at, id
 LIMIT 1;
 
 -- name: GetRoleByIDAndAccount :one
-SELECT id, name, role_type_code, account_id, created_at, updated_at
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
 FROM role
 WHERE id = ? AND (account_id = ? OR account_id IS NULL);
 
@@ -29,7 +29,9 @@ SELECT
     r.role_type_code,
     r.account_id,
     r.created_at,
-    r.updated_at
+    r.updated_at,
+    r.access,
+    r.template_code
 FROM role r
 WHERE (r.account_id = sqlc.arg('account_id') OR r.account_id IS NULL)
 AND (
@@ -55,7 +57,9 @@ SELECT
     r.role_type_code,
     r.account_id,
     r.created_at,
-    r.updated_at
+    r.updated_at,
+    r.access,
+    r.template_code
 FROM role r
 WHERE (r.account_id = sqlc.arg('account_id') OR r.account_id IS NULL)
 AND (
@@ -81,8 +85,8 @@ AND account_id = sqlc.arg('account_id')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: InsertRole :exec
-INSERT INTO role (id, name, role_type_code, account_id, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('role_type_code'), sqlc.arg('account_id'), NOW(3), NOW(3));
+INSERT INTO role (id, name, role_type_code, account_id, access, template_code, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('role_type_code'), sqlc.arg('account_id'), sqlc.arg('access'), sqlc.narg('template_code'), NOW(3), NOW(3));
 
 -- name: UpdateRoleName :exec
 UPDATE role
@@ -91,3 +95,8 @@ WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: DeleteRoleByID :exec
 DELETE FROM role WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
+
+-- name: UpdateRoleAccess :exec
+UPDATE role
+SET access = sqlc.arg('access'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');

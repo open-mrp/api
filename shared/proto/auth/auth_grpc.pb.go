@@ -41,6 +41,7 @@ const (
 	AuthService_ListAPIKeys_FullMethodName                      = "/auth.AuthService/ListAPIKeys"
 	AuthService_GetAPIKey_FullMethodName                        = "/auth.AuthService/GetAPIKey"
 	AuthService_BatchGetAPIKeysByIDs_FullMethodName             = "/auth.AuthService/BatchGetAPIKeysByIDs"
+	AuthService_IssueSignInToken_FullMethodName                 = "/auth.AuthService/IssueSignInToken"
 	AuthService_GetOrCreateDocAPIKey_FullMethodName             = "/auth.AuthService/GetOrCreateDocAPIKey"
 	AuthService_CreateRegistrationSession_FullMethodName        = "/auth.AuthService/CreateRegistrationSession"
 	AuthService_ResendVerificationEmail_FullMethodName          = "/auth.AuthService/ResendVerificationEmail"
@@ -90,6 +91,8 @@ type AuthServiceClient interface {
 	// Returns API keys matching the given IDs for the caller's target account.
 	BatchGetAPIKeysByIDs(ctx context.Context, in *BatchGetAPIKeysByIDsRequest, opts ...grpc.CallOption) (*BatchGetAPIKeysByIDsResponse, error)
 	// Returns a sandbox API key for API docs, reusing or creating as needed.
+	// Issues a sign-in link token for a user another service invites. Service-to-service only.
+	IssueSignInToken(ctx context.Context, in *IssueSignInTokenRequest, opts ...grpc.CallOption) (*IssueSignInTokenResponse, error)
 	GetOrCreateDocAPIKey(ctx context.Context, in *GetOrCreateDocAPIKeyRequest, opts ...grpc.CallOption) (*GetOrCreateDocAPIKeyResponse, error)
 	// Creates a registration session (or returns existing). Sends a verification email.
 	CreateRegistrationSession(ctx context.Context, in *CreateRegistrationSessionRequest, opts ...grpc.CallOption) (*CreateRegistrationSessionResponse, error)
@@ -265,6 +268,16 @@ func (c *authServiceClient) BatchGetAPIKeysByIDs(ctx context.Context, in *BatchG
 	return out, nil
 }
 
+func (c *authServiceClient) IssueSignInToken(ctx context.Context, in *IssueSignInTokenRequest, opts ...grpc.CallOption) (*IssueSignInTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IssueSignInTokenResponse)
+	err := c.cc.Invoke(ctx, AuthService_IssueSignInToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) GetOrCreateDocAPIKey(ctx context.Context, in *GetOrCreateDocAPIKeyRequest, opts ...grpc.CallOption) (*GetOrCreateDocAPIKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetOrCreateDocAPIKeyResponse)
@@ -429,6 +442,8 @@ type AuthServiceServer interface {
 	// Returns API keys matching the given IDs for the caller's target account.
 	BatchGetAPIKeysByIDs(context.Context, *BatchGetAPIKeysByIDsRequest) (*BatchGetAPIKeysByIDsResponse, error)
 	// Returns a sandbox API key for API docs, reusing or creating as needed.
+	// Issues a sign-in link token for a user another service invites. Service-to-service only.
+	IssueSignInToken(context.Context, *IssueSignInTokenRequest) (*IssueSignInTokenResponse, error)
 	GetOrCreateDocAPIKey(context.Context, *GetOrCreateDocAPIKeyRequest) (*GetOrCreateDocAPIKeyResponse, error)
 	// Creates a registration session (or returns existing). Sends a verification email.
 	CreateRegistrationSession(context.Context, *CreateRegistrationSessionRequest) (*CreateRegistrationSessionResponse, error)
@@ -505,6 +520,9 @@ func (UnimplementedAuthServiceServer) GetAPIKey(context.Context, *GetAPIKeyReque
 }
 func (UnimplementedAuthServiceServer) BatchGetAPIKeysByIDs(context.Context, *BatchGetAPIKeysByIDsRequest) (*BatchGetAPIKeysByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetAPIKeysByIDs not implemented")
+}
+func (UnimplementedAuthServiceServer) IssueSignInToken(context.Context, *IssueSignInTokenRequest) (*IssueSignInTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IssueSignInToken not implemented")
 }
 func (UnimplementedAuthServiceServer) GetOrCreateDocAPIKey(context.Context, *GetOrCreateDocAPIKeyRequest) (*GetOrCreateDocAPIKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrCreateDocAPIKey not implemented")
@@ -818,6 +836,24 @@ func _AuthService_BatchGetAPIKeysByIDs_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_IssueSignInToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IssueSignInTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).IssueSignInToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_IssueSignInToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).IssueSignInToken(ctx, req.(*IssueSignInTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_GetOrCreateDocAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetOrCreateDocAPIKeyRequest)
 	if err := dec(in); err != nil {
@@ -1114,6 +1150,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetAPIKeysByIDs",
 			Handler:    _AuthService_BatchGetAPIKeysByIDs_Handler,
+		},
+		{
+			MethodName: "IssueSignInToken",
+			Handler:    _AuthService_IssueSignInToken_Handler,
 		},
 		{
 			MethodName: "GetOrCreateDocAPIKey",

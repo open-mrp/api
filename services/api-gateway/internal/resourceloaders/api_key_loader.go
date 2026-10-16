@@ -2,6 +2,8 @@ package resourceloaders
 
 import (
 	"context"
+	"time"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -58,5 +60,25 @@ func apiKeyFromProto(k *authpb.APIKeyInfo) *apiresource.APIKey {
 		LastUsedAt:    grpcutil.TimestampToTimePtr(k.LastUsedAt),
 		ExpiresAt:     grpcutil.TimestampToTimePtr(k.ExpiresAt),
 		RevokedAt:     grpcutil.TimestampToTimePtr(k.RevokedAt),
+		Status:        apiKeyStatus(k, time.Now()),
+		Client:        apiKeyClient(k),
 	}
+}
+
+// apiKeyStatus is revoked once the revocation has taken effect, else expired once past its expiry, else active.
+func apiKeyStatus(k *authpb.APIKeyInfo, now time.Time) constants.APIKeyStatus {
+	if k.RevokedAt != nil && !k.RevokedAt.AsTime().After(now) {
+		return constants.APIKeyStatusRevoked
+	}
+	if k.ExpiresAt != nil && !k.ExpiresAt.AsTime().After(now) {
+		return constants.APIKeyStatusExpired
+	}
+	return constants.APIKeyStatusActive
+}
+
+func apiKeyClient(k *authpb.APIKeyInfo) *apiresource.APIKeyClient {
+	if k.ClientName == nil || *k.ClientName == "" {
+		return nil
+	}
+	return &apiresource.APIKeyClient{Name: *k.ClientName, Source: k.ClientSource}
 }

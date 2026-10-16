@@ -14,61 +14,42 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update an account user.
+// Request to update an account user.
 type UpdateAccountUserRequest struct {
 	// ID of the account user to update.
 	AccountUserID string `path:"id" validate:"required"`
-	// User display name.
+	// The person's name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// User email address.
-	//
-	// Must not already be in use by another user.
+	// The person's email address. 409 if another person already uses it.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
-	// Unique username.
-	//
-	// 3–255 characters; letters, numbers, underscores, and hyphens. Must not already be in use by another user.
-	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username"`
-	// ID of the role to assign to the user.
-	//
-	// Set to `null` to clear the role.
+	// A scanning-station login name. 409 if another login already uses it.
+	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username" visibility:"internal"`
+	// ID of the role that sets what the person can do. Send `null` to clear it.
 	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
-	// ID of the department to assign to the user.
+	// ID of the work center the person works in. Send `null` to clear it.
+	WorkCenterID field.Clearable[string] `json:"work_center_id,omitzero" validate:"omitempty"`
+	// Whether the person can be named as a sales rep: `eligible` or `ineligible`.
 	//
-	// Set to `null` to clear the department. The department must already exist in the account.
-	DepartmentID field.Clearable[string] `json:"department_id,omitzero" validate:"omitempty"`
-	// Whether the user can be assigned as a sales representative on orders, territories, and targets.
-	//
-	// Forced true for the `sales_rep` role type and rejected for scanner and agent roles. Cannot be turned off while the user stays on a `sales_rep` role.
-	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
-	// Notification preference toggles to apply.
-	//
-	// Only allowed when updating a user in a customer or supplier account you manage; rejected otherwise. Notification types omitted from the list are left unchanged, and the result is returned in `notification_types`.
-	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
+	// A member with a sales-rep role stays eligible; scanner and agent roles can't be.
+	CommissionEligibility field.Optional[constants.CommissionEligibility] `json:"commission_eligibility,omitzero"`
+	// Notification toggles for a customer's or supplier's contact; types left out are unchanged.
+	Preferences []NotificationPreferenceItem `json:"preferences,omitzero" visibility:"internal"`
 }
 
-var sampleUpdateAccountUserName = apiresource.SampleUserName
-var sampleUpdateAccountUserEmail = apiresource.SampleUserEmail
-var sampleUpdateAccountUserUsername = apiresource.SampleUserUsername
-var sampleUpdateAccountUserRoleID = apiresource.SampleRoleID
-var sampleUpdateAccountUserDepartmentID = apiresource.SampleWorkCenterID
 var sampleUpdateAccountUserRequest = &UpdateAccountUserRequest{
-	Name:         field.Some(sampleUpdateAccountUserName),
-	Email:        field.Some(sampleUpdateAccountUserEmail),
-	Username:     field.Some(sampleUpdateAccountUserUsername),
-	RoleID:       field.Set(sampleUpdateAccountUserRoleID),
-	DepartmentID: field.Set(sampleUpdateAccountUserDepartmentID),
-	Preferences: []NotificationPreferenceItem{
-		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
-	},
+	Name:                  field.Some(apiresource.SampleUserName),
+	RoleID:                field.Set(apiresource.SampleRoleID),
+	WorkCenterID:          field.Set(apiresource.SampleWorkCenterID),
+	CommissionEligibility: field.Some(constants.CommissionEligibilityEligible),
 }
 
 func (*UpdateAccountUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountUserRequest)
 }
 
-// Partially updates an account user.
+// Updates an account user.
 //
-// Omitted fields are left unchanged. Profile fields (`name`, `email`, `username`) update the underlying user, which is shared across every account the user belongs to, so the change is visible everywhere that person works.
+// Only fields you send are changed. `name` and `email` belong to the person's profile, which is shared across every account they belong to.
 type UpdateAccountUserEndpoint struct{}
 
 func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser] {
@@ -81,14 +62,10 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser
 		},
-		ObjectType: constants.ObjectTypeAccountUser,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAccountUser,
-			Fields:     []string{"user", "role", "department"},
-		}),
+		ObjectType:    constants.ObjectTypeAccountUser,
+		IncludeConfig: accountUserIncludes(),
 	})
 }

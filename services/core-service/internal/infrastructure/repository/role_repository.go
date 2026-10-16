@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"encoding/json"
 	"time"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
@@ -37,9 +39,37 @@ func mapRoleRow(row sqlc.Role) *domain.Role {
 		Name:      row.Name,
 		RoleType:  row.RoleTypeCode,
 		AccountID: acctID,
+		Access:    roleAccessFromJSON(row.Access),
+		Template:  db.StringFromNullString(row.TemplateCode),
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
+}
+
+// roleAccessFromJSON reads the stored access levels; nil when unset or unreadable, so the role is described from what
+// it holds.
+func roleAccessFromJSON(raw db.NullableRawMessage) types.RoleAccess {
+	if len(raw) == 0 {
+		return nil
+	}
+	var m map[string]string
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil
+	}
+	access := types.RoleAccess{}
+	for k, v := range m {
+		access[constants.PermissionArea(k)] = constants.AccessLevel(v)
+	}
+	return access
+}
+
+func roleAccessJSON(access types.RoleAccess) db.NullableRawMessage {
+	m := map[string]string{}
+	for k, v := range access.Complete() {
+		m[string(k)] = string(v)
+	}
+	b, _ := json.Marshal(m)
+	return b
 }
 
 func buildRoleSearchQuery(query *string) gosql.NullString {
@@ -234,12 +264,26 @@ func (r *roleRepoImpl) Create(ctx context.Context, roleID string, params domain.
 		Name:         params.Name,
 		RoleTypeCode: string(constants.RoleTypeCustom),
 		AccountID:    db.NullString(params.AccountID),
+		Access:       roleAccessJSON(params.Access),
+		TemplateCode: db.NullStringPtr((*string)(params.Template)),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
 	return nil
+}
+
+func (r *roleRepoImpl) UpdateAccess(ctx context.Context, roleID, accountID string, access types.RoleAccess) *apierror.APIError {
+	ctx, span := roleRepoTracer.Start(ctx, "repository.role.update_access")
+	defer span.End()
+
+	err := r.queries.UpdateRoleAccess(ctx, sqlc.UpdateRoleAccessParams{
+		Access:    roleAccessJSON(access),
+		ID:        roleID,
+		AccountID: db.NullString(accountID),
+	})
+	return tracing.Trace(span, db.MapSQLError(err))
 }
 
 func (r *roleRepoImpl) UpdateName(ctx context.Context, roleID, accountID, name string) *apierror.APIError {

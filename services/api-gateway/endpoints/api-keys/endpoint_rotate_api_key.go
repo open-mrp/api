@@ -40,7 +40,7 @@ func (*RotateAPIKeyRequest) SchemaExample() any {
 //
 // The replacement is a new key with its own ID; the rotated key keeps its ID and stays in the list, moving to a `revoked` status once its revocation takes effect. Use `revoke_at` to keep the old key working while you roll the new secret out.
 //
-// The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.openmrp.ai/api/managing-api-keys) on how you can manage your API keys.
+// The response carries the new key and its `secret`. The secret is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.openmrp.ai/api/managing-api-keys) on how you can manage your API keys.
 type RotateAPIKeyEndpoint struct{}
 
 func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey] {
@@ -53,13 +53,12 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		Public:            true,
 		AgentTool:         false,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeCreatedAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).RotateAPIKey
 		},
 		LocationFunc: func(resp *apiresource.CreatedAPIKey) string {
-			return "/v1/auth/api-keys/" + resp.APIKeyInfo.ID
+			return "/v1/auth/api-keys/" + resp.APIKey.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAPIKey,

@@ -15,6 +15,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	domain "github.com/open-mrp/api/services/core-service/internal/domain"
 	ledgerlock "github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	scheduling "github.com/open-mrp/api/services/core-service/internal/scheduling"
@@ -867,6 +868,20 @@ func (m *MockAccountUserRepo) RevokeRefreshTokensByUserID(ctx context.Context, u
 func (mr *MockAccountUserRepoMockRecorder) RevokeRefreshTokensByUserID(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeRefreshTokensByUserID", reflect.TypeOf((*MockAccountUserRepo)(nil).RevokeRefreshTokensByUserID), ctx, userID)
+}
+
+// SetInvitedAt mocks base method.
+func (m *MockAccountUserRepo) SetInvitedAt(ctx context.Context, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetInvitedAt", ctx, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetInvitedAt indicates an expected call of SetInvitedAt.
+func (mr *MockAccountUserRepoMockRecorder) SetInvitedAt(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInvitedAt", reflect.TypeOf((*MockAccountUserRepo)(nil).SetInvitedAt), ctx, accountUserID)
 }
 
 // SoftDelete mocks base method.
@@ -2718,6 +2733,20 @@ func (m *MockRoleRepo) List(ctx context.Context, params domain.ListRolesParams) 
 func (mr *MockRoleRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleRepo)(nil).List), ctx, params)
+}
+
+// UpdateAccess mocks base method.
+func (m *MockRoleRepo) UpdateAccess(ctx context.Context, roleID, accountID string, access types.RoleAccess) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAccess", ctx, roleID, accountID, access)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateAccess indicates an expected call of UpdateAccess.
+func (mr *MockRoleRepoMockRecorder) UpdateAccess(ctx, roleID, accountID, access any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccess", reflect.TypeOf((*MockRoleRepo)(nil).UpdateAccess), ctx, roleID, accountID, access)
 }
 
 // UpdateName mocks base method.

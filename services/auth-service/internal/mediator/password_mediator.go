@@ -276,3 +276,19 @@ func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *type
 
 	return nil
 }
+
+// SignInLinkTTL is how long an invitation's sign-in link works: long enough for someone to open it days later, short
+// enough that a forwarded old invite stops working.
+const SignInLinkTTL = 72 * time.Hour
+
+func (s *passwordMedImpl) IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError) {
+	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.issue_sign_in_token")
+	defer span.End()
+
+	expiresAt := time.Now().Add(SignInLinkTTL)
+	t, err := tokenutil.EncodeJWT(ctx, s.jwtSecret, userID, SignInLinkTTL, tokenutil.JWTTypePasswordReset)
+	if err != nil {
+		return "", time.Time{}, tracing.Trace(span, err)
+	}
+	return t, expiresAt, nil
+}

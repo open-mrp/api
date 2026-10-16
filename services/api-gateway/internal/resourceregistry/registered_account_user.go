@@ -29,11 +29,11 @@ func init() {
 				Populate:    populateRoleOnAccountUser,
 			},
 			{
-				Key:         "department",
+				Key:         "work_center",
 				Target:      constants.ObjectTypeWorkCenter,
 				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractDepartmentIDFromAccountUser,
-				Populate:    populateDepartmentOnAccountUser,
+				ExtractIDs:  extractWorkCenterIDFromAccountUser,
+				Populate:    populateWorkCenterOnAccountUser,
 			},
 		},
 	})
@@ -83,7 +83,7 @@ func populateRoleOnAccountUser(ctx context.Context, parent any, loaded map[strin
 	}
 }
 
-func extractDepartmentIDFromAccountUser(ctx context.Context, parent any) []string {
+func extractWorkCenterIDFromAccountUser(ctx context.Context, parent any) []string {
 	au := parent.(*apiresource.AccountUser)
 	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "department_id")
@@ -93,7 +93,7 @@ func extractDepartmentIDFromAccountUser(ctx context.Context, parent any) []strin
 	return []string{id}
 }
 
-func populateDepartmentOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
+func populateWorkCenterOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
 	au := parent.(*apiresource.AccountUser)
 	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "department_id")
@@ -101,6 +101,6 @@ func populateDepartmentOnAccountUser(ctx context.Context, parent any, loaded map
 		return
 	}
 	if v, ok := loaded[id]; ok {
-		au.Department = v.(*apiresource.WorkCenter)
+		au.WorkCenter = v.(*apiresource.WorkCenter)
 	}
 }

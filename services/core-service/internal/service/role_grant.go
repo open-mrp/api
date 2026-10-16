@@ -13,44 +13,20 @@ import (
 
 // A role's holders act with every permission it grants, so a non-admin may only hand out, or widen a role by, permissions they already hold. Admins are unbounded.
 
-// rolePermissionCodes flattens permission inputs into domain:action codes.
-func rolePermissionCodes(inputs []domain.CreateRolePermissionInput) map[string]bool {
-	codes := make(map[string]bool, len(inputs)*4)
-	for _, in := range inputs {
-		for action, granted := range map[types.Action]bool{
-			types.ActionCreate: in.Create,
-			types.ActionRead:   in.Read,
-			types.ActionUpdate: in.Update,
-			types.ActionDelete: in.Delete,
-		} {
-			if granted {
-				codes[in.PermissionCode+":"+string(action)] = true
-			}
-		}
-	}
-	return codes
-}
-
-// addedPermissionCodes is what an update would grant that the role does not already; removing permissions is always allowed.
-func addedPermissionCodes(current []*domain.RolePermission, requested []domain.CreateRolePermissionInput) map[string]bool {
-	held := make([]domain.CreateRolePermissionInput, 0, len(current))
-	for _, p := range current {
-		held = append(held, domain.CreateRolePermissionInput{PermissionCode: p.PermissionCode, Create: p.Create, Read: p.Read, Update: p.Update, Delete: p.Delete})
-	}
-	heldCodes := rolePermissionCodes(held)
-	added := rolePermissionCodes(requested)
-	for code := range heldCodes {
-		delete(added, code)
-	}
-	return added
-}
-
 // checkPermissionsGrantable rejects a non-admin granting a role permissions they lack.
 func checkPermissionsGrantable(identity *types.Identity, granted map[string]bool) *apierror.APIError {
 	if identity.IsAdmin() {
 		return nil
 	}
-	missing := types.PermissionsNotHeld(identity.Actor.Permissions, granted)
+	// Every member holds the baseline permissions (their profile, messaging, notes), so handing them out widens nothing.
+	needed := make(map[string]bool, len(granted))
+	for code, ok := range granted {
+		if p, known := types.CatalogPermissionByCode(code); known && p.Level == constants.AccessLevelNone {
+			continue
+		}
+		needed[code] = ok
+	}
+	missing := types.PermissionsNotHeld(identity.Actor.Permissions, needed)
 	if len(missing) == 0 {
 		return nil
 	}

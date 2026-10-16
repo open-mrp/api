@@ -8,6 +8,7 @@ import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 import "core/core_async.proto";
 import "core/value_shapes.proto";
+import "core/primitives.proto";
 option go_package = "shared/proto/core;core";
 
 message AccountGroupInfo {
@@ -98,10 +99,14 @@ message ListAccountUsersRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  reserved 5, 7;
+  reserved "include_removed", "is_commission_eligible";
   optional string role_type = 4;
-  bool include_removed = 5;
   repeated string includes = 6;
-  optional bool is_commission_eligible = 7;
+  // Empty lists every status.
+  repeated string statuses = 8;
+  optional string commission_eligibility = 9;
+  CreatedRange created = 10;
 }
 message ListAccountUsersResponse {
   repeated AccountUserDetail account_users = 1;
@@ -160,6 +165,9 @@ message UpdateAccountUserStatusRequest {
   string account_user_id = 1;
   // Target status_code: "active", "disabled", or "removed".
   string status_code = 2;
+}
+message InviteAccountUserRequest {
+  string account_user_id = 1;
 }
 message UpdateAccountUserPasswordRequest {
   string account_user_id = 1;

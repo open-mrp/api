@@ -57,6 +57,9 @@ service AuthService {
   rpc BatchGetAPIKeysByIDs(BatchGetAPIKeysByIDsRequest) returns (BatchGetAPIKeysByIDsResponse);
 
   // Returns a sandbox API key for API docs, reusing or creating as needed.
+  // Issues a sign-in link token for a user another service invites. Service-to-service only.
+  rpc IssueSignInToken(IssueSignInTokenRequest) returns (IssueSignInTokenResponse);
+
   rpc GetOrCreateDocAPIKey(GetOrCreateDocAPIKeyRequest) returns (GetOrCreateDocAPIKeyResponse);
 
   // Creates a registration session (or returns existing). Sends a verification email.
@@ -246,6 +249,23 @@ message CreateAPIKeyRequest {
   string name = 2;
   optional google.protobuf.Timestamp expires_at = 3;
   repeated string includes = 4;
+  optional APIKeyClient client = 5;
+}
+
+// The client an API key was made for.
+message APIKeyClient {
+  string name = 1;
+  optional string source = 2;
+}
+
+message IssueSignInTokenRequest {
+  string user_id = 1;
+}
+
+message IssueSignInTokenResponse {
+  // A password-reset token that signs the user in and lets them choose a password.
+  string token = 1;
+  google.protobuf.Timestamp expires_at = 2;
 }
 
 message CreateAPIKeyResponse {
@@ -325,6 +345,8 @@ message APIKeyInfo {
   optional google.protobuf.Timestamp expires_at = 9;
   optional google.protobuf.Timestamp revoked_at = 10;
   optional string role_type_code = 11;
+  optional string client_name = 12;
+  optional string client_source = 13;
 }
 
 message GetOrCreateDocAPIKeyRequest {

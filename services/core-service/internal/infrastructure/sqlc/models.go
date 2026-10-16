@@ -371,6 +371,7 @@ type AccountUser struct {
 	RoleID               sql.NullString
 	AccountID            string
 	IsCommissionEligible bool
+	InvitedAt            sql.NullTime
 }
 
 type ActionType struct {
@@ -460,6 +461,8 @@ type ApiKey struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 }
 
 type Attribute struct {
@@ -2248,6 +2251,8 @@ type Role struct {
 	AccountID    sql.NullString
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Access       db.NullableRawMessage
+	TemplateCode sql.NullString
 }
 
 type RolePermission struct {

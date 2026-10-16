@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -1714,16 +1715,22 @@ func (x *RolePermissionDetail) GetUpdatedAt() *timestamppb.Timestamp {
 }
 
 type RoleDetail struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                  `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	RoleTypeCode  string                  `protobuf:"bytes,3,opt,name=role_type_code,json=roleTypeCode,proto3" json:"role_type_code,omitempty"`
-	AccountId     string                  `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	CreatedAt     *timestamppb.Timestamp  `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp  `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Permissions   []*RolePermissionDetail `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState  `protogen:"open.v1"`
+	Id           string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name         string                  `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	RoleTypeCode string                  `protobuf:"bytes,3,opt,name=role_type_code,json=roleTypeCode,proto3" json:"role_type_code,omitempty"`
+	AccountId    string                  `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	CreatedAt    *timestamppb.Timestamp  `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    *timestamppb.Timestamp  `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Permissions  []*RolePermissionDetail `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	// The role's definition: access per area, the codes added and removed on top, and what it holds in the end.
+	Access               map[string]string `protobuf:"bytes,8,rep,name=access,proto3" json:"access,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Grants               []string          `protobuf:"bytes,9,rep,name=grants,proto3" json:"grants,omitempty"`
+	Revokes              []string          `protobuf:"bytes,10,rep,name=revokes,proto3" json:"revokes,omitempty"`
+	EffectivePermissions []string          `protobuf:"bytes,11,rep,name=effective_permissions,json=effectivePermissions,proto3" json:"effective_permissions,omitempty"`
+	TemplateCode         *string           `protobuf:"bytes,12,opt,name=template_code,json=templateCode,proto3,oneof" json:"template_code,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *RoleDetail) Reset() {
@@ -1803,6 +1810,41 @@ func (x *RoleDetail) GetPermissions() []*RolePermissionDetail {
 		return x.Permissions
 	}
 	return nil
+}
+
+func (x *RoleDetail) GetAccess() map[string]string {
+	if x != nil {
+		return x.Access
+	}
+	return nil
+}
+
+func (x *RoleDetail) GetGrants() []string {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+func (x *RoleDetail) GetRevokes() []string {
+	if x != nil {
+		return x.Revokes
+	}
+	return nil
+}
+
+func (x *RoleDetail) GetEffectivePermissions() []string {
+	if x != nil {
+		return x.EffectivePermissions
+	}
+	return nil
+}
+
+func (x *RoleDetail) GetTemplateCode() string {
+	if x != nil && x.TemplateCode != nil {
+		return *x.TemplateCode
+	}
+	return ""
 }
 
 type ListRolesRequest struct {
@@ -2106,10 +2148,16 @@ func (x *CreateRolePermissionInput) GetDelete() bool {
 }
 
 type CreateRoleRequest struct {
-	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Name          string                       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Permissions   []*CreateRolePermissionInput `protobuf:"bytes,2,rep,name=permissions,proto3" json:"permissions,omitempty"`
-	Includes      []string                     `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Name         string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Includes     []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
+	TemplateCode *string                `protobuf:"bytes,4,opt,name=template_code,json=templateCode,proto3,oneof" json:"template_code,omitempty"`
+	// Areas left out start from the template's level, or none without a template.
+	Access map[string]string `protobuf:"bytes,5,rep,name=access,proto3" json:"access,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// When has_grants is false the template's grants apply.
+	HasGrants     bool     `protobuf:"varint,6,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
+	Grants        []string `protobuf:"bytes,7,rep,name=grants,proto3" json:"grants,omitempty"`
+	Revokes       []string `protobuf:"bytes,8,rep,name=revokes,proto3" json:"revokes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2151,16 +2199,44 @@ func (x *CreateRoleRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateRoleRequest) GetPermissions() []*CreateRolePermissionInput {
+func (x *CreateRoleRequest) GetIncludes() []string {
 	if x != nil {
-		return x.Permissions
+		return x.Includes
 	}
 	return nil
 }
 
-func (x *CreateRoleRequest) GetIncludes() []string {
+func (x *CreateRoleRequest) GetTemplateCode() string {
+	if x != nil && x.TemplateCode != nil {
+		return *x.TemplateCode
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetAccess() map[string]string {
 	if x != nil {
-		return x.Includes
+		return x.Access
+	}
+	return nil
+}
+
+func (x *CreateRoleRequest) GetHasGrants() bool {
+	if x != nil {
+		return x.HasGrants
+	}
+	return false
+}
+
+func (x *CreateRoleRequest) GetGrants() []string {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+func (x *CreateRoleRequest) GetRevokes() []string {
+	if x != nil {
+		return x.Revokes
 	}
 	return nil
 }
@@ -2210,14 +2286,17 @@ func (x *CreateRoleResponse) GetRole() *RoleDetail {
 }
 
 type UpdateRoleRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// When false, existing permissions are left unchanged.
-	HasPermissions bool `protobuf:"varint,3,opt,name=has_permissions,json=hasPermissions,proto3" json:"has_permissions,omitempty"`
-	// Only applied when has_permissions is true.
-	Permissions   []*CreateRolePermissionInput `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
-	Includes      []string                     `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name     string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Includes []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Areas to change; the rest keep their level.
+	Access map[string]string `protobuf:"bytes,6,rep,name=access,proto3" json:"access,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// When has_grants (has_revokes) is false the role keeps its grants (revokes).
+	HasGrants     bool     `protobuf:"varint,7,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
+	Grants        []string `protobuf:"bytes,8,rep,name=grants,proto3" json:"grants,omitempty"`
+	HasRevokes    bool     `protobuf:"varint,9,opt,name=has_revokes,json=hasRevokes,proto3" json:"has_revokes,omitempty"`
+	Revokes       []string `protobuf:"bytes,10,rep,name=revokes,proto3" json:"revokes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2266,23 +2345,44 @@ func (x *UpdateRoleRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateRoleRequest) GetHasPermissions() bool {
+func (x *UpdateRoleRequest) GetIncludes() []string {
 	if x != nil {
-		return x.HasPermissions
-	}
-	return false
-}
-
-func (x *UpdateRoleRequest) GetPermissions() []*CreateRolePermissionInput {
-	if x != nil {
-		return x.Permissions
+		return x.Includes
 	}
 	return nil
 }
 
-func (x *UpdateRoleRequest) GetIncludes() []string {
+func (x *UpdateRoleRequest) GetAccess() map[string]string {
 	if x != nil {
-		return x.Includes
+		return x.Access
+	}
+	return nil
+}
+
+func (x *UpdateRoleRequest) GetHasGrants() bool {
+	if x != nil {
+		return x.HasGrants
+	}
+	return false
+}
+
+func (x *UpdateRoleRequest) GetGrants() []string {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+func (x *UpdateRoleRequest) GetHasRevokes() bool {
+	if x != nil {
+		return x.HasRevokes
+	}
+	return false
+}
+
+func (x *UpdateRoleRequest) GetRevokes() []string {
+	if x != nil {
+		return x.Revokes
 	}
 	return nil
 }
@@ -5551,8 +5651,10 @@ type AccountUserDetail struct {
 	IsCommissionEligible bool `protobuf:"varint,19,opt,name=is_commission_eligible,json=isCommissionEligible,proto3" json:"is_commission_eligible,omitempty"`
 	// Notification types the acting account sends this user when it manages the user's account as a customer or supplier. Unset for the acting account's own users. GetAccountUser and BatchGetAccountUsersByIDs fill it; ListAccountUsers does not, since the gateway hydrates list pages through the batch read.
 	NotificationTypes *AccountUserNotificationTypes `protobuf:"bytes,20,opt,name=notification_types,json=notificationTypes,proto3" json:"notification_types,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// When the member was last sent a sign-in link.
+	InvitedAt     *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=invited_at,json=invitedAt,proto3,oneof" json:"invited_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AccountUserDetail) Reset() {
@@ -5721,6 +5823,13 @@ func (x *AccountUserDetail) GetIsCommissionEligible() bool {
 func (x *AccountUserDetail) GetNotificationTypes() *AccountUserNotificationTypes {
 	if x != nil {
 		return x.NotificationTypes
+	}
+	return nil
+}
+
+func (x *AccountUserDetail) GetInvitedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.InvitedAt
 	}
 	return nil
 }
@@ -11752,7 +11861,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xa9\x02\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xbd\x04\n" +
 	"\n" +
 	"RoleDetail\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -11764,7 +11873,17 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12<\n" +
-	"\vpermissions\x18\a \x03(\v2\x1a.core.RolePermissionDetailR\vpermissions\"\x9a\x01\n" +
+	"\vpermissions\x18\a \x03(\v2\x1a.core.RolePermissionDetailR\vpermissions\x124\n" +
+	"\x06access\x18\b \x03(\v2\x1c.core.RoleDetail.AccessEntryR\x06access\x12\x16\n" +
+	"\x06grants\x18\t \x03(\tR\x06grants\x12\x18\n" +
+	"\arevokes\x18\n" +
+	" \x03(\tR\arevokes\x123\n" +
+	"\x15effective_permissions\x18\v \x03(\tR\x14effectivePermissions\x12(\n" +
+	"\rtemplate_code\x18\f \x01(\tH\x00R\ftemplateCode\x88\x01\x01\x1a9\n" +
+	"\vAccessEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x10\n" +
+	"\x0e_template_code\"\x9a\x01\n" +
 	"\x10ListRolesRequest\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x14\n" +
@@ -11784,19 +11903,37 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x06create\x18\x02 \x01(\bR\x06create\x12\x12\n" +
 	"\x04read\x18\x03 \x01(\bR\x04read\x12\x16\n" +
 	"\x06update\x18\x04 \x01(\bR\x06update\x12\x16\n" +
-	"\x06delete\x18\x05 \x01(\bR\x06delete\"\x86\x01\n" +
+	"\x06delete\x18\x05 \x01(\bR\x06delete\"\xdb\x02\n" +
 	"\x11CreateRoleRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12A\n" +
-	"\vpermissions\x18\x02 \x03(\v2\x1f.core.CreateRolePermissionInputR\vpermissions\x12\x1a\n" +
-	"\bincludes\x18\x03 \x03(\tR\bincludes\":\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\x12(\n" +
+	"\rtemplate_code\x18\x04 \x01(\tH\x00R\ftemplateCode\x88\x01\x01\x12;\n" +
+	"\x06access\x18\x05 \x03(\v2#.core.CreateRoleRequest.AccessEntryR\x06access\x12\x1d\n" +
+	"\n" +
+	"has_grants\x18\x06 \x01(\bR\thasGrants\x12\x16\n" +
+	"\x06grants\x18\a \x03(\tR\x06grants\x12\x18\n" +
+	"\arevokes\x18\b \x03(\tR\arevokes\x1a9\n" +
+	"\vAccessEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x10\n" +
+	"\x0e_template_codeJ\x04\b\x02\x10\x03R\vpermissions\":\n" +
 	"\x12CreateRoleResponse\x12$\n" +
-	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"\xbf\x01\n" +
+	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"\xe7\x02\n" +
 	"\x11UpdateRoleRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12'\n" +
-	"\x0fhas_permissions\x18\x03 \x01(\bR\x0ehasPermissions\x12A\n" +
-	"\vpermissions\x18\x04 \x03(\v2\x1f.core.CreateRolePermissionInputR\vpermissions\x12\x1a\n" +
-	"\bincludes\x18\x05 \x03(\tR\bincludes\":\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludes\x12;\n" +
+	"\x06access\x18\x06 \x03(\v2#.core.UpdateRoleRequest.AccessEntryR\x06access\x12\x1d\n" +
+	"\n" +
+	"has_grants\x18\a \x01(\bR\thasGrants\x12\x16\n" +
+	"\x06grants\x18\b \x03(\tR\x06grants\x12\x1f\n" +
+	"\vhas_revokes\x18\t \x01(\bR\n" +
+	"hasRevokes\x12\x18\n" +
+	"\arevokes\x18\n" +
+	" \x03(\tR\arevokes\x1a9\n" +
+	"\vAccessEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fhas_permissionsR\vpermissions\":\n" +
 	"\x12UpdateRoleResponse\x12$\n" +
 	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"#\n" +
 	"\x11DeleteRoleRequest\x12\x0e\n" +
@@ -12108,7 +12245,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x16CustomerRecipientProto\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x1c\n" +
 	"\tdocuments\x18\x02 \x03(\tR\tdocuments\x12:\n" +
-	"\faccount_user\x18\x03 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xf0\b\n" +
+	"\faccount_user\x18\x03 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xbf\t\n" +
 	"\x11AccountUserDetail\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x17\n" +
@@ -12135,7 +12272,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"R\x13departmentCreatedAt\x88\x01\x01\x12S\n" +
 	"\x15department_updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\vR\x13departmentUpdatedAt\x88\x01\x01\x124\n" +
 	"\x16is_commission_eligible\x18\x13 \x01(\bR\x14isCommissionEligible\x12Q\n" +
-	"\x12notification_types\x18\x14 \x01(\v2\".core.AccountUserNotificationTypesR\x11notificationTypesB\a\n" +
+	"\x12notification_types\x18\x14 \x01(\v2\".core.AccountUserNotificationTypesR\x11notificationTypes\x12>\n" +
+	"\n" +
+	"invited_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampH\fR\tinvitedAt\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\f\n" +
@@ -12150,7 +12289,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x10_department_nameB\x0f\n" +
 	"\r_last_used_atB\x18\n" +
 	"\x16_department_created_atB\x18\n" +
-	"\x16_department_updated_at\"4\n" +
+	"\x16_department_updated_atB\r\n" +
+	"\v_invited_at\"4\n" +
 	"\x1cAccountUserNotificationTypes\x12\x14\n" +
 	"\x05codes\x18\x01 \x03(\tR\x05codes\"\x84\x02\n" +
 	"\x14CustomerCarrierProto\x12\x0e\n" +
@@ -12883,7 +13023,7 @@ func file_core_core_identity_context_proto_rawDescGZIP() []byte {
 }
 
 var file_core_core_identity_context_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_core_core_identity_context_proto_msgTypes = make([]protoimpl.MessageInfo, 156)
+var file_core_core_identity_context_proto_msgTypes = make([]protoimpl.MessageInfo, 159)
 var file_core_core_identity_context_proto_goTypes = []any{
 	(AccountMode)(0),                             // 0: core.AccountMode
 	(SandboxMode)(0),                             // 1: core.SandboxMode
@@ -13043,199 +13183,204 @@ var file_core_core_identity_context_proto_goTypes = []any{
 	nil,                                          // 155: core.GetAccountNamesResponse.NamesEntry
 	nil,                                          // 156: core.AccountUserAccess.PermissionsEntry
 	nil,                                          // 157: core.GetRolePermissionsResponse.PermissionsEntry
-	(*timestamppb.Timestamp)(nil),                // 158: google.protobuf.Timestamp
-	(*JobInfo)(nil),                              // 159: core.JobInfo
-	(*Money)(nil),                                // 160: core.Money
-	(*CreatedRange)(nil),                         // 161: core.CreatedRange
-	(*StringPatch)(nil),                          // 162: core.StringPatch
-	(*MoneyPatch)(nil),                           // 163: core.MoneyPatch
-	(*Int32Patch)(nil),                           // 164: core.Int32Patch
-	(*EmailRecipient)(nil),                       // 165: core.EmailRecipient
+	nil,                                          // 158: core.RoleDetail.AccessEntry
+	nil,                                          // 159: core.CreateRoleRequest.AccessEntry
+	nil,                                          // 160: core.UpdateRoleRequest.AccessEntry
+	(*timestamppb.Timestamp)(nil),                // 161: google.protobuf.Timestamp
+	(*JobInfo)(nil),                              // 162: core.JobInfo
+	(*Money)(nil),                                // 163: core.Money
+	(*CreatedRange)(nil),                         // 164: core.CreatedRange
+	(*StringPatch)(nil),                          // 165: core.StringPatch
+	(*MoneyPatch)(nil),                           // 166: core.MoneyPatch
+	(*Int32Patch)(nil),                           // 167: core.Int32Patch
+	(*EmailRecipient)(nil),                       // 168: core.EmailRecipient
 }
 var file_core_core_identity_context_proto_depIdxs = []int32{
 	0,   // 0: core.GetAccountContextResponse.account_mode:type_name -> core.AccountMode
 	155, // 1: core.GetAccountNamesResponse.names:type_name -> core.GetAccountNamesResponse.NamesEntry
 	8,   // 2: core.GetUserAccountAccessResponse.access:type_name -> core.AccountUserAccess
 	156, // 3: core.AccountUserAccess.permissions:type_name -> core.AccountUserAccess.PermissionsEntry
-	158, // 4: core.AccountUserAccess.last_used_at:type_name -> google.protobuf.Timestamp
+	161, // 4: core.AccountUserAccess.last_used_at:type_name -> google.protobuf.Timestamp
 	11,  // 5: core.GetAccountRelationResponse.relation:type_name -> core.AccountRelation
 	157, // 6: core.GetRolePermissionsResponse.permissions:type_name -> core.GetRolePermissionsResponse.PermissionsEntry
 	19,  // 7: core.ListUserAccountAffiliationsResponse.affiliations:type_name -> core.AccountAffiliation
-	158, // 8: core.AccountAffiliation.last_used_at:type_name -> google.protobuf.Timestamp
+	161, // 8: core.AccountAffiliation.last_used_at:type_name -> google.protobuf.Timestamp
 	21,  // 9: core.CompleteRegistrationRequest.account_data:type_name -> core.RegistrationAccountData
 	22,  // 10: core.RegistrationAccountData.business_address:type_name -> core.RegistrationAddress
-	158, // 11: core.RolePermissionDetail.created_at:type_name -> google.protobuf.Timestamp
-	158, // 12: core.RolePermissionDetail.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 13: core.RoleDetail.created_at:type_name -> google.protobuf.Timestamp
-	158, // 14: core.RoleDetail.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 11: core.RolePermissionDetail.created_at:type_name -> google.protobuf.Timestamp
+	161, // 12: core.RolePermissionDetail.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 13: core.RoleDetail.created_at:type_name -> google.protobuf.Timestamp
+	161, // 14: core.RoleDetail.updated_at:type_name -> google.protobuf.Timestamp
 	27,  // 15: core.RoleDetail.permissions:type_name -> core.RolePermissionDetail
-	28,  // 16: core.ListRolesResponse.roles:type_name -> core.RoleDetail
-	42,  // 17: core.ListRolesResponse.page_info:type_name -> core.PageInfo
-	28,  // 18: core.GetRoleResponse.role:type_name -> core.RoleDetail
-	33,  // 19: core.CreateRoleRequest.permissions:type_name -> core.CreateRolePermissionInput
-	28,  // 20: core.CreateRoleResponse.role:type_name -> core.RoleDetail
-	33,  // 21: core.UpdateRoleRequest.permissions:type_name -> core.CreateRolePermissionInput
-	28,  // 22: core.UpdateRoleResponse.role:type_name -> core.RoleDetail
-	28,  // 23: core.BatchGetRolesByIDsResponse.roles:type_name -> core.RoleDetail
-	51,  // 24: core.ListSandboxAccountsResponse.sandboxes:type_name -> core.SandboxInfo
-	42,  // 25: core.ListSandboxAccountsResponse.page_info:type_name -> core.PageInfo
-	1,   // 26: core.CreateSandboxRequest.mode:type_name -> core.SandboxMode
-	51,  // 27: core.CreateSandboxResponse.sandbox:type_name -> core.SandboxInfo
-	51,  // 28: core.GetSandboxResponse.sandbox:type_name -> core.SandboxInfo
-	51,  // 29: core.BatchGetSandboxesByIDsResponse.sandboxes:type_name -> core.SandboxInfo
-	158, // 30: core.SandboxInfo.created_at:type_name -> google.protobuf.Timestamp
-	158, // 31: core.SandboxInfo.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 32: core.SandboxInfo.owner_account_created_at:type_name -> google.protobuf.Timestamp
-	158, // 33: core.SandboxInfo.owner_account_updated_at:type_name -> google.protobuf.Timestamp
-	158, // 34: core.UpdateAccountSubscriptionRequest.current_period_end:type_name -> google.protobuf.Timestamp
-	60,  // 35: core.ListUnitsResponse.units:type_name -> core.UnitInfo
-	42,  // 36: core.ListUnitsResponse.page_info:type_name -> core.PageInfo
-	159, // 37: core.ExportUnitsResponse.job:type_name -> core.JobInfo
-	158, // 38: core.UnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	158, // 39: core.UnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	61,  // 40: core.BulkUpsertUnitsRequest.units:type_name -> core.BulkUpsertUnitInput
-	159, // 41: core.BulkUpsertUnitsResponse.job:type_name -> core.JobInfo
-	60,  // 42: core.GetUnitResponse.unit:type_name -> core.UnitInfo
-	60,  // 43: core.CreateUnitResponse.unit:type_name -> core.UnitInfo
-	60,  // 44: core.UpdateUnitResponse.unit:type_name -> core.UnitInfo
-	60,  // 45: core.BatchGetUnitsByIDsResponse.units:type_name -> core.UnitInfo
-	75,  // 46: core.SearchProductsResponse.products:type_name -> core.ProductInfo
-	75,  // 47: core.ListProductsResponse.products:type_name -> core.ProductInfo
-	82,  // 48: core.GetCustomerByEmailResponse.customer:type_name -> core.CustomerInfo
-	85,  // 49: core.FindContactsByEmailResponse.matches:type_name -> core.ContactMatchInfo
-	158, // 50: core.ContactMatchInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	158, // 51: core.ContactMatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	158, // 52: core.ContactMatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	90,  // 53: core.CustomerProto.default_carrier:type_name -> core.CustomerCarrierProto
-	91,  // 54: core.CustomerProto.default_service_level:type_name -> core.CustomerServiceLevelProto
-	92,  // 55: core.CustomerProto.default_payment_term:type_name -> core.CustomerPaymentTermProto
-	93,  // 56: core.CustomerProto.default_shipping_term:type_name -> core.CustomerShippingTermProto
-	96,  // 57: core.CustomerProto.default_sales_rep:type_name -> core.CustomerUserProto
-	97,  // 58: core.CustomerProto.bill_to_address:type_name -> core.CustomerAddressProto
-	97,  // 59: core.CustomerProto.ship_to_address:type_name -> core.CustomerAddressProto
-	95,  // 60: core.CustomerProto.type_group:type_name -> core.CustomerAccountGroupProto
-	95,  // 61: core.CustomerProto.price_groups:type_name -> core.CustomerAccountGroupProto
-	99,  // 62: core.CustomerProto.parent_account:type_name -> core.CustomerLightCustomerProto
-	158, // 63: core.CustomerProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 64: core.CustomerProto.updated_at:type_name -> google.protobuf.Timestamp
-	160, // 65: core.CustomerProto.credit_limit:type_name -> core.Money
-	99,  // 66: core.CustomerProto.child_accounts:type_name -> core.CustomerLightCustomerProto
-	87,  // 67: core.CustomerProto.notification_recipients:type_name -> core.CustomerRecipientProto
-	88,  // 68: core.CustomerRecipientProto.account_user:type_name -> core.AccountUserDetail
-	158, // 69: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
-	158, // 70: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
-	158, // 71: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 72: core.AccountUserDetail.department_created_at:type_name -> google.protobuf.Timestamp
-	158, // 73: core.AccountUserDetail.department_updated_at:type_name -> google.protobuf.Timestamp
-	89,  // 74: core.AccountUserDetail.notification_types:type_name -> core.AccountUserNotificationTypes
-	158, // 75: core.CustomerCarrierProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 76: core.CustomerCarrierProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 77: core.CustomerServiceLevelProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 78: core.CustomerServiceLevelProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 79: core.CustomerPaymentTermProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 80: core.CustomerPaymentTermProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 81: core.CustomerShippingTermProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 82: core.CustomerShippingTermProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 83: core.CustomerAccountGroupProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 84: core.CustomerAccountGroupProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 85: core.CustomerUserProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 86: core.CustomerUserProto.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 87: core.CustomerAddressProto.geolocation:type_name -> core.CustomerGeolocationProto
-	158, // 88: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 89: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 90: core.CustomerLightCustomerProto.created_at:type_name -> google.protobuf.Timestamp
-	158, // 91: core.CustomerLightCustomerProto.updated_at:type_name -> google.protobuf.Timestamp
-	158, // 92: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 93: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
-	161, // 94: core.ListCustomersRequest.created:type_name -> core.CreatedRange
-	86,  // 95: core.ListCustomersResponse.customers:type_name -> core.CustomerProto
-	42,  // 96: core.ListCustomersResponse.page_info:type_name -> core.PageInfo
-	86,  // 97: core.GetCustomerResponse.customer:type_name -> core.CustomerProto
-	86,  // 98: core.BatchGetCustomersByIDsResponse.customers:type_name -> core.CustomerProto
-	106, // 99: core.CreateCustomerRequest.bill_to_address:type_name -> core.CreateCustomerAddressInput
-	106, // 100: core.CreateCustomerRequest.ship_to_address:type_name -> core.CreateCustomerAddressInput
-	160, // 101: core.CreateCustomerRequest.credit_limit:type_name -> core.Money
-	86,  // 102: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
-	162, // 103: core.UpdateCustomerRequest.instructions:type_name -> core.StringPatch
-	162, // 104: core.UpdateCustomerRequest.email:type_name -> core.StringPatch
-	162, // 105: core.UpdateCustomerRequest.phone:type_name -> core.StringPatch
-	162, // 106: core.UpdateCustomerRequest.url:type_name -> core.StringPatch
-	162, // 107: core.UpdateCustomerRequest.default_service_level_id:type_name -> core.StringPatch
-	162, // 108: core.UpdateCustomerRequest.default_sales_rep_id:type_name -> core.StringPatch
-	162, // 109: core.UpdateCustomerRequest.bill_to_address_id:type_name -> core.StringPatch
-	162, // 110: core.UpdateCustomerRequest.ship_to_address_id:type_name -> core.StringPatch
-	162, // 111: core.UpdateCustomerRequest.carrier_billing_account:type_name -> core.StringPatch
-	163, // 112: core.UpdateCustomerRequest.credit_limit:type_name -> core.MoneyPatch
-	164, // 113: core.UpdateCustomerRequest.default_lead_time_days:type_name -> core.Int32Patch
-	162, // 114: core.UpdateCustomerRequest.receive_calendar_id:type_name -> core.StringPatch
-	162, // 115: core.UpdateCustomerRequest.supply:type_name -> core.StringPatch
-	162, // 116: core.UpdateCustomerRequest.parent_customer_id:type_name -> core.StringPatch
-	165, // 117: core.UpdateCustomerRequest.notification_recipients:type_name -> core.EmailRecipient
-	86,  // 118: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
-	115, // 119: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
-	159, // 120: core.MergeCustomersResponse.job:type_name -> core.JobInfo
-	158, // 121: core.ExportCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 122: core.ExportCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
-	161, // 123: core.ExportCustomersRequest.created:type_name -> core.CreatedRange
-	159, // 124: core.ExportCustomersResponse.job:type_name -> core.JobInfo
-	123, // 125: core.AnalyzeCustomerPricingResponse.findings:type_name -> core.CustomerPricingFindingProto
-	158, // 126: core.AnalyzeRealizedMarginsRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 127: core.AnalyzeRealizedMarginsRequest.end_date:type_name -> google.protobuf.Timestamp
-	126, // 128: core.AnalyzeRealizedMarginsResponse.findings:type_name -> core.RealizedMarginFindingProto
-	158, // 129: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 130: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
-	158, // 131: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	158, // 132: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	158, // 133: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	158, // 134: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	158, // 135: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	158, // 136: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	129, // 137: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
-	158, // 138: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 139: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
-	133, // 140: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
-	135, // 141: core.ProductionCostProto.produced:type_name -> core.ProductionCostProducedProto
-	136, // 142: core.ProductionCostSetProto.productive:type_name -> core.ProductionCostProto
-	136, // 143: core.ProductionCostSetProto.seconds:type_name -> core.ProductionCostProto
-	136, // 144: core.ProductionCostSetProto.waste:type_name -> core.ProductionCostProto
-	136, // 145: core.ProductionCostSetProto.total:type_name -> core.ProductionCostProto
-	132, // 146: core.ProductionCostGroupProto.department:type_name -> core.BasicInfoProto
-	132, // 147: core.ProductionCostGroupProto.category:type_name -> core.BasicInfoProto
-	137, // 148: core.ProductionCostGroupProto.costs:type_name -> core.ProductionCostSetProto
-	60,  // 149: core.AnalyzeProductionCostsResponse.units:type_name -> core.UnitInfo
-	137, // 150: core.AnalyzeProductionCostsResponse.totals:type_name -> core.ProductionCostSetProto
-	138, // 151: core.AnalyzeProductionCostsResponse.departments:type_name -> core.ProductionCostGroupProto
-	138, // 152: core.AnalyzeProductionCostsResponse.categories:type_name -> core.ProductionCostGroupProto
-	138, // 153: core.AnalyzeProductionCostsResponse.department_categories:type_name -> core.ProductionCostGroupProto
-	158, // 154: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 155: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	142, // 156: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
-	143, // 157: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
-	143, // 158: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
-	143, // 159: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
-	141, // 160: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
-	144, // 161: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
-	158, // 162: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 163: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
-	158, // 164: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 165: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
-	158, // 166: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
-	158, // 167: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
-	148, // 168: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
-	148, // 169: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
-	158, // 170: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	158, // 171: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	158, // 172: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	158, // 173: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	158, // 174: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	158, // 175: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	158, // 176: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	152, // 177: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
-	178, // [178:178] is the sub-list for method output_type
-	178, // [178:178] is the sub-list for method input_type
-	178, // [178:178] is the sub-list for extension type_name
-	178, // [178:178] is the sub-list for extension extendee
-	0,   // [0:178] is the sub-list for field type_name
+	158, // 16: core.RoleDetail.access:type_name -> core.RoleDetail.AccessEntry
+	28,  // 17: core.ListRolesResponse.roles:type_name -> core.RoleDetail
+	42,  // 18: core.ListRolesResponse.page_info:type_name -> core.PageInfo
+	28,  // 19: core.GetRoleResponse.role:type_name -> core.RoleDetail
+	159, // 20: core.CreateRoleRequest.access:type_name -> core.CreateRoleRequest.AccessEntry
+	28,  // 21: core.CreateRoleResponse.role:type_name -> core.RoleDetail
+	160, // 22: core.UpdateRoleRequest.access:type_name -> core.UpdateRoleRequest.AccessEntry
+	28,  // 23: core.UpdateRoleResponse.role:type_name -> core.RoleDetail
+	28,  // 24: core.BatchGetRolesByIDsResponse.roles:type_name -> core.RoleDetail
+	51,  // 25: core.ListSandboxAccountsResponse.sandboxes:type_name -> core.SandboxInfo
+	42,  // 26: core.ListSandboxAccountsResponse.page_info:type_name -> core.PageInfo
+	1,   // 27: core.CreateSandboxRequest.mode:type_name -> core.SandboxMode
+	51,  // 28: core.CreateSandboxResponse.sandbox:type_name -> core.SandboxInfo
+	51,  // 29: core.GetSandboxResponse.sandbox:type_name -> core.SandboxInfo
+	51,  // 30: core.BatchGetSandboxesByIDsResponse.sandboxes:type_name -> core.SandboxInfo
+	161, // 31: core.SandboxInfo.created_at:type_name -> google.protobuf.Timestamp
+	161, // 32: core.SandboxInfo.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 33: core.SandboxInfo.owner_account_created_at:type_name -> google.protobuf.Timestamp
+	161, // 34: core.SandboxInfo.owner_account_updated_at:type_name -> google.protobuf.Timestamp
+	161, // 35: core.UpdateAccountSubscriptionRequest.current_period_end:type_name -> google.protobuf.Timestamp
+	60,  // 36: core.ListUnitsResponse.units:type_name -> core.UnitInfo
+	42,  // 37: core.ListUnitsResponse.page_info:type_name -> core.PageInfo
+	162, // 38: core.ExportUnitsResponse.job:type_name -> core.JobInfo
+	161, // 39: core.UnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	161, // 40: core.UnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	61,  // 41: core.BulkUpsertUnitsRequest.units:type_name -> core.BulkUpsertUnitInput
+	162, // 42: core.BulkUpsertUnitsResponse.job:type_name -> core.JobInfo
+	60,  // 43: core.GetUnitResponse.unit:type_name -> core.UnitInfo
+	60,  // 44: core.CreateUnitResponse.unit:type_name -> core.UnitInfo
+	60,  // 45: core.UpdateUnitResponse.unit:type_name -> core.UnitInfo
+	60,  // 46: core.BatchGetUnitsByIDsResponse.units:type_name -> core.UnitInfo
+	75,  // 47: core.SearchProductsResponse.products:type_name -> core.ProductInfo
+	75,  // 48: core.ListProductsResponse.products:type_name -> core.ProductInfo
+	82,  // 49: core.GetCustomerByEmailResponse.customer:type_name -> core.CustomerInfo
+	85,  // 50: core.FindContactsByEmailResponse.matches:type_name -> core.ContactMatchInfo
+	161, // 51: core.ContactMatchInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	161, // 52: core.ContactMatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	161, // 53: core.ContactMatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	90,  // 54: core.CustomerProto.default_carrier:type_name -> core.CustomerCarrierProto
+	91,  // 55: core.CustomerProto.default_service_level:type_name -> core.CustomerServiceLevelProto
+	92,  // 56: core.CustomerProto.default_payment_term:type_name -> core.CustomerPaymentTermProto
+	93,  // 57: core.CustomerProto.default_shipping_term:type_name -> core.CustomerShippingTermProto
+	96,  // 58: core.CustomerProto.default_sales_rep:type_name -> core.CustomerUserProto
+	97,  // 59: core.CustomerProto.bill_to_address:type_name -> core.CustomerAddressProto
+	97,  // 60: core.CustomerProto.ship_to_address:type_name -> core.CustomerAddressProto
+	95,  // 61: core.CustomerProto.type_group:type_name -> core.CustomerAccountGroupProto
+	95,  // 62: core.CustomerProto.price_groups:type_name -> core.CustomerAccountGroupProto
+	99,  // 63: core.CustomerProto.parent_account:type_name -> core.CustomerLightCustomerProto
+	161, // 64: core.CustomerProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 65: core.CustomerProto.updated_at:type_name -> google.protobuf.Timestamp
+	163, // 66: core.CustomerProto.credit_limit:type_name -> core.Money
+	99,  // 67: core.CustomerProto.child_accounts:type_name -> core.CustomerLightCustomerProto
+	87,  // 68: core.CustomerProto.notification_recipients:type_name -> core.CustomerRecipientProto
+	88,  // 69: core.CustomerRecipientProto.account_user:type_name -> core.AccountUserDetail
+	161, // 70: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
+	161, // 71: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
+	161, // 72: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 73: core.AccountUserDetail.department_created_at:type_name -> google.protobuf.Timestamp
+	161, // 74: core.AccountUserDetail.department_updated_at:type_name -> google.protobuf.Timestamp
+	89,  // 75: core.AccountUserDetail.notification_types:type_name -> core.AccountUserNotificationTypes
+	161, // 76: core.AccountUserDetail.invited_at:type_name -> google.protobuf.Timestamp
+	161, // 77: core.CustomerCarrierProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 78: core.CustomerCarrierProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 79: core.CustomerServiceLevelProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 80: core.CustomerServiceLevelProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 81: core.CustomerPaymentTermProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 82: core.CustomerPaymentTermProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 83: core.CustomerShippingTermProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 84: core.CustomerShippingTermProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 85: core.CustomerAccountGroupProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 86: core.CustomerAccountGroupProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 87: core.CustomerUserProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 88: core.CustomerUserProto.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 89: core.CustomerAddressProto.geolocation:type_name -> core.CustomerGeolocationProto
+	161, // 90: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 91: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 92: core.CustomerLightCustomerProto.created_at:type_name -> google.protobuf.Timestamp
+	161, // 93: core.CustomerLightCustomerProto.updated_at:type_name -> google.protobuf.Timestamp
+	161, // 94: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 95: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	164, // 96: core.ListCustomersRequest.created:type_name -> core.CreatedRange
+	86,  // 97: core.ListCustomersResponse.customers:type_name -> core.CustomerProto
+	42,  // 98: core.ListCustomersResponse.page_info:type_name -> core.PageInfo
+	86,  // 99: core.GetCustomerResponse.customer:type_name -> core.CustomerProto
+	86,  // 100: core.BatchGetCustomersByIDsResponse.customers:type_name -> core.CustomerProto
+	106, // 101: core.CreateCustomerRequest.bill_to_address:type_name -> core.CreateCustomerAddressInput
+	106, // 102: core.CreateCustomerRequest.ship_to_address:type_name -> core.CreateCustomerAddressInput
+	163, // 103: core.CreateCustomerRequest.credit_limit:type_name -> core.Money
+	86,  // 104: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
+	165, // 105: core.UpdateCustomerRequest.instructions:type_name -> core.StringPatch
+	165, // 106: core.UpdateCustomerRequest.email:type_name -> core.StringPatch
+	165, // 107: core.UpdateCustomerRequest.phone:type_name -> core.StringPatch
+	165, // 108: core.UpdateCustomerRequest.url:type_name -> core.StringPatch
+	165, // 109: core.UpdateCustomerRequest.default_service_level_id:type_name -> core.StringPatch
+	165, // 110: core.UpdateCustomerRequest.default_sales_rep_id:type_name -> core.StringPatch
+	165, // 111: core.UpdateCustomerRequest.bill_to_address_id:type_name -> core.StringPatch
+	165, // 112: core.UpdateCustomerRequest.ship_to_address_id:type_name -> core.StringPatch
+	165, // 113: core.UpdateCustomerRequest.carrier_billing_account:type_name -> core.StringPatch
+	166, // 114: core.UpdateCustomerRequest.credit_limit:type_name -> core.MoneyPatch
+	167, // 115: core.UpdateCustomerRequest.default_lead_time_days:type_name -> core.Int32Patch
+	165, // 116: core.UpdateCustomerRequest.receive_calendar_id:type_name -> core.StringPatch
+	165, // 117: core.UpdateCustomerRequest.supply:type_name -> core.StringPatch
+	165, // 118: core.UpdateCustomerRequest.parent_customer_id:type_name -> core.StringPatch
+	168, // 119: core.UpdateCustomerRequest.notification_recipients:type_name -> core.EmailRecipient
+	86,  // 120: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
+	115, // 121: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
+	162, // 122: core.MergeCustomersResponse.job:type_name -> core.JobInfo
+	161, // 123: core.ExportCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 124: core.ExportCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	164, // 125: core.ExportCustomersRequest.created:type_name -> core.CreatedRange
+	162, // 126: core.ExportCustomersResponse.job:type_name -> core.JobInfo
+	123, // 127: core.AnalyzeCustomerPricingResponse.findings:type_name -> core.CustomerPricingFindingProto
+	161, // 128: core.AnalyzeRealizedMarginsRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 129: core.AnalyzeRealizedMarginsRequest.end_date:type_name -> google.protobuf.Timestamp
+	126, // 130: core.AnalyzeRealizedMarginsResponse.findings:type_name -> core.RealizedMarginFindingProto
+	161, // 131: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 132: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
+	161, // 133: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	161, // 134: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	161, // 135: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	161, // 136: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	161, // 137: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	161, // 138: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	129, // 139: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
+	161, // 140: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 141: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
+	133, // 142: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
+	135, // 143: core.ProductionCostProto.produced:type_name -> core.ProductionCostProducedProto
+	136, // 144: core.ProductionCostSetProto.productive:type_name -> core.ProductionCostProto
+	136, // 145: core.ProductionCostSetProto.seconds:type_name -> core.ProductionCostProto
+	136, // 146: core.ProductionCostSetProto.waste:type_name -> core.ProductionCostProto
+	136, // 147: core.ProductionCostSetProto.total:type_name -> core.ProductionCostProto
+	132, // 148: core.ProductionCostGroupProto.department:type_name -> core.BasicInfoProto
+	132, // 149: core.ProductionCostGroupProto.category:type_name -> core.BasicInfoProto
+	137, // 150: core.ProductionCostGroupProto.costs:type_name -> core.ProductionCostSetProto
+	60,  // 151: core.AnalyzeProductionCostsResponse.units:type_name -> core.UnitInfo
+	137, // 152: core.AnalyzeProductionCostsResponse.totals:type_name -> core.ProductionCostSetProto
+	138, // 153: core.AnalyzeProductionCostsResponse.departments:type_name -> core.ProductionCostGroupProto
+	138, // 154: core.AnalyzeProductionCostsResponse.categories:type_name -> core.ProductionCostGroupProto
+	138, // 155: core.AnalyzeProductionCostsResponse.department_categories:type_name -> core.ProductionCostGroupProto
+	161, // 156: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 157: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	142, // 158: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
+	143, // 159: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
+	143, // 160: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
+	143, // 161: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
+	141, // 162: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
+	144, // 163: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
+	161, // 164: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 165: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
+	161, // 166: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 167: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
+	161, // 168: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
+	161, // 169: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
+	148, // 170: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
+	148, // 171: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
+	161, // 172: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	161, // 173: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	161, // 174: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	161, // 175: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	161, // 176: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	161, // 177: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	161, // 178: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	152, // 179: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
+	180, // [180:180] is the sub-list for method output_type
+	180, // [180:180] is the sub-list for method input_type
+	180, // [180:180] is the sub-list for extension type_name
+	180, // [180:180] is the sub-list for extension extendee
+	0,   // [0:180] is the sub-list for field type_name
 }
 
 func init() { file_core_core_identity_context_proto_init() }
@@ -13261,6 +13406,8 @@ func file_core_core_identity_context_proto_init() {
 	file_core_core_identity_context_proto_msgTypes[18].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[19].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[20].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[26].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[32].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[39].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[40].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[49].OneofWrappers = []any{}
@@ -13305,7 +13452,7 @@ func file_core_core_identity_context_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_identity_context_proto_rawDesc), len(file_core_core_identity_context_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   156,
+			NumMessages:   159,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

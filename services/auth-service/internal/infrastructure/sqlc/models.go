@@ -27,6 +27,7 @@ type Account struct {
 	InternalStripeSubscriptionID sql.NullString
 	SubscriptionStatus           sql.NullString
 	SubscriptionCurrentPeriodEnd sql.NullTime
+	DefaultSiteID                sql.NullString
 }
 
 type AccountAddress struct {
@@ -135,14 +136,15 @@ type AccountGroupQuantityDiscount struct {
 }
 
 type AccountIntegration struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	CredentialsV2   string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	CredentialsV2    string
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ConnectionStatus string
 }
 
 type AccountInventorySetting struct {
@@ -310,6 +312,11 @@ type AccountRelation struct {
 	FreightStatusCode        sql.NullString
 	FulfillmentPolicyCode    sql.NullString
 	CarrierBillingType       sql.NullString
+	CreditLimitAmount        sql.NullString
+	CreditLimitCurrency      sql.NullString
+	Instructions             sql.NullString
+	SupplyCode               sql.NullString
+	IsActive                 bool
 }
 
 type AccountRelationNotificationPreference struct {
@@ -364,6 +371,7 @@ type AccountUser struct {
 	RoleID               sql.NullString
 	AccountID            string
 	IsCommissionEligible bool
+	InvitedAt            sql.NullTime
 }
 
 type ActionType struct {
@@ -453,6 +461,8 @@ type ApiKey struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 }
 
 type Attribute struct {
@@ -550,6 +560,9 @@ type Carrier struct {
 	UpdatedAt              time.Time
 	IsPortalEnabled        bool
 	DeletedAt              sql.NullTime
+	IsActive               bool
+	Scac                   sql.NullString
+	DefaultCarrierOptionID sql.NullString
 }
 
 type CarrierOption struct {
@@ -564,6 +577,7 @@ type CarrierOption struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	DefaultTransitDays sql.NullInt32
+	IsActive           bool
 }
 
 type CarrierTransitEstimate struct {
@@ -826,6 +840,8 @@ type EmailLog struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+	RelatedType  sql.NullString
+	RelatedID    sql.NullString
 }
 
 type EmailMessage struct {
@@ -1125,20 +1141,30 @@ type InvoiceLine struct {
 }
 
 type Item struct {
-	ID             string
-	Sku            string
-	Description    sql.NullString
-	Notes          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      sql.NullTime
-	UnitValueID    string
-	BurnRateID     string
-	AccountID      string
-	UnitCostID     string
-	ItemCategoryID string
-	IsDirty        bool
-	ItemTypeCode   string
+	ID                      string
+	Sku                     string
+	Description             sql.NullString
+	Notes                   sql.NullString
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	DeletedAt               sql.NullTime
+	UnitValueID             string
+	BurnRateID              string
+	AccountID               string
+	UnitCostID              string
+	ItemCategoryID          string
+	IsDirty                 bool
+	ItemTypeCode            string
+	SalesUnitPriceAmount    sql.NullString
+	SalesUnitPriceCurrency  sql.NullString
+	SalesUnitPricePerUnitID sql.NullString
+	UnitCostAmount          sql.NullString
+	UnitCostCurrency        sql.NullString
+	UnitCostPerUnitID       sql.NullString
+	IsActive                bool
+	SupplyCode              sql.NullString
+	StockingUnitID          sql.NullString
+	DefaultOrderUnitID      sql.NullString
 }
 
 type ItemAttribute struct {
@@ -1165,6 +1191,7 @@ type ItemCategory struct {
 	AccountID            sql.NullString
 	ItemCategoryTypeCode string
 	UnitGroupID          string
+	DefaultLotSizeID     sql.NullString
 }
 
 type ItemCategoryType struct {
@@ -1173,6 +1200,21 @@ type ItemCategoryType struct {
 	Name      string
 	Code      string
 	UpdatedAt time.Time
+}
+
+type ItemOrderUnit struct {
+	ItemID                    string
+	UnitID                    string
+	AccountID                 string
+	Position                  int32
+	PortalVisibility          string
+	DiscountType              sql.NullString
+	DiscountPercentOff        sql.NullString
+	DiscountAmountOffAmount   sql.NullString
+	DiscountAmountOffCurrency sql.NullString
+	StockingQuantity          sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 type ItemType struct {
@@ -1253,6 +1295,7 @@ type Machine struct {
 	ProductionStepID sql.NullString
 	SerialNumber     string
 	DepartmentID     string
+	IsActive         bool
 }
 
 type MachineDowntimeEvent struct {
@@ -1453,6 +1496,22 @@ type MessagingReport struct {
 	CreatedAt             time.Time
 }
 
+type Note struct {
+	ID         string
+	AccountID  string
+	RecordType sql.NullString
+	RecordID   sql.NullString
+	Body       string
+	Type       string
+	Importance int8
+	ExpiresAt  sql.NullTime
+	ActorType  string
+	ActorID    sql.NullString
+	EditedAt   sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 type Notification struct {
 	ID                     string
 	AccountID              string
@@ -1631,6 +1690,7 @@ type PortalDomain struct {
 	VerifiedAt sql.NullTime
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	CheckedAt  sql.NullTime
 }
 
 type PortalRegistrationSession struct {
@@ -1665,6 +1725,7 @@ type Product struct {
 	ProductTypeCode string
 	ProductLineID   sql.NullString
 	IsPortalReady   bool
+	LeadTimeID      sql.NullString
 }
 
 type ProductLine struct {
@@ -1675,11 +1736,13 @@ type ProductLine struct {
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 	AccountID             sql.NullString
-	UnitGroupID           string
 	IsCommissionExempt    bool
 	IsFreightExempt       bool
 	DefaultLotID          sql.NullString
 	FulfillmentPolicyCode sql.NullString
+	IsActive              bool
+	SupplyCode            sql.NullString
+	UnitGroupID           sql.NullString
 }
 
 type ProductLineTarget struct {
@@ -1692,6 +1755,8 @@ type ProductLineTarget struct {
 	CreatedAt     time.Time
 	AmountID      string
 	UpdatedAt     time.Time
+	Amount        sql.NullString
+	Currency      sql.NullString
 }
 
 type ProductLinesQuantityDiscount struct {
@@ -2176,6 +2241,7 @@ type RequestLog struct {
 	IdentityType         sql.NullString
 	ActorType            sql.NullString
 	PayloadKey           sql.NullString
+	QueryParams          json.RawMessage
 }
 
 type Role struct {
@@ -2185,6 +2251,8 @@ type Role struct {
 	AccountID    sql.NullString
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Access       json.RawMessage
+	TemplateCode sql.NullString
 }
 
 type RolePermission struct {
@@ -2325,6 +2393,8 @@ type SalesOrderLine struct {
 	UnitCostValue              sql.NullString
 	UnitCostNumeratorUnitID    sql.NullString
 	UnitCostDenominatorUnitID  sql.NullString
+	UnitPriceCurrency          sql.NullString
+	UnitCostCurrency           sql.NullString
 }
 
 type SalesOrderStatus struct {
@@ -2479,18 +2549,25 @@ type ShippingCase struct {
 	AccountID           string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	FreightAmount       sql.NullString
+	FreightCurrency     sql.NullString
 }
 
 type ShippingTerm struct {
-	ID              string
-	Name            string
-	IsFreightExempt bool
-	IsCarrierRate   bool
-	AccountID       sql.NullString
-	FlatRateID      sql.NullString
-	MinimumOrderID  sql.NullString
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	Name                      string
+	IsFreightExempt           bool
+	IsCarrierRate             bool
+	AccountID                 sql.NullString
+	FlatRateID                sql.NullString
+	MinimumOrderID            sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	FlatRateAmount            sql.NullString
+	FlatRateCurrency          sql.NullString
+	MinimumOrderValueAmount   sql.NullString
+	MinimumOrderValueCurrency sql.NullString
+	IsActive                  bool
 }
 
 type ShippingTermFreeShippingRule struct {
@@ -2509,6 +2586,7 @@ type StorageLocation struct {
 	ParentID                sql.NullString
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	IsActive                bool
 }
 
 type StorageLocationType struct {
@@ -2575,6 +2653,8 @@ type Target struct {
 	CreatedAt  time.Time
 	AmountID   string
 	UpdatedAt  time.Time
+	Amount     sql.NullString
+	Currency   sql.NullString
 }
 
 type TaskLease struct {

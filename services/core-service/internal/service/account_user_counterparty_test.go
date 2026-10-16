@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
@@ -99,33 +100,6 @@ func TestAccountUserPermissions_FollowTheTargetAndAction(t *testing.T) {
 	}
 }
 
-// The link in a welcome email goes to the dashboard for the seller's own staff and to the seller's portal for a
-// customer's users: its verified custom domain when there is one, else its slug on the shared portal host.
-func TestWelcomeLoginLink(t *testing.T) {
-	t.Parallel()
-
-	const dash, portal = "https://app.example.com", "https://portal.example.com"
-	slug := "acme"
-	blank := "  "
-	cases := []struct {
-		name, frontendURL, portalURL, domain string
-		slug                                 *string
-		want                                 string
-	}{
-		{name: "own staff sign in to the dashboard", frontendURL: dash, portalURL: portal, want: dash + "/auth/login"},
-		{name: "a trailing slash is not doubled", frontendURL: dash + "/", portalURL: portal + "/", slug: &slug, want: portal + "/acme/auth/login"},
-		{name: "portal users sign in under the slug on the portal host", frontendURL: dash, portalURL: portal, slug: &slug, want: portal + "/acme/auth/login"},
-		{name: "a verified custom domain serves the portal without the slug", frontendURL: dash, portalURL: portal, domain: "shop.example.net", slug: &slug, want: "https://shop.example.net/auth/login"},
-		{name: "a blank slug falls back to the dashboard", frontendURL: dash, portalURL: portal, slug: &blank, want: dash + "/auth/login"},
-		{name: "no portal host and no domain gives a portal user no link", frontendURL: dash, slug: &slug, want: ""},
-		{name: "no frontend gives own staff no link", portalURL: portal, want: ""},
-		{name: "a custom domain needs neither host", domain: "shop.example.net", slug: &slug, want: "https://shop.example.net/auth/login"},
-	}
-	for _, tc := range cases {
-		assert.Equal(t, tc.want, welcomeLoginLink(tc.frontendURL, tc.portalURL, tc.domain, tc.slug), tc.name)
-	}
-}
-
 // Toggling preferences only writes the difference: an enabled type already on is not inserted again (a restored
 // contact keeps their old rows), a disabled one is deleted, and an unlisted one is left alone.
 func TestApplyNotificationPreferences_WritesOnlyTheDifference(t *testing.T) {
@@ -163,6 +137,7 @@ func newCounterpartyAccountUserSvc(ctrl *gomock.Controller, repos domain.RepoFac
 		BillingPublisher:      billing,
 		S3Client:              &capturingObjectStore{},
 		PlatformMode:          constants.PlatformModeTest,
+		AuthClient:            clientmock.NewMockCoreAuthClient(ctrl),
 	})
 }
 
@@ -229,6 +204,9 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 		repos.EXPECT().NewAccountUserRepo().Return(accountUserRepo).AnyTimes()
 		repos.EXPECT().NewDeletedRecordRepo().Return(deletedRepo).AnyTimes()
 		repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
+		relationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
+		repos.EXPECT().NewAccountRelationRepo().Return(relationRepo).AnyTimes()
+		relationRepo.EXPECT().ListNotificationTypesForRecipients(gomock.Any(), counterpartySellerID, counterpartyCustomerID, gomock.Any()).Return(nil, nil).AnyTimes()
 		editAccess := mediatormock.NewMockEditAccessMed(ctrl)
 		editAccess.EXPECT().CheckEditAccess(gomock.Any(), counterpartySellerID, counterpartyCustomerID).Return(nil)
 		billing := publishermock.NewMockBillingPublisher(ctrl)
@@ -248,7 +226,7 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 		accountUserRepo, svc := setup(t, constants.AccountUserStatusActive)
 		accountUserRepo.EXPECT().SoftDelete(gomock.Any(), counterpartyAccountUser).Return(nil)
 
-		apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:delete"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
+		_, apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:delete"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
 		require.Nil(t, apiErr, apierror.Describe(apiErr))
 	})
 
@@ -257,7 +235,7 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 		accountUserRepo, svc := setup(t, constants.AccountUserStatusRemoved)
 		accountUserRepo.EXPECT().UpdateStatus(gomock.Any(), counterpartyAccountUser, constants.AccountUserStatusActive).Return(nil)
 
-		apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusActive)
+		_, apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusActive)
 		require.Nil(t, apiErr, apierror.Describe(apiErr))
 	})
 }
@@ -268,7 +246,7 @@ func TestUpdateAccountUserStatus_RemoveNeedsDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc := newCounterpartyAccountUserSvc(ctrl, factorymock.NewMockRepoFactory(ctrl), domain.Mediators{}, nil)
 
-	apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
+	_, apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }

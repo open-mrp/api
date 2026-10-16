@@ -2,8 +2,10 @@ package resourceloaders
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"strings"
+
+	"github.com/open-mrp/apikit/include"
+	"github.com/open-mrp/apikit/sensitive"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -69,7 +71,7 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 		}
 		meta.Set(constants.ObjectTypeItem, item.Id, ItemStockingUnitMetaKey, item.StockingUnitId)
 		meta.Set(constants.ObjectTypeItem, item.Id, ItemDefaultOrderUnitMetaKey, item.DefaultOrderUnitId)
-		meta.Set(constants.ObjectTypeItem, item.Id, ItemOrderUnitsMetaKey, ItemOrderUnitsFromProto(item.OrderUnits))
+		meta.Set(constants.ObjectTypeItem, item.Id, ItemOrderUnitsMetaKey, ItemOrderUnitsFromProto(item.OrderUnits, !sensitive.Visible(ctx, "internal")))
 
 		attrs := make([]apiresource.Attribute, 0, len(item.Attributes))
 		for _, a := range item.Attributes {
@@ -120,11 +122,12 @@ const (
 	ItemOrderUnitsMetaKey       = "order_units_list"
 )
 
-// ItemOrderUnitsFromProto presents an item's order units. Each unit loads before the response is written.
-func ItemOrderUnitsFromProto(in []*pb.ItemOrderUnitInfo) *apiresource.List[apiresource.ItemOrderUnit] {
+// ItemOrderUnitsFromProto presents an item's order units, without the hidden ones for a portal caller. Each unit
+// loads before the response is written.
+func ItemOrderUnitsFromProto(in []*pb.ItemOrderUnitInfo, portal bool) *apiresource.List[apiresource.ItemOrderUnit] {
 	out := make([]apiresource.ItemOrderUnit, 0, len(in))
 	for _, ou := range in {
-		if ou == nil {
+		if ou == nil || (portal && ou.PortalVisibility == string(constants.CustomerPortalVisibilityHidden)) {
 			continue
 		}
 		out = append(out, apiresource.ItemOrderUnit{

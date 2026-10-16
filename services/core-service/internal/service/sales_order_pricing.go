@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -119,8 +120,13 @@ func resolveSalesOrderCreateLines(
 			return nil, tracing.Trace(span, apierror.NewFieldError("product_id", apierror.CodeInvalidFormat, "Product not found."))
 		}
 
-		// The quantity unit must be the item's stocking unit or one of its order units.
-		if !bundle.ItemUnits[product.ItemID].Allows(line.QuantityUnitID) {
+		// The quantity unit must be the item's stocking unit or one of its order units; customers can't use a hidden one.
+		units := bundle.ItemUnits[product.ItemID]
+		if !units.Allows(line.QuantityUnitID) {
+			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat,
+				"The unit must be the item's stocking unit or one of its order units."))
+		}
+		if ou := units.OrderUnit(line.QuantityUnitID); !isInternalActor && ou != nil && ou.PortalVisibility == constants.CustomerPortalVisibilityHidden {
 			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat,
 				"The unit must be the item's stocking unit or one of its order units."))
 		}

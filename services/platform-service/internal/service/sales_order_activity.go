@@ -18,8 +18,10 @@ import (
 	"github.com/open-mrp/apikit/tracing"
 )
 
-// Sales-order activity notifications tell an order's owner — its sales rep, or the user who created it
-// when no rep is set — about milestones other people reach on it:
+// Sales-order activity notifications tell the people subscribed to an order (or to its customer) about
+// milestones other people reach on it. Its creator and sales rep are subscribed automatically; an order made
+// before subscriptions existed, which nobody has a subscription row for, tells its owner instead — its sales rep,
+// or the user who created it when no rep is set. The milestones are:
 //
 //   - the order is issued (including created already issued), fulfilled, shipped, or moved back a status;
 //   - the order is deleted;
@@ -33,7 +35,7 @@ import (
 // and agents are never owners.
 //
 // The audit trail is the only record platform-service has of the order, so owner and status are read from
-// it: the latest recorded sales_rep_id and sales_order_status_code, and the create event's actor.
+// it: the latest recorded sales_rep_id, buyer_account_id and sales_order_status_code, and the create event's actor.
 
 // orderActivityKind classifies an audit event against the milestone policy.
 type orderActivityKind int
@@ -60,8 +62,9 @@ var orderLineMilestoneFields = map[string]bool{
 	"item_id":          true,
 }
 
-// notifySalesOrderOwner fans a bell notification out to the order's owner when a sales-order-related
-// audit event is a milestone under the policy above. Non-order events and non-milestones no-op.
+// notifySalesOrderOwner fans a notification out to the order's subscribers when a sales-order-related audit
+// event is a milestone under the policy above, subscribing the event's people first. Non-order events and
+// non-milestones no-op.
 func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *domain.AuditEvent) *apierror.APIError {
 	orderID := salesOrderIDForEvent(event)
 	if orderID == "" || event.AccountID == "" {
@@ -98,8 +101,21 @@ func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *do
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if ownerID == "" || ownerID == event.ActorID {
-		return nil
+
+	order := messaging.RecordRef{Type: string(constants.RecordTypeSalesOrder), ID: orderID}
+	audience := &messaging.SubscriberAudience{Records: []messaging.RecordRef{order}}
+	buyer, _, apiErr := s.auditEventRepo.GetLatestResourceFieldValue(ctx, event.AccountID, constants.ObjectTypeSalesOrder, orderID, "buyer_account_id")
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if customerID := decodeString(buyer); customerID != "" {
+		audience.Records = append(audience.Records, messaging.RecordRef{Type: string(constants.RecordTypeCustomer), ID: customerID})
+	}
+	if ownerID != "" {
+		audience.FallbackUserIDs = []string{ownerID}
+	}
+	if event.ActorID != "" {
+		audience.ExcludeUserIDs = []string{event.ActorID}
 	}
 
 	var orderNumber string
@@ -117,17 +133,27 @@ func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *do
 		LinkResourceID:   orderID,
 		Priority:         string(constants.NotificationPriorityNormal),
 		SenderType:       string(constants.NotificationSenderTypeSystem),
-		RecipientUserIDs: []string{ownerID},
 		DedupeKey:        salesOrderActivityDedupeKey(orderID),
 		CoalesceQuietly:  true,
+		Record:           &order,
+		Subscribe:        subscriptionIntentsFor(event),
+		Audience:         audience,
 	}
 
+	if apiErr := s.enqueueFanout(ctx, salesOrderActivityMessageID(event, orderID), data); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+// enqueueFanout writes a notification fan-out intent to the outbox under messageID. A duplicate message id means
+// the work was already enqueued (another audit event from the same request got there first, or a retry re-ran a
+// completed step).
+func (s *auditEventSvcImpl) enqueueFanout(ctx context.Context, messageID string, data messaging.AlertFanoutData) *apierror.APIError {
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal order activity fan-out payload."))
+		return apierror.NewInternalError(err, "Failed to marshal the notification fan-out payload.")
 	}
-
-	messageID := salesOrderActivityMessageID(event, orderID)
 	msg := contracts.AmqpMessage{Data: dataJSON, MessageID: messageID}
 	if identity, ok := appctx.Identity[*authtypes.Identity](ctx); ok {
 		msg.Identity = identity
@@ -135,7 +161,6 @@ func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *do
 	if requestID, ok := appctx.GetRequestID(ctx); ok {
 		msg.RequestID = requestID
 	}
-
 	if _, err := s.outboxRepo.Create(ctx, messaging.OutboxMessageInput{
 		MessageID:   messageID,
 		ServiceName: domain.ServiceName,
@@ -144,13 +169,11 @@ func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *do
 		RoutingKey:  string(contracts.NotificationCmdFanout),
 		Payload:     msg,
 	}); err != nil {
-		// A duplicate message id means this request's edit was already fanned out (another audit event from the same request got there first, or a retry re-ran a completed step).
 		if db.IsDuplicateEntry(err) {
 			return nil
 		}
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to enqueue order activity fan-out."))
+		return apierror.NewInternalError(err, "Failed to enqueue the notification fan-out.")
 	}
-
 	return nil
 }
 

@@ -53,7 +53,10 @@ func (s *auditEventSvcImpl) SaveAuditEvent(ctx context.Context, event *domain.Au
 	}
 
 	// The owner fan-out runs after the row is persisted so it reads the order's owner and status including this event. Both steps are idempotent (duplicate-tolerant), so a retry after a partial failure completes the remainder.
-	return tracing.Trace(span, s.notifySalesOrderOwner(ctx, event))
+	if apiErr := s.notifySalesOrderOwner(ctx, event); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return tracing.Trace(span, s.subscribeFromAuditEvent(ctx, event))
 }
 
 func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {

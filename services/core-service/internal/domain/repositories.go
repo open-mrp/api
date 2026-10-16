@@ -2197,6 +2197,8 @@ type ManufacturingMethodRepo interface {
 	// becomes the single operation of a new active method for the item it produces; one already in a method passes on
 	// its output, consumptions and machines. A step that records no output is left alone.
 	SyncLegacyStep(ctx context.Context, stepID string) *apierror.APIError
+	// RemoveMachineFromOperations takes a machine being deleted off every operation that runs on it.
+	RemoveMachineFromOperations(ctx context.Context, machineID string) *apierror.APIError
 	// DeleteIfEmpty deletes a method that no longer has operations.
 	DeleteIfEmpty(ctx context.Context, accountID, methodID string) *apierror.APIError
 	// ListStepIDsAfter walks every production step by ID, for the adoption backfill.

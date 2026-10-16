@@ -97,6 +97,17 @@ func (q *Queries) CountOperationMaterials(ctx context.Context, operationID sql.N
 	return count, err
 }
 
+const deleteMachineFromOperations = `-- name: DeleteMachineFromOperations :exec
+DELETE FROM method_operation_machine WHERE machine_id = ?
+`
+
+// A deleted machine leaves every operation it ran on, as it left its production step before methods. Served by
+// method_operation_machine_machine_id_idx.
+func (q *Queries) DeleteMachineFromOperations(ctx context.Context, machineID string) error {
+	_, err := q.db.ExecContext(ctx, deleteMachineFromOperations, machineID)
+	return err
+}
+
 const deleteManufacturingMethodRow = `-- name: DeleteManufacturingMethodRow :exec
 DELETE FROM manufacturing_method WHERE id = ? AND account_id = ?
 `

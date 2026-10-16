@@ -366,3 +366,8 @@ SELECT id FROM production_step
 WHERE id > sqlc.arg('after_id')
 ORDER BY id
 LIMIT ?;
+
+-- name: DeleteMachineFromOperations :exec
+-- A deleted machine leaves every operation it ran on, as it left its production step before methods. Served by
+-- method_operation_machine_machine_id_idx.
+DELETE FROM method_operation_machine WHERE machine_id = sqlc.arg('machine_id');

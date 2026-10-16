@@ -23,14 +23,13 @@ type Machine struct {
 	UpdatedAt           time.Time
 }
 
-// MachineReferences blocks deleting a machine that batches, downtime events or method operations still name.
+// MachineReferences blocks deleting a machine that batches or downtime events still name.
 var MachineReferences = RegisterReferences(References{
 	Noun:       "machine",
 	Archivable: true,
 	Probes: []ReferenceProbe{
 		{Label: "batches", Table: "_batches_machines", Column: "B"},
 		{Label: "downtime events", Table: "machine_downtime_event", Column: "machine_id"},
-		{Label: "manufacturing method operations", Table: "method_operation_machine", Column: "machine_id"},
 	},
 })
 

@@ -91,3 +91,7 @@ func (r *manufacturingMethodRepoImpl) ListStepIDsAfter(ctx context.Context, afte
 	ids, err := r.queries.ListUnadoptedStepIDsAfter(ctx, sqlc.ListUnadoptedStepIDsAfterParams{AfterID: afterID, Limit: limit})
 	return ids, db.MapSQLError(err)
 }
+
+func (r *manufacturingMethodRepoImpl) RemoveMachineFromOperations(ctx context.Context, machineID string) *apierror.APIError {
+	return db.MapSQLError(r.queries.DeleteMachineFromOperations(ctx, machineID))
+}

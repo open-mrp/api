@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 
@@ -129,7 +130,8 @@ func TestManufacturingMethods_CRUD(t *testing.T) {
 	assertObjectField(t, method, "manufacturing_method")
 	assert.Equal(t, "draft", jsonField(method, "status"))
 	assert.Equal(t, "1", jsonField(method, "version"))
-	assertMethodQuantity(t, jsonObject(method, "output_quantity"), "1", unitEach, "default output_quantity (one stocking unit)")
+	stockingUnit := jsonField(jsonObject(getItem(t, itemID, "stocking_unit"), "stocking_unit"), "id")
+	assertMethodQuantity(t, jsonObject(method, "output_quantity"), "1", stockingUnit, "default output_quantity (one stocking unit)")
 	assertValidTimestamp(t, jsonField(method, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(method, "updated_at"), "updated_at")
 
@@ -359,17 +361,20 @@ func TestMethodOperations_ArchivedMachineRejected(t *testing.T) {
 	assertErrorParam(t, requireErrorResponse(t, raw, "resource_archived", "invalid_request_error"), "machine_ids")
 }
 
-// A machine an operation runs on can't be deleted out from under it.
-func TestMethodOperations_MachineInUse(t *testing.T) {
+// Deleting a machine takes it off the operations that run on it, as it left its production step before methods.
+func TestMethodOperations_DeletedMachineLeavesOperations(t *testing.T) {
 	t.Parallel()
 	machineID := jsonField(createMachineAt(t, SeedDepartmentID, nil), "id")
 	method, _ := createDraftMethod(t, map[string]any{})
-	addOperation(t, jsonField(method, "id"), map[string]any{"machine_ids": []string{machineID}})
+	methodID := jsonField(method, "id")
+	opID := jsonField(addOperation(t, methodID, map[string]any{"machine_ids": []string{machineID}}), "id")
 
 	status, raw, err := apiClient.Delete(machinesPath + "/" + machineID)
 	require.NoError(t, err)
-	requireStatus(t, 409, status, raw)
-	requireErrorResponse(t, raw, "resource_in_use", "invalid_request_error")
+	requireStatus(t, 200, status, raw)
+
+	got := getWith(t, methodOperationsPath(methodID)+"/"+opID, "machines")
+	assert.Empty(t, jsonArray(jsonObject(got, "machines"), "data"))
 }
 
 // --- Materials ---
@@ -626,4 +631,38 @@ func TestManufacturingMethods_PreviewStepIsAMethod(t *testing.T) {
 	list, _, err = apiClient.GetList(manufacturingMethodsPath, url.Values{"item_ids[]": {produced}})
 	require.NoError(t, err)
 	assert.Empty(t, list.Data, "deleting the step takes its method with it")
+}
+
+func TestMethodOperations_ListPages(t *testing.T) {
+	t.Parallel()
+	method, _ := createDraftMethod(t, map[string]any{})
+	methodID := jsonField(method, "id")
+	var ids []string
+	for i := 0; i < 3; i++ {
+		ids = append(ids, jsonField(addOperation(t, methodID, nil), "id"))
+	}
+
+	var seen []string
+	page, _, err := apiClient.GetList(methodOperationsPath(methodID), url.Values{"limit": {"1"}})
+	require.NoError(t, err)
+	for {
+		for _, row := range methodRows(page) {
+			seen = append(seen, jsonField(row, "id"))
+		}
+		if page.PageInfo.NextPageURL == nil {
+			break
+		}
+		require.Less(t, len(seen), 4, "paging ends")
+		var status int
+		var raw []byte
+		status, raw, err = apiClient.GetListRawFromPageURL(page.PageInfo.NextPageURL)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, raw)
+		page = &ListResponse{}
+		require.NoError(t, json.Unmarshal(raw, page))
+	}
+	assert.Equal(t, ids, seen, "every operation once, in position order")
+
+	embedded := jsonObject(getMethod(t, methodID, "operations"), "operations")
+	assert.Len(t, jsonArray(embedded, "data"), 3)
 }

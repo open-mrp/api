@@ -22464,6 +22464,20 @@ func (mr *MockManufacturingMethodRepoMockRecorder) OperationNameTaken(ctx, accou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OperationNameTaken", reflect.TypeOf((*MockManufacturingMethodRepo)(nil).OperationNameTaken), ctx, accountID, name)
 }
 
+// RemoveMachineFromOperations mocks base method.
+func (m *MockManufacturingMethodRepo) RemoveMachineFromOperations(ctx context.Context, machineID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveMachineFromOperations", ctx, machineID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveMachineFromOperations indicates an expected call of RemoveMachineFromOperations.
+func (mr *MockManufacturingMethodRepoMockRecorder) RemoveMachineFromOperations(ctx, machineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMachineFromOperations", reflect.TypeOf((*MockManufacturingMethodRepo)(nil).RemoveMachineFromOperations), ctx, machineID)
+}
+
 // RemoveProjection mocks base method.
 func (m *MockManufacturingMethodRepo) RemoveProjection(ctx context.Context, stepID string) *apierror.APIError {
 	m.ctrl.T.Helper()

@@ -9,10 +9,10 @@ import (
 
 // forge made the item the one catalog resource: a type of material | part | product | service, a status, a supply,
 // a sales section holding the selling price (unit_value → sales.unit_price) and a material section, and no notes.
-// preview.9 callers see the item they knew wherever one appears: a service is a product, unit_value is the sales
-// price (null for an item that isn't sold), notes is null, and the new fields are gone. Their item list keeps its
-// starts_at / ends_at and supplier_id filters, and lists active items only, as archived items are the ones it used to
-// hide as deleted.
+// preview.9 callers see the item they knew wherever one appears: a service is a product, unit_value is the stored
+// selling price (the gateway fills `sales` for preview.9 even on an item that isn't sold), notes is null, and the
+// new fields are gone. Their item list keeps its starts_at / ends_at and supplier_id filters, and lists active items
+// only, as archived items are the ones it used to hide as deleted.
 type itemForgeToPreview9 struct {
 	forgeToPreview9
 	everyObject

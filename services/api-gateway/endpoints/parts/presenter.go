@@ -13,7 +13,7 @@ func PartPresenter(p *pb.PartInfo) apiresource.Part {
 		return apiresource.Part{}
 	}
 
-	item := itemep.ItemPresenter(p.Item)
+	item := itemep.ItemPresenter(p.Item, true)
 	part := apiresource.Part{
 		ID:        p.Id,
 		Object:    constants.ObjectTypePart,

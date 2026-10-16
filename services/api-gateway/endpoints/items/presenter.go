@@ -50,13 +50,13 @@ func lightAttributePresenter(a *pb.ItemAttributeInfo) *apiresource.Attribute {
 }
 
 // ItemPresenter presents an item embedded whole in an older-version response, with its category and attributes; an
-// attribute's property is left to its include.
-func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
+// attribute's property is left to its include. preview9 is as for resourceloaders.ItemFromProto.
+func ItemPresenter(i *pb.ItemInfo, preview9 bool) apiresource.Item {
 	if i == nil {
 		return apiresource.Item{}
 	}
 
-	item := *resourceloaders.ItemFromProto(i)
+	item := *resourceloaders.ItemFromProto(i, preview9)
 	item.Category = lightItemCategoryPresenter(i.Category)
 
 	attrs := make([]apiresource.Attribute, len(i.Attributes))

@@ -2355,6 +2355,20 @@ func (mr *MockItemRepoMockRecorder) SetFields(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFields", reflect.TypeOf((*MockItemRepo)(nil).SetFields), ctx, params)
 }
 
+// DeleteProduct mocks base method.
+func (m *MockItemRepo) DeleteProduct(ctx context.Context, itemID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProduct", ctx, itemID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteProduct indicates an expected call of DeleteProduct.
+func (mr *MockItemRepoMockRecorder) DeleteProduct(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProduct", reflect.TypeOf((*MockItemRepo)(nil).DeleteProduct), ctx, itemID)
+}
+
 // SetProduct mocks base method.
 func (m *MockItemRepo) SetProduct(ctx context.Context, params domain.SetItemProductParams) *apierror.APIError {
 	m.ctrl.T.Helper()

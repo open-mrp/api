@@ -205,6 +205,8 @@ type ItemRepo interface {
 	// InsertProduct writes the product row that holds an item's selling details; SetProduct changes it.
 	InsertProduct(ctx context.Context, row ItemProductRow) *apierror.APIError
 	SetProduct(ctx context.Context, params SetItemProductParams) *apierror.APIError
+	// DeleteProduct removes the product row holding an item's selling details.
+	DeleteProduct(ctx context.Context, itemID string) *apierror.APIError
 	// InsertPart writes the part row a part item keeps for older API versions.
 	InsertPart(ctx context.Context, partID, itemID string) *apierror.APIError
 	// HardDelete removes the item, its extension rows, values and the bookkeeping that never moved stock. The caller

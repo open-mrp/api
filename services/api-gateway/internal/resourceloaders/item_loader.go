@@ -8,10 +8,13 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/apiversion"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
+	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 )
 
@@ -53,7 +56,7 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 	}
 
 	for _, item := range items {
-		out[item.Id] = ItemFromProto(item)
+		out[item.Id] = ItemFromProto(item, IsPreview9(ctx))
 
 		if item.Category != nil {
 			if c, ok := categoryMap[item.Category.Id]; ok {
@@ -107,7 +110,15 @@ func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties b
 // ItemSalesProductLineMetaKey stashes the product line an item's sales section names, for `sales.product_line`.
 const ItemSalesProductLineMetaKey = "sales.product_line_id"
 
-func ItemFromProto(i *pb.ItemInfo) *apiresource.Item {
+// IsPreview9 reports whether the request asked for 1.0.forge-preview.9.
+func IsPreview9(ctx context.Context) bool {
+	v, ok := appctx.GetAPIVersionFromContext(ctx)
+	return ok && v.Equal(apiversion.V1_0_Forge_Preview9)
+}
+
+// ItemFromProto presents an item. For preview9 an item without a sales section still carries a non-zero stored
+// selling price in one, as preview.9 reads it as `unit_value`; the downgrade then drops the section.
+func ItemFromProto(i *pb.ItemInfo, preview9 bool) *apiresource.Item {
 	item := &apiresource.Item{
 		ID:          i.Id,
 		Object:      constants.ObjectTypeItem,
@@ -134,6 +145,12 @@ func ItemFromProto(i *pb.ItemInfo) *apiresource.Item {
 			LeadTime:         quantityValueFromProto(s.LeadTime),
 		}
 	}
+	if item.Sales == nil && preview9 && nonZeroPrice(i.UnitValue) {
+		item.Sales = &apiresource.ItemSales{
+			UnitPrice:        UnitPriceFromProto(i.UnitValue),
+			PortalVisibility: constants.CustomerPortalVisibilityHidden,
+		}
+	}
 	if m := i.Material; m != nil {
 		item.Material = &apiresource.ItemMaterial{
 			OrderPoint: quantityValueFromProto(m.OrderPoint),
@@ -151,3 +168,10 @@ func quantityValueFromProto(q *pb.QuantityValue) *apiresource.Quantity {
 	return apiresource.NewQuantity(apiresource.NormalizeQuantityValue(q.Value, q.UnitType), q.UnitId)
 }
 
+func nonZeroPrice(p *pb.UnitPrice) bool {
+	if p == nil {
+		return false
+	}
+	amount, err := decimal.NewFromString(p.Amount)
+	return err == nil && !amount.IsZero()
+}

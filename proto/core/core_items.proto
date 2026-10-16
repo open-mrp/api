@@ -81,6 +81,8 @@ message UpdateItemRequest {
   UnitPrice unit_cost = 12;
   ItemSalesInput sales = 13;
   ItemMaterialInput material = 14;
+  // Removes the item's sales section (its product row); sales must be unset.
+  bool clear_sales = 15;
 }
 message UpdateItemResponse {
   ItemInfo item = 1;

@@ -186,6 +186,16 @@ func (r *itemRepoImpl) SetProduct(ctx context.Context, params domain.SetItemProd
 	return nil
 }
 
+func (r *itemRepoImpl) DeleteProduct(ctx context.Context, itemID string) *apierror.APIError {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.delete_product")
+	defer span.End()
+
+	if apiErr := db.MapSQLError(r.queries.DeleteItemProduct(ctx, itemID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *itemRepoImpl) InsertPart(ctx context.Context, partID, itemID string) *apierror.APIError {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.insert_part")
 	defer span.End()

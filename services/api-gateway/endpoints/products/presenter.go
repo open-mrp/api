@@ -28,7 +28,7 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 	}
 
 	if proto.Item != nil {
-		i := itemep.ItemPresenter(proto.Item)
+		i := itemep.ItemPresenter(proto.Item, true)
 		result.Item = &i
 	}
 

@@ -178,3 +178,16 @@ func TestVersionCompatItems_Preview9ProductReadsOnForge(t *testing.T) {
 	assert.Equal(t, "active", jsonField(item, "status"))
 	assert.NotNil(t, jsonObject(item, "sales"), "a product made on preview.9 has a sales section on forge")
 }
+
+// The preview.9 list's active-only default is the list's alone: a preview.9 create on the same route still succeeds.
+func TestVersionCompatItems_CreateOnPreview9(t *testing.T) {
+	t.Parallel()
+	resp, err := apiClient.WithAPIVersion(preview9Version).PostFull(itemsPath, forgeItemBody("part", uniqueName("e2e-compat-item-create")), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	created := parseJSON(resp.Body)
+	itemID := jsonField(created, "id")
+	require.NotEmpty(t, itemID)
+	t.Cleanup(func() { apiClient.Delete(itemsPath + "/" + itemID) })
+	assertPreview9ItemShape(t, created)
+}

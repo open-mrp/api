@@ -464,17 +464,16 @@ func TestOrderCascadeAudit_PurchaseOrderLineLinksTheSupplierMaterial(t *testing.
 	line["item_id"] = itemID
 	createPurchaseOrder(t, func(b map[string]any) { b["lines"] = []map[string]any{line} })
 
-	supplierMaterialsPath := "/v1/operations/suppliers/" + SeedSupplierAccountID + "/materials"
-	status, body, err := apiClient.GetListRaw(supplierMaterialsPath, url.Values{"q": {partNumber}})
+	status, body, err := apiClient.GetListRaw(supplierItemsPath(SeedSupplierAccountID), url.Values{"q": {partNumber}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	links := jsonArray(parseJSON(body), "data")
 	require.Len(t, links, 1, "the order linked the material to its supplier: %s", string(body))
-	materialID := jsonField(links[0].(map[string]any), "id")
-	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsPath + "/" + materialID) })
+	linkID := jsonField(links[0].(map[string]any), "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierItemsPath(SeedSupplierAccountID) + "/" + linkID) })
 
-	expectAuditEvent(t, materialID, "supplier_material", "create")
-	expectSupplierMaterialRootedEvents(t, SeedSupplierAccountID, materialID, 1)
+	expectAuditEvent(t, linkID, "supplier_item", "create")
+	expectSupplierItemRootedEvents(t, SeedSupplierAccountID, linkID, 1)
 }
 
 // --- Settlements ---

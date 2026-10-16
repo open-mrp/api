@@ -106,7 +106,8 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 	}
 	if req.EntityType != nil {
 		if r, apiErr := memoryRecord(*req.EntityType, "-"); apiErr != nil {
-			return nil, apiErr
+			// preview.9 filtered by any string, so a type no record has matches nothing.
+			return apiresource.NewList([]apiresource.AgentMemory{}, apiresource.PageInfo{}), nil
 		} else if r != nil {
 			pbReq.RecordTypes = []string{r.Type}
 		}

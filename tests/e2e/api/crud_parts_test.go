@@ -142,9 +142,7 @@ func TestParts_Preview9Lifecycle(t *testing.T) {
 	t.Run("forge reads the part as an item", func(t *testing.T) {
 		forgeItem := getItem(t, itemID)
 		assertItemEnvelope(t, forgeItem, "part", sku)
-		sales := jsonObject(forgeItem, "sales")
-		require.NotNil(t, sales, "a priced part is sold")
-		assertItemPrice(t, jsonObject(sales, "unit_price"), "5.00", nonCurrencyUnitID, "sales.unit_price")
+		assertNilField(t, forgeItem, "sales") // a stored price alone doesn't make a part sold
 		assertItemPrice(t, jsonObject(forgeItem, "unit_cost"), "2.50", nonCurrencyUnitID, "unit_cost")
 	})
 

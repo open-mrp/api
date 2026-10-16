@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,13 +110,18 @@ func TestProductsPreview9_Includes(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
+		// Seeded products only: products other tests create and delete meanwhile can lose their item mid-read.
+		seeded, err := time.Parse(time.RFC3339, jsonField(getPreview9Product(t, SeedProductID), "created_at"))
+		require.NoError(t, err)
 		status, body, err := preview.GetListRaw(productsPath, url.Values{
-			"include": {"item", "product_line.unit_group"},
-			"limit":   {"5"},
+			"include":          {"item", "product_line.unit_group"},
+			"product_line_ids": {SeedProductLineID},
+			"ends_at":          {seeded.Add(time.Minute).Format(time.RFC3339)},
+			"limit":            {"5"},
 		})
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
-		data := jsonListData(parseJSON(body), "data")
+		data := jsonArray(parseJSON(body), "data")
 		require.NotEmpty(t, data)
 		for _, raw := range data {
 			row := raw.(map[string]any)

@@ -126,10 +126,20 @@ func (s *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, orderDiscou
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{
+	discount, apiErr := s.repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{
 		AccountID:       identity.Target.AccountID,
 		OrderDiscountID: orderDiscountID,
 	})
+	if apiErr != nil && apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		gone, checkErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscountID, identity.Target.AccountID)
+		if checkErr != nil {
+			return nil, tracing.Trace(span, checkErr)
+		}
+		if gone {
+			return nil, tracing.Trace(span, apierror.NewGoneError("This order discount has been deleted."))
+		}
+	}
+	return discount, tracing.Trace(span, apiErr)
 }
 
 // BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs that the caller's account is authorized to read. Account-scoped.

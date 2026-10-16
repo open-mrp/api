@@ -81,7 +81,14 @@ func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *List
 }
 
 func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
-	return loadOrderDiscountByID(ctx, req.OrderDiscountID)
+	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetOrderDiscountResponse, error) {
+			return m.coreClient.GetOrderDiscount(ctx, &pb.GetOrderDiscountRequest{Id: req.OrderDiscountID}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return resourceloaders.OrderDiscountFromProto(resp.OrderDiscount), nil
 }
 
 func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {

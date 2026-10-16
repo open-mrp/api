@@ -90,11 +90,8 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *testing.T) {
 	t.Parallel()
 	lockPricingRead(t)
-	// The unit a line's price is quoted in depends on the discount that wins: customer2's
-	// per-pair account price (18.45/pair) beats the volume discount and is returned in its
-	// native per-pair unit — NOT the ordered carton unit. That discount-driven per unit
-	// (which does not come from the request) is exactly the one that used to come back
-	// as a bare {id, object}. It must be fully presented.
+	// customer2's own per-pair price (18.45/pair) beats the volume tiers and is converted to the
+	// ordered carton (12 pairs). The per unit must come back fully presented.
 	body := map[string]any{
 		"buyer_account_id": seedCustomer2AccountID,
 		"lines":            []map[string]any{quoteLine(seedVolumeProductA, "11", seedCartonUnitID)},
@@ -105,12 +102,10 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *test
 
 	unitPrice := jsonObject(quoteLineAt(t, respBody, 0), "unit_price")
 	require.NotNil(t, unitPrice, "line has a unit_price")
-	assert.InDelta(t, 18.45, quoteUnitPriceAt(t, respBody, 0), 0.001, "account price (per pair) beats the volume discount")
+	assert.InDelta(t, 221.40, quoteUnitPriceAt(t, respBody, 0), 0.001, "the customer's own price, per carton")
 
 	perUnit := jsonObject(unitPrice, "per_unit")
-	// The discount changed the unit away from the ordered carton to the account price's pair.
-	assert.Equal(t, "un_01seedpair000000000", jsonField(perUnit, "id"),
-		"the discount prices per pair, not per the ordered carton unit")
+	assert.Equal(t, seedCartonUnitID, jsonField(perUnit, "id"), "the price is per the ordered carton")
 	assertFullyPresentedUnit(t, perUnit, "per_unit")
 }
 
@@ -273,8 +268,8 @@ func TestQuoteSalesOrderPrices_VolumeDiscountSumsAcrossMatchingProducts(t *testi
 func TestQuoteSalesOrderPrices_AccountPriceBeatsVolumeDiscount(t *testing.T) {
 	t.Parallel()
 	lockPricingRead(t)
-	// customer2 has a per-pair account price (18.45/pair) on the volume line; it overrides
-	// the volume discount regardless of quantity, and is returned in its native per-pair unit.
+	// customer2 has its own per-pair price (18.45/pair) on the volume line; its list beats the
+	// account-wide volume tiers on an equally specific scope, whatever the quantity.
 	body := map[string]any{
 		"buyer_account_id": seedCustomer2AccountID,
 		"lines":            []map[string]any{quoteLine(seedVolumeProductA, "11", seedCartonUnitID)},
@@ -282,10 +277,8 @@ func TestQuoteSalesOrderPrices_AccountPriceBeatsVolumeDiscount(t *testing.T) {
 	status, respBody, err := apiClient.Post(salesOrderPriceQuotePath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, respBody)
-	assert.InDelta(t, 18.45, quoteUnitPriceAt(t, respBody, 0), 0.001, "account price (per pair) beats the volume discount")
+	assert.InDelta(t, 221.40, quoteUnitPriceAt(t, respBody, 0), 0.001, "18.45 per pair, converted to the ordered carton")
 
-	// The price is returned in its native per-pair unit (not converted to the ordered
-	// carton), which the frontend resolves to display "18.45 / pair".
 	unitPrice := jsonObject(quoteLineAt(t, respBody, 0), "unit_price")
-	assert.Equal(t, "un_01seedpair000000000", jsonField(jsonObject(unitPrice, "per_unit"), "id"))
+	assert.Equal(t, seedCartonUnitID, jsonField(jsonObject(unitPrice, "per_unit"), "id"))
 }

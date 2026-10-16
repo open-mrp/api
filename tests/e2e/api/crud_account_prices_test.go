@@ -30,6 +30,7 @@ var pricingMu sync.RWMutex
 // lockPricingWrite holds the exclusive side for the rest of the test.
 func lockPricingWrite(t *testing.T) {
 	t.Helper()
+	mirrorPricing(t)
 	pricingMu.Lock()
 	t.Cleanup(pricingMu.Unlock)
 }
@@ -37,6 +38,7 @@ func lockPricingWrite(t *testing.T) {
 // lockPricingRead holds the shared side for the rest of the test.
 func lockPricingRead(t *testing.T) {
 	t.Helper()
+	mirrorPricing(t)
 	pricingMu.RLock()
 	t.Cleanup(pricingMu.RUnlock)
 }

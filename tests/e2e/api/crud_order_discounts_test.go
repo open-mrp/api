@@ -14,14 +14,21 @@ import (
 
 const orderDiscountsPath = "/v1/sales/order-discounts"
 
+func percentOff(pct string) map[string]any {
+	return map[string]any{"type": "percent_off", "percent_off": pct}
+}
+
+func amountOff(amount string) map[string]any {
+	return map[string]any{"type": "amount_off", "amount_off": map[string]any{"amount": amount, "currency": "usd"}}
+}
+
 // createOrderDiscount creates a percentage discount with a unique code and registers cleanup.
 func createOrderDiscount(t *testing.T, overrides map[string]any) map[string]any {
 	t.Helper()
 	body := map[string]any{
-		"name":          uniqueName("e2e-ords"),
-		"code":          uniqueName("E2EORDS"),
-		"discount_type": "percentage",
-		"percentage":    "0.1",
+		"name":     uniqueName("e2e-ords"),
+		"code":     uniqueName("E2EORDS"),
+		"discount": percentOff("10"),
 	}
 	for k, v := range overrides {
 		body[k] = v
@@ -53,11 +60,20 @@ func TestOrderDiscounts_ListResponseShape(t *testing.T) {
 		assertIDFormat(t, jsonField(m, "id"), id.OrderDiscountIDPrefix)
 		assert.NotEmpty(t, jsonField(m, "name"))
 		assert.NotEmpty(t, jsonField(m, "code"))
-		assert.Contains(t, []string{"percentage", "amount"}, jsonField(m, "discount_type"),
-			"discount_type is a closed enum")
-		assert.NotEmpty(t, jsonField(m, "percentage"))
-		assert.NotEmpty(t, jsonField(m, "amount"))
-		require.NotNil(t, m["order_count"], "order_count should always be present")
+		assert.Contains(t, []string{"active", "archived"}, jsonField(m, "status"))
+		discount := jsonObject(m, "discount")
+		require.NotNil(t, discount, "discount is always present")
+		switch jsonField(discount, "type") {
+		case "percent_off":
+			assert.NotEmpty(t, jsonField(discount, "percent_off"))
+			assertNilField(t, discount, "amount_off")
+		case "amount_off":
+			assert.NotNil(t, jsonObject(discount, "amount_off"))
+			assertNilField(t, discount, "percent_off")
+		default:
+			t.Errorf("discount.type %q is not percent_off or amount_off", jsonField(discount, "type"))
+		}
+		require.NotNil(t, m["times_redeemed"], "times_redeemed should always be present")
 		assertValidTimestamp(t, jsonField(m, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(m, "updated_at"), "updated_at")
 	}
@@ -98,10 +114,9 @@ func TestOrderDiscounts_CreatePercentageResponseShape(t *testing.T) {
 	name := uniqueName("e2e-ords-pct")
 	code := uniqueName("E2EPCT")
 	resp, err := apiClient.PostFull(orderDiscountsPath, map[string]any{
-		"name":          name,
-		"code":          code,
-		"discount_type": "percentage",
-		"percentage":    "0.15",
+		"name":     name,
+		"code":     code,
+		"discount": percentOff("15"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -116,38 +131,38 @@ func TestOrderDiscounts_CreatePercentageResponseShape(t *testing.T) {
 	assertObjectField(t, got, "order_discount")
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, code, jsonField(got, "code"))
-	assert.Equal(t, "percentage", jsonField(got, "discount_type"))
-	// percentage is a multiplier, not a whole percent.
-	assertDecimalEquals(t, 0.15, jsonField(got, "percentage"), "percentage")
-	assert.EqualValues(t, 0, got["order_count"], "a new discount has not been applied to any order")
+	assert.Equal(t, "active", jsonField(got, "status"), "status defaults to active")
+	discount := jsonObject(got, "discount")
+	assert.Equal(t, "percent_off", jsonField(discount, "type"))
+	// percent_off is a whole percent.
+	assert.Equal(t, "15", jsonField(discount, "percent_off"))
+	assertNilField(t, discount, "amount_off")
+	assert.EqualValues(t, 0, got["times_redeemed"], "a new discount has not been applied to any order")
 }
 
 func TestOrderDiscounts_CreateAmountType(t *testing.T) {
 	t.Parallel()
-	created := createOrderDiscount(t, map[string]any{
-		"discount_type": "amount",
-		"amount":        "25.00",
-		"percentage":    "0",
-	})
+	created := createOrderDiscount(t, map[string]any{"discount": amountOff("25.00"), "status": "archived"})
 
-	assert.Equal(t, "amount", jsonField(created, "discount_type"))
-	assertDecimalEquals(t, 25.00, jsonField(created, "amount"), "amount")
+	discount := jsonObject(created, "discount")
+	assert.Equal(t, "amount_off", jsonField(discount, "type"))
+	assertDecimalEquals(t, 25.00, jsonField(jsonObject(discount, "amount_off"), "amount"), "amount_off.amount")
+	assert.Equal(t, "usd", jsonField(jsonObject(discount, "amount_off"), "currency"))
+	assertNilField(t, discount, "percent_off")
+	assert.Equal(t, "archived", jsonField(created, "status"))
 }
 
-// discount_type is declared as constants.OrderDiscountType, so the gateway rejects any
-// value outside the enum before the request reaches core-service.
+// discount.type is a closed enum, so the gateway rejects any value outside it.
 func TestOrderDiscounts_CreateRejectsInvalidDiscountType(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(orderDiscountsPath, map[string]any{
-		"name":          uniqueName("e2e-ords-badtype"),
-		"code":          uniqueName("E2EBAD"),
-		"discount_type": "banana",
-		"percentage":    "0.1",
+		"name":     uniqueName("e2e-ords-badtype"),
+		"code":     uniqueName("E2EBAD"),
+		"discount": map[string]any{"type": "banana", "percent_off": "10"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
-		"an unknown discount_type should be rejected, got %d: %s", status, string(body))
-	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "discount_type")
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "discount.type")
 }
 
 func TestOrderDiscounts_CreateValidation(t *testing.T) {
@@ -157,9 +172,12 @@ func TestOrderDiscounts_CreateValidation(t *testing.T) {
 		name string
 		body map[string]any
 	}{
-		{"missing name", map[string]any{"code": uniqueName("E2ENONAME"), "discount_type": "percentage"}},
-		{"missing code", map[string]any{"name": uniqueName("e2e-ords-nocode"), "discount_type": "percentage"}},
-		{"missing discount_type", map[string]any{"name": uniqueName("e2e-ords-notype"), "code": uniqueName("E2ENOTYPE")}},
+		{"missing name", map[string]any{"code": uniqueName("E2ENONAME"), "discount": percentOff("10")}},
+		{"missing code", map[string]any{"name": uniqueName("e2e-ords-nocode"), "discount": percentOff("10")}},
+		{"missing discount", map[string]any{"name": uniqueName("e2e-ords-notype"), "code": uniqueName("E2ENOTYPE")}},
+		{"percent over 100", map[string]any{"name": uniqueName("e2e-ords-pct"), "code": uniqueName("E2EPCT"), "discount": percentOff("150")}},
+		{"other currency", map[string]any{"name": uniqueName("e2e-ords-eur"), "code": uniqueName("E2EEUR"),
+			"discount": map[string]any{"type": "amount_off", "amount_off": map[string]any{"amount": "5", "currency": "eur"}}}},
 	}
 
 	for _, tc := range cases {
@@ -181,10 +199,9 @@ func TestOrderDiscounts_CreateDuplicateCodeConflict(t *testing.T) {
 
 	for _, variant := range []string{code, strings.ToLower(code)} {
 		status, body, err := apiClient.Post(orderDiscountsPath, map[string]any{
-			"name":          uniqueName("e2e-ords-dupe"),
-			"code":          variant,
-			"discount_type": "percentage",
-			"percentage":    "0.1",
+			"name":     uniqueName("e2e-ords-dupe"),
+			"code":     variant,
+			"discount": percentOff("10"),
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 409, status, body)
@@ -196,10 +213,9 @@ func TestOrderDiscounts_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	idemKey := newIdempotencyKey()
 	body := map[string]any{
-		"name":          uniqueName("e2e-ords-idem"),
-		"code":          uniqueName("E2EIDEM"),
-		"discount_type": "percentage",
-		"percentage":    "0.1",
+		"name":     uniqueName("e2e-ords-idem"),
+		"code":     uniqueName("E2EIDEM"),
+		"discount": percentOff("10"),
 	}
 
 	status1, body1, err := apiClient.Post(orderDiscountsPath, body, idemKey)
@@ -264,8 +280,8 @@ func TestOrderDiscounts_UpdateFields(t *testing.T) {
 
 	newName := uniqueName("e2e-ords-renamed")
 	status, body, err := apiClient.Patch(orderDiscountsPath+"/"+discountID, map[string]any{
-		"name":       newName,
-		"percentage": "0.25",
+		"name":     newName,
+		"discount": percentOff("25"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -273,7 +289,7 @@ func TestOrderDiscounts_UpdateFields(t *testing.T) {
 	updated := parseJSON(body)
 	assert.Equal(t, discountID, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, newName, jsonField(updated, "name"))
-	assertDecimalEquals(t, 0.25, jsonField(updated, "percentage"), "percentage")
+	assert.Equal(t, "25", jsonField(jsonObject(updated, "discount"), "percent_off"))
 	assert.Equal(t, jsonField(created, "code"), jsonField(updated, "code"), "an omitted code is unchanged")
 }
 
@@ -282,15 +298,15 @@ func TestOrderDiscounts_UpdateSwitchesDiscountType(t *testing.T) {
 	created := createOrderDiscount(t, map[string]any{})
 
 	status, body, err := apiClient.Patch(orderDiscountsPath+"/"+jsonField(created, "id"), map[string]any{
-		"discount_type": "amount",
-		"amount":        "40.00",
+		"discount": amountOff("40.00"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	updated := parseJSON(body)
-	assert.Equal(t, "amount", jsonField(updated, "discount_type"))
-	assertDecimalEquals(t, 40.00, jsonField(updated, "amount"), "amount")
+	discount := jsonObject(parseJSON(body), "discount")
+	assert.Equal(t, "amount_off", jsonField(discount, "type"))
+	assertDecimalEquals(t, 40.00, jsonField(jsonObject(discount, "amount_off"), "amount"), "amount_off.amount")
+	assertNilField(t, discount, "percent_off")
 }
 
 func TestOrderDiscounts_UpdateRejectsInvalidDiscountType(t *testing.T) {
@@ -298,10 +314,9 @@ func TestOrderDiscounts_UpdateRejectsInvalidDiscountType(t *testing.T) {
 	created := createOrderDiscount(t, map[string]any{})
 
 	status, body, err := apiClient.Patch(orderDiscountsPath+"/"+jsonField(created, "id"),
-		map[string]any{"discount_type": "banana"}, newIdempotencyKey())
+		map[string]any{"discount": map[string]any{"type": "banana"}}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
-		"an unknown discount_type should be rejected on update too, got %d: %s", status, string(body))
+	requireStatus(t, 422, status, body)
 }
 
 // The legacy implementation only checked code uniqueness on create, so an update could
@@ -353,9 +368,11 @@ func TestOrderDiscounts_DeleteRemovesDiscount(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
+	assertDeletedStub(t, body, discountID, "order_discount")
+
 	getStatus, getBody, err := apiClient.GetListRaw(orderDiscountsPath+"/"+discountID, nil)
 	require.NoError(t, err)
-	requireStatus(t, 404, getStatus, getBody)
+	requireStatus(t, 410, getStatus, getBody)
 }
 
 func TestOrderDiscounts_DeleteNonexistentReturns404(t *testing.T) {
@@ -371,4 +388,61 @@ func TestOrderDiscounts_RetrieveNonexistentReturns404(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+}
+
+func TestOrderDiscounts_ListStatusFilter(t *testing.T) {
+	t.Parallel()
+	active := createOrderDiscount(t, map[string]any{})
+	archived := createOrderDiscount(t, map[string]any{"status": "archived"})
+
+	list, _, err := apiClient.GetList(orderDiscountsPath, url.Values{"statuses[]": {"archived"}, "q": {jsonField(archived, "code")}})
+	require.NoError(t, err)
+	require.Len(t, list.Data, 1)
+	assert.Equal(t, jsonField(archived, "id"), DataItemField(list.Data[0], "id"))
+
+	list, _, err = apiClient.GetList(orderDiscountsPath, url.Values{"statuses[]": {"archived"}, "q": {jsonField(active, "code")}})
+	require.NoError(t, err)
+	assert.Empty(t, list.Data)
+}
+
+// An archived code can't be applied to a new order.
+func TestOrderDiscounts_ArchivedCodeCannotBeApplied(t *testing.T) {
+	t.Parallel()
+	archived := createOrderDiscount(t, map[string]any{"status": "archived"})
+
+	status, body, err := getCustomerPortalClient().Post(orderDiscountsPath+"/actions/find-by-code",
+		map[string]any{"code": jsonField(archived, "code")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 404, status, body)
+}
+
+// preview.9 callers still read and write the fraction fields.
+func TestOrderDiscounts_Preview9Shape(t *testing.T) {
+	t.Parallel()
+	p9 := p9Client()
+
+	status, body, err := p9.Post(orderDiscountsPath, map[string]any{
+		"name": uniqueName("e2e-ords-p9"), "code": uniqueName("E2EP9"), "discount_type": "percentage", "percentage": "0.05",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	got := parseJSON(body)
+	discountID := jsonField(got, "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(orderDiscountsPath + "/" + discountID) })
+	assert.Equal(t, "percentage", jsonField(got, "discount_type"))
+	assertDecimalEquals(t, 0.05, jsonField(got, "percentage"), "percentage")
+	require.NotNil(t, got["order_count"])
+	assert.NotContains(t, got, "discount")
+
+	status, body, err = apiClient.GetListRaw(orderDiscountsPath+"/"+discountID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "5", jsonField(jsonObject(parseJSON(body), "discount"), "percent_off"), "forge reads the whole percent")
+
+	status, body, err = p9.Patch(orderDiscountsPath+"/"+discountID, map[string]any{"discount_type": "amount", "amount": "12.50"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	got = parseJSON(body)
+	assert.Equal(t, "amount", jsonField(got, "discount_type"))
+	assertDecimalEquals(t, 12.5, jsonField(got, "amount"), "amount")
 }

@@ -35,7 +35,7 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 				}
 
 				t.Run("clear_"+field, func(t *testing.T) {
-					getStatus, getBody, err := apiClient.GetListRaw(path, nil)
+					getStatus, getBody, err := specClient.GetListRaw(path, nil)
 					require.NoError(t, err)
 					if getStatus == 404 || getStatus == 401 || getStatus == 403 {
 						t.Fatalf("Seed resource not accessible for %s: %d", path, getStatus)
@@ -45,7 +45,7 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 					originalValue := parseJSON(getBody)[field]
 
 					// Phase 1: Set the field to a known value.
-					setStatus, setBody, err := apiClient.Patch(path, map[string]any{
+					setStatus, setBody, err := specClient.Patch(path, map[string]any{
 						field: seedVal,
 					}, newIdempotencyKey())
 					require.NoError(t, err)
@@ -56,14 +56,14 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 					requireStatus(t, 200, setStatus, setBody)
 
 					// Phase 2: Clear the field by sending null.
-					clearStatus, clearBody, err := apiClient.Patch(path, map[string]any{
+					clearStatus, clearBody, err := specClient.Patch(path, map[string]any{
 						field: nil,
 					}, newIdempotencyKey())
 					require.NoError(t, err)
 					requireStatus(t, 200, clearStatus, clearBody)
 
 					// Phase 3: Restore the original value so other tests aren't affected.
-					restoreStatus, restoreBody, err := apiClient.Patch(path, map[string]any{
+					restoreStatus, restoreBody, err := specClient.Patch(path, map[string]any{
 						field: originalValue,
 					}, newIdempotencyKey())
 					require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestUpdateEndpoints_EmptyBodyRejected(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.Patch(path, map[string]any{}, newIdempotencyKey())
+			statusCode, body, err := specClient.Patch(path, map[string]any{}, newIdempotencyKey())
 			require.NoError(t, err, "PATCH %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 

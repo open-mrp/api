@@ -30,7 +30,7 @@ func TestListEndpoints_ResponseContracts(t *testing.T) {
 				return
 			}
 
-			status, body, err := apiClient.GetListRaw(path, nil)
+			status, body, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, status)
 			if status != 200 {
@@ -66,7 +66,7 @@ func TestSeededGetEndpoints_ResponseContracts(t *testing.T) {
 				return
 			}
 
-			status, body, err := apiClient.GetListRaw(path, nil)
+			status, body, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, status)
 			if status == 405 {

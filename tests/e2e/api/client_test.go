@@ -28,7 +28,7 @@ type Client struct {
 	apiKey     string
 	accountID  string
 	apiVersion string
-	// pinned is set by WithAPIVersion: the request carries apiVersion whatever its route.
+	// pinned is set by WithAPIVersion and Exact: the request carries apiVersion whatever its route.
 	pinned bool
 	// forgeOrders sends sales order requests as 1.0.forge instead of preview.9 (see requestVersion).
 	forgeOrders bool
@@ -38,8 +38,6 @@ type Client struct {
 	// header. The gateway rejects a request carrying both, so the two are
 	// mutually exclusive rather than additive.
 	cookies []*http.Cookie
-	// exactVersion sends apiVersion as is, even on a route requestVersion would pin to preview.9.
-	exactVersion bool
 }
 
 // NewClient creates a new API client.
@@ -84,7 +82,6 @@ func (c *Client) WithAPIVersion(version string) *Client {
 func (c *Client) Exact() *Client {
 	clone := c.WithAPIVersion(c.apiVersion)
 	clone.cookies = c.cookies
-	clone.exactVersion = true
 	return clone
 }
 
@@ -114,8 +111,8 @@ func (c *Client) applyAuth(req *http.Request) {
 	}
 	req.Header.Set("OpenMRP-Account", c.accountID)
 	version := c.apiVersion
-	if !c.pinned && !c.exactVersion && !(req.Method == http.MethodGet && isItemInventoryPath(req.URL.Path)) {
-		version = requestVersion(version, req.URL.Path, c.forgeOrders)
+	if !c.pinned {
+		version = requestVersion(version, req.Method, req.URL.Path, c.forgeOrders)
 	}
 	req.Header.Set("OpenMRP-Version", version)
 	req.Header.Set("Accept", "application/json")
@@ -127,34 +124,39 @@ var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts"
 	"/v1/sales/account-prices", "/v1/sales/volume-discounts", "/v1/operations/inventory-change-logs", "/v1/operations/inventories",
 	"/v1/catalog/items/actions/bulk-reconcile", "/v1/sales/sales-orders/statuses"}
 
-// requestVersion pins a default-version request to a preview.9-only route to preview.9, the only version it answers.
-func requestVersion(version, path string, forgeOrders bool) string {
+// requestVersion is the version an unpinned client sends. A route 1.0.forge no longer answers goes as preview.9, the
+// only version that does. Sales orders also go as preview.9 unless forgeOrders: suites that only set orders up for
+// other resources still write and read them in the preview.9 shape, while the sales order suites and the spec sweeps
+// opt into 1.0.forge.
+func requestVersion(version, method, path string, forgeOrders bool) string {
 	if version != defaultAPIVersion {
 		return version
 	}
-	for _, prefix := range preview9OnlyPrefixes {
-		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			return preview9Version
-		}
-	}
-	if isSupplierMaterialsPath(path) || isRetiredItemInventoryPath(path) {
-		return preview9Version
-	}
-	// Suites that only set up sales orders for other resources still write and read them in the preview.9 shape;
-	// the sales order suites pin 1.0.forge with forgeClient.
-	if !forgeOrders && isSalesOrderHeaderPath(path) {
+	if isRetiredRoute(method, path) || (!forgeOrders && isSalesOrderHeaderPath(path)) {
 		return preview9Version
 	}
 	return version
 }
 
-// isRetiredItemInventoryPath reports whether path is an item's /inventory (whose PATCH only preview.9 answers; its GET
-// is forge's inventory level, which applyAuth leaves on the client's version) or its /lot-default.
-func isRetiredItemInventoryPath(path string) bool {
-	return isItemSubPath(path, "inventory") || isItemSubPath(path, "lot-default")
+// isRetiredRoute reports whether only 1.0.forge-preview.9 answers method on path, a concrete path or a spec template.
+func isRetiredRoute(method, path string) bool {
+	for _, prefix := range preview9OnlyPrefixes {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return true
+		}
+	}
+	switch {
+	case isSupplierMaterialsPath(path), isItemSubPath(path, "lot-default"):
+		return true
+	case isItemSubPath(path, "inventory"):
+		// Its GET is forge's inventory level; only preview.9 adjusts it there.
+		return method != http.MethodGet
+	case method == http.MethodPut && isSalesOrderStatusActionPath(path):
+		// forge takes status actions as POST.
+		return true
+	}
+	return false
 }
-
-func isItemInventoryPath(path string) bool { return isItemSubPath(path, "inventory") }
 
 func isItemSubPath(path, sub string) bool {
 	rest, ok := strings.CutPrefix(path, "/v1/catalog/items/")
@@ -175,15 +177,22 @@ func isSalesOrderHeaderPath(path string) bool {
 	if !ok {
 		return false
 	}
+	return (!strings.Contains(rest, "/") && rest != "price-quote") || isSalesOrderStatusActionPath(path)
+}
+
+// isSalesOrderStatusActionPath reports whether path is one order's issue, unissue, cancel, close or open action.
+func isSalesOrderStatusActionPath(path string) bool {
+	rest, ok := strings.CutPrefix(path, salesOrdersPath+"/")
+	if !ok {
+		return false
+	}
 	segs := strings.Split(rest, "/")
-	switch {
-	case len(segs) == 1:
-		return segs[0] != "price-quote"
-	case len(segs) == 3 && segs[1] == "actions":
-		switch segs[2] {
-		case "issue", "unissue", "cancel", "close", "open":
-			return true
-		}
+	if len(segs) != 3 || segs[1] != "actions" {
+		return false
+	}
+	switch segs[2] {
+	case "issue", "unissue", "cancel", "close", "open":
+		return true
 	}
 	return false
 }

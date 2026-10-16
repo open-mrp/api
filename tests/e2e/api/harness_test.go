@@ -24,7 +24,10 @@ const (
 )
 
 var (
-	apiClient       *Client
+	apiClient *Client
+	// specClient runs the spec-driven sweeps: every route the spec documents for 1.0.forge as 1.0.forge, sales orders
+	// included.
+	specClient      *Client
 	listEndpoints   []ListEndpointSpec
 	updateEndpoints []UpdateEndpointSpec
 	createEndpoints []BodyEndpointSpec
@@ -41,6 +44,7 @@ func TestMain(m *testing.M) {
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 256
 
 	apiClient = NewClient(baseURL, apiKey, accountID)
+	specClient = apiClient.WithForgeSalesOrders()
 
 	// Wait for the API gateway to be healthy.
 	log.Println("Waiting for API gateway to be healthy...")

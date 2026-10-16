@@ -67,7 +67,7 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 			}
 
 			// Fetch actual data.
-			statusCode, body, err := apiClient.GetListRaw(path, nil)
+			statusCode, body, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err)
 			skipOnNonClientError(t, path, statusCode)
 			if statusCode != 200 {
@@ -287,7 +287,7 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 
 			var respBody []byte
 
-			getStatus, getBody, err := apiClient.GetListRaw(path, nil)
+			getStatus, getBody, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err)
 			skipOnNonClientError(t, path, getStatus)
 
@@ -299,7 +299,7 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 				if body == nil {
 					body = map[string]any{}
 				}
-				patchStatus, patchBody, patchErr := apiClient.Patch(path, body, newIdempotencyKey())
+				patchStatus, patchBody, patchErr := specClient.Patch(path, body, newIdempotencyKey())
 				require.NoError(t, patchErr)
 				skipOnNonClientError(t, path, patchStatus)
 				if patchStatus != 200 {

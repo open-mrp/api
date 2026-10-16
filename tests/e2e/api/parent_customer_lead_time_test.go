@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 
@@ -143,13 +142,8 @@ func TestParentCustomerLeadTime_StampsAnIssuedOrdersCommitment(t *testing.T) {
 	assert.Equal(t, "parent_customer", jsonField(commitmentOf(order), "lead_time_source"),
 		"the order records the rule that produced its ship-by date")
 
-	// The days are asserted against the date rather than against 13: the shipping
-	// calendar can pull a ship-by date back onto an open day, and which day that is
-	// depends on when the test runs.
-	days, err := strconv.Atoi(jsonField(commitmentOf(order), "lead_time_days"))
-	require.NoError(t, err, "an issued order must carry the days it committed to")
-	assert.LessOrEqual(t, days, 13, "a calendar can only pull a ship-by date earlier")
-	assert.Equal(t, issuedPlusDays(t, order, days), shipByDate(t, order))
+	assert.Equal(t, 13, committedRuleDays(t, order), "the order commits to the parent's 13 business days")
+	assert.Equal(t, expectedShipBy(t, order, 13), shipByDate(t, order))
 }
 
 // The write path, end to end: a rep sets a lead time on the head office and every location

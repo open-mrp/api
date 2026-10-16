@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
@@ -62,6 +63,35 @@ type CoreClient interface {
 	// GetUserAccess returns the user's current role and permissions in the account, or nil when the user is not a member.
 	GetUserAccess(ctx context.Context, userID, accountID string) (*UserAccess, error)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, error)
+	// RecallNotes is the notes an agent reads before it works: the account's standing guidance plus the notes on
+	// recordIDs, unexpired, most important first.
+	RecallNotes(ctx context.Context, accountID string, recordIDs []string, limit int32) ([]RecalledNote, error)
+	// ImportNotes copies memories into notes. Notes whose ID already exists are skipped; it returns how many were new.
+	ImportNotes(ctx context.Context, notes []ImportedNote) (int64, error)
+}
+
+// RecalledNote is a note an agent reads.
+type RecalledNote struct {
+	Type       string
+	Importance string
+	Body       string
+	// RecordType and RecordID are empty for an account-wide note.
+	RecordType string
+	RecordID   string
+}
+
+// ImportedNote is a memory as the note it becomes.
+type ImportedNote struct {
+	ID         string
+	AccountID  string
+	RecordType string
+	RecordID   string
+	Body       string
+	Type       string
+	Importance string
+	ExpiresAt  *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // RoleInfo identifies a role's type and owning account.

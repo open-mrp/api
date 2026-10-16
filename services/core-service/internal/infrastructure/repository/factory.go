@@ -243,6 +243,10 @@ func (r *repoFactoryImpl) NewDemandOverrideRepo() domain.DemandOverrideRepo {
 	return NewDemandOverrideRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewNoteRepo() domain.NoteRepo {
+	return NewNoteRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewScheduleAttainmentRepo() domain.ScheduleAttainmentRepo {
 	return NewScheduleAttainmentRepo(r.queries)
 }

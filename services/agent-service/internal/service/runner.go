@@ -728,23 +728,7 @@ func (s *runnerSvc) executeAgent(
 ) (*domain.RunResult, error) {
 	seq := 0
 
-	// Load memories
-	memoryRepo := s.repos.NewAgentMemoryRepo()
-	memories, memErr := memoryRepo.ListAccountMemories(ctx, accountID, accountID, 50)
-	if memErr != nil {
-		memories = nil // non-fatal
-	}
-
-	// Append memories to system prompt
-	if len(memories) > 0 {
-		var sb strings.Builder
-		sb.WriteString(systemPrompt)
-		sb.WriteString("\n\nRelevant memories from previous interactions:\n")
-		for _, m := range memories {
-			fmt.Fprintf(&sb, "- [%s] %s\n", m.Category, m.Content)
-		}
-		systemPrompt = sb.String()
-	}
+	systemPrompt = s.withRecalledNotes(ctx, run, accountID, systemPrompt)
 
 	// Prepend cross-cutting guidance (tool discovery; resource links for chat runs).
 	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools, toolDefs)
@@ -1918,22 +1902,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		temperature = *agentCfg.Temperature
 	}
 
-	// Load memories and build system prompt
-	systemPrompt := agentCfg.SystemPrompt
-	memoryRepo := s.repos.NewAgentMemoryRepo()
-	memories, memErr := memoryRepo.ListAccountMemories(ctx, accountID, accountID, 50)
-	if memErr != nil {
-		memories = nil
-	}
-	if len(memories) > 0 {
-		var sb strings.Builder
-		sb.WriteString(systemPrompt)
-		sb.WriteString("\n\nRelevant memories from previous interactions:\n")
-		for _, m := range memories {
-			fmt.Fprintf(&sb, "- [%s] %s\n", m.Category, m.Content)
-		}
-		systemPrompt = sb.String()
-	}
+	systemPrompt := s.withRecalledNotes(ctx, run, accountID, agentCfg.SystemPrompt)
 
 	// Prepend cross-cutting guidance (tool discovery; resource links for chat runs), same as the first turn, so a continued run keeps it.
 	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools, toolDefs)

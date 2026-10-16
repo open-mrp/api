@@ -194,6 +194,36 @@ func (mr *MockCoreClientMockRecorder) GetUserAccess(ctx, userID, accountID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAccess", reflect.TypeOf((*MockCoreClient)(nil).GetUserAccess), ctx, userID, accountID)
 }
 
+// ImportNotes mocks base method.
+func (m *MockCoreClient) ImportNotes(ctx context.Context, notes []domain.ImportedNote) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImportNotes", ctx, notes)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ImportNotes indicates an expected call of ImportNotes.
+func (mr *MockCoreClientMockRecorder) ImportNotes(ctx, notes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportNotes", reflect.TypeOf((*MockCoreClient)(nil).ImportNotes), ctx, notes)
+}
+
+// RecallNotes mocks base method.
+func (m *MockCoreClient) RecallNotes(ctx context.Context, accountID string, recordIDs []string, limit int32) ([]domain.RecalledNote, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecallNotes", ctx, accountID, recordIDs, limit)
+	ret0, _ := ret[0].([]domain.RecalledNote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecallNotes indicates an expected call of RecallNotes.
+func (mr *MockCoreClientMockRecorder) RecallNotes(ctx, accountID, recordIDs, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecallNotes", reflect.TypeOf((*MockCoreClient)(nil).RecallNotes), ctx, accountID, recordIDs, limit)
+}
+
 // MockBillingCustomerResolver is a mock of BillingCustomerResolver interface.
 type MockBillingCustomerResolver struct {
 	ctrl     *gomock.Controller

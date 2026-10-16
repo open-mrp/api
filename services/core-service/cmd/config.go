@@ -47,6 +47,7 @@ const (
 	envAccountMarketingBlurbs     = "ACCOUNT_MARKETING_BLURBS"
 	envMoneyColumnBackfillOff     = "MONEY_COLUMN_BACKFILL_DISABLED"
 	envItemUnitsBackfillOff       = "ITEM_UNITS_BACKFILL_DISABLED"
+	envNoteBackfillOff            = "NOTE_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -146,6 +147,9 @@ type config struct {
 	// ItemUnitsBackfillDisabled (optional; default: false) stops the backfill that stores items' units ("true" to
 	// stop it); items it hasn't reached keep reading units derived from their unit groups.
 	ItemUnitsBackfillDisabled bool
+	// NoteBackfillDisabled (optional; default: false) stops the backfills that copy notes columns into notes ("true"
+	// to stop them).
+	NoteBackfillDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -192,6 +196,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		AccountMarketingBlurbs:      env.GetEnv(envAccountMarketingBlurbs, getenv),
 		MoneyColumnBackfillDisabled: env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
 		ItemUnitsBackfillDisabled:   env.GetEnv(envItemUnitsBackfillOff, getenv) == "true",
+		NoteBackfillDisabled:        env.GetEnv(envNoteBackfillOff, getenv) == "true",
 	}
 }
 

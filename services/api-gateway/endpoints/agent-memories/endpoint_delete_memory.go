@@ -32,10 +32,8 @@ func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMem
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeAgentMemory,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgentMemories, Action: types.ActionDelete}}},
+		Public:            false,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainNotes, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMemoryRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(AgentMemorySvc).DeleteMemory, constants.ObjectTypeAgentMemory, "id")
 		},

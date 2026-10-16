@@ -62,6 +62,7 @@ type RepoFactory interface {
 	NewMachineStatusRepo() MachineStatusRepo
 	NewMachineDowntimeRepo() MachineDowntimeRepo
 	NewDemandOverrideRepo() DemandOverrideRepo
+	NewNoteRepo() NoteRepo
 	NewScheduleAttainmentRepo() ScheduleAttainmentRepo
 	NewProductionScheduleInputRepo() ProductionScheduleInputRepo
 	NewProductionScheduleRepo() ProductionScheduleRepo

@@ -12,6 +12,7 @@ import (
 var routeSegmentToSampleID = map[string]string{
 	"machine-downtime-events":      apiresource.SampleMachineDowntimeEventID,
 	"demand-overrides":             apiresource.SampleDemandOverrideID,
+	"notes":                        apiresource.SampleNoteID,
 	"production-schedules":         apiresource.SampleProductionScheduleID,
 	"announcements":                apiresource.SampleAnnouncementID,
 	"notifications":                apiresource.SampleNotificationID,

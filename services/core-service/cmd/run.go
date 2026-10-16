@@ -55,6 +55,9 @@ const backfillRetryInterval = 5 * time.Minute
 // enough for a rollout to retire the previous release's pods, which write only the legacy rows.
 const moneyColumnBackfillDelay = 15 * time.Minute
 
+// noteBackfillDelay is how long a pod waits before it copies notes columns into notes, for the same reason.
+const noteBackfillDelay = 15 * time.Minute
+
 func Run(
 	ctx context.Context,
 	getenv func(string) string,
@@ -678,6 +681,12 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	noteSvc := service.NewNoteSvc(&service.NoteSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
 	roleSvc := service.NewRoleSvc(&service.RoleSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1016,6 +1025,28 @@ func Run(
 			go runner.Keep(ctx, leaseSvc, backfillRetryInterval)
 		}
 	}
+	// The notes columns forge.1 drops from the API become notes, one paced backfill per table. They wait out the rollout
+	// so notes the previous release's pods still wrote are copied too. NOTE_BACKFILL_DISABLED=true stops them.
+	if !cfg.NoteBackfillDisabled {
+		for _, src := range repository.NoteColumnSources {
+			noteBackfill, err := backfill.New(&backfill.Config{
+				Name:     src.BackfillName(),
+				Batch:    repository.NewNoteColumnBackfill(sqlc.New(reportDB), queries, src).Batch,
+				Progress: repository.NewBackfillProgressRepo(queries),
+			})
+			if err != nil {
+				return err
+			}
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(noteBackfillDelay):
+				}
+				noteBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
+			}()
+		}
+	}
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventSalesFactQueue,
 		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,
@@ -1084,6 +1115,7 @@ func Run(
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
+	grpc.RegisterNoteService(srv, noteSvc)
 	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)

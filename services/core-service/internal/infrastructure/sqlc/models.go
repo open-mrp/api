@@ -1492,6 +1492,22 @@ type MessagingReport struct {
 	CreatedAt             time.Time
 }
 
+type Note struct {
+	ID         string
+	AccountID  string
+	RecordType sql.NullString
+	RecordID   sql.NullString
+	Body       string
+	Type       string
+	Importance int8
+	ExpiresAt  sql.NullTime
+	ActorType  string
+	ActorID    sql.NullString
+	EditedAt   sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 type Notification struct {
 	ID                     string
 	AccountID              string

@@ -5,9 +5,11 @@ import "sort"
 type PermissionDomain string
 
 const (
-	PermissionDomainAgents                        PermissionDomain = "agents"
-	PermissionDomainAgentRuns                     PermissionDomain = "agent_runs"
-	PermissionDomainAgentMemories                 PermissionDomain = "agent_memories"
+	PermissionDomainAgents        PermissionDomain = "agents"
+	PermissionDomainAgentRuns     PermissionDomain = "agent_runs"
+	PermissionDomainAgentMemories PermissionDomain = "agent_memories"
+	// Notes on records and on the account. Update and delete apply to the caller's own notes; admins may delete anyone's.
+	PermissionDomainNotes                         PermissionDomain = "notes"
 	PermissionDomainAlerts                        PermissionDomain = "alerts"
 	PermissionDomainAccount                       PermissionDomain = "self"
 	PermissionDomainDeliveries                    PermissionDomain = "deliveries"
@@ -113,6 +115,7 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainAgents,
 		PermissionDomainAgentRuns,
 		PermissionDomainAgentMemories,
+		PermissionDomainNotes,
 		PermissionDomainAlerts,
 		PermissionDomainAccount,
 		PermissionDomainDeliveries,

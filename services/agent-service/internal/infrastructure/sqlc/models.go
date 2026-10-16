@@ -164,6 +164,15 @@ type AgentTokenUsage struct {
 	UpdatedAt    pgtype.Timestamptz
 }
 
+type BackfillProgress struct {
+	Name        string
+	CursorValue string
+	RowsDone    int64
+	CompletedAt pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
 type DeletedRecord struct {
 	ID           int64
 	DeletedAt    pgtype.Timestamptz

@@ -104,6 +104,7 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"supplier_ids":         apiresource.SampleSupplierID,
 		"department_ids":       apiresource.SampleWorkCenterID,
 		"work_center_ids":      apiresource.SampleWorkCenterID,
+		"record_ids":           apiresource.SampleCustomerID,
 		"product_line_ids":     apiresource.SampleProductLineID,
 		"category_ids":         apiresource.SampleItemCategoryID,
 		"item_category_ids":    apiresource.SampleItemCategoryID,

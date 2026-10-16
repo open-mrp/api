@@ -265,6 +265,7 @@ var excludedPaths = []string{
 	// 1.0.forge-preview.9 only: items name their own stocking and order units. Covered by the unit group crud tests.
 	"/v1/catalog/unit-groups",
 	"/v1/catalog/item-categories/{id}/unit-groups",
+	"/v1/ai/memories", // 1.0.forge-preview.9 only, over notes; covered by the agent memory and notes tests.
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

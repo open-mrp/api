@@ -14,13 +14,13 @@ type AgentMemoriesEndpointGroup struct {
 }
 
 type AgentMemoriesEndpointGroupConfig struct {
-	// AgentClient (required) is the agent-service gRPC client.
-	AgentClient *grpcclient.AgentServiceClient
+	// CoreClient (required) is the core-service gRPC client; memories are notes.
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *AgentMemoriesEndpointGroupConfig) validate() error {
-	if c.AgentClient == nil {
-		return fmt.Errorf("agent memories endpoint group: agent client is required")
+	if c.CoreClient == nil {
+		return fmt.Errorf("agent memories endpoint group: core client is required")
 	}
 	return nil
 }
@@ -31,12 +31,12 @@ func (*AgentMemoriesEndpointGroup) Materialize(config *AgentMemoriesEndpointGrou
 	}
 
 	memorySvc := agentmemoryep.NewAgentMemorySvc(&agentmemoryep.AgentMemorySvcConfig{
-		AgentClient: config.AgentClient.Client,
+		NoteClient: config.CoreClient.Note,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Agent Memories",
-		Description:  "List, create, update, and delete agent memories.",
+		Description:  "Agent memories, which are notes. These routes answer only 1.0.forge-preview.9 callers.",
 		ResourceType: &apiresource.AgentMemory{},
 	}
 

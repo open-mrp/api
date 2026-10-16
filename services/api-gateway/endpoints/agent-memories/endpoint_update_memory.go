@@ -70,11 +70,9 @@ func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMem
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeAgentMemory,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgentMemories, Action: types.ActionUpdate}}},
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainNotes, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).UpdateMemory
 		},

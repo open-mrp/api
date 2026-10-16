@@ -82,6 +82,10 @@ INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at
     ('agent_runs', 'agent_runs', 'Agent Runs', 'teams', NOW(), NOW()),
     ('agent_memories', 'agent_memories', 'Agent Memories', 'teams', NOW(), NOW());
 
+-- Mirrors data migration 00023_add_notes_permission.
+INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
+    ('notes', 'notes', 'Notes', 'teams', 'Read and write notes on records and the account. Update and delete apply to your own notes; admins can delete any.', NOW(), NOW());
+
 -- Mirrors data migration 00013_add_costs_permission.
 INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
     ('costs', 'costs', 'Costs', 'pricing', 'See costs and margins: item unit costs, order line costs, costing and margin reports. Only read applies.', NOW(), NOW());
@@ -171,6 +175,7 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_agents0', 'rl_mtg88e6u6fbu', 'agents', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_agentr0', 'rl_mtg88e6u6fbu', 'agent_runs', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_agentm0', 'rl_mtg88e6u6fbu', 'agent_memories', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_notes00', 'rl_mtg88e6u6fbu', 'notes', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_alerts0', 'rl_mtg88e6u6fbu', 'alerts', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_costs00', 'rl_mtg88e6u6fbu', 'costs', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_billng0', 'rl_mtg88e6u6fbu', 'billing', 1, 1, 1, 1, NOW(), NOW());

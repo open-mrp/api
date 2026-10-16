@@ -21817,3 +21817,144 @@ func (mr *MockStockingUnitRestateRepoMockRecorder) Restate(ctx, accountID, itemI
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restate", reflect.TypeOf((*MockStockingUnitRestateRepo)(nil).Restate), ctx, accountID, itemID, fromUnitID, toUnitID, factor)
 }
+
+// MockNoteRepo is a mock of NoteRepo interface.
+type MockNoteRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockNoteRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockNoteRepoMockRecorder is the mock recorder for MockNoteRepo.
+type MockNoteRepoMockRecorder struct {
+	mock *MockNoteRepo
+}
+
+// NewMockNoteRepo creates a new mock instance.
+func NewMockNoteRepo(ctrl *gomock.Controller) *MockNoteRepo {
+	mock := &MockNoteRepo{ctrl: ctrl}
+	mock.recorder = &MockNoteRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNoteRepo) EXPECT() *MockNoteRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockNoteRepo) Create(ctx context.Context, note *domain.Note) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, note)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockNoteRepoMockRecorder) Create(ctx, note any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNoteRepo)(nil).Create), ctx, note)
+}
+
+// Delete mocks base method.
+func (m *MockNoteRepo) Delete(ctx context.Context, accountID, noteID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountID, noteID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockNoteRepoMockRecorder) Delete(ctx, accountID, noteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNoteRepo)(nil).Delete), ctx, accountID, noteID)
+}
+
+// Get mocks base method.
+func (m *MockNoteRepo) Get(ctx context.Context, accountID, noteID string) (*domain.Note, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, noteID)
+	ret0, _ := ret[0].(*domain.Note)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockNoteRepoMockRecorder) Get(ctx, accountID, noteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNoteRepo)(nil).Get), ctx, accountID, noteID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockNoteRepo) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Note, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.Note)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockNoteRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockNoteRepo)(nil).GetByIDs), ctx, accountID, ids)
+}
+
+// Import mocks base method.
+func (m *MockNoteRepo) Import(ctx context.Context, notes []domain.ImportNote) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Import", ctx, notes)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Import indicates an expected call of Import.
+func (mr *MockNoteRepoMockRecorder) Import(ctx, notes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Import", reflect.TypeOf((*MockNoteRepo)(nil).Import), ctx, notes)
+}
+
+// List mocks base method.
+func (m *MockNoteRepo) List(ctx context.Context, params domain.ListNotesParams) (*domain.ListNotesResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, params)
+	ret0, _ := ret[0].(*domain.ListNotesResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockNoteRepoMockRecorder) List(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNoteRepo)(nil).List), ctx, params)
+}
+
+// Recall mocks base method.
+func (m *MockNoteRepo) Recall(ctx context.Context, params domain.RecallNotesParams) ([]*domain.Note, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Recall", ctx, params)
+	ret0, _ := ret[0].([]*domain.Note)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Recall indicates an expected call of Recall.
+func (mr *MockNoteRepoMockRecorder) Recall(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recall", reflect.TypeOf((*MockNoteRepo)(nil).Recall), ctx, params)
+}
+
+// Update mocks base method.
+func (m *MockNoteRepo) Update(ctx context.Context, note *domain.Note) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, note)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockNoteRepoMockRecorder) Update(ctx, note any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNoteRepo)(nil).Update), ctx, note)
+}

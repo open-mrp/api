@@ -445,7 +445,8 @@ const (
 	SeedCustomAgentDefinitionID   = "agdf_01seede2e_custom00"
 	SeedInactiveAgentDefinitionID = "agdf_01seede2e_inact00" // custom, status=inactive, no role/tools
 	SeedAgentConfigID             = "agcf_01seede2e_ordercfg0"
-	SeedAgentMemoryID             = "agmm_01seede2e_memory01"
+	SeedAgentMemoryID             = SeedNoteID
+	SeedNoteID                    = "nt_01seede2e_note0001"
 	SeedAgentRunID                = "agrn_01seede2e_run00001" // run #1 has agent_definition + config (needed for include=definition.config)
 	// Dedicated terminal-state runs for the one-shot retry/continue happy paths.
 	// Do not reuse for other tests — Retry/Continue flip them permanently.
@@ -624,6 +625,7 @@ var pathSpecificIDSeeds = map[string]string{
 
 	"/v1/ai/agents/":                        SeedCustomAgentDefinitionID,
 	"/v1/ai/memories/":                      SeedAgentMemoryID,
+	"/v1/core/notes/":                       SeedNoteID,
 	"/v1/ai/runs/":                          SeedAgentRunID,
 	"/v1/auth/api-keys/":                    SeedAPIKeyID,
 	"/v1/core/analytics/open-orders/":       SeedSalesOrderID,

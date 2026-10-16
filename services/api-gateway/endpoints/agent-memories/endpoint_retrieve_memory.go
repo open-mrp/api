@@ -30,11 +30,9 @@ func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeAgentMemory,
-		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgentMemories, Action: types.ActionRead}}},
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainNotes, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).GetMemory
 		},

@@ -27,12 +27,12 @@ AND i.deleted_at IS NULL;
 
 -- name: GetAccountSystemProduct :one
 -- Fetches the account's system product (e.g. credit, shipping) along with
--- the base unit of its item category, for use when synthesizing order lines.
+-- its item's stocking unit, for use when synthesizing order lines.
 SELECT
     p.id AS product_id,
     i.sku AS product_sku,
     i.description AS product_description,
-    ug.base_unit_id AS quantity_unit_id
+    COALESCE(i.stocking_unit_id, ug.base_unit_id) AS quantity_unit_id
 FROM product p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id

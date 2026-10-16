@@ -657,12 +657,12 @@ LEFT JOIN rate ucr ON ucr.id = ci.unit_cost_id
 LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
 WHERE c.production_step_id = sqlc.arg('production_step_id');
 
--- GetItemStockingUnit resolves the unit an item is counted in — its category's unit group base unit — with the group that unit belongs to. An item's unit cost is only meaningful denominated in this unit, because it is the unit its inventory is held and valued in.
+-- GetItemStockingUnit resolves the unit an item is counted in — its stocking unit — with its category's unit group. An item's unit cost is only meaningful denominated in this unit, because it is the unit its inventory is held and valued in.
 -- GetItemStockingUnit returns the unit an item is counted in, plus the currency its costs are expressed in.
 --
 -- The currency comes off the item's own unit-cost rate, which is where a recomputed cost is written back to, so a computed cost and the stored one always name the same money.
 -- name: GetItemStockingUnit :one
-SELECT ic.unit_group_id, ug.base_unit_id, rc.numerator_unit_id AS cost_numerator_unit_id
+SELECT ic.unit_group_id, COALESCE(i.stocking_unit_id, ug.base_unit_id) AS base_unit_id, rc.numerator_unit_id AS cost_numerator_unit_id
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
@@ -692,7 +692,7 @@ AND account_id = sqlc.arg('account_id')
 AND deleted_at IS NULL;
 
 -- GetItemInventoryLevelBefore is the last inventory level logged strictly before `before`, in the
--- item's category base unit. Each log is written in the unit of the movement behind it, so every
+-- item's stocking unit. Each log is written in the unit of the movement behind it, so every
 -- level goes through its own unit's ratio before it is compared with another. The key is forced: the
 -- single-column item_id key also matches, and taking it sorts every log the item has. STRAIGHT_JOIN
 -- keeps the log driving, so the unit and category tables are read by key and never scanned.
@@ -707,7 +707,7 @@ JOIN unit u ON u.id = q.unit_id
 JOIN item i ON i.id = il.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu ON bu.id = ug.base_unit_id
+JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 WHERE il.account_id = sqlc.arg('account_id')
   AND il.item_id = sqlc.arg('item_id')
   AND il.created_at < sqlc.arg('before')
@@ -715,7 +715,7 @@ ORDER BY il.created_at DESC
 LIMIT 1;
 
 -- ListItemDailyClosingInventoryLevels is each UTC day's last logged inventory level in
--- [window_start, window_end), in the item's category base unit. The day's closing time comes off the
+-- [window_start, window_end), in the item's stocking unit. The day's closing time comes off the
 -- (account_id, item_id, created_at) index alone; only those rows are read in full. Two logs sharing
 -- the closing instant both come back, oldest id first. STRAIGHT_JOIN keeps the closings driving.
 -- name: ListItemDailyClosingInventoryLevels :many
@@ -740,12 +740,12 @@ JOIN unit u ON u.id = q.unit_id
 JOIN item i ON i.id = il.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu ON bu.id = ug.base_unit_id
+JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 ORDER BY il.created_at, il.id;
 
 -- ExportItemsWithInventory is the item export: every catalog item the inventory list shows, with the
 -- same on-hand figure in the same unit — available receipts net of their allocations, each row
--- through its own unit's ratio, expressed in the category's base unit. Non-sale products (service,
+-- through its own unit's ratio, expressed in the item's stocking unit. Non-sale products (service,
 -- shipping, tax, credit, return) are left out as the list leaves them out. The caller passes one row
 -- past the export cap as the limit so an overflow is detectable rather than silently cut.
 -- name: ExportItemsWithInventory :many
@@ -785,7 +785,7 @@ SELECT
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu ON bu.id = ug.base_unit_id
+JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
 AND (
@@ -916,7 +916,7 @@ SELECT
     i.id AS item_id,
     i.sku,
     ic.unit_group_id,
-    ug.base_unit_id
+    COALESCE(i.stocking_unit_id, ug.base_unit_id) AS base_unit_id
 FROM item i
 JOIN item_category ic ON i.item_category_id = ic.id
 JOIN unit_group ug ON ic.unit_group_id = ug.id

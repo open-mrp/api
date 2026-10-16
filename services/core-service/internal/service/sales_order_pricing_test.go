@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // These tests pin the server-side sales-order line pricing algorithm (a faithful port
@@ -71,16 +72,18 @@ func TestConvertValue_BetweenUnits(t *testing.T) {
 
 // --- computeUnitPrice: the full algorithm -----------------------------------
 
-// pricingTestBundle builds a bundle for a single product "p" priced in USD per "ea",
-// with an "ea" base unit and a "dz" (dozen) unit, in unit group "ug".
-func pricingTestBundle(product *domain.PricingProduct, groupUnits map[string]*domain.PricingUnitGroupUnit, accountPrices []*domain.PricingAccountPrice, discounts []*domain.PricingVolumeDiscount) *domain.PricingBundle {
+// pricingTestBundle builds a bundle for a single product "p" priced in USD per "ea", stocked in "ea" (the base
+// unit) and orderable in orderUnits, such as "dz" (dozen).
+func pricingTestBundle(product *domain.PricingProduct, orderUnits []domain.ItemOrderUnit, accountPrices []*domain.PricingAccountPrice, discounts []*domain.PricingVolumeDiscount) *domain.PricingBundle {
 	return &domain.PricingBundle{
 		Products: map[string]*domain.PricingProduct{"p": product},
 		Units: map[string]*domain.PricingUnit{
 			"ea": {ID: "ea", IsBaseUnit: true},
 			"dz": {ID: "dz", RatioNumerator: "12", RatioDenominator: "1", OffsetNumerator: "0", OffsetDenominator: "1"},
 		},
-		UnitGroupUnits:  map[string]map[string]*domain.PricingUnitGroupUnit{"ug": groupUnits},
+		ItemUnits: map[string]*domain.ItemUnits{product.ItemID: {
+			StockingUnitID: "ea", DefaultOrderUnitID: "ea", OrderUnits: orderUnits, Stored: true,
+		}},
 		AccountPrices:   accountPrices,
 		VolumeDiscounts: discounts,
 	}
@@ -98,7 +101,6 @@ func basePricingProduct(unitValue string, productLineID *string, attrs []string)
 		UnitValueNumeratorUnitID:   "usd",
 		UnitValueDenominatorUnitID: "ea",
 		ProductLineID:              productLineID,
-		CategoryUnitGroupID:        "ug",
 		AttributeIDs:               attrs,
 	}
 }
@@ -118,33 +120,50 @@ func assertPrice(t *testing.T, got domain.SalesOrderLinePrice, wantValue, wantNu
 func TestComputeUnitPrice_ListPriceNoDiscounts(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil)
-	bundle := pricingTestBundle(product, map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}, nil, nil)
+	bundle := pricingTestBundle(product, nil, nil, nil)
 
 	got := computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
 	assertPrice(t, got, "10", "usd", "ea")
 }
 
-func TestComputeUnitPrice_UnitConversionDiscount(t *testing.T) {
+func TestComputeUnitPrice_OrderUnitDiscount(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil)
-	// (10 - 1) * (1 - 0.1) = 8.1
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{
-		"ea": {UnitGroupID: "ug", UnitID: "ea", DiscountFixed: "1", DiscountPercentage: "0.1"},
-	}
-	bundle := pricingTestBundle(product, groupUnits, nil, nil)
+	lines := []domain.SalesOrderPriceLineInput{line("1", "dz")}
 
-	got := computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
-	assertPrice(t, got, "8.1", "usd", "ea")
+	// Converted first (10 x 12 = 120), then the order unit's discount: 120 - 6 = 114.
+	amountOff := []domain.ItemOrderUnit{{UnitID: "dz", Discount: &domain.Discount{
+		Type: constants.DiscountTypeAmountOff, AmountOff: &domain.Money{Amount: "6", Currency: constants.CurrencyUSD},
+	}}}
+	assertPrice(t, computeUnitPrice(pricingTestBundle(product, amountOff, nil, nil), lines[0], lines), "114", "usd", "dz")
+
+	// 10% off the converted 120 = 108.
+	pct := "10"
+	percentOff := []domain.ItemOrderUnit{{UnitID: "dz", Discount: &domain.Discount{Type: constants.DiscountTypePercentOff, PercentOff: &pct}}}
+	assertPrice(t, computeUnitPrice(pricingTestBundle(product, percentOff, nil, nil), lines[0], lines), "108", "usd", "dz")
+
+	// A discount larger than the price leaves it at zero.
+	tooMuch := []domain.ItemOrderUnit{{UnitID: "dz", Discount: &domain.Discount{
+		Type: constants.DiscountTypeAmountOff, AmountOff: &domain.Money{Amount: "500", Currency: constants.CurrencyUSD},
+	}}}
+	assertPrice(t, computeUnitPrice(pricingTestBundle(product, tooMuch, nil, nil), lines[0], lines), "0", "usd", "dz")
+}
+
+func TestComputeUnitPrice_OrderUnitQuantityOverridesRatio(t *testing.T) {
+	t.Parallel()
+	product := basePricingProduct("10", nil, nil)
+	// This item's dozen-labelled pack holds 10 each, not 12: 10 x 10 = 100.
+	ten := "10"
+	orderUnits := []domain.ItemOrderUnit{{UnitID: "dz", StockingQuantity: &ten}}
+	lines := []domain.SalesOrderPriceLineInput{line("1", "dz")}
+	assertPrice(t, computeUnitPrice(pricingTestBundle(product, orderUnits, nil, nil), lines[0], lines), "100", "usd", "dz")
 }
 
 func TestComputeUnitPrice_BaseToOrderedUnitConversion(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil) // $10 per each
 	// Ordered in dozens: price = 10 * 12 = 120 per dozen. No unit-conversion discount for "dz".
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{
-		"ea": {UnitGroupID: "ug", UnitID: "ea"},
-		"dz": {UnitGroupID: "ug", UnitID: "dz"},
-	}
+	groupUnits := []domain.ItemOrderUnit{{UnitID: "dz"}}
 	bundle := pricingTestBundle(product, groupUnits, nil, nil)
 
 	got := computeUnitPrice(bundle, line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
@@ -154,7 +173,7 @@ func TestComputeUnitPrice_BaseToOrderedUnitConversion(t *testing.T) {
 func TestComputeUnitPrice_VolumeDiscount_SingleAndMultipleTiers(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 
 	// Single tier met: qty 10 >= 5 -> 1 - 0.2 = 0.8 -> 10*0.8 = 8.
 	single := []*domain.PricingVolumeDiscount{{
@@ -179,7 +198,7 @@ func TestComputeUnitPrice_VolumeDiscount_SingleAndMultipleTiers(t *testing.T) {
 func TestComputeUnitPrice_VolumeDiscount_ThresholdNotMet(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	discounts := []*domain.PricingVolumeDiscount{{
 		ID: "vd", AcceptableUnitIDs: []string{"ea"},
 		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "100", DiscountPercentage: "0.5"}},
@@ -192,7 +211,7 @@ func TestComputeUnitPrice_VolumeDiscount_ThresholdNotMet(t *testing.T) {
 func TestComputeUnitPrice_VolumeDiscount_SumsAcrossLines(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("10", nil, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	// Threshold 10; each line is 6 (< 10) but the two lines sum to 12 (>= 10) -> discount applies.
 	discounts := []*domain.PricingVolumeDiscount{{
 		ID: "vd", AcceptableUnitIDs: []string{"ea"},
@@ -215,15 +234,18 @@ func TestComputeUnitPrice_VolumeDiscount_ScopedAndSummedAcrossMatchingProducts(t
 			ProductID: id, ItemID: "it_" + id, UnitValue: "100",
 			UnitValueNumeratorUnitID: "usd", UnitValueDenominatorUnitID: "ea",
 			UnitCost: "1", UnitCostNumeratorUnitID: "usd", UnitCostDenominatorUnitID: "ea",
-			ProductLineID: &pl, ProductLineUnitGroupID: strptr("ug"), CategoryUnitGroupID: "ug",
+			ProductLineID: &pl,
 		}
 	}
 	bundle := &domain.PricingBundle{
 		Products: map[string]*domain.PricingProduct{
 			"p_ltd1": mk("p_ltd1", "ltd"), "p_ltd2": mk("p_ltd2", "ltd"), "p_other": mk("p_other", "other"),
 		},
-		Units:          map[string]*domain.PricingUnit{"ea": {ID: "ea", IsBaseUnit: true}},
-		UnitGroupUnits: map[string]map[string]*domain.PricingUnitGroupUnit{"ug": {"ea": {UnitGroupID: "ug", UnitID: "ea"}}},
+		Units: map[string]*domain.PricingUnit{"ea": {ID: "ea", IsBaseUnit: true}},
+		ItemUnits: map[string]*domain.ItemUnits{
+			"it_p_ltd1": {StockingUnitID: "ea", DefaultOrderUnitID: "ea"}, "it_p_ltd2": {StockingUnitID: "ea", DefaultOrderUnitID: "ea"},
+			"it_p_other": {StockingUnitID: "ea", DefaultOrderUnitID: "ea"},
+		},
 		VolumeDiscounts: []*domain.PricingVolumeDiscount{{
 			ID: "vd", AcceptableUnitIDs: []string{"ea"}, ProductLineIDs: []string{"ltd"},
 			Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "10", DiscountPercentage: "0.2"}},
@@ -247,8 +269,7 @@ func TestComputeUnitPrice_AccountPriceOverride_BeatsEverything(t *testing.T) {
 	t.Parallel()
 	pl := "pl"
 	product := basePricingProduct("10", &pl, nil)
-	product.ProductLineUnitGroupID = strptr("ug")
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	// A volume discount AND an account price both apply; the account price (absolute) wins.
 	discounts := []*domain.PricingVolumeDiscount{{
 		ID: "vd", AcceptableUnitIDs: []string{"ea"},
@@ -264,7 +285,7 @@ func TestComputeUnitPrice_AccountPriceOverride_BeatsEverything(t *testing.T) {
 
 func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 	t.Parallel()
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	l := line("1", "ea")
 	all := []domain.SalesOrderPriceLineInput{l}
 
@@ -306,7 +327,7 @@ func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 func TestComputeUnitPrice_AccountPrice_DisambiguatesByAttribute(t *testing.T) {
 	t.Parallel()
 	pl := "pl"
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	l := line("1", "ea")
 	all := []domain.SalesOrderPriceLineInput{l}
 
@@ -325,7 +346,7 @@ func TestComputeUnitPrice_LastAccountPriceWins(t *testing.T) {
 	t.Parallel()
 	pl := "pl"
 	product := basePricingProduct("10", &pl, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 	// Bundle is created_at ASC; the last applicable match wins.
 	accountPrices := []*domain.PricingAccountPrice{
 		{ID: "ap1", ProductLineID: "pl", UnitValue: "4", NumeratorUnitID: "usd", DenominatorUnitID: "ea"},
@@ -345,19 +366,17 @@ func TestComputeUnitPrice_UnknownProduct(t *testing.T) {
 func TestComputeUnitPrice_FullPrecedence(t *testing.T) {
 	t.Parallel()
 	pl := "pl"
-	// list 20, unit-conversion discount (fixed 2, 10%), ordered in dozens (x12), volume 0.5.
+	// list 20, ordered in dozens (x12) with the dozen's 21.6 off, volume 0.5.
 	product := basePricingProduct("20", &pl, nil)
-	product.ProductLineUnitGroupID = strptr("ug")
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{
-		"ea": {UnitGroupID: "ug", UnitID: "ea"},
-		"dz": {UnitGroupID: "ug", UnitID: "dz", DiscountFixed: "2", DiscountPercentage: "0.1"},
-	}
+	groupUnits := []domain.ItemOrderUnit{{UnitID: "dz", Discount: &domain.Discount{
+		Type: constants.DiscountTypeAmountOff, AmountOff: &domain.Money{Amount: "45.6", Currency: constants.CurrencyUSD},
+	}}}
 	discounts := []*domain.PricingVolumeDiscount{{
 		ID: "vd", AcceptableUnitIDs: []string{"dz"},
 		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "1", DiscountPercentage: "0.5"}},
 	}}
 
-	// Without an account price: (20-2)*0.9 = 16.2; convert to dozen x12 = 194.4; volume *0.5 = 97.2.
+	// Without an account price: 20 x 12 = 240; less 45.6 = 194.4; volume *0.5 = 97.2.
 	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
 	assertPrice(t, got, "97.2", "usd", "dz")
 
@@ -372,7 +391,7 @@ func TestComputeUnitPrice_FullPrecedence(t *testing.T) {
 func TestComputeUnitPrice_MultipleMatchingDiscounts_SmallestDiscountWinsRegardlessOfOrder(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("100", nil, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 
 	mild := &domain.PricingVolumeDiscount{
 		ID: "vd-mild", AcceptableUnitIDs: []string{"ea"},
@@ -398,7 +417,7 @@ func TestComputeUnitPrice_MultipleMatchingDiscounts_SmallestDiscountWinsRegardle
 func TestComputeUnitPrice_CustomerGroupDiscountOutranksTheMultiplierRule(t *testing.T) {
 	t.Parallel()
 	product := basePricingProduct("100", nil, nil)
-	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+	var groupUnits []domain.ItemOrderUnit
 
 	open := &domain.PricingVolumeDiscount{
 		ID: "vd-open", AcceptableUnitIDs: []string{"ea"},

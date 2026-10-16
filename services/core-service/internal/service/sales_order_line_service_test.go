@@ -179,13 +179,10 @@ func createLinePricingBundle() *domain.PricingBundle {
 				UnitValue:                  "10",
 				UnitValueNumeratorUnitID:   "un_usd",
 				UnitValueDenominatorUnitID: "un_ea",
-				CategoryUnitGroupID:        "ug_test",
 			},
 		},
-		Units: map[string]*domain.PricingUnit{"un_ea": {ID: "un_ea", IsBaseUnit: true}},
-		UnitGroupUnits: map[string]map[string]*domain.PricingUnitGroupUnit{
-			"ug_test": {"un_ea": {UnitGroupID: "ug_test", UnitID: "un_ea"}},
-		},
+		Units:     map[string]*domain.PricingUnit{"un_ea": {ID: "un_ea", IsBaseUnit: true}},
+		ItemUnits: map[string]*domain.ItemUnits{"it_test": {StockingUnitID: "un_ea", DefaultOrderUnitID: "un_ea"}},
 	}
 }
 

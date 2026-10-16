@@ -518,7 +518,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := ValidateCostDenominatorInUnitGroup(ctx, s.repos.NewUnitRepo(), stocking.UnitGroupID, stepUnitID, "unit_cost"); apiErr != nil {
+	if apiErr := ValidateCostDenominatorForItem(stocking, stepUnitID, "unit_cost"); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -1115,6 +1115,11 @@ func changeItemCategoryInTx(ctx context.Context, repos domain.RepoFactory, accou
 	if apiErr := itemRepo.UpdateConsumptionProductionQuantityUnits(ctx, accountID, itemID, baseUnitID); apiErr != nil {
 		return nil, apiErr
 	}
+	// This preview.9 route moves the item into the new category's unit group, as it always has, so its units derive
+	// from that group again.
+	if apiErr := repos.NewItemUnitsRepo().Unstore(ctx, itemID); apiErr != nil {
+		return nil, apiErr
+	}
 
 	after, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
 		AccountID: accountID,
@@ -1324,17 +1329,14 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		return tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
 	}
 
-	// The quantity converts to the item's base unit through its unit group; a unit outside it has no conversion.
+	// Inventory is adjusted in the units the item is ordered and received in.
 	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, params.ItemID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	inGroup, apiErr := s.repos.NewUnitRepo().IsUnitInGroup(ctx, stocking.UnitGroupID, params.UnitID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if !inGroup {
-		return tracing.Trace(span, apierror.NewFieldError("quantity.unit_id", apierror.CodeInvalidFormat, "quantity.unit_id must be a unit in the item's unit group."))
+	if !slices.Contains(stocking.AllowedUnitIDs, params.UnitID) && params.UnitID != stocking.BaseUnitID {
+		return tracing.Trace(span, apierror.NewFieldError("quantity.unit_id", apierror.CodeInvalidFormat,
+			"quantity.unit_id must be the item's stocking unit or one of its order units."))
 	}
 
 	// If customerID is provided, verify edit access.

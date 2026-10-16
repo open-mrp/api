@@ -980,7 +980,7 @@ func (s *productionScheduleSvcImpl) DeleteProductionSchedule(ctx context.Context
 	return nil
 }
 
-// itemCountingUnitID is the unit an item is counted in, from its category's unit group.
+// itemCountingUnitID is the unit an item is counted in: its stocking unit.
 //
 // Empty rather than an error when the item has no category or the category no base unit: a lot with no unit is still a usable lot size, and the release resolves the unit again from the item before it writes a batch.
 func (s *productionScheduleSvcImpl) itemCountingUnitID(ctx context.Context, accountID, itemID string) (string, *apierror.APIError) {
@@ -991,9 +991,12 @@ func (s *productionScheduleSvcImpl) itemCountingUnitID(ctx context.Context, acco
 	if item.ItemCategoryID == "" {
 		return "", nil
 	}
-	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, itemID)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return "", nil
+	}
 	if apiErr != nil {
 		return "", apiErr
 	}
-	return unitID, nil
+	return stocking.BaseUnitID, nil
 }

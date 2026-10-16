@@ -149,7 +149,7 @@ JOIN product fg ON fg.id = sol.product_id
 LEFT JOIN item pb ON pb.id = fg.item_id
 LEFT JOIN item_category ic ON ic.id = pb.item_category_id
 LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
+LEFT JOIN unit bu_unit ON bu_unit.id = COALESCE(pb.stocking_unit_id, ug.base_unit_id)
 ` + values + `
 LEFT JOIN (
     SELECT il.sales_order_line_id AS line_id,

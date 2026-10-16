@@ -98,8 +98,12 @@ func newCostRollupHarness(t *testing.T, stubs rolloutStubs) *costRollupHarness {
 	h.itemRepo = repositorymock.NewMockItemRepo(ctrl)
 	h.itemRepo.EXPECT().GetCostFlowConsumptions(gomock.Any(), testCostStepID).
 		Return(stubs.consumptions, nil).AnyTimes()
+	allowed := []string{testCostUnitCarton}
+	if stubs.stepUnitInGroup {
+		allowed = append(allowed, stubs.stepUnitID)
+	}
 	h.itemRepo.EXPECT().GetStockingUnit(gomock.Any(), testCostAccountID, testCostItemID).
-		Return(&domain.ItemStockingUnit{UnitGroupID: testCostUnitGroupID, BaseUnitID: testCostUnitCarton}, nil).AnyTimes()
+		Return(&domain.ItemStockingUnit{BaseUnitID: testCostUnitCarton, AllowedUnitIDs: allowed}, nil).AnyTimes()
 	h.itemRepo.EXPECT().UpdateUnitCost(gomock.Any(), testCostAccountID, testCostItemID, gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _, _ string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError {
 			h.written = append(h.written, writtenUnitCost{Cost: cost, DenominatorID: denominatorUnitID})
@@ -111,8 +115,6 @@ func newCostRollupHarness(t *testing.T, stubs rolloutStubs) *costRollupHarness {
 		Return(&domain.ProductionStepDetail{ID: testCostStepID}, nil).AnyTimes()
 
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
-	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), testCostUnitGroupID, stubs.stepUnitID).
-		Return(stubs.stepUnitInGroup, nil).AnyTimes()
 	// The stubbed item has no unit-cost rate, so the currency comes from the fallback.
 	unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return(testCostCurrencyUnit, nil).AnyTimes()
 
@@ -259,30 +261,26 @@ func TestCalculateStepCost_NormalisesConsumptionAgainstTheCostsOwnUnit(t *testin
 	}
 }
 
-// A cost denominated in a unit outside the item's own group cannot be converted onto the item at all.
+// A cost denominated in a unit the item is neither stocked nor ordered in can't be put onto the item.
 // ValidateCostRateUnits passes it, because a carton and an each are both counts and a dimension code
 // cannot tell them apart.
-func TestValidateCostDenominatorInUnitGroup(t *testing.T) {
+func TestValidateCostDenominatorForItem(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		inGroup  bool
+		allowed  []string
 		wantCode apierror.Code
 	}{
-		{"denominator in the item's unit group", true, ""},
-		{"denominator outside the item's unit group", false, apierror.CodeValidationFailed},
+		{"denominator among the item's units", []string{testCostUnitCarton, testCostUnitEach}, ""},
+		{"denominator outside the item's units", []string{testCostUnitCarton}, apierror.CodeValidationFailed},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ctrl := gomock.NewController(t)
-			repo := repositorymock.NewMockUnitRepo(ctrl)
-			repo.EXPECT().IsUnitInGroup(gomock.Any(), testCostUnitGroupID, testCostUnitEach).
-				Return(tt.inGroup, nil).AnyTimes()
-
-			apiErr := ValidateCostDenominatorInUnitGroup(context.Background(), repo, testCostUnitGroupID, testCostUnitEach, "unit_cost")
+			stocking := &domain.ItemStockingUnit{BaseUnitID: testCostUnitCarton, AllowedUnitIDs: tt.allowed}
+			apiErr := ValidateCostDenominatorForItem(stocking, testCostUnitEach, "unit_cost")
 
 			if tt.wantCode == "" {
 				if apiErr != nil {

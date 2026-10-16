@@ -290,4 +290,3 @@ func quantityValueToProto(q *domain.QuantityValue) *pb.QuantityValue {
 	}
 	return &pb.QuantityValue{Value: q.Value, UnitId: q.UnitID, UnitType: q.UnitType}
 }
-

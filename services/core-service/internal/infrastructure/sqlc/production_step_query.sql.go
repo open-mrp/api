@@ -421,7 +421,7 @@ JOIN production p ON p.production_step_id = ps.id
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit u ON u.id = ug.base_unit_id
+JOIN unit u ON u.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 WHERE ps.id = ?
 AND ps.account_id = ?
 LIMIT 1
@@ -445,8 +445,8 @@ type FindProducedUnitByStepRow struct {
 	AccountID         sql.NullString
 }
 
-// The unit a step's output is counted in on the scanning floor: the base unit of the produced item's
-// unit group, not the unit the production happens to be written in.
+// The unit a step's output is counted in on the scanning floor: the produced item's stocking unit, not
+// the unit the production happens to be written in.
 func (q *Queries) FindProducedUnitByStep(ctx context.Context, arg FindProducedUnitByStepParams) (FindProducedUnitByStepRow, error) {
 	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, arg.ProductionStepID, arg.AccountID)
 	var i FindProducedUnitByStepRow

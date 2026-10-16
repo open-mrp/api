@@ -249,10 +249,9 @@ func TestComputeItemCosts_SewnThenBoxedItemTimedPerCase(t *testing.T) {
 			return consumptions[id], nil
 		}).Times(2)
 	itemRepo.EXPECT().GetStockingUnit(gomock.Any(), accountID, itemID).
-		Return(&domain.ItemStockingUnit{UnitGroupID: "ug_each", BaseUnitID: countEach.ID, CostNumeratorUnitID: currencyID}, nil)
+		Return(&domain.ItemStockingUnit{BaseUnitID: countEach.ID, AllowedUnitIDs: []string{countEach.ID}, CostNumeratorUnitID: currencyID}, nil)
 
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
-	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), "ug_each", countEach.ID).Return(true, nil)
 
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewProductionFlowRepo().Return(flowRepo).AnyTimes()

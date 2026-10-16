@@ -26,9 +26,9 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 	defer span.End()
 
 	bundle := &domain.PricingBundle{
-		Products:       make(map[string]*domain.PricingProduct),
-		Units:          make(map[string]*domain.PricingUnit),
-		UnitGroupUnits: make(map[string]map[string]*domain.PricingUnitGroupUnit),
+		Products:  make(map[string]*domain.PricingProduct),
+		Units:     make(map[string]*domain.PricingUnit),
+		ItemUnits: make(map[string]*domain.ItemUnits),
 	}
 
 	productIDs := dedupe(params.ProductIDs)
@@ -83,9 +83,26 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 		}
 	}
 
+	// --- Item units (stocking unit, order units and their discounts) -------
+	itemIDs := make([]string, 0, len(bundle.Products))
+	for _, p := range bundle.Products {
+		itemIDs = append(itemIDs, p.ItemID)
+	}
+	itemUnits, apiErr := NewItemUnitsRepo(r.queries).Get(ctx, itemIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	bundle.ItemUnits = itemUnits
+
 	// --- Units (conversion data) --------------------------------------------
-	// Collect every unit id we may need: each line's ordered unit plus every product's base denominator unit.
+	// Collect every unit id we may need: each line's ordered unit, every product's base denominator unit and every
+	// item's stocking unit.
 	unitIDSet := make(map[string]struct{})
+	for _, u := range itemUnits {
+		if u.StockingUnitID != "" {
+			unitIDSet[u.StockingUnitID] = struct{}{}
+		}
+	}
 	for _, id := range params.OrderedUnitIDs {
 		if id != "" {
 			unitIDSet[id] = struct{}{}
@@ -110,36 +127,6 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 				OffsetNumerator:   row.OffsetNumerator,
 				OffsetDenominator: row.OffsetDenominator,
 				IsBaseUnit:        row.IsBaseUnit,
-			}
-		}
-	}
-
-	// --- Unit-group-unit discounts ------------------------------------------
-	unitGroupIDSet := make(map[string]struct{})
-	for _, p := range bundle.Products {
-		if p.ProductLineUnitGroupID != nil && *p.ProductLineUnitGroupID != "" {
-			unitGroupIDSet[*p.ProductLineUnitGroupID] = struct{}{}
-		} else if p.CategoryUnitGroupID != "" {
-			unitGroupIDSet[p.CategoryUnitGroupID] = struct{}{}
-		}
-	}
-	unitGroupIDs := keys(unitGroupIDSet)
-	if len(unitGroupIDs) > 0 {
-		rows, err := r.queries.GetPricingUnitGroupUnits(ctx, unitGroupIDs)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			inner, ok := bundle.UnitGroupUnits[row.UnitGroupID]
-			if !ok {
-				inner = make(map[string]*domain.PricingUnitGroupUnit)
-				bundle.UnitGroupUnits[row.UnitGroupID] = inner
-			}
-			inner[row.UnitID] = &domain.PricingUnitGroupUnit{
-				UnitGroupID:        row.UnitGroupID,
-				UnitID:             row.UnitID,
-				DiscountPercentage: row.DiscountPercentage,
-				DiscountFixed:      row.DiscountFixed,
 			}
 		}
 	}
@@ -304,9 +291,7 @@ func keys(m map[string]struct{}) []string {
 	return out
 }
 
-// ProductQuantityUnits maps each product to the units its unit group allows.
-//
-// Two queries regardless of how many lines an order carries, which is what makes it usable inside a create transaction. It reuses the pricing queries rather than adding parallel ones so there is a single definition of "which unit group governs this product" — the product line's when it has one, the item category's otherwise.
+// ProductQuantityUnits maps each product to the units its item can be ordered in: its stocking unit and order units.
 func (r *pricingRepoImpl) ProductQuantityUnits(ctx context.Context, accountID string, productIDs []string) (map[string]map[string]struct{}, *apierror.APIError) {
 	ctx, span := pricingRepoTracer.Start(ctx, "repository.pricing.product_quantity_units")
 	defer span.End()
@@ -314,7 +299,6 @@ func (r *pricingRepoImpl) ProductQuantityUnits(ctx context.Context, accountID st
 	if len(productIDs) == 0 {
 		return map[string]map[string]struct{}{}, nil
 	}
-
 	products, err := r.queries.GetPricingProductsByIDs(ctx, sqlc.GetPricingProductsByIDsParams{
 		ProductIds: productIDs,
 		AccountID:  accountID,
@@ -322,49 +306,22 @@ func (r *pricingRepoImpl) ProductQuantityUnits(ctx context.Context, accountID st
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	groupByProduct := make(map[string]string, len(products))
-	groupIDSet := make(map[string]struct{})
+	itemIDs := make([]string, len(products))
+	for i, p := range products {
+		itemIDs[i] = p.ItemID
+	}
+	units, apiErr := NewItemUnitsRepo(r.queries).Get(ctx, itemIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make(map[string]map[string]struct{}, len(products))
 	for _, p := range products {
-		groupID := p.CategoryUnitGroupID
-		if p.ProductLineUnitGroupID.Valid && p.ProductLineUnitGroupID.String != "" {
-			groupID = p.ProductLineUnitGroupID.String
-		}
-		if groupID == "" {
-			continue
-		}
-		groupByProduct[p.ProductID] = groupID
-		groupIDSet[groupID] = struct{}{}
-	}
-
-	groupIDs := make([]string, 0, len(groupIDSet))
-	for id := range groupIDSet {
-		groupIDs = append(groupIDs, id)
-	}
-
-	unitsByGroup := make(map[string]map[string]struct{}, len(groupIDs))
-	if len(groupIDs) > 0 {
-		rows, err := r.queries.GetPricingUnitGroupUnits(ctx, groupIDs)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			inner, ok := unitsByGroup[row.UnitGroupID]
-			if !ok {
-				inner = make(map[string]struct{})
-				unitsByGroup[row.UnitGroupID] = inner
-			}
-			inner[row.UnitID] = struct{}{}
-		}
-	}
-
-	out := make(map[string]map[string]struct{}, len(groupByProduct))
-	for productID, groupID := range groupByProduct {
-		out[productID] = unitsByGroup[groupID]
+		out[p.ProductID] = allowedUnitSet(units[p.ItemID])
 	}
 	return out, nil
 }
 
+// ItemQuantityUnits maps each of the account's items to the units it can be ordered in.
 func (r *pricingRepoImpl) ItemQuantityUnits(ctx context.Context, accountID string, itemIDs []string) (map[string]map[string]struct{}, *apierror.APIError) {
 	ctx, span := pricingRepoTracer.Start(ctx, "repository.pricing.item_quantity_units")
 	defer span.End()
@@ -372,7 +329,6 @@ func (r *pricingRepoImpl) ItemQuantityUnits(ctx context.Context, accountID strin
 	if len(itemIDs) == 0 {
 		return map[string]map[string]struct{}{}, nil
 	}
-
 	items, err := r.queries.GetPurchaseOrderLineItemUnitGroups(ctx, sqlc.GetPurchaseOrderLineItemUnitGroupsParams{
 		ItemIds:   itemIDs,
 		AccountID: accountID,
@@ -380,36 +336,25 @@ func (r *pricingRepoImpl) ItemQuantityUnits(ctx context.Context, accountID strin
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	groupIDs := make([]string, 0, len(items))
-	seen := make(map[string]struct{}, len(items))
-	for _, it := range items {
-		if _, ok := seen[it.UnitGroupID]; ok {
-			continue
-		}
-		seen[it.UnitGroupID] = struct{}{}
-		groupIDs = append(groupIDs, it.UnitGroupID)
+	owned := make([]string, len(items))
+	for i, it := range items {
+		owned[i] = it.ItemID
 	}
-
-	unitsByGroup := make(map[string]map[string]struct{}, len(groupIDs))
-	if len(groupIDs) > 0 {
-		rows, err := r.queries.GetPricingUnitGroupUnits(ctx, groupIDs)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, row := range rows {
-			inner, ok := unitsByGroup[row.UnitGroupID]
-			if !ok {
-				inner = make(map[string]struct{})
-				unitsByGroup[row.UnitGroupID] = inner
-			}
-			inner[row.UnitID] = struct{}{}
-		}
+	units, apiErr := NewItemUnitsRepo(r.queries).Get(ctx, owned)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
 	out := make(map[string]map[string]struct{}, len(items))
-	for _, it := range items {
-		out[it.ItemID] = unitsByGroup[it.UnitGroupID]
+	for _, id := range owned {
+		out[id] = allowedUnitSet(units[id])
 	}
 	return out, nil
+}
+
+func allowedUnitSet(u *domain.ItemUnits) map[string]struct{} {
+	out := make(map[string]struct{})
+	for _, id := range u.AllowedUnitIDs() {
+		out[id] = struct{}{}
+	}
+	return out
 }

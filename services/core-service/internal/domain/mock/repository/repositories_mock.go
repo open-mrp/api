@@ -21765,6 +21765,20 @@ func (mr *MockItemUnitsRepoMockRecorder) SetStockingUnit(ctx, itemID, unitID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStockingUnit", reflect.TypeOf((*MockItemUnitsRepo)(nil).SetStockingUnit), ctx, itemID, unitID)
 }
 
+// Unstore mocks base method.
+func (m *MockItemUnitsRepo) Unstore(ctx context.Context, itemID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unstore", ctx, itemID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Unstore indicates an expected call of Unstore.
+func (mr *MockItemUnitsRepoMockRecorder) Unstore(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unstore", reflect.TypeOf((*MockItemUnitsRepo)(nil).Unstore), ctx, itemID)
+}
+
 // MockStockingUnitRestateRepo is a mock of StockingUnitRestateRepo interface.
 type MockStockingUnitRestateRepo struct {
 	ctrl     *gomock.Controller

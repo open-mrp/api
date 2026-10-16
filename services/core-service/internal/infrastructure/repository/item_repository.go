@@ -698,11 +698,21 @@ func (r *itemRepoImpl) GetStockingUnit(ctx context.Context, accountID, itemID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.ItemStockingUnit{
-		UnitGroupID:         row.UnitGroupID,
+	units, apiErr := NewItemUnitsRepo(r.queries).Get(ctx, []string{itemID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	stocking := &domain.ItemStockingUnit{
 		BaseUnitID:          row.BaseUnitID,
 		CostNumeratorUnitID: row.CostNumeratorUnitID.String,
-	}, nil
+	}
+	if u := units[itemID]; u != nil {
+		if u.StockingUnitID != "" {
+			stocking.BaseUnitID = u.StockingUnitID
+		}
+		stocking.AllowedUnitIDs = u.AllowedUnitIDs()
+	}
+	return stocking, nil
 }
 
 func (r *itemRepoImpl) UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError {

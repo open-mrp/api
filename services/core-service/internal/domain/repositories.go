@@ -2110,6 +2110,8 @@ type ItemUnitsRepo interface {
 	SetStockingUnit(ctx context.Context, itemID, unitID string) *apierror.APIError
 	// Replace stores the item's default order unit and replaces its order units.
 	Replace(ctx context.Context, accountID, itemID, defaultOrderUnitID string, orderUnits []ItemOrderUnit) *apierror.APIError
+	// Unstore drops the item's stored units, so they derive from its unit groups again.
+	Unstore(ctx context.Context, itemID string) *apierror.APIError
 	// RemoveOrderUnits removes the given order units from the item.
 	RemoveOrderUnits(ctx context.Context, itemID string, unitIDs []string) *apierror.APIError
 	// MatchItems returns up to limit of the account's items matching every filter given, by id.

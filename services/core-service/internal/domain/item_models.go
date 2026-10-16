@@ -420,10 +420,13 @@ type CostFlowConsumption struct {
 	UnitCostDenominatorRatio decimal.Decimal // base units per one unit the cost is denominated in
 }
 
-// ItemStockingUnit is the unit an item is counted in and the group that unit belongs to. Anything denominated per-item — a unit cost above all — belongs in BaseUnitID, and a unit outside UnitGroupID cannot be converted into it.
+// ItemStockingUnit is the unit an item is counted in and the units it may be counted in otherwise. Anything
+// denominated per-item — a unit cost above all — belongs in BaseUnitID, and a unit outside AllowedUnitIDs is not one
+// the item is kept, ordered or produced in.
 type ItemStockingUnit struct {
-	UnitGroupID string
-	BaseUnitID  string
+	BaseUnitID string
+	// AllowedUnitIDs are the stocking unit and the item's order units.
+	AllowedUnitIDs []string
 	// CostNumeratorUnitID is the currency the item's costs are expressed in, from its unit-cost rate. Empty when the item has no unit cost recorded yet.
 	CostNumeratorUnitID string
 }

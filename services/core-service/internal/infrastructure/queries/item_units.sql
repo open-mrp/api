@@ -79,3 +79,6 @@ SELECT id, default_order_unit_id IS NULL AS unstored FROM item
 WHERE id > sqlc.arg('cursor')
 ORDER BY id
 LIMIT ?;
+
+-- name: ClearItemUnits :exec
+UPDATE item SET stocking_unit_id = NULL, default_order_unit_id = NULL WHERE id = sqlc.arg('id');

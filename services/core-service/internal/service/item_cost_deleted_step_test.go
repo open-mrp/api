@@ -61,14 +61,13 @@ func TestComputeItemCosts_DeletedParentStepDoesNotFailTheRollup(t *testing.T) {
 	itemRepo := repositorymock.NewMockItemRepo(ctrl)
 	itemRepo.EXPECT().GetCostFlowConsumptions(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	itemRepo.EXPECT().GetStockingUnit(gomock.Any(), accountID, itemID).
-		Return(&domain.ItemStockingUnit{UnitGroupID: groupID, BaseUnitID: unitID}, nil).AnyTimes()
+		Return(&domain.ItemStockingUnit{BaseUnitID: unitID, AllowedUnitIDs: []string{unitID}}, nil).AnyTimes()
 
 	stepQueryRepo := repositorymock.NewMockProductionStepQueryRepo(ctrl)
 	stepQueryRepo.EXPECT().Find(gomock.Any(), accountID, gomock.Any()).
 		Return(&domain.ProductionStepDetail{ID: targetID}, nil).AnyTimes()
 
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
-	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), groupID, unitID).Return(true, nil).AnyTimes()
 	unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return(currency, nil).AnyTimes()
 
 	repos := factorymock.NewMockRepoFactory(ctrl)

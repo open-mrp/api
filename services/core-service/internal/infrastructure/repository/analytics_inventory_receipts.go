@@ -81,7 +81,7 @@ FROM (
         JOIN item it ON it.id = ir.item_id
         JOIN item_category ic ON ic.id = it.item_category_id
         JOIN unit_group ug ON ug.id = ic.unit_group_id
-        JOIN unit bu ON bu.id = ug.base_unit_id
+        JOIN unit bu ON bu.id = COALESCE(it.stocking_unit_id, ug.base_unit_id)
         WHERE ` + strings.Join(preds, " AND ") + `
     ) r
     GROUP BY r.item_id, r.storage_location_id, r.lot_id, r.owner_account_id, r.holder_account_id

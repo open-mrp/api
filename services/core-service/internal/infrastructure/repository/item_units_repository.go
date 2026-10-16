@@ -333,6 +333,13 @@ func (r *itemUnitsRepo) Replace(ctx context.Context, accountID, itemID, defaultO
 	return r.insertOrderUnits(ctx, accountID, itemID, orderUnits)
 }
 
+func (r *itemUnitsRepo) Unstore(ctx context.Context, itemID string) *apierror.APIError {
+	if err := r.queries.ClearItemUnits(ctx, itemID); err != nil {
+		return db.MapSQLError(err)
+	}
+	return db.MapSQLError(r.queries.DeleteItemOrderUnits(ctx, itemID))
+}
+
 func (r *itemUnitsRepo) RemoveOrderUnits(ctx context.Context, itemID string, unitIDs []string) *apierror.APIError {
 	if len(unitIDs) == 0 {
 		return nil

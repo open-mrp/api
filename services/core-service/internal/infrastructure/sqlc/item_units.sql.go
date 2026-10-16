@@ -11,6 +11,15 @@ import (
 	"strings"
 )
 
+const clearItemUnits = `-- name: ClearItemUnits :exec
+UPDATE item SET stocking_unit_id = NULL, default_order_unit_id = NULL WHERE id = ?
+`
+
+func (q *Queries) ClearItemUnits(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, clearItemUnits, id)
+	return err
+}
+
 const deleteItemOrderUnits = `-- name: DeleteItemOrderUnits :exec
 DELETE FROM item_order_unit WHERE item_id = ?
 `

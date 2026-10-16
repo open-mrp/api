@@ -2515,7 +2515,6 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 	return nil
 }
 
-
 // mapSalesOrderReferenceError turns a not-found lookup into a field-scoped 400
 // validation error and passes any other error through unchanged.
 func mapSalesOrderReferenceError(apiErr *apierror.APIError, notFoundMsg, param string) *apierror.APIError {

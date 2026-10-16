@@ -97,7 +97,7 @@ func TestPreview9_SalesOrderCreateMovesFieldsIntoSections(t *testing.T) {
 		"buyer_account_id": "ac_1", "note": "n", "priority_code": "normal",
 		"carrier_id": "car_1", "service_level_id": "sl_1", "carrier_billing_type": "third_party", "carrier_billing_account_number": "9",
 		"promised_at": "2026-05-20T00:00:00Z", "bill_to_address_id": "ad_1",
-		"ship_to_address": map[string]any{"id": "ad_2", "name": "Dock", "country": "US", "is_drop_ship": true, "line_2": nil},
+		"ship_to_address":                map[string]any{"id": "ad_2", "name": "Dock", "country": "US", "is_drop_ship": true, "line_2": nil},
 		"acknowledgement_email_contacts": []any{map[string]any{"account_user_id": "acus_1"}},
 		"invoice_email_contacts":         []any{map[string]any{"account_user_id": "acus_1"}, map[string]any{"account_user_id": "acus_2"}},
 		"lines":                          []any{},

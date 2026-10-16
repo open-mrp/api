@@ -118,6 +118,16 @@ UPDATE account_relation
  WHERE id = 'acre_01seedsupplier0001'
    AND (default_billing_address_id IS NULL OR default_shipping_address_id IS NULL);
 
+-- The first supplier's purchase order defaults and contact, so every supplier include resolves a real record.
+UPDATE account_relation
+   SET default_carrier_id        = 'delivery',
+       default_carrier_option_id = 'crop_01seedground000000',
+       payment_term_id           = 'pytm_01seednet3000000',
+       shipping_term_id          = 'prepaid_billed',
+       instructions              = 'Confirm every delivery date by email.'
+ WHERE id = 'acre_01seedsupplier0000'
+   AND default_carrier_id IS NULL;
+
 -- Supplier materials (supplier_account_id is the counterparty account, not the relation ID)
 INSERT IGNORE INTO supplier_material (id, material_id, supplier_account_id, supplier_part_number, supplier_description, is_active, owner_account_id, created_at, updated_at) VALUES
     ('spml_01seedsupmat1_0000', 'ml_01seedyrn1mat000000', 'ac_01seedsupplier_acct0', 'YRN-EXT-001', 'Premium Yarn Type 1', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),

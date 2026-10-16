@@ -47,6 +47,7 @@ const (
 	envAccountMarketingBlurbs     = "ACCOUNT_MARKETING_BLURBS"
 	envMoneyColumnBackfillOff     = "MONEY_COLUMN_BACKFILL_DISABLED"
 	envItemUnitsBackfillOff       = "ITEM_UNITS_BACKFILL_DISABLED"
+	envMovementBackfillOff        = "INVENTORY_MOVEMENT_BACKFILL_DISABLED"
 	envNoteBackfillOff            = "NOTE_BACKFILL_DISABLED"
 	envPriceListSyncBackfillOff   = "PRICE_LIST_SYNC_BACKFILL_DISABLED"
 	envMethodBackfillOff          = "MANUFACTURING_METHOD_BACKFILL_DISABLED"
@@ -149,6 +150,9 @@ type config struct {
 	// ItemUnitsBackfillDisabled (optional; default: false) stops the backfill that stores items' units ("true" to
 	// stop it); items it hasn't reached keep reading units derived from their unit groups.
 	ItemUnitsBackfillDisabled bool
+	// InventoryMovementBackfillDisabled (optional; default: false) stops the backfill that stores old inventory
+	// movements' type and actor ("true" to stop it); movements it hasn't reached still read them derived.
+	InventoryMovementBackfillDisabled bool
 	// NoteBackfillDisabled (optional; default: false) stops the backfills that copy notes columns into notes ("true"
 	// to stop them).
 	NoteBackfillDisabled bool
@@ -204,6 +208,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		AccountMarketingBlurbs:              env.GetEnv(envAccountMarketingBlurbs, getenv),
 		MoneyColumnBackfillDisabled:         env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
 		ItemUnitsBackfillDisabled:           env.GetEnv(envItemUnitsBackfillOff, getenv) == "true",
+		InventoryMovementBackfillDisabled:   env.GetEnv(envMovementBackfillOff, getenv) == "true",
 		NoteBackfillDisabled:                env.GetEnv(envNoteBackfillOff, getenv) == "true",
 		PriceListSyncBackfillDisabled:       env.GetEnv(envPriceListSyncBackfillOff, getenv) == "true",
 		ManufacturingMethodBackfillDisabled: env.GetEnv(envMethodBackfillOff, getenv) == "true",

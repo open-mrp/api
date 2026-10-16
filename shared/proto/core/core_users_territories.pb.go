@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -3665,8 +3666,18 @@ type InventoryChangeLogInfo struct {
 	ScanningStationUpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=scanning_station_updated_at,json=scanningStationUpdatedAt,proto3,oneof" json:"scanning_station_updated_at,omitempty"`
 	ResponsibleUserCreatedAt      *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
 	ResponsibleUserUpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	// The movement this row records: business event, actor, place, lot, reason, source document and cost.
+	Type          string     `protobuf:"bytes,31,opt,name=type,proto3" json:"type,omitempty"`
+	Actor         *Actor     `protobuf:"bytes,32,opt,name=actor,proto3" json:"actor,omitempty"`
+	LocationId    *string    `protobuf:"bytes,33,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
+	LotId         *string    `protobuf:"bytes,34,opt,name=lot_id,json=lotId,proto3,oneof" json:"lot_id,omitempty"`
+	Reason        *string    `protobuf:"bytes,35,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	RelatedType   *string    `protobuf:"bytes,36,opt,name=related_type,json=relatedType,proto3,oneof" json:"related_type,omitempty"`
+	RelatedId     *string    `protobuf:"bytes,37,opt,name=related_id,json=relatedId,proto3,oneof" json:"related_id,omitempty"`
+	UnitCost      *UnitPrice `protobuf:"bytes,38,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	LotNumber     *string    `protobuf:"bytes,39,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InventoryChangeLogInfo) Reset() {
@@ -3909,6 +3920,69 @@ func (x *InventoryChangeLogInfo) GetResponsibleUserUpdatedAt() *timestamppb.Time
 	return nil
 }
 
+func (x *InventoryChangeLogInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetActor() *Actor {
+	if x != nil {
+		return x.Actor
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetLocationId() string {
+	if x != nil && x.LocationId != nil {
+		return *x.LocationId
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetLotId() string {
+	if x != nil && x.LotId != nil {
+		return *x.LotId
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetRelatedType() string {
+	if x != nil && x.RelatedType != nil {
+		return *x.RelatedType
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetRelatedId() string {
+	if x != nil && x.RelatedId != nil {
+		return *x.RelatedId
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetUnitCost() *UnitPrice {
+	if x != nil {
+		return x.UnitCost
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetLotNumber() string {
+	if x != nil && x.LotNumber != nil {
+		return *x.LotNumber
+	}
+	return ""
+}
+
 type ListInventoryChangeLogsRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Cursor           *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -3919,7 +3993,11 @@ type ListInventoryChangeLogsRequest struct {
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	// Substring match on the affected item's SKU.
-	SearchQuery   *string `protobuf:"bytes,9,opt,name=search_query,json=searchQuery,proto3,oneof" json:"search_query,omitempty"`
+	SearchQuery   *string  `protobuf:"bytes,9,opt,name=search_query,json=searchQuery,proto3,oneof" json:"search_query,omitempty"`
+	Types         []string `protobuf:"bytes,10,rep,name=types,proto3" json:"types,omitempty"`
+	ActorIds      []string `protobuf:"bytes,11,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	ActorTypes    []string `protobuf:"bytes,12,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
+	LocationIds   []string `protobuf:"bytes,13,rep,name=location_ids,json=locationIds,proto3" json:"location_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4008,6 +4086,34 @@ func (x *ListInventoryChangeLogsRequest) GetSearchQuery() string {
 		return *x.SearchQuery
 	}
 	return ""
+}
+
+func (x *ListInventoryChangeLogsRequest) GetTypes() []string {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+func (x *ListInventoryChangeLogsRequest) GetActorIds() []string {
+	if x != nil {
+		return x.ActorIds
+	}
+	return nil
+}
+
+func (x *ListInventoryChangeLogsRequest) GetActorTypes() []string {
+	if x != nil {
+		return x.ActorTypes
+	}
+	return nil
+}
+
+func (x *ListInventoryChangeLogsRequest) GetLocationIds() []string {
+	if x != nil {
+		return x.LocationIds
+	}
+	return nil
 }
 
 type ListInventoryChangeLogsResponse struct {
@@ -4285,6 +4391,10 @@ type StartInventoryChangeLogsExportRequest struct {
 	ChangedByUserIds []string               `protobuf:"bytes,3,rep,name=changed_by_user_ids,json=changedByUserIds,proto3" json:"changed_by_user_ids,omitempty"`
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Types            []string               `protobuf:"bytes,6,rep,name=types,proto3" json:"types,omitempty"`
+	ActorIds         []string               `protobuf:"bytes,7,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	ActorTypes       []string               `protobuf:"bytes,8,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
+	LocationIds      []string               `protobuf:"bytes,9,rep,name=location_ids,json=locationIds,proto3" json:"location_ids,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -4350,6 +4460,34 @@ func (x *StartInventoryChangeLogsExportRequest) GetStartDate() *timestamppb.Time
 func (x *StartInventoryChangeLogsExportRequest) GetEndDate() *timestamppb.Timestamp {
 	if x != nil {
 		return x.EndDate
+	}
+	return nil
+}
+
+func (x *StartInventoryChangeLogsExportRequest) GetTypes() []string {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+func (x *StartInventoryChangeLogsExportRequest) GetActorIds() []string {
+	if x != nil {
+		return x.ActorIds
+	}
+	return nil
+}
+
+func (x *StartInventoryChangeLogsExportRequest) GetActorTypes() []string {
+	if x != nil {
+		return x.ActorTypes
+	}
+	return nil
+}
+
+func (x *StartInventoryChangeLogsExportRequest) GetLocationIds() []string {
+	if x != nil {
+		return x.LocationIds
 	}
 	return nil
 }
@@ -5317,7 +5455,7 @@ var File_core_core_users_territories_proto protoreflect.FileDescriptor
 
 const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
-	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x17core/value_shapes.proto\x1a\x15core/core_async.proto\x1a\x19core/core_analytics.proto\x1a\x17core/core_lookups.proto\"\xa6\x03\n" +
+	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x17core/value_shapes.proto\x1a\x15core/core_async.proto\x1a\x19core/core_analytics.proto\x1a\x17core/core_lookups.proto\x1a\x15core/primitives.proto\"\xa6\x03\n" +
 	"\x16GetCurrentUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -5692,7 +5830,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetEmailLogResponse\x12/\n" +
-	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xa3\x10\n" +
+	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xbf\x13\n" +
 	"\x16InventoryChangeLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
@@ -5727,7 +5865,20 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1bscanning_station_created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x18scanningStationCreatedAt\x88\x01\x01\x12^\n" +
 	"\x1bscanning_station_updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampH\aR\x18scanningStationUpdatedAt\x88\x01\x01\x12^\n" +
 	"\x1bresponsible_user_created_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampH\bR\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
-	"\x1bresponsible_user_updated_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampH\tR\x18responsibleUserUpdatedAt\x88\x01\x01B\x16\n" +
+	"\x1bresponsible_user_updated_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampH\tR\x18responsibleUserUpdatedAt\x88\x01\x01\x12\x12\n" +
+	"\x04type\x18\x1f \x01(\tR\x04type\x12!\n" +
+	"\x05actor\x18  \x01(\v2\v.core.ActorR\x05actor\x12$\n" +
+	"\vlocation_id\x18! \x01(\tH\n" +
+	"R\n" +
+	"locationId\x88\x01\x01\x12\x1a\n" +
+	"\x06lot_id\x18\" \x01(\tH\vR\x05lotId\x88\x01\x01\x12\x1b\n" +
+	"\x06reason\x18# \x01(\tH\fR\x06reason\x88\x01\x01\x12&\n" +
+	"\frelated_type\x18$ \x01(\tH\rR\vrelatedType\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"related_id\x18% \x01(\tH\x0eR\trelatedId\x88\x01\x01\x121\n" +
+	"\tunit_cost\x18& \x01(\v2\x0f.core.UnitPriceH\x0fR\bunitCost\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"lot_number\x18' \x01(\tH\x10R\tlotNumber\x88\x01\x01B\x16\n" +
 	"\x14_scanning_station_idB\x18\n" +
 	"\x16_scanning_station_nameB\x16\n" +
 	"\x14_responsible_user_idB\x18\n" +
@@ -5737,7 +5888,15 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1c_scanning_station_created_atB\x1e\n" +
 	"\x1c_scanning_station_updated_atB\x1e\n" +
 	"\x1c_responsible_user_created_atB\x1e\n" +
-	"\x1c_responsible_user_updated_at\"\xab\x03\n" +
+	"\x1c_responsible_user_updated_atB\x0e\n" +
+	"\f_location_idB\t\n" +
+	"\a_lot_idB\t\n" +
+	"\a_reasonB\x0f\n" +
+	"\r_related_typeB\r\n" +
+	"\v_related_idB\f\n" +
+	"\n" +
+	"_unit_costB\r\n" +
+	"\v_lot_number\"\xa2\x04\n" +
 	"\x1eListInventoryChangeLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5747,7 +5906,13 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\aendDate\x88\x01\x01\x12&\n" +
-	"\fsearch_query\x18\t \x01(\tH\x03R\vsearchQuery\x88\x01\x01B\t\n" +
+	"\fsearch_query\x18\t \x01(\tH\x03R\vsearchQuery\x88\x01\x01\x12\x14\n" +
+	"\x05types\x18\n" +
+	" \x03(\tR\x05types\x12\x1b\n" +
+	"\tactor_ids\x18\v \x03(\tR\bactorIds\x12\x1f\n" +
+	"\vactor_types\x18\f \x03(\tR\n" +
+	"actorTypes\x12!\n" +
+	"\flocation_ids\x18\r \x03(\tR\vlocationIdsB\t\n" +
 	"\a_cursorB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\x0f\n" +
@@ -5770,14 +5935,19 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\t_end_date\"\x8b\x01\n" +
 	"!ExportInventoryChangeLogsResponse\x12P\n" +
 	"\x15inventory_change_logs\x18\x01 \x03(\v2\x1c.core.InventoryChangeLogInfoR\x13inventoryChangeLogs\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"\xb5\x02\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"\xac\x03\n" +
 	"%StartInventoryChangeLogsExportRequest\x12\x19\n" +
 	"\bitem_ids\x18\x01 \x03(\tR\aitemIds\x12*\n" +
 	"\x11action_type_codes\x18\x02 \x03(\tR\x0factionTypeCodes\x12-\n" +
 	"\x13changed_by_user_ids\x18\x03 \x03(\tR\x10changedByUserIds\x12>\n" +
 	"\n" +
 	"start_date\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\aendDate\x88\x01\x01B\r\n" +
+	"\bend_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\aendDate\x88\x01\x01\x12\x14\n" +
+	"\x05types\x18\x06 \x03(\tR\x05types\x12\x1b\n" +
+	"\tactor_ids\x18\a \x03(\tR\bactorIds\x12\x1f\n" +
+	"\vactor_types\x18\b \x03(\tR\n" +
+	"actorTypes\x12!\n" +
+	"\flocation_ids\x18\t \x03(\tR\vlocationIdsB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_date\"I\n" +
 	"&StartInventoryChangeLogsExportResponse\x12\x1f\n" +
@@ -6001,13 +6171,14 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*JobInfo)(nil),                                // 81: core.JobInfo
 	(*StringPatch)(nil),                            // 82: core.StringPatch
 	(*ObjectIdentifier)(nil),                       // 83: core.ObjectIdentifier
-	(*TransactionInfo)(nil),                        // 84: core.TransactionInfo
-	(*MetadataPatch)(nil),                          // 85: core.MetadataPatch
-	(*InvoiceForPaymentInfo)(nil),                  // 86: core.InvoiceForPaymentInfo
-	(*InvoiceLineInfo)(nil),                        // 87: core.InvoiceLineInfo
-	(*InvoiceAllocationInfo)(nil),                  // 88: core.InvoiceAllocationInfo
-	(*AddressInfo)(nil),                            // 89: core.AddressInfo
-	(*PaymentTermInfo)(nil),                        // 90: core.PaymentTermInfo
+	(*Actor)(nil),                                  // 84: core.Actor
+	(*TransactionInfo)(nil),                        // 85: core.TransactionInfo
+	(*MetadataPatch)(nil),                          // 86: core.MetadataPatch
+	(*InvoiceForPaymentInfo)(nil),                  // 87: core.InvoiceForPaymentInfo
+	(*InvoiceLineInfo)(nil),                        // 88: core.InvoiceLineInfo
+	(*InvoiceAllocationInfo)(nil),                  // 89: core.InvoiceAllocationInfo
+	(*AddressInfo)(nil),                            // 90: core.AddressInfo
+	(*PaymentTermInfo)(nil),                        // 91: core.PaymentTermInfo
 }
 var file_core_core_users_territories_proto_depIdxs = []int32{
 	76, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
@@ -6076,42 +6247,44 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	76, // 63: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
 	76, // 64: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
 	76, // 65: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	76, // 66: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 67: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	57, // 68: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	77, // 69: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
-	57, // 70: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	76, // 71: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 72: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	57, // 73: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	76, // 74: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 75: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
-	81, // 76: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
-	76, // 77: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 78: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
-	74, // 79: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
-	77, // 80: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
-	74, // 81: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 82: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	82, // 83: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
-	85, // 84: core.UpdateInvoiceRequest.metadata:type_name -> core.MetadataPatch
-	74, // 85: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 86: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	86, // 87: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	77, // 88: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	84, // 89: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
-	87, // 90: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	88, // 91: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	76, // 92: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 93: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	89, // 94: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
-	90, // 95: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
-	75, // 96: core.InvoiceInfo.metadata:type_name -> core.InvoiceInfo.MetadataEntry
-	97, // [97:97] is the sub-list for method output_type
-	97, // [97:97] is the sub-list for method input_type
-	97, // [97:97] is the sub-list for extension type_name
-	97, // [97:97] is the sub-list for extension extendee
-	0,  // [0:97] is the sub-list for field type_name
+	84, // 66: core.InventoryChangeLogInfo.actor:type_name -> core.Actor
+	80, // 67: core.InventoryChangeLogInfo.unit_cost:type_name -> core.UnitPrice
+	76, // 68: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 69: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	57, // 70: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	77, // 71: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	57, // 72: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
+	76, // 73: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 74: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	57, // 75: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	76, // 76: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 77: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
+	81, // 78: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
+	76, // 79: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 80: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	74, // 81: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
+	77, // 82: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	74, // 83: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	85, // 84: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	82, // 85: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
+	86, // 86: core.UpdateInvoiceRequest.metadata:type_name -> core.MetadataPatch
+	74, // 87: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	85, // 88: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	87, // 89: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	77, // 90: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	85, // 91: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
+	88, // 92: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	89, // 93: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	76, // 94: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 95: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	90, // 96: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
+	91, // 97: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
+	75, // 98: core.InvoiceInfo.metadata:type_name -> core.InvoiceInfo.MetadataEntry
+	99, // [99:99] is the sub-list for method output_type
+	99, // [99:99] is the sub-list for method input_type
+	99, // [99:99] is the sub-list for extension type_name
+	99, // [99:99] is the sub-list for extension extendee
+	0,  // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -6129,6 +6302,7 @@ func file_core_core_users_territories_proto_init() {
 	file_core_core_async_proto_init()
 	file_core_core_analytics_proto_init()
 	file_core_core_lookups_proto_init()
+	file_core_primitives_proto_init()
 	file_core_core_users_territories_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[5].OneofWrappers = []any{}

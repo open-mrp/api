@@ -13,8 +13,8 @@ import (
 // SeedPairUnitID is the base unit of the seeded socks unit group: pairs, which is the whole point of the distinction — a doff of sock greige is 60 pairs, not 60 eaches.
 const SeedPairUnitID = "un_01seedpair000000000"
 
-func lotDefaultPath(itemID string) string {
-	return "/v1/catalog/items/" + itemID + "/lot-default"
+func lotSizeDefaultPath(itemID string) string {
+	return "/v1/catalog/items/" + itemID + "/lot-size-default"
 }
 
 // categoryWithLot creates a product category counted in pairs, with the given lot when lot is non-nil.
@@ -134,35 +134,34 @@ func TestItemLotDefault_ResolvesFromTheItemsCategory(t *testing.T) {
 	itemID := jsonField(jsonObject(product, "item"), "id")
 	require.NotEmpty(t, itemID)
 
-	status, lotBody, err := apiClient.GetListRaw(lotDefaultPath(itemID), url.Values{"include": {"unit"}})
+	status, lotBody, err := apiClient.GetListRaw(lotSizeDefaultPath(itemID), url.Values{"include": {"item,item_category"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, lotBody)
 
 	lot := parseJSON(lotBody)
-	assert.Equal(t, "item_lot_default", jsonField(lot, "object"))
+	assert.Equal(t, "lot_size_default", jsonField(lot, "object"))
 	assert.Equal(t, itemID, jsonField(jsonObject(lot, "item"), "id"))
 	assert.Equal(t, "item_category", jsonField(lot, "source"))
-	assert.Equal(t, float64(48), lot["quantity"])
 	assert.Equal(t, jsonField(category, "id"), jsonField(jsonObject(lot, "item_category"), "id"))
-	unit := jsonObject(lot, "unit")
-	require.NotNil(t, unit)
-	assert.Equal(t, SeedPairUnitID, jsonField(unit, "id"))
+	assertQuantityIn(t, jsonObject(lot, "lot_size"), "48", SeedPairUnitID, "lot_size")
 }
 
-// The unit is expandable, so like every other sub-resource it is null until asked for.
-func TestItemLotDefault_UnitNullWithoutInclude(t *testing.T) {
+// The item and category are expandable, so like every other related resource they are null until asked for.
+func TestItemLotDefault_RelatedNullWithoutInclude(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(lotDefaultPath(SeedItemID), nil)
+	status, body, err := apiClient.GetListRaw(lotSizeDefaultPath(SeedItemID), nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assertNilField(t, parseJSON(body), "unit")
+	got := parseJSON(body)
+	assertNilField(t, got, "item")
+	assertNilField(t, got, "item_category")
 }
 
 func TestItemLotDefault_RejectsAnUnknownItem(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(lotDefaultPath("it_01definitelynotreal"), nil)
+	status, body, err := apiClient.GetListRaw(lotSizeDefaultPath("it_01definitelynotreal"), nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	assert.Equal(t, 404, status)

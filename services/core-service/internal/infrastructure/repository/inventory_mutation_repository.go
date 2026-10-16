@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/shopspring/decimal"
 
@@ -329,10 +330,30 @@ func (r *inventoryMutationRepo) CreateInventoryChangeLog(ctx context.Context, pa
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to insert quantity for inventory change log."))
 	}
 
-	// Create the inventory change log.
-	changeLogID, apiErr := id.GenID(id.InventoryChangeLogIDPrefix, nil)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	changeLogID := params.ID
+	if changeLogID == "" {
+		changeLogID, apiErr = id.GenID(id.InventoryMovementIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	movement := params.Movement
+	if movement.Type == "" {
+		movement.Type = domain.LegacyMovementType(params.ActionType, params.Measure)
+	}
+	if movement.Actor.Type == "" {
+		movement.Actor = domain.LegacyMovementActor(params.ScanningStationID, params.ResponsibleUserID)
+	}
+	if movement.UnitCost == nil {
+		// The movement keeps the item's cost as it stood, so a later price change never revalues history.
+		costRow, err := r.queries.GetItemUnitCost(ctx, sqlc.GetItemUnitCostParams{ItemID: params.ItemID, AccountID: params.AccountID})
+		switch {
+		case err == nil:
+			movement.UnitCost = itemUnitCost(costRow)
+		case !errors.Is(err, sql.ErrNoRows):
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
 	}
 
 	scanningStationID := sql.NullString{}
@@ -350,6 +371,9 @@ func (r *inventoryMutationRepo) CreateInventoryChangeLog(ctx context.Context, pa
 		inventoryLogID = sql.NullString{String: *params.InventoryLogID, Valid: true}
 	}
 
+	actorType, actorID := movement.Actor.Columns()
+	unitCostAmount, unitCostCurrency, unitCostPerUnitID := unitPriceParams(movement.UnitCost)
+
 	if err := r.queries.InsertInventoryChangeLog(ctx, sqlc.InsertInventoryChangeLogParams{
 		ID:                changeLogID,
 		ItemID:            params.ItemID,
@@ -359,6 +383,17 @@ func (r *inventoryMutationRepo) CreateInventoryChangeLog(ctx context.Context, pa
 		AccountID:         params.AccountID,
 		InventoryLogID:    inventoryLogID,
 		ResponsibleUserID: responsibleUserID,
+		TypeCode:          db.NullString(string(movement.Type)),
+		ActorType:         db.NullString(actorType),
+		ActorID:           actorID,
+		LocationID:        db.NullStringPtr(movement.LocationID),
+		LotID:             db.NullStringPtr(movement.LotID),
+		ReasonCode:        db.NullStringPtr(movement.Reason.StringPtr()),
+		RelatedType:       sql.NullString{String: string(movement.RelatedType), Valid: movement.RelatedID != ""},
+		RelatedID:         sql.NullString{String: movement.RelatedID, Valid: movement.RelatedID != ""},
+		UnitCostAmount:    unitCostAmount,
+		UnitCostCurrency:  unitCostCurrency,
+		UnitCostPerUnitID: unitCostPerUnitID,
 	}); err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to insert inventory change log."))
 	}

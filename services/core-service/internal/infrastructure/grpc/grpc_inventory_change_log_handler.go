@@ -60,6 +60,22 @@ func inventoryChangeLogToProto(icl *domain.InventoryChangeLog) *pb.InventoryChan
 		info.ResponsibleUserUpdatedAt = timestamppb.New(*icl.ResponsibleUserUpdatedAt)
 	}
 
+	m := icl.Movement
+	info.Type = string(m.Type)
+	info.Actor = m.Actor.ToProto()
+	info.LocationId = m.LocationID
+	info.LotId = m.LotID
+	info.LotNumber = m.LotNumber
+	info.Reason = m.Reason.StringPtr()
+	if m.RelatedID != "" {
+		relatedType := string(m.RelatedType)
+		info.RelatedType = &relatedType
+		info.RelatedId = &m.RelatedID
+	}
+	if m.UnitCost != nil {
+		info.UnitCost = &pb.UnitPrice{Amount: m.UnitCost.Amount, Currency: string(m.UnitCost.Currency), PerUnitId: m.UnitCost.PerUnitID}
+	}
+
 	return info
 }
 
@@ -79,6 +95,10 @@ func (h *gRPCHandler) ListInventoryChangeLogs(ctx context.Context, req *pb.ListI
 		ActionTypeCodes:  req.ActionTypeCodes,
 		ChangedByUserIDs: req.ChangedByUserIds,
 		Query:            req.SearchQuery,
+		Types:            req.Types,
+		ActorIDs:         req.ActorIds,
+		ActorTypes:       req.ActorTypes,
+		LocationIDs:      req.LocationIds,
 	}
 
 	if startDate != nil {
@@ -174,6 +194,10 @@ func (h *gRPCHandler) StartInventoryChangeLogsExport(ctx context.Context, req *p
 		ItemIDs:          req.ItemIds,
 		ActionTypeCodes:  req.ActionTypeCodes,
 		ChangedByUserIDs: req.ChangedByUserIds,
+		Types:            req.Types,
+		ActorIDs:         req.ActorIds,
+		ActorTypes:       req.ActorTypes,
+		LocationIDs:      req.LocationIds,
 	}
 	if req.StartDate != nil {
 		t := req.StartDate.AsTime()

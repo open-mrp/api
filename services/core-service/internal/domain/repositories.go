@@ -732,6 +732,12 @@ type InventoryQueryRepo interface {
 	FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError)
 	// FetchInventoryLevelsAsOf is each item's last logged level at or before asOf, in its category base unit; zero for an item with none.
 	FetchInventoryLevelsAsOf(ctx context.Context, itemIDs []string, accountID string, asOf time.Time) ([]*BulkOnHandInventory, *apierror.APIError)
+	// FetchStockLevels is each item's on-hand, reserved, short and available stock at locationIDs (every location when empty), in its stocking unit.
+	FetchStockLevels(ctx context.Context, accountID string, itemIDs, locationIDs []string) (map[string]*StockLevel, *apierror.APIError)
+	// FetchStockLevelsAsOf is each item's last logged level at or before asOf, in its stocking unit, as on-hand only.
+	FetchStockLevelsAsOf(ctx context.Context, accountID string, itemIDs []string, asOf time.Time) (map[string]*StockLevel, *apierror.APIError)
+	// LotBelongsToItem reports whether lotID is a lot of the account's item.
+	LotBelongsToItem(ctx context.Context, accountID, itemID, lotID string) (bool, *apierror.APIError)
 }
 
 type ProductLineRepo interface {

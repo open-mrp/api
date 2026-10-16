@@ -397,6 +397,12 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(inventoryChangeLogsGroup.APIEndpointGroup)
 	}
 
+	// Inventory movements, levels and lot-size defaults
+	inventoryConfig := &httpgroup.InventoryChangeLogsEndpointGroupConfig{CoreClient: config.CoreClient}
+	registry.RegisterGroup((&httpgroup.InventoryMovementsEndpointGroup{}).Materialize(inventoryConfig).APIEndpointGroup)
+	registry.RegisterGroup((&httpgroup.InventoryLevelsEndpointGroup{}).Materialize(inventoryConfig).APIEndpointGroup)
+	registry.RegisterGroup((&httpgroup.LotSizeDefaultsEndpointGroup{}).Materialize(inventoryConfig).APIEndpointGroup)
+
 	// Invoices
 	invoicesGroup := (&httpgroup.InvoicesEndpointGroup{}).Materialize(&httpgroup.InvoicesEndpointGroupConfig{
 		CoreClient: config.CoreClient,

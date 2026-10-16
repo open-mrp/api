@@ -28,9 +28,7 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeInventoryChangeLog,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},

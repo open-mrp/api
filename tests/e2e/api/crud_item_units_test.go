@@ -344,7 +344,7 @@ func TestItemUnits_ChangeStockingUnitConvert(t *testing.T) {
 	assert.ElementsMatch(t, []string{seedDozenUnitID, SeedUnitID}, orderUnitIDs, "the old stocking unit stays orderable")
 	assertItemPrice(t, jsonObject(got, "unit_cost"), "5", seedEachUnitID, "unit_cost restated per each")
 
-	status, raw, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand"}})
+	status, raw, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	onHand := jsonObject(parseJSON(raw), "on_hand")
@@ -378,7 +378,7 @@ func TestItemUnits_ChangeStockingUnitRelabel(t *testing.T) {
 	assertUnitShape(t, jsonObject(got, "default_order_unit"), SeedMaterialUnitID, "default_order_unit")
 	assert.Empty(t, orderUnitsOf(t, got))
 
-	status, raw, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand"}})
+	status, raw, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	onHand := jsonObject(parseJSON(raw), "on_hand")

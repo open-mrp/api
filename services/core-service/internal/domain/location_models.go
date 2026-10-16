@@ -60,6 +60,7 @@ var LocationReferences = RegisterReferences(References{
 	Probes: []ReferenceProbe{
 		{Label: "stock", Table: "inventory_receipt", Column: "storage_location_id"},
 		{Label: "inventory movements", Table: "inventory_issue", Column: "storage_location_id"},
+		{Label: "inventory movements", Table: "inventory_change_log", Column: "location_id"},
 		{Label: "deliveries", Table: "delivery_line", Column: "storage_location_id"},
 		{Label: "child locations", Table: "storage_location", Column: "parent_id"},
 		{Label: "work centers", Table: "department", Column: "location_id"},

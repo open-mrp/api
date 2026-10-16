@@ -59,9 +59,7 @@ func (p inventoryPosition) level() decimal.Decimal {
 
 func readInventory(t *testing.T, itemID string) inventoryPosition {
 	t.Helper()
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{
-		"include": {"on_hand,reserved,available_to_promise,short"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -405,9 +403,7 @@ func TestItemInventory_FiguresAreComputedNotStoredRows(t *testing.T) {
 	itemID := freshInventoryItem(t)
 	mustUpdateInventory(t, itemID, "3", poundUnitID, "adjust")
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{
-		"include": {"on_hand,reserved,available_to_promise,short"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -424,7 +420,7 @@ func TestItemInventory_FiguresAreComputedNotStoredRows(t *testing.T) {
 func TestUpdateItemInventory_RejectsAQuantityThatIsNotADecimal(t *testing.T) {
 	t.Parallel()
 	status, _ := updateInventory(t, SeedItemID, "not-a-number", SeedUnitID, "adjust")
-	assert.Equal(t, 422, status)
+	assert.Equal(t, 400, status, "preview.9 reports a body field error as 400")
 }
 
 func TestUpdateItemInventory_RejectsAMissingQuantity(t *testing.T) {
@@ -433,7 +429,7 @@ func TestUpdateItemInventory_RejectsAMissingQuantity(t *testing.T) {
 		"operation": "adjust",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 422, status)
+	assert.Equal(t, 400, status, "preview.9 reports a missing body field as 400")
 }
 
 func TestUpdateItemInventory_NotFound(t *testing.T) {

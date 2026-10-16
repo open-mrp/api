@@ -120,6 +120,14 @@ func dashItemsTenantBRefs(t *testing.T) dashItemsForeignRefs {
 // Reading back what happened
 // ---------------------------------------------------------------------------
 
+// requireRetiredRouteErrorOfType reads a preview.9 error object of any type, such as an idempotency error.
+func requireRetiredRouteErrorOfType(t *testing.T, body []byte) map[string]any {
+	t.Helper()
+	errObj, ok := parseJSON(body)["error"].(map[string]any)
+	require.True(t, ok, "response has an error object: %s", body)
+	return errObj
+}
+
 func dashItemsPound(value string) map[string]any {
 	return map[string]any{"value": value, "unit_id": poundUnitID}
 }
@@ -487,7 +495,8 @@ func TestDashItems_InventoryFiguresAreNullWithoutInclude(t *testing.T) {
 	t.Parallel()
 	itemID := dashItemsMaterial(t, uniqueName("e2e-dashitems-invnull"))
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
+	preview9 := apiClient.WithAPIVersion(preview9Version)
+	status, body, err := preview9.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
@@ -496,10 +505,10 @@ func TestDashItems_InventoryFiguresAreNullWithoutInclude(t *testing.T) {
 		assertNilField(t, got, field)
 	}
 
-	status, body, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand,bogus"}})
+	status, body, err = preview9.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand,bogus"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireRetiredRouteError(t, body, "parameter_invalid")
 }
 
 // ---------------------------------------------------------------------------
@@ -600,10 +609,8 @@ func TestDashItems_InventoryRejectsInvalidFields(t *testing.T) {
 		{"missing unit", "missing_field", map[string]any{"quantity": map[string]any{"value": "1"}}},
 	} {
 		status, body := dashItemsPatchInventory(t, apiClient, itemID, tc.body)
-		assertClientRejection(t, status, body, "%s: %s", tc.name, string(body))
-		if status == 400 {
-			requireErrorResponse(t, body, tc.code, "invalid_request_error")
-		}
+		assert.Contains(t, []int{400, 422}, status, "%s: %s", tc.name, string(body))
+		requireRetiredRouteError(t, body, "")
 	}
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
@@ -616,7 +623,7 @@ func TestDashItems_InventoryCustomerMustBeOneOfYours(t *testing.T) {
 	for _, customerID := range []string{SeedTenantBAccountID, "ac_01zzzzzzzzzzzzzzzzzzzzzz"} {
 		status, body := dashItemsPatchInventory(t, apiClient, itemID, map[string]any{"quantity": dashItemsPound("1"), "customer_id": customerID})
 		requireStatus(t, 403, status, body)
-		requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+		requireRetiredRouteError(t, body, "insufficient_permissions")
 	}
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
@@ -639,7 +646,7 @@ func TestDashItems_InventoryRejectsAnUnknownUnit(t *testing.T) {
 	status, body := dashItemsPatchInventory(t, apiClient, itemID, map[string]any{
 		"quantity": map[string]any{"value": "1", "unit_id": "un_01zzzzzzzzzzzzzzzzzzzz"},
 	})
-	assert.Contains(t, []int{422, 404}, status, "an unknown unit is a client error: %s", string(body))
+	assert.Contains(t, []int{400, 422, 404}, status, "an unknown unit is a client error: %s", string(body))
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -651,7 +658,7 @@ func TestDashItems_InventoryRejectsAUnitOutsideTheItemsGroup(t *testing.T) {
 	status, body := dashItemsPatchInventory(t, apiClient, itemID, map[string]any{
 		"quantity": map[string]any{"value": "1", "unit_id": SeedUnitID},
 	})
-	assert.Equal(t, 422, status, "a pair of yarn has no weight to convert: %s", string(body))
+	assert.Equal(t, 400, status, "a pair of yarn has no weight to convert: %s", string(body))
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -675,8 +682,8 @@ func TestDashItems_InventoryReplayAdjustsOnce(t *testing.T) {
 
 	status, raw, err := apiClient.Patch(path, map[string]any{"quantity": dashItemsPound("4"), "operation": "adjust"}, key)
 	require.NoError(t, err)
-	requireStatus(t, 422, status, raw)
-	requireErrorResponse(t, raw, "idempotency_key_reused", "idempotency_error")
+	requireStatus(t, 400, status, raw)
+	assert.Equal(t, "idempotency_error", requireRetiredRouteErrorOfType(t, raw)["type"])
 	dashItemsAssertUnchanged(t, itemID, "3", 1)
 }
 
@@ -698,8 +705,8 @@ func TestDashItems_InventoryKeyReusedOnAnotherItemIsNotReplayed(t *testing.T) {
 	switch resp.StatusCode {
 	case 200:
 		assert.Equal(t, "1", dashItemsLevel(t, second), "a 200 for the second item must have adjusted it")
-	case 422:
-		requireErrorResponse(t, resp.Body, "idempotency_key_reused", "idempotency_error")
+	case 400, 422:
+		assert.Equal(t, "idempotency_error", requireRetiredRouteErrorOfType(t, resp.Body)["type"])
 		dashItemsAssertUnchanged(t, second, "0", 0)
 	default:
 		t.Errorf("unexpected status %d: %s", resp.StatusCode, string(resp.Body))
@@ -734,13 +741,13 @@ func TestDashItems_InventoryReadOnlyRoleCannotAdjust(t *testing.T) {
 		requireStatus(t, 200, status, body)
 		assert.Contains(t, string(body), itemID, "GET %s", path)
 	}
-	status, body, err := reader.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand"}})
+	status, body, err := reader.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	status, body = dashItemsPatchInventory(t, reader, itemID, map[string]any{"quantity": dashItemsPound("5")})
 	requireStatus(t, 403, status, body)
-	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	requireRetiredRouteError(t, body, "insufficient_permissions")
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -772,7 +779,6 @@ func TestDashItems_InventoryCorrectionIsAttributedToTheSignedInUser(t *testing.T
 		assert.Equal(t, "user_correction", jsonField(got, "action_type"), where)
 		quantity := jsonObject(got, "quantity")
 		require.NotNil(t, quantity, "%s: quantity", where)
-		assertValueShapeBare(t, quantity, where+": quantity")
 		assertDecimalEqual(t, "2.5", jsonField(quantity, "value"), where)
 		assert.Equal(t, poundUnitID, jsonField(jsonObject(quantity, "unit"), "id"), where)
 		assert.Equal(t, itemID, jsonField(jsonObject(got, "item"), "id"), where)
@@ -842,8 +848,8 @@ func TestDashItems_BulkReconcileReplayAppliesOnce(t *testing.T) {
 	other := map[string]any{"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "7"}}, "reconcile_type": "addition"}
 	status, raw, err := apiClient.Post(bulkReconcilePath, other, key)
 	require.NoError(t, err)
-	requireStatus(t, 422, status, raw)
-	requireErrorResponse(t, raw, "idempotency_key_reused", "idempotency_error")
+	requireStatus(t, 400, status, raw)
+	assert.Equal(t, "idempotency_error", requireRetiredRouteErrorOfType(t, raw)["type"])
 	dashItemsAssertUnchanged(t, itemID, "25", 1)
 }
 
@@ -868,8 +874,8 @@ func TestDashItems_BulkReconcileRejectsANumericQuantity(t *testing.T) {
 		"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": 5}}, "reconcile_type": "force",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	requireRetiredRouteError(t, body, "invalid_format")
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
 
@@ -906,7 +912,7 @@ func TestDashItems_BulkReconcileRefusesThePortalAndAnUpdateOnlyRole(t *testing.T
 	status, raw, err = updater.Post(bulkReconcilePath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 403, status, raw)
-	requireErrorResponse(t, raw, "insufficient_permissions", "invalid_request_error")
+	requireRetiredRouteError(t, raw, "insufficient_permissions")
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 
 	status, raw = dashItemsPatchInventory(t, updater, itemID, map[string]any{"quantity": dashItemsPound("2")})

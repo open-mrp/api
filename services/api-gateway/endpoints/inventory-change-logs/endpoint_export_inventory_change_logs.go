@@ -43,9 +43,7 @@ func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/operations/inventory-change-logs/actions/export",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		AgentTool:         true,
+		Public:            false,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},
 		}},

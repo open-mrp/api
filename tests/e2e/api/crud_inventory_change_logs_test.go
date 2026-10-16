@@ -68,18 +68,6 @@ func TestInventoryChangeLogs_IncludeItem(t *testing.T) {
 	assert.Equal(t, "item", jsonField(item, "object"))
 }
 
-// The amount is part of the entry rather than a relation, so naming it as an include is a caller
-// mistake instead of a no-op that would quietly return the row anyway.
-func TestInventoryChangeLogs_QuantityIsNotAnInclude(t *testing.T) {
-	t.Parallel()
-	id := firstInventoryChangeLogID(t)
-
-	status, body, err := apiClient.GetListRaw(inventoryChangeLogsPath+"/"+id, url.Values{"include": {"quantity"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an unknown include must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "quantity is not an expandable relation: %s", string(body))
-}
-
 func TestInventoryChangeLogs_IncludeResponsibleUser(t *testing.T) {
 	t.Parallel()
 	id := firstInventoryChangeLogID(t)

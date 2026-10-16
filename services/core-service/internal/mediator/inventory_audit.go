@@ -36,7 +36,32 @@ func RecordInventoryAuditTrail(
 		return tracing.Trace(span, apiErr)
 	}
 
-	return RecordInventoryAuditTrailWithLevel(ctx, repos, accountID, itemID, delta, currentPhysical, unitID, actionType, scanningStationID, responsibleUserID)
+	return RecordInventoryMovementWithLevel(ctx, repos, accountID, itemID, delta, currentPhysical, unitID, actionType, scanningStationID, responsibleUserID, domain.MovementFields{})
+}
+
+// RecordInventoryMovement is RecordInventoryAuditTrail for a caller that knows what the movement was: its type, actor,
+// location, lot, reason, source document or cost. Fields left zero default as RecordInventoryAuditTrail's do.
+func RecordInventoryMovement(
+	ctx context.Context,
+	repos domain.RepoFactory,
+	accountID, itemID string,
+	delta decimal.Decimal,
+	unitID, actionType string,
+	scanningStationID *string,
+	responsibleUserID *string,
+	movement domain.MovementFields,
+) *apierror.APIError {
+	ctx, span := inventoryAuditTracer.Start(ctx, "mediator.inventory_audit.record_movement")
+	defer span.End()
+
+	if delta.IsZero() {
+		return nil
+	}
+	currentPhysical, apiErr := repos.NewInventoryQueryRepo().FetchPhysicalInventory(ctx, itemID, accountID, unitID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return RecordInventoryMovementWithLevel(ctx, repos, accountID, itemID, delta, currentPhysical, unitID, actionType, scanningStationID, responsibleUserID, movement)
 }
 
 // RecordInventoryAuditTrailWithLevel writes the inventory snapshot and change log using a level that was already calculated by the caller. This avoids doing another inventory lookup for each item and can recalculate burn rate when the change represents consumption.
@@ -49,6 +74,21 @@ func RecordInventoryAuditTrailWithLevel(
 	unitID, actionType string,
 	scanningStationID *string,
 	responsibleUserID *string,
+) *apierror.APIError {
+	return RecordInventoryMovementWithLevel(ctx, repos, accountID, itemID, delta, level, unitID, actionType, scanningStationID, responsibleUserID, domain.MovementFields{})
+}
+
+// RecordInventoryMovementWithLevel is RecordInventoryAuditTrailWithLevel with the movement's own fields.
+func RecordInventoryMovementWithLevel(
+	ctx context.Context,
+	repos domain.RepoFactory,
+	accountID, itemID string,
+	delta decimal.Decimal,
+	level decimal.Decimal,
+	unitID, actionType string,
+	scanningStationID *string,
+	responsibleUserID *string,
+	movement domain.MovementFields,
 ) *apierror.APIError {
 	ctx, span := inventoryAuditTracer.Start(ctx, "mediator.inventory_audit.record_trail_with_level")
 	defer span.End()
@@ -76,6 +116,7 @@ func RecordInventoryAuditTrailWithLevel(
 		ActionType:        actionType,
 		ScanningStationID: scanningStationID,
 		ResponsibleUserID: responsibleUserID,
+		Movement:          movement,
 	}); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

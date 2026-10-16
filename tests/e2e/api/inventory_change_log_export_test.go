@@ -15,7 +15,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-// Covers POST /v1/operations/inventory-change-logs/actions/export, the export that runs as a job: the file it produces and the window it is named for, the filters reaching the worker, and who may start one and read its job.
+// Covers POST /v1/operations/inventory-movements/actions/export (which replaced the change logs' own export and writes the same file), checked against the preview.9 change-log list; the export that runs as a job: the file it produces and the window it is named for, the filters reaching the worker, and who may start one and read its job.
 //
 // Other tests write to the log concurrently, so row-for-row checks are made on an item the test creates and nobody else touches, and the account-wide export is checked by its head and containment.
 
@@ -115,7 +115,7 @@ func TestInventoryChangeLogExport_WithoutAWindowExportsAnItemsWholeHistory(t *te
 	t.Parallel()
 	_, itemID := changeLogExportItem(t)
 
-	resp, err := apiClient.DoFull(http.MethodPost, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+	resp, err := apiClient.DoFull(http.MethodPost, movementsExportPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, resp.StatusCode, resp.Body)
 	accepted := parseJSON(resp.Body)
@@ -150,24 +150,24 @@ func TestInventoryChangeLogExport_NamesTheFileForItsWindow(t *testing.T) {
 		rows     int
 	}{
 		"both bounds": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": rfc3339(startsAt), "ends_at": rfc3339(endsAt)},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": rfc3339(startsAt), "occurred_before": rfc3339(endsAt)},
 			url.Values{"item_ids": {itemID}, "starts_at": {rfc3339(startsAt)}, "ends_at": {rfc3339(endsAt)}},
 			"inventory-change-logs-" + day(startsAt) + "-" + day(endsAt) + ".xlsx", 3,
 		},
 		"open end": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": rfc3339(startsAt)},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": rfc3339(startsAt)},
 			url.Values{"item_ids": {itemID}, "starts_at": {rfc3339(startsAt)}},
 			"inventory-change-logs-" + day(startsAt) + "-all.xlsx", 3,
 		},
 		"a window that closed before the item existed": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": "2000-01-01T00:00:00Z", "ends_at": "2000-01-02T00:00:00Z"},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": "2000-01-01T00:00:00Z", "occurred_before": "2000-01-02T00:00:00Z"},
 			url.Values{"item_ids": {itemID}, "starts_at": {"2000-01-01T00:00:00Z"}, "ends_at": {"2000-01-02T00:00:00Z"}},
 			"inventory-change-logs-2000-01-01-2000-01-02.xlsx", 0,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			filename, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, tc.filters))
+			filename, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, tc.filters))
 			assert.Equal(t, tc.filename, filename)
 			want := listedChangeLogCells(t, tc.listed)
 			require.Len(t, want, tc.rows)
@@ -181,7 +181,7 @@ func TestInventoryChangeLogExport_WithNoFiltersCoversTheWholeAccount(t *testing.
 	t.Parallel()
 	sku, itemID := changeLogExportItem(t)
 
-	filename, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, nil))
+	filename, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, nil))
 	assert.Equal(t, "inventory-change-logs-all-all.xlsx", filename)
 
 	head := listedChangeLogCells(t, url.Values{"limit": {"2"}})
@@ -202,32 +202,32 @@ func TestInventoryChangeLogExport_AppliesEachFilter(t *testing.T) {
 		filters map[string]any
 		listed  url.Values
 	}{
-		"action type": {
-			map[string]any{"item_ids": []string{itemID}, "action_types": []string{"user_correction"}},
-			url.Values{"item_ids": {itemID}, "action_types": {"user_correction"}},
+		// The opening entry and both corrections are adjustments.
+		"type": {
+			map[string]any{"item_ids": []string{itemID}, "types": []string{"adjustment"}},
+			url.Values{"item_ids": {itemID}, "action_types": {"user_action", "user_correction"}},
 		},
+		// Entries logged before movements had types read as adjustments (user actions) and receipts (system actions).
 		"every filter on the seeded entries": {
 			map[string]any{
-				"item_ids":            []string{SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
-				"action_types":        []string{"user_action", "system_action"},
-				"changed_by_user_ids": []string{SeedUserID},
-				"starts_at":           "2099-01-01T00:00:00Z",
+				"item_ids":       []string{SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+				"types":          []string{"adjustment", "receipt"},
+				"occurred_after": "2099-01-01T00:00:00Z",
 			},
 			url.Values{
-				"item_ids":            {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
-				"action_types":        {"user_action", "system_action"},
-				"changed_by_user_ids": {SeedUserID},
-				"starts_at":           {"2099-01-01T00:00:00Z"},
+				"item_ids":     {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+				"action_types": {"user_action", "system_action"},
+				"starts_at":    {"2099-01-01T00:00:00Z"},
 			},
 		},
-		"an unknown user narrows to nothing": {
-			map[string]any{"item_ids": []string{itemID}, "changed_by_user_ids": []string{"us_nosuchuser00"}},
+		"an unknown actor narrows to nothing": {
+			map[string]any{"item_ids": []string{itemID}, "actor_ids": []string{"us_nosuchuser00"}},
 			url.Values{"item_ids": {itemID}, "changed_by_user_ids": {"us_nosuchuser00"}},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			_, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, tc.filters))
+			_, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, tc.filters))
 			assertChangeLogRows(t, listedChangeLogCells(t, tc.listed), rows)
 		})
 	}
@@ -239,16 +239,16 @@ func TestInventoryChangeLogExport_RejectsInvalidFilters(t *testing.T) {
 		body  map[string]any
 		param string
 	}{
-		"unknown action type": {map[string]any{"action_types": []string{"bogus_e2e_action"}}, "action_types"},
-		"start is not a date": {map[string]any{"starts_at": "yesterday"}, "starts_at"},
-		"null start":          {map[string]any{"starts_at": nil}, "starts_at"},
-		"null end":            {map[string]any{"ends_at": nil}, "ends_at"},
+		"unknown type":        {map[string]any{"types": []string{"bogus_e2e_type"}}, "types"},
+		"start is not a date": {map[string]any{"occurred_after": "yesterday"}, "occurred_after"},
+		"null start":          {map[string]any{"occurred_after": nil}, "occurred_after"},
+		"null end":            {map[string]any{"occurred_before": nil}, "occurred_before"},
 		"ids are not a list":  {map[string]any{"item_ids": SeedInventoryChangeLogItemID}, "item_ids"},
 		"unknown field":       {map[string]any{bogusE2EJSONField: "x"}, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			status, body, err := apiClient.Post(inventoryChangeLogsExportPath, tc.body, newIdempotencyKey())
+			status, body, err := apiClient.Post(movementsExportPath, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireClientRejection(t, status, body)
 			errObj := requireErrorResponse(t, body, "", "invalid_request_error")
@@ -266,10 +266,10 @@ func TestInventoryChangeLogExport_SameKeyReplaysTheSameJob(t *testing.T) {
 	key := newIdempotencyKey()
 	body := map[string]any{"item_ids": []string{SeedInventoryChangeLogItemID}}
 
-	status, first, err := apiClient.Post(inventoryChangeLogsExportPath, body, key)
+	status, first, err := apiClient.Post(movementsExportPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, status, first)
-	status, second, err := apiClient.Post(inventoryChangeLogsExportPath, body, key)
+	status, second, err := apiClient.Post(movementsExportPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, status, second)
 
@@ -281,7 +281,7 @@ func TestInventoryChangeLogExport_SameKeyReplaysTheSameJob(t *testing.T) {
 func TestInventoryChangeLogExport_RequiresAuthentication(t *testing.T) {
 	t.Parallel()
 	anon := apiClient.WithBearerToken("", SeedAccountID)
-	status, body, err := anon.Post(inventoryChangeLogsExportPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := anon.Post(movementsExportPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusUnauthorized, status, body)
 }
@@ -291,7 +291,7 @@ func TestInventoryChangeLogExport_RefusesARoleWithoutInventoryLogsRead(t *testin
 	t.Parallel()
 
 	refused := customRoleClient(t, "items:read", "jobs:read")
-	status, body, err := refused.Post(inventoryChangeLogsExportPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := refused.Post(movementsExportPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusForbidden, status, body)
 	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
@@ -299,7 +299,7 @@ func TestInventoryChangeLogExport_RefusesARoleWithoutInventoryLogsRead(t *testin
 
 	_, itemID := changeLogExportItem(t)
 	holder := customRoleClient(t, "inventory_logs:read", "jobs:read")
-	job := completedExportJobAs(t, holder, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	job := completedExportJobAs(t, holder, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	_, rows := exportedChangeLogRows(t, job)
 	assertChangeLogRows(t, listedChangeLogCells(t, url.Values{"item_ids": {itemID}}), rows)
 }
@@ -312,14 +312,14 @@ func TestInventoryChangeLogExport_TenantsExportAndReadOnlyTheirOwn(t *testing.T)
 	_, itemID := changeLogExportItem(t)
 	tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
 
-	jobB := completedExportJobAs(t, tenantB, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	jobB := completedExportJobAs(t, tenantB, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	var accountID string
 	require.NoError(t, authDB(t).QueryRow("SELECT account_id FROM job WHERE job_id = ?", jsonField(jobB, "id")).Scan(&accountID))
 	assert.Equal(t, SeedTenantBAccountID, accountID, "tenant B's export is recorded against tenant B")
 	_, rows := exportedChangeLogRows(t, jobB)
 	assert.Empty(t, rows, "tenant A's item has no history in tenant B's log")
 
-	jobA := completedExportJob(t, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	jobA := completedExportJob(t, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	_, rows = exportedChangeLogRows(t, jobA)
 	assert.Len(t, rows, 3, "tenant A's own export holds the item's history")
 

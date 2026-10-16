@@ -54,6 +54,8 @@ const (
 	SetItemOrderUnits BulkOperation = "set_item_order_units"
 	// Moves one item to a new stocking unit — not a row batch; same {job_id} payload and consumer.
 	ChangeItemStockingUnit BulkOperation = "change_item_stocking_unit"
+	// Records many inventory adjustments or reconciliations.
+	BulkCreateInventoryMovements BulkOperation = "bulk_create_inventory_movements"
 )
 
 // lists every registered bulk operation; the rabbitmq bindings declare a queue per entry
@@ -80,4 +82,5 @@ var BulkOperations = []BulkOperation{
 	MergeCustomers,
 	SetItemOrderUnits,
 	ChangeItemStockingUnit,
+	BulkCreateInventoryMovements,
 }

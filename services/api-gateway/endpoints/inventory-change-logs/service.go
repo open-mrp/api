@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/apikit/include"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	"github.com/open-mrp/api/services/api-gateway/internal/export"
@@ -56,6 +57,9 @@ func NewInventoryChangeLogSvc(config *InventoryChangeLogSvcConfig) InventoryChan
 }
 
 func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "Use GET /v1/operations/inventory-movements."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListInventoryChangeLogsRequest{
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
@@ -92,6 +96,9 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 }
 
 func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "Use GET /v1/operations/inventory-movements/{id}."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.GetInventoryChangeLogRequest{
 		Id: req.InventoryChangeLogID,
 	}
@@ -112,6 +119,9 @@ func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, r
 }
 
 func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "Use POST /v1/operations/inventory-movements/actions/export."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ExportInventoryChangeLogsRequest{
 		ItemIds:          req.ItemIDs,
 		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
@@ -157,6 +167,9 @@ func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Contex
 }
 
 func (m *inventoryChangeLogSvcImpl) StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "Use POST /v1/operations/inventory-movements/actions/export."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.StartInventoryChangeLogsExportRequest{
 		ItemIds:          req.ItemIDs,
 		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),

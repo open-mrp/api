@@ -120,4 +120,9 @@ type CreateInventoryChangeLogParams struct {
 	ScanningStationID *string
 	ResponsibleUserID *string
 	InventoryLogID    *string
+	// ID is the movement's ID when the caller chose it; empty generates one.
+	ID string
+	// Movement fields left zero default: type from ActionType and the sign, actor from the station or responsible
+	// user, unit cost from the item's current cost.
+	Movement MovementFields
 }

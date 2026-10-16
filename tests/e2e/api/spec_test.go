@@ -271,6 +271,13 @@ var excludedPaths = []string{
 	// 1.0.forge-preview.9 only: price lists replace them. Covered by their crud tests.
 	"/v1/sales/account-prices",
 	"/v1/sales/volume-discounts",
+	// 1.0.forge-preview.9 only: inventory movements, levels and lot-size defaults replace them. Covered by the inventory
+	// change log, inventories, item inventory, bulk reconcile and lot default tests, pinned to preview.9.
+	"/v1/operations/inventory-change-logs",
+	"/v1/operations/inventories",
+	"/v1/catalog/items/{id}/preview-9-inventory",
+	"/v1/catalog/items/{id}/lot-default",
+	"/v1/catalog/items/actions/bulk-reconcile",
 }
 
 // excludedPaginationPaths are endpoints that return data but don't support

@@ -30,13 +30,26 @@ SELECT
     icl.responsible_user_id,
     usr.name AS responsible_user_name,
     usr.created_at AS responsible_user_created_at,
-    usr.updated_at AS responsible_user_updated_at
+    usr.updated_at AS responsible_user_updated_at,
+    icl.type_code,
+    icl.actor_type,
+    icl.actor_id,
+    icl.location_id,
+    icl.lot_id,
+    icl.reason_code,
+    icl.related_type,
+    icl.related_id,
+    icl.unit_cost_amount,
+    icl.unit_cost_currency,
+    icl.unit_cost_per_unit_id,
+    lt.lot_number
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
 JOIN unit u ON u.id = q.unit_id
 LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id
 LEFT JOIN user usr ON usr.id = icl.responsible_user_id
+LEFT JOIN lot lt ON lt.id = icl.lot_id
 WHERE icl.id = sqlc.arg('id')
 AND icl.account_id = sqlc.arg('account_id');
 
@@ -60,13 +73,26 @@ SELECT
     ss.name AS scanning_station_name,
     ss.scanning_station_type_code AS scanning_station_type,
     icl.responsible_user_id,
-    usr.name AS responsible_user_name
+    usr.name AS responsible_user_name,
+    icl.type_code,
+    icl.actor_type,
+    icl.actor_id,
+    icl.location_id,
+    icl.lot_id,
+    icl.reason_code,
+    icl.related_type,
+    icl.related_id,
+    icl.unit_cost_amount,
+    icl.unit_cost_currency,
+    icl.unit_cost_per_unit_id,
+    lt.lot_number
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
 JOIN unit u ON u.id = q.unit_id
 LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id
 LEFT JOIN user usr ON usr.id = icl.responsible_user_id
+LEFT JOIN lot lt ON lt.id = icl.lot_id
 WHERE icl.account_id = sqlc.arg('account_id')
 AND (
     sqlc.arg('include_item_filter') = false

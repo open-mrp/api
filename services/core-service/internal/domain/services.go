@@ -525,6 +525,18 @@ type ItemSvc interface {
 	// GetItemLotDefault resolves the lot an item is made in — how many, counted in what.
 	GetItemLotDefault(ctx context.Context, itemID string) (*ItemLotDefault, *apierror.APIError)
 
+	// CreateInventoryMovement records an adjustment or reconciliation by hand and returns the movement written.
+	CreateInventoryMovement(ctx context.Context, params CreateInventoryMovementParams) (*InventoryChangeLog, *apierror.APIError)
+
+	// BulkCreateInventoryMovements accepts many adjustments or reconciliations as an async job.
+	BulkCreateInventoryMovements(ctx context.Context, params BulkCreateInventoryMovementsParams) (*Job, *apierror.APIError)
+
+	// ExecuteBulkCreateInventoryMovements writes the rows of an accepted bulk movement job.
+	ExecuteBulkCreateInventoryMovements(ctx context.Context, evt BulkOperationJobEvent) *apierror.APIError
+
+	// ListInventoryLevels returns a page of items' stock positions.
+	ListInventoryLevels(ctx context.Context, params ListInventoryLevelsParams) (*ListInventoryLevelsResult, *apierror.APIError)
+
 	// ListItems returns a paginated list of items for the caller's account. Supports filtering by type, category, attribute, supplier, date range, and full-text search.
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 

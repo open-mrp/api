@@ -410,6 +410,18 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{
 			"related.record": {"id": SeedEmailLogID2},
 		},
 	},
+	// Only the seeded full movement (0019_e2e_inventory_movements.sql) carries a location, lot and source document; it
+	// is dated 2020-01-01, so the list is windowed around it.
+	"retrieve-inventory-movement": {
+		pathValuesByInclude: map[string]map[string]string{
+			"location": {"id": "inmv_01seedmvfull0000"},
+			"lot":      {"id": "inmv_01seedmvfull0000"},
+			"related":  {"id": "inmv_01seedmvfull0000"},
+		},
+	},
+	"list-inventory-movements": {query: url.Values{"occurred_before": {"2020-01-02T00:00:00Z"}}},
+	// A level names its location only when the list is narrowed to one.
+	"list-inventory-levels": {query: url.Values{"location_ids[]": {SeedLocationID}}},
 	// Search needs `q` unless it is narrowed with `types`; browsing one type's newest records always returns seed rows.
 	"search": {query: url.Values{"types": {"customer"}}},
 }

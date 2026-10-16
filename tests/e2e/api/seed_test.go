@@ -648,6 +648,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/core/async-jobs/":                  SeedJobID,
 	"/v1/core/sandboxes/":                   SeedSandboxID,
 	"/v1/operations/inventory-change-logs/": SeedInventoryChangeLogID,
+	"/v1/operations/inventory-movements/":   SeedInventoryChangeLogID,
 	"/v1/operations/receiving-orders/{receiving_order_id}/lines/": SeedReceivingOrderLineID,
 	"/v1/operations/receiving-orders/":                            SeedReceivingOrderID,
 	"/v1/operations/suppliers/{supplier_id}/materials/":           SeedMaterialID,

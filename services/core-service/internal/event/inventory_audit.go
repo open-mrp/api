@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -33,7 +34,7 @@ func updateInventoryWithAudit(
 		scanningStationID = &id
 	}
 
-	return mediator.RecordInventoryAuditTrail(
+	return mediator.RecordInventoryMovement(
 		ctx,
 		repos,
 		accountID,
@@ -43,6 +44,7 @@ func updateInventoryWithAudit(
 		params.ActionType,
 		scanningStationID,
 		params.ResponsibleUserID,
+		batchMovement(params.BatchID),
 	)
 }
 
@@ -64,6 +66,15 @@ type pendingInventoryAudit struct {
 	actionType        string
 	scanningStationID *string
 	responsibleUserID *string
+	batchID           *string
+}
+
+// batchMovement names the batch a scan's movement came from.
+func batchMovement(batchID *string) domain.MovementFields {
+	if batchID == nil || *batchID == "" {
+		return domain.MovementFields{}
+	}
+	return domain.MovementFields{RelatedType: constants.RecordTypeBatch, RelatedID: *batchID}
 }
 
 // inventoryAuditCollector defers the audit trail of a scan's inventory movements so their levels can
@@ -103,6 +114,7 @@ func (col *inventoryAuditCollector) mutate(
 		actionType:        params.ActionType,
 		scanningStationID: scanningStationID,
 		responsibleUserID: params.ResponsibleUserID,
+		batchID:           params.BatchID,
 	})
 	return nil
 }
@@ -149,7 +161,7 @@ func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.R
 	for _, p := range col.pending {
 		base := baseByItem[p.itemID]
 		level := levelInUnit(base, factorsByUnit, p.unitID)
-		if apiErr := mediator.RecordInventoryAuditTrailWithLevel(
+		if apiErr := mediator.RecordInventoryMovementWithLevel(
 			ctx,
 			repos,
 			accountID,
@@ -160,6 +172,7 @@ func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.R
 			p.actionType,
 			p.scanningStationID,
 			p.responsibleUserID,
+			batchMovement(p.batchID),
 		); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}

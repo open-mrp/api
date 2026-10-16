@@ -25,14 +25,14 @@ func assertQuantityInfoShape(t *testing.T, qi map[string]any, label string) {
 
 func TestItemInventory_Get_ResponseShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{
-		"include": {"on_hand", "reserved", "available_to_promise", "short"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{"include": {"item"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assertObjectField(t, got, "item_inventory")
+	assertObjectField(t, got, "inventory_level")
+	assert.Equal(t, SeedItemID, jsonField(jsonObject(got, "item"), "id"))
+	assertNilField(t, got, "location")
 	assertQuantityInfoShape(t, jsonObject(got, "on_hand"), "on_hand")
 	assertQuantityInfoShape(t, jsonObject(got, "reserved"), "reserved")
 	assertQuantityInfoShape(t, jsonObject(got, "available_to_promise"), "available_to_promise")

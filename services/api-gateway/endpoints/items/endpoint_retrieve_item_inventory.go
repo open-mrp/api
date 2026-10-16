@@ -12,6 +12,10 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
+// Preview9ItemInventoryRoute serves preview.9's GET /v1/catalog/items/{id}/inventory, whose forge path returns an
+// inventory level instead; versiontransforms.RoutePreview9Inventory reroutes preview.9 requests here.
+const Preview9ItemInventoryRoute = "/v1/catalog/items/{id}/preview-9-inventory"
+
 // Request to retrieve an item's inventory position.
 type RetrieveItemInventoryRequest struct {
 	// Item ID.
@@ -28,12 +32,10 @@ func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Retrieve Item Inventory",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/items/{id}/inventory",
+		Route:             Preview9ItemInventoryRoute,
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemInventory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemInventory

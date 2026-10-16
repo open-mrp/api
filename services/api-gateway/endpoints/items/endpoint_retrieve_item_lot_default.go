@@ -34,10 +34,8 @@ func (e *RetrieveItemLotDefaultEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/lot-default",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemLotDefault,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemLotDefault

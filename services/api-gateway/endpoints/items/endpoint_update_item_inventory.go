@@ -72,9 +72,7 @@ func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Route:             "/v1/catalog/items/{id}/inventory",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemSvc).UpdateItemInventory

@@ -18,7 +18,9 @@ const iclListColumns = `icl.id, icl.action_type_code, icl.account_id, icl.create
 	`COALESCE(u.ratio_numerator, 1), COALESCE(u.ratio_denominator, 1), COALESCE(u.offset_numerator, 0), COALESCE(u.offset_denominator, 1), ` +
 	`COALESCE(u.created_at, icl.created_at), COALESCE(u.updated_at, icl.updated_at), ` +
 	`icl.scanning_station_id, ss.name, ss.scanning_station_type_code, ss.created_at, ss.updated_at, ` +
-	`icl.responsible_user_id, usr.name, usr.created_at, usr.updated_at`
+	`icl.responsible_user_id, usr.name, usr.created_at, usr.updated_at, ` +
+	`icl.type_code, icl.actor_type, icl.actor_id, icl.location_id, icl.lot_id, icl.reason_code, icl.related_type, icl.related_id, ` +
+	`icl.unit_cost_amount, icl.unit_cost_currency, icl.unit_cost_per_unit_id, lt.lot_number`
 
 // iclListJoins reach every joined table by primary key from the page's change-log rows. They are outer
 // joins so every row the page chose comes back: an inner join dropped a row whose item was gone, which
@@ -27,7 +29,8 @@ const iclListJoins = ` LEFT JOIN item i ON i.id = icl.item_id` +
 	` LEFT JOIN quantity q ON q.id = icl.quantity_id` +
 	` LEFT JOIN unit u ON u.id = q.unit_id` +
 	` LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id` +
-	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id"
+	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id" +
+	" LEFT JOIN lot lt ON lt.id = icl.lot_id"
 
 // buildICLListPage assembles the inventory change-log listing's page. Only the
 // predicates the caller supplied are emitted: an `(? = false OR ...)` guard is not sargable, and left the
@@ -49,6 +52,10 @@ func buildICLListPage(
 			{column: "icl.item_id", index: "inventory_change_log_account_id_item_id_created_at_id_idx", values: params.ItemIDs},
 			{column: "icl.responsible_user_id", index: "inventory_change_log_acct_resp_user_created_idx", values: params.ChangedByUserIDs},
 			{column: "icl.action_type_code", index: "inventory_change_log_acct_action_type_code_created_idx", values: params.ActionTypeCodes},
+			{column: "icl.location_id", index: "inventory_change_log_location_created_idx", values: params.LocationIDs},
+			{column: "icl.actor_id", index: "inventory_change_log_actor_created_idx", values: params.ActorIDs},
+			{column: "icl.type_code", index: "inventory_change_log_acct_type_created_idx", values: params.Types},
+			{column: "icl.actor_type", index: "inventory_change_log_acct_actor_type_created_idx", values: params.ActorTypes},
 		},
 		where: []string{"icl.account_id = ?"},
 		args:  []any{params.AccountID},
@@ -93,6 +100,7 @@ func scanICLListRows(rows *gosql.Rows) ([]*domain.InventoryChangeLog, error) {
 		var stationCreatedAt, stationUpdatedAt gosql.NullTime
 		var responsibleUserID, responsibleUserName gosql.NullString
 		var responsibleUserCreatedAt, responsibleUserUpdatedAt gosql.NullTime
+		var mv movementColumns
 
 		if err := rows.Scan(
 			&icl.ID, &icl.ActionTypeCode, &icl.AccountID, &icl.CreatedAt, &icl.UpdatedAt,
@@ -104,6 +112,8 @@ func scanICLListRows(rows *gosql.Rows) ([]*domain.InventoryChangeLog, error) {
 			&icl.QuantityUnitCreatedAt, &icl.QuantityUnitUpdatedAt,
 			&stationID, &stationName, &stationType, &stationCreatedAt, &stationUpdatedAt,
 			&responsibleUserID, &responsibleUserName, &responsibleUserCreatedAt, &responsibleUserUpdatedAt,
+			&mv.TypeCode, &mv.ActorType, &mv.ActorID, &mv.LocationID, &mv.LotID, &mv.ReasonCode, &mv.RelatedType, &mv.RelatedID,
+			&mv.UnitCostAmount, &mv.UnitCostCurrency, &mv.UnitCostPerUnitID, &mv.LotNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -137,6 +147,7 @@ func scanICLListRows(rows *gosql.Rows) ([]*domain.InventoryChangeLog, error) {
 			icl.ResponsibleUserUpdatedAt = &responsibleUserUpdatedAt.Time
 		}
 
+		icl.Movement = mv.fields(icl.ActionTypeCode, icl.QuantityValue, icl.ScanningStationID, icl.ResponsibleUserID)
 		out = append(out, &icl)
 	}
 	return out, rows.Err()

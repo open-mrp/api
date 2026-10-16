@@ -14,6 +14,7 @@ import "core/value_shapes.proto";
 import "core/core_async.proto";
 import "core/core_analytics.proto";
 import "core/core_lookups.proto";
+import "core/primitives.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -371,6 +372,16 @@ message InventoryChangeLogInfo {
   optional google.protobuf.Timestamp scanning_station_updated_at = 28;
   optional google.protobuf.Timestamp responsible_user_created_at = 29;
   optional google.protobuf.Timestamp responsible_user_updated_at = 30;
+  // The movement this row records: business event, actor, place, lot, reason, source document and cost.
+  string type = 31;
+  Actor actor = 32;
+  optional string location_id = 33;
+  optional string lot_id = 34;
+  optional string reason = 35;
+  optional string related_type = 36;
+  optional string related_id = 37;
+  optional UnitPrice unit_cost = 38;
+  optional string lot_number = 39;
 }
 message ListInventoryChangeLogsRequest {
   optional string cursor = 1;
@@ -383,6 +394,10 @@ message ListInventoryChangeLogsRequest {
   optional google.protobuf.Timestamp end_date = 8;
   // Substring match on the affected item's SKU.
   optional string search_query = 9;
+  repeated string types = 10;
+  repeated string actor_ids = 11;
+  repeated string actor_types = 12;
+  repeated string location_ids = 13;
 }
 message ListInventoryChangeLogsResponse {
   repeated InventoryChangeLogInfo inventory_change_logs = 1;
@@ -411,6 +426,10 @@ message StartInventoryChangeLogsExportRequest {
   repeated string changed_by_user_ids = 3;
   optional google.protobuf.Timestamp start_date = 4;
   optional google.protobuf.Timestamp end_date = 5;
+  repeated string types = 6;
+  repeated string actor_ids = 7;
+  repeated string actor_types = 8;
+  repeated string location_ids = 9;
 }
 message StartInventoryChangeLogsExportResponse {
   JobInfo job = 1;

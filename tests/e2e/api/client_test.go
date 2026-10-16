@@ -34,6 +34,8 @@ type Client struct {
 	// header. The gateway rejects a request carrying both, so the two are
 	// mutually exclusive rather than additive.
 	cookies []*http.Cookie
+	// exactVersion sends apiVersion as is, even on a route requestVersion would pin to preview.9.
+	exactVersion bool
 }
 
 // NewClient creates a new API client.
@@ -63,6 +65,14 @@ func (c *Client) WithAPIVersion(version string) *Client {
 	return clone
 }
 
+// Exact returns a Client that sends its version on every route, never pinning a retired one to preview.9.
+func (c *Client) Exact() *Client {
+	clone := c.WithAPIVersion(c.apiVersion)
+	clone.cookies = c.cookies
+	clone.exactVersion = true
+	return clone
+}
+
 // WithCookies returns a new Client that authenticates with session cookies from a
 // login response instead of the Authorization header. Access tokens are refused in
 // the header by design, so cookies are the only way to act as a user rather than as
@@ -86,14 +96,19 @@ func (c *Client) applyAuth(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
 	req.Header.Set("OpenMRP-Account", c.accountID)
-	req.Header.Set("OpenMRP-Version", requestVersion(c.apiVersion, req.URL.Path))
+	version := c.apiVersion
+	if !c.exactVersion && !(req.Method == http.MethodGet && isItemInventoryPath(req.URL.Path)) {
+		version = requestVersion(c.apiVersion, req.URL.Path)
+	}
+	req.Header.Set("OpenMRP-Version", version)
 	req.Header.Set("Accept", "application/json")
 }
 
 // preview9OnlyPrefixes are the routes 1.0.forge removed but 1.0.forge-preview.9 callers still reach. Sales order lines
 // still name products, so fixtures create them here until orders take items.
 var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts", "/v1/catalog/products", "/v1/catalog/unit-groups", "/v1/ai/memories",
-	"/v1/sales/account-prices", "/v1/sales/volume-discounts"}
+	"/v1/sales/account-prices", "/v1/sales/volume-discounts", "/v1/operations/inventory-change-logs", "/v1/operations/inventories",
+	"/v1/catalog/items/actions/bulk-reconcile"}
 
 // requestVersion pins a default-version request to a preview.9-only route to preview.9, the only version it answers.
 func requestVersion(version, path string) string {
@@ -105,10 +120,27 @@ func requestVersion(version, path string) string {
 			return preview9Version
 		}
 	}
-	if isSupplierMaterialsPath(path) {
+	if isSupplierMaterialsPath(path) || isRetiredItemInventoryPath(path) {
 		return preview9Version
 	}
 	return version
+}
+
+// isRetiredItemInventoryPath reports whether path is an item's /inventory (whose PATCH only preview.9 answers; its GET
+// is forge's inventory level, which applyAuth leaves on the client's version) or its /lot-default.
+func isRetiredItemInventoryPath(path string) bool {
+	return isItemSubPath(path, "inventory") || isItemSubPath(path, "lot-default")
+}
+
+func isItemInventoryPath(path string) bool { return isItemSubPath(path, "inventory") }
+
+func isItemSubPath(path, sub string) bool {
+	rest, ok := strings.CutPrefix(path, "/v1/catalog/items/")
+	if !ok {
+		return false
+	}
+	id, suffix, ok := strings.Cut(rest, "/")
+	return ok && id != "" && suffix == sub
 }
 
 // isSupplierMaterialsPath reports whether path is under /v1/operations/suppliers/{id}/materials, which supplier items

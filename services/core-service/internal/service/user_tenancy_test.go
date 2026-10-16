@@ -58,6 +58,7 @@ func userInAnotherTenancy(ctrl *gomock.Controller) *factorymock.MockRepoFactory 
 	userRepo := repositorymock.NewMockUserRepo(ctrl)
 	userRepo.EXPECT().FindByID(gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("Resource not found.")).AnyTimes()
 	userRepo.EXPECT().FindByEmail(gomock.Any(), email).Return(&domain.UserRecord{ID: tenancyOtherID, Email: &email}, nil).AnyTimes()
+	userRepo.EXPECT().GetByIDs(gomock.Any(), tenancyAccountID, []string{tenancyOtherID}).Return(nil, nil).AnyTimes()
 
 	accountUserRepo := repositorymock.NewMockAccountUserRepo(ctrl)
 	accountUserRepo.EXPECT().FindByAccountAndUserID(gomock.Any(), tenancyOtherID, tenancyAccountID).
@@ -99,6 +100,36 @@ func assertUserNotFound(t *testing.T, call string, apiErr *apierror.APIError) {
 	if strings.Contains(apiErr.PublicMessage, "@") {
 		t.Errorf("%s: the refusal must not carry the email: %q", call, apiErr.PublicMessage)
 	}
+}
+
+// A member removed from the account is still read, since records keep naming them, but no longer managed: the
+// profile is theirs, shared with any account they still belong to.
+func TestUserSvc_ARemovedMemberIsReadNotManaged(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	removed := &domain.UserRecord{ID: tenancyOtherID}
+	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	userRepo.EXPECT().FindByID(gomock.Any(), tenancyOtherID).Return(removed, nil).AnyTimes()
+	userRepo.EXPECT().GetByIDs(gomock.Any(), tenancyAccountID, []string{tenancyOtherID}).Return([]*domain.UserRecord{removed}, nil).AnyTimes()
+	accountUserRepo := repositorymock.NewMockAccountUserRepo(ctrl)
+	accountUserRepo.EXPECT().FindByAccountAndUserID(gomock.Any(), tenancyOtherID, tenancyAccountID).
+		Return(nil, apierror.NewNotFoundError("Resource not found.")).AnyTimes()
+	repos := factorymock.NewMockRepoFactory(ctrl)
+	repos.EXPECT().NewUserRepo().Return(userRepo).AnyTimes()
+	repos.EXPECT().NewAccountUserRepo().Return(accountUserRepo).AnyTimes()
+	store := &recordingStore{}
+	svc := &userSvcImpl{repos: repos, s3Client: store}
+
+	user, apiErr := svc.GetUser(teamAdminCtx(), tenancyOtherID)
+	if apiErr != nil || user.ID != tenancyOtherID {
+		t.Fatalf("GetUser(removed member) = %v, %s", user, apierror.Describe(apiErr))
+	}
+
+	_, apiErr = svc.UpdateUser(teamAdminCtx(), tenancyOtherID, domain.UpdateUserParams{Name: new("Renamed")})
+	assertUserNotFound(t, "UpdateUser", apiErr)
+
+	apiErr = svc.UploadUserPhoto(teamAdminCtx(), tenancyOtherID, onePixelPNGHeader)
+	assertUserNotFound(t, "UploadUserPhoto", apiErr)
 }
 
 // A user's own record needs no membership lookup: acting in the account already proves it.

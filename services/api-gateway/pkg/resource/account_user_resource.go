@@ -20,7 +20,7 @@ type AccountUser struct {
 	//
 	// - `active`: the user can sign in to the account and occupies one of the plan's seats.
 	// - `disabled`: the user is locked out of the account and their sessions have been revoked, but the membership is retained.
-	// - `removed`: the membership has been soft-deleted; it is hidden from listings by default and can be restored with the activate action.
+	// - `removed`: the membership has been soft-deleted; it is hidden from listings by default and can be restored with the activate action. Records that name the user, such as a customer's sales rep or a transaction's responsible user, keep naming them, with their `user`.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
 	// The role that determines what this user is permitted to do in the account.
 	Role *Role `json:"role" expandable:"true"`

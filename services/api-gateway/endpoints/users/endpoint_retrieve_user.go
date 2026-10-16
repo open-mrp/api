@@ -24,7 +24,7 @@ type RetrieveUserRequest struct {
 //
 // The profile is shared across every account the user belongs to; account-specific details such as their status, role, and department live on the account user record instead.
 //
-// Users may always retrieve their own profile. Retrieving another user requires permission to read team users, and only users who belong to the account you are acting in are found.
+// Users may always retrieve their own profile. Retrieving another user requires permission to read team users, and only users who belong or belonged to the account you are acting in are found: a member since removed is still found, as records such as a customer's sales rep keep naming them, but their profile can no longer be updated.
 type RetrieveUserEndpoint struct{}
 
 func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUserRequest, *apiresource.User] {

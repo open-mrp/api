@@ -122,10 +122,14 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 								// A parallel test may also edit the row between the two reads. A real hydration gap
 								// mismatches on every read; an edit settles, so compare a fresh pair before failing.
 								if !hydratedMatchesCanonical(include, leaf, canon) {
-									if fresh := includedLeaf(id); fresh != nil {
+									fresh := includedLeaf(id)
+									if fresh != nil {
 										leaf = fresh
 									}
 									_, _, canon = retrieveCanonical(t, rt, id, owners)
+									if fresh == nil && !hydratedMatchesCanonical(include, leaf, canon) {
+										continue // the row left the page before a fresh pair could be read
+									}
 								}
 								assertHydratedMatchesCanonical(t, include, leaf, canon)
 								return

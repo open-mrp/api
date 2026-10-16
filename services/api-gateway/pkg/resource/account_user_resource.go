@@ -8,60 +8,63 @@ import (
 	"github.com/open-mrp/apikit/timeutil"
 )
 
-// A user's membership in an account, carrying the account-specific status, role, and department.
+// A person's membership in an account: your own team, or a customer's or supplier's contacts.
 //
-// Profile fields (name, email, username, image URL) live on the `user` sub-resource, which is shared across every account the user belongs to.
+// The person's name, email and photo are on `user`, which is shared across every account they belong to. Adding someone never gives them access by itself: your own team members are emailed a sign-in link when you add them, and contacts only when you invite them.
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
-	// The current state of this user's membership in the account.
+	// Whether the person can use the account.
 	//
-	// - `active`: the user can sign in to the account and occupies one of the plan's seats.
-	// - `disabled`: the user is locked out of the account and their sessions have been revoked, but the membership is retained.
-	// - `removed`: the membership has been soft-deleted; it is hidden from listings by default and can be restored with the activate action. Records that name the user, such as a customer's sales rep or a transaction's responsible user, keep naming them, with their `user`.
+	// - `active`: they can sign in, and on your own team they take a seat.
+	// - `disabled`: they're locked out and their sessions are ended; the membership is kept.
+	// - `removed`: they're no longer a member. Records that name them, such as a customer's sales rep, keep naming them.
+	//
+	// Change it with the activate, disable and remove actions.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
-	// The role that determines what this user is permitted to do in the account.
+	// Whether the person can sign in yet.
+	//
+	// - `none`: they've never been sent a sign-in link.
+	// - `invited`: they've been sent one but haven't signed in.
+	// - `active`: they've signed in.
+	//
+	// The invite action sends a link.
+	PortalAccess constants.PortalAccess `json:"portal_access" validate:"required"`
+	// The role that sets what the person can do in the account.
 	Role *Role `json:"role" expandable:"true"`
-	// The department this user belongs to within the account.
-	Department *WorkCenter `json:"department" expandable:"true"`
-	// The underlying user profile, shared across every account this person belongs to.
+	// The work center the person works in.
+	WorkCenter *WorkCenter `json:"work_center" expandable:"true"`
+	// The person's profile, shared across every account they belong to.
 	User *User `json:"user" expandable:"true"`
-	// Whether this user can be assigned as a sales representative on orders, territories, and targets.
+	// Whether the person can be named as a sales rep on customers, orders, territories and targets: `eligible` or `ineligible`.
 	//
-	// Independent of the `sales_rep` role type, which still scopes analytics and hides cost. Users with the `sales_rep` role are always eligible.
+	// Members with a sales-rep role are always `eligible`. `null` for customer and supplier portal users.
+	CommissionEligibility *constants.CommissionEligibility `json:"commission_eligibility" validate:"required" sensitive:"internal"`
+	// The notifications you send this contact about their account.
 	//
-	// Null to customer and supplier portal users, like the rest of your commission settings.
-	IsCommissionEligible *bool `json:"is_commission_eligible" validate:"required" sensitive:"internal"`
-	// The notifications you send this user about the customer or supplier account they belong to.
-	//
-	// Set when the account you are acting in is a customer or supplier account you manage, and an empty list when none are enabled; turn them on and off with `preferences` on create and update. `null` for your own account's users, and where an account user is embedded in another resource.
-	//
-	// - `order_acknowledgement`: the confirmation email sent when an order is placed for the customer.
-	// - `invoice`: invoice emails for the customer's orders.
-	// - `purchase_order_submission`: a copy of each purchase order you submit to the supplier.
-	NotificationTypes *[]constants.AccountRelationNotificationType `json:"notification_types"`
-	// When the user last accessed this account.
-	//
-	// Null to customer and supplier portal users: it is your own team's activity.
+	// Set when the account you are acting in is a customer or supplier account you manage, and `null` otherwise.
+	NotificationTypes *[]constants.AccountRelationNotificationType `json:"notification_types" visibility:"internal"`
+	// When the person last used this account. `null` for customer and supplier portal users.
 	LastUsedAt *time.Time `json:"last_used_at" sensitive:"internal"`
-	// When the account user was created.
+	// When the membership was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When the account user was last updated.
+	// When the membership was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 const SampleAccountUserID = "acus_e5zu8bde0z3h"
 
 var SampleAccountUser = &AccountUser{
-	ID:                   SampleAccountUserID,
-	Object:               constants.ObjectTypeAccountUser,
-	Status:               constants.AccountUserStatusActive,
-	Role:                 SampleRole,
-	Department:           SampleWorkCenter,
-	User:                 SampleUser,
-	IsCommissionEligible: new(false),
+	ID:                    SampleAccountUserID,
+	Object:                constants.ObjectTypeAccountUser,
+	Status:                constants.AccountUserStatusActive,
+	PortalAccess:          constants.PortalAccessActive,
+	Role:                  SampleRole,
+	WorkCenter:            SampleWorkCenter,
+	User:                  SampleUser,
+	CommissionEligibility: new(constants.CommissionEligibilityIneligible),
 	NotificationTypes: &[]constants.AccountRelationNotificationType{
 		constants.AccountRelationNotificationTypeInvoice,
 		constants.AccountRelationNotificationTypeOrderAcknowledgement,

@@ -11,35 +11,39 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
 // Request to create a role.
 type CreateRoleRequest struct {
-	// Display name for the role, such as "Warehouse Manager".
-	//
-	// Must be unique within your account.
+	// The role's name, unique within your account.
 	Name string `json:"name" validate:"required,max=255"`
-	// Permissions to grant, in `{permission}:{action}` format, such as `customers:read`.
-	//
-	// The first half is a permission code such as `customers` or `sales_orders`, and the action must be one of `create`, `read`, `update`, or `delete`. List each action separately to grant more than one action on the same permission. A role created without any permissions grants no access until permissions are added.
-	Permissions []string `json:"permissions,omitzero"`
+	// A template to start from; its access and grants apply unless you set them. GET /v1/identity/role-templates lists them.
+	Template field.Optional[constants.RoleTemplate] `json:"template,omitzero"`
+	// Access levels per area. Areas left out take the template's level, or `none`.
+	Access *RoleAccessInput `json:"access,omitzero"`
+	// Permission codes to hold beyond the access levels. Replaces the template's grants when sent.
+	Grants field.Optional[[]string] `json:"grants,omitzero"`
+	// Permission codes the access levels include that the role shouldn't hold.
+	Revokes []string `json:"revokes,omitzero"`
+	// The role's whole permission list, instead of a template, access, grants and revokes. Kept for older clients.
+	Permissions field.Optional[[]string] `json:"permissions,omitzero" visibility:"internal"`
 }
 
 var sampleCreateRoleRequest = &CreateRoleRequest{
-	Name: "Warehouse Manager",
-	Permissions: []string{
-		"customers:create", "customers:read", "customers:update",
-		"invoices:read",
-	},
+	Name:     "Warehouse",
+	Template: field.Some(constants.RoleTemplateWarehouse),
+	Access:   &RoleAccessInput{Production: field.Some(constants.AccessLevelRead)},
+	Revokes:  []string{"shipments:delete"},
 }
 
 func (*CreateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRoleRequest)
 }
 
-// Creates a custom role that can then be assigned to users in your account.
+// Creates a role.
 //
-// Roles created through the API are always owned by your account and have the type `user`. Returns a conflict error if a role with the same name already exists.
+// Start from a `template`, then adjust `access`, `grants` and `revokes`. You can only give a role permissions you hold yourself, unless you're an admin. 409 if your account already has a role with the name.
 type CreateRoleEndpoint struct{}
 
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {
@@ -52,17 +56,20 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionCreate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).CreateRole
 		},
 		LocationFunc: func(resp *apiresource.Role) string {
 			return "/v1/identity/roles/" + resp.ID
 		},
+		ObjectType:    constants.ObjectTypeRole,
+		IncludeConfig: roleIncludes(),
+	})
+}
+
+func roleIncludes() *apiendpoint.IncludeConfig {
+	return apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 		ObjectType: constants.ObjectTypeRole,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeRole,
-			Fields:     []string{"owner", "owner.account", "permissions"},
-		}),
+		Fields:     []string{"owner", "owner.account", "permissions"},
 	})
 }

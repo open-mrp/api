@@ -34,9 +34,9 @@ func LoadPermissionGroups(ctx context.Context, ids []string) (map[string]any, *a
 }
 
 func permissionGroupFromProto(pg *pb.PermissionGroupInfo) *apiresource.PermissionGroup {
-	perms := make([]apiresource.Permission, len(pg.Permissions))
+	perms := make([]apiresource.GroupPermission, len(pg.Permissions))
 	for i, p := range pg.Permissions {
-		perms[i] = apiresource.Permission{
+		perms[i] = apiresource.GroupPermission{
 			ID:                  p.Id,
 			Object:              constants.ObjectTypePermission,
 			Code:                p.Code,

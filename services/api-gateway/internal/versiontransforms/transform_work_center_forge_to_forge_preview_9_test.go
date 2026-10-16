@@ -99,7 +99,7 @@ func TestPreview9_WorkCenterRequestBodies(t *testing.T) {
 		"scanning_stations": []any{map[string]any{"name": "S1", "department": map[string]any{"id": "dp_1"}}}})
 	assert.Equal(t, map[string]any{"scanning_stations": []any{map[string]any{"name": "S1", "work_center": map[string]any{"id": "dp_1"}}}}, stations)
 
-	other := upgradeBody(constants.ObjectTypeAccountUser, http.MethodPost, "/v1/identity/account-users", map[string]any{"department_id": "dp_1"})
+	other := upgradeBody(constants.ObjectTypeNote, http.MethodPost, "/v1/core/notes", map[string]any{"department_id": "dp_1"})
 	assert.Equal(t, "dp_1", other["department_id"], "bodies of other endpoints are left alone")
 }
 

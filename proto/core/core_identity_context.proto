@@ -177,6 +177,12 @@ message RoleDetail {
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
   repeated RolePermissionDetail permissions = 7;
+  // The role's definition: access per area, the codes added and removed on top, and what it holds in the end.
+  map<string, string> access = 8;
+  repeated string grants = 9;
+  repeated string revokes = 10;
+  repeated string effective_permissions = 11;
+  optional string template_code = 12;
 }
 message ListRolesRequest {
   string cursor = 1;
@@ -204,9 +210,17 @@ message CreateRolePermissionInput {
   bool delete = 5;
 }
 message CreateRoleRequest {
+  reserved 2;
+  reserved "permissions";
   string name = 1;
-  repeated CreateRolePermissionInput permissions = 2;
   repeated string includes = 3;
+  optional string template_code = 4;
+  // Areas left out start from the template's level, or none without a template.
+  map<string, string> access = 5;
+  // When has_grants is false the template's grants apply.
+  bool has_grants = 6;
+  repeated string grants = 7;
+  repeated string revokes = 8;
 }
 message CreateRoleResponse {
   RoleDetail role = 1;
@@ -214,11 +228,16 @@ message CreateRoleResponse {
 message UpdateRoleRequest {
   string id = 1;
   string name = 2;
-  // When false, existing permissions are left unchanged.
-  bool has_permissions = 3;
-  // Only applied when has_permissions is true.
-  repeated CreateRolePermissionInput permissions = 4;
+  reserved 3, 4;
+  reserved "has_permissions", "permissions";
   repeated string includes = 5;
+  // Areas to change; the rest keep their level.
+  map<string, string> access = 6;
+  // When has_grants (has_revokes) is false the role keeps its grants (revokes).
+  bool has_grants = 7;
+  repeated string grants = 8;
+  bool has_revokes = 9;
+  repeated string revokes = 10;
 }
 message UpdateRoleResponse {
   RoleDetail role = 1;
@@ -551,6 +570,8 @@ message AccountUserDetail {
   bool is_commission_eligible = 19;
   // Notification types the acting account sends this user when it manages the user's account as a customer or supplier. Unset for the acting account's own users. GetAccountUser and BatchGetAccountUsersByIDs fill it; ListAccountUsers does not, since the gateway hydrates list pages through the batch read.
   AccountUserNotificationTypes notification_types = 20;
+  // When the member was last sent a sign-in link.
+  optional google.protobuf.Timestamp invited_at = 21;
 }
 
 // Wraps the codes so an unset field (not applicable) is distinguishable from an empty list (none enabled).

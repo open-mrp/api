@@ -773,7 +773,7 @@ func createAPIKeyAndCleanup(t *testing.T, name string) map[string]any {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	parsed := parseJSON(body)
-	info := jsonObject(parsed, "api_key_info")
+	info := jsonObject(parsed, "api_key")
 	require.NotNil(t, info)
 	id := jsonField(info, "id")
 	require.NotEmpty(t, id)

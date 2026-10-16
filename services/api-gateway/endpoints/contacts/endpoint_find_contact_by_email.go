@@ -59,7 +59,7 @@ func (e *FindContactByEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*Fin
 				"account_user",
 				"account_user.user",
 				"account_user.role",
-				"account_user.department",
+				"account_user.work_center",
 				"account",
 			},
 		}),

@@ -112,9 +112,9 @@ func TestCovMessagingBlocks_CreateListDeleteAllFields(t *testing.T) {
 	}
 	assert.True(t, foundIncluded, "created block should appear in the ?include=blocked_user list")
 
-	// GET list with the nested include variants (blocked_user.user/.role/.department).
+	// GET list with the nested include variants (blocked_user.user/.role/.work_center).
 	listNested, status, err := user.GetList(blocksPath, url.Values{
-		"include": {"blocked_user.user", "blocked_user.role", "blocked_user.department"},
+		"include": {"blocked_user.user", "blocked_user.role", "blocked_user.work_center"},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
@@ -138,8 +138,8 @@ func TestCovMessagingBlocks_CreateListDeleteAllFields(t *testing.T) {
 		assert.NotEmpty(t, jsonField(nestedRole, "id"))
 		assertObjectField(t, nestedRole, "role")
 
-		nestedDept := jsonObject(blockedUser, "department")
-		require.NotNil(t, nestedDept, "blocked_user.department should be populated with ?include=blocked_user.department")
+		nestedDept := jsonObject(blockedUser, "work_center")
+		require.NotNil(t, nestedDept, "blocked_user.work_center should be populated with ?include=blocked_user.work_center")
 		assertObjectField(t, nestedDept, "work_center")
 	}
 	assert.True(t, foundNested, "created block should appear in the nested-include list")

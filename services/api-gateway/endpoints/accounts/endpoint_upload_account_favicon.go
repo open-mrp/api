@@ -36,7 +36,7 @@ func (e *UploadAccountFaviconEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ContentType:       "application/json",
 		Route:             "/v1/identity/accounts/{id}/favicon",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		Extras: apiendpoint.APIEndpointExtras{

@@ -19,9 +19,9 @@ type DeleteRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Deletes a role along with the permissions granted through it.
+// Deletes a role.
 //
-// Only roles owned by your account can be deleted; the system-owned roles shared across all accounts cannot. A role that is still assigned to at least one user is rejected, so move those users to another role first.
+// Only your account's roles can be deleted. A role an account user or API key still holds is a 409 `resource_in_use`; move them to another role first.
 type DeleteRoleEndpoint struct{}
 
 func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteRoleRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(RoleSvc).DeleteRole, constants.ObjectTypeRole, "id")
 		},

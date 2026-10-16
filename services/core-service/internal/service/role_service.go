@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -108,7 +109,7 @@ func (s *roleSvcImpl) ListRoles(ctx context.Context, params domain.ListRolesPara
 		rolesWithPerms[i] = &domain.RoleWithPermissions{Role: *r}
 	}
 
-	if slices.Contains(params.Includes, "permissions") {
+	{
 		roleIDs := make([]string, len(page.Roles))
 		for i, r := range page.Roles {
 			roleIDs[i] = r.ID
@@ -148,7 +149,7 @@ func (s *roleSvcImpl) GetRole(ctx context.Context, roleID string, incs []string)
 
 	rwp := &domain.RoleWithPermissions{Role: *role}
 
-	if slices.Contains(incs, "permissions") {
+	{
 		permissions, apiErr := s.repos.NewRolePermissionRepo().ListByRoleID(ctx, roleID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -198,7 +199,12 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		if apiErr := checkPermissionsGrantable(identity, rolePermissionCodes(params.Permissions)); apiErr != nil {
+		access, effective, apiErr := createDefinition(params)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+		params.Access = access
+		if apiErr := checkPermissionsGrantable(identity, codeSet(effective)); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
@@ -219,15 +225,8 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 				return apiErr
 			}
 
-			for _, input := range params.Permissions {
-				permID, apiErr := id.GenID(id.RolePermissionIDPrefix, nil)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				if apiErr := txRolePermRepo.Create(txCtx, permID, roleID, input); apiErr != nil {
-					return apiErr
-				}
+			if apiErr := writePermissionRows(txCtx, txRolePermRepo, roleID, effective); apiErr != nil {
+				return apiErr
 			}
 
 			role, apiErr := txRoleRepo.Get(txCtx, roleID, params.AccountID)
@@ -326,8 +325,20 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 			if old.RoleType == string(constants.RoleTypeAdmin) && !identity.IsAdmin() {
 				return apierror.NewAuthorizationError("This is an admin role; only an admin can change it.")
 			}
-			if params.Permissions != nil {
-				if apiErr := checkPermissionsGrantable(identity, addedPermissionCodes(oldPermissions, *params.Permissions)); apiErr != nil {
+			changesDefinition := params.Access != nil || params.Grants != nil || params.Revokes != nil
+			var access types.RoleAccess
+			var effective []string
+			if changesDefinition {
+				var apiErr *apierror.APIError
+				access, effective, apiErr = updateDefinition(&domain.RoleWithPermissions{Role: *old, Permissions: oldPermissions}, params)
+				if apiErr != nil {
+					return apiErr
+				}
+				added := codeSet(effective)
+				for code := range domain.HeldCodes(oldPermissions) {
+					delete(added, code)
+				}
+				if apiErr := checkPermissionsGrantable(identity, added); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -346,20 +357,15 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 				}
 			}
 
-			if params.Permissions != nil {
+			if changesDefinition {
+				if apiErr := txRoleRepo.UpdateAccess(txCtx, params.RoleID, params.AccountID, access); apiErr != nil {
+					return apiErr
+				}
 				if apiErr := txRolePermRepo.DeleteByRoleID(txCtx, params.RoleID); apiErr != nil {
 					return apiErr
 				}
-
-				for _, input := range *params.Permissions {
-					permID, apiErr := id.GenID(id.RolePermissionIDPrefix, nil)
-					if apiErr != nil {
-						return apiErr
-					}
-
-					if apiErr := txRolePermRepo.Create(txCtx, permID, params.RoleID, input); apiErr != nil {
-						return apiErr
-					}
+				if apiErr := writePermissionRows(txCtx, txRolePermRepo, params.RoleID, effective); apiErr != nil {
+					return apiErr
 				}
 			}
 
@@ -444,12 +450,8 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 		return tracing.Trace(span, apierror.NewValidationError("Global roles cannot be deleted."))
 	}
 
-	assignedUserCount, apiErr := s.repos.NewAccountUserRepo().CountByRoleID(ctx, *role.AccountID, roleID)
-	if apiErr != nil {
+	if apiErr := domain.RoleReferences.RequireUnused(ctx, s.repos.NewReferenceRepo(), roleID); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if assignedUserCount > 0 {
-		return tracing.Trace(span, apierror.NewConflictError("This role cannot be deleted because it is assigned to one or more users."))
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *roleSvcImpl) *apierror.APIError {
@@ -570,4 +572,100 @@ func computePermissionsChange(oldPerms, newPerms []*domain.RolePermission) *audi
 
 	change := audit.NewFieldChange("permissions", oldSummaries, newSummaries)
 	return &change
+}
+
+// createDefinition settles a new role's access and what it holds: the template's access and grants, the request's
+// levels over them, its grants instead of the template's when given, and its revokes.
+func createDefinition(params domain.CreateRoleParams) (types.RoleAccess, []string, *apierror.APIError) {
+	access := types.RoleAccess{}.Complete()
+	var grants []string
+	if params.Template != nil {
+		spec, ok := types.RoleTemplateByCode(*params.Template)
+		if !ok {
+			return nil, nil, apierror.NewValidationError(fmt.Sprintf("Unknown role template %q.", *params.Template)).WithParam("template")
+		}
+		for area, level := range spec.Access {
+			access[area] = level
+		}
+		grants = slices.Clone(spec.Grants)
+	}
+	if apiErr := mergeAccess(access, params.Access); apiErr != nil {
+		return nil, nil, apiErr
+	}
+	if params.Grants != nil {
+		grants = *params.Grants
+	}
+	if apiErr := checkCatalogCodes("grants", grants); apiErr != nil {
+		return nil, nil, apiErr
+	}
+	if apiErr := checkCatalogCodes("revokes", params.Revokes); apiErr != nil {
+		return nil, nil, apiErr
+	}
+	return access, types.EffectivePermissions(access, grants, params.Revokes), nil
+}
+
+// updateDefinition applies a role update to its current definition: the areas named change level, and grants and
+// revokes are replaced when given.
+func updateDefinition(current *domain.RoleWithPermissions, params domain.UpdateRoleParams) (types.RoleAccess, []string, *apierror.APIError) {
+	def := current.Definition()
+	access := def.Access.Complete()
+	if apiErr := mergeAccess(access, params.Access); apiErr != nil {
+		return nil, nil, apiErr
+	}
+	grants, revokes := def.Grants, def.Revokes
+	if params.Grants != nil {
+		grants = *params.Grants
+		if apiErr := checkCatalogCodes("grants", grants); apiErr != nil {
+			return nil, nil, apiErr
+		}
+	}
+	if params.Revokes != nil {
+		revokes = *params.Revokes
+		if apiErr := checkCatalogCodes("revokes", revokes); apiErr != nil {
+			return nil, nil, apiErr
+		}
+	}
+	return access, types.EffectivePermissions(access, grants, revokes), nil
+}
+
+func mergeAccess(into, from types.RoleAccess) *apierror.APIError {
+	for area, level := range from {
+		if !area.IsValid() {
+			return apierror.NewValidationError(fmt.Sprintf("Unknown area %q. Areas are %s.", area, strings.Join(constants.PermissionArea("").EnumValues(), ", "))).WithParam("access")
+		}
+		if !level.IsValid() {
+			return apierror.NewValidationError(fmt.Sprintf("Unknown access level %q for %s. Levels are none, read, edit and full.", level, area)).WithParam("access." + string(area))
+		}
+		into[area] = level
+	}
+	return nil
+}
+
+func checkCatalogCodes(param string, codes []string) *apierror.APIError {
+	if unknown := types.UnknownPermissionCodes(codes); len(unknown) > 0 {
+		return apierror.NewValidationError(fmt.Sprintf("Unknown permission codes: %s. GET /v1/identity/permissions lists them.", strings.Join(unknown, ", "))).WithParam(param)
+	}
+	return nil
+}
+
+func codeSet(codes []string) map[string]bool {
+	out := make(map[string]bool, len(codes))
+	for _, c := range codes {
+		out[c] = true
+	}
+	return out
+}
+
+// writePermissionRows stores what a role holds as its permission rows, which every permission check reads.
+func writePermissionRows(ctx context.Context, repo domain.RolePermissionRepo, roleID string, effective []string) *apierror.APIError {
+	for _, input := range domain.PermissionRowsFor(effective) {
+		permID, apiErr := id.GenID(id.RolePermissionIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.Create(ctx, permID, roleID, input); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }

@@ -38,7 +38,7 @@ func (r *apiKeyRepoImpl) Find(ctx context.Context, apiKeyID string) (*apikey.API
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt), nil
+	return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt, apiKeyRow.ClientName, apiKeyRow.ClientSource), nil
 }
 
 func (r *apiKeyRepoImpl) Touch(ctx context.Context, apiKeyID int64) *apierror.APIError {
@@ -67,6 +67,8 @@ func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *apikey.APIKey) (int
 		OwnerAccountID: apiKey.OwnerAccountID,
 		RoleID:         apiKey.RoleID,
 		ExpiresAt:      db.NullTimePtr(apiKey.ExpiresAt),
+		ClientName:     db.NullStringPtr(apiKey.ClientName),
+		ClientSource:   db.NullStringPtr(apiKey.ClientSource),
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -255,7 +257,7 @@ func includesContains(includes []string, key string) bool {
 	return false
 }
 
-func mapWithRoleRow(id int64, typeID, keyID string, name gosql.NullString, secretHash []byte, redactedValue, ownerAccountID, roleID string, roleName, roleTypeCode gosql.NullString, createdAt, updatedAt time.Time, lastUsedAt, expiresAt, revokedAt gosql.NullTime) *apikey.APIKey {
+func mapWithRoleRow(id int64, typeID, keyID string, name gosql.NullString, secretHash []byte, redactedValue, ownerAccountID, roleID string, roleName, roleTypeCode gosql.NullString, createdAt, updatedAt time.Time, lastUsedAt, expiresAt, revokedAt gosql.NullTime, clientName, clientSource gosql.NullString) *apikey.APIKey {
 	rn := ""
 	if roleName.Valid {
 		rn = roleName.String
@@ -280,6 +282,8 @@ func mapWithRoleRow(id int64, typeID, keyID string, name gosql.NullString, secre
 		LastUsedAt:     db.TimeFromNullTime(lastUsedAt),
 		ExpiresAt:      db.TimeFromNullTime(expiresAt),
 		RevokedAt:      db.TimeFromNullTime(revokedAt),
+		ClientName:     db.StringFromNullString(clientName),
+		ClientSource:   db.StringFromNullString(clientSource),
 	}
 }
 
@@ -298,13 +302,15 @@ func mapBaseRow(row *sqlc.ApiKey) *apikey.APIKey {
 		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
 		ExpiresAt:      db.TimeFromNullTime(row.ExpiresAt),
 		RevokedAt:      db.TimeFromNullTime(row.RevokedAt),
+		ClientName:     db.StringFromNullString(row.ClientName),
+		ClientSource:   db.StringFromNullString(row.ClientSource),
 	}
 }
 
 func mapForwardAPIKeyRows(rows []sqlc.ListAPIKeysForwardRow) []*apikey.APIKey {
 	keys := make([]*apikey.APIKey, len(rows))
 	for i, r := range rows {
-		keys[i] = mapWithRoleRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt)
+		keys[i] = mapWithRoleRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt, r.ClientName, r.ClientSource)
 	}
 	return keys
 }
@@ -312,7 +318,7 @@ func mapForwardAPIKeyRows(rows []sqlc.ListAPIKeysForwardRow) []*apikey.APIKey {
 func mapBackwardAPIKeyRows(rows []sqlc.ListAPIKeysBackwardRow) []*apikey.APIKey {
 	keys := make([]*apikey.APIKey, len(rows))
 	for i, r := range rows {
-		keys[i] = mapWithRoleRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt)
+		keys[i] = mapWithRoleRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt, r.ClientName, r.ClientSource)
 	}
 	return keys
 }
@@ -337,7 +343,7 @@ func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string, includ
 			}
 			return nil, tracing.Trace(span, apiErr)
 		}
-		return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt), nil
+		return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt, apiKeyRow.ClientName, apiKeyRow.ClientSource), nil
 	}
 
 	row, err := r.db.FindAPIKeyBaseByTypeID(ctx, typeID)
@@ -407,7 +413,7 @@ func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64, include
 			}
 			return nil, tracing.Trace(span, apiErr)
 		}
-		return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt), nil
+		return mapWithRoleRow(apiKeyRow.ID, apiKeyRow.TypeID, apiKeyRow.KeyID, apiKeyRow.Name, apiKeyRow.SecretHash, apiKeyRow.RedactedValue, apiKeyRow.OwnerAccountID, apiKeyRow.RoleID, apiKeyRow.RoleName, apiKeyRow.RoleTypeCode, apiKeyRow.CreatedAt, apiKeyRow.UpdatedAt, apiKeyRow.LastUsedAt, apiKeyRow.ExpiresAt, apiKeyRow.RevokedAt, apiKeyRow.ClientName, apiKeyRow.ClientSource), nil
 	}
 
 	row, err := r.db.FindAPIKeyBaseByDatabaseID(ctx, id)

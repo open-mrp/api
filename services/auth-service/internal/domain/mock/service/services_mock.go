@@ -12,6 +12,7 @@ package servicemock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	apikey "github.com/open-mrp/api/services/auth-service/internal/apikey"
 	domain "github.com/open-mrp/api/services/auth-service/internal/domain"
@@ -204,6 +205,22 @@ func NewMockPasswordSvc(ctrl *gomock.Controller) *MockPasswordSvc {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPasswordSvc) EXPECT() *MockPasswordSvcMockRecorder {
 	return m.recorder
+}
+
+// IssueSignInToken mocks base method.
+func (m *MockPasswordSvc) IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IssueSignInToken", ctx, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(time.Time)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// IssueSignInToken indicates an expected call of IssueSignInToken.
+func (mr *MockPasswordSvcMockRecorder) IssueSignInToken(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueSignInToken", reflect.TypeOf((*MockPasswordSvc)(nil).IssueSignInToken), ctx, userID)
 }
 
 // RequestPasswordReset mocks base method.

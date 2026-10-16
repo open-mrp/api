@@ -107,6 +107,7 @@ const (
 	CoreService_CreateAccountUser_FullMethodName                          = "/core.CoreService/CreateAccountUser"
 	CoreService_UpdateAccountUser_FullMethodName                          = "/core.CoreService/UpdateAccountUser"
 	CoreService_UpdateAccountUserStatus_FullMethodName                    = "/core.CoreService/UpdateAccountUserStatus"
+	CoreService_InviteAccountUser_FullMethodName                          = "/core.CoreService/InviteAccountUser"
 	CoreService_UpdateAccountUserPassword_FullMethodName                  = "/core.CoreService/UpdateAccountUserPassword"
 	CoreService_BatchGetAccountUsersByIDs_FullMethodName                  = "/core.CoreService/BatchGetAccountUsersByIDs"
 	CoreService_ListSalesTargets_FullMethodName                           = "/core.CoreService/ListSalesTargets"
@@ -614,7 +615,9 @@ type CoreServiceClient interface {
 	// Partially updates an account user.
 	UpdateAccountUser(ctx context.Context, in *UpdateAccountUserRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error)
 	// Transitions an account user to the target status (active, disabled, or removed).
-	UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error)
+	// Sends an account user a sign-in link and records that they were invited.
+	InviteAccountUser(ctx context.Context, in *InviteAccountUserRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error)
 	// Updates the password for an account user (non-admin users without an email address only).
 	UpdateAccountUserPassword(ctx context.Context, in *UpdateAccountUserPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Batched read for the api-gateway resourcekit resolver.
@@ -1935,10 +1938,20 @@ func (c *coreServiceClient) UpdateAccountUser(ctx context.Context, in *UpdateAcc
 	return out, nil
 }
 
-func (c *coreServiceClient) UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *coreServiceClient) UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(UpdateAccountUserResponse)
 	err := c.cc.Invoke(ctx, CoreService_UpdateAccountUserStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) InviteAccountUser(ctx context.Context, in *InviteAccountUserRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateAccountUserResponse)
+	err := c.cc.Invoke(ctx, CoreService_InviteAccountUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5501,7 +5514,9 @@ type CoreServiceServer interface {
 	// Partially updates an account user.
 	UpdateAccountUser(context.Context, *UpdateAccountUserRequest) (*UpdateAccountUserResponse, error)
 	// Transitions an account user to the target status (active, disabled, or removed).
-	UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*emptypb.Empty, error)
+	UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*UpdateAccountUserResponse, error)
+	// Sends an account user a sign-in link and records that they were invited.
+	InviteAccountUser(context.Context, *InviteAccountUserRequest) (*UpdateAccountUserResponse, error)
 	// Updates the password for an account user (non-admin users without an email address only).
 	UpdateAccountUserPassword(context.Context, *UpdateAccountUserPasswordRequest) (*emptypb.Empty, error)
 	// Batched read for the api-gateway resourcekit resolver.
@@ -6269,8 +6284,11 @@ func (UnimplementedCoreServiceServer) CreateAccountUser(context.Context, *Create
 func (UnimplementedCoreServiceServer) UpdateAccountUser(context.Context, *UpdateAccountUserRequest) (*UpdateAccountUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUser not implemented")
 }
-func (UnimplementedCoreServiceServer) UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*emptypb.Empty, error) {
+func (UnimplementedCoreServiceServer) UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*UpdateAccountUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUserStatus not implemented")
+}
+func (UnimplementedCoreServiceServer) InviteAccountUser(context.Context, *InviteAccountUserRequest) (*UpdateAccountUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InviteAccountUser not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdateAccountUserPassword(context.Context, *UpdateAccountUserPasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUserPassword not implemented")
@@ -8746,6 +8764,24 @@ func _CoreService_UpdateAccountUserStatus_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).UpdateAccountUserStatus(ctx, req.(*UpdateAccountUserStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_InviteAccountUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InviteAccountUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).InviteAccountUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_InviteAccountUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).InviteAccountUser(ctx, req.(*InviteAccountUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -15178,6 +15214,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAccountUserStatus",
 			Handler:    _CoreService_UpdateAccountUserStatus_Handler,
+		},
+		{
+			MethodName: "InviteAccountUser",
+			Handler:    _CoreService_InviteAccountUser_Handler,
 		},
 		{
 			MethodName: "UpdateAccountUserPassword",

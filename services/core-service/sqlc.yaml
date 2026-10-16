@@ -22,6 +22,10 @@ sql:
           # until the job settles. json.RawMessage cannot scan NULL — database/sql
           # special cases *[]byte but not named types of it — so a freshly created
           # job would fail to read back.
+          - column: "role.access"
+            go_type:
+              import: "github.com/open-mrp/apikit/db"
+              type: "NullableRawMessage"
           - column: "job.results"
             go_type:
               import: "github.com/open-mrp/apikit/db"

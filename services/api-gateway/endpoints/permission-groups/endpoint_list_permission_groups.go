@@ -23,7 +23,8 @@ type ListPermissionGroupsRequest struct {
 	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
-// Lists the permission catalog, organized into groups of related permissions.
+// Lists the permission catalog, organized into groups of related permissions. Internal: 1.0.forge-preview.9 callers
+// only; forge reads GET /v1/identity/permissions.
 //
 // Each group carries the individual permissions it covers; pair a permission's code with an action (`create`, `read`, `update`, or `delete`) to build the permission strings accepted when creating or updating a role. The catalog is platform-defined and identical for every account.
 type ListPermissionGroupsEndpoint struct{}
@@ -35,9 +36,8 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ContentType:       "application/json",
 		Route:             "/v1/identity/permission-groups",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
+		AgentTool:         false,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainPermissions, Action: types.ActionRead},
 		}},

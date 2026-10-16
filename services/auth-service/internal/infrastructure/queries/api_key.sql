@@ -16,6 +16,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -37,6 +39,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -58,6 +62,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -125,7 +131,9 @@ SELECT
     api_key.updated_at,
     api_key.last_used_at,
     api_key.expires_at,
-    api_key.revoked_at
+    api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source
 FROM api_key
 WHERE api_key.type_id IN (sqlc.slice('ids'))
 AND api_key.owner_account_id = sqlc.arg('owner_account_id');
@@ -154,8 +162,10 @@ INSERT INTO api_key (
     role_id,
     created_at,
     updated_at,
-    expires_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), ?);
+    expires_at,
+    client_name,
+    client_source
+) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), ?, ?, ?);
 
 -- name: ListAPIKeysForward :many
 SELECT

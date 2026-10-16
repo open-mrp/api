@@ -58,6 +58,21 @@ func (mr *MockCoreAuthClientMockRecorder) GetIncompleteRegistrationSession(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteRegistrationSession", reflect.TypeOf((*MockCoreAuthClient)(nil).GetIncompleteRegistrationSession), ctx, userID)
 }
 
+// IssueSignInToken mocks base method.
+func (m *MockCoreAuthClient) IssueSignInToken(ctx context.Context, userID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IssueSignInToken", ctx, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IssueSignInToken indicates an expected call of IssueSignInToken.
+func (mr *MockCoreAuthClientMockRecorder) IssueSignInToken(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueSignInToken", reflect.TypeOf((*MockCoreAuthClient)(nil).IssueSignInToken), ctx, userID)
+}
+
 // MockShippoClient is a mock of ShippoClient interface.
 type MockShippoClient struct {
 	ctrl     *gomock.Controller

@@ -18,30 +18,30 @@ import (
 type UpdateRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
-	// New display name for the role.
-	//
-	// Returns a conflict error if another role in your account already uses this name.
+	// The role's name, unique within your account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Full replacement set of permissions, in `{permission}:{action}` format, such as `customers:read`.
-	//
-	// The role's existing permissions are discarded and replaced with exactly what you send, so include every permission the role should keep. Sending an empty array strips the role of all access, while leaving the field out keeps the current permissions untouched.
-	Permissions field.Optional[[]string] `json:"permissions,omitzero"`
+	// Access levels to change. Areas left out keep their level.
+	Access *RoleAccessInput `json:"access,omitzero"`
+	// Permission codes to hold beyond the access levels. Replaces the role's grants.
+	Grants field.Optional[[]string] `json:"grants,omitzero"`
+	// Permission codes the access levels include that the role shouldn't hold. Replaces the role's revokes.
+	Revokes field.Optional[[]string] `json:"revokes,omitzero"`
+	// The role's whole permission list, replacing its access, grants and revokes. Kept for older clients.
+	Permissions field.Optional[[]string] `json:"permissions,omitzero" visibility:"internal"`
 }
 
-var sampleUpdateRoleName = "Updated Manager"
-var sampleUpdateRolePerms = []string{"customers:read", "customers:update"}
 var sampleUpdateRoleRequest = &UpdateRoleRequest{
-	Name:        field.Some(sampleUpdateRoleName),
-	Permissions: field.Some(sampleUpdateRolePerms),
+	Access: &RoleAccessInput{Sales: field.Some(constants.AccessLevelEdit)},
+	Grants: field.Some([]string{"invoices:read"}),
 }
 
 func (*UpdateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRoleRequest)
 }
 
-// Updates a role's name or the set of permissions it grants.
+// Updates a role.
 //
-// Only roles owned by your account can be updated; the system-owned roles shared across all accounts are rejected. Permission changes apply to every user already assigned the role, starting with their next request.
+// Only fields you send are changed, including each area inside `access`. Changes apply to everyone with the role from their next request. You can only give a role permissions you hold yourself, unless you're an admin. The system roles OpenMRP owns can't be changed.
 type UpdateRoleEndpoint struct{}
 
 func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleRequest, *apiresource.Role] {
@@ -54,14 +54,10 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).UpdateRole
 		},
-		ObjectType: constants.ObjectTypeRole,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeRole,
-			Fields:     []string{"owner", "owner.account", "permissions"},
-		}),
+		ObjectType:    constants.ObjectTypeRole,
+		IncludeConfig: roleIncludes(),
 	})
 }

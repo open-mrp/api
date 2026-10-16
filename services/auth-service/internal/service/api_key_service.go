@@ -182,6 +182,8 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 				RoleID:         input.RoleID,
 				Name:           input.Name,
 				ExpiresAt:      input.ExpiresAt,
+				ClientName:     input.ClientName,
+				ClientSource:   input.ClientSource,
 			})
 
 			if createErr != nil {

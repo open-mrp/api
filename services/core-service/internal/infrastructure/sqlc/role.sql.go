@@ -10,6 +10,8 @@ import (
 	"database/sql"
 	"strings"
 	"time"
+
+	"github.com/open-mrp/apikit/db"
 )
 
 const deleteRoleByID = `-- name: DeleteRoleByID :exec
@@ -102,7 +104,7 @@ func (q *Queries) GetRoleByID(ctx context.Context, id string) (GetRoleByIDRow, e
 }
 
 const getRoleByIDAndAccount = `-- name: GetRoleByIDAndAccount :one
-SELECT id, name, role_type_code, account_id, created_at, updated_at
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
 FROM role
 WHERE id = ? AND (account_id = ? OR account_id IS NULL)
 `
@@ -122,6 +124,8 @@ func (q *Queries) GetRoleByIDAndAccount(ctx context.Context, arg GetRoleByIDAndA
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Access,
+		&i.TemplateCode,
 	)
 	return i, err
 }
@@ -170,7 +174,7 @@ func (q *Queries) GetRolesByIDs(ctx context.Context, ids []string) ([]GetRolesBy
 }
 
 const getRolesFullByIDs = `-- name: GetRolesFullByIDs :many
-SELECT id, name, role_type_code, account_id, created_at, updated_at
+SELECT id, name, role_type_code, account_id, created_at, updated_at, access, template_code
 FROM role
 WHERE id IN (/*SLICE:ids*/?)
 AND (account_id = ? OR account_id IS NULL)
@@ -208,6 +212,8 @@ func (q *Queries) GetRolesFullByIDs(ctx context.Context, arg GetRolesFullByIDsPa
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Access,
+			&i.TemplateCode,
 		); err != nil {
 			return nil, err
 		}
@@ -223,8 +229,8 @@ func (q *Queries) GetRolesFullByIDs(ctx context.Context, arg GetRolesFullByIDsPa
 }
 
 const insertRole = `-- name: InsertRole :exec
-INSERT INTO role (id, name, role_type_code, account_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO role (id, name, role_type_code, account_id, access, template_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type InsertRoleParams struct {
@@ -232,6 +238,8 @@ type InsertRoleParams struct {
 	Name         string
 	RoleTypeCode string
 	AccountID    sql.NullString
+	Access       db.NullableRawMessage
+	TemplateCode sql.NullString
 }
 
 func (q *Queries) InsertRole(ctx context.Context, arg InsertRoleParams) error {
@@ -240,6 +248,8 @@ func (q *Queries) InsertRole(ctx context.Context, arg InsertRoleParams) error {
 		arg.Name,
 		arg.RoleTypeCode,
 		arg.AccountID,
+		arg.Access,
+		arg.TemplateCode,
 	)
 	return err
 }
@@ -251,7 +261,9 @@ SELECT
     r.role_type_code,
     r.account_id,
     r.created_at,
-    r.updated_at
+    r.updated_at,
+    r.access,
+    r.template_code
 FROM role r
 WHERE (r.account_id = ? OR r.account_id IS NULL)
 AND (
@@ -314,6 +326,8 @@ func (q *Queries) ListRolesBackward(ctx context.Context, arg ListRolesBackwardPa
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Access,
+			&i.TemplateCode,
 		); err != nil {
 			return nil, err
 		}
@@ -335,7 +349,9 @@ SELECT
     r.role_type_code,
     r.account_id,
     r.created_at,
-    r.updated_at
+    r.updated_at,
+    r.access,
+    r.template_code
 FROM role r
 WHERE (r.account_id = ? OR r.account_id IS NULL)
 AND (
@@ -400,6 +416,8 @@ func (q *Queries) ListRolesForward(ctx context.Context, arg ListRolesForwardPara
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Access,
+			&i.TemplateCode,
 		); err != nil {
 			return nil, err
 		}
@@ -412,6 +430,23 @@ func (q *Queries) ListRolesForward(ctx context.Context, arg ListRolesForwardPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateRoleAccess = `-- name: UpdateRoleAccess :exec
+UPDATE role
+SET access = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?
+`
+
+type UpdateRoleAccessParams struct {
+	Access    db.NullableRawMessage
+	ID        string
+	AccountID sql.NullString
+}
+
+func (q *Queries) UpdateRoleAccess(ctx context.Context, arg UpdateRoleAccessParams) error {
+	_, err := q.db.ExecContext(ctx, updateRoleAccess, arg.Access, arg.ID, arg.AccountID)
+	return err
 }
 
 const updateRoleName = `-- name: UpdateRoleName :exec

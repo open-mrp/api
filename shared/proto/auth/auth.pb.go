@@ -1210,6 +1210,7 @@ type CreateAPIKeyRequest struct {
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
 	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	Client        *APIKeyClient          `protobuf:"bytes,5,opt,name=client,proto3,oneof" json:"client,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1272,6 +1273,163 @@ func (x *CreateAPIKeyRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreateAPIKeyRequest) GetClient() *APIKeyClient {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
+// The client an API key was made for.
+type APIKeyClient struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Source        *string                `protobuf:"bytes,2,opt,name=source,proto3,oneof" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *APIKeyClient) Reset() {
+	*x = APIKeyClient{}
+	mi := &file_auth_auth_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *APIKeyClient) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*APIKeyClient) ProtoMessage() {}
+
+func (x *APIKeyClient) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use APIKeyClient.ProtoReflect.Descriptor instead.
+func (*APIKeyClient) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *APIKeyClient) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *APIKeyClient) GetSource() string {
+	if x != nil && x.Source != nil {
+		return *x.Source
+	}
+	return ""
+}
+
+type IssueSignInTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IssueSignInTokenRequest) Reset() {
+	*x = IssueSignInTokenRequest{}
+	mi := &file_auth_auth_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IssueSignInTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IssueSignInTokenRequest) ProtoMessage() {}
+
+func (x *IssueSignInTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IssueSignInTokenRequest.ProtoReflect.Descriptor instead.
+func (*IssueSignInTokenRequest) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *IssueSignInTokenRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type IssueSignInTokenResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A password-reset token that signs the user in and lets them choose a password.
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IssueSignInTokenResponse) Reset() {
+	*x = IssueSignInTokenResponse{}
+	mi := &file_auth_auth_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IssueSignInTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IssueSignInTokenResponse) ProtoMessage() {}
+
+func (x *IssueSignInTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IssueSignInTokenResponse.ProtoReflect.Descriptor instead.
+func (*IssueSignInTokenResponse) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *IssueSignInTokenResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *IssueSignInTokenResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 type CreateAPIKeyResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Full secret value, shown only at creation time.
@@ -1283,7 +1441,7 @@ type CreateAPIKeyResponse struct {
 
 func (x *CreateAPIKeyResponse) Reset() {
 	*x = CreateAPIKeyResponse{}
-	mi := &file_auth_auth_proto_msgTypes[18]
+	mi := &file_auth_auth_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1295,7 +1453,7 @@ func (x *CreateAPIKeyResponse) String() string {
 func (*CreateAPIKeyResponse) ProtoMessage() {}
 
 func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[18]
+	mi := &file_auth_auth_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1308,7 +1466,7 @@ func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{18}
+	return file_auth_auth_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CreateAPIKeyResponse) GetApiKeySecret() string {
@@ -1341,7 +1499,7 @@ type RotateAPIKeyRequest struct {
 
 func (x *RotateAPIKeyRequest) Reset() {
 	*x = RotateAPIKeyRequest{}
-	mi := &file_auth_auth_proto_msgTypes[19]
+	mi := &file_auth_auth_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1353,7 +1511,7 @@ func (x *RotateAPIKeyRequest) String() string {
 func (*RotateAPIKeyRequest) ProtoMessage() {}
 
 func (x *RotateAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[19]
+	mi := &file_auth_auth_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1366,7 +1524,7 @@ func (x *RotateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*RotateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{19}
+	return file_auth_auth_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RotateAPIKeyRequest) GetApiKeyId() string {
@@ -1408,7 +1566,7 @@ type RotateAPIKeyResponse struct {
 
 func (x *RotateAPIKeyResponse) Reset() {
 	*x = RotateAPIKeyResponse{}
-	mi := &file_auth_auth_proto_msgTypes[20]
+	mi := &file_auth_auth_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1420,7 +1578,7 @@ func (x *RotateAPIKeyResponse) String() string {
 func (*RotateAPIKeyResponse) ProtoMessage() {}
 
 func (x *RotateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[20]
+	mi := &file_auth_auth_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1433,7 +1591,7 @@ func (x *RotateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*RotateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{20}
+	return file_auth_auth_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RotateAPIKeyResponse) GetApiKeySecret() string {
@@ -1459,7 +1617,7 @@ type RevokeAPIKeyRequest struct {
 
 func (x *RevokeAPIKeyRequest) Reset() {
 	*x = RevokeAPIKeyRequest{}
-	mi := &file_auth_auth_proto_msgTypes[21]
+	mi := &file_auth_auth_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1471,7 +1629,7 @@ func (x *RevokeAPIKeyRequest) String() string {
 func (*RevokeAPIKeyRequest) ProtoMessage() {}
 
 func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[21]
+	mi := &file_auth_auth_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1484,7 +1642,7 @@ func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*RevokeAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{21}
+	return file_auth_auth_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *RevokeAPIKeyRequest) GetApiKeyId() string {
@@ -1508,7 +1666,7 @@ type ListAPIKeysRequest struct {
 
 func (x *ListAPIKeysRequest) Reset() {
 	*x = ListAPIKeysRequest{}
-	mi := &file_auth_auth_proto_msgTypes[22]
+	mi := &file_auth_auth_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1520,7 +1678,7 @@ func (x *ListAPIKeysRequest) String() string {
 func (*ListAPIKeysRequest) ProtoMessage() {}
 
 func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[22]
+	mi := &file_auth_auth_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1533,7 +1691,7 @@ func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{22}
+	return file_auth_auth_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListAPIKeysRequest) GetCursor() string {
@@ -1583,7 +1741,7 @@ type PageInfo struct {
 
 func (x *PageInfo) Reset() {
 	*x = PageInfo{}
-	mi := &file_auth_auth_proto_msgTypes[23]
+	mi := &file_auth_auth_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1595,7 +1753,7 @@ func (x *PageInfo) String() string {
 func (*PageInfo) ProtoMessage() {}
 
 func (x *PageInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[23]
+	mi := &file_auth_auth_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1608,7 +1766,7 @@ func (x *PageInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PageInfo.ProtoReflect.Descriptor instead.
 func (*PageInfo) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{23}
+	return file_auth_auth_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PageInfo) GetNextCursor() string {
@@ -1649,7 +1807,7 @@ type ListAPIKeysResponse struct {
 
 func (x *ListAPIKeysResponse) Reset() {
 	*x = ListAPIKeysResponse{}
-	mi := &file_auth_auth_proto_msgTypes[24]
+	mi := &file_auth_auth_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1661,7 +1819,7 @@ func (x *ListAPIKeysResponse) String() string {
 func (*ListAPIKeysResponse) ProtoMessage() {}
 
 func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[24]
+	mi := &file_auth_auth_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1674,7 +1832,7 @@ func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{24}
+	return file_auth_auth_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListAPIKeysResponse) GetApiKeys() []*APIKeyInfo {
@@ -1701,7 +1859,7 @@ type GetAPIKeyRequest struct {
 
 func (x *GetAPIKeyRequest) Reset() {
 	*x = GetAPIKeyRequest{}
-	mi := &file_auth_auth_proto_msgTypes[25]
+	mi := &file_auth_auth_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1713,7 +1871,7 @@ func (x *GetAPIKeyRequest) String() string {
 func (*GetAPIKeyRequest) ProtoMessage() {}
 
 func (x *GetAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[25]
+	mi := &file_auth_auth_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1726,7 +1884,7 @@ func (x *GetAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*GetAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{25}
+	return file_auth_auth_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetAPIKeyRequest) GetApiKeyId() string {
@@ -1752,7 +1910,7 @@ type GetAPIKeyResponse struct {
 
 func (x *GetAPIKeyResponse) Reset() {
 	*x = GetAPIKeyResponse{}
-	mi := &file_auth_auth_proto_msgTypes[26]
+	mi := &file_auth_auth_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1764,7 +1922,7 @@ func (x *GetAPIKeyResponse) String() string {
 func (*GetAPIKeyResponse) ProtoMessage() {}
 
 func (x *GetAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[26]
+	mi := &file_auth_auth_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1777,7 +1935,7 @@ func (x *GetAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{26}
+	return file_auth_auth_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetAPIKeyResponse) GetApiKey() *APIKeyInfo {
@@ -1796,7 +1954,7 @@ type BatchGetAPIKeysByIDsRequest struct {
 
 func (x *BatchGetAPIKeysByIDsRequest) Reset() {
 	*x = BatchGetAPIKeysByIDsRequest{}
-	mi := &file_auth_auth_proto_msgTypes[27]
+	mi := &file_auth_auth_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1808,7 +1966,7 @@ func (x *BatchGetAPIKeysByIDsRequest) String() string {
 func (*BatchGetAPIKeysByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetAPIKeysByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[27]
+	mi := &file_auth_auth_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1821,7 +1979,7 @@ func (x *BatchGetAPIKeysByIDsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetAPIKeysByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetAPIKeysByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{27}
+	return file_auth_auth_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *BatchGetAPIKeysByIDsRequest) GetIds() []string {
@@ -1840,7 +1998,7 @@ type BatchGetAPIKeysByIDsResponse struct {
 
 func (x *BatchGetAPIKeysByIDsResponse) Reset() {
 	*x = BatchGetAPIKeysByIDsResponse{}
-	mi := &file_auth_auth_proto_msgTypes[28]
+	mi := &file_auth_auth_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1852,7 +2010,7 @@ func (x *BatchGetAPIKeysByIDsResponse) String() string {
 func (*BatchGetAPIKeysByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetAPIKeysByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[28]
+	mi := &file_auth_auth_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1865,7 +2023,7 @@ func (x *BatchGetAPIKeysByIDsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetAPIKeysByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetAPIKeysByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{28}
+	return file_auth_auth_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *BatchGetAPIKeysByIDsResponse) GetApiKeys() []*APIKeyInfo {
@@ -1888,13 +2046,15 @@ type APIKeyInfo struct {
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
 	RevokedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=revoked_at,json=revokedAt,proto3,oneof" json:"revoked_at,omitempty"`
 	RoleTypeCode  *string                `protobuf:"bytes,11,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
+	ClientName    *string                `protobuf:"bytes,12,opt,name=client_name,json=clientName,proto3,oneof" json:"client_name,omitempty"`
+	ClientSource  *string                `protobuf:"bytes,13,opt,name=client_source,json=clientSource,proto3,oneof" json:"client_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *APIKeyInfo) Reset() {
 	*x = APIKeyInfo{}
-	mi := &file_auth_auth_proto_msgTypes[29]
+	mi := &file_auth_auth_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1906,7 +2066,7 @@ func (x *APIKeyInfo) String() string {
 func (*APIKeyInfo) ProtoMessage() {}
 
 func (x *APIKeyInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[29]
+	mi := &file_auth_auth_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1919,7 +2079,7 @@ func (x *APIKeyInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIKeyInfo.ProtoReflect.Descriptor instead.
 func (*APIKeyInfo) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{29}
+	return file_auth_auth_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *APIKeyInfo) GetId() string {
@@ -1999,6 +2159,20 @@ func (x *APIKeyInfo) GetRoleTypeCode() string {
 	return ""
 }
 
+func (x *APIKeyInfo) GetClientName() string {
+	if x != nil && x.ClientName != nil {
+		return *x.ClientName
+	}
+	return ""
+}
+
+func (x *APIKeyInfo) GetClientSource() string {
+	if x != nil && x.ClientSource != nil {
+		return *x.ClientSource
+	}
+	return ""
+}
+
 type GetOrCreateDocAPIKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Includes      []string               `protobuf:"bytes,1,rep,name=includes,proto3" json:"includes,omitempty"`
@@ -2008,7 +2182,7 @@ type GetOrCreateDocAPIKeyRequest struct {
 
 func (x *GetOrCreateDocAPIKeyRequest) Reset() {
 	*x = GetOrCreateDocAPIKeyRequest{}
-	mi := &file_auth_auth_proto_msgTypes[30]
+	mi := &file_auth_auth_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2020,7 +2194,7 @@ func (x *GetOrCreateDocAPIKeyRequest) String() string {
 func (*GetOrCreateDocAPIKeyRequest) ProtoMessage() {}
 
 func (x *GetOrCreateDocAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[30]
+	mi := &file_auth_auth_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2033,7 +2207,7 @@ func (x *GetOrCreateDocAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrCreateDocAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*GetOrCreateDocAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{30}
+	return file_auth_auth_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetOrCreateDocAPIKeyRequest) GetIncludes() []string {
@@ -2053,7 +2227,7 @@ type GetOrCreateDocAPIKeyResponse struct {
 
 func (x *GetOrCreateDocAPIKeyResponse) Reset() {
 	*x = GetOrCreateDocAPIKeyResponse{}
-	mi := &file_auth_auth_proto_msgTypes[31]
+	mi := &file_auth_auth_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2065,7 +2239,7 @@ func (x *GetOrCreateDocAPIKeyResponse) String() string {
 func (*GetOrCreateDocAPIKeyResponse) ProtoMessage() {}
 
 func (x *GetOrCreateDocAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[31]
+	mi := &file_auth_auth_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2078,7 +2252,7 @@ func (x *GetOrCreateDocAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrCreateDocAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetOrCreateDocAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{31}
+	return file_auth_auth_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetOrCreateDocAPIKeyResponse) GetApiKeySecret() string {
@@ -2105,7 +2279,7 @@ type CreateRegistrationSessionRequest struct {
 
 func (x *CreateRegistrationSessionRequest) Reset() {
 	*x = CreateRegistrationSessionRequest{}
-	mi := &file_auth_auth_proto_msgTypes[32]
+	mi := &file_auth_auth_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2117,7 +2291,7 @@ func (x *CreateRegistrationSessionRequest) String() string {
 func (*CreateRegistrationSessionRequest) ProtoMessage() {}
 
 func (x *CreateRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[32]
+	mi := &file_auth_auth_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2130,7 +2304,7 @@ func (x *CreateRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRegistrationSessionRequest.ProtoReflect.Descriptor instead.
 func (*CreateRegistrationSessionRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{32}
+	return file_auth_auth_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CreateRegistrationSessionRequest) GetEmail() string {
@@ -2156,7 +2330,7 @@ type CreateRegistrationSessionResponse struct {
 
 func (x *CreateRegistrationSessionResponse) Reset() {
 	*x = CreateRegistrationSessionResponse{}
-	mi := &file_auth_auth_proto_msgTypes[33]
+	mi := &file_auth_auth_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2168,7 +2342,7 @@ func (x *CreateRegistrationSessionResponse) String() string {
 func (*CreateRegistrationSessionResponse) ProtoMessage() {}
 
 func (x *CreateRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[33]
+	mi := &file_auth_auth_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2181,7 +2355,7 @@ func (x *CreateRegistrationSessionResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CreateRegistrationSessionResponse.ProtoReflect.Descriptor instead.
 func (*CreateRegistrationSessionResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{33}
+	return file_auth_auth_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CreateRegistrationSessionResponse) GetSessionId() string {
@@ -2200,7 +2374,7 @@ type ResendVerificationEmailRequest struct {
 
 func (x *ResendVerificationEmailRequest) Reset() {
 	*x = ResendVerificationEmailRequest{}
-	mi := &file_auth_auth_proto_msgTypes[34]
+	mi := &file_auth_auth_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2212,7 +2386,7 @@ func (x *ResendVerificationEmailRequest) String() string {
 func (*ResendVerificationEmailRequest) ProtoMessage() {}
 
 func (x *ResendVerificationEmailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[34]
+	mi := &file_auth_auth_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2225,7 +2399,7 @@ func (x *ResendVerificationEmailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResendVerificationEmailRequest.ProtoReflect.Descriptor instead.
 func (*ResendVerificationEmailRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{34}
+	return file_auth_auth_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ResendVerificationEmailRequest) GetSessionId() string {
@@ -2251,7 +2425,7 @@ type RegistrationSessionData struct {
 
 func (x *RegistrationSessionData) Reset() {
 	*x = RegistrationSessionData{}
-	mi := &file_auth_auth_proto_msgTypes[35]
+	mi := &file_auth_auth_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2263,7 +2437,7 @@ func (x *RegistrationSessionData) String() string {
 func (*RegistrationSessionData) ProtoMessage() {}
 
 func (x *RegistrationSessionData) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[35]
+	mi := &file_auth_auth_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2276,7 +2450,7 @@ func (x *RegistrationSessionData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegistrationSessionData.ProtoReflect.Descriptor instead.
 func (*RegistrationSessionData) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{35}
+	return file_auth_auth_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *RegistrationSessionData) GetUserName() string {
@@ -2359,7 +2533,7 @@ type RegistrationSessionInfo struct {
 
 func (x *RegistrationSessionInfo) Reset() {
 	*x = RegistrationSessionInfo{}
-	mi := &file_auth_auth_proto_msgTypes[36]
+	mi := &file_auth_auth_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2371,7 +2545,7 @@ func (x *RegistrationSessionInfo) String() string {
 func (*RegistrationSessionInfo) ProtoMessage() {}
 
 func (x *RegistrationSessionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[36]
+	mi := &file_auth_auth_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2558,7 @@ func (x *RegistrationSessionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegistrationSessionInfo.ProtoReflect.Descriptor instead.
 func (*RegistrationSessionInfo) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{36}
+	return file_auth_auth_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *RegistrationSessionInfo) GetId() string {
@@ -2508,7 +2682,7 @@ type VerifyRegistrationTokenRequest struct {
 
 func (x *VerifyRegistrationTokenRequest) Reset() {
 	*x = VerifyRegistrationTokenRequest{}
-	mi := &file_auth_auth_proto_msgTypes[37]
+	mi := &file_auth_auth_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2520,7 +2694,7 @@ func (x *VerifyRegistrationTokenRequest) String() string {
 func (*VerifyRegistrationTokenRequest) ProtoMessage() {}
 
 func (x *VerifyRegistrationTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[37]
+	mi := &file_auth_auth_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2533,7 +2707,7 @@ func (x *VerifyRegistrationTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyRegistrationTokenRequest.ProtoReflect.Descriptor instead.
 func (*VerifyRegistrationTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{37}
+	return file_auth_auth_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *VerifyRegistrationTokenRequest) GetToken() string {
@@ -2552,7 +2726,7 @@ type VerifyRegistrationTokenResponse struct {
 
 func (x *VerifyRegistrationTokenResponse) Reset() {
 	*x = VerifyRegistrationTokenResponse{}
-	mi := &file_auth_auth_proto_msgTypes[38]
+	mi := &file_auth_auth_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2564,7 +2738,7 @@ func (x *VerifyRegistrationTokenResponse) String() string {
 func (*VerifyRegistrationTokenResponse) ProtoMessage() {}
 
 func (x *VerifyRegistrationTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[38]
+	mi := &file_auth_auth_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2577,7 +2751,7 @@ func (x *VerifyRegistrationTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyRegistrationTokenResponse.ProtoReflect.Descriptor instead.
 func (*VerifyRegistrationTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{38}
+	return file_auth_auth_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *VerifyRegistrationTokenResponse) GetSession() *RegistrationSessionInfo {
@@ -2596,7 +2770,7 @@ type GetRegistrationSessionRequest struct {
 
 func (x *GetRegistrationSessionRequest) Reset() {
 	*x = GetRegistrationSessionRequest{}
-	mi := &file_auth_auth_proto_msgTypes[39]
+	mi := &file_auth_auth_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2608,7 +2782,7 @@ func (x *GetRegistrationSessionRequest) String() string {
 func (*GetRegistrationSessionRequest) ProtoMessage() {}
 
 func (x *GetRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[39]
+	mi := &file_auth_auth_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2621,7 +2795,7 @@ func (x *GetRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRegistrationSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetRegistrationSessionRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{39}
+	return file_auth_auth_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GetRegistrationSessionRequest) GetSessionId() string {
@@ -2640,7 +2814,7 @@ type GetRegistrationSessionResponse struct {
 
 func (x *GetRegistrationSessionResponse) Reset() {
 	*x = GetRegistrationSessionResponse{}
-	mi := &file_auth_auth_proto_msgTypes[40]
+	mi := &file_auth_auth_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2652,7 +2826,7 @@ func (x *GetRegistrationSessionResponse) String() string {
 func (*GetRegistrationSessionResponse) ProtoMessage() {}
 
 func (x *GetRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[40]
+	mi := &file_auth_auth_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2665,7 +2839,7 @@ func (x *GetRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRegistrationSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetRegistrationSessionResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{40}
+	return file_auth_auth_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetRegistrationSessionResponse) GetSession() *RegistrationSessionInfo {
@@ -2686,7 +2860,7 @@ type CreateUserForRegistrationRequest struct {
 
 func (x *CreateUserForRegistrationRequest) Reset() {
 	*x = CreateUserForRegistrationRequest{}
-	mi := &file_auth_auth_proto_msgTypes[41]
+	mi := &file_auth_auth_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2698,7 +2872,7 @@ func (x *CreateUserForRegistrationRequest) String() string {
 func (*CreateUserForRegistrationRequest) ProtoMessage() {}
 
 func (x *CreateUserForRegistrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[41]
+	mi := &file_auth_auth_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2711,7 +2885,7 @@ func (x *CreateUserForRegistrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUserForRegistrationRequest.ProtoReflect.Descriptor instead.
 func (*CreateUserForRegistrationRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{41}
+	return file_auth_auth_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *CreateUserForRegistrationRequest) GetSessionId() string {
@@ -2746,7 +2920,7 @@ type CreateUserForRegistrationResponse struct {
 
 func (x *CreateUserForRegistrationResponse) Reset() {
 	*x = CreateUserForRegistrationResponse{}
-	mi := &file_auth_auth_proto_msgTypes[42]
+	mi := &file_auth_auth_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2758,7 +2932,7 @@ func (x *CreateUserForRegistrationResponse) String() string {
 func (*CreateUserForRegistrationResponse) ProtoMessage() {}
 
 func (x *CreateUserForRegistrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[42]
+	mi := &file_auth_auth_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2771,7 +2945,7 @@ func (x *CreateUserForRegistrationResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CreateUserForRegistrationResponse.ProtoReflect.Descriptor instead.
 func (*CreateUserForRegistrationResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{42}
+	return file_auth_auth_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *CreateUserForRegistrationResponse) GetUserId() string {
@@ -2809,7 +2983,7 @@ type UpdateRegistrationSessionRequest struct {
 
 func (x *UpdateRegistrationSessionRequest) Reset() {
 	*x = UpdateRegistrationSessionRequest{}
-	mi := &file_auth_auth_proto_msgTypes[43]
+	mi := &file_auth_auth_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2821,7 +2995,7 @@ func (x *UpdateRegistrationSessionRequest) String() string {
 func (*UpdateRegistrationSessionRequest) ProtoMessage() {}
 
 func (x *UpdateRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[43]
+	mi := &file_auth_auth_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2834,7 +3008,7 @@ func (x *UpdateRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRegistrationSessionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRegistrationSessionRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{43}
+	return file_auth_auth_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *UpdateRegistrationSessionRequest) GetSessionId() string {
@@ -2888,7 +3062,7 @@ type UpdateRegistrationSessionResponse struct {
 
 func (x *UpdateRegistrationSessionResponse) Reset() {
 	*x = UpdateRegistrationSessionResponse{}
-	mi := &file_auth_auth_proto_msgTypes[44]
+	mi := &file_auth_auth_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2900,7 +3074,7 @@ func (x *UpdateRegistrationSessionResponse) String() string {
 func (*UpdateRegistrationSessionResponse) ProtoMessage() {}
 
 func (x *UpdateRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[44]
+	mi := &file_auth_auth_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2913,7 +3087,7 @@ func (x *UpdateRegistrationSessionResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use UpdateRegistrationSessionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRegistrationSessionResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{44}
+	return file_auth_auth_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *UpdateRegistrationSessionResponse) GetSession() *RegistrationSessionInfo {
@@ -2933,7 +3107,7 @@ type ListRegistrationSessionsRequest struct {
 
 func (x *ListRegistrationSessionsRequest) Reset() {
 	*x = ListRegistrationSessionsRequest{}
-	mi := &file_auth_auth_proto_msgTypes[45]
+	mi := &file_auth_auth_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2945,7 +3119,7 @@ func (x *ListRegistrationSessionsRequest) String() string {
 func (*ListRegistrationSessionsRequest) ProtoMessage() {}
 
 func (x *ListRegistrationSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[45]
+	mi := &file_auth_auth_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2958,7 +3132,7 @@ func (x *ListRegistrationSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegistrationSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListRegistrationSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{45}
+	return file_auth_auth_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ListRegistrationSessionsRequest) GetCursor() string {
@@ -2985,7 +3159,7 @@ type ListRegistrationSessionsResponse struct {
 
 func (x *ListRegistrationSessionsResponse) Reset() {
 	*x = ListRegistrationSessionsResponse{}
-	mi := &file_auth_auth_proto_msgTypes[46]
+	mi := &file_auth_auth_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2997,7 +3171,7 @@ func (x *ListRegistrationSessionsResponse) String() string {
 func (*ListRegistrationSessionsResponse) ProtoMessage() {}
 
 func (x *ListRegistrationSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[46]
+	mi := &file_auth_auth_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3010,7 +3184,7 @@ func (x *ListRegistrationSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegistrationSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListRegistrationSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{46}
+	return file_auth_auth_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListRegistrationSessionsResponse) GetSessions() []*RegistrationSessionInfo {
@@ -3036,7 +3210,7 @@ type SetupRegistrationBillingRequest struct {
 
 func (x *SetupRegistrationBillingRequest) Reset() {
 	*x = SetupRegistrationBillingRequest{}
-	mi := &file_auth_auth_proto_msgTypes[47]
+	mi := &file_auth_auth_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3048,7 +3222,7 @@ func (x *SetupRegistrationBillingRequest) String() string {
 func (*SetupRegistrationBillingRequest) ProtoMessage() {}
 
 func (x *SetupRegistrationBillingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[47]
+	mi := &file_auth_auth_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3061,7 +3235,7 @@ func (x *SetupRegistrationBillingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupRegistrationBillingRequest.ProtoReflect.Descriptor instead.
 func (*SetupRegistrationBillingRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{47}
+	return file_auth_auth_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *SetupRegistrationBillingRequest) GetSessionId() string {
@@ -3081,7 +3255,7 @@ type ConfirmRegistrationPaymentRequest struct {
 
 func (x *ConfirmRegistrationPaymentRequest) Reset() {
 	*x = ConfirmRegistrationPaymentRequest{}
-	mi := &file_auth_auth_proto_msgTypes[48]
+	mi := &file_auth_auth_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3093,7 +3267,7 @@ func (x *ConfirmRegistrationPaymentRequest) String() string {
 func (*ConfirmRegistrationPaymentRequest) ProtoMessage() {}
 
 func (x *ConfirmRegistrationPaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[48]
+	mi := &file_auth_auth_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3106,7 +3280,7 @@ func (x *ConfirmRegistrationPaymentRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ConfirmRegistrationPaymentRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmRegistrationPaymentRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{48}
+	return file_auth_auth_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ConfirmRegistrationPaymentRequest) GetSessionId() string {
@@ -3133,7 +3307,7 @@ type ConfirmRegistrationPaymentResponse struct {
 
 func (x *ConfirmRegistrationPaymentResponse) Reset() {
 	*x = ConfirmRegistrationPaymentResponse{}
-	mi := &file_auth_auth_proto_msgTypes[49]
+	mi := &file_auth_auth_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3145,7 +3319,7 @@ func (x *ConfirmRegistrationPaymentResponse) String() string {
 func (*ConfirmRegistrationPaymentResponse) ProtoMessage() {}
 
 func (x *ConfirmRegistrationPaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[49]
+	mi := &file_auth_auth_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3158,7 +3332,7 @@ func (x *ConfirmRegistrationPaymentResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ConfirmRegistrationPaymentResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmRegistrationPaymentResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{49}
+	return file_auth_auth_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ConfirmRegistrationPaymentResponse) GetStatus() string {
@@ -3184,7 +3358,7 @@ type GetIncompleteRegistrationSessionRequest struct {
 
 func (x *GetIncompleteRegistrationSessionRequest) Reset() {
 	*x = GetIncompleteRegistrationSessionRequest{}
-	mi := &file_auth_auth_proto_msgTypes[50]
+	mi := &file_auth_auth_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3196,7 +3370,7 @@ func (x *GetIncompleteRegistrationSessionRequest) String() string {
 func (*GetIncompleteRegistrationSessionRequest) ProtoMessage() {}
 
 func (x *GetIncompleteRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[50]
+	mi := &file_auth_auth_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3209,7 +3383,7 @@ func (x *GetIncompleteRegistrationSessionRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetIncompleteRegistrationSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetIncompleteRegistrationSessionRequest) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{50}
+	return file_auth_auth_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetIncompleteRegistrationSessionRequest) GetUserId() string {
@@ -3228,7 +3402,7 @@ type GetIncompleteRegistrationSessionResponse struct {
 
 func (x *GetIncompleteRegistrationSessionResponse) Reset() {
 	*x = GetIncompleteRegistrationSessionResponse{}
-	mi := &file_auth_auth_proto_msgTypes[51]
+	mi := &file_auth_auth_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3240,7 +3414,7 @@ func (x *GetIncompleteRegistrationSessionResponse) String() string {
 func (*GetIncompleteRegistrationSessionResponse) ProtoMessage() {}
 
 func (x *GetIncompleteRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[51]
+	mi := &file_auth_auth_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3253,7 +3427,7 @@ func (x *GetIncompleteRegistrationSessionResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use GetIncompleteRegistrationSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetIncompleteRegistrationSessionResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{51}
+	return file_auth_auth_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetIncompleteRegistrationSessionResponse) GetSession() *IncompleteRegistrationSessionProto {
@@ -3275,7 +3449,7 @@ type IncompleteRegistrationSessionProto struct {
 
 func (x *IncompleteRegistrationSessionProto) Reset() {
 	*x = IncompleteRegistrationSessionProto{}
-	mi := &file_auth_auth_proto_msgTypes[52]
+	mi := &file_auth_auth_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3287,7 +3461,7 @@ func (x *IncompleteRegistrationSessionProto) String() string {
 func (*IncompleteRegistrationSessionProto) ProtoMessage() {}
 
 func (x *IncompleteRegistrationSessionProto) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[52]
+	mi := &file_auth_auth_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3300,7 +3474,7 @@ func (x *IncompleteRegistrationSessionProto) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use IncompleteRegistrationSessionProto.ProtoReflect.Descriptor instead.
 func (*IncompleteRegistrationSessionProto) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{52}
+	return file_auth_auth_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *IncompleteRegistrationSessionProto) GetSessionId() string {
@@ -3346,7 +3520,7 @@ type SetupRegistrationBillingResponse struct {
 
 func (x *SetupRegistrationBillingResponse) Reset() {
 	*x = SetupRegistrationBillingResponse{}
-	mi := &file_auth_auth_proto_msgTypes[53]
+	mi := &file_auth_auth_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3358,7 +3532,7 @@ func (x *SetupRegistrationBillingResponse) String() string {
 func (*SetupRegistrationBillingResponse) ProtoMessage() {}
 
 func (x *SetupRegistrationBillingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[53]
+	mi := &file_auth_auth_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3371,7 +3545,7 @@ func (x *SetupRegistrationBillingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupRegistrationBillingResponse.ProtoReflect.Descriptor instead.
 func (*SetupRegistrationBillingResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{53}
+	return file_auth_auth_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *SetupRegistrationBillingResponse) GetStripeCustomerId() string {
@@ -3513,14 +3687,26 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"]\n" +
 	"\x15UpdatePasswordRequest\x12!\n" +
 	"\fold_password\x18\x01 \x01(\tR\voldPassword\x12!\n" +
-	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\xad\x01\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\xe9\x01\n" +
 	"\x13CreateAPIKeyRequest\x12\x17\n" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12>\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\r\n" +
-	"\v_expires_at\"g\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12/\n" +
+	"\x06client\x18\x05 \x01(\v2\x12.auth.APIKeyClientH\x01R\x06client\x88\x01\x01B\r\n" +
+	"\v_expires_atB\t\n" +
+	"\a_client\"J\n" +
+	"\fAPIKeyClient\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
+	"\x06source\x18\x02 \x01(\tH\x00R\x06source\x88\x01\x01B\t\n" +
+	"\a_source\"2\n" +
+	"\x17IssueSignInTokenRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"k\n" +
+	"\x18IssueSignInTokenResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x129\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"g\n" +
 	"\x14CreateAPIKeyResponse\x12$\n" +
 	"\x0eapi_key_secret\x18\x01 \x01(\tR\fapiKeySecret\x12)\n" +
 	"\aapi_key\x18\x02 \x01(\v2\x10.auth.APIKeyInfoR\x06apiKey\"\xea\x01\n" +
@@ -3569,7 +3755,7 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\x1bBatchGetAPIKeysByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"K\n" +
 	"\x1cBatchGetAPIKeysByIDsResponse\x12+\n" +
-	"\bapi_keys\x18\x01 \x03(\v2\x10.auth.APIKeyInfoR\aapiKeys\"\xd7\x04\n" +
+	"\bapi_keys\x18\x01 \x03(\v2\x10.auth.APIKeyInfoR\aapiKeys\"\xc9\x05\n" +
 	"\n" +
 	"APIKeyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -3588,7 +3774,10 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\n" +
 	"revoked_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampH\x04R\trevokedAt\x88\x01\x01\x12)\n" +
-	"\x0erole_type_code\x18\v \x01(\tH\x05R\froleTypeCode\x88\x01\x01B\n" +
+	"\x0erole_type_code\x18\v \x01(\tH\x05R\froleTypeCode\x88\x01\x01\x12$\n" +
+	"\vclient_name\x18\f \x01(\tH\x06R\n" +
+	"clientName\x88\x01\x01\x12(\n" +
+	"\rclient_source\x18\r \x01(\tH\aR\fclientSource\x88\x01\x01B\n" +
 	"\n" +
 	"\b_role_idB\f\n" +
 	"\n" +
@@ -3596,7 +3785,9 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\r_last_used_atB\r\n" +
 	"\v_expires_atB\r\n" +
 	"\v_revoked_atB\x11\n" +
-	"\x0f_role_type_code\"9\n" +
+	"\x0f_role_type_codeB\x0e\n" +
+	"\f_client_nameB\x10\n" +
+	"\x0e_client_source\"9\n" +
 	"\x1bGetOrCreateDocAPIKeyRequest\x12\x1a\n" +
 	"\bincludes\x18\x01 \x03(\tR\bincludes\"o\n" +
 	"\x1cGetOrCreateDocAPIKeyResponse\x12$\n" +
@@ -3743,7 +3934,7 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\vAccountMode\x12\x1c\n" +
 	"\x18ACCOUNT_MODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ACCOUNT_MODE_PRODUCTION\x10\x01\x12\x18\n" +
-	"\x14ACCOUNT_MODE_SANDBOX\x10\x022\x88\x12\n" +
+	"\x14ACCOUNT_MODE_SANDBOX\x10\x022\xdb\x12\n" +
 	"\vAuthService\x126\n" +
 	"\x12ValidateCredential\x12\x10.auth.Credential\x1a\x0e.auth.Identity\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x126\n" +
@@ -3758,7 +3949,8 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\fRevokeAPIKey\x12\x19.auth.RevokeAPIKeyRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
 	"\vListAPIKeys\x12\x18.auth.ListAPIKeysRequest\x1a\x19.auth.ListAPIKeysResponse\x12<\n" +
 	"\tGetAPIKey\x12\x16.auth.GetAPIKeyRequest\x1a\x17.auth.GetAPIKeyResponse\x12]\n" +
-	"\x14BatchGetAPIKeysByIDs\x12!.auth.BatchGetAPIKeysByIDsRequest\x1a\".auth.BatchGetAPIKeysByIDsResponse\x12]\n" +
+	"\x14BatchGetAPIKeysByIDs\x12!.auth.BatchGetAPIKeysByIDsRequest\x1a\".auth.BatchGetAPIKeysByIDsResponse\x12Q\n" +
+	"\x10IssueSignInToken\x12\x1d.auth.IssueSignInTokenRequest\x1a\x1e.auth.IssueSignInTokenResponse\x12]\n" +
 	"\x14GetOrCreateDocAPIKey\x12!.auth.GetOrCreateDocAPIKeyRequest\x1a\".auth.GetOrCreateDocAPIKeyResponse\x12l\n" +
 	"\x19CreateRegistrationSession\x12&.auth.CreateRegistrationSessionRequest\x1a'.auth.CreateRegistrationSessionResponse\x12W\n" +
 	"\x17ResendVerificationEmail\x12$.auth.ResendVerificationEmailRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
@@ -3787,7 +3979,7 @@ func file_auth_auth_proto_rawDescGZIP() []byte {
 }
 
 var file_auth_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
+var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
 var file_auth_auth_proto_goTypes = []any{
 	(IdentityActorType)(0),                           // 0: auth.IdentityActorType
 	(IdentityRelationType)(0),                        // 1: auth.IdentityRelationType
@@ -3810,143 +4002,150 @@ var file_auth_auth_proto_goTypes = []any{
 	(*RevokeRefreshTokenRequest)(nil),                // 18: auth.RevokeRefreshTokenRequest
 	(*UpdatePasswordRequest)(nil),                    // 19: auth.UpdatePasswordRequest
 	(*CreateAPIKeyRequest)(nil),                      // 20: auth.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),                     // 21: auth.CreateAPIKeyResponse
-	(*RotateAPIKeyRequest)(nil),                      // 22: auth.RotateAPIKeyRequest
-	(*RotateAPIKeyResponse)(nil),                     // 23: auth.RotateAPIKeyResponse
-	(*RevokeAPIKeyRequest)(nil),                      // 24: auth.RevokeAPIKeyRequest
-	(*ListAPIKeysRequest)(nil),                       // 25: auth.ListAPIKeysRequest
-	(*PageInfo)(nil),                                 // 26: auth.PageInfo
-	(*ListAPIKeysResponse)(nil),                      // 27: auth.ListAPIKeysResponse
-	(*GetAPIKeyRequest)(nil),                         // 28: auth.GetAPIKeyRequest
-	(*GetAPIKeyResponse)(nil),                        // 29: auth.GetAPIKeyResponse
-	(*BatchGetAPIKeysByIDsRequest)(nil),              // 30: auth.BatchGetAPIKeysByIDsRequest
-	(*BatchGetAPIKeysByIDsResponse)(nil),             // 31: auth.BatchGetAPIKeysByIDsResponse
-	(*APIKeyInfo)(nil),                               // 32: auth.APIKeyInfo
-	(*GetOrCreateDocAPIKeyRequest)(nil),              // 33: auth.GetOrCreateDocAPIKeyRequest
-	(*GetOrCreateDocAPIKeyResponse)(nil),             // 34: auth.GetOrCreateDocAPIKeyResponse
-	(*CreateRegistrationSessionRequest)(nil),         // 35: auth.CreateRegistrationSessionRequest
-	(*CreateRegistrationSessionResponse)(nil),        // 36: auth.CreateRegistrationSessionResponse
-	(*ResendVerificationEmailRequest)(nil),           // 37: auth.ResendVerificationEmailRequest
-	(*RegistrationSessionData)(nil),                  // 38: auth.RegistrationSessionData
-	(*RegistrationSessionInfo)(nil),                  // 39: auth.RegistrationSessionInfo
-	(*VerifyRegistrationTokenRequest)(nil),           // 40: auth.VerifyRegistrationTokenRequest
-	(*VerifyRegistrationTokenResponse)(nil),          // 41: auth.VerifyRegistrationTokenResponse
-	(*GetRegistrationSessionRequest)(nil),            // 42: auth.GetRegistrationSessionRequest
-	(*GetRegistrationSessionResponse)(nil),           // 43: auth.GetRegistrationSessionResponse
-	(*CreateUserForRegistrationRequest)(nil),         // 44: auth.CreateUserForRegistrationRequest
-	(*CreateUserForRegistrationResponse)(nil),        // 45: auth.CreateUserForRegistrationResponse
-	(*UpdateRegistrationSessionRequest)(nil),         // 46: auth.UpdateRegistrationSessionRequest
-	(*UpdateRegistrationSessionResponse)(nil),        // 47: auth.UpdateRegistrationSessionResponse
-	(*ListRegistrationSessionsRequest)(nil),          // 48: auth.ListRegistrationSessionsRequest
-	(*ListRegistrationSessionsResponse)(nil),         // 49: auth.ListRegistrationSessionsResponse
-	(*SetupRegistrationBillingRequest)(nil),          // 50: auth.SetupRegistrationBillingRequest
-	(*ConfirmRegistrationPaymentRequest)(nil),        // 51: auth.ConfirmRegistrationPaymentRequest
-	(*ConfirmRegistrationPaymentResponse)(nil),       // 52: auth.ConfirmRegistrationPaymentResponse
-	(*GetIncompleteRegistrationSessionRequest)(nil),  // 53: auth.GetIncompleteRegistrationSessionRequest
-	(*GetIncompleteRegistrationSessionResponse)(nil), // 54: auth.GetIncompleteRegistrationSessionResponse
-	(*IncompleteRegistrationSessionProto)(nil),       // 55: auth.IncompleteRegistrationSessionProto
-	(*SetupRegistrationBillingResponse)(nil),         // 56: auth.SetupRegistrationBillingResponse
-	nil,                                              // 57: auth.IdentityActor.PermissionsEntry
-	(*timestamppb.Timestamp)(nil),                    // 58: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                            // 59: google.protobuf.Empty
+	(*APIKeyClient)(nil),                             // 21: auth.APIKeyClient
+	(*IssueSignInTokenRequest)(nil),                  // 22: auth.IssueSignInTokenRequest
+	(*IssueSignInTokenResponse)(nil),                 // 23: auth.IssueSignInTokenResponse
+	(*CreateAPIKeyResponse)(nil),                     // 24: auth.CreateAPIKeyResponse
+	(*RotateAPIKeyRequest)(nil),                      // 25: auth.RotateAPIKeyRequest
+	(*RotateAPIKeyResponse)(nil),                     // 26: auth.RotateAPIKeyResponse
+	(*RevokeAPIKeyRequest)(nil),                      // 27: auth.RevokeAPIKeyRequest
+	(*ListAPIKeysRequest)(nil),                       // 28: auth.ListAPIKeysRequest
+	(*PageInfo)(nil),                                 // 29: auth.PageInfo
+	(*ListAPIKeysResponse)(nil),                      // 30: auth.ListAPIKeysResponse
+	(*GetAPIKeyRequest)(nil),                         // 31: auth.GetAPIKeyRequest
+	(*GetAPIKeyResponse)(nil),                        // 32: auth.GetAPIKeyResponse
+	(*BatchGetAPIKeysByIDsRequest)(nil),              // 33: auth.BatchGetAPIKeysByIDsRequest
+	(*BatchGetAPIKeysByIDsResponse)(nil),             // 34: auth.BatchGetAPIKeysByIDsResponse
+	(*APIKeyInfo)(nil),                               // 35: auth.APIKeyInfo
+	(*GetOrCreateDocAPIKeyRequest)(nil),              // 36: auth.GetOrCreateDocAPIKeyRequest
+	(*GetOrCreateDocAPIKeyResponse)(nil),             // 37: auth.GetOrCreateDocAPIKeyResponse
+	(*CreateRegistrationSessionRequest)(nil),         // 38: auth.CreateRegistrationSessionRequest
+	(*CreateRegistrationSessionResponse)(nil),        // 39: auth.CreateRegistrationSessionResponse
+	(*ResendVerificationEmailRequest)(nil),           // 40: auth.ResendVerificationEmailRequest
+	(*RegistrationSessionData)(nil),                  // 41: auth.RegistrationSessionData
+	(*RegistrationSessionInfo)(nil),                  // 42: auth.RegistrationSessionInfo
+	(*VerifyRegistrationTokenRequest)(nil),           // 43: auth.VerifyRegistrationTokenRequest
+	(*VerifyRegistrationTokenResponse)(nil),          // 44: auth.VerifyRegistrationTokenResponse
+	(*GetRegistrationSessionRequest)(nil),            // 45: auth.GetRegistrationSessionRequest
+	(*GetRegistrationSessionResponse)(nil),           // 46: auth.GetRegistrationSessionResponse
+	(*CreateUserForRegistrationRequest)(nil),         // 47: auth.CreateUserForRegistrationRequest
+	(*CreateUserForRegistrationResponse)(nil),        // 48: auth.CreateUserForRegistrationResponse
+	(*UpdateRegistrationSessionRequest)(nil),         // 49: auth.UpdateRegistrationSessionRequest
+	(*UpdateRegistrationSessionResponse)(nil),        // 50: auth.UpdateRegistrationSessionResponse
+	(*ListRegistrationSessionsRequest)(nil),          // 51: auth.ListRegistrationSessionsRequest
+	(*ListRegistrationSessionsResponse)(nil),         // 52: auth.ListRegistrationSessionsResponse
+	(*SetupRegistrationBillingRequest)(nil),          // 53: auth.SetupRegistrationBillingRequest
+	(*ConfirmRegistrationPaymentRequest)(nil),        // 54: auth.ConfirmRegistrationPaymentRequest
+	(*ConfirmRegistrationPaymentResponse)(nil),       // 55: auth.ConfirmRegistrationPaymentResponse
+	(*GetIncompleteRegistrationSessionRequest)(nil),  // 56: auth.GetIncompleteRegistrationSessionRequest
+	(*GetIncompleteRegistrationSessionResponse)(nil), // 57: auth.GetIncompleteRegistrationSessionResponse
+	(*IncompleteRegistrationSessionProto)(nil),       // 58: auth.IncompleteRegistrationSessionProto
+	(*SetupRegistrationBillingResponse)(nil),         // 59: auth.SetupRegistrationBillingResponse
+	nil,                                              // 60: auth.IdentityActor.PermissionsEntry
+	(*timestamppb.Timestamp)(nil),                    // 61: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                            // 62: google.protobuf.Empty
 }
 var file_auth_auth_proto_depIdxs = []int32{
 	7,  // 0: auth.LoginResponse.user:type_name -> auth.User
-	58, // 1: auth.User.email_verified:type_name -> google.protobuf.Timestamp
-	58, // 2: auth.User.created_at:type_name -> google.protobuf.Timestamp
-	58, // 3: auth.User.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 1: auth.User.email_verified:type_name -> google.protobuf.Timestamp
+	61, // 2: auth.User.created_at:type_name -> google.protobuf.Timestamp
+	61, // 3: auth.User.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: auth.Identity.type:type_name -> auth.IdentityActorType
 	11, // 5: auth.Identity.actor:type_name -> auth.IdentityActor
 	2,  // 6: auth.Identity.account_mode:type_name -> auth.AccountMode
 	10, // 7: auth.Identity.target:type_name -> auth.IdentityTarget
 	1,  // 8: auth.IdentityActor.relation_type:type_name -> auth.IdentityRelationType
-	57, // 9: auth.IdentityActor.permissions:type_name -> auth.IdentityActor.PermissionsEntry
-	58, // 10: auth.CreateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
-	32, // 11: auth.CreateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	58, // 12: auth.RotateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
-	58, // 13: auth.RotateAPIKeyRequest.revoke_at:type_name -> google.protobuf.Timestamp
-	32, // 14: auth.RotateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	32, // 15: auth.ListAPIKeysResponse.api_keys:type_name -> auth.APIKeyInfo
-	26, // 16: auth.ListAPIKeysResponse.page_info:type_name -> auth.PageInfo
-	32, // 17: auth.GetAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	32, // 18: auth.BatchGetAPIKeysByIDsResponse.api_keys:type_name -> auth.APIKeyInfo
-	58, // 19: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
-	58, // 20: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58, // 21: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	58, // 22: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
-	58, // 23: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
-	32, // 24: auth.GetOrCreateDocAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	38, // 25: auth.RegistrationSessionInfo.session_data:type_name -> auth.RegistrationSessionData
-	58, // 26: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
-	58, // 27: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	58, // 28: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	39, // 29: auth.VerifyRegistrationTokenResponse.session:type_name -> auth.RegistrationSessionInfo
-	39, // 30: auth.GetRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
-	38, // 31: auth.UpdateRegistrationSessionRequest.session_data:type_name -> auth.RegistrationSessionData
-	39, // 32: auth.UpdateRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
-	39, // 33: auth.ListRegistrationSessionsResponse.sessions:type_name -> auth.RegistrationSessionInfo
-	26, // 34: auth.ListRegistrationSessionsResponse.page_info:type_name -> auth.PageInfo
-	55, // 35: auth.GetIncompleteRegistrationSessionResponse.session:type_name -> auth.IncompleteRegistrationSessionProto
-	58, // 36: auth.IncompleteRegistrationSessionProto.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 37: auth.AuthService.ValidateCredential:input_type -> auth.Credential
-	5,  // 38: auth.AuthService.Login:input_type -> auth.LoginRequest
-	12, // 39: auth.AuthService.Register:input_type -> auth.RegisterRequest
-	14, // 40: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
-	16, // 41: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
-	17, // 42: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
-	18, // 43: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
-	19, // 44: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
-	20, // 45: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
-	22, // 46: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
-	24, // 47: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
-	25, // 48: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
-	28, // 49: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
-	30, // 50: auth.AuthService.BatchGetAPIKeysByIDs:input_type -> auth.BatchGetAPIKeysByIDsRequest
-	33, // 51: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
-	35, // 52: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
-	37, // 53: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
-	40, // 54: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
-	42, // 55: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
-	44, // 56: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
-	46, // 57: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
-	48, // 58: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
-	50, // 59: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
-	51, // 60: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
-	3,  // 61: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
-	13, // 62: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
-	53, // 63: auth.AuthService.GetIncompleteRegistrationSession:input_type -> auth.GetIncompleteRegistrationSessionRequest
-	9,  // 64: auth.AuthService.ValidateCredential:output_type -> auth.Identity
-	6,  // 65: auth.AuthService.Login:output_type -> auth.LoginResponse
-	6,  // 66: auth.AuthService.Register:output_type -> auth.LoginResponse
-	15, // 67: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
-	59, // 68: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
-	6,  // 69: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
-	59, // 70: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
-	59, // 71: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
-	21, // 72: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
-	23, // 73: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
-	59, // 74: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
-	27, // 75: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
-	29, // 76: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
-	31, // 77: auth.AuthService.BatchGetAPIKeysByIDs:output_type -> auth.BatchGetAPIKeysByIDsResponse
-	34, // 78: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
-	36, // 79: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
-	59, // 80: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
-	41, // 81: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
-	43, // 82: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
-	45, // 83: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
-	47, // 84: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
-	49, // 85: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
-	56, // 86: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
-	52, // 87: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
-	4,  // 88: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
-	6,  // 89: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
-	54, // 90: auth.AuthService.GetIncompleteRegistrationSession:output_type -> auth.GetIncompleteRegistrationSessionResponse
-	64, // [64:91] is the sub-list for method output_type
-	37, // [37:64] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	60, // 9: auth.IdentityActor.permissions:type_name -> auth.IdentityActor.PermissionsEntry
+	61, // 10: auth.CreateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	21, // 11: auth.CreateAPIKeyRequest.client:type_name -> auth.APIKeyClient
+	61, // 12: auth.IssueSignInTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	35, // 13: auth.CreateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	61, // 14: auth.RotateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	61, // 15: auth.RotateAPIKeyRequest.revoke_at:type_name -> google.protobuf.Timestamp
+	35, // 16: auth.RotateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	35, // 17: auth.ListAPIKeysResponse.api_keys:type_name -> auth.APIKeyInfo
+	29, // 18: auth.ListAPIKeysResponse.page_info:type_name -> auth.PageInfo
+	35, // 19: auth.GetAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	35, // 20: auth.BatchGetAPIKeysByIDsResponse.api_keys:type_name -> auth.APIKeyInfo
+	61, // 21: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
+	61, // 22: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 23: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	61, // 24: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
+	61, // 25: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
+	35, // 26: auth.GetOrCreateDocAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	41, // 27: auth.RegistrationSessionInfo.session_data:type_name -> auth.RegistrationSessionData
+	61, // 28: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
+	61, // 29: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	61, // 30: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	42, // 31: auth.VerifyRegistrationTokenResponse.session:type_name -> auth.RegistrationSessionInfo
+	42, // 32: auth.GetRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
+	41, // 33: auth.UpdateRegistrationSessionRequest.session_data:type_name -> auth.RegistrationSessionData
+	42, // 34: auth.UpdateRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
+	42, // 35: auth.ListRegistrationSessionsResponse.sessions:type_name -> auth.RegistrationSessionInfo
+	29, // 36: auth.ListRegistrationSessionsResponse.page_info:type_name -> auth.PageInfo
+	58, // 37: auth.GetIncompleteRegistrationSessionResponse.session:type_name -> auth.IncompleteRegistrationSessionProto
+	61, // 38: auth.IncompleteRegistrationSessionProto.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 39: auth.AuthService.ValidateCredential:input_type -> auth.Credential
+	5,  // 40: auth.AuthService.Login:input_type -> auth.LoginRequest
+	12, // 41: auth.AuthService.Register:input_type -> auth.RegisterRequest
+	14, // 42: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
+	16, // 43: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
+	17, // 44: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
+	18, // 45: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
+	19, // 46: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
+	20, // 47: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
+	25, // 48: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
+	27, // 49: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
+	28, // 50: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
+	31, // 51: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
+	33, // 52: auth.AuthService.BatchGetAPIKeysByIDs:input_type -> auth.BatchGetAPIKeysByIDsRequest
+	22, // 53: auth.AuthService.IssueSignInToken:input_type -> auth.IssueSignInTokenRequest
+	36, // 54: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
+	38, // 55: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
+	40, // 56: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
+	43, // 57: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
+	45, // 58: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
+	47, // 59: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
+	49, // 60: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
+	51, // 61: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
+	53, // 62: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
+	54, // 63: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
+	3,  // 64: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
+	13, // 65: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
+	56, // 66: auth.AuthService.GetIncompleteRegistrationSession:input_type -> auth.GetIncompleteRegistrationSessionRequest
+	9,  // 67: auth.AuthService.ValidateCredential:output_type -> auth.Identity
+	6,  // 68: auth.AuthService.Login:output_type -> auth.LoginResponse
+	6,  // 69: auth.AuthService.Register:output_type -> auth.LoginResponse
+	15, // 70: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
+	62, // 71: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
+	6,  // 72: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
+	62, // 73: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
+	62, // 74: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
+	24, // 75: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
+	26, // 76: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
+	62, // 77: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
+	30, // 78: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
+	32, // 79: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
+	34, // 80: auth.AuthService.BatchGetAPIKeysByIDs:output_type -> auth.BatchGetAPIKeysByIDsResponse
+	23, // 81: auth.AuthService.IssueSignInToken:output_type -> auth.IssueSignInTokenResponse
+	37, // 82: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
+	39, // 83: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
+	62, // 84: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
+	44, // 85: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
+	46, // 86: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
+	48, // 87: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
+	50, // 88: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
+	52, // 89: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
+	59, // 90: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
+	55, // 91: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
+	4,  // 92: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
+	6,  // 93: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
+	57, // 94: auth.AuthService.GetIncompleteRegistrationSession:output_type -> auth.GetIncompleteRegistrationSessionResponse
+	67, // [67:95] is the sub-list for method output_type
+	39, // [39:67] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_auth_auth_proto_init() }
@@ -3962,23 +4161,24 @@ func file_auth_auth_proto_init() {
 	file_auth_auth_proto_msgTypes[9].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[13].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[17].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[19].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[18].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[22].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[23].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[29].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[35].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[36].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[43].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[45].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[49].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[51].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[25].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[26].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[32].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[38].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[39].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[46].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[48].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[52].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[54].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_auth_proto_rawDesc), len(file_auth_auth_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   55,
+			NumMessages:   58,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

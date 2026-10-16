@@ -50,6 +50,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 	createAPIKeyEndpoint := apiendpoint.From(&apikeyep.CreateAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	rotateAPIKeyEndpoint := apiendpoint.From(&apikeyep.RotateAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	revokeAPIKeyEndpoint := apiendpoint.From(&apikeyep.RevokeAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	revokeAPIKeyActionEndpoint := apiendpoint.From(&apikeyep.RevokeAPIKeyActionEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	getDocAPIKeyEndpoint := apiendpoint.From(&apikeyep.GetDocAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
@@ -58,6 +59,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 		createAPIKeyEndpoint,
 		rotateAPIKeyEndpoint,
 		revokeAPIKeyEndpoint,
+		revokeAPIKeyActionEndpoint,
 		getDocAPIKeyEndpoint,
 	}
 

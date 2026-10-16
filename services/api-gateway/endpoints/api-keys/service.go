@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/open-mrp/api/services/api-gateway/pkg/lifecycle"
+
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -22,6 +24,7 @@ type APIKeySvc interface {
 	CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RotateAPIKey(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RevokeAPIKey(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	RevokeAPIKeyAction(ctx context.Context, req *lifecycle.Request) (*apiresource.APIKey, *apierror.APIError)
 	ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError)
 	GetOrCreateDocAPIKey(ctx context.Context) (*apiresource.CreatedAPIKey, *apierror.APIError)
 }
@@ -86,6 +89,9 @@ func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyReque
 		RoleId: req.RoleID,
 		Name:   req.Name,
 	}
+	if req.Client != nil {
+		pbReq.Client = &pb.APIKeyClient{Name: req.Client.Name, Source: req.Client.Source.Ptr()}
+	}
 
 	if v, ok := req.ExpiresAt.Value(); ok {
 		pbReq.ExpiresAt = timestamppb.New(v)
@@ -106,9 +112,9 @@ func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyReque
 	}
 
 	return &apiresource.CreatedAPIKey{
-		Object:       constants.ObjectTypeCreatedAPIKey,
-		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   *loaded,
+		Object: constants.ObjectTypeCreatedAPIKey,
+		Secret: resp.ApiKeySecret,
+		APIKey: *loaded,
 	}, nil
 }
 
@@ -140,9 +146,9 @@ func (m *apiKeySvcImpl) RotateAPIKey(ctx context.Context, req *RotateAPIKeyReque
 	}
 
 	return &apiresource.CreatedAPIKey{
-		Object:       constants.ObjectTypeCreatedAPIKey,
-		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   *loaded,
+		Object: constants.ObjectTypeCreatedAPIKey,
+		Secret: resp.ApiKeySecret,
+		APIKey: *loaded,
 	}, nil
 }
 
@@ -159,6 +165,13 @@ func (m *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, req *RevokeAPIKeyReque
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *apiKeySvcImpl) RevokeAPIKeyAction(ctx context.Context, req *lifecycle.Request) (*apiresource.APIKey, *apierror.APIError) {
+	if _, apiErr := m.RevokeAPIKey(ctx, &RevokeAPIKeyRequest{APIKeyID: req.ID}); apiErr != nil {
+		return nil, apiErr
+	}
+	return loadAPIKeyByID(ctx, req.ID)
 }
 
 func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
@@ -211,8 +224,8 @@ func (m *apiKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*apiresource.
 	}
 
 	return &apiresource.CreatedAPIKey{
-		Object:       constants.ObjectTypeCreatedAPIKey,
-		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   *loaded,
+		Object: constants.ObjectTypeCreatedAPIKey,
+		Secret: resp.ApiKeySecret,
+		APIKey: *loaded,
 	}, nil
 }

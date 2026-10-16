@@ -788,11 +788,11 @@ func TestCovAiTools_ForbiddenMissingAgentsPermissionBothRoutes(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	info := jsonObject(created, "api_key_info")
+	info := jsonObject(created, "api_key")
 	require.NotNil(t, info)
 	keyID := jsonField(info, "id")
 	require.NotEmpty(t, keyID)
-	secret := jsonField(created, "api_key_secret")
+	secret := jsonField(created, "secret")
 	require.NotEmpty(t, secret)
 	defer apiClient.Delete(apiKeysPath + "/" + keyID)
 

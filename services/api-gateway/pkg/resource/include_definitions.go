@@ -161,7 +161,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "user", ObjectType: constants.ObjectTypeUser},
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
-			{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
+			{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
 		},
 	})
 
@@ -174,7 +174,7 @@ func init() {
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
-					{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
+					{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
 				},
 			},
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
@@ -197,7 +197,7 @@ func init() {
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
-					{Key: "department", ObjectType: constants.ObjectTypeWorkCenter},
+					{Key: "work_center", ObjectType: constants.ObjectTypeWorkCenter},
 				},
 			},
 		},

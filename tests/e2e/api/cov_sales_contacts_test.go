@@ -21,7 +21,7 @@ import (
 // requireSelfMatch from find_contact_by_email_test.go (same package).
 //
 // Covers: a positive `relationship:"customer"` match, a multi-account
-// same-email fan-out, ?include=account_user.role/account_user.department
+// same-email fan-out, ?include=account_user.role/account_user.work_center
 // (both null-without and populated-with), every AccountUser scalar field
 // reachable through account_user, page_info always-zero-value, an
 // empty-string email validation case, an invalid ?include= value, the
@@ -142,7 +142,7 @@ func TestCovSalesContacts_MultiMatchAcrossAccounts(t *testing.T) {
 }
 
 // TestCovSalesContacts_IncludeAccountUserRoleAndDepartment covers the two
-// configured include paths (account_user.role, account_user.department)
+// configured include paths (account_user.role, account_user.work_center)
 // that no existing test ever exercises: null without the nested include,
 // populated id+object with it.
 func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
@@ -152,10 +152,10 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         email,
-		"role_id":       SeedAdminRoleID,
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"email":          email,
+		"role_id":        SeedAdminRoleID,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -172,11 +172,11 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	au := jsonObject(match, "account_user")
 	require.NotNil(t, au)
 	assert.Nil(t, au["role"], "account_user.role should be null without ?include=account_user.role")
-	assert.Nil(t, au["department"], "account_user.department should be null without ?include=account_user.department")
+	assert.Nil(t, au["work_center"], "account_user.work_center should be null without ?include=account_user.work_center")
 
 	// Both nested includes: role and department hydrate.
 	match = findContactMatchByID(
-		findContacts(t, email, url.Values{"include": {"account_user,account_user.role,account_user.department"}}),
+		findContacts(t, email, url.Values{"include": {"account_user,account_user.role,account_user.work_center"}}),
 		accountUserID,
 	)
 	require.NotNil(t, match)
@@ -188,8 +188,8 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	assert.Equal(t, "role", jsonField(role, "object"))
 	assert.Equal(t, SeedAdminRoleID, jsonField(role, "id"))
 
-	dept := jsonObject(au, "department")
-	require.NotNil(t, dept, "account_user.department should be populated with ?include=account_user.department")
+	dept := jsonObject(au, "work_center")
+	require.NotNil(t, dept, "account_user.work_center should be populated with ?include=account_user.work_center")
 	assert.Equal(t, "work_center", jsonField(dept, "object"))
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 }

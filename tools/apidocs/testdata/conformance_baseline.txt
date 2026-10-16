@@ -5,9 +5,6 @@ actions_are_post PUT /v1/auth/registration-sessions/{token}/actions/verify-token
 actions_are_post PUT /v1/catalog/products/actions/validate
 actions_are_post PUT /v1/catalog/units/actions/validate
 actions_are_post PUT /v1/core/actions/check-duplicates
-actions_are_post PUT /v1/identity/account-users/{id}/actions/activate
-actions_are_post PUT /v1/identity/account-users/{id}/actions/disable
-actions_are_post PUT /v1/identity/account-users/{id}/actions/remove
 actions_are_post PUT /v1/operations/picks/{id}/actions/pick
 actions_are_post PUT /v1/operations/picks/{id}/actions/void
 actions_are_post PUT /v1/operations/picks/{pick_id}/lines/{id}/actions/pick
@@ -69,7 +66,6 @@ long_running_returns_async_job POST /v1/messaging/notifications
 
 public_docstrings GET /v1/operations/fulfillment-recommendations
 public_docstrings PATCH /v1/catalog/items/{id}/inventory
-public_docstrings PATCH /v1/identity/account-users/{id}
 
 
 public_docstrings PATCH /v1/operations/production-schedules/{id}/lines/{line_id}
@@ -89,7 +85,6 @@ public_docstrings POST /v1/operations/shipments/actions/rate-shop
 public_docstrings POST /v1/sales/sales-orders/{id}/actions/quote-freight
 public_docstrings POST /v1/sales/sales-orders/{id}/lines/actions/reorder
 public_docstrings PUT /v1/ai/agents/{id}/status
-public_docstrings PUT /v1/identity/account-users/{id}/actions/disable
 public_docstrings PUT /v1/operations/production-schedule-settings/items/{item_id}
 public_docstrings PUT /v1/operations/production-schedule-settings/resources
 public_docstrings PUT /v1/operations/production-schedules/{id}/actions/publish
@@ -99,7 +94,6 @@ search_documented GET /v1/ai/agents
 search_documented GET /v1/ai/runs
 search_documented GET /v1/ai/tool-groups
 search_documented GET /v1/ai/tools
-search_documented GET /v1/auth/api-keys
 search_documented GET /v1/billing/plans
 search_documented GET /v1/catalog/catalog/product-lines
 search_documented GET /v1/catalog/catalog/product-lines/{id}/products
@@ -120,11 +114,9 @@ search_documented GET /v1/finance/transaction-allocations
 search_documented GET /v1/finance/transaction-methods
 search_documented GET /v1/finance/transaction-types
 search_documented GET /v1/finance/transactions
-search_documented GET /v1/identity/account-users
 search_documented GET /v1/identity/child-accounts
 search_documented GET /v1/identity/me/tenancy/customer-accounts/{vendor_account_id}
 search_documented GET /v1/identity/permission-groups
-search_documented GET /v1/identity/roles
 
 
 

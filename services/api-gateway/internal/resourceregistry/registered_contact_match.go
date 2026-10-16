@@ -15,7 +15,7 @@ func init() {
 		Load:       resourceloaders.LoadContactMatches,
 		Subs: []include.SubField{
 			// account_user is eagerly built by the find-by-email service (the contact lives in a related account that the account-scoped account_user batch-get can't reach)
-			// and stashed in LoadMeta. Populate gates it on ?include=account_user; ExtractRefs then lets the resolver recurse into account_user.user/role/department via the
+			// and stashed in LoadMeta. Populate gates it on ?include=account_user; ExtractRefs then lets the resolver recurse into account_user.user/role/work_center via the
 			// AccountUser definition's own subs (which load by id from global tables).
 			{
 				Key:         "account_user",

@@ -66,3 +66,16 @@ func (c *CoreAuthClient) GetIncompleteRegistrationSession(ctx context.Context, u
 		CreatedAt: resp.Session.CreatedAt.AsTime(),
 	}, nil
 }
+
+func (c *CoreAuthClient) IssueSignInToken(ctx context.Context, userID string) (string, *apierror.APIError) {
+	ctx = rpc.PrepareServiceCallCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, authClientTracer, "auth_client.issue_sign_in_token", authServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.IssueSignInTokenResponse, error) {
+			return c.client.IssueSignInToken(ctx, &pb.IssueSignInTokenRequest{UserId: userID}, opts...)
+		})
+	if apiErr != nil {
+		return "", apiErr
+	}
+	return resp.Token, nil
+}

@@ -90,10 +90,10 @@ func roleScopedClient(t *testing.T, roleID string) *Client {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	keyID := jsonField(jsonObject(created, "api_key_info"), "id")
+	keyID := jsonField(jsonObject(created, "api_key"), "id")
 	require.NotEmpty(t, keyID)
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(apiKeysPath + "/" + keyID) })
-	secret := jsonField(created, "api_key_secret")
+	secret := jsonField(created, "secret")
 	require.NotEmpty(t, secret)
 	return apiClient.WithBearerToken(secret, SeedAccountID)
 }

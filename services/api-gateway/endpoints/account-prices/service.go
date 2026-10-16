@@ -220,17 +220,9 @@ func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 		meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "recipient_account_id", ap.RecipientAccount.Id)
 	}
 
+	// The product line is hydrated through the shared loader, so the include is the full product line.
 	if ap.ProductLine != nil {
-		pl := ap.ProductLine
-		meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "product_line", &apiresource.ProductLine{
-			ID:               pl.Id,
-			Object:           constants.ObjectTypeProductLine,
-			Name:             pl.Name,
-			CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
-			FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
-			CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
-		})
+		meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "product_line_id", ap.ProductLine.Id)
 	}
 
 	categories := make([]apiresource.ItemCategory, len(ap.Categories))

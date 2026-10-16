@@ -21,7 +21,13 @@ func init() {
 				ExtractIDs:  extractRecipientAccountIDFromAccountPrice,
 				Populate:    populateRecipientAccountOnAccountPrice,
 			},
-			{Key: "product_line", Populate: populateProductLineOnAccountPrice},
+			{
+				Key:         "product_line",
+				Target:      constants.ObjectTypeProductLine,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  extractProductLineIDFromAccountPrice,
+				Populate:    populateProductLineOnAccountPrice,
+			},
 			{Key: "categories", Populate: populateCategoriesOnAccountPrice},
 			{Key: "attributes", Populate: populateAttributesOnAccountPrice},
 		},
@@ -47,14 +53,23 @@ func populateRecipientAccountOnAccountPrice(ctx context.Context, parent any, loa
 	}
 }
 
-func populateProductLineOnAccountPrice(ctx context.Context, parent any, _ map[string]any) {
+func extractProductLineIDFromAccountPrice(ctx context.Context, parent any) []string {
 	ap := parent.(*apiresource.AccountPrice)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeAccountPrice, ap.ID, "product_line")
-	if !ok {
-		return
+	id, _ := include.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountPrice, ap.ID, "product_line_id")
+	if id == "" {
+		return nil
 	}
-	ap.ProductLine = v.(*apiresource.ProductLine)
+	return []string{id}
+}
+
+func populateProductLineOnAccountPrice(ctx context.Context, parent any, loaded map[string]any) {
+	ap := parent.(*apiresource.AccountPrice)
+	id, _ := include.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountPrice, ap.ID, "product_line_id")
+	if v, ok := loaded[id]; ok {
+		ap.ProductLine = v.(*apiresource.ProductLine)
+	}
 }
 
 func populateCategoriesOnAccountPrice(ctx context.Context, parent any, _ map[string]any) {

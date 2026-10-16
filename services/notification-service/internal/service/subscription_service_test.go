@@ -45,7 +45,9 @@ func newFanoutFixture(t *testing.T, account notifyprefs.Defaults) *fanoutFixture
 	fx.notifRepo.EXPECT().ResolveUserID(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, acus string) (string, *apierror.APIError) { return "us_" + acus, nil }).AnyTimes()
 	fx.notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, userID, _ string) (string, *apierror.APIError) { return userID[len("us_"):], nil }).AnyTimes()
+		func(_ context.Context, userID, _ string) (string, *apierror.APIError) {
+			return userID[len("us_"):], nil
+		}).AnyTimes()
 	fx.notifRepo.EXPECT().CreateBatch(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, ns []*domain.Notification) *apierror.APIError {
 			fx.created = append(fx.created, ns...)

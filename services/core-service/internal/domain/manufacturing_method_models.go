@@ -237,7 +237,7 @@ type BulkUpsertMethodOperationRow struct {
 }
 
 type BulkUpsertMethodMaterialRow struct {
-	Item  ItemIdentifier
+	Item ItemIdentifier
 	// Operation is the 1-based position of the consuming operation in the row's operations; the first when unset.
 	Operation        *int32
 	Quantity         UpsertQuantity

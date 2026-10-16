@@ -458,7 +458,7 @@ Fields
 - [x] `status: active | archived`; archived items can't be added to new orders, production or purchasing.
 
 Delete (replaces soft delete)
-- [x] Hard delete only while nothing references the item (order lines, inventory movements, lots, batches, production, planned orders, price-list rules, supplier materials — all indexed `item_id` probes); else 409 `resource_in_use`. Returns the stub. *(ITM1: price-list rule probes come with PRC.)*
+- [x] Hard delete only while nothing references the item (order lines, inventory movements, lots, batches, production, planned orders, price-list rules, supplier materials — all indexed `item_id` probes); else 409 `resource_in_use`. Returns the stub. *(ITM1: price-list rule probes come with PRC. PRC: added for items, categories, attributes and product lines; legacy account-price and volume-discount rows read as price-list rules in the message.)*
 - [ ] Migration: the 131 soft-deleted items (`deleted_at` set) become `archived`; then drop `item.deleted_at`. *(ITM1: an item soft-deleted before this reads as `archived` (is_active = 0 or deleted_at set), and making it active clears deleted_at; nothing writes deleted_at any more. The data move and column drop are left to CLEAN.)*
 
 List
@@ -554,8 +554,8 @@ Docstrings
 
 Endpoints: list, create, retrieve, update, delete. Product-line access for groups is internal (out of scope).
 
-- [ ] ~~`type` → `classification | pricing`~~ **superseded by price lists**: pricing groups are removed, so account groups are classification-only and the `type` field (and `types[]` filter) is removed. *(CUS: `type` and the `type` filter are `visibility:"internal"` (a group created without one is a `type_group`); PRC removes pricing groups and the field.)*
-- [ ] Add `price_lists` (expandable List; request `price_list_ids`), applying to every customer in the group. *(Left to PRC.)*
+- [ ] ~~`type` → `classification | pricing`~~ **superseded by price lists**: pricing groups are removed, so account groups are classification-only and the `type` field (and `types[]` filter) is removed. *(CUS: `type` and the `type` filter are `visibility:"internal"` (a group created without one is a `type_group`); PRC removes pricing groups and the field.)* *(PRC: pricing groups stay as preview.9-only legacy records mirrored into lists; `type` stays internal until CLEAN drops them.)*
+- [x] Add `price_lists` (expandable List; request `price_list_ids`), applying to every customer in the group. *(PRC: done.)*
 - [x] `default_lead_time_days` → `defaults.lead_time` (mirrors `customer.defaults.lead_time_days`).
 - [x] Drop group-level receive calendar and fulfillment policy from the inheritance chains (columns `receive_calendar_id`, `fulfillment_policy_code` are unexposed and unused: 0 rows). Customer chains become: customer → account default. Update the customer docstrings to drop the group step for those two fields.
 - [x] Policies take the L1 values (`applied | exempt`, `billed | free`).
@@ -624,32 +624,32 @@ Docstrings
 End state: **price lists** (`/v1/sales/price-lists`) and **order discounts** (`/v1/sales/order-discounts`) are the only pricing resources. Account prices, pricing account groups and volume discounts are removed.
 
 Shared
-- [ ] **One `Discount` value shape** for things taken off: `{ type: "percent_off", percent_off: "decimal" }` (whole-number percent, `"5"` = 5%, 0–100) or `{ type: "amount_off", amount_off: Money }`. Used by order-unit discounts and order discounts. Migration multiplies today's fractions (`"0.05"`) by 100.
+- [x] **One `Discount` value shape** for things taken off: `{ type: "percent_off", percent_off: "decimal" }` (whole-number percent, `"5"` = 5%, 0–100) or `{ type: "amount_off", amount_off: Money }`. Used by order-unit discounts and order discounts. Migration multiplies today's fractions (`"0.05"`) by 100. *(PRC: order discounts and item order units use it; legacy fractions became whole percents (data 00025).)*
 
 Price lists
-- [ ] `price_list`: `{ id, object, status (active | archived), name, description, rules (expandable List; first 10 + next_page_url), created_at, updated_at }`.
-- [ ] `price_list_rule` (sub-resource with IDs): `{ id, object, scope { items, product_lines, categories, attributes } (expandable Lists; empty = any; item must have every attribute), price, created_at, updated_at }`. Requests: `scope.item_ids`, `product_line_ids`, `category_ids`, `attribute_ids`.
-- [ ] `price` types: `{ type: "fixed", unit_price: UnitPrice }`; `{ type: "percent_of_base", percent_of_base: "decimal > 0" }` (`"80"` = 20% off, `"235.3"` = markup; no signs); `{ type: "tiered", unit: Unit, tiers: [{ min_quantity, percent_of_base | unit_price }] }` (quantity = total across every order line in the rule's scope, converted into `unit`; highest reached tier sets the price; tiers sorted, max 20).
-- [ ] Assignment: `customer.price_lists` (request `price_list_ids`, replaces `price_groups`), `account_group.price_lists` (applies to every member), and a parent customer's lists apply to its child customers.
-- [ ] Pricing pipeline: base `sales.unit_price` → **one** price-list rule (most specific scope: item > attributes and/or category > product line > any; tie → customer's own list > parent's > group's; tie → newest rule) → convert to the ordered unit + order-unit discount → order discount on the total. Matches today's one-winner behavior (an account price replaced everything).
-- [ ] Endpoints: `GET/POST /v1/sales/price-lists`, `GET/PATCH/DELETE /v1/sales/price-lists/{id}`, `GET/POST /v1/sales/price-lists/{id}/rules`, `GET/PATCH/DELETE /v1/sales/price-lists/{id}/rules/{rule_id}`. Later, additive: bulk upsert of rules (price-sheet imports), an account-level "applies to all customers" default list. The internal price-list export moves here.
-- [ ] List filters: price lists `statuses[]`, `customer_ids[]` (applying directly or inherited), `q` on `name`; rules `item_ids[]`, `product_line_ids[]`.
-- [ ] Delete a price list: 409 `resource_in_use` while assigned to a customer or group; archive instead (archived lists stop applying immediately). Rules delete freely (orders keep their price). Stub responses.
-- [ ] Perf: a customer's rules load once per order with the existing pricing bundle (hundreds of rules in prod); no per-line queries.
+- [x] `price_list`: `{ id, object, status (active | archived), name, description, rules (expandable List; first 10 + next_page_url), created_at, updated_at }`. *(PRC: `currency` is read-only `usd` (optional on create, other codes 422 `currency_not_supported`).)*
+- [x] `price_list_rule` (sub-resource with IDs): `{ id, object, scope { items, product_lines, categories, attributes } (expandable Lists; empty = any; item must have every attribute), price, created_at, updated_at }`. Requests: `scope.item_ids`, `product_line_ids`, `category_ids`, `attribute_ids`. *(PRC: scope lists come back whole (each dimension capped at 100 IDs on write), so they carry no next_page_url.)*
+- [x] `price` types: `{ type: "fixed", unit_price: UnitPrice }`; `{ type: "percent_of_base", percent_of_base: "decimal > 0" }` (`"80"` = 20% off, `"235.3"` = markup; no signs); `{ type: "tiered", unit: Unit, tiers: [{ min_quantity, percent_of_base | unit_price }] }` (quantity = total across every order line in the rule's scope, converted into `unit`; highest reached tier sets the price; tiers sorted, max 20). *(PRC: tiers sorted on write, duplicate min_quantity refused; a tiered rule whose lowest tier the order does not reach does not apply, so the next rule does.)*
+- [x] Assignment: `customer.price_lists` (request `price_list_ids`, replaces `price_groups`), `account_group.price_lists` (applies to every member), and a parent customer's lists apply to its child customers. *(PRC: customer and account group `price_lists` / `price_list_ids`, customer `price_list_ids[]` filter; `price_groups` / `price_group_ids` stay internal for preview.9 and are mirrored into lists.)*
+- [x] Pricing pipeline: base `sales.unit_price` → **one** price-list rule (most specific scope: item > attributes and/or category > product line > any; tie → customer's own list > parent's > group's; tie → newest rule) → convert to the ordered unit + order-unit discount → order discount on the total. Matches today's one-winner behavior (an account price replaced everything). *(PRC: within lists assigned to the customer, its own (mirrored account prices) list ranks first; a fixed price is converted to the ordered unit and takes the order-unit discount; computed prices round to the cent, an unconverted fixed price is kept exact.)*
+- [x] Endpoints: `GET/POST /v1/sales/price-lists`, `GET/PATCH/DELETE /v1/sales/price-lists/{id}`, `GET/POST /v1/sales/price-lists/{id}/rules`, `GET/PATCH/DELETE /v1/sales/price-lists/{id}/rules/{rule_id}`. Later, additive: bulk upsert of rules (price-sheet imports), an account-level "applies to all customers" default list. The internal price-list export moves here. *(PRC: the customer price export is internal `POST /v1/sales/price-lists/actions/export-customer-prices`, quoted per each item's default order unit from its own order units (no unit groups).)*
+- [x] List filters: price lists `statuses[]`, `customer_ids[]` (applying directly or inherited), `q` on `name`; rules `item_ids[]`, `product_line_ids[]`.
+- [x] Delete a price list: 409 `resource_in_use` while assigned to a customer or group; archive instead (archived lists stop applying immediately). Rules delete freely (orders keep their price). Stub responses. *(PRC: rule deletes and list deletes leave tombstones (410).)*
+- [x] Perf: a customer's rules load once per order with the existing pricing bundle (hundreds of rules in prod); no per-line queries. *(PRC: the bundle loads the applicable lists' rules in one pass per order.)*
 - [x] Confirmed: the precedence above (no list `priority`), and rules as a sub-resource with IDs.
 
 Migration
-- [ ] 152 account prices (62 customers) → one customer-specific list per customer with `fixed` rules (scope: product line, categories now counting, attributes).
-- [ ] 3 pricing groups (default policies, no product-line access) → price lists of the same name, assigned to their members; their 20 flat single-tier (threshold 0) volume discounts → `percent_of_base` rules with `100 × (1 − fraction)` (6 are markups, e.g. −135.3% → `"235.3"`).
-- [ ] Flat discounts scoped to classification groups → lists assigned to those groups.
-- [ ] 2 real tiered volume discounts → `tiered` rules (`unit` = their carton unit; tier percents rewritten to today's cumulative effect so prices don't change).
-- [ ] Drop `account_price*`, `quantity_discount*` (incl. 50 orphaned unit rows), pricing account groups and their memberships.
+- [x] 152 account prices (62 customers) → one customer-specific list per customer with `fixed` rules (scope: product line, categories now counting, attributes). *(PRC: mirrored, not migrated once: a paced backfill (`price_list_legacy_sync`, kill switch PRICE_LIST_SYNC_BACKFILL_DISABLED) copies each account's legacy prices into lists, and every preview.9 write re-mirrors its record, keeping IDs; until an account is mirrored its orders price from the legacy records.)*
+- [x] 3 pricing groups (default policies, no product-line access) → price lists of the same name, assigned to their members; their 20 flat single-tier (threshold 0) volume discounts → `percent_of_base` rules with `100 × (1 − fraction)` (6 are markups, e.g. −135.3% → `"235.3"`). *(PRC: each mirrored group list is assigned to the group and to the customers listing it as a price group.)*
+- [x] Flat discounts scoped to classification groups → lists assigned to those groups. *(PRC: discounts naming no group go to an account-wide list (internal `source_type` account) that applies to every customer at the lowest rank.)*
+- [x] 2 real tiered volume discounts → `tiered` rules (`unit` = their carton unit; tier percents rewritten to today's cumulative effect so prices don't change). *(PRC: tier percent_of_base = 100 x the product of (1 - fraction) up to that tier; the first acceptable unit counts.)*
+- [ ] Drop `account_price*`, `quantity_discount*` (incl. 50 orphaned unit rows), pricing account groups and their memberships. *(PRC: left to CLEAN: preview.9 still writes them; drop with the legacy pricing path and price_list_legacy_sync.)*
 
 Order discounts
-- [ ] `discount_type` + `percentage` + `amount` → `discount` (Discount shape; `amount_off` is Money).
-- [ ] Add `status: active | archived`; archived codes can't be applied to new orders (find-by-code returns 404 to portal users).
-- [ ] `order_count` → `times_redeemed`, from a stored counter.
-- [ ] Keep `POST actions/find-by-code`. List: `statuses[]`; `q` substring on `name` or `code`. Later, additive: `expires_at`, `max_redemptions`.
+- [x] `discount_type` + `percentage` + `amount` → `discount` (Discount shape; `amount_off` is Money). *(PRC: legacy columns stay written for order totals until SO2 reads the typed ones.)*
+- [x] Add `status: active | archived`; archived codes can't be applied to new orders (find-by-code returns 404 to portal users). *(PRC: archived codes 422 `resource_archived` on order create/update, 404 from find-by-code for buyers.)*
+- [x] `order_count` → `times_redeemed`, from a stored counter.
+- [x] Keep `POST actions/find-by-code`. List: `statuses[]`; `q` substring on `name` or `code`. Later, additive: `expires_at`, `max_redemptions`.
 
 Docstrings
 
@@ -1549,6 +1549,9 @@ Pricing
 - Account prices, volume discounts and pricing account groups are replaced by **price lists** (`/v1/sales/price-lists` + `/rules`): new screens for lists and rules (fixed, percent of base, tiered). Customer `price_groups` → `price_lists`; account groups gain `price_lists` and lose `type`.
 - Percentages are whole numbers (`"5"` = 5%, was `"0.05"`); discounts use `{ type, percent_off | amount_off }`.
 - Order discounts: `discount` object, `status`, `order_count` → `times_redeemed`.
+- `/v1/sales/account-prices` and `/v1/sales/volume-discounts` answer preview.9 callers only. Their writes are mirrored into price lists, so they still price orders; rules made through `/v1/sales/price-lists` don't show in them. The price PDF moves to `POST /v1/sales/price-lists/actions/export-customer-prices` (quoted per each item's default order unit).
+- A customer's fixed price is now converted to the ordered unit (and takes the order unit's discount): an 18.45/pair price quotes 221.40 for a 12-pair carton line instead of 18.45 per pair. A more specific group rule can now beat a customer's own price (e.g. a discount scoped by attributes over an ungated customer price).
+- A sales order's `order_discount` include is the order discount resource (forge shape); a deleted order discount reads 410.
 
 Sales orders (the order)
 - Request fields renamed to match the response: `customer_id`, `bill_to { address_id | inline }`, `ship_to { … }`, `freight { carrier_id, service_level_id, carrier_billing }`, `commitment { promised_at, lead_time_override, ship_by_override_date }`, `email_recipients [{ account_user, documents }]`; `acknowledgement_*` → `acknowledgment_*`.

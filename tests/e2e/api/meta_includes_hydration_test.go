@@ -53,7 +53,7 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 				path, query, ok := resolveGetScenario(ep, include)
 				require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
 
-				status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+				status, body, err := forgeClient().GetListRaw(path, withIncludeQuery(query, include))
 				require.NoError(t, err, "GET %s?include=%s failed", path, include)
 				require.Equalf(t, 200, status, "GET %s?include=%s: %s", path, include, string(body))
 
@@ -71,7 +71,7 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					}
 					nextPath, nextQuery, ok := ListURLPathQuery(&next)
 					require.True(t, ok, "next_page_url %q", next)
-					status, body, err = apiClient.GetListRaw(nextPath, nextQuery)
+					status, body, err = forgeClient().GetListRaw(nextPath, nextQuery)
 					require.NoError(t, err, "GET %s failed", next)
 					require.Equalf(t, 200, status, "GET %s: %s", next, string(body))
 					path, query, got = nextPath, nextQuery, parseJSON(body)
@@ -91,7 +91,7 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					owners := func() []string {
 						// The owning account is often itself an expandable (a sales order's customer), so
 						// look again with every top-level include expanded.
-						status, body, err := apiClient.GetListRaw(path, withIncludesQuery(query, topLevelIncludes(ep.IncludeEnum)))
+						status, body, err := forgeClient().GetListRaw(path, withIncludesQuery(query, topLevelIncludes(ep.IncludeEnum)))
 						require.NoError(t, err)
 						require.Less(t, status, 500, "GET %s with every include must not 5xx: %s", path, string(body))
 						return append(collectAccountIDs(got), collectAccountIDs(parseJSON(body))...)
@@ -99,7 +99,7 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					// A parallel test may delete a listed row between the two reads. A leaf the including
 					// endpoint no longer hands out is that race; one it still hands out must be retrievable.
 					includedLeaf := func(id string) map[string]any {
-						status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+						status, body, err := forgeClient().GetListRaw(path, withIncludeQuery(query, include))
 						require.NoError(t, err)
 						requireStatus(t, 200, status, body)
 						for _, leaf := range collectIncludeLeafResources(parseJSON(body), include) {
@@ -153,13 +153,13 @@ func retrieveCanonical(t *testing.T, rt retrieveEndpoint, id string, owners func
 	t.Helper()
 
 	canonPath := strings.ReplaceAll(rt.path, "{"+rt.param+"}", id)
-	status, body, err := apiClient.GetListRaw(canonPath, nil)
+	status, body, err := forgeClient().GetListRaw(canonPath, nil)
 	require.NoError(t, err, "canonical GET %s failed", canonPath)
 	require.Less(t, status, 500, "canonical GET %s must not 5xx: %s", canonPath, string(body))
 
 	if status != 200 {
 		for _, accountID := range owners() {
-			status, body, err = apiClient.WithAccountID(accountID).GetListRaw(canonPath, nil)
+			status, body, err = forgeClient().WithAccountID(accountID).GetListRaw(canonPath, nil)
 			require.NoError(t, err, "canonical GET %s as %s failed", canonPath, accountID)
 			require.Less(t, status, 500, "canonical GET %s as %s must not 5xx: %s", canonPath, accountID, string(body))
 			if status == 200 {

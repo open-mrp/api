@@ -110,7 +110,7 @@ func TestCovSalesSalesOrders_CreateAllFields(t *testing.T) {
 	assert.Equal(t, po, jsonField(created, "customer_purchase_order_number"))
 	assert.Equal(t, "Rush order", jsonField(created, "note"))
 	assert.Equal(t, "estimate", jsonField(created, "status"), "new orders default to estimate")
-	assert.Equal(t, "normal", jsonField(created, "priority"), "priority is a plain code string")
+	assertNilField(t, created, "priority") // forge dropped priority; preview.9 reads it as null
 	assert.Equal(t, "unpaid", jsonField(created, "payment_status"))
 	assert.Equal(t, "not_sent", jsonField(created, "acknowledgment_status"))
 	assert.EqualValues(t, 3, created["line_count"], "1 input line + synthesized shipping line + synthesized discount line")
@@ -230,7 +230,7 @@ func TestCovSalesSalesOrders_PriorityAndAcknowledgmentStatusRealValues(t *testin
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
-	assert.Equal(t, "normal", jsonField(got, "priority"))
+	assertNilField(t, got, "priority") // forge dropped priority; preview.9 reads it as null
 	assert.Equal(t, "not_sent", jsonField(got, "acknowledgment_status"))
 }
 
@@ -300,15 +300,16 @@ func TestCovSalesSalesOrders_MissingRequiredFieldsRejected(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 
-	fields := []string{"buyer_account_id", "bill_to_address_id", "ship_to_address_id", "priority_code", "lines"}
+	// The addresses, carrier and terms default from the customer; only the customer and the lines are required.
+	fields := []string{"customer_id", "lines"}
 	for _, field := range fields {
 		field := field
 		t.Run(field, func(t *testing.T) {
 			t.Parallel()
-			body := minimalSalesOrderCreateBody(t, customerID)
+			body := forgeOrderBody(customerID)
 			delete(body, field)
 
-			status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			require.GreaterOrEqual(t, status, 400, "missing %s should be rejected: %s", field, string(respBody))
 			require.Less(t, status, 500, "missing %s must not 5xx: %s", field, string(respBody))
@@ -321,10 +322,10 @@ func TestCovSalesSalesOrders_MissingRequiredFieldsRejected(t *testing.T) {
 func TestCovSalesSalesOrders_EmptyLinesRejected(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
-	body := minimalSalesOrderCreateBody(t, customerID)
+	body := forgeOrderBody(customerID)
 	body["lines"] = []map[string]any{}
 
-	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
@@ -361,6 +362,7 @@ func TestCovSalesSalesOrders_OptionalScalarFieldValidation(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 
+	// instructions takes null for none, so it isn't here.
 	cases := []struct {
 		name  string
 		field string
@@ -369,19 +371,17 @@ func TestCovSalesSalesOrders_OptionalScalarFieldValidation(t *testing.T) {
 		{"CustomerPurchaseOrderNumberBlank", "customer_purchase_order_number", ""},
 		{"CustomerPurchaseOrderNumberNull", "customer_purchase_order_number", nil},
 		{"CustomerPurchaseOrderNumberTooLong", "customer_purchase_order_number", strings.Repeat("X", 256)},
-		{"NoteBlank", "note", ""},
-		{"NoteNull", "note", nil},
-		{"CarrierBillingAccountNumberTooLong", "carrier_billing_account_number", strings.Repeat("X", 256)},
-		{"PromisedAtMalformed", "promised_at", "not-a-date"},
+		{"CarrierBillingAccountNumberTooLong", "freight", map[string]any{"carrier_billing": map[string]any{"type": "third_party", "account_number": strings.Repeat("X", 256)}}},
+		{"PromisedOnMalformed", "commitment", map[string]any{"promised_on": "not-a-date"}},
 	}
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			body := minimalSalesOrderCreateBody(t, customerID)
+			body := forgeOrderBody(customerID)
 			body[tc.field] = tc.value
 
-			status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			require.GreaterOrEqual(t, status, 400, "%s should be rejected: %s", tc.name, string(respBody))
 			require.Less(t, status, 500, "%s must not 5xx: %s", tc.name, string(respBody))
@@ -392,23 +392,23 @@ func TestCovSalesSalesOrders_OptionalScalarFieldValidation(t *testing.T) {
 func TestCovSalesSalesOrders_CarrierBillingTypeInvalidEnumRejected(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
-	body := minimalSalesOrderCreateBody(t, customerID)
-	body["carrier_billing_type"] = "bogus_billing_type"
+	body := forgeOrderBody(customerID)
+	body["freight"] = map[string]any{"carrier_billing": map[string]any{"type": "bogus_billing_type"}}
 
-	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "carrier_billing_type")
+	assertErrorParam(t, errObj, "freight.carrier_billing.type")
 }
 
 func TestCovSalesSalesOrders_UnknownTopLevelFieldRejected(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
-	body := minimalSalesOrderCreateBody(t, customerID)
+	body := forgeOrderBody(customerID)
 	body[bogusE2EJSONField] = "x"
 
-	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	assertJSONUnknownFieldRejected(t, "POST", salesOrdersPath, status, respBody)
 }
@@ -423,10 +423,10 @@ func TestCovSalesSalesOrders_LineValidation(t *testing.T) {
 
 	t.Run("MissingProductID", func(t *testing.T) {
 		t.Parallel()
-		body := minimalSalesOrderCreateBody(t, customerID)
+		body := forgeOrderBody(customerID)
 		body["lines"] = []map[string]any{{"quantity": map[string]any{"value": "1", "unit_id": SeedUnitID}}}
 
-		status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+		status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 422, status, respBody)
 		requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
@@ -434,13 +434,13 @@ func TestCovSalesSalesOrders_LineValidation(t *testing.T) {
 
 	t.Run("NonexistentProductID", func(t *testing.T) {
 		t.Parallel()
-		body := minimalSalesOrderCreateBody(t, customerID)
+		body := forgeOrderBody(customerID)
 		body["lines"] = []map[string]any{{
 			"product_id": "pd_00000000000000000000",
 			"quantity":   map[string]any{"value": "1", "unit_id": SeedUnitID},
 		}}
 
-		status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+		status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, status, 400, "nonexistent line product_id should be rejected: %s", string(respBody))
 		require.Less(t, status, 500, "nonexistent line product_id must not 5xx: %s", string(respBody))
@@ -550,9 +550,9 @@ func TestCovSalesSalesOrders_NonexistentUncheckedForeignKeysRejected(t *testing.
 	cases := []struct {
 		name  string
 		field string
-		value string
+		value any
 	}{
-		{"ServiceLevelID", "service_level_id", "crop_00000000000000000000"},
+		{"ServiceLevelID", "freight", map[string]any{"carrier_id": SeedCarrierID, "service_level_id": "crop_00000000000000000000"}},
 		{"PaymentTermID", "payment_term_id", "pytm_00000000000000000000"},
 		{"ShippingTermID", "shipping_term_id", "bogus_shipping_term_e2e"},
 		{"SalesRepID", "sales_rep_id", "acus_00000000000000000000"},
@@ -561,10 +561,10 @@ func TestCovSalesSalesOrders_NonexistentUncheckedForeignKeysRejected(t *testing.
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			body := minimalSalesOrderCreateBody(t, customerID)
+			body := forgeOrderBody(customerID)
 			body[tc.field] = tc.value
 
-			status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			status, respBody, err := forgeClient().Post(salesOrdersPath, body, newIdempotencyKey())
 			require.NoError(t, err)
 			if status == 201 {
 				id := jsonField(parseJSON(respBody), "id")
@@ -641,7 +641,7 @@ func TestCovSalesSalesOrders_EmailContactFromSellerAccountRejected(t *testing.T)
 		id := jsonField(parseJSON(respBody), "id")
 		deleteOrder(t, id)
 	}
-	assert.Equalf(t, 422, status,
+	assert.Equalf(t, 404, status,
 		"a seller-account account_user_id must be rejected as an order email contact (recipients are buyer-side), got %d: %s",
 		status, string(respBody))
 }
@@ -674,7 +674,7 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 		id := jsonField(parseJSON(respBody), "id")
 		deleteOrder(t, id)
 
-		gStatus, gBody, err := apiClient.GetListRaw(salesOrdersPath+"/"+id, url.Values{"include": {"lines", "lines.unit_price"}})
+		gStatus, gBody, err := forgeClient().GetListRaw(salesOrdersPath+"/"+id, url.Values{"include": {"lines", "lines.unit_price"}})
 		require.NoError(t, err)
 		requireStatus(t, 200, gStatus, gBody)
 		lines := jsonListData(parseJSON(gBody), "lines")
@@ -708,7 +708,7 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 		id := jsonField(parseJSON(respBody), "id")
 		deleteOrder(t, id)
 
-		gStatus, gBody, err := apiClient.GetListRaw(salesOrdersPath+"/"+id, url.Values{"include": {"lines", "lines.unit_price"}})
+		gStatus, gBody, err := forgeClient().GetListRaw(salesOrdersPath+"/"+id, url.Values{"include": {"lines", "lines.unit_price"}})
 		require.NoError(t, err)
 		requireStatus(t, 200, gStatus, gBody)
 		lines := jsonListData(parseJSON(gBody), "lines")
@@ -731,21 +731,21 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 // is wrong instead of being handed an empty page they would read as "no such orders".
 func TestCovSalesSalesOrders_ListStatusCodesUnknownRejected(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"status_codes": {"bogus_status_code_e2e"}})
+	status, body, err := forgeClient().GetListRaw(salesOrdersPath, url.Values{"statuses": {"bogus_status_code_e2e"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "status_codes")
+	assertErrorParam(t, errObj, "statuses")
 }
 
 // A malformed date window is refused on its parameter rather than read as no filter.
 func TestCovSalesSalesOrders_ListMalformedDateFiltersRejected(t *testing.T) {
 	t.Parallel()
-	for _, param := range []string{"starts_at", "ends_at", "ship_by_after", "ship_by_before"} {
+	for _, param := range []string{"created_after", "created_before", "ship_by_after", "ship_by_before"} {
 		param := param
 		t.Run(param, func(t *testing.T) {
 			t.Parallel()
-			status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{param: {"not-a-date"}})
+			status, body, err := forgeClient().GetListRaw(salesOrdersPath, url.Values{param: {"not-a-date"}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
 			assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), param)
@@ -755,7 +755,7 @@ func TestCovSalesSalesOrders_ListMalformedDateFiltersRejected(t *testing.T) {
 
 func TestCovSalesSalesOrders_ListUnknownIncludeRejected(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"include": {"bogus_include_e2e"}})
+	status, body, err := forgeClient().GetListRaw(salesOrdersPath, url.Values{"include": {"bogus_include_e2e"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
@@ -817,8 +817,8 @@ func TestCovSalesSalesOrders_StatusesListInvalidLimitRejected(t *testing.T) {
 		name  string
 		limit string
 	}{
+		// The statuses list is preview.9's alone, and preview.9 caps a larger limit rather than refusing it.
 		{"Zero", "0"},
-		{"TooLarge", "1001"},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -851,6 +851,6 @@ func TestCovSalesSalesOrders_StatusesUnknownIncludeRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covSalesSalesOrdersStatusesPath, url.Values{"include": {"bogus_include_e2e"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requirePreview9Error(t, body, "parameter_invalid")
 	assertErrorParam(t, errObj, "include[]")
 }

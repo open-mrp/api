@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,12 +96,16 @@ func TestSalesOrderCounterpartyRefs_UpdateRefusesOnesTheAccountCannotUse(t *test
 	}{
 		{"a supplier as the customer", "customer_id", SeedSupplierAccountID},
 		{"another tenant's customer", "customer_id", foreignCustomer},
-		{"another tenant's bill-to", "billing_address_id", foreignAddress},
-		{"another tenant's ship-to", "shipping_address_id", foreignAddress},
-		{"another customer's ship-to", "shipping_address_id", otherCustomersAddress},
+		{"another tenant's bill-to", "bill_to.address_id", foreignAddress},
+		{"another tenant's ship-to", "ship_to.address_id", foreignAddress},
+		{"another customer's ship-to", "ship_to.address_id", otherCustomersAddress},
 		{"another tenant's discount", "order_discount_id", foreignDiscount},
 	} {
-		status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{tc.field: tc.id}, newIdempotencyKey())
+		patch := map[string]any{tc.field: tc.id}
+		if side, ok := strings.CutSuffix(tc.field, ".address_id"); ok {
+			patch = map[string]any{side: map[string]any{"address_id": tc.id}}
+		}
+		status, body, err := forgeClient().Patch(salesOrdersPath+"/"+orderID, patch, newIdempotencyKey())
 		require.NoError(t, err)
 		require.Equal(t, 404, status, "%s: %s", tc.name, string(body))
 		assertErrorParam(t, requireErrorResponse(t, body, "resource_not_found", "invalid_request_error"), tc.field)

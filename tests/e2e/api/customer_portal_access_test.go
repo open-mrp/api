@@ -299,7 +299,7 @@ func TestCustomerPortalAccess_CannotCreateUnitGroup(t *testing.T) {
 // order total on the portal.
 func TestCustomerPortalAccess_SalesOrderLineUnitsHydrated(t *testing.T) {
 	t.Parallel()
-	client := getCustomerPortalClient()
+	client := getCustomerPortalClient().WithForgeSalesOrders()
 
 	// Seed estimate EST-001 (or_01k0a8bs2yfhev5begay245wez): owned by the vendor, bought by the
 	// seed customer, whose lines carry quantity units (pair / each) and unit prices.

@@ -72,9 +72,13 @@ func TestForeignShippingRefs_SalesOrderUpdateRefusedLeavesTheOrderAndItsShipment
 		{"payment_term_id", foreign.paymentTermID},
 	} {
 		t.Run(tc.field, func(t *testing.T) {
-			status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{tc.field: tc.id}, newIdempotencyKey())
+			status, body, err := forgeClient().Patch(salesOrdersPath+"/"+orderID, forgeSalesOrderWrite(map[string]any{tc.field: tc.id}), newIdempotencyKey())
 			require.NoError(t, err)
-			assertRefNotFound(t, status, body, tc.field)
+			param := tc.field
+			if param == "carrier_id" || param == "service_level_id" {
+				param = "freight." + param
+			}
+			assertRefNotFound(t, status, body, param)
 
 			gotCarrier, gotServiceLevel, gotShippingTerm, gotPaymentTerm := orderRefIDs(t, orderID)
 			assert.Equal(t, carrier, gotCarrier, "the order keeps its carrier")
@@ -135,30 +139,30 @@ func TestForeignShippingRefs_SalesOrderCreateRefusesAForeignCarrier(t *testing.T
 			body["carrier_id"] = foreign.carrierID
 			delete(body, "service_level_id")
 
-			status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			status, resp, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 			require.NoError(t, err)
 			if status == 201 {
 				deleteOrder(t, jsonField(parseJSON(resp), "id"))
 			}
-			assertRefNotFound(t, status, resp, "carrier_id")
+			assertRefNotFound(t, status, resp, "freight.carrier_id")
 		})
 	}
 }
 
-// Create refuses another tenant's service level with the 400 its other reference checks answer.
+// Create refuses another tenant's service level with the 422 its other reference checks answer.
 func TestForeignShippingRefs_SalesOrderCreateRefusesAForeignServiceLevel(t *testing.T) {
 	t.Parallel()
 	foreign := createTenantBShippingRefs(t)
 	body := minimalSalesOrderCreateBody(t, setupFreightExemptOrderCustomer(t))
 	body["service_level_id"] = foreign.serviceLevelID
 
-	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, resp, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		deleteOrder(t, jsonField(parseJSON(resp), "id"))
 	}
 	requireStatus(t, 422, status, resp)
-	assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), "service_level_id")
+	assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), "freight.service_level_id")
 }
 
 func TestForeignShippingRefs_SalesOrderCreateTakesASystemOrOwnCarrier(t *testing.T) {

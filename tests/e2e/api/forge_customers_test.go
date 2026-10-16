@@ -307,7 +307,7 @@ func TestForgeCustomers_ArchivedCustomerTakesNoNewOrders(t *testing.T) {
 	status, resp := forgeCustomerPatch(t, customerID, map[string]any{"status": "archived"})
 	requireStatus(t, 200, status, resp)
 
-	orderStatus, orderBody, err := apiClient.Post(salesOrdersPath, minimalSalesOrderCreateBody(t, customerID), newIdempotencyKey())
+	orderStatus, orderBody, err := forgeClient().Post(salesOrdersPath, forgeOrderBody(customerID), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, orderStatus, orderBody)
 	assertErrorParam(t, requireErrorResponse(t, orderBody, "resource_archived", "invalid_request_error"), "customer_id")

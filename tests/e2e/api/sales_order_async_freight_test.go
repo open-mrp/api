@@ -43,7 +43,7 @@ func freightOrder(t *testing.T, postalCode string) map[string]any {
 func freightLinePrices(t *testing.T, orderID string, orderedSKU string) []float64 {
 	t.Helper()
 
-	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"lines", "lines.unit_price"}})
+	status, body, err := forgeClient().GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"lines", "lines.unit_price"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

@@ -47,7 +47,7 @@ func createOrderWithBasis(t *testing.T, customerID string, basis map[string]any)
 		body[k] = v
 	}
 
-	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, respBody, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "order create must not 5xx: %s", string(respBody))
 	if status == 201 {
@@ -65,7 +65,7 @@ func TestCommitmentBasis_LeadTimeOverrideReplacesTheCustomerChain(t *testing.T) 
 	requireStatus(t, 201, status, body)
 
 	orderID := jsonField(parseJSON(body), "id")
-	assert.Equal(t, "7", jsonField(commitmentOf(parseJSON(body)), "lead_time_override_days"))
+	assert.Equal(t, "7", jsonField(jsonObject(commitmentOf(parseJSON(body)), "lead_time_override"), "value"))
 
 	issued := issueOrder(t, orderID)
 	assert.Equal(t, "order_lead_time", jsonField(commitmentOf(issued), "lead_time_source"),
@@ -143,9 +143,9 @@ func TestCommitmentBasis_AddingASecondBasisByPatchIsRejected(t *testing.T) {
 	orderID := jsonField(parseJSON(body), "id")
 
 	when := futureWeekday(30).Format("2006-01-02") + "T00:00:00Z"
-	status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{
+	status, body, err := forgeClient().Patch(salesOrdersPath+"/"+orderID, forgeSalesOrderWrite(map[string]any{
 		"promised_at": when,
-	}, newIdempotencyKey())
+	}), newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "patch must not 5xx: %s", string(body))
 	assert.Equal(t, 422, status, "adding a second basis must be rejected: %s", string(body))

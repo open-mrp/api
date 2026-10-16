@@ -84,20 +84,6 @@ func inlinePurchaseOrderBody(supplierID string) map[string]any {
 	}
 }
 
-func inlineSalesOrderBody(customerID string) map[string]any {
-	return map[string]any{
-		"buyer_account_id": customerID,
-		"carrier_id":       SeedCarrierID,
-		"service_level_id": SeedServiceLevelID,
-		"priority_code":    "normal",
-		"payment_term_id":  SeedPaymentTermID,
-		"shipping_term_id": SeedShippingTermID,
-		"lines": []map[string]any{
-			{"product_id": SeedProductID, "quantity": map[string]any{"value": "1", "unit_id": SeedUnitID}},
-		},
-	}
-}
-
 // getWithAddresses reads a record with both of its address includes.
 func getWithAddresses(t *testing.T, path, billKey, shipKey string) (bill, ship map[string]any) {
 	t.Helper()
@@ -290,18 +276,58 @@ func TestInlineAddresses_PurchaseOrderRejections(t *testing.T) {
 
 // --- Sales orders ---
 
+// An order copies its addresses: a saved address by address_id, or the fields inline. Neither edits the address book.
+
+// forgeOrderAddresses reads an order's bill_to and ship_to copies with the saved addresses they came from.
+func forgeOrderAddresses(t *testing.T, orderID string) (bill, ship map[string]any) {
+	t.Helper()
+	got := forgeReadOrder(t, orderID, "bill_to.address", "ship_to.address")
+	bill, ship = jsonObject(got, "bill_to"), jsonObject(got, "ship_to")
+	require.NotNil(t, bill, "bill_to: %v", got)
+	require.NotNil(t, ship, "ship_to: %v", got)
+	return bill, ship
+}
+
+// listCounterpartyAddresses is the address book of accountID.
+func listCounterpartyAddresses(t *testing.T, accountID string) []map[string]any {
+	t.Helper()
+	status, body, err := apiClient.WithAccountID(accountID).GetListRaw(addressesPath, url.Values{"limit": {"100"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	var out []map[string]any
+	for _, raw := range jsonArray(parseJSON(body), "data") {
+		if row, ok := raw.(map[string]any); ok {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+// assertErrorNames requires an error to name param, as its own param or one of its listed fields'.
+func assertErrorNames(t *testing.T, errObj map[string]any, param string) {
+	t.Helper()
+	names := []string{jsonField(errObj, "param")}
+	rows, _ := errObj["errors"].([]any)
+	for _, r := range rows {
+		if row, ok := r.(map[string]any); ok {
+			names = append(names, jsonField(row, "param"))
+		}
+	}
+	assert.Contains(t, names, param, "error: %v", errObj)
+}
+
 func TestInlineAddresses_SalesOrderCreateNeedsOnlyCreatePermission(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)
 	existingID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-existing"))
 	*saved = append(*saved, existingID)
-	client := customRoleClient(t, "sales_orders:create")
+	client := customRoleClient(t, "sales_orders:create").WithForgeSalesOrders()
 
-	billName, shipName := uniqueName("e2e-inline-so-bill"), uniqueName("e2e-inline-so-ship")
-	body := inlineSalesOrderBody(customerID)
-	body["bill_to_address"] = inlineAddressBody(billName, "6 Billing Blvd")
-	body["ship_to_address"] = map[string]any{"id": existingID, "name": shipName, "line_2": "Dock 4"}
+	billName := uniqueName("e2e-inline-so-bill")
+	body := forgeOrderBody(customerID)
+	body["bill_to"] = inlineAddressBody(billName, "6 Billing Blvd")
+	body["ship_to"] = map[string]any{"address_id": existingID}
 
 	status, resp, err := client.Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -309,18 +335,16 @@ func TestInlineAddresses_SalesOrderCreateNeedsOnlyCreatePermission(t *testing.T)
 	orderID := jsonField(parseJSON(resp), "id")
 	deleteOrder(t, orderID)
 
-	bill, ship := getWithAddresses(t, salesOrdersPath+"/"+orderID, "bill_to_address", "ship_to_address")
-	billID := jsonField(bill, "id")
-	*saved = append(*saved, billID)
+	bill, ship := forgeOrderAddresses(t, orderID)
 	assert.Equal(t, billName, jsonField(bill, "name"))
-	assert.Equal(t, existingID, jsonField(ship, "id"))
-	assert.Equal(t, shipName, jsonField(ship, "name"))
+	assert.Equal(t, "6 Billing Blvd", jsonField(bill, "line_1"))
+	assert.Equal(t, "US", jsonField(bill, "country"))
+	assert.Equal(t, existingID, jsonField(jsonObject(ship, "address"), "id"), "the copy names the saved address it came from")
+	assert.Equal(t, "9 Spindle Way", jsonField(ship, "line_1"), "the saved address's fields are copied")
 
-	assert.Equal(t, "6 Billing Blvd", jsonField(addressIn(t, customerID, billID), "line_1"), "the new address is saved to the customer")
-	updated := addressIn(t, customerID, existingID)
-	assert.Equal(t, shipName, jsonField(updated, "name"))
-	assert.Equal(t, "Dock 4", jsonField(updated, "line_2"))
-	assert.Equal(t, "9 Spindle Way", jsonField(updated, "line_1"), "fields the inline update leaves out are kept")
+	for _, raw := range listCounterpartyAddresses(t, customerID) {
+		assert.NotEqual(t, billName, jsonField(raw, "name"), "an inline address is not saved to the customer")
+	}
 }
 
 func TestInlineAddresses_SalesOrderUpdateNeedsOnlyUpdatePermission(t *testing.T) {
@@ -330,32 +354,23 @@ func TestInlineAddresses_SalesOrderUpdateNeedsOnlyUpdatePermission(t *testing.T)
 	existingID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-upd-existing"))
 	*saved = append(*saved, existingID)
 
-	body := inlineSalesOrderBody(customerID)
-	body["bill_to_address_id"] = existingID
-	body["ship_to_address_id"] = existingID
-	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, resp)
-	orderID := jsonField(parseJSON(resp), "id")
-	deleteOrder(t, orderID)
+	order := forgeCreateOrder(t, forgeOrderBody(customerID))
+	orderID := jsonField(order, "id")
 
-	client := customRoleClient(t, "sales_orders:update")
-	billName, shipName := uniqueName("e2e-inline-so-upd-bill"), uniqueName("e2e-inline-so-upd-ship")
-	status, resp, err = client.Patch(salesOrdersPath+"/"+orderID, map[string]any{
-		"billing_address":  map[string]any{"id": existingID, "name": billName, "email": "billing@e2e-test.openmrp.ai"},
-		"shipping_address": inlineAddressBody(shipName, "7 Shipping St"),
+	client := customRoleClient(t, "sales_orders:update").WithForgeSalesOrders()
+	shipName := uniqueName("e2e-inline-so-upd-ship")
+	status, resp, err := client.Patch(salesOrdersPath+"/"+orderID, map[string]any{
+		"bill_to": map[string]any{"address_id": existingID},
+		"ship_to": inlineAddressBody(shipName, "7 Shipping St"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, resp)
 
-	bill, ship := getWithAddresses(t, salesOrdersPath+"/"+orderID, "bill_to_address", "ship_to_address")
-	shipID := jsonField(ship, "id")
-	*saved = append(*saved, shipID)
-	assert.Equal(t, existingID, jsonField(bill, "id"))
-	assert.Equal(t, billName, jsonField(bill, "name"))
-	assert.NotEqual(t, existingID, shipID)
-	assert.Equal(t, shipName, jsonField(addressIn(t, customerID, shipID), "name"), "the new address is saved to the customer")
-	assert.Equal(t, "billing@e2e-test.openmrp.ai", jsonField(addressIn(t, customerID, existingID), "email"))
+	bill, ship := forgeOrderAddresses(t, orderID)
+	assert.Equal(t, existingID, jsonField(jsonObject(bill, "address"), "id"))
+	assert.Equal(t, shipName, jsonField(ship, "name"))
+	assert.Equal(t, "7 Shipping St", jsonField(ship, "line_1"))
+	assert.Equal(t, "9 Spindle Way", jsonField(addressIn(t, customerID, existingID), "line_1"), "the saved address is unchanged")
 }
 
 func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
@@ -370,17 +385,10 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 	*otherSaved = append(*otherSaved, otherCustomerAddressID)
 	otherTenantAddressID := tenantBAddress(t)
 
-	body := inlineSalesOrderBody(customerID)
-	body["bill_to_address_id"] = customerAddressID
-	body["ship_to_address_id"] = customerAddressID
-	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, resp)
-	orderID := jsonField(parseJSON(resp), "id")
-	deleteOrder(t, orderID)
+	orderID := jsonField(forgeCreateOrder(t, forgeOrderBody(customerID)), "id")
 
-	createClient := customRoleClient(t, "sales_orders:create")
-	updateClient := customRoleClient(t, "sales_orders:update")
+	createClient := customRoleClient(t, "sales_orders:create").WithForgeSalesOrders()
+	updateClient := customRoleClient(t, "sales_orders:update").WithForgeSalesOrders()
 
 	cases := []struct {
 		name   string
@@ -391,38 +399,29 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 		param  string
 	}{
 		{"create: another customer's address", false, func(b map[string]any) {
-			b["bill_to_address"] = map[string]any{"id": otherCustomerAddressID}
-			b["ship_to_address_id"] = customerAddressID
-		}, 404, "", "bill_to_address.id"},
+			b["bill_to"] = map[string]any{"address_id": otherCustomerAddressID}
+		}, 404, "resource_not_found", "bill_to.address_id"},
 		{"create: another tenant's address", false, func(b map[string]any) {
-			b["bill_to_address_id"] = customerAddressID
-			b["ship_to_address"] = map[string]any{"id": otherTenantAddressID}
-		}, 404, "", "ship_to_address.id"},
+			b["ship_to"] = map[string]any{"address_id": otherTenantAddressID}
+		}, 404, "resource_not_found", "ship_to.address_id"},
 		{"create: an id and an inline address", false, func(b map[string]any) {
-			b["bill_to_address_id"] = customerAddressID
-			b["bill_to_address"] = map[string]any{"id": customerAddressID}
-			b["ship_to_address_id"] = customerAddressID
-		}, 422, "validation_failed", "bill_to_address"},
-		{"create: neither an id nor an inline address", false, func(b map[string]any) {
-			b["bill_to_address_id"] = customerAddressID
-		}, 422, "missing_field", "ship_to_address_id"},
+			b["bill_to"] = map[string]any{"address_id": customerAddressID, "name": "Both"}
+		}, 422, "", "bill_to"},
 		{"create: a new address without a country", false, func(b map[string]any) {
-			b["bill_to_address"] = map[string]any{"name": "No country"}
-			b["ship_to_address_id"] = customerAddressID
-		}, 422, "missing_field", "bill_to_address.country"},
+			b["bill_to"] = map[string]any{"name": "No country"}
+		}, 422, "", "bill_to.country"},
 		{"update: another customer's address", true, func(b map[string]any) {
-			b["billing_address"] = map[string]any{"id": otherCustomerAddressID, "name": "x"}
-		}, 404, "", "billing_address.id"},
+			b["bill_to"] = map[string]any{"address_id": otherCustomerAddressID}
+		}, 404, "resource_not_found", "bill_to.address_id"},
 		{"update: another tenant's address", true, func(b map[string]any) {
-			b["shipping_address"] = map[string]any{"id": otherTenantAddressID}
-		}, 404, "", "shipping_address.id"},
+			b["ship_to"] = map[string]any{"address_id": otherTenantAddressID}
+		}, 404, "resource_not_found", "ship_to.address_id"},
 		{"update: an id and an inline address", true, func(b map[string]any) {
-			b["shipping_address_id"] = customerAddressID
-			b["shipping_address"] = map[string]any{"id": customerAddressID}
-		}, 422, "validation_failed", "shipping_address"},
+			b["ship_to"] = map[string]any{"address_id": customerAddressID, "line_1": "1 Main St"}
+		}, 422, "", "ship_to"},
 		{"update: a too-long state", true, func(b map[string]any) {
-			b["billing_address"] = map[string]any{"name": "Long state", "country": "US", "state": strings.Repeat("x", 256)}
-		}, 422, "", "billing_address.state"},
+			b["bill_to"] = map[string]any{"name": "Long state", "country": "US", "state": strings.Repeat("x", 256)}
+		}, 422, "", "bill_to.state"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -434,7 +433,7 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 				tc.mutate(b)
 				status, resp, err = updateClient.Patch(salesOrdersPath+"/"+orderID, b, newIdempotencyKey())
 			} else {
-				b := inlineSalesOrderBody(customerID)
+				b := forgeOrderBody(customerID)
 				tc.mutate(b)
 				status, resp, err = createClient.Post(salesOrdersPath, b, newIdempotencyKey())
 				if status == 201 {
@@ -443,7 +442,7 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 			}
 			require.NoError(t, err)
 			requireStatus(t, tc.status, status, resp)
-			assertErrorParam(t, requireErrorResponse(t, resp, tc.code, "invalid_request_error"), tc.param)
+			assertErrorNames(t, requireErrorResponse(t, resp, tc.code, "invalid_request_error"), tc.param)
 		})
 	}
 	assert.Equal(t, "9 Spindle Way", jsonField(addressIn(t, otherCustomerID, otherCustomerAddressID), "line_1"), "another customer's address is never touched")

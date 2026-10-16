@@ -29,9 +29,11 @@ type Client struct {
 	accountID  string
 	apiVersion string
 	// pinned is set by WithAPIVersion: the request carries apiVersion whatever its route.
-	pinned     bool
-	httpClient *http.Client
-	retries    int
+	pinned bool
+	// forgeOrders sends sales order requests as 1.0.forge instead of preview.9 (see requestVersion).
+	forgeOrders bool
+	httpClient  *http.Client
+	retries     int
 	// cookies, when set, authenticate the request in place of the Authorization
 	// header. The gateway rejects a request carrying both, so the two are
 	// mutually exclusive rather than additive.
@@ -54,7 +56,17 @@ func NewClient(baseURL, apiKey, accountID string) *Client {
 
 // WithAccountID returns a new Client targeting a different account.
 func (c *Client) WithAccountID(accountID string) *Client {
-	return NewClient(c.baseURL, c.apiKey, accountID)
+	clone := NewClient(c.baseURL, c.apiKey, accountID)
+	clone.forgeOrders = c.forgeOrders
+	return clone
+}
+
+// WithForgeSalesOrders returns a Client that reads and writes sales orders as 1.0.forge, which other suites' clients
+// do as preview.9. Every other route is versioned as it is for c.
+func (c *Client) WithForgeSalesOrders() *Client {
+	clone := *c
+	clone.forgeOrders = true
+	return &clone
 }
 
 // WithAPIVersion returns a new Client pinned to a specific API version. Used
@@ -74,6 +86,7 @@ func (c *Client) WithCookies(cookies []*http.Cookie, accountID string) *Client {
 	clone := NewClient(c.baseURL, "", accountID)
 	clone.apiVersion = c.apiVersion
 	clone.pinned = c.pinned
+	clone.forgeOrders = c.forgeOrders
 	clone.cookies = cookies
 	return clone
 }
@@ -92,7 +105,7 @@ func (c *Client) applyAuth(req *http.Request) {
 	req.Header.Set("OpenMRP-Account", c.accountID)
 	version := c.apiVersion
 	if !c.pinned {
-		version = requestVersion(version, req.URL.Path)
+		version = requestVersion(version, req.URL.Path, c.forgeOrders)
 	}
 	req.Header.Set("OpenMRP-Version", version)
 	req.Header.Set("Accept", "application/json")
@@ -101,10 +114,10 @@ func (c *Client) applyAuth(req *http.Request) {
 // preview9OnlyPrefixes are the routes 1.0.forge removed but 1.0.forge-preview.9 callers still reach. Sales order lines
 // still name products, so fixtures create them here until orders take items.
 var preview9OnlyPrefixes = []string{"/v1/catalog/materials", "/v1/catalog/parts", "/v1/catalog/products", "/v1/catalog/unit-groups", "/v1/ai/memories",
-	"/v1/sales/account-prices", "/v1/sales/volume-discounts"}
+	"/v1/sales/account-prices", "/v1/sales/volume-discounts", "/v1/sales/sales-orders/statuses"}
 
 // requestVersion pins a default-version request to a preview.9-only route to preview.9, the only version it answers.
-func requestVersion(version, path string) string {
+func requestVersion(version, path string, forgeOrders bool) string {
 	if version != defaultAPIVersion {
 		return version
 	}
@@ -118,10 +131,33 @@ func requestVersion(version, path string) string {
 	}
 	// Suites that only set up sales orders for other resources still write and read them in the preview.9 shape;
 	// the sales order suites pin 1.0.forge with forgeClient.
-	if path == salesOrdersPath || strings.HasPrefix(path, salesOrdersPath+"/") {
+	if !forgeOrders && isSalesOrderHeaderPath(path) {
 		return preview9Version
 	}
 	return version
+}
+
+// isSalesOrderHeaderPath reports whether path reads or writes the sales order itself (not its lines or helpers):
+// the list, one order and its status actions.
+func isSalesOrderHeaderPath(path string) bool {
+	if path == salesOrdersPath {
+		return true
+	}
+	rest, ok := strings.CutPrefix(path, salesOrdersPath+"/")
+	if !ok {
+		return false
+	}
+	segs := strings.Split(rest, "/")
+	switch {
+	case len(segs) == 1:
+		return segs[0] != "price-quote"
+	case len(segs) == 3 && segs[1] == "actions":
+		switch segs[2] {
+		case "issue", "unissue", "cancel", "close", "open":
+			return true
+		}
+	}
+	return false
 }
 
 // isSupplierMaterialsPath reports whether path is under /v1/operations/suppliers/{id}/materials, which supplier items

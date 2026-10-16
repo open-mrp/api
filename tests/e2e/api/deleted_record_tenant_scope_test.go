@@ -171,9 +171,13 @@ func TestDeletedRecordScope_Sales(t *testing.T) {
 		{
 			name: "sales order",
 			setup: func(t *testing.T) deletedScopeTarget {
-				return deletedScopeTarget{path: salesOrdersPath + "/" + createLifecycleOrder(t)}
+				return deletedScopeTarget{
+					path:    salesOrdersPath + "/" + createLifecycleOrder(t),
+					owner:   forgeClient(),
+					tenantB: getTenantBClient().WithForgeSalesOrders(),
+				}
 			},
-			patch: map[string]any{"note": "x"},
+			patch: map[string]any{"instructions": "x"},
 		},
 		{
 			name: "account price",

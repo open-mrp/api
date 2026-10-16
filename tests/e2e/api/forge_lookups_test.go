@@ -96,7 +96,7 @@ func TestForgePaymentTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["payment_term_id"] = archivedID
-	status, resp, err = apiClient.Post(salesOrdersPath, order, newIdempotencyKey())
+	status, resp, err = forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(order), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		deleteOrder(t, jsonField(parseJSON(resp), "id"))
@@ -105,7 +105,7 @@ func TestForgePaymentTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "payment_term_id")
 
 	orderID := createOrderForCustomer(t, SeedCustomerAccountID, nil)
-	status, resp, err = apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{"payment_term_id": archivedID}, newIdempotencyKey())
+	status, resp, err = forgeClient().Patch(salesOrdersPath+"/"+orderID, map[string]any{"payment_term_id": archivedID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
 	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "payment_term_id")
@@ -297,7 +297,7 @@ func TestForgeShippingTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 
 	order := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	order["shipping_term_id"] = archivedID
-	status, resp, err = apiClient.Post(salesOrdersPath, order, newIdempotencyKey())
+	status, resp, err = forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(order), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		deleteOrder(t, jsonField(parseJSON(resp), "id"))
@@ -306,7 +306,7 @@ func TestForgeShippingTerms_ArchivedCantBeNewlyAssigned(t *testing.T) {
 	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "shipping_term_id")
 
 	orderID := createOrderForCustomer(t, SeedCustomerAccountID, nil)
-	status, resp, err = apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{"shipping_term_id": archivedID}, newIdempotencyKey())
+	status, resp, err = forgeClient().Patch(salesOrdersPath+"/"+orderID, map[string]any{"shipping_term_id": archivedID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, resp)
 	assertErrorParam(t, requireErrorResponse(t, resp, "resource_archived", "invalid_request_error"), "shipping_term_id")

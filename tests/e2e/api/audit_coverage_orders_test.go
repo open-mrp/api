@@ -233,7 +233,11 @@ func TestOrderCascadeAudit_SalesOrderContactsAndAcknowledgement(t *testing.T) {
 	name, email := contactEmail("e2e-audit-so-contact")
 	contactID := jsonField(createContact(t, apiClient.WithAccountID(customerID), name, email, nil), "id")
 
-	status, body, err := apiClient.Post(salesOrdersPath, minimalSalesOrderCreateBody(t, customerID), newIdempotencyKey())
+	// The order starts with no recipients rather than copying the customer's, so the patch below changes them.
+	order := minimalSalesOrderCreateBody(t, customerID)
+	order["acknowledgement_email_contacts"] = []map[string]any{}
+	order["invoice_email_contacts"] = []map[string]any{}
+	status, body, err := apiClient.Post(salesOrdersPath, order, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	orderID := jsonField(parseJSON(body), "id")
@@ -246,9 +250,11 @@ func TestOrderCascadeAudit_SalesOrderContactsAndAcknowledgement(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	contacts := expectAuditFieldChange(t, orderID, "sales_order", "update", "acknowledgement_email_contacts")
+	// The order records its recipients as one list, each with the documents they receive.
+	contacts := expectAuditFieldChange(t, orderID, "sales_order", "update", "email_recipients")
 	assert.Empty(t, jsonArray(contacts, "old_value"))
-	assert.Equal(t, []any{email}, jsonArray(contacts, "new_value"))
+	assert.Equal(t, []any{map[string]any{"account_user_id": contactID, "notification_type_codes": []any{"order_acknowledgement"}}},
+		jsonArray(contacts, "new_value"), "%s gets the acknowledgement", email)
 
 	// Issuing with a notification hands the send to a consumer, which flags the order acknowledged.
 	status, body = salesOrderAction(t, orderID, "issue", true)

@@ -91,11 +91,23 @@ func issueOrderForCustomer(t *testing.T, customerID string, extra map[string]any
 	return parseJSON(issueBody)
 }
 
-// The date a lead-time *rule* commits to, less whatever the calendars pulled it back onto an open
-// day. A span the order reported has that taken out already — use issuedPlusDays for those.
+// The date a lead-time *rule* commits to: that many business days (Monday to Friday, as the seed account works)
+// after the issue date, less whatever the calendars pulled it back onto an open day. A span the order reported has
+// that taken out already — use issuedPlusDays for those.
 func expectedShipBy(t *testing.T, order map[string]any, ruleDays int) string {
 	t.Helper()
-	return issuedPlusDays(t, order, ruleDays-calendarAdjustmentDays(order))
+	issuedAt := jsonField(order, "issued_at")
+	require.NotEmpty(t, issuedAt, "issued order must carry issued_at")
+	parsed, err := time.Parse(time.RFC3339, issuedAt)
+	require.NoError(t, err)
+	day := parsed.UTC()
+	for added := 0; added < ruleDays; {
+		day = day.AddDate(0, 0, 1)
+		if day.Weekday() != time.Saturday && day.Weekday() != time.Sunday {
+			added++
+		}
+	}
+	return day.AddDate(0, 0, -calendarAdjustmentDays(order)).Format("2006-01-02")
 }
 
 // The issue date plus a span, with no calendar reasoning of its own.
@@ -108,13 +120,14 @@ func issuedPlusDays(t *testing.T, order map[string]any, days int) string {
 	return parsed.UTC().AddDate(0, 0, days).Format("2006-01-02")
 }
 
-// The lead-time rule an order resolved to: the span it committed to, plus whatever the calendars
-// took back out of it. Assert against this rather than lead_time_days, which moves with the date.
+// The lead-time rule an order resolved to, in business days: forge's promised_lead_time. Assert against this
+// rather than preview.9's lead_time_days, the calendar span to the ship-by date.
 func committedRuleDays(t *testing.T, order map[string]any) int {
 	t.Helper()
-	days, err := strconv.Atoi(jsonField(commitmentOf(order), "lead_time_days"))
-	require.NoError(t, err, "an issued order must carry the days it committed to")
-	return days + calendarAdjustmentDays(order)
+	forge := forgeReadOrder(t, jsonField(order, "id"))
+	days, err := strconv.Atoi(jsonField(jsonObject(jsonObject(forge, "commitment"), "promised_lead_time"), "value"))
+	require.NoError(t, err, "an issued order must carry the days it committed to: %v", forge["commitment"])
+	return days
 }
 
 // How many days the receiving and shipping calendars pulled an order's ship-by back. Zero when the
@@ -532,7 +545,7 @@ func TestSalesOrders_MalformedShipByFilterIsRejected(t *testing.T) {
 		{"ship_by_before", "2026-13-45"},
 	} {
 		t.Run(tc.param, func(t *testing.T) {
-			status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{tc.param: {tc.value}})
+			status, body, err := forgeClient().GetListRaw(salesOrdersPath, url.Values{tc.param: {tc.value}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
 			assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.param)

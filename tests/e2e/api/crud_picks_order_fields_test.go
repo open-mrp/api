@@ -153,8 +153,9 @@ func TestPicks_IncludeFreight(t *testing.T) {
 	}
 }
 
-// An order needs a carrier but not a service level or a billing arrangement, so freight has to
-// report the parts that were chosen and null for the rest rather than dropping out entirely.
+// An order needs a carrier but not a service level, so freight has to report the parts that were
+// chosen and null for the rest rather than dropping out entirely. The billing arrangement is copied
+// from the customer, which bills the sender unless told otherwise.
 func TestPicks_FreightReportsNullsForWhatTheOrderLeftUnset(t *testing.T) {
 	t.Parallel()
 
@@ -167,7 +168,7 @@ func TestPicks_FreightReportsNullsForWhatTheOrderLeftUnset(t *testing.T) {
 	require.NotNil(t, freight, "freight is present even when only the carrier was chosen")
 	require.NotNil(t, jsonObject(freight, "carrier"), "the carrier is mandatory on an order")
 	assertNilField(t, freight, "service_level")
-	assertNilField(t, freight, "billing_type")
+	assert.Equal(t, "sender", jsonField(freight, "billing_type"))
 	assertNilField(t, freight, "billing_account_number")
 }
 

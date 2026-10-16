@@ -73,7 +73,7 @@ func includeParams(includes []string, extra url.Values) url.Values {
 func requireSameIncludes(t *testing.T, client *Client, path string, includes ...string) map[string]any {
 	t.Helper()
 	params := includeParams(includes, nil)
-	want := parseJSON(mustGetAs(t, apiClient, path, params))
+	want := parseJSON(mustGetAs(t, adminLike(client), path, params))
 	got := parseJSON(mustGetAs(t, client, path, params))
 	assertSameIncludes(t, want, got, path, includes...)
 	return got
@@ -104,10 +104,18 @@ func assertSameValueUnits(t *testing.T, want, got map[string]any, where string, 
 func requireSameValueUnits(t *testing.T, client *Client, path string, includes, unitPaths []string) map[string]any {
 	t.Helper()
 	params := includeParams(includes, nil)
-	want := parseJSON(mustGetAs(t, apiClient, path, params))
+	want := parseJSON(mustGetAs(t, adminLike(client), path, params))
 	got := parseJSON(mustGetAs(t, client, path, params))
 	assertSameValueUnits(t, want, got, path, unitPaths...)
 	return got
+}
+
+// adminLike is the admin client, reading sales orders in the version client does.
+func adminLike(client *Client) *Client {
+	if client.forgeOrders {
+		return apiClient.WithForgeSalesOrders()
+	}
+	return apiClient
 }
 
 // listedRow lists path with the includes as client and returns the row whose id is id, failing when it is not listed.
@@ -135,10 +143,10 @@ func requireRefusedRead(t *testing.T, client *Client, path string) {
 
 func TestIncludeReads_SalesOrderReaderGetsEveryInclude(t *testing.T) {
 	t.Parallel()
-	reader := customRoleClient(t, "sales_orders:read")
+	reader := customRoleClient(t, "sales_orders:read").WithForgeSalesOrders()
 	includes := []string{
 		"customer", "lines.product", "lines.product.item", "lines.product.product_line",
-		"related.pick", "related.production_run", "related.shipments", "related.invoices",
+		"related.pick", "related.jobs", "related.shipments", "related.invoices",
 	}
 	valueIncludes := []string{"lines.quantity_ordered", "lines.unit_price"}
 	unitPaths := []string{"lines.quantity_ordered.unit", "lines.unit_price.per_unit"}

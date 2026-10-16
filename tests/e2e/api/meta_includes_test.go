@@ -51,7 +51,7 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 					path, query, ok := resolveGetScenario(ep, include)
 					require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
 
-					status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+					status, body, err := forgeClient().GetListRaw(path, withIncludeQuery(query, include))
 					require.NoError(t, err, "GET %s?include=%s failed", path, include)
 					requireStatus(t, 200, status, body)
 
@@ -69,7 +69,7 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 						if next == "" || page >= maxListScanPages {
 							break
 						}
-						status, body, err = apiClient.GetListRawFromPageURL(&next)
+						status, body, err = forgeClient().GetListRawFromPageURL(&next)
 						require.NoError(t, err, "GET %s failed", next)
 						requireStatus(t, 200, status, body)
 						got = parseJSON(body)
@@ -693,7 +693,7 @@ func TestIncludes_ExpandableFieldsCollapseWithoutInclude(t *testing.T) {
 			path, query, ok := resolveGetScenario(ep, "")
 			require.True(t, ok, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
 
-			status, body, err := apiClient.GetListRaw(path, query)
+			status, body, err := forgeClient().GetListRaw(path, query)
 			require.NoError(t, err, "GET %s failed", path)
 			requireStatus(t, 200, status, body)
 

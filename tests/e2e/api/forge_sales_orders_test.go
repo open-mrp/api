@@ -3,8 +3,11 @@
 package api_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,9 +18,9 @@ import (
 // The sales order as 1.0.forge reads and writes it. Suites that only set orders up for other resources still go
 // through preview.9 (see requestVersion); these pin forge with forgeClient.
 
-// forgeClient is apiClient pinned to 1.0.forge on every route.
+// forgeClient is apiClient reading and writing sales orders as 1.0.forge.
 func forgeClient() *Client {
-	return apiClient.WithAPIVersion(defaultAPIVersion)
+	return apiClient.WithForgeSalesOrders()
 }
 
 // forgeOrderLines is one line of the seed product.
@@ -66,6 +69,93 @@ func forgeOrderAction(t *testing.T, orderID, verb string, body map[string]any) (
 	status, resp, err := forgeClient().Post(salesOrdersPath+"/"+orderID+"/actions/"+verb, body, newIdempotencyKey())
 	require.NoError(t, err)
 	return status, resp
+}
+
+// forgeSalesOrderWrite rewrites a preview.9 order write (as minimalSalesOrderCreateBody builds) in forge's shape, for
+// suites whose assertions are about forge's validation rather than the body's shape.
+func forgeSalesOrderWrite(body map[string]any) map[string]any {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+	out := map[string]any{}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		panic(err)
+	}
+	move := func(from, to string) {
+		if v, ok := out[from]; ok {
+			delete(out, from)
+			out[to] = v
+		}
+	}
+	section := func(name string) map[string]any {
+		m, _ := out[name].(map[string]any)
+		if m == nil {
+			m = map[string]any{}
+			out[name] = m
+		}
+		return m
+	}
+	move("buyer_account_id", "customer_id")
+	move("note", "instructions")
+	delete(out, "priority_code")
+	for _, k := range []string{"carrier_id", "service_level_id"} {
+		if v, ok := out[k]; ok {
+			delete(out, k)
+			section("freight")[k] = v
+		}
+	}
+	billingType, hasType := out["carrier_billing_type"]
+	account, hasAccount := out["carrier_billing_account_number"]
+	delete(out, "carrier_billing_type")
+	delete(out, "carrier_billing_account_number")
+	if hasType || hasAccount {
+		billing := map[string]any{}
+		if hasType {
+			billing["type"] = billingType
+		}
+		if hasAccount {
+			billing["account_number"] = account
+		}
+		section("freight")["carrier_billing"] = billing
+	}
+	for from, to := range map[string]string{"promised_at": "promised_on", "ship_by_override_date": "ship_by_override_on"} {
+		if v, ok := out[from]; ok {
+			delete(out, from)
+			if s, ok := v.(string); ok && len(s) > len(time.DateOnly) && s[len(time.DateOnly)] == 'T' {
+				v = s[:len(time.DateOnly)]
+			}
+			section("commitment")[to] = v
+		}
+	}
+	if v, ok := out["lead_time_override_days"]; ok {
+		delete(out, "lead_time_override_days")
+		if v != nil {
+			v = map[string]any{"value": fmt.Sprint(v), "unit_id": "day"}
+		}
+		section("commitment")["lead_time_override"] = v
+	}
+	for from, to := range map[string]string{"bill_to_address_id": "bill_to", "ship_to_address_id": "ship_to"} {
+		if v, ok := out[from]; ok {
+			delete(out, from)
+			out[to] = map[string]any{"address_id": v}
+		}
+	}
+	var recipients []any
+	for _, kind := range []struct{ key, doc string }{{"acknowledgement_email_contacts", "acknowledgment"}, {"invoice_email_contacts", "invoice"}} {
+		contacts, ok := out[kind.key].([]any)
+		if !ok {
+			continue
+		}
+		delete(out, kind.key)
+		for _, c := range contacts {
+			recipients = append(recipients, map[string]any{"account_user_id": c.(map[string]any)["account_user_id"], "documents": []any{kind.doc}})
+		}
+	}
+	if recipients != nil {
+		out["email_recipients"] = recipients
+	}
+	return out
 }
 
 // --- CRUD ---
@@ -348,7 +438,7 @@ func TestForgeSalesOrders_PreviewStatusRoutesAreGoneOnForge(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 404, status, resp)
 
-	status, resp, err = forgeClient().GetListRaw(salesOrdersPath+"/statuses", nil)
+	status, resp, err = apiClient.WithAPIVersion(defaultAPIVersion).GetListRaw(salesOrdersPath+"/statuses", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, resp)
 }

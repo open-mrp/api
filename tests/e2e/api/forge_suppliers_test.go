@@ -188,7 +188,7 @@ func TestForgeSuppliers_CreateValidation(t *testing.T) {
 func TestForgeSuppliers_ArchivedReferenceIsRefused(t *testing.T) {
 	t.Parallel()
 
-	term := createAndCleanup(t, paymentTermsPath, map[string]any{"name": uniqueName("e2e-fs-term"), "days_until_due": 10, "status": "archived"})
+	term := createAndCleanup(t, paymentTermsPath, map[string]any{"name": uniqueName("e2e-fs-term"), "status": "archived"})
 	status, body, err := apiClient.Post(suppliersPath, map[string]any{
 		"name": uniqueName("e2e-fs-arch"), "number": uniqueName("SUP"),
 		"defaults": map[string]any{"payment_term_id": jsonField(term, "id")},

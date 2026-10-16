@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -328,6 +329,9 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 	if apiErr := checkSupplierEnums(params.ArchiveStatus, params.CarrierBillingType); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := checkSupplierNotBlank(params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	params.OwnerAccountID = identity.Target.AccountID
 
@@ -483,6 +487,27 @@ func checkSupplierEnums(status *constants.ArchiveStatus, billing *constants.Carr
 	}
 	if billing != nil && *billing != constants.CarrierBillingTypeSender && *billing != constants.CarrierBillingTypeThirdParty {
 		return apierror.NewFieldError("carrier_billing.type", apierror.CodeInvalidFormat, "carrier_billing.type must be one of sender or third_party.")
+	}
+	return nil
+}
+
+// checkSupplierNotBlank refuses a blank value where null is how a field is cleared.
+func checkSupplierNotBlank(params domain.UpdateSupplierParams) *apierror.APIError {
+	for _, f := range []struct {
+		value field.Clearable[string]
+		param string
+	}{
+		{params.Instructions, "instructions"},
+		{params.DefaultCarrierID, "defaults.carrier_id"},
+		{params.DefaultServiceLevelID, "defaults.service_level_id"},
+		{params.PaymentTermID, "defaults.payment_term_id"},
+		{params.ShippingTermID, "defaults.shipping_term_id"},
+		{params.BillToAddressID, "defaults.bill_to_address_id"},
+		{params.ShipToAddressID, "defaults.ship_to_address_id"},
+	} {
+		if v, ok := f.value.Value(); ok && strings.TrimSpace(v) == "" {
+			return apierror.NewFieldError(f.param, apierror.CodeInvalidFormat, "Field '"+f.param+"' must not be blank; send null to clear it.")
+		}
 	}
 	return nil
 }

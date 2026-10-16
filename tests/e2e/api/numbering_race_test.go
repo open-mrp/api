@@ -100,39 +100,52 @@ func TestNumbering_AnAllocatedCustomerNumberSkipsOneTypedIn(t *testing.T) {
 	requireStatus(t, http.StatusCreated, status, raw)
 	typeGroupID := jsonField(parseJSON(raw), "id")
 	t.Cleanup(func() { clientB.Delete(accountGroupsPath + "/" + typeGroupID) })
-	createCustomerB := func(number string) map[string]any {
+	createCustomerB := func(number string) (int, map[string]any) {
 		t.Helper()
 		name := uniqueName("e2e-number-skip")
 		// Tenant B has no carrier or terms of its own; the platform's are open to every account.
 		body := map[string]any{
-			"name":                     name,
-			"status":                   "normal",
-			"default_carrier_id":       SeedSystemCarrierID,
-			"default_payment_term_id":  SeedDefaultPaymentTermID,
-			"default_shipping_term_id": SeedShippingTermID,
-			"customer_type_group_id":   typeGroupID,
-			"bill_to_address":          map[string]any{"name": name + " Billing", "country": "US"},
-			"ship_to_address":          map[string]any{"name": name + " Shipping", "country": "US"},
+			"name":     name,
+			"standing": "normal",
+			"defaults": map[string]any{
+				"carrier_id":       SeedSystemCarrierID,
+				"payment_term_id":  SeedDefaultPaymentTermID,
+				"shipping_term_id": SeedShippingTermID,
+			},
+			"group_id":        typeGroupID,
+			"bill_to_address": map[string]any{"name": name + " Billing", "country": "US"},
+			"ship_to_address": map[string]any{"name": name + " Shipping", "country": "US"},
 		}
 		if number != "" {
 			body["number"] = number
 		}
 		status, raw, err := clientB.Post(customersPath, body, newIdempotencyKey())
 		require.NoError(t, err)
+		if status == http.StatusConflict && number != "" {
+			return status, nil
+		}
 		requireStatus(t, http.StatusCreated, status, raw)
 		customer := parseJSON(raw)
 		id := jsonField(customer, "id")
 		t.Cleanup(func() { clientB.Delete(customersPath + "/" + id) })
-		return customer
+		return status, customer
 	}
 
-	first := createCustomerB("")
-	n, err := strconv.Atoi(jsonField(first, "number"))
-	require.NoError(t, err, "an allocated customer number is numeric")
-	typedIn := strconv.Itoa(n + 1)
-	createCustomerB(typedIn)
+	// Other tests create tenant B customers in parallel and can be allocated the number this test means to type in
+	// first, so the next free one is retried.
+	var typedIn string
+	for range 5 {
+		_, first := createCustomerB("")
+		n, err := strconv.Atoi(jsonField(first, "number"))
+		require.NoError(t, err, "an allocated customer number is numeric")
+		if status, _ := createCustomerB(strconv.Itoa(n + 1)); status == http.StatusCreated {
+			typedIn = strconv.Itoa(n + 1)
+			break
+		}
+	}
+	require.NotEmpty(t, typedIn, "a number just past the counter could be typed in")
 
-	next := createCustomerB("")
+	_, next := createCustomerB("")
 	assert.NotEqual(t, typedIn, jsonField(next, "number"), "the counter skips the number someone typed in")
 }
 

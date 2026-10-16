@@ -175,13 +175,13 @@ func TestOperatingCalendar_DeleteRefusedWhileReferenced(t *testing.T) {
 	calendarID := createCalendar(t, "receive", "1111100", nil)
 
 	status, body, err := apiClient.Patch(customersPath+"/"+SeedCustomerAccountID, map[string]any{
-		"receive_calendar_id": calendarID,
+		"defaults": map[string]any{"receive_calendar_id": calendarID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "linking must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
 	t.Cleanup(func() {
-		_, _, _ = apiClient.Patch(customersPath+"/"+SeedCustomerAccountID, map[string]any{"receive_calendar_id": nil}, newIdempotencyKey())
+		_, _, _ = apiClient.Patch(customersPath+"/"+SeedCustomerAccountID, map[string]any{"defaults": map[string]any{"receive_calendar_id": nil}}, newIdempotencyKey())
 	})
 
 	status, body, err = apiClient.Delete(operatingCalendarsPath + "/" + calendarID)

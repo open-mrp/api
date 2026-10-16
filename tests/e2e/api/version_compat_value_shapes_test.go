@@ -43,7 +43,7 @@ func TestVersionCompatValueShapes_CreditLimitIsAQuantityOnPreview9(t *testing.T)
 }
 
 // A preview.9 caller prices a material with a currency numerator and reads the item's unit value back as a rate with a
-// denominator unit; forge reads the same price as the UnitPrice sales.unit_price.
+// denominator unit. On forge only an explicitly sellable item has a sales section, so the material shows none.
 func TestVersionCompatValueShapes_UnitValueIsARateOnPreview9(t *testing.T) {
 	t.Parallel()
 
@@ -73,11 +73,8 @@ func TestVersionCompatValueShapes_UnitValueIsARateOnPreview9(t *testing.T) {
 	assert.Equal(t, "8.25", jsonObject(item, "unit_cost")["value"])
 
 	forgeItem := getItem(t, itemID)
-	assert.NotContains(t, forgeItem, "unit_value", "forge holds the selling price in sales.unit_price")
-	forge := jsonObject(jsonObject(forgeItem, "sales"), "unit_price")
-	require.NotNil(t, forge, "a priced material has a sales section on forge: %v", forgeItem)
-	assertItemPrice(t, forge, "12.50", nonCurrencyUnitID, "sales.unit_price")
-	assert.NotContains(t, forge, "display_value")
+	assert.NotContains(t, forgeItem, "unit_value", "forge holds a selling price only in sales.unit_price")
+	assert.Nil(t, forgeItem["sales"], "a material with a price but no product row is not sellable on forge: %v", forgeItem)
 	assertItemPrice(t, jsonObject(forgeItem, "unit_cost"), "8.25", nonCurrencyUnitID, "unit_cost")
 }
 

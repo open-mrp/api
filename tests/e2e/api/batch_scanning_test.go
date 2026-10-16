@@ -861,7 +861,8 @@ func TestBatchScanning_InitializeAsAnotherStationType(t *testing.T) {
 	assert.Equal(t, firstChoice, jsonField(jsonObject(picked, "production_step"), "id"))
 
 	status, _, raw = postScan(t, "initialize", map[string]any{"batch_id": planScanBatch(t, part.id, "1", unitEach), "scanning_station_id": moveStation, "type_override": "not_a_type"})
-	requireStatus(t, 400, status, raw)
+	requireStatus(t, 422, status, raw)
+	assertErrorParam(t, requireErrorResponse(t, raw, "invalid_format", "invalid_request_error"), "type_override")
 }
 
 // ──────────────────────────────────────────────

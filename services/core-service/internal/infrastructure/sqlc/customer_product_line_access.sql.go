@@ -151,8 +151,8 @@ SELECT
     ar.external_number AS customer_number,
     arpl.product_line_id,
     pl.name AS product_line_name,
-    arpl.created_at,
-    arpl.updated_at
+    ar.created_at,
+    ar.updated_at
 FROM account_relation_product_line arpl
 JOIN account_relation ar ON ar.id = arpl.account_relation_id
 JOIN account a ON a.id = ar.counterparty_account_id
@@ -165,10 +165,10 @@ AND (
     OR ar.external_number LIKE ?
 )
 AND (
-    arpl.created_at > ?
-    OR (arpl.created_at = ? AND ar.counterparty_account_id > ?)
+    ar.created_at > ?
+    OR (ar.created_at = ? AND ar.counterparty_account_id > ?)
 )
-ORDER BY arpl.created_at ASC, ar.counterparty_account_id ASC
+ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
 LIMIT ?
 `
 
@@ -240,8 +240,8 @@ SELECT
     ar.external_number AS customer_number,
     arpl.product_line_id,
     pl.name AS product_line_name,
-    arpl.created_at,
-    arpl.updated_at
+    ar.created_at,
+    ar.updated_at
 FROM account_relation_product_line arpl
 JOIN account_relation ar ON ar.id = arpl.account_relation_id
 JOIN account a ON a.id = ar.counterparty_account_id
@@ -255,10 +255,10 @@ AND (
 )
 AND (
     ? IS NULL
-    OR arpl.created_at < ?
-    OR (arpl.created_at = ? AND ar.counterparty_account_id < ?)
+    OR ar.created_at < ?
+    OR (ar.created_at = ? AND ar.counterparty_account_id < ?)
 )
-ORDER BY arpl.created_at DESC, ar.counterparty_account_id DESC
+ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
 LIMIT ?
 `
 

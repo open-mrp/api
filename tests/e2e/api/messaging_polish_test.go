@@ -24,9 +24,9 @@ func TestSelfDM_Allowed(t *testing.T) {
 	require.True(t, ok)
 	assert.Len(t, parts, 1, "a self-DM has a single participant")
 
-	// Re-creating the self-DM is deduped to the same conversation.
+	// Like any create, a second self-DM starts a new conversation.
 	again := createDM(t, user, SeedAccountUserID)
-	assert.Equal(t, convID, jsonField(again, "id"), "self-DM create is deduped")
+	assert.NotEqual(t, convID, jsonField(again, "id"), "a repeat self-DM create starts a new conversation")
 
 	// The user can post a note to themselves.
 	body := uniqueName("remember to ship")

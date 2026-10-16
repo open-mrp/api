@@ -258,5 +258,6 @@ func TestScheduleRegenerate_RejectsUnknownMergeMode(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 400, status)
+	requireStatus(t, 422, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "merge_mode")
 }

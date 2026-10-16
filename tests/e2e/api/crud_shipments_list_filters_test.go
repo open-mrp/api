@@ -108,9 +108,13 @@ func TestShipmentsList_SalesRepIsTheOrdersRepNotTheCustomers(t *testing.T) {
 	_, defaultRep := paritySalesRep(t)
 	groupID := leadTimeAccountGroup(t, "e2e-shp-rep-grp", nil)
 	customerID := parityCustomer(t, groupID)
-	status, body, err := apiClient.Patch(customersPath+"/"+customerID, map[string]any{"default_sales_rep_id": defaultRep}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID, map[string]any{"defaults": map[string]any{"sales_rep_id": defaultRep}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	// The customer outlives the test once it has orders; it must not keep defaulting to a rep the cleanup removes.
+	t.Cleanup(func() {
+		_, _, _ = apiClient.Patch(customersPath+"/"+customerID, map[string]any{"defaults": map[string]any{"sales_rep_id": nil}}, newIdempotencyKey())
+	})
 
 	order := parityOrderBody(t, customerID)
 	order["sales_rep_id"] = orderRep

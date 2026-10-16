@@ -124,7 +124,7 @@ func TestNewCustomers_PagesByCursorBothWays(t *testing.T) {
 	var mine []string
 	for range 3 {
 		customerID := shipSaleToNewCustomer(t).customerID
-		status, body, err := apiClient.Patch(customersPath+"/"+customerID, map[string]any{"customer_type_group_id": groupID}, newIdempotencyKey())
+		status, body, err := apiClient.Patch(customersPath+"/"+customerID, map[string]any{"group_id": groupID}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 		mine = append(mine, customerID)

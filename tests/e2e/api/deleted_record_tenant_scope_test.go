@@ -26,8 +26,6 @@ type deletedScopeCase struct {
 	noGet bool
 	// patch is a body the update endpoint accepts; nil when the resource has no PATCH.
 	patch map[string]any
-	// deleteStatus is the first delete's success status; 0 means 200.
-	deleteStatus int
 }
 
 func runDeletedScopeCases(t *testing.T, cases []deletedScopeCase) {
@@ -42,7 +40,7 @@ func runDeletedScopeCases(t *testing.T, cases []deletedScopeCase) {
 
 			status, body, err := owner.Delete(target.path)
 			require.NoError(t, err)
-			requireStatus(t, cmp.Or(tc.deleteStatus, 200), status, body)
+			requireStatus(t, 200, status, body)
 
 			if !tc.noGet {
 				status, body, err = tenantB.GetListRaw(probe, nil)
@@ -426,7 +424,6 @@ func TestDeletedRecordScope_Account(t *testing.T) {
 			setup: func(t *testing.T) deletedScopeTarget {
 				return createdPath(t, sandboxesPath, map[string]any{"name": uniqueName("e2e-dscope-sb"), "mode": "blank"})
 			},
-			deleteStatus: 202,
 		},
 	})
 }

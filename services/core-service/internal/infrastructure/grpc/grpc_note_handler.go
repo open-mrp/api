@@ -148,6 +148,7 @@ func (h *noteGRPCHandler) CreateNote(ctx context.Context, req *pb.CreateNoteRequ
 		Body:       req.Body,
 		Type:       noteTypeFromProto(req.Type),
 		Importance: noteImportanceFromProto(req.Importance),
+		Mentions:   req.Mentions,
 	}
 	if req.ExpiresAt != nil {
 		t := req.ExpiresAt.AsTime()
@@ -171,6 +172,7 @@ func (h *noteGRPCHandler) UpdateNote(ctx context.Context, req *pb.UpdateNoteRequ
 		Importance:  noteImportanceFromProto(req.Importance),
 		Record:      noteRecordFromProto(req.Record),
 		ClearRecord: req.ClearRecord,
+		Mentions:    req.Mentions,
 	}
 	if p := req.ExpiresAt; p != nil {
 		if p.Clear || p.Value == nil {

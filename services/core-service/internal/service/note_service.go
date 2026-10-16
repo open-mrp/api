@@ -201,6 +201,9 @@ func (s *noteSvcImpl) CreateNote(ctx context.Context, params domain.CreateNotePa
 	if apiErr := validateNoteBody(params.Body); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := requireMentionable(ctx, s.repos, identity.Target.AccountID, params.Mentions); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	note := &domain.Note{
 		AccountID:  identity.Target.AccountID,
@@ -253,6 +256,9 @@ func (s *noteSvcImpl) CreateNote(ctx context.Context, params domain.CreateNotePa
 				return apiErr
 			}
 			result = created
+			if apiErr := notifyNoteMentions(txCtx, txSvc.repos, identity, created, params.Mentions); apiErr != nil {
+				return apiErr
+			}
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
@@ -309,6 +315,9 @@ func (s *noteSvcImpl) UpdateNote(ctx context.Context, params domain.UpdateNotePa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID
+	if apiErr := requireMentionable(ctx, s.repos, accountID, params.Mentions); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	meds := s.mediators()
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -346,6 +355,9 @@ func (s *noteSvcImpl) UpdateNote(ctx context.Context, params domain.UpdateNotePa
 				return apiErr
 			}
 			result = updated
+			if apiErr := notifyNoteMentions(txCtx, txSvc.repos, identity, updated, params.Mentions); apiErr != nil {
+				return apiErr
+			}
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,

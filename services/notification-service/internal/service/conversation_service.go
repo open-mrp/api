@@ -1218,7 +1218,9 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	senderType, senderID, senderName := s.messageSenderAttribution(ctx, f, msg, senderAcus)
 	var conversationTitle string
 	var isCustomerCase bool
+	var topic *domain.Conversation
 	if conv, apiErr := f.NewConversationRepo().GetByID(ctx, msg.ConversationID, accountID); apiErr == nil {
+		topic = conv
 		if conv.Title != nil {
 			conversationTitle = *conv.Title
 		}
@@ -1235,6 +1237,16 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	mentioned := make(map[string]bool, len(msg.MentionAccountUserIDs))
 	for _, m := range msg.MentionAccountUserIDs {
 		mentioned[m] = true
+	}
+	// Only mentioned participants are subscribed: a mention can't reach anyone outside the conversation.
+	var mentionedParticipants []string
+	for _, p := range participants {
+		if p.AccountUserID != nil && mentioned[*p.AccountUserID] && p.Membership == string(constants.ParticipantMembershipActive) {
+			mentionedParticipants = append(mentionedParticipants, *p.AccountUserID)
+		}
+	}
+	if apiErr := subscribeMentionedToTopic(ctx, f, settings, topic, accountID, mentionedParticipants, senderAcus); apiErr != nil {
+		return apiErr
 	}
 
 	for _, p := range participants {
@@ -1315,6 +1327,34 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 			if apiErr := s.enqueueChatEmail(ctx, f, outbox, *p.AccountUserID, accountID, senderName, conversationTitle, msg.Preview); apiErr != nil {
 				return apiErr
 			}
+		}
+	}
+	return nil
+}
+
+// subscribeMentionedToTopic subscribes the people a message @mentions to the record its conversation is about, each
+// only when they subscribe on mentions. The sender is never subscribed by mentioning themselves.
+func subscribeMentionedToTopic(ctx context.Context, f domain.RepoFactory, settings *settingsCache, conv *domain.Conversation, accountID string, mentions []string, senderAcus string) *apierror.APIError {
+	if conv == nil || conv.TopicResourceType == nil || conv.TopicResourceID == nil || len(mentions) == 0 {
+		return nil
+	}
+	if !constants.RecordType(*conv.TopicResourceType).Followable() {
+		return nil
+	}
+	repo := f.NewSubscriptionRepo()
+	for _, m := range mentions {
+		if m == "" || m == senderAcus || !settings.get(ctx, m).layers.AutoSubscribes(constants.SubscriptionReasonMentioned) {
+			continue
+		}
+		subID, apiErr := id.GenID(id.SubscriptionIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if _, apiErr := repo.Insert(ctx, &domain.Subscription{
+			ID: subID, AccountID: accountID, AccountUserID: m, RecordType: *conv.TopicResourceType, RecordID: *conv.TopicResourceID,
+			Reason: string(constants.SubscriptionReasonMentioned), Status: string(constants.RecordSubscriptionStatusSubscribed),
+		}); apiErr != nil {
+			return apiErr
 		}
 	}
 	return nil

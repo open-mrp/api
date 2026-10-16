@@ -90,6 +90,8 @@ message CreateNoteRequest {
   optional string type = 3;
   optional string importance = 4;
   optional google.protobuf.Timestamp expires_at = 5;
+  // Account users the note @mentions.
+  repeated string mentions = 6;
 }
 
 message CreateNoteResponse {
@@ -105,6 +107,8 @@ message UpdateNoteRequest {
   // Moves the note to another record; clear_record makes it account-wide. The preview.9 memory routes use these.
   optional NoteRecordRef record = 6;
   bool clear_record = 7;
+  // Account users this edit @mentions.
+  repeated string mentions = 8;
 }
 
 message UpdateNoteResponse {

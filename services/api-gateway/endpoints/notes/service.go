@@ -97,6 +97,7 @@ func (s *noteSvcImpl) CreateNote(ctx context.Context, req *CreateNoteRequest) (*
 		Body:       req.Body,
 		Type:       req.Type.Ptr().StringPtr(),
 		Importance: req.Importance.Ptr().StringPtr(),
+		Mentions:   req.Mentions,
 	}
 	if r, ok := req.Record.Value(); ok {
 		if apiErr := RequireRecord(ctx, "record.id", r.Type, r.ID); apiErr != nil {
@@ -123,6 +124,7 @@ func (s *noteSvcImpl) UpdateNote(ctx context.Context, req *UpdateNoteRequest) (*
 		Body:       req.Body.Ptr(),
 		Type:       req.Type.Ptr().StringPtr(),
 		Importance: req.Importance.Ptr().StringPtr(),
+		Mentions:   req.Mentions,
 	}
 	if req.ExpiresAt.IsClear() {
 		pbReq.ExpiresAt = &pb.TimestampPatch{Clear: true}

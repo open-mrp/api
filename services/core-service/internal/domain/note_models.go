@@ -66,6 +66,8 @@ type CreateNoteParams struct {
 	Type       *constants.NoteType
 	Importance *constants.NoteImportance
 	ExpiresAt  *time.Time
+	// Mentions are account users the note @mentions: each is notified and subscribed to the record.
+	Mentions []string
 }
 
 // UpdateNoteParams changes only what is set. Record changes serve the preview.9 memory routes, whose entity fields are
@@ -79,6 +81,8 @@ type UpdateNoteParams struct {
 	ClearExpiresAt bool
 	Record         *NoteRecord
 	ClearRecord    bool
+	// Mentions are account users this edit @mentions: each is notified and subscribed to the record.
+	Mentions []string
 }
 
 // ImportNote is a note copied from elsewhere (agent memories) with its own ID, author and timestamps.

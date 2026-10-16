@@ -27,6 +27,9 @@ type UpdateNoteRequest struct {
 	Importance field.Optional[constants.NoteImportance] `json:"importance,omitzero"`
 	// When the note stops being used. Send `null` for a note that never expires.
 	ExpiresAt field.Clearable[time.Time] `json:"expires_at,omitzero"`
+	// Account users this edit @mentions, up to 25. Each is notified, and subscribed to the note's record when they
+	// subscribe on mentions. Mentions aren't stored, so only the people you list here are notified.
+	Mentions []string `json:"mentions,omitzero" validate:"omitempty,max=25"`
 }
 
 var sampleUpdateNoteRequest = &UpdateNoteRequest{

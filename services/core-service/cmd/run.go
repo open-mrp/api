@@ -1122,6 +1122,44 @@ func Run(
 			}()
 		}
 	}
+	// Sales orders keep their own address copies and per-party instructions and metadata (00117). These fill the
+	// orders written before, after the rollout so orders the previous release's pods still wrote are covered.
+	// SALES_ORDER_BACKFILL_DISABLED=true stops them.
+	if !cfg.SalesOrderBackfillDisabled {
+		billTo, err := repository.NewAddressSnapshotBackfill(sqlc.New(reportDB), queries, "sales_order", "billing_address_id", "bill_to")
+		if err != nil {
+			return err
+		}
+		shipTo, err := repository.NewAddressSnapshotBackfill(sqlc.New(reportDB), queries, "sales_order", "shipping_address_id", "ship_to")
+		if err != nil {
+			return err
+		}
+		for _, b := range []struct {
+			name  string
+			batch backfill.Batch
+		}{
+			{repository.SalesOrderBillToBackfillName, billTo.Batch},
+			{repository.SalesOrderShipToBackfillName, shipTo.Batch},
+			{repository.DocumentPartyBackfillName, repository.NewDocumentPartyBackfill(sqlc.New(reportDB), queries).Batch},
+		} {
+			runner, err := backfill.New(&backfill.Config{
+				Name:     b.name,
+				Batch:    b.batch,
+				Progress: repository.NewBackfillProgressRepo(queries),
+			})
+			if err != nil {
+				return err
+			}
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(noteBackfillDelay):
+				}
+				runner.Keep(ctx, leaseSvc, backfillRetryInterval)
+			}()
+		}
+	}
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventSalesFactQueue,
 		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,

@@ -107,7 +107,7 @@ func TestCreateSalesOrder_DuplicateCustomerPONumberConflicts(t *testing.T) {
 	dupStatus, dupBody, err := apiClient.Post(salesOrdersPath, dupReq, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, dupStatus, dupBody)
-	assertErrorParam(t, jsonObject(parseJSON(dupBody), "error"), "customer_po_number")
+	assertErrorParam(t, jsonObject(parseJSON(dupBody), "error"), "customer_purchase_order_number")
 }
 
 func TestCreateSalesOrder_UnitNotInProductGroupRejected(t *testing.T) {

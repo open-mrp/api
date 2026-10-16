@@ -553,16 +553,16 @@ func TestInvoiceParity_ListFilters(t *testing.T) {
 }
 
 // A date window that does not parse is refused on the parameter rather than read as no filter; the
-// sales-order list holds its dates to the same rule.
+// sales-order list holds its ship-by dates to the same rule.
 func TestInvoiceParity_ListDatesMustParse(t *testing.T) {
 	t.Parallel()
 	for path, params := range map[string][]string{
 		invoicesPath:    {"starts_at", "ends_at"},
-		salesOrdersPath: {"starts_at", "ends_at", "ship_by_after", "ship_by_before"},
+		salesOrdersPath: {"ship_by_after", "ship_by_before"},
 	} {
 		for _, param := range params {
 			for _, bad := range []string{"not-a-date", "2026-13-01", "10/05/2026"} {
-				status, body, err := apiClient.GetListRaw(path, url.Values{param: {bad}})
+				status, body, err := forgeClient().GetListRaw(path, url.Values{param: {bad}})
 				require.NoError(t, err)
 				requireStatus(t, 400, status, body)
 				assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), param)

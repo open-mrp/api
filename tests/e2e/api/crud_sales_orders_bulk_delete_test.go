@@ -39,19 +39,16 @@ func TestSalesOrder_BulkDelete_DeletesAll(t *testing.T) {
 }
 
 // TestSalesOrder_BulkDelete_AtomicWhenOneUndeletable pins all-or-nothing: if any order in
-// the batch cannot be deleted (a fulfilled order), none are deleted and the call fails with
+// the batch cannot be deleted (one its shipments or invoices name), none are deleted and the call fails with
 // a client error (never a 5xx).
 func TestSalesOrder_BulkDelete_AtomicWhenOneUndeletable(t *testing.T) {
 	t.Parallel()
 	deletable := createLifecycleOrder(t)
 
-	fulfilled := createLifecycleOrder(t)
-	status, body := salesOrderAction(t, fulfilled, "issue", false)
-	requireStatus(t, 200, status, body)
-	status, body = salesOrderAction(t, fulfilled, "close", false)
-	requireStatus(t, 200, status, body)
+	// An order its shipments and invoices name can't be deleted.
+	fulfilled := SeedFulfilledPaidOrderID
 
-	// The batch contains a fulfilled order → the whole delete is rejected.
+	// The batch contains an order in use → the whole delete is rejected.
 	dStatus, dBody := bulkDeleteOrders(t, []string{deletable, fulfilled})
 	requireClientError(t, dStatus, dBody)
 

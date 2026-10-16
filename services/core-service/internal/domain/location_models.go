@@ -66,6 +66,7 @@ var LocationReferences = RegisterReferences(References{
 		{Label: "work centers", Table: "department", Column: "location_id"},
 		{Label: "batches", Table: "batch", Column: "location_id"},
 		{Label: "account settings", Table: "account", Column: "default_site_id"},
+		{Label: "sales orders", Table: "sales_order", Column: "site_id"},
 	},
 })
 

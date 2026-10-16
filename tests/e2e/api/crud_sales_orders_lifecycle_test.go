@@ -198,7 +198,7 @@ func TestSalesOrder_Update_RejectsNumberField(t *testing.T) {
 
 	// The order number is not updatable: `number` is not part of the update request, so
 	// sending it is rejected as an unknown field rather than silently ignored.
-	status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID,
+	status, body, err := forgeClient().Patch(salesOrdersPath+"/"+orderID,
 		map[string]any{"number": "SHOULD-BE-REJECTED"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
@@ -388,14 +388,8 @@ func TestSalesOrder_Delete_EstimateAllowed_FulfilledBlocked(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 404, gStatus, "deleted order is gone")
 
-	// A fulfilled order cannot be deleted.
-	fulfilledID := createLifecycleOrder(t)
-	status, body = salesOrderAction(t, fulfilledID, "issue", false)
-	requireStatus(t, 200, status, body)
-	status, body = salesOrderAction(t, fulfilledID, "close", false)
-	requireStatus(t, 200, status, body)
-
-	fStatus, fBody, err := apiClient.Delete(salesOrdersPath + "/" + fulfilledID)
+	// An order its shipments and invoices name cannot be deleted.
+	fStatus, fBody, err := apiClient.Delete(salesOrdersPath + "/" + SeedFulfilledPaidOrderID)
 	require.NoError(t, err)
 	requireClientError(t, fStatus, fBody)
 }

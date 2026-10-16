@@ -69,11 +69,15 @@ func TestResolveCommitment_LeadTimeOverrideReplacesTheChain(t *testing.T) {
 	if !ok {
 		t.Fatal("expected a commitment")
 	}
-	if want := onDay(2026, time.August, 11); !got.ShipByDate.Equal(want) {
+	// Seven business days from a Tuesday crosses one weekend.
+	if want := onDay(2026, time.August, 13); !got.ShipByDate.Equal(want) {
 		t.Fatalf("ship-by = %s, want %s", got.ShipByDate.Format(time.DateOnly), want.Format(time.DateOnly))
 	}
-	if got.LeadTimeDays != 7 || got.Source != LeadTimeSourceOrderLeadTime {
-		t.Fatalf("got (%d, %q), want (7, order_lead_time)", got.LeadTimeDays, got.Source)
+	if got.LeadTimeDays != 9 || got.Source != LeadTimeSourceOrderLeadTime {
+		t.Fatalf("got (%d, %q), want (9, order_lead_time)", got.LeadTimeDays, got.Source)
+	}
+	if got.PromisedLeadTimeDays == nil || *got.PromisedLeadTimeDays != 7 || got.PromisedLeadTimeSource != PromisedLeadTimeSourceOverride {
+		t.Fatalf("promised lead time = (%v, %q), want (7, override)", got.PromisedLeadTimeDays, got.PromisedLeadTimeSource)
 	}
 }
 

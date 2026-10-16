@@ -25,7 +25,35 @@ JOIN account_address aa ON aa.address_id = a.id
 WHERE a.id = sqlc.arg('id')
 AND aa.account_id = sqlc.arg('account_id');
 
+-- GetOrderAddress reads an address by ID alone, for an address a sales order names: either a saved address or the
+-- order's own copy of an address given inline, which no account's address book lists.
+-- name: GetOrderAddress :one
+SELECT
+    a.id,
+    a.name,
+    a.phone,
+    a.email,
+    a.is_drop_ship,
+    a.receive_calendar_id,
+    a.created_at,
+    a.updated_at,
+    g.id AS geolocation_id,
+    g.street_line_1,
+    g.street_line_2,
+    g.locality,
+    g.state,
+    g.postal_code,
+    g.country,
+    g.google_place_id,
+    g.latitude,
+    g.longitude,
+    g.timezone
+FROM address a
+JOIN geolocation g ON a.geolocation_id = g.id
+WHERE a.id = sqlc.arg('id');
+
 -- name: GetAddressesByIDs :many
+
 -- Returns addresses matching the given IDs that belong to the caller's
 -- account, via the account_address junction. Addresses are always
 -- account-scoped (no system rows).

@@ -420,6 +420,10 @@ type AddressRepo interface {
 	// dangling default when the address is deleted (there are no FKs to cascade). Call inside the
 	// delete transaction.
 	SwitchAccountDefaultAddressToRelation(ctx context.Context, addressID string) *apierror.APIError
+	// GetOrderAddress reads an address a sales order names, whichever account (if any) lists it.
+	GetOrderAddress(ctx context.Context, addressID string) (*Address, *apierror.APIError)
+	// CreateOrderAddress stores an address given inline on a sales order, which no address book lists.
+	CreateOrderAddress(ctx context.Context, addressID, geolocationID string, params CreateAddressParams) *apierror.APIError
 }
 
 type AccountStatusRepo interface {
@@ -1527,6 +1531,12 @@ type SalesOrderRepo interface {
 	GetSalesRepEmail(ctx context.Context, accountID, salesOrderID string) (*string, *apierror.APIError)
 	MarkUnfulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError)
+	// GetEmailRecipients is each order's email recipients and the notification types they receive. Orders with none are absent.
+	GetEmailRecipients(ctx context.Context, salesOrderIDs []string) (map[string][]NotificationRecipientRef, *apierror.APIError)
+	// ReplaceEmailRecipients makes recipients the order's email recipients.
+	ReplaceEmailRecipients(ctx context.Context, salesOrderID string, recipients []NotificationRecipientRef) *apierror.APIError
+	// GetItemLeadTimeDays is the longest sales lead time of the items on the order's lines, in whole days; nil when none has one.
+	GetItemLeadTimeDays(ctx context.Context, salesOrderID string) (*int, *apierror.APIError)
 }
 
 type SalesOrderLineRepo interface {

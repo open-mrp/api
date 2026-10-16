@@ -184,6 +184,9 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 	if apiErr := r.attachLineCounts(ctx, result); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := r.attachForgeFields(ctx, viewerAccount(params.AccountID, params.BuyerAccountID), result); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
 }
 
@@ -241,8 +244,17 @@ func (r *salesOrderRepoImpl) searchList(
 		}
 		orders = append(orders, so)
 	}
+	orders, apiErr := r.filterSearchMatches(ctx, params, orders)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	result, pageInfo := pagination.BuildPageString(orders, params.Limit, nil, salesOrderCreatedAt, salesOrderID)
+	if buyerAccountID.Valid {
+		if apiErr := r.attachForgeFields(ctx, buyerAccountID.String, result); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 	return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
 }
 
@@ -330,7 +342,19 @@ func (r *salesOrderRepoImpl) Get(ctx context.Context, accountID, salesOrderID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetSalesOrderRow(row), nil
+	so := mapGetSalesOrderRow(row)
+	if apiErr := r.attachForgeFields(ctx, accountID, []*domain.SalesOrder{so}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return so, nil
+}
+
+// viewerAccount is the party reading an order: its buyer when a buyer reads it, else the owner.
+func viewerAccount(ownerAccountID string, buyerAccountID *string) string {
+	if buyerAccountID != nil {
+		return *buyerAccountID
+	}
+	return ownerAccountID
 }
 
 // GetByIDs is the batched form of Get, or of GetForCustomer when buyerAccountID is set. Ids outside
@@ -360,6 +384,9 @@ func (r *salesOrderRepoImpl) GetByIDs(ctx context.Context, accountID string, buy
 		}
 		orders = append(orders, mapGetSalesOrderRow(sqlc.GetSalesOrderRow(row)))
 	}
+	if apiErr := r.attachForgeFields(ctx, viewerAccount(accountID, buyerAccountID), orders); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return orders, nil
 }
 
@@ -376,7 +403,11 @@ func (r *salesOrderRepoImpl) GetForCustomer(ctx context.Context, accountID, buye
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetSalesOrderForCustomerRow(row), nil
+	so := mapGetSalesOrderForCustomerRow(row)
+	if apiErr := r.attachForgeFields(ctx, buyerAccountID, []*domain.SalesOrder{so}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return so, nil
 }
 
 func (r *salesOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) ([]*domain.SalesOrderLine, *apierror.APIError) {
@@ -568,11 +599,34 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 		leadTimeOverrideNull = gosql.NullInt32{Int32: *params.LeadTimeOverrideDays, Valid: true}
 	}
 
+	billTo, shipTo := AddressSnapshotToColumns(params.BillTo), AddressSnapshotToColumns(params.ShipTo)
 	err := r.queries.CreateSalesOrder(ctx, sqlc.CreateSalesOrderParams{
 		ID:                    soID,
 		Number:                params.Number,
 		CustomerPoNumber:      toNullString(params.CustomerPONumber),
-		Note:                  toNullString(params.Note),
+		Note:                  field.StringToNullString(params.Instructions),
+		BillToAddressID:       billTo.AddressID,
+		BillToName:            billTo.Name,
+		BillToLine1:           billTo.Line1,
+		BillToLine2:           billTo.Line2,
+		BillToCity:            billTo.City,
+		BillToState:           billTo.State,
+		BillToPostalCode:      billTo.PostalCode,
+		BillToCountry:         billTo.Country,
+		BillToPhone:           billTo.Phone,
+		BillToEmail:           billTo.Email,
+		ShipToAddressID:       shipTo.AddressID,
+		ShipToName:            shipTo.Name,
+		ShipToLine1:           shipTo.Line1,
+		ShipToLine2:           shipTo.Line2,
+		ShipToCity:            shipTo.City,
+		ShipToState:           shipTo.State,
+		ShipToPostalCode:      shipTo.PostalCode,
+		ShipToCountry:         shipTo.Country,
+		ShipToPhone:           shipTo.Phone,
+		ShipToEmail:           shipTo.Email,
+		SiteID:                toNullString(params.SiteID),
+		CommitmentFirmness:    toNullString(params.CommitmentFirmness),
 		BillingAddressID:      params.BillingAddressID,
 		ShippingAddressID:     params.ShippingAddressID,
 		CarrierID:             toNullString(params.CarrierID),
@@ -597,7 +651,21 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, params.AccountID, soID)
+	return r.getWritingOwnerParty(ctx, params.AccountID, soID)
+}
+
+// getWritingOwnerParty reads an order just written and stores the owner's party row from it.
+func (r *salesOrderRepoImpl) getWritingOwnerParty(ctx context.Context, accountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
+	row, err := r.queries.GetSalesOrder(ctx, sqlc.GetSalesOrderParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	// The legacy columns hold what was just written; the party row takes them.
+	legacy := mapGetSalesOrderRow(row)
+	if apiErr := r.writeOwnerParty(ctx, legacy); apiErr != nil {
+		return nil, apiErr
+	}
+	return r.Get(ctx, accountID, salesOrderID)
 }
 
 func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
@@ -620,11 +688,36 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 		promisedAtNull = gosql.NullTime{Time: v, Valid: true}
 	}
 
+	billTo, shipTo := AddressSnapshotToColumns(params.BillToSnapshot), AddressSnapshotToColumns(params.ShipToSnapshot)
 	err := r.queries.UpdateSalesOrder(ctx, sqlc.UpdateSalesOrderParams{
 		Number: toNullString(params.Number),
 		// Clearable fields → NullString (Set → value, Clear → NULL); SQL uses plain narg.
 		CustomerPoNumber:      field.StringToNullString(params.CustomerPONumber),
-		Note:                  field.StringToNullString(params.Note),
+		Note:                  field.StringToNullString(params.Instructions),
+		CommitmentFirmness:    field.StringToNullString(params.CommitmentFirmness),
+		SiteID:                toNullString(params.SiteID),
+		SetBillTo:             params.BillToSnapshot != nil,
+		BillToAddressID:       billTo.AddressID,
+		BillToName:            billTo.Name,
+		BillToLine1:           billTo.Line1,
+		BillToLine2:           billTo.Line2,
+		BillToCity:            billTo.City,
+		BillToState:           billTo.State,
+		BillToPostalCode:      billTo.PostalCode,
+		BillToCountry:         billTo.Country,
+		BillToPhone:           billTo.Phone,
+		BillToEmail:           billTo.Email,
+		SetShipTo:             params.ShipToSnapshot != nil,
+		ShipToAddressID:       shipTo.AddressID,
+		ShipToName:            shipTo.Name,
+		ShipToLine1:           shipTo.Line1,
+		ShipToLine2:           shipTo.Line2,
+		ShipToCity:            shipTo.City,
+		ShipToState:           shipTo.State,
+		ShipToPostalCode:      shipTo.PostalCode,
+		ShipToCountry:         shipTo.Country,
+		ShipToPhone:           shipTo.Phone,
+		ShipToEmail:           shipTo.Email,
 		CarrierOptionID:       field.StringToNullString(params.ServiceLevelID),
 		CarrierBillingType:    field.StringToNullString(params.CarrierBillingType),
 		CarrierBillingAccount: field.StringToNullString(params.CarrierBillingAccount),
@@ -651,7 +744,7 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, params.AccountID, params.SalesOrderID)
+	return r.getWritingOwnerParty(ctx, params.AccountID, params.SalesOrderID)
 }
 
 func (r *salesOrderRepoImpl) Delete(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
@@ -753,6 +846,10 @@ func (r *salesOrderRepoImpl) SetShipByCommitment(ctx context.Context, accountID,
 			params.ShipByCutoffAt = gosql.NullTime{Time: *commitment.ShipByCutoffAt, Valid: true}
 		}
 		params.CalendarAdjustmentDays = gosql.NullInt32{Int32: safeconv.IntToInt32(commitment.CalendarAdjustmentDays), Valid: true}
+		if commitment.PromisedLeadTimeDays != nil {
+			params.PromisedLeadTimeDays = gosql.NullInt32{Int32: safeconv.IntToInt32(*commitment.PromisedLeadTimeDays), Valid: true}
+			params.PromisedLeadTimeSource = gosql.NullString{String: commitment.PromisedLeadTimeSource, Valid: true}
+		}
 	}
 
 	if apiErr := db.MapSQLError(r.queries.SetSalesOrderShipByCommitment(ctx, params)); apiErr != nil {
@@ -1020,8 +1117,15 @@ func (r *salesOrderRepoImpl) DeleteCascade(ctx context.Context, accountID, sales
 	// strand their allocations against an issue id that no longer exists, and nothing would ever be
 	// able to release the stock again.
 
+	if err := r.queries.DeleteDocumentParties(ctx, salesOrderID); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
 	// Delete sales order lines
 	if err := r.queries.DeleteSalesOrderLinesBySalesOrder(ctx, salesOrderID); err != nil {
+
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -1225,7 +1329,7 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	}
 
 	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
-	so.Note = nullStringToPtr(row.Note)
+	so.Instructions = nullStringToPtr(row.Note)
 	so.CarrierID = nullStringToPtr(row.CarrierID)
 	so.ServiceLevelID = nullStringToPtr(row.CarrierOptionID)
 	so.CarrierBillingType = nullStringToPtr(row.CarrierBillingType)
@@ -1375,7 +1479,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	}
 
 	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
-	so.Note = nullStringToPtr(row.Note)
+	so.Instructions = nullStringToPtr(row.Note)
 	so.CarrierID = nullStringToPtr(row.CarrierID)
 	so.ServiceLevelID = nullStringToPtr(row.CarrierOptionID)
 	so.CarrierBillingType = nullStringToPtr(row.CarrierBillingType)
@@ -1631,7 +1735,7 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	}
 
 	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
-	so.Note = nullStringToPtr(row.Note)
+	so.Instructions = nullStringToPtr(row.Note)
 	so.CarrierID = nullStringToPtr(row.CarrierID)
 	so.ServiceLevelID = nullStringToPtr(row.CarrierOptionID)
 	so.CarrierBillingType = nullStringToPtr(row.CarrierBillingType)

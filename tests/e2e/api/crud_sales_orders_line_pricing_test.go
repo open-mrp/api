@@ -15,7 +15,10 @@ import (
 // is SeedProductID.
 func saleLineUnitPrices(t *testing.T, orderID string) []float64 {
 	t.Helper()
-	got := getSalesOrder(t, orderID, url.Values{"include": {"lines", "lines.product", "lines.unit_price"}})
+	status, body, err := forgeClient().GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"lines", "lines.product", "lines.unit_price"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	got := parseJSON(body)
 	lines := jsonObject(got, "lines")
 	require.NotNil(t, lines, "lines present with ?include=lines")
 

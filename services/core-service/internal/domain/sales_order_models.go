@@ -13,10 +13,11 @@ import (
 
 // SalesOrder represents a full sales order domain model.
 type SalesOrder struct {
-	ID                    string
-	Number                string                 `audit:"number"`
-	CustomerPONumber      *string                `audit:"customer_po_number"`
-	Note                  *string                `audit:"note"`
+	ID               string
+	Number           string  `audit:"number"`
+	CustomerPONumber *string `audit:"customer_po_number"`
+	// Instructions is the reading party's own guidance for the order (document_party), internal to that party.
+	Instructions          *string                `audit:"instructions"`
 	IsAcknowledgmentSent  bool                   `audit:"is_acknowledgment_sent"`
 	BillingAddressID      string                 `audit:"billing_address_id"`
 	ShippingAddressID     string                 `audit:"shipping_address_id"`
@@ -51,9 +52,21 @@ type SalesOrder struct {
 	// ShipByCutoffAt is ShipByDate at the plant's pickup cutoff, and CalendarAdjustmentDays how many days the receiving and shipping calendars pulled the date back beyond transit. Both stamped with the commitment so an edited calendar cannot rewrite the explanation of a promise already made.
 	ShipByCutoffAt         *time.Time `audit:"ship_by_cutoff_at"`
 	CalendarAdjustmentDays *int32     `audit:"calendar_adjustment_days"`
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
+	// PromisedLeadTimeDays is the lead time the ship-by date was promised on, in business days, and
+	// PromisedLeadTimeSource where it came from (a constants.PromisedLeadTimeSource). Both nil when the order was
+	// promised or pinned a date rather than a lead time, or was issued before they were recorded.
+	PromisedLeadTimeDays   *int32  `audit:"promised_lead_time_days"`
+	PromisedLeadTimeSource *string `audit:"promised_lead_time_source"`
+	// CommitmentFirmness is a constants.CommitmentFirmness, nil when unset.
+	CommitmentFirmness *string `audit:"commitment_firmness"`
+	// BillTo and ShipTo are the order's own copies of its addresses.
+	BillTo *AddressSnapshot `audit:"bill_to"`
+	ShipTo *AddressSnapshot `audit:"ship_to"`
+	// SiteID is the site the order ships from; nil is the account's default site.
+	SiteID    *string `audit:"site_id"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	// Metadata is the reading party's own key/value pairs (document_party); never nil. See shared/metadata.
 	Metadata map[string]string `audit:"metadata"`
 
 	// Joined customer details
@@ -159,6 +172,10 @@ type SalesOrder struct {
 	// Order acknowledgement email recipients (populated when contacts is included).
 	AcknowledgementEmails []string
 
+	// EmailRecipients are the order's recipients and the documents each receives (populated when email_recipients is
+	// included).
+	EmailRecipients []NotificationRecipient
+
 	// Fulfillment progress as fractions between 0 and 1 aggregated over the order's sale-type lines (always populated, independent of the lines include).
 	PickedCompletion   float64
 	PackedCompletion   float64
@@ -167,6 +184,15 @@ type SalesOrder struct {
 	// Monetary stage totals summed over the order's lines, populated only when the totals include is requested (nil otherwise). Computed in Go via shared/pricing so the amounts match the dashboard exactly.
 	Totals *SalesOrderTotals
 }
+
+// SalesOrderReferences blocks deleting a sales order once a shipment or invoice exists for it.
+var SalesOrderReferences = RegisterReferences(References{
+	Noun: "sales order",
+	Probes: []ReferenceProbe{
+		{Label: "shipments", Table: "shipment", Column: "sales_order_id"},
+		{Label: "invoices", Table: "invoice", Column: "sales_order_id"},
+	},
+})
 
 // SalesOrderTotals holds a sales order's monetary stage totals as decimal strings. Available is false when a line cannot be priced the way the dashboard prices it, in which case the amounts are empty and callers serialize a null total rather than a wrong one.
 type SalesOrderTotals struct {
@@ -206,8 +232,13 @@ type ListSalesOrdersParams struct {
 	ShipByAfter      *string
 	ShipByBefore     *string
 	PastDue          *bool
-	AccountID        string
-	BuyerAccountID   *string
+	// CreatedAfter (inclusive) and CreatedBefore (exclusive) bound the created date.
+	CreatedAfter  *time.Time
+	CreatedBefore *time.Time
+	// PaymentStatuses are constants.SalesOrderPaymentStatus values.
+	PaymentStatuses []string
+	AccountID       string
+	BuyerAccountID  *string
 	// Includes to expand (e.g. "lines"); inline-joined fields are always present.
 	Includes []string
 }
@@ -228,17 +259,18 @@ type GetSalesOrderParams struct {
 
 // CreateSalesOrderParams holds the parameters for creating a sales order.
 type CreateSalesOrderParams struct {
-	AccountID             string
-	BuyerAccountID        string
-	Includes              []string
-	SellerAccountID       string
-	OwnerAccountID        string
-	Number                string
-	SalesOrderStatusCode  string
-	BillingAddressID      string
-	ShippingAddressID     string
-	CustomerPONumber      *string
-	Note                  *string
+	AccountID            string
+	BuyerAccountID       string
+	Includes             []string
+	SellerAccountID      string
+	OwnerAccountID       string
+	Number               string
+	SalesOrderStatusCode string
+	BillingAddressID     string
+	ShippingAddressID    string
+	CustomerPONumber     *string
+	// Instructions set or cleared by the caller; unset copies the customer's.
+	Instructions          field.Clearable[string]
 	CarrierID             *string
 	ServiceLevelID        *string
 	CarrierBillingType    *string
@@ -252,17 +284,17 @@ type CreateSalesOrderParams struct {
 	// LeadTimeOverrideDays and ShipByOverrideDate are the alternatives to PromisedAt. At most one of the three may be set; the service rejects more.
 	LeadTimeOverrideDays *int32
 	ShipByOverrideDate   *time.Time
-	// Existing bill-to / ship-to address IDs the order references. The addresses must belong to the order's owner or buyer account (matching Dashboard, which only accepts address IDs — addresses are persisted separately).
-	BillToAddressID string
-	ShipToAddressID string
-	Lines           []CreateSalesOrderLineInput
-	// Email contact recipients to write into order_email_contact on create.
-	AcknowledgementEmailContacts []SalesOrderEmailContactInput
-	InvoiceEmailContacts         []SalesOrderEmailContactInput
-	// BillToAddress and ShipToAddress are buyer addresses saved with the order, each in place of its ID.
-	BillToAddress *InlineAddressParams
-	ShipToAddress *InlineAddressParams
-	Metadata      map[string]string
+	// BillTo and ShipTo name a saved address (AddressID) or give one inline; nil takes the customer's default.
+	BillTo *AddressSnapshot
+	ShipTo *AddressSnapshot
+	Lines  []CreateSalesOrderLineInput
+	// EmailRecipients, when set (even empty), are the order's recipients; unset copies the customer's.
+	EmailRecipients *[]NotificationRecipientRef
+	// SiteID is the site the order ships from; nil takes the account's default site.
+	SiteID *string
+	// CommitmentFirmness is a constants.CommitmentFirmness, nil when unset.
+	CommitmentFirmness *string
+	Metadata           map[string]string
 }
 
 // SalesOrderEmailContactInput represents a single recipient to wire to a sales order.
@@ -299,6 +331,7 @@ type UpdateSalesOrderParams struct {
 	Number               *string
 	BillingAddressID     *string
 	ShippingAddressID    *string
+	SiteID               *string
 	CarrierID            *string
 	PriorityCode         *string
 	ShippingTermID       *string
@@ -308,7 +341,8 @@ type UpdateSalesOrderParams struct {
 	// Clearable (set / clear / leave). The service backfills unset from the existing
 	// order, so a cleared field resolves to NULL and an unset field keeps its value.
 	CustomerPONumber      field.Clearable[string]
-	Note                  field.Clearable[string]
+	Instructions          field.Clearable[string]
+	CommitmentFirmness    field.Clearable[string]
 	ServiceLevelID        field.Clearable[string]
 	CarrierBillingType    field.Clearable[string]
 	CarrierBillingAccount field.Clearable[string]
@@ -318,14 +352,19 @@ type UpdateSalesOrderParams struct {
 	// LeadTimeOverrideDays and ShipByOverrideDate are the alternatives to PromisedAt. Clearing one to set another in the same request is how a caller switches basis.
 	LeadTimeOverrideDays field.Clearable[int32]
 	ShipByOverrideDate   field.Clearable[time.Time]
-	// When non-nil, replaces the acknowledgement email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
+	// When non-nil, replaces the order's email recipients. An empty slice clears them; nil leaves them untouched.
+	EmailRecipients *[]NotificationRecipientRef
+	// When non-nil, replace the order's recipients of acknowledgments or invoices alone.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
-	// When non-nil, replaces the invoice email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
-	InvoiceEmailContacts *[]SalesOrderEmailContactInput
-	// BillingAddress and ShippingAddress are buyer addresses saved with the update, each in place of its ID.
-	BillingAddress  *InlineAddressParams
-	ShippingAddress *InlineAddressParams
-	Metadata        metadata.Update
+	InvoiceEmailContacts         *[]SalesOrderEmailContactInput
+	// BillTo and ShipTo replace the order's copy of an address: a saved address (AddressID) or one given inline.
+	BillTo   *AddressSnapshot
+	ShipTo   *AddressSnapshot
+	Metadata metadata.Update
+
+	// Set by the service: the resolved copies of BillTo and ShipTo, written with the update.
+	BillToSnapshot *AddressSnapshot
+	ShipToSnapshot *AddressSnapshot
 }
 
 // DeleteSalesOrderParams holds the parameters for deleting a sales order.
@@ -413,6 +452,10 @@ type ShipByCommitment struct {
 	ShipByDate   time.Time
 	LeadTimeDays int
 	SourceCode   string
+	// PromisedLeadTimeDays is the lead time promised, in business days, and PromisedLeadTimeSource where it came from
+	// (a constants.PromisedLeadTimeSource). Nil and empty when the order was promised or pinned a date.
+	PromisedLeadTimeDays   *int
+	PromisedLeadTimeSource string
 	// TransitDays is the carrier transit subtracted from a promised delivery date to get ShipByDate, nil when transit was unknown or the commitment came from a lead time.
 	TransitDays *int
 	// TransitSourceCode names where TransitDays came from, empty when TransitDays is nil.

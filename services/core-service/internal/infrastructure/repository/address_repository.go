@@ -164,7 +164,49 @@ func (r *addressRepoImpl) Get(ctx context.Context, params domain.GetAddressParam
 	return mapGetAddressRow(row), nil
 }
 
+// GetOrderAddress reads an address a sales order names, whichever account (if any) lists it.
+func (r *addressRepoImpl) GetOrderAddress(ctx context.Context, addressID string) (*domain.Address, *apierror.APIError) {
+	ctx, span := addressRepoTracer.Start(ctx, "repository.address.get_order_address")
+	defer span.End()
+
+	row, err := r.queries.GetOrderAddress(ctx, addressID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return mapGetAddressRow(sqlc.GetAddressRow(row)), nil
+}
+
+// CreateOrderAddress stores an address given inline on a sales order, unlinked from any account so no address book
+// lists it.
+func (r *addressRepoImpl) CreateOrderAddress(ctx context.Context, addressID, geolocationID string, params domain.CreateAddressParams) *apierror.APIError {
+	ctx, span := addressRepoTracer.Start(ctx, "repository.address.create_order_address")
+	defer span.End()
+
+	if err := r.queries.InsertGeolocation(ctx, sqlc.InsertGeolocationParams{
+		ID:          geolocationID,
+		StreetLine1: toNullString(params.StreetLine1),
+		StreetLine2: toNullString(params.StreetLine2),
+		Locality:    toNullString(params.Locality),
+		State:       toNullString(params.State),
+		PostalCode:  toNullString(params.PostalCode),
+		Country:     params.Country,
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := r.queries.InsertAddress(ctx, sqlc.InsertAddressParams{
+		ID:            addressID,
+		Name:          params.Name,
+		Phone:         toNullString(params.Phone),
+		Email:         toNullString(params.Email),
+		GeolocationID: geolocationID,
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	return nil
+}
+
 func (r *addressRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Address, *apierror.APIError) {
+
 	ctx, span := addressRepoTracer.Start(ctx, "repository.address.get_by_ids")
 	defer span.End()
 

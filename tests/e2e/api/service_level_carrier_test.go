@@ -19,18 +19,27 @@ func assertServiceLevelOffCarrier(t *testing.T, status int, body []byte, msg str
 	}
 }
 
+// assertOrderServiceLevelOffCarrier is assertServiceLevelOffCarrier for a sales order, whose freight section holds
+// the pair.
+func assertOrderServiceLevelOffCarrier(t *testing.T, status int, body []byte, msg string) {
+	t.Helper()
+	if assert.Equal(t, 422, status, "%s: %s", msg, string(body)) {
+		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "freight.service_level_id")
+	}
+}
+
 func TestServiceLevelOnCarrier_SalesOrderCreate(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 
 	body := minimalSalesOrderCreateBody(t, customerID)
 	body["service_level_id"] = SeedTransitGroundServiceLevelID
-	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, resp, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
 		deleteOrder(t, jsonField(parseJSON(resp), "id"))
 	}
-	assertServiceLevelOffCarrier(t, status, resp, "another carrier's service level")
+	assertOrderServiceLevelOffCarrier(t, status, resp, "another carrier's service level")
 
 	body = minimalSalesOrderCreateBody(t, customerID)
 	body["carrier_id"] = SeedTransitCarrierID
@@ -62,9 +71,9 @@ func TestServiceLevelOnCarrier_SalesOrderUpdate(t *testing.T) {
 		{"service level alone", map[string]any{"service_level_id": SeedTransitGroundServiceLevelID}},
 		{"both", map[string]any{"carrier_id": SeedSystemCarrierID, "service_level_id": SeedTransitGroundServiceLevelID}},
 	} {
-		status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, tc.body, newIdempotencyKey())
+		status, body, err := forgeClient().Patch(salesOrdersPath+"/"+orderID, forgeSalesOrderWrite(tc.body), newIdempotencyKey())
 		require.NoError(t, err)
-		assertServiceLevelOffCarrier(t, status, body, tc.name)
+		assertOrderServiceLevelOffCarrier(t, status, body, tc.name)
 		carrier, serviceLevel, _, _ := orderRefIDs(t, orderID)
 		assert.Equal(t, SeedCarrierID, carrier, "%s: the order keeps its carrier", tc.name)
 		assert.Equal(t, SeedServiceLevelID, serviceLevel, "%s: the order keeps its service level", tc.name)

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -44,6 +46,9 @@ func NewSalesOrderStatusSvc(config *SalesOrderStatusSvcConfig) SalesOrderStatusS
 }
 
 func (m *salesOrderStatusSvcImpl) ListSalesOrderStatuses(ctx context.Context, req *ListSalesOrderStatusesRequest) (*apiresource.List[apiresource.SalesOrderStatus], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, "A sales order's status is one of draft, issued, fulfilled and canceled."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListSalesOrderStatusesRequest{Cursor: req.Cursor, Limit: req.Limit, Query: req.Query}
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderStatusSvcTracer, "service.sales_order_statuses.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListSalesOrderStatusesResponse, error) {
@@ -62,7 +67,8 @@ func (m *salesOrderStatusSvcImpl) ListSalesOrderStatuses(ctx context.Context, re
 	}
 	items := make([]apiresource.SalesOrderStatus, 0, len(ids))
 	for _, id := range ids {
-		if v, ok := loaded[id]; ok {
+		// preview.9 never had a canceled status; its orders read canceled as fulfilled.
+		if v, ok := loaded[id]; ok && v.(*apiresource.SalesOrderStatus).Code != constants.SalesOrderStatusCodeCanceled {
 			items = append(items, *(v.(*apiresource.SalesOrderStatus)))
 		}
 	}

@@ -291,18 +291,6 @@ func setReceivingOrderCompletion(ctx context.Context, repos domain.RepoFactory, 
 	return publishReceivingOrder(ctx, repos, constants.AuditActionUpdate, before, after)
 }
 
-// salesOrderContacts reads the order's email recipients; an order with none reads as empty lists.
-func salesOrderContacts(ctx context.Context, repo domain.SalesOrderRepo, salesOrderID string) (*domain.SalesOrderContacts, *apierror.APIError) {
-	contacts, apiErr := repo.GetContactsByOrders(ctx, []string{salesOrderID})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if c, ok := contacts[salesOrderID]; ok {
-		return c, nil
-	}
-	return &domain.SalesOrderContacts{}, nil
-}
-
 // purchaseOrderContactUserIDs reads the account users the order's submission is sent to.
 func purchaseOrderContactUserIDs(ctx context.Context, repo domain.PurchaseOrderRepo, purchaseOrderID string) ([]string, *apierror.APIError) {
 	contacts, apiErr := repo.GetEmailContacts(ctx, purchaseOrderID)

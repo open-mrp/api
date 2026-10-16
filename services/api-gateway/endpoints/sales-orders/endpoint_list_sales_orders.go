@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/apikit/object"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,41 +18,36 @@ import (
 // Request to list sales orders.
 type ListSalesOrdersRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	apirequest.CreatedRange
+	// Exact match on `number` or `customer_purchase_order_number`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Restricts results to orders in any of these lifecycle statuses.
-	StatusCodes []constants.SalesOrderStatusCode `query:"status_codes"`
-	// Restricts results to orders that have at least one line for any of these inventory items.
+	// Only return orders with any of these statuses: `draft`, `issued`, `fulfilled` or `canceled`.
+	Statuses []constants.SalesOrderStatus `query:"statuses"`
+	// Only return orders with any of these payment statuses: `unpaid`, `partially_paid` or `paid`.
+	PaymentStatuses []constants.SalesOrderPaymentStatus `query:"payment_statuses"`
+	// Only return orders with a line for any of these items.
 	ItemIDs []string `query:"item_ids"`
-	// Restricts results to orders that have at least one line whose product belongs to any of these product lines.
+	// Only return orders with a line for an item in any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Restricts results to orders placed by any of these customers.
+	// Only return orders for any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Restricts results to orders placed by customers belonging to any of these account groups.
-	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Restricts results to orders credited to any of these sales reps.
-	//
-	// These are account user IDs, matching the `sales_rep` on the order.
+	// Only return orders for customers in any of these account groups.
+	GroupIDs []string `query:"group_ids"`
+	// Only return orders credited to any of these sales reps (account user IDs).
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Only include orders created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
-	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
-	// Only include orders created at or before the start of this date (`YYYY-MM-DD`, UTC), so orders created later on the end date itself are excluded; pass the following day to include them. A full timestamp (RFC 3339) is also accepted and used as given.
-	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
-	// Earliest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
+	// Earliest ship-by date to include, as `YYYY-MM-DD`. Inclusive.
 	ShipByAfter *string `query:"ship_by_after" validate:"omitempty,date_filter"`
-	// Latest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
+	// Latest ship-by date to include, as `YYYY-MM-DD`. Inclusive.
 	ShipByBefore *string `query:"ship_by_before" validate:"omitempty,date_filter"`
-	// Restricts results to orders that are, or are not, past their ship-by date.
+	// Only return orders that are, or are not, past their ship-by date.
 	//
-	// An order is past due when it is still `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due — it is delivered, and how late it was is a delivery-performance question rather than a backlog one.
+	// An order is past due while it is `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due.
 	PastDue *bool `query:"past_due"`
 }
 
-// Returns a paginated list of sales orders for the current account, newest first.
+// Returns a list of sales orders.
 //
-// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. A customer or supplier portal calling this endpoint only ever sees the orders its own account placed, whatever filters it sets.
+// Sorted by creation date, newest first. Customer and supplier portal users only see the orders their own account placed.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {
@@ -62,16 +58,12 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		Route:             "/v1/sales/sales-orders",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer", "sales_rep", "created_by", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.product.item", "lines.product.item.category", "lines.product.item.category.properties", "lines.product.item.category.unit_group", "lines.product.item.category.unit_group.base_unit", "lines.product.item.category.unit_group.associated_units", "lines.product.item.category.unit_group.associated_units.unit", "lines.product.product_line", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
-		}),
+		IncludeConfig: salesOrderIncludeConfig(),
 	})
 }

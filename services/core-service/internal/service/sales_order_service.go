@@ -20,6 +20,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/integrationhealth"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -176,6 +177,11 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, result.SalesOrders, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if includesSalesOrderEmailRecipients(params.Includes) {
+		if apiErr := attachEmailRecipients(ctx, s.repos, result.SalesOrders); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	return result, nil
 }
@@ -226,6 +232,11 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 
 	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, []*domain.SalesOrder{order}, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	if includesSalesOrderEmailRecipients(params.Includes) {
+		if apiErr := attachEmailRecipients(ctx, s.repos, []*domain.SalesOrder{order}); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return order, nil
@@ -426,21 +437,15 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create sales orders."))
 	}
 
-	if apiErr := checkSalesOrderCreateAddressChoices(params); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	params.AccountID = identity.Target.AccountID
 
-	// For customer-portal creates, fold the customer's saved note into the order note (matches Dashboard: [customer.note, data.note] joined).
-	if identity.IsCustomerUser() {
-		if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil); apiErr == nil && customer != nil && customer.Instructions != nil && *customer.Instructions != "" {
-			folded := *customer.Instructions
-			if params.Note != nil && *params.Note != "" {
-				folded = *customer.Instructions + "\n\n" + *params.Note
-			}
-			params.Note = &folded
-		}
+	// Instructions are the seller's own guidance, which portal users never see or set.
+	if !identity.IsInternalUser() {
+		params.Instructions = field.Clearable[string]{}
+	}
+
+	if params.CommitmentFirmness != nil && !constants.CommitmentFirmness(*params.CommitmentFirmness).IsValid() {
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("commitment.firmness", "Firmness must be soft or hard."))
 	}
 
 	if apiErr := checkCustomerTakesOrders(ctx, s.repos, params.AccountID, params.BuyerAccountID); apiErr != nil {
@@ -491,24 +496,51 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return nil, cacheErr(apiErr)
 			}
 			if isDup {
-				return nil, cacheErr(apierror.NewConflictErrorWithParam("customer_po_number", "A sales order with this customer PO number already exists."))
+				return nil, cacheErr(apierror.NewConflictErrorWithParam("customer_purchase_order_number", "A sales order with this customer PO number already exists."))
 			}
 		}
 
 		// Resolve everything else that only requires reads (and the live Shippo call) BEFORE opening the write transaction, so the external rate lookup never holds a DB transaction open across network latency. The transaction below performs only the inserts.
-		addressRepo := s.repos.NewAddressRepo()
+		// Omitted values are copied from the customer's defaults onto the order, so later edits to the customer never change it.
+		if apiErr := s.applyCustomerOrderDefaults(ctx, &params); apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
 
-		// A saved bill-to / ship-to must belong to the order's owner or buyer account; an inline one is the buyer's address as it will be once saved with the order. The resolved ship-to feeds the sales-rep territory + shipping-rate logic below; the bill-to supplies the third-party freight-billing address.
-		if apiErr := checkInlineAddressPair(params.BillToAddress, params.ShipToAddress, "ship_to_address"); apiErr != nil {
-			return nil, cacheErr(apiErr)
-		}
-		billAddr, apiErr := s.resolveCreateOrderAddress(ctx, meds.Address, addressRepo, params, params.BillToAddressID, params.BillToAddress, "bill_to_address")
+		// The order keeps its own copy of each address; the ship-to feeds the sales-rep territory and shipping-rate
+		// logic below, and the bill-to the third-party freight-billing address.
+		billSnap, apiErr := s.resolveOrderSnapshot(ctx, params.AccountID, params.BuyerAccountID, params.BillTo, "bill_to")
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
-		shipAddr, apiErr := s.resolveCreateOrderAddress(ctx, meds.Address, addressRepo, params, params.ShipToAddressID, params.ShipToAddress, "ship_to_address")
+		shipSnap, apiErr := s.resolveOrderSnapshot(ctx, params.AccountID, params.BuyerAccountID, params.ShipTo, "ship_to")
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
+		}
+		if billSnap == nil {
+			return nil, cacheErr(apierror.NewMissingFieldError("bill_to", "A bill-to address is required and the customer has no default bill-to address."))
+		}
+		if shipSnap == nil {
+			return nil, cacheErr(apierror.NewMissingFieldError("ship_to", "A ship-to address is required and the customer has no default ship-to address."))
+		}
+		params.BillTo, params.ShipTo = billSnap, shipSnap
+		billAddr, shipAddr := shippingAddressFromSnapshot(billSnap), shippingAddressFromSnapshot(shipSnap)
+
+		siteID, apiErr := meds.Site.Resolve(ctx, params.AccountID, params.SiteID, "site_id")
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+		params.SiteID = siteID
+
+		if params.EmailRecipients != nil {
+			if apiErr := s.checkOrderRecipients(ctx, params.BuyerAccountID, *params.EmailRecipients, "email_recipients"); apiErr != nil {
+				return nil, cacheErr(apiErr)
+			}
+		} else {
+			recipients, apiErr := s.customerOrderRecipients(ctx, params.AccountID, params.BuyerAccountID)
+			if apiErr != nil {
+				return nil, cacheErr(apiErr)
+			}
+			params.EmailRecipients = &recipients
 		}
 
 		// Resolve the order discount, which the caller may pass as either its ID or its unique code; store the resolved ID on the order.
@@ -528,11 +560,6 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					return nil, cacheErr(apierror.NewNotFoundError("Order discount not found."))
 				}
 			}
-		}
-
-		// Fill carrier, service level, shipping term, and payment term from the buyer's customer-relation defaults whenever the caller omits them, mirroring the Dashboard create form (which pre-fills these from the selected customer). Carrier, shipping term, and payment term are mandatory on a readable order — the Dashboard order adapter rejects any order missing one — so an API create that omits them without a customer default to fall back on is failed here rather than persisted as a record that 500s on every read.
-		if apiErr := s.applyCustomerOrderDefaults(ctx, &params); apiErr != nil {
-			return nil, cacheErr(apiErr)
 		}
 
 		// Reject caller-supplied foreign keys that don't exist. Vitess does not
@@ -597,9 +624,15 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apierror.NewConflictErrorWithParam("number", "A sales order with this number already exists.")
 			}
 
-			billingAddressID, shippingAddressID, apiErr := savedOrderAddressIDs(txCtx, txSvc.mediators().Address, params)
+			billingAddressID, apiErr := txSvc.orderAddressID(txCtx, params.BillTo)
 			if apiErr != nil {
 				return apiErr
+			}
+			shippingAddressID := billingAddressID
+			if !sameSnapshot(params.BillTo, params.ShipTo) {
+				if shippingAddressID, apiErr = txSvc.orderAddressID(txCtx, params.ShipTo); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Create the order. SellerAccountID and OwnerAccountID default to the target account (the account creating the order), matching Dashboard behavior.
@@ -613,12 +646,16 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				BillingAddressID:      billingAddressID,
 				ShippingAddressID:     shippingAddressID,
 				CustomerPONumber:      params.CustomerPONumber,
-				Note:                  params.Note,
+				Instructions:          params.Instructions,
+				BillTo:                params.BillTo,
+				ShipTo:                params.ShipTo,
+				SiteID:                params.SiteID,
+				CommitmentFirmness:    params.CommitmentFirmness,
 				CarrierID:             params.CarrierID,
 				ServiceLevelID:        params.ServiceLevelID,
 				CarrierBillingType:    params.CarrierBillingType,
 				CarrierBillingAccount: params.CarrierBillingAccount,
-				PriorityCode:          params.PriorityCode,
+				PriorityCode:          string(constants.PriorityCodeNormal),
 				SalesRepID:            salesRepID,
 				ShippingTermID:        params.ShippingTermID,
 				PaymentTermID:         params.PaymentTermID,
@@ -637,11 +674,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			// Create email contacts (matches Dashboard behavior)
-			if apiErr := createOrderEmailContacts(txCtx, txOrderRepo, orderID, params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := createOrderEmailContacts(txCtx, txOrderRepo, orderID, params.InvoiceEmailContacts, string(constants.AccountRelationNotificationTypeInvoice)); apiErr != nil {
+			if apiErr := txOrderRepo.ReplaceEmailRecipients(txCtx, orderID, *params.EmailRecipients); apiErr != nil {
 				return apiErr
 			}
 
@@ -722,6 +755,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					return apiErr
 				}
 			}
+			if includesSalesOrderEmailRecipients(params.Includes) {
+				if apiErr := attachEmailRecipients(txCtx, txSvc.repos, []*domain.SalesOrder{order}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			result = order
 
@@ -784,11 +822,8 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	if apiErr := checkInlineAddressChoices(
-		inlineAddressChoice{params.BillingAddressID != nil, params.BillingAddress, "billing_address_id", "billing_address"},
-		inlineAddressChoice{params.ShippingAddressID != nil, params.ShippingAddress, "shipping_address_id", "shipping_address"},
-	); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if v, ok := params.CommitmentFirmness.Value(); ok && !constants.CommitmentFirmness(v).IsValid() {
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("commitment.firmness", "Firmness must be soft or hard."))
 	}
 
 	meds := s.mediators()
@@ -835,23 +870,50 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			// Saved into the buyer the order will have, after the customer change above is known to be valid.
+			// The customer is the order's counterparty, so it changes only while the order is a draft.
+			if params.BuyerAccountID != nil && *params.BuyerAccountID != existing.BuyerAccountID &&
+				existing.SalesOrderStatusCode != string(constants.SalesOrderStatusCodeEstimate) {
+				return apierror.NewConflictErrorWithParam("customer_id", "The customer can only be changed while the order is a draft.")
+			}
+
 			buyerAccountID := existing.BuyerAccountID
 			if params.BuyerAccountID != nil {
 				buyerAccountID = *params.BuyerAccountID
 			}
-			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, buyerAccountID, params.BillingAddress, params.ShippingAddress, "billing_address", "shipping_address")
-			if apiErr != nil {
+			if params.BillToSnapshot, apiErr = txSvc.resolveOrderSnapshot(txCtx, params.AccountID, buyerAccountID, params.BillTo, "bill_to"); apiErr != nil {
 				return apiErr
 			}
-			if billID != "" {
+			if params.ShipToSnapshot, apiErr = txSvc.resolveOrderSnapshot(txCtx, params.AccountID, buyerAccountID, params.ShipTo, "ship_to"); apiErr != nil {
+				return apiErr
+			}
+			if params.BillToSnapshot != nil {
+				billID, apiErr := txSvc.orderAddressID(txCtx, params.BillToSnapshot)
+				if apiErr != nil {
+					return apiErr
+				}
 				params.BillingAddressID = &billID
 			}
-			if shipID != "" {
+			if params.ShipToSnapshot != nil {
+				shipID := ""
+				if params.BillToSnapshot != nil && sameSnapshot(params.BillToSnapshot, params.ShipToSnapshot) {
+					shipID = *params.BillingAddressID
+				} else if shipID, apiErr = txSvc.orderAddressID(txCtx, params.ShipToSnapshot); apiErr != nil {
+					return apiErr
+				}
 				params.ShippingAddressID = &shipID
 			}
+			if params.SiteID != nil {
+				if params.SiteID, apiErr = txSvc.mediators().Site.Resolve(txCtx, params.AccountID, params.SiteID, "site_id"); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.EmailRecipients != nil {
+				if apiErr := txSvc.checkOrderRecipients(txCtx, buyerAccountID, *params.EmailRecipients, "email_recipients"); apiErr != nil {
+					return apiErr
+				}
+			}
 
-			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "freight.service_level_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -883,7 +945,8 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			// and a set value overwrites. This is how the three-state (set/clear/leave)
 			// survives to the SQL — an empty string is a real value, never a clear.
 			params.CustomerPONumber = params.CustomerPONumber.BackfillUnsetPtr(existing.CustomerPONumber)
-			params.Note = params.Note.BackfillUnsetPtr(existing.Note)
+			params.Instructions = params.Instructions.BackfillUnsetPtr(existing.Instructions)
+			params.CommitmentFirmness = params.CommitmentFirmness.BackfillUnsetPtr(existing.CommitmentFirmness)
 			params.ServiceLevelID = params.ServiceLevelID.BackfillUnsetPtr(existing.ServiceLevelID)
 			params.CarrierBillingType = params.CarrierBillingType.BackfillUnsetPtr(existing.CarrierBillingType)
 			params.CarrierBillingAccount = params.CarrierBillingAccount.BackfillUnsetPtr(existing.CarrierBillingAccount)
@@ -952,22 +1015,37 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				result = updated
 			}
 
-			replacingContacts := params.AcknowledgementEmailContacts != nil || params.InvoiceEmailContacts != nil
-			var contactsBefore *domain.SalesOrderContacts
-			if replacingContacts {
-				if contactsBefore, apiErr = salesOrderContacts(txCtx, txRepo, params.SalesOrderID); apiErr != nil {
+			replacingRecipients := params.EmailRecipients != nil || params.AcknowledgementEmailContacts != nil || params.InvoiceEmailContacts != nil
+			var recipientsBefore map[string][]domain.NotificationRecipientRef
+			if replacingRecipients {
+				if recipientsBefore, apiErr = txRepo.GetEmailRecipients(txCtx, []string{params.SalesOrderID}); apiErr != nil {
 					return apiErr
 				}
 			}
-
-			// Replace email contacts when the caller supplied lists (nil = leave alone)
-			if params.AcknowledgementEmailContacts != nil {
-				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
+			if params.EmailRecipients != nil {
+				if apiErr := txRepo.ReplaceEmailRecipients(txCtx, params.SalesOrderID, *params.EmailRecipients); apiErr != nil {
 					return apiErr
 				}
 			}
-			if params.InvoiceEmailContacts != nil {
-				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.InvoiceEmailContacts, string(constants.AccountRelationNotificationTypeInvoice)); apiErr != nil {
+			for _, byType := range []struct {
+				contacts *[]domain.SalesOrderEmailContactInput
+				code     constants.AccountRelationNotificationType
+				param    string
+			}{
+				{params.AcknowledgementEmailContacts, constants.AccountRelationNotificationTypeOrderAcknowledgement, "acknowledgement_email_contacts"},
+				{params.InvoiceEmailContacts, constants.AccountRelationNotificationTypeInvoice, "invoice_email_contacts"},
+			} {
+				if byType.contacts == nil {
+					continue
+				}
+				refs := make([]domain.NotificationRecipientRef, len(*byType.contacts))
+				for i, c := range *byType.contacts {
+					refs[i] = domain.NotificationRecipientRef{AccountUserID: c.AccountUserID, NotificationTypeCodes: []string{string(byType.code)}}
+				}
+				if apiErr := txSvc.checkOrderRecipients(txCtx, updated.BuyerAccountID, refs, byType.param); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *byType.contacts, string(byType.code)); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -985,15 +1063,19 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 					return apiErr
 				}
 			}
+			if includesSalesOrderEmailRecipients(params.Includes) {
+				if apiErr := attachEmailRecipients(txCtx, txSvc.repos, []*domain.SalesOrder{result}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(existing, updated)
-			if replacingContacts {
-				contactsAfter, apiErr := salesOrderContacts(txCtx, txRepo, params.SalesOrderID)
+			if replacingRecipients {
+				after, apiErr := txRepo.GetEmailRecipients(txCtx, []string{params.SalesOrderID})
 				if apiErr != nil {
 					return apiErr
 				}
-				changes = appendListChange(changes, "acknowledgement_email_contacts", contactsBefore.AcknowledgementEmails, contactsAfter.AcknowledgementEmails)
-				changes = appendListChange(changes, "invoice_email_contacts", contactsBefore.InvoiceEmails, contactsAfter.InvoiceEmails)
+				changes = appendRecipientsChange(changes, recipientsBefore[params.SalesOrderID], after[params.SalesOrderID])
 			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -1073,8 +1155,8 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		}
 		return tracing.Trace(span, apiErr)
 	}
-	if order.CompletedAt != nil || order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
-		return tracing.Trace(span, apierror.NewValidationError("Cannot delete a fulfilled sales order."))
+	if apiErr := domain.SalesOrderReferences.RequireUnused(ctx, s.repos.NewReferenceRepo(), order.ID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
@@ -1190,8 +1272,8 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 				if apiErr != nil {
 					return apiErr
 				}
-				if order.CompletedAt != nil || order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
-					return apierror.NewValidationError("Cannot delete a fulfilled sales order: " + orderID)
+				if apiErr := domain.SalesOrderReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), order.ID); apiErr != nil {
+					return apiErr
 				}
 				if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSalesOrder, order.ID, params.AccountID, order); apiErr != nil {
 					return apiErr
@@ -1269,7 +1351,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	switch params.StatusChange {
 	case "issue":
 		if order.SalesOrderStatusCode != "estimate" {
-			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in estimate status to issue."))
+			return nil, tracing.Trace(span, apperr.NewInvalidStateTransitionError("Only a draft order can be issued."))
 		}
 
 		// Everything this transaction will write the ledger for, resolved on the pool: the items it is about to reserve, and the items of any stale reservation it releases first. Both are read again inside the transaction; this pass exists to name the root, not to decide anything. See ledgerlock, Corollary A.
@@ -1428,7 +1510,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 
 	case "unissue":
 		if order.SalesOrderStatusCode != "issued" {
-			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in issued status to unissue."))
+			return nil, tracing.Trace(span, apperr.NewInvalidStateTransitionError("Only an issued order can be unissued."))
 		}
 
 		// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
@@ -1510,9 +1592,17 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			return nil
 		})
 
-	case "close":
+	case "close", "cancel":
 		if order.SalesOrderStatusCode != "issued" {
+			if params.StatusChange == "cancel" {
+				return nil, tracing.Trace(span, apperr.NewInvalidStateTransitionError("Only an issued order can be canceled. Delete a draft instead."))
+			}
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in issued status to close."))
+		}
+		// Close (preview.9) always fulfilled the order; cancel ends it canceled when nothing shipped.
+		stopped := constants.SalesOrderStatusCodeFulfilled
+		if params.StatusChange == "cancel" {
+			stopped = cancelOutcome(order)
 		}
 
 		// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
@@ -1530,7 +1620,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
-			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, "fulfilled", order.IssuedAt, &now); apiErr != nil {
+			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, string(stopped), order.IssuedAt, &now); apiErr != nil {
 				return apiErr
 			}
 
@@ -1560,7 +1650,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 
 			changes := audit.ComputeChanges(order, &domain.SalesOrder{
-				SalesOrderStatusCode: "fulfilled",
+				SalesOrderStatusCode: string(stopped),
 				CompletedAt:          &now,
 			}, "SalesOrderStatusCode", "CompletedAt")
 
@@ -2016,13 +2106,13 @@ func salesOrderCommitmentBasisChanged(existing *domain.SalesOrder, params domain
 func validateCommitmentBasisExclusive(promisedAt *time.Time, leadTimeOverrideDays *int32, shipByOverrideDate *time.Time) *apierror.APIError {
 	named := make([]string, 0, 3)
 	if promisedAt != nil {
-		named = append(named, "promised_at")
+		named = append(named, "promised_on")
 	}
 	if leadTimeOverrideDays != nil {
-		named = append(named, "lead_time_override_days")
+		named = append(named, "lead_time_override")
 	}
 	if shipByOverrideDate != nil {
-		named = append(named, "ship_by_override_date")
+		named = append(named, "ship_by_override_on")
 	}
 	if len(named) <= 1 {
 		return nil
@@ -2343,20 +2433,20 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 // validateSalesOrderReferences rejects caller-supplied foreign keys that don't exist in the account; order_discount_id is resolved separately by resolveOrderDiscountID. The carrier is checked here because a freight-exempt order never reaches the shipping-rate lookup.
 func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, params domain.CreateSalesOrderParams) *apierror.APIError {
 	var carrier customerRefs
-	carrier.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	carrier.add(customerRefCarrier, params.CarrierID, nil, "freight.carrier_id")
 	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, carrier); apiErr != nil {
 		return apiErr
 	}
 	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
 		level, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID)
 		if apiErr != nil {
-			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
+			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "freight.service_level_id")
 		}
-		if apiErr := domain.RequireAssignable("service_level_id", "service level", constants.ArchiveStatusFromIsActive(level.IsActive)); apiErr != nil {
+		if apiErr := domain.RequireAssignable("freight.service_level_id", "service level", constants.ArchiveStatusFromIsActive(level.IsActive)); apiErr != nil {
 			return apiErr
 		}
 	}
-	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "freight.service_level_id"); apiErr != nil {
 		return apiErr
 	}
 	if params.ShippingTermID != nil && *params.ShippingTermID != "" {
@@ -2382,21 +2472,14 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 			return mapSalesOrderReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
 		}
 	}
-	// Order-acknowledgement and invoice email contacts are recipients on the buyer (customer) side, so their account_user_id must resolve within the buyer's account, not the acting seller account.
-	if apiErr := s.validateEmailContactAccountUsers(ctx, params.BuyerAccountID, params.AcknowledgementEmailContacts, "acknowledgement_email_contacts"); apiErr != nil {
-		return apiErr
-	}
-	if apiErr := s.validateEmailContactAccountUsers(ctx, params.BuyerAccountID, params.InvoiceEmailContacts, "invoice_email_contacts"); apiErr != nil {
-		return apiErr
-	}
 	return nil
 }
 
 // changedSalesOrderRefs lists the routing and terms an update moves to a different record; one the order already holds is not looked up again.
 func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) customerRefs {
 	var refs customerRefs
-	refs.add(customerRefCarrier, params.CarrierID, existing.CarrierID, "carrier_id")
-	refs.add(customerRefServiceLevel, params.ServiceLevelID.ValuePtr(), existing.ServiceLevelID, "service_level_id")
+	refs.add(customerRefCarrier, params.CarrierID, existing.CarrierID, "freight.carrier_id")
+	refs.add(customerRefServiceLevel, params.ServiceLevelID.ValuePtr(), existing.ServiceLevelID, "freight.service_level_id")
 	refs.add(customerRefShippingTerm, params.ShippingTermID, existing.ShippingTermID, "shipping_term_id")
 	refs.add(customerRefPaymentTerm, params.PaymentTermID, existing.PaymentTermID, "payment_term_id")
 	return refs
@@ -2404,7 +2487,6 @@ func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domai
 
 // checkSalesOrderCounterpartyRefs refuses a customer, address or discount the account may not use; an address must be the buyer's or the account's own, as on create. One the order already holds is not looked up again.
 func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFactory, params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) *apierror.APIError {
-	buyerAccountID := existing.BuyerAccountID
 	if params.BuyerAccountID != nil && *params.BuyerAccountID != existing.BuyerAccountID {
 		customer, apiErr := repos.NewCustomerRepo().Get(ctx, params.AccountID, *params.BuyerAccountID, nil)
 		if apiErr != nil {
@@ -2415,26 +2497,6 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 		}
 		if customer.ArchiveStatus == constants.ArchiveStatusArchived {
 			return domain.RequireAssignable("customer_id", "customer", customer.ArchiveStatus)
-		}
-		buyerAccountID = *params.BuyerAccountID
-	}
-
-	for _, address := range []struct {
-		id, held *string
-		param    string
-	}{
-		{params.BillingAddressID, &existing.BillingAddressID, "billing_address_id"},
-		{params.ShippingAddressID, &existing.ShippingAddressID, "shipping_address_id"},
-	} {
-		if address.id == nil || *address.id == *address.held {
-			continue
-		}
-		acct, apiErr := orderAddressAccount(ctx, repos.NewAddressRepo(), params.AccountID, buyerAccountID, *address.id)
-		if apiErr != nil {
-			return apiErr
-		}
-		if acct == "" {
-			return apierror.NewNotFoundError("No address found with the provided ID.").WithParam(address.param)
 		}
 	}
 
@@ -2448,19 +2510,6 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 		}
 		if apiErr := domain.RequireAssignable("order_discount_id", "order discount", d.Status); apiErr != nil {
 			return apiErr
-		}
-	}
-	return nil
-}
-
-// validateEmailContactAccountUsers rejects an order email-contact whose account_user_id does not exist in the buyer's account, rather than silently dropping the reference. buyerAccountID scopes the lookup: these contacts are customer-side recipients, so an account_user of the seller (acting) account is not a valid contact.
-func (s *salesOrderSvcImpl) validateEmailContactAccountUsers(ctx context.Context, buyerAccountID string, contacts []domain.SalesOrderEmailContactInput, param string) *apierror.APIError {
-	for _, c := range contacts {
-		if c.AccountUserID == "" {
-			continue
-		}
-		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, buyerAccountID, c.AccountUserID, nil); apiErr != nil {
-			return mapSalesOrderReferenceError(apiErr, "Email contact account user not found.", param)
 		}
 	}
 	return nil
@@ -2568,29 +2617,41 @@ func computeDiscountAmount(discount *domain.OrderDiscount, total decimal.Decimal
 
 // applyCustomerOrderDefaults fills the carrier, service level, shipping term, and payment term the caller omitted from the buyer's customer-relation defaults, matching the Dashboard create form which pre-fills these from the selected customer. Carrier, shipping term, and payment term are mandatory on a readable order (the Dashboard order adapter throws when any is absent), so when neither the request nor a customer default supplies one, this fails with a 400 instead of persisting an order that cannot be read back. The default service level is only adopted alongside a defaulted carrier, so the two never end up referencing different carriers.
 func (s *salesOrderSvcImpl) applyCustomerOrderDefaults(ctx context.Context, params *domain.CreateSalesOrderParams) *apierror.APIError {
-	if params.CarrierID == nil || params.ServiceLevelID == nil || params.ShippingTermID == nil || params.PaymentTermID == nil {
-		customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil)
-		if apiErr != nil {
-			return apiErr
+	customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil)
+	if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return apiErr
+	}
+	if customer != nil {
+		if params.CarrierID == nil {
+			params.CarrierID = customer.DefaultCarrierID
+			if params.ServiceLevelID == nil {
+				params.ServiceLevelID = customer.DefaultServiceLevelID
+			}
 		}
-		if customer != nil {
-			if params.CarrierID == nil {
-				params.CarrierID = customer.DefaultCarrierID
-				if params.ServiceLevelID == nil {
-					params.ServiceLevelID = customer.DefaultServiceLevelID
-				}
+		if params.ShippingTermID == nil {
+			params.ShippingTermID = customer.DefaultShippingTermID
+		}
+		if params.PaymentTermID == nil {
+			params.PaymentTermID = customer.DefaultPaymentTermID
+		}
+		if params.CarrierBillingType == nil && customer.CarrierBillingType != nil {
+			billingType := string(*customer.CarrierBillingType)
+			params.CarrierBillingType = &billingType
+			if params.CarrierBillingAccount == nil {
+				params.CarrierBillingAccount = customer.CarrierBillingAccount
 			}
-			if params.ShippingTermID == nil {
-				params.ShippingTermID = customer.DefaultShippingTermID
-			}
-			if params.PaymentTermID == nil {
-				params.PaymentTermID = customer.DefaultPaymentTermID
-			}
+		}
+		params.Instructions = params.Instructions.BackfillUnsetPtr(customer.Instructions)
+		if params.BillTo == nil && customer.BillToAddressID != nil {
+			params.BillTo = &domain.AddressSnapshot{AddressID: customer.BillToAddressID}
+		}
+		if params.ShipTo == nil && customer.ShipToAddressID != nil {
+			params.ShipTo = &domain.AddressSnapshot{AddressID: customer.ShipToAddressID}
 		}
 	}
 
 	if params.CarrierID == nil {
-		return apierror.NewFieldError("carrier_id", apierror.CodeInvalidFormat, "Carrier is required and the customer has no default carrier.")
+		return apierror.NewFieldError("freight.carrier_id", apierror.CodeInvalidFormat, "Carrier is required and the customer has no default carrier.")
 	}
 	if params.ShippingTermID == nil {
 		return apierror.NewFieldError("shipping_term_id", apierror.CodeInvalidFormat, "Shipping term is required and the customer has no default shipping term.")
@@ -2651,61 +2712,11 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 	return nil
 }
 
-// checkSalesOrderCreateAddressChoices requires each of the order's addresses, given either by ID or inline but not both.
-func checkSalesOrderCreateAddressChoices(params domain.CreateSalesOrderParams) *apierror.APIError {
-	if apiErr := checkInlineAddressChoices(
-		inlineAddressChoice{params.BillToAddressID != "", params.BillToAddress, "bill_to_address_id", "bill_to_address"},
-		inlineAddressChoice{params.ShipToAddressID != "", params.ShipToAddress, "ship_to_address_id", "ship_to_address"},
-	); apiErr != nil {
-		return apiErr
-	}
-	if params.BillToAddressID == "" && params.BillToAddress == nil {
-		return apierror.NewMissingFieldError("bill_to_address_id", "Either bill_to_address_id or bill_to_address is required.")
-	}
-	if params.ShipToAddressID == "" && params.ShipToAddress == nil {
-		return apierror.NewMissingFieldError("ship_to_address_id", "Either ship_to_address_id or ship_to_address is required.")
-	}
-	return nil
-}
-
-// resolveCreateOrderAddress is a new order's bill-to or ship-to for the rate and sales-rep logic: the saved address it names, or its inline address as it will be once saved into the buyer's account.
-func (s *salesOrderSvcImpl) resolveCreateOrderAddress(ctx context.Context, med domain.AddressMed, addressRepo domain.AddressRepo, params domain.CreateSalesOrderParams, savedID string, inline *domain.InlineAddressParams, param string) (domain.ShippingAddress, *apierror.APIError) {
-	if inline == nil {
-		return s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, savedID)
-	}
-	previewed, apiErr := med.Preview(ctx, params.BuyerAccountID, *inline, param)
-	if apiErr != nil {
-		return domain.ShippingAddress{}, apiErr
-	}
-	return shippingAddressFromDomain(previewed), nil
-}
-
-// savedOrderAddressIDs saves a new order's inline addresses into the buyer's account and returns the bill-to and ship-to IDs the order references.
-func savedOrderAddressIDs(ctx context.Context, med domain.AddressMed, params domain.CreateSalesOrderParams) (string, string, *apierror.APIError) {
-	billID, shipID, apiErr := saveInlineAddresses(ctx, med, params.BuyerAccountID, params.BillToAddress, params.ShipToAddress, "bill_to_address", "ship_to_address")
-	if apiErr != nil {
-		return "", "", apiErr
-	}
-	if billID == "" {
-		billID = params.BillToAddressID
-	}
-	if shipID == "" {
-		shipID = params.ShipToAddressID
-	}
-	return billID, shipID, nil
-}
-
-// resolveOrderAddress validates that an order's bill-to / ship-to address exists and belongs to the order's owner or buyer account (matching Dashboard, which only accepts existing address IDs), and returns it as a ShippingAddress for the sales-rep territory + shipping-rate logic.
-func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo domain.AddressRepo, ownerAccountID, buyerAccountID, addressID string) (domain.ShippingAddress, *apierror.APIError) {
-	acct, apiErr := orderAddressAccount(ctx, addressRepo, ownerAccountID, buyerAccountID, addressID)
-	if apiErr != nil {
-		return domain.ShippingAddress{}, apiErr
-	}
-	if acct == "" {
-		return domain.ShippingAddress{}, apierror.NewValidationError("Address does not belong to the order's owner or buyer account.")
-	}
-
-	existing, apiErr := addressRepo.Get(ctx, domain.GetAddressParams{AccountID: acct, AddressID: addressID})
+// resolveOrderAddress is the address an existing order names, as a ShippingAddress for the transit, commitment and
+// freight logic. The ID comes from the order itself: a saved address of its owner or buyer, or the order's own copy
+// of an address given inline.
+func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo domain.AddressRepo, _, _, addressID string) (domain.ShippingAddress, *apierror.APIError) {
+	existing, apiErr := addressRepo.GetOrderAddress(ctx, addressID)
 	if apiErr != nil {
 		return domain.ShippingAddress{}, apiErr
 	}

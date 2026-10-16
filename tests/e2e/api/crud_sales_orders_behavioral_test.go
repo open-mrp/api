@@ -25,7 +25,7 @@ func TestSalesOrders_LineRejectsRemovedEdiLineItemID(t *testing.T) {
 	// decoding, before any business validation.
 	lines[0]["edi_line_item_id"] = "edi_should_be_rejected"
 
-	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	status, respBody, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "", "invalid_request_error")
@@ -35,7 +35,7 @@ func TestSalesOrders_LineRejectsRemovedEdiLineItemID(t *testing.T) {
 
 func TestSalesOrders_ListRejectsRemovedExcludeInternalParam(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"exclude_internal_orders": {"true"}})
+	status, body, err := forgeClient().GetListRaw(salesOrdersPath, url.Values{"exclude_internal_orders": {"true"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")

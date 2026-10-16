@@ -243,6 +243,10 @@ var typeRegistry = map[string]any{
 	"AgentMemoryCategory":             AgentMemoryCategory(""),
 	"RemovedResourceScope":            RemovedResourceScope(""),
 	"SalesOrderStatusCode":            SalesOrderStatusCode(""),
+	"SalesOrderStatus":                SalesOrderStatus(""),
+	"CommitmentFirmness":              CommitmentFirmness(""),
+	"PromisedLeadTimeSource":          PromisedLeadTimeSource(""),
+
 	"SalesOrderStatusChange":          SalesOrderStatusChange(""),
 	"SalesOrderPaymentStatus":         SalesOrderPaymentStatus(""),
 	"InvoicePaymentStatus":            InvoicePaymentStatus(""),

@@ -45,6 +45,14 @@ func patchStatus(t *testing.T, path string, body map[string]any) (int, map[strin
 	return status, parseJSON(b)
 }
 
+// forgePatchStatus is patchStatus as a 1.0.forge caller, for routes other suites still call as preview.9.
+func forgePatchStatus(t *testing.T, path string, body map[string]any) (int, map[string]any) {
+	t.Helper()
+	status, b, err := forgeClient().Patch(path, body, newIdempotencyKey())
+	require.NoError(t, err)
+	return status, parseJSON(b)
+}
+
 func errParam(body map[string]any) string {
 	e, _ := body["error"].(map[string]any)
 	p, _ := e["param"].(string)
@@ -256,7 +264,7 @@ func TestSalesOrderMetadata_FiftyKeyLimitAppliesToTheMergedResult(t *testing.T) 
 	assert.Len(t, metadataOf(t, patchOK(t, path, map[string]any{"metadata": fifty})), 50, "exactly 50 is allowed")
 
 	// One more key in a request that is itself valid pushes the object over the limit; nothing is written.
-	status, body := patchStatus(t, path, map[string]any{"note": "must not stick", "metadata": map[string]any{"k50": "v"}})
+	status, body := forgePatchStatus(t, path, map[string]any{"instructions": "must not stick", "metadata": map[string]any{"k50": "v"}})
 	assert.Equal(t, 422, status, "%v", body)
 	assert.Equal(t, "metadata", errParam(body))
 	assert.Len(t, orderMetadata(t, orderID), 50, "the rejected update is rolled back")
@@ -302,7 +310,7 @@ func TestSalesOrderMetadata_InvalidMapsAreRejected(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			status, body := patchStatus(t, path, map[string]any{"metadata": tc.metadata})
+			status, body := forgePatchStatus(t, path, map[string]any{"metadata": tc.metadata})
 			require.Equal(t, 422, status, "%v", body)
 			if tc.param != "" {
 				assert.Equal(t, tc.param, errParam(body))
@@ -327,7 +335,7 @@ func TestSalesOrderMetadata_InvalidMapOnCreateIsRejected(t *testing.T) {
 			t.Parallel()
 			body := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 			mutate(body)
-			status, b, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			status, b, err := forgeClient().Post(salesOrdersPath, forgeSalesOrderWrite(body), newIdempotencyKey())
 			require.NoError(t, err)
 			if status == 201 {
 				_, _, _ = apiClient.Delete(salesOrdersPath + "/" + jsonField(parseJSON(b), "id"))

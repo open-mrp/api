@@ -141,8 +141,9 @@ func TestListSalesOrders_StatusCodesAllRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"status_codes": {"all"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "status_codes")
+	// The error names forge's statuses parameter, which status_codes became.
+	errObj := requirePreview9Error(t, body, "parameter_invalid")
+	assertErrorParam(t, errObj, "statuses")
 }
 
 // --- customer_group_ids ---

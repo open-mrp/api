@@ -2067,3 +2067,15 @@ INSERT IGNORE INTO account_user (id, user_id, account_id, role_id, created_at, u
 
 INSERT IGNORE INTO account_relation_notification_preference (id, account_relation_id, recipient_account_user_id, notification_type_code, created_at, updated_at) VALUES
     ('arnp_01e2ecustrecip0001', 'acre_01e2ecustrecip0001', 'acus_01e2ecustrecip0001', 'invoice', NOW(), NOW());
+
+-- ============================================================
+-- SECTION: FORGE SALES ORDER INCLUDES
+-- ORD-001 (SeedSalesOrderID) ships from the campus site and emails its invoice to one of the
+-- customer's own account users, so ?include=site and ?include=email_recipients populate. Its other
+-- contacts are users of the selling account, which forge's email_recipients leaves out.
+-- ============================================================
+UPDATE sales_order SET site_id = 'sglc_01seedcampus00000'
+    WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1' AND site_id IS NULL;
+
+INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
+    ('oec_01seediss_custinv0', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_01seedcustuser00000', 'invoice', NOW(), NOW());

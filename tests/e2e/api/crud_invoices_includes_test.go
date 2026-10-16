@@ -71,8 +71,8 @@ func TestInvoices_IncludeOrderCarriesLifecycleTimestamps(t *testing.T) {
 	assert.Equal(t, "sales_order", jsonField(order, "object"))
 	assert.NotEmpty(t, jsonField(order, "issued_at"),
 		"the included order carries its issued_at, not a reference stripped of lifecycle timestamps")
-	assert.NotEmpty(t, jsonField(order, "first_ship_at"),
-		"the included order carries its first_ship_at, not a reference stripped of lifecycle timestamps")
-	assert.NotEmpty(t, jsonField(order, "completed_at"),
-		"the included order carries its completed_at, not a reference stripped of lifecycle timestamps")
+	assert.NotEmpty(t, jsonField(order, "first_shipped_at"),
+		"the included order carries its first_shipped_at, not a reference stripped of lifecycle timestamps")
+	assert.NotEmpty(t, jsonField(order, "fulfilled_at"),
+		"the included order carries its fulfilled_at, not a reference stripped of lifecycle timestamps")
 }

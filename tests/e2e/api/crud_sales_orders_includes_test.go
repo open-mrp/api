@@ -413,7 +413,7 @@ func TestSalesOrders_UpdateSalesRep_RejectsUserIDAcceptsAccountUser(t *testing.T
 	deleteOrder(t, orderID)
 
 	// A user id (us_) is the wrong id space — it must be rejected, not stored.
-	badStatus, badBody, err := apiClient.Patch(salesOrdersPath+"/"+orderID,
+	badStatus, badBody, err := forgeClient().Patch(salesOrdersPath+"/"+orderID,
 		map[string]any{"sales_rep_id": SeedUserID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, badStatus, badBody)

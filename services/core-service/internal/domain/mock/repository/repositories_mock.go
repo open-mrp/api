@@ -4253,6 +4253,20 @@ func (mr *MockAddressRepoMockRecorder) CreateGeolocation(ctx, id, params any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGeolocation", reflect.TypeOf((*MockAddressRepo)(nil).CreateGeolocation), ctx, id, params)
 }
 
+// CreateOrderAddress mocks base method.
+func (m *MockAddressRepo) CreateOrderAddress(ctx context.Context, addressID, geolocationID string, params domain.CreateAddressParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrderAddress", ctx, addressID, geolocationID, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateOrderAddress indicates an expected call of CreateOrderAddress.
+func (mr *MockAddressRepoMockRecorder) CreateOrderAddress(ctx, addressID, geolocationID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrderAddress", reflect.TypeOf((*MockAddressRepo)(nil).CreateOrderAddress), ctx, addressID, geolocationID, params)
+}
+
 // Delete mocks base method.
 func (m *MockAddressRepo) Delete(ctx context.Context, params domain.DeleteAddressParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -4325,6 +4339,21 @@ func (m *MockAddressRepo) GetGeolocationSharedCount(ctx context.Context, geoloca
 func (mr *MockAddressRepoMockRecorder) GetGeolocationSharedCount(ctx, geolocationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGeolocationSharedCount", reflect.TypeOf((*MockAddressRepo)(nil).GetGeolocationSharedCount), ctx, geolocationID)
+}
+
+// GetOrderAddress mocks base method.
+func (m *MockAddressRepo) GetOrderAddress(ctx context.Context, addressID string) (*domain.Address, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrderAddress", ctx, addressID)
+	ret0, _ := ret[0].(*domain.Address)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOrderAddress indicates an expected call of GetOrderAddress.
+func (mr *MockAddressRepoMockRecorder) GetOrderAddress(ctx, addressID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderAddress", reflect.TypeOf((*MockAddressRepo)(nil).GetOrderAddress), ctx, addressID)
 }
 
 // IsInAccount mocks base method.
@@ -15109,6 +15138,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetCustomerLeadTimeChain(ctx, accountI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerLeadTimeChain", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetCustomerLeadTimeChain), ctx, accountID, buyerAccountID)
 }
 
+// GetEmailRecipients mocks base method.
+func (m *MockSalesOrderRepo) GetEmailRecipients(ctx context.Context, salesOrderIDs []string) (map[string][]domain.NotificationRecipientRef, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEmailRecipients", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]domain.NotificationRecipientRef)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetEmailRecipients indicates an expected call of GetEmailRecipients.
+func (mr *MockSalesOrderRepoMockRecorder) GetEmailRecipients(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmailRecipients", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetEmailRecipients), ctx, salesOrderIDs)
+}
+
 // GetExcessReservedItemIDs mocks base method.
 func (m *MockSalesOrderRepo) GetExcessReservedItemIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15182,6 +15226,21 @@ func (m *MockSalesOrderRepo) GetInvoiceIDsForOrders(ctx context.Context, salesOr
 func (mr *MockSalesOrderRepoMockRecorder) GetInvoiceIDsForOrders(ctx, salesOrderIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoiceIDsForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetInvoiceIDsForOrders), ctx, salesOrderIDs)
+}
+
+// GetItemLeadTimeDays mocks base method.
+func (m *MockSalesOrderRepo) GetItemLeadTimeDays(ctx context.Context, salesOrderID string) (*int, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItemLeadTimeDays", ctx, salesOrderID)
+	ret0, _ := ret[0].(*int)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetItemLeadTimeDays indicates an expected call of GetItemLeadTimeDays.
+func (mr *MockSalesOrderRepoMockRecorder) GetItemLeadTimeDays(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemLeadTimeDays", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetItemLeadTimeDays), ctx, salesOrderID)
 }
 
 // GetLines mocks base method.
@@ -15537,6 +15596,20 @@ func (m *MockSalesOrderRepo) NoteFirstShipAt(ctx context.Context, accountID, sal
 func (mr *MockSalesOrderRepoMockRecorder) NoteFirstShipAt(ctx, accountID, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NoteFirstShipAt", reflect.TypeOf((*MockSalesOrderRepo)(nil).NoteFirstShipAt), ctx, accountID, salesOrderID)
+}
+
+// ReplaceEmailRecipients mocks base method.
+func (m *MockSalesOrderRepo) ReplaceEmailRecipients(ctx context.Context, salesOrderID string, recipients []domain.NotificationRecipientRef) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceEmailRecipients", ctx, salesOrderID, recipients)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReplaceEmailRecipients indicates an expected call of ReplaceEmailRecipients.
+func (mr *MockSalesOrderRepoMockRecorder) ReplaceEmailRecipients(ctx, salesOrderID, recipients any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceEmailRecipients", reflect.TypeOf((*MockSalesOrderRepo)(nil).ReplaceEmailRecipients), ctx, salesOrderID, recipients)
 }
 
 // SetProductionRunID mocks base method.

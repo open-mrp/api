@@ -123,6 +123,15 @@ func salesOrderListFilter(params domain.ListSalesOrdersParams, productIDs, group
 	if d := parseDateString(params.EndDate); d.Valid {
 		f.add("so.created_at <= ?", d.Time)
 	}
+	if params.CreatedAfter != nil {
+		f.add("so.created_at >= ?", *params.CreatedAfter)
+	}
+	if params.CreatedBefore != nil {
+		f.add("so.created_at < ?", *params.CreatedBefore)
+	}
+	if pred := salesOrderPaymentStatusPredicate(params.PaymentStatuses); pred != "" {
+		f.add(pred)
+	}
 	if d := parseDateString(params.ShipByAfter); d.Valid {
 		f.add("so.ship_by_date >= ?", d.Time)
 	}

@@ -19,9 +19,9 @@ type DeleteSalesOrderRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 }
 
-// Deletes a sales order and all its related records.
+// Deletes a sales order.
 //
-// Removes the order's lines, pick, shipment and invoice lines, and email contacts, and releases any inventory it had reserved. Fulfilled orders cannot be deleted.
+// Only while it has no shipment or invoice. Releases any reserved inventory.
 type DeleteSalesOrderEndpoint struct{}
 
 func (e *DeleteSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSalesOrderRequest, *object.Deleted] {
@@ -34,7 +34,6 @@ func (e *DeleteSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionDelete},
 		}},

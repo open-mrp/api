@@ -3,7 +3,6 @@ package salesorderep
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
@@ -14,95 +13,79 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 // Request to create a sales order.
 type CreateSalesOrderRequest struct {
-	// ID of the customer account the order is for.
-	BuyerAccountID string `json:"buyer_account_id" validate:"required"`
-	// The customer's own purchase order number, for cross-referencing.
-	//
-	// Must be unique among your orders for this customer.
+	// ID of the customer the order is for.
+	CustomerID string `json:"customer_id" validate:"required"`
+	// The customer's own purchase order number. Unique among the customer's orders.
 	CustomerPurchaseOrderNumber field.Optional[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
-	// Free-form note about the order.
-	Note field.Optional[string] `json:"note,omitzero"`
-	// ID of the carrier that will ship the order.
+	// The order's currency, as a lowercase ISO 4217 code. Only `usd` is supported; any other code fails with `currency_not_supported`.
+	Currency field.Optional[string] `json:"currency,omitzero"`
+	// Your team's instructions for the order. Omit to copy the customer's; send `null` for none.
+	Instructions field.Clearable[string] `json:"instructions,omitzero" validate:"omitempty,max=5000"`
+	// The address to bill: a saved address by `address_id`, or the fields inline. Omit to use the customer's default bill-to address.
+	BillTo field.Optional[apirequest.AddressSnapshotInput] `json:"bill_to,omitzero"`
+	// The address to ship to: a saved address by `address_id`, or the fields inline. Omit to use the customer's default ship-to address.
+	ShipTo field.Optional[apirequest.AddressSnapshotInput] `json:"ship_to,omitzero"`
+	// ID of the site the order ships from. Omit to use your default site.
+	SiteID field.Optional[string] `json:"site_id,omitzero"`
+	// How the order ships. Anything omitted is copied from the customer's defaults.
+	Freight field.Optional[CreateSalesOrderFreightInput] `json:"freight,omitzero"`
+	// ID of your account user to credit with the order.
 	//
-	// Falls back to the customer's default carrier; the order is rejected when neither is available.
-	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// ID of the carrier service level the order ships on.
+	// Omit to assign one: the customer's default sales rep, else the sales territory covering the ship-to address. None is assigned when the customer, or every ordered item's product line, is commission-exempt.
+	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero"`
+	// ID of the order's payment term. Omit to use the customer's default.
+	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero"`
+	// ID of the order's shipping term. Omit to use the customer's default.
+	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero"`
+	// The order discount to apply, by its ID or its code.
+	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero"`
+	// When the order is due to ship. Omit to use the customer's lead time.
+	Commitment field.Optional[CreateSalesOrderCommitmentInput] `json:"commitment,omitzero"`
+	// Who receives the order's documents by email. Omit to copy the customer's `notification_recipients`; send `[]` for none.
 	//
-	// Falls back to the customer's default service level, but only when `carrier_id` is also omitted — supplying a carrier without a service level leaves the service level unset.
-	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Who is billed for freight.
-	//
-	// - `sender`: the sender pays for shipping.
-	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
-	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
-	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
-	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
-	// Fulfillment priority used to rank the order on the shop floor.
-	PriorityCode constants.PriorityCode `json:"priority_code" validate:"required"`
-	// ID of the account user to credit as the order's sales rep.
-	//
-	// When omitted, a rep is assigned automatically: the customer's default sales rep first, then the sales territory matching the ship-to postal code, then the ship-to state. No rep is assigned when the customer is commission-exempt or every ordered product belongs to a commission-exempt product line.
-	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
-	// ID of the shipping terms for the order.
-	//
-	// Falls back to the customer's default shipping term; the order is rejected when neither is available.
-	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
-	// ID of the payment terms for the order.
-	//
-	// Falls back to the customer's default payment term; the order is rejected when neither is available.
-	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
-	// The order-level discount to apply, given as either its ID or its unique code.
-	//
-	// The discount is realized as an extra negative-priced line on the order rather than as a separate total.
-	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
-	// Date delivery is promised to the customer.
-	//
-	// The order's ship-by date is worked back from this: the goods have to reach the customer on a day they receive, so transit and both operating calendars are subtracted from it. Mutually exclusive with lead_time_override_days and ship_by_override_date.
-	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
-	// Days between this order being issued and it being due to ship, replacing the customer's standing lead time for this order alone.
-	//
-	// Already a ship lead time, so no carrier transit is subtracted from it. Mutually exclusive with promised_at and ship_by_override_date.
-	LeadTimeOverrideDays field.Optional[int32] `json:"lead_time_override_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
-	// The exact date the order is due to ship, bypassing transit and the customer's receiving days.
-	//
-	// Still moved back to the nearest earlier day the plant ships on, since a date nobody can ship on is not a deadline. Mutually exclusive with promised_at and lead_time_override_days.
-	ShipByOverrideDate field.Optional[time.Time] `json:"ship_by_override_date,omitzero"`
-	// Bill-to address ID.
-	//
-	// Must reference an existing address on the order's owner or buyer account. Required unless `bill_to_address` is sent instead.
-	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
-	// Ship-to address ID.
-	//
-	// Must reference an existing address on the order's owner or buyer account. Required unless `ship_to_address` is sent instead.
-	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
-	// Bill-to address saved to the customer's account with the order, in place of `bill_to_address_id`: a new address, or an update to one of the customer's saved addresses named by its `id`.
-	//
-	// Saving it needs no permission beyond creating the order.
-	BillToAddress field.Optional[apirequest.InlineAddressInput] `json:"bill_to_address,omitzero"`
-	// Ship-to address saved to the customer's account with the order, in place of `ship_to_address_id`: a new address, or an update to one of the customer's saved addresses named by its `id`.
-	//
-	// Saving it needs no permission beyond creating the order. An identical `bill_to_address` and `ship_to_address` are saved as one address.
-	ShipToAddress field.Optional[apirequest.InlineAddressInput] `json:"ship_to_address,omitzero"`
-	// The line items to put on the order.
-	//
-	// The freight line, and the discount line when `order_discount_id` is supplied, are added on top of these automatically.
+	// Each recipient must be one of the customer's account users and receives `acknowledgment`, `invoice` or `shipment` documents.
+	EmailRecipients field.Optional[[]apirequest.EmailRecipientInput] `json:"email_recipients,omitzero"`
+	// The order's lines.
 	Lines []CreateSalesOrderLineInput `json:"lines" validate:"required,min=1,dive"`
-	// Users who should receive order acknowledgement emails for this order.
-	//
-	// Each must be a user on the customer's account.
-	AcknowledgementEmailContacts []SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitzero"`
-	// Users who should receive invoice emails for this order.
-	//
-	// Each must be a user on the customer's account.
-	InvoiceEmailContacts []SalesOrderEmailContactInput `json:"invoice_email_contacts,omitzero"`
 	// Key-value pairs to store on the order for your own references, such as its ID in another system.
 	//
 	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.
 	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
+}
+
+// How a new order ships.
+type CreateSalesOrderFreightInput struct {
+	// ID of the carrier. Omit to use the customer's default carrier; the order is rejected when neither is set.
+	CarrierID field.Optional[string] `json:"carrier_id,omitzero"`
+	// ID of a service level of the carrier. Omit to use the customer's default when the carrier is the customer's too.
+	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero"`
+	// Who the carrier bills. Omit to copy the customer's.
+	CarrierBilling field.Optional[CarrierBillingInput] `json:"carrier_billing,omitzero"`
+}
+
+// Who a carrier bills for an order's freight.
+type CarrierBillingInput struct {
+	// `sender`: you pay the carrier. `third_party`: the carrier bills `account_number`.
+	Type constants.CarrierBillingType `json:"type" validate:"required"`
+	// The carrier account billed when `type` is `third_party`.
+	AccountNumber field.Optional[string] `json:"account_number,omitzero" validate:"omitempty,max=255"`
+}
+
+// When a new order is due to ship. Give at most one of `promised_on`, `lead_time_override` and `ship_by_override_on`.
+type CreateSalesOrderCommitmentInput struct {
+	// The date delivery is promised to the customer. The ship-by date is worked back from it through transit and the customer's receiving days.
+	PromisedOn field.Optional[timeutil.Date] `json:"promised_on,omitzero"`
+	// Business days from issue to ship for this order alone, in the `day` unit.
+	LeadTimeOverride field.Optional[apirequest.QuantityInput] `json:"lead_time_override,omitzero"`
+	// The exact date the order is due to ship, bypassing transit and the customer's receiving days.
+	ShipByOverrideOn field.Optional[timeutil.Date] `json:"ship_by_override_on,omitzero"`
+	// Whether the customer can accept the order late: `soft` or `hard`.
+	Firmness field.Optional[constants.CommitmentFirmness] `json:"firmness,omitzero"`
 }
 
 // Line item input for a create sales order request.
@@ -131,47 +114,20 @@ type CreateSalesOrderLineInput struct {
 	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
-// A user subscribed to one of a sales order's email notifications.
-type SalesOrderEmailContactInput struct {
-	// ID of the account user who should receive the notification.
-	AccountUserID string `json:"account_user_id" validate:"required"`
-}
-
-var sampleCreateSONote = "Rush order for trade show"
-var sampleCreateSOCarrierID = apiresource.SampleCarrierID
-var sampleCreateSOServiceLevelID = apiresource.SampleServiceLevelID
-var sampleCreateSOCustomerPONumber = "PO-88231"
-var sampleCreateSOCarrierBillingAccount = "123456789"
 var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
-	BuyerAccountID:              apiresource.SampleCustomerID,
-	CustomerPurchaseOrderNumber: field.Some(sampleCreateSOCustomerPONumber),
-	Note:                        field.Some(sampleCreateSONote),
-	CarrierID:                   field.Some(sampleCreateSOCarrierID),
-	ServiceLevelID:              field.Some(sampleCreateSOServiceLevelID),
-	CarrierBillingType:          field.Some(constants.CarrierBillingTypeSender),
-	CarrierBillingAccountNumber: field.Some(sampleCreateSOCarrierBillingAccount),
-	PriorityCode:                constants.PriorityCodeNormal,
-	SalesRepID:                  field.Some(apiresource.SampleAccountUserID),
-	ShippingTermID:              field.Some(apiresource.SampleShippingTermID),
-	PaymentTermID:               field.Some(apiresource.SamplePaymentTermID),
-	OrderDiscountID:             field.Some(apiresource.SampleOrderDiscountID),
-	PromisedAt:                  field.Some(time.Date(2026, time.May, 20, 0, 0, 0, 0, time.UTC)),
-	BillToAddressID:             field.Some(apiresource.SampleAddressID),
-	ShipToAddressID:             field.Some(apiresource.SampleAddressID),
+	CustomerID:                  apiresource.SampleCustomerID,
+	CustomerPurchaseOrderNumber: field.Some("PO-88231"),
+	ShipTo:                      field.Some(apirequest.AddressSnapshotInput{AddressID: field.Some(apiresource.SampleAddressID)}),
+	Freight: field.Some(CreateSalesOrderFreightInput{
+		CarrierID:      field.Some(apiresource.SampleCarrierID),
+		ServiceLevelID: field.Some(apiresource.SampleServiceLevelID),
+	}),
+	Commitment: field.Some(CreateSalesOrderCommitmentInput{PromisedOn: field.Some(timeutil.NewDate(2026, 5, 20))}),
 	Lines: []CreateSalesOrderLineInput{
 		{
 			ProductID: apiresource.SampleProductID,
-			Quantity: apirequest.QuantityInput{
-				Value:  "10",
-				UnitID: apiresource.SampleUnitID,
-			},
+			Quantity:  apirequest.QuantityInput{Value: "10", UnitID: apiresource.SampleUnitID},
 		},
-	},
-	AcknowledgementEmailContacts: []SalesOrderEmailContactInput{
-		{AccountUserID: apiresource.SampleAccountUserID},
-	},
-	InvoiceEmailContacts: []SalesOrderEmailContactInput{
-		{AccountUserID: apiresource.SampleAccountUserID},
 	},
 }
 
@@ -179,9 +135,9 @@ func (*CreateSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesOrderRequest)
 }
 
-// Creates a sales order in `estimate` status.
+// Creates a sales order as a `draft`.
 //
-// The order number is assigned automatically, and a sales rep is auto-assigned when none is provided. Line prices and costs are resolved server-side from each product. A shipping line carrying the estimated freight charge is added to the order, plus a negative-priced discount line when an order discount is supplied. The order is not committed for fulfillment until it is issued.
+// Anything you omit is copied from the customer's `defaults`: addresses, carrier, terms, lead time, sales rep and instructions. Issue it to start fulfillment.
 type CreateSalesOrderEndpoint struct{}
 
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrder] {
@@ -192,7 +148,6 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Route:             "/v1/sales/sales-orders",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionCreate}}},
 		ObjectType:        constants.ObjectTypeSalesOrder,
@@ -202,9 +157,6 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.SalesOrder) string {
 			return "/v1/sales/sales-orders/" + resp.ID
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
-		}),
+		IncludeConfig: salesOrderIncludeConfig(),
 	})
 }

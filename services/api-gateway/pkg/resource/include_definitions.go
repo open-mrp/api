@@ -449,22 +449,43 @@ func init() {
 		ObjectType: constants.ObjectTypeSalesOrder,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "sales_rep", ObjectType: constants.ObjectTypeActor},
+			{Key: "site", ObjectType: constants.ObjectTypeLocation},
+			{Key: "sales_rep", ObjectType: constants.ObjectTypeAccountUser},
 			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
+			{Key: "contacts", ObjectType: constants.ObjectTypeOrderContact},
+			{
+				Key:      "bill_to",
+				Children: []apiendpoint.IncludeFieldDef{{Key: "address", ObjectType: constants.ObjectTypeAddress}},
+			},
+			{
+				Key:      "ship_to",
+				Children: []apiendpoint.IncludeFieldDef{{Key: "address", ObjectType: constants.ObjectTypeAddress}},
+			},
+			{
+				Key: "freight",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
+					{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
+				},
+			},
 			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 			{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
 			{Key: "order_discount", ObjectType: constants.ObjectTypeOrderDiscount},
 			{Key: "totals", ObjectType: constants.ObjectTypeSalesOrderTotals},
-			{Key: "contacts", ObjectType: constants.ObjectTypeOrderContact},
+			{
+				Key: "email_recipients",
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "account_user", ObjectType: constants.ObjectTypeAccountUser},
+				},
+			},
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypeSalesOrderRelated,
 				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "pick", ObjectType: constants.ObjectTypeRecord},
-					{Key: "production_run", ObjectType: constants.ObjectTypeRecord},
+					{Key: "jobs", ObjectType: constants.ObjectTypeRecord},
 					{Key: "shipments", ObjectType: constants.ObjectTypeRecord},
 					{Key: "invoices", ObjectType: constants.ObjectTypeRecord},
 				},

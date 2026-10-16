@@ -89,10 +89,10 @@ func TestResolveLeadTime_NothingConfigured(t *testing.T) {
 	}
 }
 
-func TestResolveCommitment_AddsCalendarDaysToTheIssueDate(t *testing.T) {
+func TestResolveCommitment_AddsBusinessDaysToTheIssueDate(t *testing.T) {
 	t.Parallel()
 
-	// Tuesday, so thirty days later is a Thursday and the shipping calendar leaves it where it is. The snap is covered separately.
+	// Tuesday: thirty business days on the plant's Monday-to-Friday calendar is six weeks on, a Tuesday.
 	issued := time.Date(2026, time.August, 4, 17, 42, 3, 0, time.UTC)
 
 	got, ok := ResolveCommitment(issued, CommitmentBasis{}, LeadTimeInput{AccountLeadTimeDays: new(30)}, nil, DefaultCalendars())
@@ -100,12 +100,38 @@ func TestResolveCommitment_AddsCalendarDaysToTheIssueDate(t *testing.T) {
 		t.Fatal("expected a commitment")
 	}
 
-	want := time.Date(2026, time.September, 3, 0, 0, 0, 0, time.UTC)
+	want := time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	if !got.ShipByDate.Equal(want) {
 		t.Fatalf("ship-by = %s, want %s", got.ShipByDate, want)
 	}
-	if got.LeadTimeDays != 30 || got.Source != LeadTimeSourceAccount {
-		t.Fatalf("got (%d, %q), want (30, account)", got.LeadTimeDays, got.Source)
+	if got.LeadTimeDays != 42 || got.Source != LeadTimeSourceAccount {
+		t.Fatalf("got (%d, %q), want (42, account)", got.LeadTimeDays, got.Source)
+	}
+	if got.PromisedLeadTimeDays == nil || *got.PromisedLeadTimeDays != 30 || got.PromisedLeadTimeSource != PromisedLeadTimeSourceCustomer {
+		t.Fatalf("promised lead time = (%v, %q), want (30, customer)", got.PromisedLeadTimeDays, got.PromisedLeadTimeSource)
+	}
+}
+
+// An item that takes longer to make than the customer waits sets the promise.
+func TestResolveCommitment_LongerItemLeadTimeWins(t *testing.T) {
+	t.Parallel()
+
+	issued := time.Date(2026, time.August, 4, 0, 0, 0, 0, time.UTC) // Tuesday
+
+	got, ok := ResolveCommitment(issued, CommitmentBasis{}, LeadTimeInput{CustomerLeadTimeDays: new(2), ItemLeadTimeDays: new(5)}, nil, DefaultCalendars())
+	if !ok {
+		t.Fatal("expected a commitment")
+	}
+	if want := time.Date(2026, time.August, 11, 0, 0, 0, 0, time.UTC); !got.ShipByDate.Equal(want) {
+		t.Fatalf("ship-by = %s, want %s", got.ShipByDate, want)
+	}
+	if got.Source != LeadTimeSourceCustomer || *got.PromisedLeadTimeDays != 5 || got.PromisedLeadTimeSource != PromisedLeadTimeSourceItem {
+		t.Fatalf("got (%q, %d, %q), want (customer, 5, item)", got.Source, *got.PromisedLeadTimeDays, got.PromisedLeadTimeSource)
+	}
+
+	shorter, _ := ResolveCommitment(issued, CommitmentBasis{}, LeadTimeInput{CustomerLeadTimeDays: new(5), ItemLeadTimeDays: new(2)}, nil, DefaultCalendars())
+	if *shorter.PromisedLeadTimeDays != 5 || shorter.PromisedLeadTimeSource != PromisedLeadTimeSourceCustomer {
+		t.Fatalf("got (%d, %q), want (5, customer)", *shorter.PromisedLeadTimeDays, shorter.PromisedLeadTimeSource)
 	}
 }
 
@@ -174,8 +200,8 @@ func TestResolveCommitment_NormalizesToUTC(t *testing.T) {
 	if !ok {
 		t.Fatal("expected a commitment")
 	}
-	// 2026-08-06 20:00 EST is 2026-08-07 01:00 UTC, so the issue date is Friday the 7th and three days later is Monday the 10th.
-	if want := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC); !got.ShipByDate.Equal(want) {
+	// 2026-08-06 20:00 EST is 2026-08-07 01:00 UTC, so the issue date is Friday the 7th and three business days later is Wednesday the 12th.
+	if want := time.Date(2026, time.August, 12, 0, 0, 0, 0, time.UTC); !got.ShipByDate.Equal(want) {
 		t.Fatalf("ship-by = %s, want %s", got.ShipByDate, want)
 	}
 }

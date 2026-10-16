@@ -44,6 +44,15 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		in.AccountLeadTimeDays = &days
 	}
 
+	// An order isn't promised sooner than its slowest item can ship. A preview of an order not yet saved has no lines.
+	if order.ID != "" {
+		itemDays, apiErr := s.repos.NewSalesOrderRepo().GetItemLeadTimeDays(ctx, order.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		in.ItemLeadTimeDays = itemDays
+	}
+
 	basis := salesOrderCommitmentBasis(order)
 
 	var transit *scheduling.Transit
@@ -82,6 +91,8 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		ShipByDate:             commitment.ShipByDate,
 		LeadTimeDays:           commitment.LeadTimeDays,
 		SourceCode:             commitment.Source,
+		PromisedLeadTimeDays:   commitment.PromisedLeadTimeDays,
+		PromisedLeadTimeSource: commitment.PromisedLeadTimeSource,
 		TransitDays:            commitment.TransitDays,
 		TransitSourceCode:      commitment.TransitSource,
 		ShipByCutoffAt:         commitment.ShipByCutoffAt,

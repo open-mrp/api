@@ -110,7 +110,7 @@ func requirePermissionRefused(t *testing.T, status int, body []byte, want string
 
 func counterpartyGet(t *testing.T, c *Client, path string) (int, []byte) {
 	t.Helper()
-	status, body, err := c.GetListRaw(path, nil)
+	status, body, err := c.WithForgeSalesOrders().GetListRaw(path, nil)
 	require.NoError(t, err)
 	return status, body
 }

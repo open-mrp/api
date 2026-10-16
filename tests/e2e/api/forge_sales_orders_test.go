@@ -434,11 +434,11 @@ func TestForgeSalesOrders_PreviewStatusRoutesAreGoneOnForge(t *testing.T) {
 	customerID := setupOrderCustomer(t)
 	orderID := jsonField(forgeCreateOrder(t, forgeOrderBody(customerID)), "id")
 
-	status, resp, err := forgeClient().Put(salesOrdersPath+"/"+orderID+"/actions/issue", map[string]any{})
+	status, resp, err := apiClient.Exact().Put(salesOrdersPath+"/"+orderID+"/actions/issue", map[string]any{})
 	require.NoError(t, err)
 	requireStatus(t, 404, status, resp)
 
-	status, resp, err = apiClient.WithAPIVersion(defaultAPIVersion).GetListRaw(salesOrdersPath+"/statuses", nil)
+	status, resp, err = apiClient.Exact().GetListRaw(salesOrdersPath+"/statuses", nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, resp)
 }

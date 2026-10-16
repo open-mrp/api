@@ -5,6 +5,7 @@ package api_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -303,6 +304,12 @@ func isExcludedPath(path string) bool {
 	return false
 }
 
+// isPreview9Operation reports whether only 1.0.forge-preview.9 answers op, which the spec sweeps leave out: they test
+// routes as 1.0.forge, and these are covered by their own tests pinned to preview.9.
+func isPreview9Operation(method, path string, op openAPIOperation) bool {
+	return strings.HasSuffix(op.OperationID, "(preview.9)") || isRetiredRoute(method, path)
+}
+
 // excludedPaginationOperations are operationIDs that should be excluded from
 // pagination tests because they use offset pagination or no pagination at all.
 var excludedPaginationOperations = map[string]bool{
@@ -478,6 +485,9 @@ func LoadListEndpoints() ([]ListEndpointSpec, error) {
 		if !strings.Contains(strings.ToLower(op.OperationID), "list") {
 			continue
 		}
+		if isPreview9Operation(http.MethodGet, path, op) {
+			continue
+		}
 		if excludedListOperations[op.OperationID] {
 			continue
 		}
@@ -593,7 +603,7 @@ func LoadUpdateEndpoints() ([]UpdateEndpointSpec, error) {
 		if !ok {
 			continue
 		}
-		if excludedUpdateOperations[op.OperationID] {
+		if excludedUpdateOperations[op.OperationID] || isPreview9Operation(http.MethodPatch, path, op) {
 			continue
 		}
 
@@ -656,7 +666,7 @@ func LoadBodyEndpoints(httpMethod string, excluded map[string]bool) ([]BodyEndpo
 		if !ok {
 			continue
 		}
-		if excluded[op.OperationID] {
+		if excluded[op.OperationID] || isPreview9Operation(strings.ToUpper(httpMethod), path, op) {
 			continue
 		}
 		if op.RequestBody == nil {

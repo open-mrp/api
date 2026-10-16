@@ -23,7 +23,7 @@ func TestListEndpoints_ValidShape(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, nil)
+			statusCode, body, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 			require.Equal(t, 200, statusCode, "GET %s returned %d: %s", path, statusCode, string(body))
@@ -51,7 +51,7 @@ func TestListEndpoints_LimitParam(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"1"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"limit": {"1"}})
 			require.NoError(t, err, "GET %s?limit=1 failed", path)
 			skipOnNonClientError(t, path, statusCode)
 			require.Equal(t, 200, statusCode, "GET %s?limit=1 returned %d: %s", path, statusCode, string(body))
@@ -78,7 +78,7 @@ func TestListEndpoints_SearchNonsense(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"q": {"zzzznonexistent99999"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"q": {"zzzznonexistent99999"}})
 			require.NoError(t, err, "GET %s?q=nonsense failed", path)
 			skipOnNonClientError(t, path, statusCode)
 			require.Equal(t, 200, statusCode, "GET %s?q=nonsense returned %d: %s", path, statusCode, string(body))
@@ -112,7 +112,7 @@ func TestListEndpoints_ItemObjectField(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, nil)
+			statusCode, body, err := specClient.GetListRaw(path, nil)
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 			require.Equal(t, 200, statusCode, "GET %s returned %d: %s", path, statusCode, string(body))
@@ -155,7 +155,7 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 			const pageFetchAttempts = 3
 			var page1, page2 ListResponse
 			for attempt := 1; ; attempt++ {
-				statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"1"}})
+				statusCode, body, err := specClient.GetListRaw(path, url.Values{"limit": {"1"}})
 				require.NoError(t, err, "GET %s?limit=1 (page 1) failed", path)
 				skipOnNonClientError(t, path, statusCode)
 				require.Equal(t, 200, statusCode, "GET %s?limit=1 returned %d: %s", path, statusCode, string(body))
@@ -175,7 +175,7 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 
 				require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
 
-				p2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+				p2, _, err := specClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 				require.NoError(t, err, "GET page 2 via next_page_url failed for %s", path)
 				page2 = *p2
 

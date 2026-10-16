@@ -40,7 +40,7 @@ func TestGetEndpoints_NotFoundErrorShape(t *testing.T) {
 			continue
 		}
 		// Routes only 1.0.forge-preview.9 answers carry its error shape, not 1.0.forge's.
-		if isExcludedPath(prefix) {
+		if isExcludedPath(prefix) || isRetiredRoute(http.MethodGet, prefix+"{id}") {
 			continue
 		}
 
@@ -61,7 +61,7 @@ func TestGetEndpoints_NotFoundErrorShape(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			statusCode, body, err := apiClient.GetListRaw(tc.path, nil)
+			statusCode, body, err := specClient.GetListRaw(tc.path, nil)
 			require.NoError(t, err, "GET %s failed", tc.path)
 
 			switch statusCode {
@@ -93,7 +93,7 @@ func TestUpdateEndpoints_UnknownFieldRejected(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.Patch(path, map[string]any{
+			statusCode, body, err := specClient.Patch(path, map[string]any{
 				bogusE2EJSONField: "should_be_rejected",
 			}, newIdempotencyKey())
 			require.NoError(t, err, "PATCH %s failed", path)
@@ -115,7 +115,7 @@ func TestCreateEndpoints_UnknownFieldRejected(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.Post(path, map[string]any{
+			statusCode, body, err := specClient.Post(path, map[string]any{
 				bogusE2EJSONField: "should_be_rejected",
 			}, newIdempotencyKey())
 			require.NoError(t, err, "POST %s failed", path)
@@ -137,7 +137,7 @@ func TestPutEndpoints_UnknownFieldRejected(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.Put(path, map[string]any{
+			statusCode, body, err := specClient.Put(path, map[string]any{
 				bogusE2EJSONField: "should_be_rejected",
 			})
 			require.NoError(t, err, "PUT %s failed", path)
@@ -159,7 +159,7 @@ func TestListEndpoints_UnknownQueryParamRejected(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{
 				bogusE2EQueryParam: {"should_be_rejected"},
 			})
 			require.NoError(t, err, "GET %s failed", path)
@@ -191,7 +191,7 @@ func TestUpdateEndpoints_TimestampFieldsRejected(t *testing.T) {
 					return
 				}
 
-				statusCode, body, err := apiClient.Patch(path, map[string]any{
+				statusCode, body, err := specClient.Patch(path, map[string]any{
 					tf.field: tf.value,
 				}, newIdempotencyKey())
 				require.NoError(t, err, "PATCH %s failed", path)
@@ -225,7 +225,7 @@ func TestUpdateEndpoints_EmptyBodyErrorShape(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.Patch(path, map[string]any{}, newIdempotencyKey())
+			statusCode, body, err := specClient.Patch(path, map[string]any{}, newIdempotencyKey())
 			require.NoError(t, err, "PATCH %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
@@ -259,7 +259,7 @@ func TestMethodNotAllowed(t *testing.T) {
 	for _, path := range listOnlyPaths {
 		t.Run(fmt.Sprintf("POST_%s", path), func(t *testing.T) {
 			t.Parallel()
-			statusCode, body, err := apiClient.Post(path, map[string]any{"name": "test"}, newIdempotencyKey())
+			statusCode, body, err := specClient.Post(path, map[string]any{"name": "test"}, newIdempotencyKey())
 			require.NoError(t, err, "POST %s failed", path)
 			skipOnNonClientError(t, path, statusCode)
 

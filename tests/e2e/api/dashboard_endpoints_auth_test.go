@@ -328,7 +328,7 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 			t.Parallel()
 			status, body := dashboardCall(t, p.refused, p.op)
 			requireStatus(t, http.StatusForbidden, status, body)
-			requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+			requireDashboardRefusal(t, p.op, body)
 
 			adminStatus, adminBody := dashboardCall(t, apiClient, p.op)
 			require.Less(t, adminStatus, 500, string(adminBody))
@@ -336,14 +336,14 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 			for _, perm := range p.op.counterparty {
 				status, body := dashboardCall(t, clients[perm], p.op)
 				requireStatus(t, http.StatusForbidden, status, body)
-				requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+				requireDashboardRefusal(t, p.op, body)
 			}
 
 			if p.op.allOf {
 				for _, perm := range sortedKeys(p.holders) {
 					status, body := dashboardCall(t, p.holders[perm], p.op)
 					requireStatus(t, http.StatusForbidden, status, body)
-					requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+					requireDashboardRefusal(t, p.op, body)
 				}
 				status, body := dashboardCall(t, p.all, p.op)
 				assert.Equal(t, adminStatus, status, "a role holding all of %v is treated unlike the admin (%d): %s", p.op.permissions, adminStatus, string(body))
@@ -370,6 +370,17 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// requireDashboardRefusal checks a permission refusal in the error shape of the version the route answers: a route only
+// 1.0.forge-preview.9 answers refuses in preview.9's.
+func requireDashboardRefusal(t *testing.T, op dashboardOperation, body []byte) {
+	t.Helper()
+	if isRetiredRoute(op.method, op.path) {
+		requireRetiredRouteError(t, body, "insufficient_permissions")
+		return
+	}
+	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
 }
 
 // dashboardRefusedPermission prefers a sibling of the set's domain, so a gate that checks only the domain shows up.

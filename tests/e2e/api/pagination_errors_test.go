@@ -33,7 +33,7 @@ func TestListEndpoints_InvalidLimit_Zero(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"0"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"limit": {"0"}})
 			require.NoError(t, err, "GET %s?limit=0 failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
@@ -64,7 +64,7 @@ func TestListEndpoints_InvalidLimit_Negative(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"-1"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"limit": {"-1"}})
 			require.NoError(t, err, "GET %s?limit=-1 failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
@@ -94,7 +94,7 @@ func TestListEndpoints_InvalidLimit_TooLarge(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"999999"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"limit": {"999999"}})
 			require.NoError(t, err, "GET %s?limit=999999 failed", path)
 			skipOnNonClientError(t, path, statusCode)
 
@@ -130,7 +130,7 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"cursor": {"not_a_real_cursor_value"}})
+			statusCode, body, err := specClient.GetListRaw(path, url.Values{"cursor": {"not_a_real_cursor_value"}})
 			require.NoError(t, err, "GET %s?cursor=invalid failed", path)
 			skipOnNonClientError(t, path, statusCode)
 

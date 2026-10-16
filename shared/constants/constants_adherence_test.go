@@ -265,6 +265,8 @@ var typeRegistry = map[string]any{
 	"PickSearchMatch":                 PickSearchMatch(""),
 	"ArchiveStatus":                   ArchiveStatus(""),
 	"NoteType":                        NoteType(""),
+	"PriceListPriceType":              PriceListPriceType(""),
+	"PriceListSourceType":             PriceListSourceType(""),
 	"NoteImportance":                  NoteImportance(""),
 	"NoteStatus":                      NoteStatus(""),
 	"ServiceLevelScope":               ServiceLevelScope(""),

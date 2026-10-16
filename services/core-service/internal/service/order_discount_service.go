@@ -178,6 +178,9 @@ func (s *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, params d
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if params.Discount == nil {
+		return nil, tracing.Trace(span, apierror.NewFieldError("discount", apierror.CodeInvalidFormat, "An order discount needs a discount."))
+	}
 
 	meds := s.mediators()
 
@@ -207,7 +210,21 @@ func (s *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, params d
 				return apierror.NewConflictErrorWithParam("code", "A discount with this code already exists.")
 			}
 
-			created, apiErr := txRepo.Create(txCtx, discountID, params)
+			discount := &domain.OrderDiscount{
+				ID:        discountID,
+				AccountID: params.AccountID,
+				Name:      params.Name,
+				Code:      params.Code,
+				Status:    constants.ArchiveStatusActive,
+				Discount:  *params.Discount,
+			}
+			if params.Status != nil {
+				discount.Status = *params.Status
+			}
+			if apiErr := txRepo.Create(txCtx, discount); apiErr != nil {
+				return apiErr
+			}
+			created, apiErr := txRepo.Get(txCtx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: discountID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -295,7 +312,23 @@ func (s *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, params d
 				}
 			}
 
-			updated, apiErr := txRepo.Update(txCtx, params)
+			next := *old
+			if params.Name != nil {
+				next.Name = *params.Name
+			}
+			if params.Code != nil {
+				next.Code = *params.Code
+			}
+			if params.Discount != nil {
+				next.Discount = *params.Discount
+			}
+			if params.Status != nil {
+				next.Status = *params.Status
+			}
+			if apiErr := txRepo.Update(txCtx, &next); apiErr != nil {
+				return apiErr
+			}
+			updated, apiErr := txRepo.Get(txCtx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: params.OrderDiscountID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -441,6 +474,10 @@ func (s *orderDiscountSvcImpl) FindOrderDiscountByCode(ctx context.Context, para
 	discount, apiErr := repo.FindByCode(ctx, params.AccountID, params.Code)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	// An archived code can't be applied to new orders, so a buyer can't find it.
+	if identity.IsCustomerUser() && !discount.Status.IsActive() {
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Order discount not found."))
 	}
 
 	// Check duplicate usage if buyer account ID is provided

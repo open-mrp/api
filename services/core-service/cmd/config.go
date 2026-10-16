@@ -48,6 +48,7 @@ const (
 	envMoneyColumnBackfillOff     = "MONEY_COLUMN_BACKFILL_DISABLED"
 	envItemUnitsBackfillOff       = "ITEM_UNITS_BACKFILL_DISABLED"
 	envNoteBackfillOff            = "NOTE_BACKFILL_DISABLED"
+	envPriceListSyncBackfillOff   = "PRICE_LIST_SYNC_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -150,6 +151,9 @@ type config struct {
 	// NoteBackfillDisabled (optional; default: false) stops the backfills that copy notes columns into notes ("true"
 	// to stop them).
 	NoteBackfillDisabled bool
+	// PriceListSyncBackfillDisabled (optional; default: false) stops the backfill that mirrors legacy account prices
+	// and volume discounts into price lists ("true" to stop). Unmirrored accounts keep pricing from the legacy records.
+	PriceListSyncBackfillDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -169,34 +173,35 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:                        port,
-		DBURL:                       env.GetEnv(envDBURL, getenv),
-		DBReplicaURL:                cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
-		RabbitMQURI:                 cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		RedisURL:                    env.GetEnv(envRedisURL, getenv),
-		PlatformMode:                platformMode,
-		CursorHMACKey:               []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		GoogleMapsAPIKey:            env.GetEnv(envGoogleMapsAPIKey, getenv),
-		IntegrationEncryptionKey:    env.GetEnv(envIntegrationEncryptionKey, getenv),
-		IntegrationEncryptionKeyID:  env.GetEnv(envIntegrationEncryptionKeyID, getenv),
-		AWSRegion:                   env.GetEnv(envAWSRegion, getenv),
-		AccountPhotosBucket:         env.GetEnv(envAccountPhotosBucket, getenv),
-		AssetCDNBaseURL:             env.GetEnv(envAssetCDNBaseURL, getenv),
-		UserPhotosBucket:            env.GetEnv(envUserPhotosBucket, getenv),
-		ShippingLabelsBucket:        env.GetEnv(envShippingLabelsBucket, getenv),
-		ExportsBucket:               env.GetEnv(envExportsBucket, getenv),
-		PayloadsBucket:              env.GetEnv(envPayloadsBucket, getenv),
-		FrontendURL:                 env.GetEnv(envFrontendURL, getenv),
-		PortalURL:                   cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
-		OperatorEmail:               cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
-		AuthServiceURL:              env.GetEnv(envAuthServiceURL, getenv),
-		VercelAPIToken:              env.GetEnv(envVercelAPIToken, getenv),
-		VercelProjectID:             env.GetEnv(envVercelProjectID, getenv),
-		VercelTeamID:                env.GetEnv(envVercelTeamID, getenv),
-		AccountMarketingBlurbs:      env.GetEnv(envAccountMarketingBlurbs, getenv),
-		MoneyColumnBackfillDisabled: env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
-		ItemUnitsBackfillDisabled:   env.GetEnv(envItemUnitsBackfillOff, getenv) == "true",
-		NoteBackfillDisabled:        env.GetEnv(envNoteBackfillOff, getenv) == "true",
+		Port:                          port,
+		DBURL:                         env.GetEnv(envDBURL, getenv),
+		DBReplicaURL:                  cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
+		RabbitMQURI:                   cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		RedisURL:                      env.GetEnv(envRedisURL, getenv),
+		PlatformMode:                  platformMode,
+		CursorHMACKey:                 []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		GoogleMapsAPIKey:              env.GetEnv(envGoogleMapsAPIKey, getenv),
+		IntegrationEncryptionKey:      env.GetEnv(envIntegrationEncryptionKey, getenv),
+		IntegrationEncryptionKeyID:    env.GetEnv(envIntegrationEncryptionKeyID, getenv),
+		AWSRegion:                     env.GetEnv(envAWSRegion, getenv),
+		AccountPhotosBucket:           env.GetEnv(envAccountPhotosBucket, getenv),
+		AssetCDNBaseURL:               env.GetEnv(envAssetCDNBaseURL, getenv),
+		UserPhotosBucket:              env.GetEnv(envUserPhotosBucket, getenv),
+		ShippingLabelsBucket:          env.GetEnv(envShippingLabelsBucket, getenv),
+		ExportsBucket:                 env.GetEnv(envExportsBucket, getenv),
+		PayloadsBucket:                env.GetEnv(envPayloadsBucket, getenv),
+		FrontendURL:                   env.GetEnv(envFrontendURL, getenv),
+		PortalURL:                     cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
+		OperatorEmail:                 cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
+		AuthServiceURL:                env.GetEnv(envAuthServiceURL, getenv),
+		VercelAPIToken:                env.GetEnv(envVercelAPIToken, getenv),
+		VercelProjectID:               env.GetEnv(envVercelProjectID, getenv),
+		VercelTeamID:                  env.GetEnv(envVercelTeamID, getenv),
+		AccountMarketingBlurbs:        env.GetEnv(envAccountMarketingBlurbs, getenv),
+		MoneyColumnBackfillDisabled:   env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
+		ItemUnitsBackfillDisabled:     env.GetEnv(envItemUnitsBackfillOff, getenv) == "true",
+		NoteBackfillDisabled:          env.GetEnv(envNoteBackfillOff, getenv) == "true",
+		PriceListSyncBackfillDisabled: env.GetEnv(envPriceListSyncBackfillOff, getenv) == "true",
 	}
 }
 

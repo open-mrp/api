@@ -80,13 +80,15 @@ type Customer struct {
 	TypeGroupCreatedAt                 *time.Time
 	TypeGroupUpdatedAt                 *time.Time
 	PriceGroups                        []CustomerAccountGroup `audit:"price_groups"`
-	ParentAccountID                    *string                `audit:"parent_account_id"`
-	ParentAccountRelationID            *string
-	ParentAccountName                  *string
-	ParentAccountNumber                *string
-	ParentAccountCreatedAt             *time.Time
-	ParentAccountUpdatedAt             *time.Time
-	ChildAccounts                      []CustomerChildAccount
+	// PriceListIDs are the price lists assigned to the customer directly; set by batch reads.
+	PriceListIDs            []string `audit:"-"`
+	ParentAccountID         *string  `audit:"parent_account_id"`
+	ParentAccountRelationID *string
+	ParentAccountName       *string
+	ParentAccountNumber     *string
+	ParentAccountCreatedAt  *time.Time
+	ParentAccountUpdatedAt  *time.Time
+	ChildAccounts           []CustomerChildAccount
 	// NotificationRecipients are loaded only when asked for.
 	NotificationRecipients []NotificationRecipient `audit:"-"`
 	CreatedAt              time.Time
@@ -207,6 +209,8 @@ type CreateCustomerParams struct {
 	BillToAddress         *CreateAddressParams
 	ShipToAddress         *CreateAddressParams
 	CustomerPriceGroupIDs []string
+	// PriceListIDs, when non-nil, are the price lists assigned to the customer directly.
+	PriceListIDs          []string
 	CustomerTypeGroupID   *string
 	CarrierBillingType    *string
 	CarrierBillingAccount *string
@@ -292,12 +296,15 @@ type UpdateCustomerParams struct {
 	ShipToAddressID           field.Clearable[string]
 	CustomerPriceGroupIDs     []string
 	HasCustomerPriceGroupIDs  bool
-	CustomerTypeGroupID       *string
-	CarrierBillingType        *string
-	CarrierBillingAccount     field.Clearable[string]
-	CreditLimit               field.Clearable[fieldpb.QuantityInput]
-	CreditLimitID             *string
-	Includes                  []string
+	// PriceListIDs, when HasPriceListIDs, replaces the price lists assigned to the customer directly.
+	PriceListIDs          []string
+	HasPriceListIDs       bool
+	CustomerTypeGroupID   *string
+	CarrierBillingType    *string
+	CarrierBillingAccount field.Clearable[string]
+	CreditLimit           field.Clearable[fieldpb.QuantityInput]
+	CreditLimitID         *string
+	Includes              []string
 }
 
 // FrequentlyOrderedProduct represents a product frequently ordered by a customer.

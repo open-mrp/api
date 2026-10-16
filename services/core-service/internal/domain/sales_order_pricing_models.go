@@ -143,6 +143,11 @@ type PricingBundle struct {
 	AccountPrices []*PricingAccountPrice
 	// VolumeDiscounts applicable to the buyer.
 	VolumeDiscounts []*PricingVolumeDiscount
+	// UsesPriceLists is set once the account's legacy prices are mirrored into price lists: lines are then priced from
+	// Rules alone, and AccountPrices and VolumeDiscounts stay empty.
+	UsesPriceLists bool
+	// Rules are the rules of every active price list that applies to the buyer.
+	Rules []*PricingRule
 }
 
 // LoadPricingBundleParams identifies what to load for a pricing computation.

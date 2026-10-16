@@ -518,6 +518,8 @@ message CustomerProto {
   // The customer's notification recipients, set only when has_notification_recipients.
   repeated CustomerRecipientProto notification_recipients = 37;
   bool has_notification_recipients = 38;
+  // The price lists assigned to the customer directly.
+  repeated string price_list_ids = 39;
 }
 // One person who receives a customer's documents, and their account user on the customer's account.
 // documents are constants.RecipientDocument values.
@@ -725,6 +727,9 @@ message CreateCustomerRequest {
   // active or archived; empty is active.
   optional string archive_status = 33;
   optional string parent_customer_id = 34;
+  // The price lists assigned to the customer directly; has_price_list_ids says the field was sent.
+  repeated string price_list_ids = 35;
+  bool has_price_list_ids = 36;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -766,6 +771,9 @@ message UpdateCustomerRequest {
   // Replaces the customer's notification recipients when has_notification_recipients.
   repeated EmailRecipient notification_recipients = 36;
   bool has_notification_recipients = 37;
+  // Replaces the price lists assigned to the customer directly when has_price_list_ids.
+  repeated string price_list_ids = 38;
+  bool has_price_list_ids = 39;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;

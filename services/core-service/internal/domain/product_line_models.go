@@ -173,8 +173,9 @@ var ProductLineReferences = RegisterReferences(References{
 	Probes: []ReferenceProbe{
 		{Label: "products", Table: "product", Column: "product_line_id",
 			Where: "EXISTS (SELECT 1 FROM `item` i WHERE i.id = `product`.`item_id` AND i.deleted_at IS NULL)"},
-		{Label: "account prices", Table: "account_price", Column: "product_line_id"},
-		{Label: "volume discounts", Table: "_product_lines_quantity_discounts", Column: "A"},
+		{Label: "price-list rules", Table: "price_list_rule_product_line", Column: "product_line_id"},
+		{Label: "price-list rules", Table: "account_price", Column: "product_line_id"},
+		{Label: "price-list rules", Table: "_product_lines_quantity_discounts", Column: "A"},
 		{Label: "sales targets", Table: "product_line_target", Column: "product_line_id"},
 		{Label: "territories", Table: "territory", Column: "product_line_id"},
 	},

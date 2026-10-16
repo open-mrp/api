@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -5200,8 +5201,10 @@ type CustomerProto struct {
 	// The customer's notification recipients, set only when has_notification_recipients.
 	NotificationRecipients    []*CustomerRecipientProto `protobuf:"bytes,37,rep,name=notification_recipients,json=notificationRecipients,proto3" json:"notification_recipients,omitempty"`
 	HasNotificationRecipients bool                      `protobuf:"varint,38,opt,name=has_notification_recipients,json=hasNotificationRecipients,proto3" json:"has_notification_recipients,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// The price lists assigned to the customer directly.
+	PriceListIds  []string `protobuf:"bytes,39,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CustomerProto) Reset() {
@@ -5463,6 +5466,13 @@ func (x *CustomerProto) GetHasNotificationRecipients() bool {
 		return x.HasNotificationRecipients
 	}
 	return false
+}
+
+func (x *CustomerProto) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
 }
 
 // One person who receives a customer's documents, and their account user on the customer's account.
@@ -7185,8 +7195,11 @@ type CreateCustomerRequest struct {
 	// active or archived; empty is active.
 	ArchiveStatus    *string `protobuf:"bytes,33,opt,name=archive_status,json=archiveStatus,proto3,oneof" json:"archive_status,omitempty"`
 	ParentCustomerId *string `protobuf:"bytes,34,opt,name=parent_customer_id,json=parentCustomerId,proto3,oneof" json:"parent_customer_id,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// The price lists assigned to the customer directly; has_price_list_ids says the field was sent.
+	PriceListIds    []string `protobuf:"bytes,35,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	HasPriceListIds bool     `protobuf:"varint,36,opt,name=has_price_list_ids,json=hasPriceListIds,proto3" json:"has_price_list_ids,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateCustomerRequest) Reset() {
@@ -7422,6 +7435,20 @@ func (x *CreateCustomerRequest) GetParentCustomerId() string {
 	return ""
 }
 
+func (x *CreateCustomerRequest) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
+}
+
+func (x *CreateCustomerRequest) GetHasPriceListIds() bool {
+	if x != nil {
+		return x.HasPriceListIds
+	}
+	return false
+}
+
 type CreateCustomerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Customer      *CustomerProto         `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
@@ -7500,8 +7527,11 @@ type UpdateCustomerRequest struct {
 	// Replaces the customer's notification recipients when has_notification_recipients.
 	NotificationRecipients    []*EmailRecipient `protobuf:"bytes,36,rep,name=notification_recipients,json=notificationRecipients,proto3" json:"notification_recipients,omitempty"`
 	HasNotificationRecipients bool              `protobuf:"varint,37,opt,name=has_notification_recipients,json=hasNotificationRecipients,proto3" json:"has_notification_recipients,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// Replaces the price lists assigned to the customer directly when has_price_list_ids.
+	PriceListIds    []string `protobuf:"bytes,38,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	HasPriceListIds bool     `protobuf:"varint,39,opt,name=has_price_list_ids,json=hasPriceListIds,proto3" json:"has_price_list_ids,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateCustomerRequest) Reset() {
@@ -7747,6 +7777,20 @@ func (x *UpdateCustomerRequest) GetNotificationRecipients() []*EmailRecipient {
 func (x *UpdateCustomerRequest) GetHasNotificationRecipients() bool {
 	if x != nil {
 		return x.HasNotificationRecipients
+	}
+	return false
+}
+
+func (x *UpdateCustomerRequest) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
+	}
+	return nil
+}
+
+func (x *UpdateCustomerRequest) GetHasPriceListIds() bool {
+	if x != nil {
+		return x.HasPriceListIds
 	}
 	return false
 }
@@ -12047,7 +12091,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_idB\x0f\n" +
-	"\r_last_used_at\"\x8d\x11\n" +
+	"\r_last_used_at\"\xb3\x11\n" +
 	"\rCustomerProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -12086,7 +12130,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x06supply\x18# \x01(\tH\x11R\x06supply\x88\x01\x01\x12%\n" +
 	"\x0earchive_status\x18$ \x01(\tR\rarchiveStatus\x12U\n" +
 	"\x17notification_recipients\x18% \x03(\v2\x1c.core.CustomerRecipientProtoR\x16notificationRecipients\x12>\n" +
-	"\x1bhas_notification_recipients\x18& \x01(\bR\x19hasNotificationRecipientsB\x0f\n" +
+	"\x1bhas_notification_recipients\x18& \x01(\bR\x19hasNotificationRecipients\x12$\n" +
+	"\x0eprice_list_ids\x18' \x03(\tR\fpriceListIdsB\x0f\n" +
 	"\r_instructionsB\b\n" +
 	"\x06_emailB\b\n" +
 	"\x06_phoneB\x06\n" +
@@ -12331,7 +12376,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
-	"\f_postal_code\"\xa6\x0f\n" +
+	"\f_postal_code\"\xf9\x0f\n" +
 	"\x15CreateCustomerRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12'\n" +
@@ -12364,7 +12409,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\fcredit_limit\x18\x1f \x01(\v2\v.core.MoneyR\vcreditLimit\x12\x1b\n" +
 	"\x06supply\x18  \x01(\tH\x16R\x06supply\x88\x01\x01\x12*\n" +
 	"\x0earchive_status\x18! \x01(\tH\x17R\rarchiveStatus\x88\x01\x01\x121\n" +
-	"\x12parent_customer_id\x18\" \x01(\tH\x18R\x10parentCustomerId\x88\x01\x01B\t\n" +
+	"\x12parent_customer_id\x18\" \x01(\tH\x18R\x10parentCustomerId\x88\x01\x01\x12$\n" +
+	"\x0eprice_list_ids\x18# \x03(\tR\fpriceListIds\x12+\n" +
+	"\x12has_price_list_ids\x18$ \x01(\bR\x0fhasPriceListIdsB\t\n" +
 	"\a_numberB\x0f\n" +
 	"\r_instructionsB\b\n" +
 	"\x06_emailB\b\n" +
@@ -12391,7 +12438,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0f_archive_statusB\x15\n" +
 	"\x13_parent_customer_idJ\x04\b\b\x10\tJ\x04\b\x0f\x10\x10J\x04\b\x19\x10\x1aJ\x04\b\x1a\x10\x1bJ\x04\b\x1e\x10\x1f\"I\n" +
 	"\x16CreateCustomerResponse\x12/\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xf9\x10\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xcc\x11\n" +
 	"\x15UpdateCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
@@ -12426,7 +12473,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0earchive_status\x18\" \x01(\tH\x14R\rarchiveStatus\x88\x01\x01\x12?\n" +
 	"\x12parent_customer_id\x18# \x01(\v2\x11.core.StringPatchR\x10parentCustomerId\x12M\n" +
 	"\x17notification_recipients\x18$ \x03(\v2\x14.core.EmailRecipientR\x16notificationRecipients\x12>\n" +
-	"\x1bhas_notification_recipients\x18% \x01(\bR\x19hasNotificationRecipientsB\a\n" +
+	"\x1bhas_notification_recipients\x18% \x01(\bR\x19hasNotificationRecipients\x12$\n" +
+	"\x0eprice_list_ids\x18& \x03(\tR\fpriceListIds\x12+\n" +
+	"\x12has_price_list_ids\x18' \x01(\bR\x0fhasPriceListIdsB\a\n" +
 	"\x05_nameB\t\n" +
 	"\a_numberB\x0f\n" +
 	"\r_instructionsB\b\n" +

@@ -1604,6 +1604,7 @@ func accountGroupToProto(ag *domain.AccountGroup) *pb.AccountGroupInfo {
 		CreatedAt:           timestamppb.New(ag.CreatedAt),
 		UpdatedAt:           timestamppb.New(ag.UpdatedAt),
 		DefaultLeadTimeDays: ag.DefaultLeadTimeDays,
+		PriceListIds:        ag.PriceListIDs,
 	}
 	if ag.Description != nil {
 		info.Description = ag.Description
@@ -1689,6 +1690,7 @@ func (h *gRPCHandler) CreateAccountGroup(ctx context.Context, req *pb.CreateAcco
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
 		DefaultLeadTimeDays:  req.DefaultLeadTimeDays,
+		PriceListIDs:         priceListIDsIfSent(req.PriceListIds, req.HasPriceListIds),
 	}
 
 	accountGroup, apiErr := h.accountGroupSvc.CreateAccountGroup(ctx, params)
@@ -1716,6 +1718,8 @@ func (h *gRPCHandler) UpdateAccountGroup(ctx context.Context, req *pb.UpdateAcco
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
 		DefaultLeadTimeDays:  fieldpb.Int32ClearableFromProto(req.DefaultLeadTimeDays),
+		PriceListIDs:         req.PriceListIds,
+		HasPriceListIDs:      req.HasPriceListIds,
 	}
 
 	accountGroup, apiErr := h.accountGroupSvc.UpdateAccountGroup(ctx, params)

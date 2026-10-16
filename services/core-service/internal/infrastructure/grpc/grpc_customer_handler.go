@@ -279,6 +279,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		}
 	}
 	p.PriceGroups = priceGroups
+	p.PriceListIds = c.PriceListIDs
 
 	if c.ParentAccountID != nil {
 		pa := &pb.CustomerLightCustomerProto{
@@ -451,6 +452,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		DefaultShippingTermID: req.DefaultShippingTermId,
 		DefaultSalesRepID:     req.DefaultSalesRepId,
 		CustomerPriceGroupIDs: req.CustomerPriceGroupIds,
+		PriceListIDs:          priceListIDsIfSent(req.PriceListIds, req.HasPriceListIds),
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
@@ -520,6 +522,8 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		ShipToAddressID:          fieldpb.StringClearableFromProto(req.ShipToAddressId),
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
 		HasCustomerPriceGroupIDs: req.HasCustomerPriceGroupIds,
+		PriceListIDs:             req.PriceListIds,
+		HasPriceListIDs:          req.HasPriceListIds,
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
 		CarrierBillingAccount:    fieldpb.StringClearableFromProto(req.CarrierBillingAccount),

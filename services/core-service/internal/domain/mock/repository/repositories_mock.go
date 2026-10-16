@@ -14020,6 +14020,20 @@ func (m *MockOrderDiscountRepo) EXPECT() *MockOrderDiscountRepoMockRecorder {
 	return m.recorder
 }
 
+// AdjustRedemptions mocks base method.
+func (m *MockOrderDiscountRepo) AdjustRedemptions(ctx context.Context, id string, delta int32) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdjustRedemptions", ctx, id, delta)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AdjustRedemptions indicates an expected call of AdjustRedemptions.
+func (mr *MockOrderDiscountRepoMockRecorder) AdjustRedemptions(ctx, id, delta any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdjustRedemptions", reflect.TypeOf((*MockOrderDiscountRepo)(nil).AdjustRedemptions), ctx, id, delta)
+}
+
 // CheckDuplicateUsage mocks base method.
 func (m *MockOrderDiscountRepo) CheckDuplicateUsage(ctx context.Context, accountID, buyerAccountID, orderDiscountID string, salesOrderID *string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14036,18 +14050,17 @@ func (mr *MockOrderDiscountRepoMockRecorder) CheckDuplicateUsage(ctx, accountID,
 }
 
 // Create mocks base method.
-func (m *MockOrderDiscountRepo) Create(ctx context.Context, id string, params domain.CreateOrderDiscountParams) (*domain.OrderDiscount, *apierror.APIError) {
+func (m *MockOrderDiscountRepo) Create(ctx context.Context, d *domain.OrderDiscount) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, id, params)
-	ret0, _ := ret[0].(*domain.OrderDiscount)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Create", ctx, d)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockOrderDiscountRepoMockRecorder) Create(ctx, id, params any) *gomock.Call {
+func (mr *MockOrderDiscountRepoMockRecorder) Create(ctx, d any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOrderDiscountRepo)(nil).Create), ctx, id, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOrderDiscountRepo)(nil).Create), ctx, d)
 }
 
 // Delete mocks base method.
@@ -14141,18 +14154,17 @@ func (mr *MockOrderDiscountRepoMockRecorder) List(ctx, params any) *gomock.Call 
 }
 
 // Update mocks base method.
-func (m *MockOrderDiscountRepo) Update(ctx context.Context, params domain.UpdateOrderDiscountParams) (*domain.OrderDiscount, *apierror.APIError) {
+func (m *MockOrderDiscountRepo) Update(ctx context.Context, d *domain.OrderDiscount) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, params)
-	ret0, _ := ret[0].(*domain.OrderDiscount)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Update", ctx, d)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockOrderDiscountRepoMockRecorder) Update(ctx, params any) *gomock.Call {
+func (mr *MockOrderDiscountRepoMockRecorder) Update(ctx, d any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOrderDiscountRepo)(nil).Update), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOrderDiscountRepo)(nil).Update), ctx, d)
 }
 
 // MockVolumeDiscountRepo is a mock of VolumeDiscountRepo interface.
@@ -22001,4 +22013,564 @@ func (m *MockNoteRepo) Update(ctx context.Context, note *domain.Note) *apierror.
 func (mr *MockNoteRepoMockRecorder) Update(ctx, note any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNoteRepo)(nil).Update), ctx, note)
+}
+
+// MockPriceListRepo is a mock of PriceListRepo interface.
+type MockPriceListRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockPriceListRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockPriceListRepoMockRecorder is the mock recorder for MockPriceListRepo.
+type MockPriceListRepoMockRecorder struct {
+	mock *MockPriceListRepo
+}
+
+// NewMockPriceListRepo creates a new mock instance.
+func NewMockPriceListRepo(ctrl *gomock.Controller) *MockPriceListRepo {
+	mock := &MockPriceListRepo{ctrl: ctrl}
+	mock.recorder = &MockPriceListRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPriceListRepo) EXPECT() *MockPriceListRepoMockRecorder {
+	return m.recorder
+}
+
+// AddCustomerList mocks base method.
+func (m *MockPriceListRepo) AddCustomerList(ctx context.Context, relationID, listID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddCustomerList", ctx, relationID, listID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AddCustomerList indicates an expected call of AddCustomerList.
+func (mr *MockPriceListRepoMockRecorder) AddCustomerList(ctx, relationID, listID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCustomerList", reflect.TypeOf((*MockPriceListRepo)(nil).AddCustomerList), ctx, relationID, listID)
+}
+
+// ApplicableLists mocks base method.
+func (m *MockPriceListRepo) ApplicableLists(ctx context.Context, ownerAccountID string, customerAccountIDs []string) (map[string]map[string]domain.PriceListSource, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplicableLists", ctx, ownerAccountID, customerAccountIDs)
+	ret0, _ := ret[0].(map[string]map[string]domain.PriceListSource)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ApplicableLists indicates an expected call of ApplicableLists.
+func (mr *MockPriceListRepoMockRecorder) ApplicableLists(ctx, ownerAccountID, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplicableLists", reflect.TypeOf((*MockPriceListRepo)(nil).ApplicableLists), ctx, ownerAccountID, customerAccountIDs)
+}
+
+// CustomerListIDs mocks base method.
+func (m *MockPriceListRepo) CustomerListIDs(ctx context.Context, relationIDs []string) (domain.PriceListAssignments, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CustomerListIDs", ctx, relationIDs)
+	ret0, _ := ret[0].(domain.PriceListAssignments)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CustomerListIDs indicates an expected call of CustomerListIDs.
+func (mr *MockPriceListRepoMockRecorder) CustomerListIDs(ctx, relationIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomerListIDs", reflect.TypeOf((*MockPriceListRepo)(nil).CustomerListIDs), ctx, relationIDs)
+}
+
+// CustomerListIDsByAccounts mocks base method.
+func (m *MockPriceListRepo) CustomerListIDsByAccounts(ctx context.Context, ownerAccountID string, customerAccountIDs []string) (domain.PriceListAssignments, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CustomerListIDsByAccounts", ctx, ownerAccountID, customerAccountIDs)
+	ret0, _ := ret[0].(domain.PriceListAssignments)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CustomerListIDsByAccounts indicates an expected call of CustomerListIDsByAccounts.
+func (mr *MockPriceListRepoMockRecorder) CustomerListIDsByAccounts(ctx, ownerAccountID, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomerListIDsByAccounts", reflect.TypeOf((*MockPriceListRepo)(nil).CustomerListIDsByAccounts), ctx, ownerAccountID, customerAccountIDs)
+}
+
+// Delete mocks base method.
+func (m *MockPriceListRepo) Delete(ctx context.Context, accountID, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountID, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockPriceListRepoMockRecorder) Delete(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPriceListRepo)(nil).Delete), ctx, accountID, id)
+}
+
+// DeleteCustomerAssignments mocks base method.
+func (m *MockPriceListRepo) DeleteCustomerAssignments(ctx context.Context, relationIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCustomerAssignments", ctx, relationIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteCustomerAssignments indicates an expected call of DeleteCustomerAssignments.
+func (mr *MockPriceListRepoMockRecorder) DeleteCustomerAssignments(ctx, relationIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomerAssignments", reflect.TypeOf((*MockPriceListRepo)(nil).DeleteCustomerAssignments), ctx, relationIDs)
+}
+
+// DeleteGroupAssignments mocks base method.
+func (m *MockPriceListRepo) DeleteGroupAssignments(ctx context.Context, groupID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteGroupAssignments", ctx, groupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteGroupAssignments indicates an expected call of DeleteGroupAssignments.
+func (mr *MockPriceListRepoMockRecorder) DeleteGroupAssignments(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGroupAssignments", reflect.TypeOf((*MockPriceListRepo)(nil).DeleteGroupAssignments), ctx, groupID)
+}
+
+// DeleteRule mocks base method.
+func (m *MockPriceListRepo) DeleteRule(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRule", ctx, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteRule indicates an expected call of DeleteRule.
+func (mr *MockPriceListRepoMockRecorder) DeleteRule(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRule", reflect.TypeOf((*MockPriceListRepo)(nil).DeleteRule), ctx, id)
+}
+
+// FirstRuleIDs mocks base method.
+func (m *MockPriceListRepo) FirstRuleIDs(ctx context.Context, listIDs []string) (map[string]domain.PriceListRuleIDs, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FirstRuleIDs", ctx, listIDs)
+	ret0, _ := ret[0].(map[string]domain.PriceListRuleIDs)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FirstRuleIDs indicates an expected call of FirstRuleIDs.
+func (mr *MockPriceListRepoMockRecorder) FirstRuleIDs(ctx, listIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FirstRuleIDs", reflect.TypeOf((*MockPriceListRepo)(nil).FirstRuleIDs), ctx, listIDs)
+}
+
+// GetByIDs mocks base method.
+func (m *MockPriceListRepo) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockPriceListRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockPriceListRepo)(nil).GetByIDs), ctx, accountID, ids)
+}
+
+// GetBySource mocks base method.
+func (m *MockPriceListRepo) GetBySource(ctx context.Context, accountID string, sourceType constants.PriceListSourceType, sourceID string) (*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBySource", ctx, accountID, sourceType, sourceID)
+	ret0, _ := ret[0].(*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetBySource indicates an expected call of GetBySource.
+func (mr *MockPriceListRepoMockRecorder) GetBySource(ctx, accountID, sourceType, sourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySource", reflect.TypeOf((*MockPriceListRepo)(nil).GetBySource), ctx, accountID, sourceType, sourceID)
+}
+
+// GetRuleBySource mocks base method.
+func (m *MockPriceListRepo) GetRuleBySource(ctx context.Context, listID, sourceID string) (*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRuleBySource", ctx, listID, sourceID)
+	ret0, _ := ret[0].(*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRuleBySource indicates an expected call of GetRuleBySource.
+func (mr *MockPriceListRepoMockRecorder) GetRuleBySource(ctx, listID, sourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuleBySource", reflect.TypeOf((*MockPriceListRepo)(nil).GetRuleBySource), ctx, listID, sourceID)
+}
+
+// GetRulesByIDs mocks base method.
+func (m *MockPriceListRepo) GetRulesByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRulesByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRulesByIDs indicates an expected call of GetRulesByIDs.
+func (mr *MockPriceListRepoMockRecorder) GetRulesByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRulesByIDs", reflect.TypeOf((*MockPriceListRepo)(nil).GetRulesByIDs), ctx, accountID, ids)
+}
+
+// GetRulesByListIDs mocks base method.
+func (m *MockPriceListRepo) GetRulesByListIDs(ctx context.Context, listIDs []string) ([]*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRulesByListIDs", ctx, listIDs)
+	ret0, _ := ret[0].([]*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRulesByListIDs indicates an expected call of GetRulesByListIDs.
+func (mr *MockPriceListRepoMockRecorder) GetRulesByListIDs(ctx, listIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRulesByListIDs", reflect.TypeOf((*MockPriceListRepo)(nil).GetRulesByListIDs), ctx, listIDs)
+}
+
+// GetRulesBySource mocks base method.
+func (m *MockPriceListRepo) GetRulesBySource(ctx context.Context, accountID, sourceID string) ([]*domain.PriceListRule, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRulesBySource", ctx, accountID, sourceID)
+	ret0, _ := ret[0].([]*domain.PriceListRule)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRulesBySource indicates an expected call of GetRulesBySource.
+func (mr *MockPriceListRepoMockRecorder) GetRulesBySource(ctx, accountID, sourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRulesBySource", reflect.TypeOf((*MockPriceListRepo)(nil).GetRulesBySource), ctx, accountID, sourceID)
+}
+
+// GroupListIDs mocks base method.
+func (m *MockPriceListRepo) GroupListIDs(ctx context.Context, groupIDs []string) (domain.PriceListAssignments, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupListIDs", ctx, groupIDs)
+	ret0, _ := ret[0].(domain.PriceListAssignments)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GroupListIDs indicates an expected call of GroupListIDs.
+func (mr *MockPriceListRepoMockRecorder) GroupListIDs(ctx, groupIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupListIDs", reflect.TypeOf((*MockPriceListRepo)(nil).GroupListIDs), ctx, groupIDs)
+}
+
+// Insert mocks base method.
+func (m *MockPriceListRepo) Insert(ctx context.Context, list *domain.PriceList) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Insert", ctx, list)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Insert indicates an expected call of Insert.
+func (mr *MockPriceListRepoMockRecorder) Insert(ctx, list any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockPriceListRepo)(nil).Insert), ctx, list)
+}
+
+// InsertRule mocks base method.
+func (m *MockPriceListRepo) InsertRule(ctx context.Context, rule *domain.PriceListRule) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertRule", ctx, rule)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertRule indicates an expected call of InsertRule.
+func (mr *MockPriceListRepoMockRecorder) InsertRule(ctx, rule any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRule", reflect.TypeOf((*MockPriceListRepo)(nil).InsertRule), ctx, rule)
+}
+
+// IsLegacySynced mocks base method.
+func (m *MockPriceListRepo) IsLegacySynced(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsLegacySynced", ctx, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsLegacySynced indicates an expected call of IsLegacySynced.
+func (mr *MockPriceListRepoMockRecorder) IsLegacySynced(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLegacySynced", reflect.TypeOf((*MockPriceListRepo)(nil).IsLegacySynced), ctx, accountID)
+}
+
+// List mocks base method.
+func (m *MockPriceListRepo) List(ctx context.Context, params domain.ListPriceListsParams) (*domain.ListPriceListsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPriceListsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockPriceListRepoMockRecorder) List(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPriceListRepo)(nil).List), ctx, params)
+}
+
+// ListBySourceType mocks base method.
+func (m *MockPriceListRepo) ListBySourceType(ctx context.Context, accountID string, sourceType constants.PriceListSourceType) ([]*domain.PriceList, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBySourceType", ctx, accountID, sourceType)
+	ret0, _ := ret[0].([]*domain.PriceList)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListBySourceType indicates an expected call of ListBySourceType.
+func (mr *MockPriceListRepoMockRecorder) ListBySourceType(ctx, accountID, sourceType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySourceType", reflect.TypeOf((*MockPriceListRepo)(nil).ListBySourceType), ctx, accountID, sourceType)
+}
+
+// ListCustomerRelations mocks base method.
+func (m *MockPriceListRepo) ListCustomerRelations(ctx context.Context, listID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCustomerRelations", ctx, listID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListCustomerRelations indicates an expected call of ListCustomerRelations.
+func (mr *MockPriceListRepoMockRecorder) ListCustomerRelations(ctx, listID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomerRelations", reflect.TypeOf((*MockPriceListRepo)(nil).ListCustomerRelations), ctx, listID)
+}
+
+// ListRules mocks base method.
+func (m *MockPriceListRepo) ListRules(ctx context.Context, params domain.ListPriceListRulesParams) (*domain.ListPriceListRulesResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRules", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPriceListRulesResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRules indicates an expected call of ListRules.
+func (mr *MockPriceListRepoMockRecorder) ListRules(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRules", reflect.TypeOf((*MockPriceListRepo)(nil).ListRules), ctx, params)
+}
+
+// MarkLegacySynced mocks base method.
+func (m *MockPriceListRepo) MarkLegacySynced(ctx context.Context, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkLegacySynced", ctx, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkLegacySynced indicates an expected call of MarkLegacySynced.
+func (mr *MockPriceListRepoMockRecorder) MarkLegacySynced(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkLegacySynced", reflect.TypeOf((*MockPriceListRepo)(nil).MarkLegacySynced), ctx, accountID)
+}
+
+// RemoveCustomerList mocks base method.
+func (m *MockPriceListRepo) RemoveCustomerList(ctx context.Context, relationID, listID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveCustomerList", ctx, relationID, listID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveCustomerList indicates an expected call of RemoveCustomerList.
+func (mr *MockPriceListRepoMockRecorder) RemoveCustomerList(ctx, relationID, listID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveCustomerList", reflect.TypeOf((*MockPriceListRepo)(nil).RemoveCustomerList), ctx, relationID, listID)
+}
+
+// ScopeTargets mocks base method.
+func (m *MockPriceListRepo) ScopeTargets(ctx context.Context, kind domain.PriceListScopeKind, accountID string, ids []string) (map[string]bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScopeTargets", ctx, kind, accountID, ids)
+	ret0, _ := ret[0].(map[string]bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ScopeTargets indicates an expected call of ScopeTargets.
+func (mr *MockPriceListRepoMockRecorder) ScopeTargets(ctx, kind, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScopeTargets", reflect.TypeOf((*MockPriceListRepo)(nil).ScopeTargets), ctx, kind, accountID, ids)
+}
+
+// SetCustomerLists mocks base method.
+func (m *MockPriceListRepo) SetCustomerLists(ctx context.Context, relationID string, listIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetCustomerLists", ctx, relationID, listIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetCustomerLists indicates an expected call of SetCustomerLists.
+func (mr *MockPriceListRepoMockRecorder) SetCustomerLists(ctx, relationID, listIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomerLists", reflect.TypeOf((*MockPriceListRepo)(nil).SetCustomerLists), ctx, relationID, listIDs)
+}
+
+// SetGroupLists mocks base method.
+func (m *MockPriceListRepo) SetGroupLists(ctx context.Context, groupID string, listIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetGroupLists", ctx, groupID, listIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetGroupLists indicates an expected call of SetGroupLists.
+func (mr *MockPriceListRepoMockRecorder) SetGroupLists(ctx, groupID, listIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGroupLists", reflect.TypeOf((*MockPriceListRepo)(nil).SetGroupLists), ctx, groupID, listIDs)
+}
+
+// Update mocks base method.
+func (m *MockPriceListRepo) Update(ctx context.Context, list *domain.PriceList) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, list)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockPriceListRepoMockRecorder) Update(ctx, list any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPriceListRepo)(nil).Update), ctx, list)
+}
+
+// UpdateRule mocks base method.
+func (m *MockPriceListRepo) UpdateRule(ctx context.Context, rule *domain.PriceListRule) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRule", ctx, rule)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateRule indicates an expected call of UpdateRule.
+func (mr *MockPriceListRepoMockRecorder) UpdateRule(ctx, rule any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRule", reflect.TypeOf((*MockPriceListRepo)(nil).UpdateRule), ctx, rule)
+}
+
+// MockLegacyPricingRepo is a mock of LegacyPricingRepo interface.
+type MockLegacyPricingRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockLegacyPricingRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockLegacyPricingRepoMockRecorder is the mock recorder for MockLegacyPricingRepo.
+type MockLegacyPricingRepoMockRecorder struct {
+	mock *MockLegacyPricingRepo
+}
+
+// NewMockLegacyPricingRepo creates a new mock instance.
+func NewMockLegacyPricingRepo(ctrl *gomock.Controller) *MockLegacyPricingRepo {
+	mock := &MockLegacyPricingRepo{ctrl: ctrl}
+	mock.recorder = &MockLegacyPricingRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLegacyPricingRepo) EXPECT() *MockLegacyPricingRepoMockRecorder {
+	return m.recorder
+}
+
+// AccountIDsAfter mocks base method.
+func (m *MockLegacyPricingRepo) AccountIDsAfter(ctx context.Context, cursor string, limit int32) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountIDsAfter", ctx, cursor, limit)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AccountIDsAfter indicates an expected call of AccountIDsAfter.
+func (mr *MockLegacyPricingRepoMockRecorder) AccountIDsAfter(ctx, cursor, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountIDsAfter", reflect.TypeOf((*MockLegacyPricingRepo)(nil).AccountIDsAfter), ctx, cursor, limit)
+}
+
+// AccountPrices mocks base method.
+func (m *MockLegacyPricingRepo) AccountPrices(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.LegacyAccountPrice, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountPrices", ctx, ownerAccountID, ids)
+	ret0, _ := ret[0].([]*domain.LegacyAccountPrice)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AccountPrices indicates an expected call of AccountPrices.
+func (mr *MockLegacyPricingRepoMockRecorder) AccountPrices(ctx, ownerAccountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountPrices", reflect.TypeOf((*MockLegacyPricingRepo)(nil).AccountPrices), ctx, ownerAccountID, ids)
+}
+
+// PricingGroups mocks base method.
+func (m *MockLegacyPricingRepo) PricingGroups(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.LegacyPricingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PricingGroups", ctx, ownerAccountID, ids)
+	ret0, _ := ret[0].([]*domain.LegacyPricingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PricingGroups indicates an expected call of PricingGroups.
+func (mr *MockLegacyPricingRepoMockRecorder) PricingGroups(ctx, ownerAccountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PricingGroups", reflect.TypeOf((*MockLegacyPricingRepo)(nil).PricingGroups), ctx, ownerAccountID, ids)
+}
+
+// RelationPriceGroupIDs mocks base method.
+func (m *MockLegacyPricingRepo) RelationPriceGroupIDs(ctx context.Context, relationID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelationPriceGroupIDs", ctx, relationID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RelationPriceGroupIDs indicates an expected call of RelationPriceGroupIDs.
+func (mr *MockLegacyPricingRepoMockRecorder) RelationPriceGroupIDs(ctx, relationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelationPriceGroupIDs", reflect.TypeOf((*MockLegacyPricingRepo)(nil).RelationPriceGroupIDs), ctx, relationID)
+}
+
+// VolumeDiscounts mocks base method.
+func (m *MockLegacyPricingRepo) VolumeDiscounts(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.LegacyVolumeDiscount, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VolumeDiscounts", ctx, ownerAccountID, ids)
+	ret0, _ := ret[0].([]*domain.LegacyVolumeDiscount)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// VolumeDiscounts indicates an expected call of VolumeDiscounts.
+func (mr *MockLegacyPricingRepoMockRecorder) VolumeDiscounts(ctx, ownerAccountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VolumeDiscounts", reflect.TypeOf((*MockLegacyPricingRepo)(nil).VolumeDiscounts), ctx, ownerAccountID, ids)
 }

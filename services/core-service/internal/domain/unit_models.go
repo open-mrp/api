@@ -124,5 +124,8 @@ var UnitReferences = RegisterReferences(References{
 		{Label: "items", Table: "item", Column: "stocking_unit_id"},
 		{Label: "items", Table: "item", Column: "default_order_unit_id"},
 		{Label: "items", Table: "item_order_unit", Column: "unit_id"},
+		{Label: "price-list rules", Table: "price_list_rule", Column: "unit_price_per_unit_id"},
+		{Label: "price-list rules", Table: "price_list_rule", Column: "tier_unit_id"},
+		{Label: "price-list rules", Table: "price_list_rule_tier", Column: "unit_price_per_unit_id"},
 	},
 })

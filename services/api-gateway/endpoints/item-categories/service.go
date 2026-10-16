@@ -72,7 +72,7 @@ func (m *itemCategorySvcImpl) ExportItemCategories(ctx context.Context, req *Exp
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
@@ -297,7 +297,7 @@ func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // typeCodeFilter narrows the list to one stored type code, or nil when types names none or both.

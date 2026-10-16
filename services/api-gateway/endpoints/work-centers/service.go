@@ -61,7 +61,7 @@ func (m *workCenterSvcImpl) ExportWorkCenters(ctx context.Context, req *ExportWo
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *workCenterSvcImpl) ListWorkCenters(ctx context.Context, req *ListWorkCentersRequest) (*apiresource.List[apiresource.WorkCenter], *apierror.APIError) {
@@ -127,7 +127,7 @@ func (m *workCenterSvcImpl) BulkUpsertWorkCenters(ctx context.Context, req *Bulk
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *workCenterSvcImpl) UpdateWorkCenter(ctx context.Context, req *UpdateWorkCenterRequest) (*apiresource.WorkCenter, *apierror.APIError) {

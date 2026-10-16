@@ -81,10 +81,6 @@ func (e *BulkUpsertUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*B
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionCreate}, {Domain: types.PermissionDomainUnitGroups, Action: types.ActionUpdate}}, RequireAll: true},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(UnitGroupSvc).BulkUpsertUnitGroups
 		},

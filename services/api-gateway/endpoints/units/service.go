@@ -65,7 +65,7 @@ func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) 
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
@@ -190,7 +190,7 @@ func (m *unitSvcImpl) BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsR
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *unitSvcImpl) DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {

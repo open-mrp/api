@@ -47,10 +47,6 @@ func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(MaterialSvc).ExportMaterials
 		},

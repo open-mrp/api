@@ -70,7 +70,7 @@ func (m *locationSvcImpl) ExportLocations(ctx context.Context, req *ExportLocati
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *locationSvcImpl) ListLocations(ctx context.Context, req *ListLocationsRequest) (*apiresource.List[apiresource.Location], *apierror.APIError) {
@@ -279,5 +279,5 @@ func (m *locationSvcImpl) BulkUpsertLocations(ctx context.Context, req *BulkUpse
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }

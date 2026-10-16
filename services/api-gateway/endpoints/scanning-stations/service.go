@@ -66,7 +66,7 @@ func (m *scanningStationSvcImpl) ExportScanningStations(ctx context.Context, req
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func loadScanningStationByID(ctx context.Context, id string) (*apiresource.ScanningStation, *apierror.APIError) {
@@ -175,7 +175,7 @@ func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context,
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {

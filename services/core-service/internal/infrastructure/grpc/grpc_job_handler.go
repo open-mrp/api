@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -126,6 +127,38 @@ func (h *jobGRPCHandler) GetJob(ctx context.Context, req *pb.GetJobRequest) (*pb
 	}
 
 	return &pb.GetJobResponse{Job: info}, nil
+}
+
+func (h *jobGRPCHandler) ListJobs(ctx context.Context, req *pb.ListJobsRequest) (*pb.ListJobsResponse, error) {
+	params := domain.ListJobsParams{Cursor: req.Cursor, Limit: req.GetLimit()}
+	for _, t := range req.GetTypes() {
+		params.Types = append(params.Types, constants.JobType(t))
+	}
+	for _, s := range req.GetStatuses() {
+		params.Statuses = append(params.Statuses, constants.JobStatus(s))
+	}
+
+	result, apiErr := h.jobSvc.ListJobs(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	jobs := make([]*pb.JobInfo, len(result.Jobs))
+	for i, job := range result.Jobs {
+		jobs[i] = jobToProto(job)
+		url, apiErr := h.exportSvc.DownloadURL(ctx, job)
+		if apiErr != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+		}
+		if url != "" {
+			jobs[i].Export = &pb.ExportInfo{Url: url}
+		}
+	}
+
+	return &pb.ListJobsResponse{
+		Jobs:     jobs,
+		PageInfo: &pb.JobPageInfo{NextCursor: result.PageInfo.NextCursor, PrevCursor: result.PageInfo.PrevCursor},
+	}, nil
 }
 
 func (h *jobGRPCHandler) CancelJob(ctx context.Context, req *pb.CancelJobRequest) (*pb.CancelJobResponse, error) {

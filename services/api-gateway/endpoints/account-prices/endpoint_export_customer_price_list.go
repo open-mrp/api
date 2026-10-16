@@ -45,10 +45,6 @@ func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
 		}},

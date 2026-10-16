@@ -270,5 +270,5 @@ func (m *accountPriceSvcImpl) ExportPriceList(ctx context.Context, req *ExportPr
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }

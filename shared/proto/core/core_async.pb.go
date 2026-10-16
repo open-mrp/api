@@ -26,6 +26,181 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ListJobsRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// constants.JobType values.
+	Types []string `protobuf:"bytes,3,rep,name=types,proto3" json:"types,omitempty"`
+	// queued | running | completed | failed | canceled.
+	Statuses      []string `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListJobsRequest) Reset() {
+	*x = ListJobsRequest{}
+	mi := &file_core_core_async_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListJobsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListJobsRequest) ProtoMessage() {}
+
+func (x *ListJobsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_async_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListJobsRequest.ProtoReflect.Descriptor instead.
+func (*ListJobsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_async_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ListJobsRequest) GetCursor() string {
+	if x != nil && x.Cursor != nil {
+		return *x.Cursor
+	}
+	return ""
+}
+
+func (x *ListJobsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListJobsRequest) GetTypes() []string {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+func (x *ListJobsRequest) GetStatuses() []string {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
+}
+
+type ListJobsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Jobs          []*JobInfo             `protobuf:"bytes,1,rep,name=jobs,proto3" json:"jobs,omitempty"`
+	PageInfo      *JobPageInfo           `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListJobsResponse) Reset() {
+	*x = ListJobsResponse{}
+	mi := &file_core_core_async_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListJobsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListJobsResponse) ProtoMessage() {}
+
+func (x *ListJobsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_async_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListJobsResponse.ProtoReflect.Descriptor instead.
+func (*ListJobsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_async_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListJobsResponse) GetJobs() []*JobInfo {
+	if x != nil {
+		return x.Jobs
+	}
+	return nil
+}
+
+func (x *ListJobsResponse) GetPageInfo() *JobPageInfo {
+	if x != nil {
+		return x.PageInfo
+	}
+	return nil
+}
+
+// JobPageInfo mirrors PageInfo, which this file can't import: core_identity_context.proto imports it.
+type JobPageInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NextCursor    *string                `protobuf:"bytes,1,opt,name=next_cursor,json=nextCursor,proto3,oneof" json:"next_cursor,omitempty"`
+	PrevCursor    *string                `protobuf:"bytes,2,opt,name=prev_cursor,json=prevCursor,proto3,oneof" json:"prev_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JobPageInfo) Reset() {
+	*x = JobPageInfo{}
+	mi := &file_core_core_async_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JobPageInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JobPageInfo) ProtoMessage() {}
+
+func (x *JobPageInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_async_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JobPageInfo.ProtoReflect.Descriptor instead.
+func (*JobPageInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_async_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *JobPageInfo) GetNextCursor() string {
+	if x != nil && x.NextCursor != nil {
+		return *x.NextCursor
+	}
+	return ""
+}
+
+func (x *JobPageInfo) GetPrevCursor() string {
+	if x != nil && x.PrevCursor != nil {
+		return *x.PrevCursor
+	}
+	return ""
+}
+
 type GetJobRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -35,7 +210,7 @@ type GetJobRequest struct {
 
 func (x *GetJobRequest) Reset() {
 	*x = GetJobRequest{}
-	mi := &file_core_core_async_proto_msgTypes[0]
+	mi := &file_core_core_async_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -47,7 +222,7 @@ func (x *GetJobRequest) String() string {
 func (*GetJobRequest) ProtoMessage() {}
 
 func (x *GetJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[0]
+	mi := &file_core_core_async_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +235,7 @@ func (x *GetJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJobRequest.ProtoReflect.Descriptor instead.
 func (*GetJobRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{0}
+	return file_core_core_async_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetJobRequest) GetId() string {
@@ -79,7 +254,7 @@ type GetJobResponse struct {
 
 func (x *GetJobResponse) Reset() {
 	*x = GetJobResponse{}
-	mi := &file_core_core_async_proto_msgTypes[1]
+	mi := &file_core_core_async_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -91,7 +266,7 @@ func (x *GetJobResponse) String() string {
 func (*GetJobResponse) ProtoMessage() {}
 
 func (x *GetJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[1]
+	mi := &file_core_core_async_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -104,7 +279,7 @@ func (x *GetJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJobResponse.ProtoReflect.Descriptor instead.
 func (*GetJobResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{1}
+	return file_core_core_async_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetJobResponse) GetJob() *JobInfo {
@@ -123,7 +298,7 @@ type CancelJobRequest struct {
 
 func (x *CancelJobRequest) Reset() {
 	*x = CancelJobRequest{}
-	mi := &file_core_core_async_proto_msgTypes[2]
+	mi := &file_core_core_async_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -135,7 +310,7 @@ func (x *CancelJobRequest) String() string {
 func (*CancelJobRequest) ProtoMessage() {}
 
 func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[2]
+	mi := &file_core_core_async_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -148,7 +323,7 @@ func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobRequest.ProtoReflect.Descriptor instead.
 func (*CancelJobRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{2}
+	return file_core_core_async_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CancelJobRequest) GetId() string {
@@ -167,7 +342,7 @@ type CancelJobResponse struct {
 
 func (x *CancelJobResponse) Reset() {
 	*x = CancelJobResponse{}
-	mi := &file_core_core_async_proto_msgTypes[3]
+	mi := &file_core_core_async_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -179,7 +354,7 @@ func (x *CancelJobResponse) String() string {
 func (*CancelJobResponse) ProtoMessage() {}
 
 func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[3]
+	mi := &file_core_core_async_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -192,7 +367,7 @@ func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobResponse.ProtoReflect.Descriptor instead.
 func (*CancelJobResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{3}
+	return file_core_core_async_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CancelJobResponse) GetJob() *JobInfo {
@@ -233,7 +408,7 @@ type JobInfo struct {
 
 func (x *JobInfo) Reset() {
 	*x = JobInfo{}
-	mi := &file_core_core_async_proto_msgTypes[4]
+	mi := &file_core_core_async_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -245,7 +420,7 @@ func (x *JobInfo) String() string {
 func (*JobInfo) ProtoMessage() {}
 
 func (x *JobInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[4]
+	mi := &file_core_core_async_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -258,7 +433,7 @@ func (x *JobInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobInfo.ProtoReflect.Descriptor instead.
 func (*JobInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{4}
+	return file_core_core_async_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *JobInfo) GetId() string {
@@ -370,7 +545,7 @@ type JobResultList struct {
 
 func (x *JobResultList) Reset() {
 	*x = JobResultList{}
-	mi := &file_core_core_async_proto_msgTypes[5]
+	mi := &file_core_core_async_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -382,7 +557,7 @@ func (x *JobResultList) String() string {
 func (*JobResultList) ProtoMessage() {}
 
 func (x *JobResultList) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[5]
+	mi := &file_core_core_async_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,7 +570,7 @@ func (x *JobResultList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobResultList.ProtoReflect.Descriptor instead.
 func (*JobResultList) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{5}
+	return file_core_core_async_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *JobResultList) GetItems() []*JobResultInfo {
@@ -439,7 +614,7 @@ type JobResultInfo struct {
 
 func (x *JobResultInfo) Reset() {
 	*x = JobResultInfo{}
-	mi := &file_core_core_async_proto_msgTypes[6]
+	mi := &file_core_core_async_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +626,7 @@ func (x *JobResultInfo) String() string {
 func (*JobResultInfo) ProtoMessage() {}
 
 func (x *JobResultInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[6]
+	mi := &file_core_core_async_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -464,7 +639,7 @@ func (x *JobResultInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobResultInfo.ProtoReflect.Descriptor instead.
 func (*JobResultInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{6}
+	return file_core_core_async_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *JobResultInfo) GetIndex() int32 {
@@ -530,7 +705,7 @@ type JobSubResourceInfo struct {
 
 func (x *JobSubResourceInfo) Reset() {
 	*x = JobSubResourceInfo{}
-	mi := &file_core_core_async_proto_msgTypes[7]
+	mi := &file_core_core_async_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -542,7 +717,7 @@ func (x *JobSubResourceInfo) String() string {
 func (*JobSubResourceInfo) ProtoMessage() {}
 
 func (x *JobSubResourceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[7]
+	mi := &file_core_core_async_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -555,7 +730,7 @@ func (x *JobSubResourceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobSubResourceInfo.ProtoReflect.Descriptor instead.
 func (*JobSubResourceInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{7}
+	return file_core_core_async_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *JobSubResourceInfo) GetId() string {
@@ -591,7 +766,7 @@ type ExportInfo struct {
 
 func (x *ExportInfo) Reset() {
 	*x = ExportInfo{}
-	mi := &file_core_core_async_proto_msgTypes[8]
+	mi := &file_core_core_async_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +778,7 @@ func (x *ExportInfo) String() string {
 func (*ExportInfo) ProtoMessage() {}
 
 func (x *ExportInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[8]
+	mi := &file_core_core_async_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +791,7 @@ func (x *ExportInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportInfo.ProtoReflect.Descriptor instead.
 func (*ExportInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{8}
+	return file_core_core_async_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ExportInfo) GetUrl() string {
@@ -630,7 +805,23 @@ var File_core_core_async_proto protoreflect.FileDescriptor
 
 const file_core_core_async_proto_rawDesc = "" +
 	"\n" +
-	"\x15core/core_async.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1f\n" +
+	"\x15core/core_async.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
+	"\x0fListJobsRequest\x12\x1b\n" +
+	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x14\n" +
+	"\x05types\x18\x03 \x03(\tR\x05types\x12\x1a\n" +
+	"\bstatuses\x18\x04 \x03(\tR\bstatusesB\t\n" +
+	"\a_cursor\"e\n" +
+	"\x10ListJobsResponse\x12!\n" +
+	"\x04jobs\x18\x01 \x03(\v2\r.core.JobInfoR\x04jobs\x12.\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x11.core.JobPageInfoR\bpageInfo\"y\n" +
+	"\vJobPageInfo\x12$\n" +
+	"\vnext_cursor\x18\x01 \x01(\tH\x00R\n" +
+	"nextCursor\x88\x01\x01\x12$\n" +
+	"\vprev_cursor\x18\x02 \x01(\tH\x01R\n" +
+	"prevCursor\x88\x01\x01B\x0e\n" +
+	"\f_next_cursorB\x0e\n" +
+	"\f_prev_cursor\"\x1f\n" +
 	"\rGetJobRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
 	"\x0eGetJobResponse\x12\x1f\n" +
@@ -687,10 +878,11 @@ const file_core_core_async_proto_rawDesc = "" +
 	"\x05_name\"6\n" +
 	"\n" +
 	"ExportInfo\x12\x10\n" +
-	"\x03url\x18\x05 \x01(\tR\x03urlJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x052\x83\x01\n" +
+	"\x03url\x18\x05 \x01(\tR\x03urlJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x052\xbe\x01\n" +
 	"\x0eCoreJobService\x123\n" +
 	"\x06GetJob\x12\x13.core.GetJobRequest\x1a\x14.core.GetJobResponse\x12<\n" +
-	"\tCancelJob\x12\x16.core.CancelJobRequest\x1a\x17.core.CancelJobResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\tCancelJob\x12\x16.core.CancelJobRequest\x1a\x17.core.CancelJobResponse\x129\n" +
+	"\bListJobs\x12\x15.core.ListJobsRequest\x1a\x16.core.ListJobsResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_async_proto_rawDescOnce sync.Once
@@ -704,41 +896,48 @@ func file_core_core_async_proto_rawDescGZIP() []byte {
 	return file_core_core_async_proto_rawDescData
 }
 
-var file_core_core_async_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_core_core_async_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_core_core_async_proto_goTypes = []any{
-	(*GetJobRequest)(nil),         // 0: core.GetJobRequest
-	(*GetJobResponse)(nil),        // 1: core.GetJobResponse
-	(*CancelJobRequest)(nil),      // 2: core.CancelJobRequest
-	(*CancelJobResponse)(nil),     // 3: core.CancelJobResponse
-	(*JobInfo)(nil),               // 4: core.JobInfo
-	(*JobResultList)(nil),         // 5: core.JobResultList
-	(*JobResultInfo)(nil),         // 6: core.JobResultInfo
-	(*JobSubResourceInfo)(nil),    // 7: core.JobSubResourceInfo
-	(*ExportInfo)(nil),            // 8: core.ExportInfo
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*ListJobsRequest)(nil),       // 0: core.ListJobsRequest
+	(*ListJobsResponse)(nil),      // 1: core.ListJobsResponse
+	(*JobPageInfo)(nil),           // 2: core.JobPageInfo
+	(*GetJobRequest)(nil),         // 3: core.GetJobRequest
+	(*GetJobResponse)(nil),        // 4: core.GetJobResponse
+	(*CancelJobRequest)(nil),      // 5: core.CancelJobRequest
+	(*CancelJobResponse)(nil),     // 6: core.CancelJobResponse
+	(*JobInfo)(nil),               // 7: core.JobInfo
+	(*JobResultList)(nil),         // 8: core.JobResultList
+	(*JobResultInfo)(nil),         // 9: core.JobResultInfo
+	(*JobSubResourceInfo)(nil),    // 10: core.JobSubResourceInfo
+	(*ExportInfo)(nil),            // 11: core.ExportInfo
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
 }
 var file_core_core_async_proto_depIdxs = []int32{
-	4,  // 0: core.GetJobResponse.job:type_name -> core.JobInfo
-	4,  // 1: core.CancelJobResponse.job:type_name -> core.JobInfo
-	5,  // 2: core.JobInfo.results:type_name -> core.JobResultList
-	9,  // 3: core.JobInfo.started_at:type_name -> google.protobuf.Timestamp
-	9,  // 4: core.JobInfo.completed_at:type_name -> google.protobuf.Timestamp
-	9,  // 5: core.JobInfo.failed_at:type_name -> google.protobuf.Timestamp
-	9,  // 6: core.JobInfo.cancelled_at:type_name -> google.protobuf.Timestamp
-	9,  // 7: core.JobInfo.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 8: core.JobInfo.updated_at:type_name -> google.protobuf.Timestamp
-	8,  // 9: core.JobInfo.export:type_name -> core.ExportInfo
-	6,  // 10: core.JobResultList.items:type_name -> core.JobResultInfo
-	7,  // 11: core.JobResultInfo.sub_resources:type_name -> core.JobSubResourceInfo
-	0,  // 12: core.CoreJobService.GetJob:input_type -> core.GetJobRequest
-	2,  // 13: core.CoreJobService.CancelJob:input_type -> core.CancelJobRequest
-	1,  // 14: core.CoreJobService.GetJob:output_type -> core.GetJobResponse
-	3,  // 15: core.CoreJobService.CancelJob:output_type -> core.CancelJobResponse
-	14, // [14:16] is the sub-list for method output_type
-	12, // [12:14] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	7,  // 0: core.ListJobsResponse.jobs:type_name -> core.JobInfo
+	2,  // 1: core.ListJobsResponse.page_info:type_name -> core.JobPageInfo
+	7,  // 2: core.GetJobResponse.job:type_name -> core.JobInfo
+	7,  // 3: core.CancelJobResponse.job:type_name -> core.JobInfo
+	8,  // 4: core.JobInfo.results:type_name -> core.JobResultList
+	12, // 5: core.JobInfo.started_at:type_name -> google.protobuf.Timestamp
+	12, // 6: core.JobInfo.completed_at:type_name -> google.protobuf.Timestamp
+	12, // 7: core.JobInfo.failed_at:type_name -> google.protobuf.Timestamp
+	12, // 8: core.JobInfo.cancelled_at:type_name -> google.protobuf.Timestamp
+	12, // 9: core.JobInfo.created_at:type_name -> google.protobuf.Timestamp
+	12, // 10: core.JobInfo.updated_at:type_name -> google.protobuf.Timestamp
+	11, // 11: core.JobInfo.export:type_name -> core.ExportInfo
+	9,  // 12: core.JobResultList.items:type_name -> core.JobResultInfo
+	10, // 13: core.JobResultInfo.sub_resources:type_name -> core.JobSubResourceInfo
+	3,  // 14: core.CoreJobService.GetJob:input_type -> core.GetJobRequest
+	5,  // 15: core.CoreJobService.CancelJob:input_type -> core.CancelJobRequest
+	0,  // 16: core.CoreJobService.ListJobs:input_type -> core.ListJobsRequest
+	4,  // 17: core.CoreJobService.GetJob:output_type -> core.GetJobResponse
+	6,  // 18: core.CoreJobService.CancelJob:output_type -> core.CancelJobResponse
+	1,  // 19: core.CoreJobService.ListJobs:output_type -> core.ListJobsResponse
+	17, // [17:20] is the sub-list for method output_type
+	14, // [14:17] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_core_core_async_proto_init() }
@@ -746,16 +945,18 @@ func file_core_core_async_proto_init() {
 	if File_core_core_async_proto != nil {
 		return
 	}
-	file_core_core_async_proto_msgTypes[4].OneofWrappers = []any{}
-	file_core_core_async_proto_msgTypes[6].OneofWrappers = []any{}
+	file_core_core_async_proto_msgTypes[0].OneofWrappers = []any{}
+	file_core_core_async_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_async_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_core_async_proto_msgTypes[9].OneofWrappers = []any{}
+	file_core_core_async_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_async_proto_rawDesc), len(file_core_core_async_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1805,6 +1805,8 @@ type ExportSvc interface {
 
 type JobSvc interface {
 	GetJob(ctx context.Context, jobID string) (*Job, *apierror.APIError)
+	// ListJobs returns a page of the caller's account's jobs; a portal caller sees only the jobs it raised.
+	ListJobs(ctx context.Context, params ListJobsParams) (*ListJobsResult, *apierror.APIError)
 	GetJobForExecution(ctx context.Context, jobID string) (*Job, *apierror.APIError)
 	// GetJobItems returns the payload a job was raised with.
 	GetJobItems(ctx context.Context, job *Job) (json.RawMessage, *apierror.APIError)

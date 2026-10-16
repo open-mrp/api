@@ -67,10 +67,6 @@ func (e *BulkUpsertPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*B
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}, {Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}}, RequireAll: true},
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertPropertiesRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(PropertySvc).BulkUpsertProperties
 		},

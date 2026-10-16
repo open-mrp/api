@@ -72,7 +72,7 @@ func (m *productionStepSvcImpl) ExportProductionSteps(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productionStepSvcImpl) ListProductionSteps(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError) {
@@ -321,7 +321,7 @@ func (m *productionStepSvcImpl) BulkUpsertProductionSteps(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {

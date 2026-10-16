@@ -15,6 +15,28 @@ service CoreJobService {
   // CancelJob settles a job as cancelled. The job itself is not removed: it is returned carrying its new state.
   rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
 
+  // ListJobs returns a page of the account's jobs, newest first.
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+}
+
+message ListJobsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  // constants.JobType values.
+  repeated string types = 3;
+  // queued | running | completed | failed | canceled.
+  repeated string statuses = 4;
+}
+
+message ListJobsResponse {
+  repeated JobInfo jobs = 1;
+  JobPageInfo page_info = 2;
+}
+
+// JobPageInfo mirrors PageInfo, which this file can't import: core_identity_context.proto imports it.
+message JobPageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
 }
 
 message GetJobRequest {

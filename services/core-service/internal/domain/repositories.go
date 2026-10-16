@@ -2048,6 +2048,8 @@ type PricingRepo interface {
 
 type JobRepo interface {
 	Get(ctx context.Context, jobID, accountID string) (*Job, *apierror.APIError)
+	// List returns a page of the account's jobs, newest first.
+	List(ctx context.Context, params ListJobsRepositoryParams) (*ListJobsResult, *apierror.APIError)
 	Create(ctx context.Context, params CreateJobRepositoryParams) *apierror.APIError
 	// PutItems places a job's payload ahead of its row: a large one is written to object storage
 	// and its key returned, anything else comes back to be stored inline. It makes no database

@@ -41,10 +41,6 @@ func (e *ExportProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}}},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionStepSvc).ExportProductionSteps
 		},

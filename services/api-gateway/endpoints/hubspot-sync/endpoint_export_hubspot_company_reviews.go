@@ -43,11 +43,7 @@ func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndp
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
-		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}}},
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).ExportCompanyReviews
 		},

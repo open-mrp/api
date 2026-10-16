@@ -89,11 +89,7 @@ func (e *BulkUpsertMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		Public:            false,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}, {Domain: types.PermissionDomainMaterials, Action: types.ActionUpdate}}, RequireAll: true},
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
-		Extras: apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
+		Extras:            apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(MaterialSvc).BulkUpsertMaterials
 		},

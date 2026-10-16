@@ -13,8 +13,8 @@ const SampleAsyncJobID = "jb_grz7cdpnz8jr"
 // answering `202 Accepted` point at one with a `Location` header; poll it for the outcome.
 type AsyncJob struct {
 	object.AsyncJob[Entity]
-	// The actor who requested the work.
-	CreatedBy *Actor `json:"created_by" expandable:"true"`
+	// Who requested the work.
+	CreatedBy *ActorRef `json:"created_by" validate:"required"`
 	// Where a completed export job's file can be downloaded.
 	//
 	// Null on every other job, and returned only to a caller asking for JSON — otherwise retrieving the job redirects to it.
@@ -58,7 +58,7 @@ var SampleAsyncJob = &AsyncJob{AsyncJob: object.AsyncJob[Entity]{
 	CompletedAt: timeutil.TimestampToTimePtr(sampleCreatedAtTimestamp),
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-}}
+}, CreatedBy: SampleActorRef}
 
 func (*AsyncJob) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAsyncJob)

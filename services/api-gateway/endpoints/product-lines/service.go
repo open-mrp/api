@@ -67,7 +67,7 @@ func (m *productLineSvcImpl) ExportProductLines(ctx context.Context, req *Export
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
@@ -200,7 +200,7 @@ func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *Bu
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 // wraps the single-ID load pattern used after every mutation and for the retrieve endpoint.

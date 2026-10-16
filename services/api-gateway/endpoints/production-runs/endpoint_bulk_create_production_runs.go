@@ -100,10 +100,6 @@ func (e *BulkCreateProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}}},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeAsyncJob,
-			Fields:     []string{"created_by", "created_by.role"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionRunSvc).BulkCreateProductionRuns
 		},

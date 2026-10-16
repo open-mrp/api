@@ -201,7 +201,7 @@ func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsert
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
@@ -340,7 +340,7 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		return nil, apiErr
 	}
 
-	return jobep.JobFromProto(resp.GetJob()), nil
+	return jobep.JobFromProto(ctx, resp.GetJob()), nil
 }
 
 func loadProductByID(ctx context.Context, id string) (*apiresource.Product, *apierror.APIError) {

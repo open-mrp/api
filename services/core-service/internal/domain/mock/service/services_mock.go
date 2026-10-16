@@ -11322,6 +11322,21 @@ func (mr *MockJobSvcMockRecorder) GetJobItems(ctx, job any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobItems", reflect.TypeOf((*MockJobSvc)(nil).GetJobItems), ctx, job)
 }
 
+// ListJobs mocks base method.
+func (m *MockJobSvc) ListJobs(ctx context.Context, params domain.ListJobsParams) (*domain.ListJobsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", ctx, params)
+	ret0, _ := ret[0].(*domain.ListJobsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs.
+func (mr *MockJobSvcMockRecorder) ListJobs(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockJobSvc)(nil).ListJobs), ctx, params)
+}
+
 // StageJobItems mocks base method.
 func (m *MockJobSvc) StageJobItems(ctx context.Context, items json.RawMessage) (*domain.StagedJobItems, *apierror.APIError) {
 	m.ctrl.T.Helper()

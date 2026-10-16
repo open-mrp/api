@@ -136,14 +136,15 @@ type AccountGroupQuantityDiscount struct {
 }
 
 type AccountIntegration struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	CredentialsV2   string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               string
+	AccountID        string
+	IntegrationCode  string
+	Name             string
+	CredentialsV2    string
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ConnectionStatus string
 }
 
 type AccountInventorySetting struct {
@@ -614,14 +615,16 @@ type Color struct {
 }
 
 type Consumption struct {
-	ID               string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	ItemID           string
-	QuantityID       string
-	ProductionStepID sql.NullString
-	WasteQuantityID  string
-	Instructions     sql.NullString
+	ID                    string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	ItemID                string
+	QuantityID            string
+	ProductionStepID      sql.NullString
+	WasteQuantityID       string
+	Instructions          sql.NullString
+	ManufacturingMethodID sql.NullString
+	SupplyCode            string
 }
 
 type Conversation struct {
@@ -836,6 +839,8 @@ type EmailLog struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+	RelatedType  sql.NullString
+	RelatedID    sql.NullString
 }
 
 type EmailMessage struct {
@@ -1155,6 +1160,10 @@ type Item struct {
 	UnitCostAmount          sql.NullString
 	UnitCostCurrency        sql.NullString
 	UnitCostPerUnitID       sql.NullString
+	IsActive                bool
+	SupplyCode              sql.NullString
+	StockingUnitID          sql.NullString
+	DefaultOrderUnitID      sql.NullString
 }
 
 type ItemAttribute struct {
@@ -1190,6 +1199,21 @@ type ItemCategoryType struct {
 	Name      string
 	Code      string
 	UpdatedAt time.Time
+}
+
+type ItemOrderUnit struct {
+	ItemID                    string
+	UnitID                    string
+	AccountID                 string
+	Position                  int32
+	PortalVisibility          string
+	DiscountType              sql.NullString
+	DiscountPercentOff        sql.NullString
+	DiscountAmountOffAmount   sql.NullString
+	DiscountAmountOffCurrency sql.NullString
+	StockingQuantity          sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 type ItemType struct {
@@ -1270,6 +1294,7 @@ type Machine struct {
 	ProductionStepID sql.NullString
 	SerialNumber     string
 	DepartmentID     string
+	IsActive         bool
 }
 
 type MachineDowntimeEvent struct {
@@ -1312,6 +1337,20 @@ type MachineItem struct {
 	ItemID    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type ManufacturingMethod struct {
+	ID                   string
+	AccountID            string
+	ItemID               string
+	Version              int32
+	StatusCode           string
+	OutputQuantityValue  string
+	OutputQuantityUnitID string
+	SalesOrderLineID     sql.NullString
+	ActivatedAt          sql.NullTime
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 type Material struct {
@@ -1468,6 +1507,29 @@ type MessagingReport struct {
 	ReporterAccountUserID string
 	Reason                string
 	CreatedAt             time.Time
+}
+
+type MethodOperationMachine struct {
+	AccountID   string
+	OperationID string
+	MachineID   string
+	CreatedAt   time.Time
+}
+
+type Note struct {
+	ID         string
+	AccountID  string
+	RecordType sql.NullString
+	RecordID   sql.NullString
+	Body       string
+	Type       string
+	Importance int8
+	ExpiresAt  sql.NullTime
+	ActorType  string
+	ActorID    sql.NullString
+	EditedAt   sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type Notification struct {
@@ -1648,6 +1710,7 @@ type PortalDomain struct {
 	VerifiedAt sql.NullTime
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	CheckedAt  sql.NullTime
 }
 
 type PortalRegistrationSession struct {
@@ -1682,6 +1745,7 @@ type Product struct {
 	ProductTypeCode string
 	ProductLineID   sql.NullString
 	IsPortalReady   bool
+	LeadTimeID      sql.NullString
 }
 
 type ProductLine struct {
@@ -2038,6 +2102,13 @@ type ProductionStep struct {
 	OverheadRateAmount    sql.NullString
 	OverheadRateCurrency  sql.NullString
 	OverheadRatePerUnitID sql.NullString
+	ManufacturingMethodID sql.NullString
+	Position              int32
+	SequenceCode          string
+	TypeCode              string
+	SetupTimeQuantityID   sql.NullString
+	MachineTimeID         sql.NullString
+	WorkInstructions      sql.NullString
 }
 
 type Property struct {

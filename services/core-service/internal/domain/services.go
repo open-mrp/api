@@ -1872,3 +1872,20 @@ type OperatingCalendarSvc interface {
 	CreateOperatingCalendarClosure(ctx context.Context, calendarID string, closedOn time.Time, name string) (*OperatingCalendarClosure, *apierror.APIError)
 	DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError
 }
+
+// NoteSvc manages notes: attributed commentary on any record or on the whole account. Notes are internal; portal users
+// never see them.
+type NoteSvc interface {
+	ListNotes(ctx context.Context, params ListNotesParams) (*ListNotesResult, *apierror.APIError)
+	GetNote(ctx context.Context, noteID string) (*Note, *apierror.APIError)
+	BatchGetNotesByIDs(ctx context.Context, ids []string) ([]*Note, *apierror.APIError)
+	CreateNote(ctx context.Context, params CreateNoteParams) (*Note, *apierror.APIError)
+	// UpdateNote is for the note's author only.
+	UpdateNote(ctx context.Context, params UpdateNoteParams) (*Note, *apierror.APIError)
+	// DeleteNote is for the note's author or an admin.
+	DeleteNote(ctx context.Context, noteID string) *apierror.APIError
+	// ImportNotes copies notes in from another store. It is for OpenMRP's own services, never exposed.
+	ImportNotes(ctx context.Context, notes []ImportNote) (int64, *apierror.APIError)
+	// RecallNotes is what an agent reads before it works. It is for OpenMRP's own services, never exposed.
+	RecallNotes(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
+}

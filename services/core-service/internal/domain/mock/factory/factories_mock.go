@@ -643,6 +643,20 @@ func (mr *MockRepoFactoryMockRecorder) NewMaterialRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMaterialRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMaterialRepo))
 }
 
+// NewNoteRepo mocks base method.
+func (m *MockRepoFactory) NewNoteRepo() domain.NoteRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewNoteRepo")
+	ret0, _ := ret[0].(domain.NoteRepo)
+	return ret0
+}
+
+// NewNoteRepo indicates an expected call of NewNoteRepo.
+func (mr *MockRepoFactoryMockRecorder) NewNoteRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNoteRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewNoteRepo))
+}
+
 // NewOperatingCalendarRepo mocks base method.
 func (m *MockRepoFactory) NewOperatingCalendarRepo() domain.OperatingCalendarRepo {
 	m.ctrl.T.Helper()

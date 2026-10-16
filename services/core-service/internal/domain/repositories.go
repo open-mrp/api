@@ -2095,3 +2095,16 @@ type ReferenceRepo interface {
 	// InUseBy returns the labels of the probes with at least one row referencing id, in probe order.
 	InUseBy(ctx context.Context, id string, probes []ReferenceProbe) ([]string, *apierror.APIError)
 }
+
+type NoteRepo interface {
+	List(ctx context.Context, params ListNotesParams) (*ListNotesResult, *apierror.APIError)
+	Get(ctx context.Context, accountID, noteID string) (*Note, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Note, *apierror.APIError)
+	Create(ctx context.Context, note *Note) *apierror.APIError
+	Update(ctx context.Context, note *Note) *apierror.APIError
+	Delete(ctx context.Context, accountID, noteID string) *apierror.APIError
+	// Import inserts notes copied from elsewhere, skipping any whose ID is already taken, so a copy can be repeated.
+	Import(ctx context.Context, notes []ImportNote) (int64, *apierror.APIError)
+	// Recall is account-wide notes except comments plus the notes on params.RecordIDs, unexpired, most important first.
+	Recall(ctx context.Context, params RecallNotesParams) ([]*Note, *apierror.APIError)
+}

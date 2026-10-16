@@ -68,6 +68,16 @@ const (
 	RecordTypeDevice RecordType = "device"
 	// RecordTypeConversation indicates that the record is a conversation.
 	RecordTypeConversation RecordType = "conversation"
+	// RecordTypeWorkCenter indicates that the record is a work center.
+	RecordTypeWorkCenter RecordType = "work_center"
+	// RecordTypeMachine indicates that the record is a machine.
+	RecordTypeMachine RecordType = "machine"
+	// RecordTypeScanningStation indicates that the record is a scanning station.
+	RecordTypeScanningStation RecordType = "scanning_station"
+	// RecordTypeItemCategory indicates that the record is an item category.
+	RecordTypeItemCategory RecordType = "item_category"
+	// RecordTypeProductLine indicates that the record is a product line.
+	RecordTypeProductLine RecordType = "product_line"
 )
 
 var recordTypes = []RecordType{
@@ -77,6 +87,7 @@ var recordTypes = []RecordType{
 	RecordTypeJob, RecordTypeWorkOrder, RecordTypeBatch, RecordTypeBatchScan, RecordTypeInventoryMovement, RecordTypeLot,
 	RecordTypeCustomer, RecordTypeSupplier, RecordTypeItem, RecordTypeManufacturingMethod, RecordTypePriceList,
 	RecordTypeAccountUser, RecordTypeAPIKey, RecordTypeAgent, RecordTypeDevice, RecordTypeConversation,
+	RecordTypeWorkCenter, RecordTypeMachine, RecordTypeScanningStation, RecordTypeItemCategory, RecordTypeProductLine,
 }
 
 func (m RecordType) IsValid() bool {

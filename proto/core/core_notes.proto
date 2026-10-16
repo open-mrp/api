@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+// CoreNoteService handles notes: attributed commentary on any record, or on the whole account, that agents also recall.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core_identity_context.proto";
+import "core/core_patch.proto";
+import "core/primitives.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreNoteService {
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse);
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc BatchGetNotesByIDs(BatchGetNotesByIDsRequest) returns (BatchGetNotesByIDsResponse);
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc UpdateNote(UpdateNoteRequest) returns (UpdateNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (google.protobuf.Empty);
+
+  // ImportNotes copies notes in from another store with their own IDs, authors and timestamps. An ID already present
+  // is skipped, so a batch can be sent again. For OpenMRP's services only.
+  rpc ImportNotes(ImportNotesRequest) returns (ImportNotesResponse);
+
+  // RecallNotes is what an agent reads before it works: account-wide guidance plus the notes on the given records,
+  // unexpired, most important first. For OpenMRP's services only.
+  rpc RecallNotes(RecallNotesRequest) returns (RecallNotesResponse);
+}
+
+// The record a note is on. type is a constants.RecordType.
+message NoteRecordRef {
+  string type = 1;
+  string id = 2;
+}
+
+message NoteInfo {
+  string id = 1;
+  // Unset for an account-wide note.
+  optional NoteRecordRef record = 2;
+  string body = 3;
+  // constants.NoteType.
+  string type = 4;
+  // constants.NoteImportance.
+  string importance = 5;
+  optional google.protobuf.Timestamp expires_at = 6;
+  Actor actor = 7;
+  optional google.protobuf.Timestamp edited_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListNotesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string record_ids = 3;
+  repeated string record_types = 4;
+  repeated string types = 5;
+  repeated string actor_types = 6;
+  // constants.NoteStatus values; empty returns every note.
+  repeated string statuses = 7;
+  optional string query = 8;
+}
+
+message ListNotesResponse {
+  repeated NoteInfo notes = 1;
+  PageInfo page_info = 2;
+}
+
+message GetNoteRequest {
+  string id = 1;
+}
+
+message GetNoteResponse {
+  NoteInfo note = 1;
+}
+
+message BatchGetNotesByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetNotesByIDsResponse {
+  repeated NoteInfo notes = 1;
+}
+
+message CreateNoteRequest {
+  // Unset for an account-wide note.
+  optional NoteRecordRef record = 1;
+  string body = 2;
+  optional string type = 3;
+  optional string importance = 4;
+  optional google.protobuf.Timestamp expires_at = 5;
+}
+
+message CreateNoteResponse {
+  NoteInfo note = 1;
+}
+
+message UpdateNoteRequest {
+  string id = 1;
+  optional string body = 2;
+  optional string type = 3;
+  optional string importance = 4;
+  TimestampPatch expires_at = 5;
+  // Moves the note to another record; clear_record makes it account-wide. The preview.9 memory routes use these.
+  optional NoteRecordRef record = 6;
+  bool clear_record = 7;
+}
+
+message UpdateNoteResponse {
+  NoteInfo note = 1;
+}
+
+message DeleteNoteRequest {
+  string id = 1;
+}
+
+message ImportNoteInput {
+  string id = 1;
+  string account_id = 2;
+  optional NoteRecordRef record = 3;
+  string body = 4;
+  string type = 5;
+  string importance = 6;
+  optional google.protobuf.Timestamp expires_at = 7;
+  Actor actor = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ImportNotesRequest {
+  repeated ImportNoteInput notes = 1;
+}
+
+message ImportNotesResponse {
+  // How many notes were new.
+  int64 inserted = 1;
+}
+
+message RecallNotesRequest {
+  string account_id = 1;
+  repeated string record_ids = 2;
+  int32 limit = 3;
+}
+
+message RecallNotesResponse {
+  repeated NoteInfo notes = 1;
+}

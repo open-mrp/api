@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/shared/apiversion"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/version"
@@ -132,6 +133,9 @@ func TestPreview9_ErrorShapeAndStatus(t *testing.T) {
 		_, body := errorBody(t, forge)
 		assert.Equal(t, preview, body["error"].(map[string]any)["code"], string(forge.Code))
 	}
+
+	_, body = errorBody(t, apierror.NewInvalidFormatError("kind", "Field 'kind' must be one of: a, b"))
+	assert.Equal(t, apperr.DocsBaseURL+"parameter_invalid", body["error"].(map[string]any)["doc_url"], "doc_url follows the rewritten code")
 
 	status, _ = errorBody(t, apierror.NewIdempotencyKeyReusedError("k"))
 	assert.Equal(t, http.StatusBadRequest, status)

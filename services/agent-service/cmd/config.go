@@ -29,6 +29,7 @@ const (
 	envPlatformMode           = "PLATFORM"
 	envGatewayInternalURL     = "API_GATEWAY_INTERNAL_URL"
 	envInternalSvcToken       = "INTERNAL_SERVICE_TOKEN" // #nosec G101 - Env var name, not a credential
+	envMemoryNoteBackfillOff  = "MEMORY_NOTE_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the agent service.
@@ -73,6 +74,10 @@ type config struct {
 
 	// InternalServiceToken (optional; default: "") is the shared secret presented to the gateway internal listener.
 	InternalServiceToken string
+
+	// MemoryNoteBackfillDisabled (optional; default: false) stops the backfill that copies agent memories into notes
+	// ("true" to stop it).
+	MemoryNoteBackfillDisabled bool
 }
 
 func (c *config) withDefaults(getenv func(string) string) *config {
@@ -104,6 +109,8 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		BillingServiceURL:      env.GetEnv(envBillingServiceURL, getenv),
 		GatewayInternalURL:     env.GetEnv(envGatewayInternalURL, getenv),
 		InternalServiceToken:   env.GetEnv(envInternalSvcToken, getenv),
+
+		MemoryNoteBackfillDisabled: env.GetEnv(envMemoryNoteBackfillOff, getenv) == "true",
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/open-mrp/api/services/agent-service/internal/agents"
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
@@ -22,10 +23,18 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/service"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/apikit/db/backfill"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/tracing"
 )
+
+// memoryNoteBackfillDelay is how long a pod waits before copying memories into notes: long enough for a rollout to
+// retire the previous release's pods, which still wrote memories.
+const memoryNoteBackfillDelay = 15 * time.Minute
+
+// memoryNoteBackfillRetry is how often a pod tries to take up the memory copy while it is unfinished.
+const memoryNoteBackfillRetry = 5 * time.Minute
 
 func Run(
 	ctx context.Context,
@@ -104,6 +113,29 @@ func Run(
 
 	if err := coreClient.WaitForReady(ctx); err != nil {
 		return err
+	}
+
+	// Agent memories are notes in core-service now. This copies the memories written before, once, paced and on one
+	// pod, after the rollout has retired the pods that still wrote memories. MEMORY_NOTE_BACKFILL_DISABLED=true stops it.
+	if !cfg.MemoryNoteBackfillDisabled {
+		memoryNotes, err := backfill.New(&backfill.Config{
+			Name: service.MemoryNoteBackfillName,
+			Batch: service.NewMemoryNoteBackfill(func(ctx context.Context, afterID string, limit int) ([]sqlc.ListAgentMemoriesAfterRow, error) {
+				return repository.ListAgentMemoriesAfter(ctx, queries, afterID, limit)
+			}, coreClient).Batch,
+			Progress: repository.NewBackfillProgressRepo(queries),
+		})
+		if err != nil {
+			return err
+		}
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(memoryNoteBackfillDelay):
+			}
+			memoryNotes.Keep(ctx, leaseSvc, memoryNoteBackfillRetry)
+		}()
 	}
 
 	// Billing-service gRPC client (required for Stripe customer ID resolution)

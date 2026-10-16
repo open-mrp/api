@@ -338,7 +338,7 @@ func TestForgeAPIKeys_ClientStatusRevokeAndActor(t *testing.T) {
 
 	// What the key does names it, with its client.
 	keyClient := NewClient(apiClient.baseURL, secret, SeedAccountID)
-	note := createAndCleanupWith(t, keyClient, "/v1/core/notes", map[string]any{"record": nil, "body": "from the key"})
+	note := createAndCleanupWith(t, keyClient, "/v1/core/notes", map[string]any{"body": "from the key"})
 	actor := jsonObject(note, "actor")
 	assert.Equal(t, "api_key", jsonField(actor, "type"))
 	assert.Equal(t, keyID, jsonField(actor, "id"))

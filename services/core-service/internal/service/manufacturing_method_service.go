@@ -871,6 +871,9 @@ func (s *manufacturingMethodSvcImpl) writeValueRows(ctx context.Context, op *dom
 		return rid, repo.InsertRate(ctx, rid, v)
 	}
 	money := func(p *domain.UnitPrice, param string) (string, *apierror.APIError) {
+		if p == nil || op.LaborTime == nil {
+			return "", apierror.NewInvariantViolationError("Operation " + op.ID + " has no " + param + " or labor_time.")
+		}
 		legacy, apiErr := validatedLegacyCurrencyPrice(ctx, units, *p, param)
 		if apiErr != nil {
 			return "", apiErr

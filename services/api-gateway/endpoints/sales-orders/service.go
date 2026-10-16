@@ -469,16 +469,6 @@ func salesOrderTotalsFromOrder(info *pb.SalesOrderInfo) *apiresource.SalesOrderT
 	}
 }
 
-// salesOrderPaymentStatusFromProto maps the proto payment status to the resource
-// enum, defaulting to unpaid for any empty or unrecognized value.
-func salesOrderPaymentStatusFromProto(status string) constants.SalesOrderPaymentStatus {
-	s := constants.SalesOrderPaymentStatus(status)
-	if !s.IsValid() {
-		return constants.SalesOrderPaymentStatusUnpaid
-	}
-	return s
-}
-
 // parseDecimal parses a decimal string, treating empty/invalid input as zero.
 func parseDecimal(s string) decimal.Decimal {
 	if s == "" {

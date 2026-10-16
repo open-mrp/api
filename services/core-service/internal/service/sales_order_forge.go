@@ -44,14 +44,6 @@ func (s *salesOrderSvcImpl) resolveOrderSnapshot(ctx context.Context, ownerAccou
 	return s.mediators().Address.Snapshot(ctx, accountID, input, param)
 }
 
-// customerDefaultSnapshot is the copy of a customer's default address for a new order, nil when it has none.
-func (s *salesOrderSvcImpl) customerDefaultSnapshot(ctx context.Context, ownerAccountID, buyerAccountID string, addressID *string) (*domain.AddressSnapshot, *apierror.APIError) {
-	if addressID == nil || *addressID == "" {
-		return nil, nil
-	}
-	return s.resolveOrderSnapshot(ctx, ownerAccountID, buyerAccountID, &domain.AddressSnapshot{AddressID: addressID}, "customer_id")
-}
-
 // orderAddressID is the address row an order's legacy address column points at for snap: the saved address it was
 // copied from, or, for an address given inline, a row of the order's own that no address book lists. Picks,
 // shipments and invoices still read the order's address through that column.

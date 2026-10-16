@@ -1030,29 +1030,29 @@ Removed (replaced by the above): `/production-schedules/*` (22 routes), `/produc
 ## Core ✅ finalized
 
 Audit events (public)
-- [ ] Shape kept. `starts_at` / `ends_at` → `occurred_after` / `occurred_before`; `root_resource_type` / `root_resource_id` → `root_resource_types[]` / `root_resource_ids[]`. Remove `GET /audit-events/resource-types` (fixed enum: `resource_type` is the `object` enum).
+- [x] Shape kept. `starts_at` / `ends_at` → `occurred_after` / `occurred_before`; `root_resource_type` / `root_resource_id` → `root_resource_types[]` / `root_resource_ids[]`. Remove `GET /audit-events/resource-types` (fixed enum: `resource_type` is the `object` enum).
 
 Request logs (public)
-- [ ] **C1** `request_body`, `response_body` (and `query_params`) are removed from the log resource. Bodies are fetched with a **separate call**: `GET /v1/core/request-logs/{id}/bodies` → `{ object: "request_log_bodies", request_body, response_body }` (secrets redacted), gated by a dedicated permission (`request_logs:read_bodies`). Bodies are moving to S3, so this is one object fetch per call and never part of list responses. `query_params` → typed `{ key: value }` map on the log (it's small). Date filters → `occurred_after` / `occurred_before`; `min_latency_us` kept.
+- [x] **C1** `request_body`, `response_body` (and `query_params`) are removed from the log resource. Bodies are fetched with a **separate call**: `GET /v1/core/request-logs/{id}/bodies` → `{ object: "request_log_bodies", request_body, response_body }` (secrets redacted), gated by a dedicated permission (`request_logs:read_bodies`). *(Dane, 2026-10-15: no separate permission; `request_logs:read` covers bodies.)* Bodies are moving to S3, so this is one object fetch per call and never part of list responses. `query_params` → typed `{ key: value }` map on the log (it's small). Date filters → `occurred_after` / `occurred_before`; `min_latency_us` kept.
 
 Email logs (public)
-- [ ] Add `related` (the invoice, order acknowledgment, statement, … it carried). Filters `send_statuses[]`, `created_after` / `created_before`, `related_ids[]`.
+- [x] Add `related` (the invoice, order acknowledgment, statement, … it carried). Filters `send_statuses[]`, `created_after` / `created_before`, `related_ids[]`.
 
 Jobs (public)
-- [ ] Async jobs move to `/v1/core/async-jobs` (X11): `POST /jobs/{id}/cancel` → `POST /v1/core/async-jobs/{id}/actions/cancel`. New `GET /v1/core/async-jobs` (`types[]`, `statuses[]`).
+- [x] Async jobs move to `/v1/core/async-jobs` (X11): `POST /jobs/{id}/cancel` → `POST /v1/core/async-jobs/{id}/actions/cancel`. New `GET /v1/core/async-jobs` (`types[]`, `statuses[]`).
 
 Sandboxes (public)
 - [ ] Kept; gain `seed: empty | sample_factory` (G4).
 
 Search (public)
-- [ ] **C2** Results are `{ object: "search_result", type, resource }` with `resource` expandable (`include[]=data.resource`, batch-loaded per type); no `entity` stubs. `customer` filter → `customer_ids[]`. Each type's docstring lists the columns it matches.
+- [x] **C2** Results are `{ object: "search_result", type, resource }` with `resource` expandable (`include[]=data.resource`, batch-loaded per type); no `entity` stubs. `customer` filter → `customer_ids[]`. Each type's docstring lists the columns it matches. *(As built: results also carry `resource_id`, since `resource` is null unless included; the include key is `resource`; `messaging_contact` results are `account_user`.)*
 
 Analytics
-- [ ] **C3** All analytics are **internal at forge.1**, including the currently public `oee`, `oee-trend`, `delivery-performance` and `schedule-attainment` (attainment joins the planning beta). Internal analytics move off PUT (GET, or POST `actions/query` for complex filters) but aren't part of the contract.
+- [x] **C3** All analytics are **internal at forge.1**, including the currently public `oee`, `oee-trend`, `delivery-performance` and `schedule-attainment` (attainment joins the planning beta). Internal analytics move off PUT (GET, or POST `actions/query` for complex filters) but aren't part of the contract.
 - [ ] **Future (separate design):** replace per-dashboard analytics endpoints with a flexible analytics query model (metrics × dimensions × filters × time buckets) so a new dashboard doesn't need a new endpoint.
 
 Other
-- [ ] **C4** `POST /core/records/actions/generate-pack-list` → `POST /v1/operations/shipments/{id}/actions/generate-pack-list`. `/identity/me/tenancy` reviewed with identity.
+- [x] **C4** `POST /core/records/actions/generate-pack-list` → `POST /v1/operations/shipments/{id}/actions/generate-pack-list`. `/identity/me/tenancy` reviewed with identity.
 
 ## Identity & auth (resources) ✅ finalized
 
@@ -1619,12 +1619,15 @@ Identity
 - Permission groups → `/identity/permissions` catalog; API key `status`, revoke via `actions/revoke`, create/rotate response `{ secret, api_key }`; favicon upload internal; customer parent set via `parent_customer_id` (child-accounts routes removed).
 
 Core
-- Request log bodies: read via `GET /core/request-logs/{id}/bodies` (separate call, new permission); list/retrieve no longer carry bodies.
-- Search results: `include[]=data.resource` to get labels (no `entity` stubs); `customer` filter → `customer_ids[]`.
+- Request log bodies: read via `GET /core/request-logs/{id}/bodies` (separate call, needs only `request_logs:read`); list/retrieve no longer carry bodies (preview.9 still reads them through the internal `request_body` / `response_body` includes).
+- Search results: `{object: search_result, type, resource_id, resource}`; `include[]=resource` to get the record (no `entity` stubs); `customer` filter → `customer_ids[]`; type `messaging_contact` → `account_user`. preview.9 still gets entities.
 - Audit events: `root_resource_type` / `root_resource_id` → `root_resource_types[]` / `root_resource_ids[]`.
 - Pack list: `POST /core/records/actions/generate-pack-list` → `POST /v1/operations/shipments/{id}/actions/generate-pack-list`.
 - Analytics: all internal (OEE, OEE trend, delivery performance, schedule attainment included) — dashboard keeps using internal routes; PUT → GET/POST query. Every PUT report is now `POST …/actions/query` (preview.9 PUTs are rerouted). `new-customers-table` and `sales-lines` cap `limit` at 100 (default 25; preview.9 keeps its 100 / 50 defaults), so larger pages must follow `next_page_url`.
 - Jobs: cancel → `actions/cancel`; job list available. Audit/request log date filters → `occurred_after`/`occurred_before`; audit resource-types endpoint removed.
+- Actors on audit events, request logs, email logs (`sent_by`) and async jobs (`created_by`) are always-present `{type, id, name, client}` refs; the `actor` / `sent_by` / `created_by` (and `.role`) include keys are gone. On preview.9 they keep the old actor shape, but `handle`, `avatar_url` and `role` read as null and a system actor reads as null, so actor handle and role chips disappear.
+- Email logs: `sent_by` is never null on forge (platform sends read as `{type: system}`); new `related.record`; filters `send_statuses[]`, `created_after`/`created_before`, `related_ids[]`.
+- Sandbox delete answers 200 with the deleted stub (was 202), preview.9 too.
 
 Production planning
 - Schedules, schedule settings, item/resource settings, fulfillment recommendations and demand overrides are replaced by demand + demand adjustments, item and work center `planning` sections, versioned production plans with planned orders / load / exceptions, pull release under WIP caps, and a weekly plan-vs-actual attainment view. All internal (private beta); the planning screens are rebuilt on them.

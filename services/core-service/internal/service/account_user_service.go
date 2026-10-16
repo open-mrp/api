@@ -3,22 +3,20 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
-	"github.com/open-mrp/api/shared/messaging"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/crypto"
-	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -35,6 +33,7 @@ type accountUserSvcImpl struct {
 	branding              BrandingAssets
 	frontendURL           string
 	portalURL             string
+	authClient            domain.CoreAuthClient
 }
 
 type AccountUserSvcConfig struct {
@@ -70,6 +69,9 @@ type AccountUserSvcConfig struct {
 
 	// PlatformMode (required) gates test-only relaxations; in test mode UserPhotosBucket is not required.
 	PlatformMode constants.PlatformMode
+
+	// AuthClient (required) mints the sign-in links invitations carry.
+	AuthClient domain.CoreAuthClient
 }
 
 func (c *AccountUserSvcConfig) validate() error {
@@ -94,6 +96,9 @@ func (c *AccountUserSvcConfig) validate() error {
 	if !c.PlatformMode.IsTest() && c.UserPhotosBucket == "" {
 		return fmt.Errorf("account user service: user photos bucket is required")
 	}
+	if c.AuthClient == nil {
+		return fmt.Errorf("account user service: auth client is required")
+	}
 	return nil
 }
 
@@ -113,6 +118,7 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		branding:              config.Branding,
 		frontendURL:           config.FrontendURL,
 		portalURL:             config.PortalURL,
+		authClient:            config.AuthClient,
 	}
 }
 
@@ -133,6 +139,7 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			userPhotosBucket:      s.userPhotosBucket,
 			frontendURL:           s.frontendURL,
 			portalURL:             s.portalURL,
+			authClient:            s.authClient,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -316,7 +323,25 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 	case domain.RecoveryPointStarted:
 		var result *domain.AccountUserDetail
 		var userID string
-		var generatedPassword string
+
+		// The sign-in link is minted before the transaction: it needs the user's ID, and a call to auth-service has no
+		// place inside one. An existing user keeps their ID; a new one gets the ID minted here.
+		newUserID, apiErr := id.GenID(id.UserIDPrefix, nil)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr))
+		}
+		var signInToken string
+		if params.Email != nil && !identity.IsExternalTarget() {
+			inviteeID := newUserID
+			if found, findErr := s.repos.NewUserRepo().FindByEmail(ctx, *params.Email); findErr == nil && found != nil {
+				inviteeID = found.ID
+			}
+			token, apiErr := s.authClient.IssueSignInToken(ctx, inviteeID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr))
+			}
+			signInToken = token
+		}
 
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
 			txCtx = event.WithRepos(txCtx, txSvc.repos)
@@ -392,28 +417,12 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					return existErr
 				}
 			} else {
-				// Create a new user.
-				newUserID, apiErr := id.GenID(id.UserIDPrefix, nil)
-				if apiErr != nil {
-					return apiErr
-				}
 				userID = newUserID
 
+				// Only a scanning-station login has a password; everyone else signs in through the link they're sent.
 				var hashedPassword *string
 				if params.Password != nil {
 					hp, err := crypto.HashBcrypt(*params.Password)
-					if err != nil {
-						return apierror.NewInternalError(err, "Failed to hash password.")
-					}
-					hashedPassword = &hp
-				} else if !isScanningStation {
-					// Generate a random password for non-scanning-station users.
-					genPass, err := crypto.RandHexString(16)
-					if err != nil {
-						return apierror.NewInternalError(err, "Failed to generate random password.")
-					}
-					generatedPassword = genPass
-					hp, err := crypto.HashBcrypt(generatedPassword)
 					if err != nil {
 						return apierror.NewInternalError(err, "Failed to hash password.")
 					}
@@ -489,51 +498,13 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				return apiErr
 			}
 
-			// Send welcome email if user has an email and we generated a password for them. Suppliers are skipped: there is no supplier portal yet, so a supplier-relation user has nowhere to log in and does not need their generated password.
-			if params.Email != nil && generatedPassword != "" && !identity.IsTargetSupplierAccount() {
-				emailParams := map[string]any{
-					"Name":     ptrutil.ValOrDefault(params.Name, "there"),
-					"Password": generatedPassword,
+			// Your own team members are invited; a customer's or supplier's contacts are not emailed until someone
+			// invites them.
+			if signInToken != "" {
+				if apiErr := txAccountUserRepo.SetInvitedAt(txCtx, accountUserID); apiErr != nil {
+					return apiErr
 				}
-
-				subject := "Welcome to OpenMRP"
-				if loginLink := welcomeLoginLink(txSvc.frontendURL, txSvc.portalURL, "", nil); loginLink != "" {
-					emailParams["LoginLink"] = loginLink
-				}
-
-				if identity.IsExternalTarget() {
-					actorAccountID := *identity.ActorAccountID()
-					txAccountRepo := txSvc.repos.NewAccountRepo()
-					accountName, _ := txAccountRepo.GetName(txCtx, actorAccountID)
-					logoRef, _ := txAccountRepo.GetBrandingLogoKey(txCtx, actorAccountID)
-					slug, _ := txAccountRepo.GetPortalSlug(txCtx, actorAccountID)
-
-					emailParams["AccountName"] = accountName
-					emailParams["IsBranded"] = true
-					// The stored value is an object key, so it has to be signed before it can be an <img src>.
-					if logoURL := txSvc.branding.LogoURL(txCtx, ptrutil.Deref(logoRef)); logoURL != "" {
-						emailParams["LogoURL"] = logoURL
-					}
-					// The user signs in to the merchant's portal. Best-effort: a failed domain lookup falls back to the slug-prefixed link.
-					verifiedDomain := ""
-					if portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
-						verifiedDomain = portalDomain.Domain
-					}
-					if loginLink := welcomeLoginLink(txSvc.frontendURL, txSvc.portalURL, verifiedDomain, slug); loginLink != "" {
-						emailParams["LoginLink"] = loginLink
-					}
-					subject = "Welcome to the " + accountName + " platform"
-				}
-
-				if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, messaging.EmailSendData{
-					To:         []string{*params.Email},
-					Subject:    subject,
-					TemplateID: constants.EmailTemplateNewUserWelcome,
-					Params:     emailParams,
-					// Scope the audit log to the originating (actor) account so the sender can confirm the email went out, even when creating a user for another account (external target).
-					AccountID: identity.ActorAccountID(),
-					SentByID:  &identity.Actor.ID,
-				}); apiErr != nil {
+				if apiErr := txSvc.sendSignInLink(txCtx, identity, params.Name, *params.Email, signInToken); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -785,21 +756,21 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 }
 
 // UpdateAccountUserStatus transitions an account user to the given target status. Consolidates lock (active→disabled), unlock (disabled→active), restore (removed→active), and delete (→removed). Idempotent: calling with the current status is a no-op.
-func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError {
+func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) (*domain.AccountUserDetail, *apierror.APIError) {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_status")
 	defer span.End()
 
 	if !targetStatus.IsValid() {
-		return tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid status: %s", targetStatus)))
+		return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid status: %s", targetStatus)))
 	}
 
 	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
-		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := checkSellerStaff(identity); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Removal uses the delete permission; other transitions use update.
@@ -808,11 +779,11 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		checkPermission = checkAccountUserDeletePermission
 	}
 	if apiErr := checkPermission(identity); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID
@@ -820,7 +791,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), accountID); apiErr != nil {
-			return tracing.Trace(span, apiErr)
+			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
@@ -828,10 +799,10 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	if identity.IsUser() {
 		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, *identity.ActorAccountID(), identity.Actor.ID, nil)
 		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
+			return nil, tracing.Trace(span, apiErr)
 		}
 		if callerDetail.StatusCode == constants.AccountUserStatusDisabled {
-			return tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot perform this action."))
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot perform this action."))
 		}
 	}
 
@@ -842,37 +813,37 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID, accountID)
 			if deletedCheckErr != nil {
-				return tracing.Trace(span, deletedCheckErr)
+				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewGoneError("This account user has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This account user has already been deleted and can no longer be modified."))
 			}
 		}
-		return tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Idempotent no-op when already in the target state.
 	if accountUser.StatusCode == targetStatus {
-		return nil
+		return s.statusResult(ctx, identity, accountID, accountUserID)
 	}
 
 	// Validate transition-specific rules.
 	switch targetStatus {
 	case constants.AccountUserStatusDisabled:
 		if accountUser.StatusCode == constants.AccountUserStatusRemoved {
-			return tracing.Trace(span, apierror.NewValidationError("Cannot lock a removed user. Restore the user first."))
+			return nil, tracing.Trace(span, apperr.NewInvalidStateTransitionError("A removed user can't be disabled. Activate them first."))
 		}
 		if identity.IsUser() && identity.Actor != nil && identity.Actor.ID == accountUser.UserID {
-			return tracing.Trace(span, apierror.NewValidationError("You cannot lock your own account."))
+			return nil, tracing.Trace(span, apierror.NewValidationError("You cannot lock your own account."))
 		}
 		if accountUser.RoleType != nil && *accountUser.RoleType == string(constants.RoleTypeAdmin) {
-			return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
+			return nil, tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
 		}
 	case constants.AccountUserStatusActive:
 		// Reactivating (from disabled or removed) consumes a seat. Seats are the acting account's plan, so a customer or supplier account's users do not count against it.
 		if !identity.IsExternalTarget() {
 			if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
-				return apiErr
+				return nil, apiErr
 			}
 		}
 	case constants.AccountUserStatusRemoved:
@@ -931,10 +902,23 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	})
 
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return nil
+	return s.statusResult(ctx, identity, accountID, accountUserID)
+}
+
+// statusResult is the member a status action answers with, read after the change.
+func (s *accountUserSvcImpl) statusResult(ctx context.Context, identity *types.Identity, accountID, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+	detail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := s.attachNotificationTypes(ctx, identity, detail); apiErr != nil {
+		return nil, apiErr
+	}
+	detail.ImageURL = s.resolveImageURL(ctx, accountID, detail.UserID, detail.ImageURL)
+	return detail, nil
 }
 
 // UpdateAccountUserPassword sets the password for an account user who has no email address (and so cannot use the email reset flow) after verifying the requester's password.
@@ -1113,12 +1097,12 @@ func resolveCommissionEligibility(roleType string, requested *bool, current bool
 	switch constants.RoleType(roleType) {
 	case constants.RoleTypeSalesRep:
 		if requested != nil && !*requested {
-			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Sales rep users are always eligible for commission.")
+			return false, apierror.NewFieldError("commission_eligibility", apierror.CodeInvalidFormat, "Sales rep users are always eligible for commission.")
 		}
 		return true, nil
 	case constants.RoleTypeScanner, constants.RoleTypeAgent:
 		if requested != nil && *requested {
-			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Scanning station and agent users cannot be eligible for commission.")
+			return false, apierror.NewFieldError("commission_eligibility", apierror.CodeInvalidFormat, "Scanning station and agent users cannot be eligible for commission.")
 		}
 		return false, nil
 	default:
@@ -1250,25 +1234,4 @@ func applyNotificationPreferences(ctx context.Context, relationRepo domain.Accou
 		enabled[code] = pref.Enabled
 	}
 	return nil
-}
-
-// loginPath mirrors the frontend's FrontendPaths.login.
-const loginPath = "/auth/login"
-
-// welcomeLoginLink returns where a newly added user signs in, or "" when there is no URL to give. The acting account's own users sign in to the dashboard (no portal domain or slug); a customer's users sign in to the merchant's portal: its verified custom domain when it has one, else its slug under the shared portal host.
-func welcomeLoginLink(frontendURL, portalURL, verifiedPortalDomain string, portalSlug *string) string {
-	if verifiedPortalDomain != "" {
-		return "https://" + verifiedPortalDomain + loginPath
-	}
-	if portalSlug != nil && strings.TrimSpace(*portalSlug) != "" {
-		if base := slugPortalBase(portalURL, portalSlug); base != "" {
-			return base + loginPath
-		}
-		return ""
-	}
-	frontendURL = strings.TrimRight(frontendURL, "/")
-	if frontendURL == "" {
-		return ""
-	}
-	return frontendURL + loginPath
 }

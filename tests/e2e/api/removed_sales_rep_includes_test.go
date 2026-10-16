@@ -52,13 +52,13 @@ func TestRemovedSalesRep_IncludesStayReadable(t *testing.T) {
 	repUserID, repEmail := jsonField(repUser, "id"), jsonField(repUser, "email")
 	require.NotEmpty(t, repEmail)
 
-	status, raw, err = apiClient.Put(accountUsersPath+"/"+repID+"/actions/remove", nil)
+	status, raw, err = apiClient.Post(accountUsersPath+"/"+repID+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 
 	// Records the caller may read carry their rep's user along, whatever the caller may read of the team.
 	callers := map[string]*Client{
-		"admin": apiClient,
+		"admin":                  apiClient,
 		"role without team read": customRoleClient(t, "customers:read", "sales_rep_territories:read", "transactions:read"),
 	}
 	for name, client := range callers {

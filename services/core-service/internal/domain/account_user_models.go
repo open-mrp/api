@@ -29,20 +29,36 @@ type AccountUserDetail struct {
 	// NotificationTypes are the notification types the acting account sends this user when it manages the user's account as a customer or supplier. Nil for the acting account's own users.
 	NotificationTypes []string `audit:"notification_types"`
 	LastUsedAt        *time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	// InvitedAt is when the member was last sent a sign-in link.
+	InvitedAt *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// PortalAccess is whether the member can sign in: active once they have, invited once they were sent a link, else none.
+func (d *AccountUserDetail) PortalAccess() constants.PortalAccess {
+	switch {
+	case d.LastUsedAt != nil:
+		return constants.PortalAccessActive
+	case d.InvitedAt != nil:
+		return constants.PortalAccessInvited
+	default:
+		return constants.PortalAccessNone
+	}
 }
 
 // ListAccountUsersParams are the parameters for listing account users.
 type ListAccountUsersParams struct {
-	AccountID            string
-	Query                *string
-	Cursor               *string
-	Limit                int32
-	RoleType             *string
-	IsCommissionEligible *bool
-	IncludeRemoved       bool
-	Includes             []string
+	AccountID             string
+	Query                 *string
+	Cursor                *string
+	Limit                 int32
+	RoleType              *string
+	CommissionEligibility *constants.CommissionEligibility
+	// Statuses limits the list to these statuses; empty lists every status.
+	Statuses []constants.AccountUserStatus
+	Created  CreatedRange
+	Includes []string
 }
 
 // ListAccountUsersResult is the result of listing account users.

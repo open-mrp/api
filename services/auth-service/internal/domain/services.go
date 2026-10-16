@@ -73,6 +73,9 @@ type PasswordSvc interface {
 
 	// RequestPasswordReset initiates a password reset flow for the identifier.
 	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
+
+	// IssueSignInToken mints the token of a sign-in link for a user another service adds or invites.
+	IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError)
 }
 
 type CreateRegistrationSessionInput struct {
@@ -245,9 +248,11 @@ type RegistrationAddress struct {
 }
 
 type CreateAPIKeyInput struct {
-	RoleID    string
-	Name      string
-	ExpiresAt *time.Time
+	RoleID       string
+	Name         string
+	ExpiresAt    *time.Time
+	ClientName   *string
+	ClientSource *string
 }
 
 type CreateAPIKeyResult struct {

@@ -18,9 +18,9 @@ type RetrieveRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Retrieves a single role by ID.
+// Retrieves a role.
 //
-// Both the roles your account owns and the system-owned roles shared by every account can be retrieved.
+// Your account's roles and the system roles OpenMRP shares with every account can be retrieved.
 type RetrieveRoleEndpoint struct{}
 
 func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role] {
@@ -33,7 +33,6 @@ func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveR
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionRead}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).GetRole
 		},

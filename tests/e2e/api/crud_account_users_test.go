@@ -51,8 +51,8 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 		assert.NotEmpty(t, jsonField(m, "status"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
-		_, ok := m["is_commission_eligible"].(bool)
-		assert.True(t, ok, "is_commission_eligible must always be present as a bool")
+		assert.Contains(t, []any{"eligible", "ineligible"}, m["commission_eligibility"], "commission_eligibility is always set for your own team")
+		assert.Contains(t, []any{"none", "invited", "active"}, m["portal_access"])
 	}
 }
 
@@ -186,14 +186,14 @@ func TestAccountUsers_IncludeRole(t *testing.T) {
 
 func TestAccountUsers_IncludeDepartment(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(accountUsersPath+"/"+SeedAccountUserID, url.Values{"include": {"department"}})
+	status, body, err := apiClient.GetListRaw(accountUsersPath+"/"+SeedAccountUserID, url.Values{"include": {"work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	// department may be null if the user has no department assigned, but the field should be present
-	_, ok := got["department"]
-	assert.True(t, ok, "department field should be present with ?include=department")
+	// work_center may be null when the user has none, but the field is present
+	_, ok := got["work_center"]
+	assert.True(t, ok, "work_center field should be present with ?include=work_center")
 }
 
 // --- CRUD ---
@@ -240,10 +240,10 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	name := uniqueName("e2e-au-allf")
 	email := name + "@e2e-test.openmrp.ai"
 	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         email,
-		"role_id":       SeedAdminRoleID,
-		"department_id": SeedDepartmentID,
+		"name":           name,
+		"email":          email,
+		"role_id":        SeedAdminRoleID,
+		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -265,7 +265,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
 	// Verify via GET with include
-	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got = parseJSON(getBody)
@@ -282,8 +282,8 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, SeedAdminRoleID, jsonField(role, "id"))
 	assert.Equal(t, "role", jsonField(role, "object"))
 
-	dept := jsonObject(got, "department")
-	require.NotNil(t, dept, "department must be set after create")
+	dept := jsonObject(got, "work_center")
+	require.NotNil(t, dept, "work_center must be set after create")
 	assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	assert.Equal(t, "work_center", jsonField(dept, "object"))
 
@@ -306,7 +306,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
 	// Verify via GET with include
-	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
+	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,work_center"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
 	updated = parseJSON(getBody2)
@@ -319,11 +319,11 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	updRole := jsonObject(updated, "role")
 	require.NotNil(t, updRole, "role should be updated")
 	assert.Equal(t, SeedSalesRepRoleID, jsonField(updRole, "id"))
-	assert.Equal(t, true, updated["is_commission_eligible"])
+	assert.Equal(t, "eligible", updated["commission_eligibility"])
 
 	// Department should be preserved
-	updDept := jsonObject(updated, "department")
-	require.NotNil(t, updDept, "department should be preserved")
+	updDept := jsonObject(updated, "work_center")
+	require.NotNil(t, updDept, "work_center should be preserved")
 	assert.Equal(t, SeedDepartmentID, jsonField(updDept, "id"))
 
 	// Audit
@@ -377,7 +377,7 @@ func TestAccountUsers_Remove(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
+	delStatus, delBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
@@ -409,7 +409,7 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	defer removeAccountUser(id)
 
 	// Lock via disable action.
-	lockStatus, lockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
+	lockStatus, lockBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, lockStatus, lockBody)
 
@@ -420,12 +420,12 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	assert.Equal(t, "disabled", jsonField(parseJSON(getBody), "status"))
 
 	// Re-applying disable is an idempotent no-op.
-	idemStatus, idemBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
+	idemStatus, idemBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, idemStatus, idemBody)
 
 	// Unlock via activate action.
-	unlockStatus, unlockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
+	unlockStatus, unlockBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/activate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, unlockStatus, unlockBody)
 
@@ -456,12 +456,12 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	defer removeAccountUser(id)
 
 	// Remove via remove action.
-	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
+	delStatus, delBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
 	// Restore via activate action.
-	restoreStatus, restoreBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
+	restoreStatus, restoreBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/activate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, restoreStatus, restoreBody)
 
@@ -523,14 +523,14 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 
 	removeAccountUser(id)
 
-	// List with removed_scope=included should find the removed user.
+	// The removed user is listed with statuses[]=removed.
 	// Paginate until found: rows accumulate across repeated e2e runs.
-	assertListContainsID(t, accountUsersPath, url.Values{"removed_scope": {"included"}}, id)
+	assertListContainsID(t, accountUsersPath, url.Values{"statuses[]": {"removed"}}, id)
 }
 
 // removeAccountUser is a test helper that soft-deletes a user via the remove action.
 func removeAccountUser(id string) {
-	_, _, _ = apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
+	_, _, _ = apiClient.Post(accountUsersPath+"/"+id+"/actions/remove", nil, newIdempotencyKey())
 }
 
 // --- Scanner creation ---
@@ -604,7 +604,7 @@ func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
 	defer removeAccountUser(id)
 
 	// User is already active; activate must be a no-op.
-	status, body, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
+	status, body, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/activate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -617,7 +617,7 @@ func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
 func TestAccountUsers_StatusLockAdminFails(t *testing.T) {
 	t.Parallel()
 	// The seeded admin account user cannot be disabled.
-	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/actions/disable", nil)
+	status, _, err := apiClient.Post(accountUsersPath+"/"+SeedAccountUserID+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 422, status, "admin users cannot be locked")
 }
@@ -637,14 +637,15 @@ func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
 	id := jsonField(parseJSON(createBody), "id")
 
 	// Remove first.
-	rmStatus, rmBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
+	rmStatus, rmBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, rmStatus, rmBody)
 
-	// Attempting to lock a removed user must fail.
-	lockStatus, _, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
+	// Disabling a removed user is not a transition its status allows.
+	lockStatus, lockBody, err := apiClient.Post(accountUsersPath+"/"+id+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 422, lockStatus, "removed users cannot be locked")
+	requireStatus(t, 409, lockStatus, lockBody)
+	requireErrorResponse(t, lockBody, "invalid_state_transition", "invalid_request_error")
 }
 
 // --- Scanner password endpoint ---
@@ -706,14 +707,14 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 			assert.False(t, present, "%s should not be exposed on the account_user resource", key)
 		}
 		assertNilField(t, got, "last_used_at")
-		assert.Equal(t, false, got["is_commission_eligible"])
+		assert.Equal(t, "ineligible", got["commission_eligibility"])
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
 		// Expandable fields should be nil without ?include
 		assertNilField(t, got, "user")
 		assertNilField(t, got, "role")
-		assertNilField(t, got, "department")
+		assertNilField(t, got, "work_center")
 
 		// Profile fields are exposed via the expanded user.
 		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user"}})
@@ -732,10 +733,10 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 
 		// Create with all fields
 		createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
-			"name":          name,
-			"email":         email,
-			"role_id":       SeedAdminRoleID,
-			"department_id": SeedDepartmentID,
+			"name":           name,
+			"email":          email,
+			"role_id":        SeedAdminRoleID,
+			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -755,7 +756,7 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		requireStatus(t, 200, patchStatus, patchBody)
 
 		// GET with include to verify preservation
-		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
+		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,work_center"}})
 		require.NoError(t, err)
 		requireStatus(t, 200, getStatus, getBody)
 
@@ -780,8 +781,8 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		assert.Equal(t, SeedAdminRoleID, jsonField(role, "id"))
 
 		// Preserved department
-		dept := jsonObject(got, "department")
-		require.NotNil(t, dept, "department should be preserved")
+		dept := jsonObject(got, "work_center")
+		require.NotNil(t, dept, "work_center should be preserved")
 		assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	})
 }
@@ -805,7 +806,7 @@ func TestAccountUsers_CommissionEligibleOnCustomRole(t *testing.T) {
 		"name":                   name,
 		"email":                  email,
 		"role_id":                roleID,
-		"is_commission_eligible": true,
+		"commission_eligibility": "eligible",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -814,12 +815,12 @@ func TestAccountUsers_CommissionEligibleOnCustomRole(t *testing.T) {
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 	defer removeAccountUser(id)
-	assert.Equal(t, true, created["is_commission_eligible"])
+	assert.Equal(t, "eligible", created["commission_eligibility"])
 
-	assertListContainsID(t, accountUsersPath, url.Values{"is_commission_eligible": {"true"}}, id)
+	assertListContainsID(t, accountUsersPath, url.Values{"commission_eligibility": {"eligible"}}, id)
 	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"role_type": {"sales_rep"}}, "id", id),
 		"commission-eligible custom-role user must not appear in role_type=sales_rep")
-	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"is_commission_eligible": {"false"}}, "id", id))
+	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"commission_eligibility": {"ineligible"}}, "id", id))
 }
 
 func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
@@ -839,23 +840,23 @@ func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 	defer removeAccountUser(id)
-	assert.Equal(t, true, created["is_commission_eligible"])
+	assert.Equal(t, "eligible", created["commission_eligibility"])
 
 	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
-		"is_commission_eligible": false,
+		"commission_eligibility": "ineligible",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, patchStatus, patchBody)
 	errObj := requireErrorResponse(t, patchBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "is_commission_eligible")
+	assertErrorParam(t, errObj, "commission_eligibility")
 }
 
 func TestAccountUsers_CommissionEligibleFilterIncludesSalesRepRole(t *testing.T) {
 	t.Parallel()
 
 	assertListContainsID(t, accountUsersPath, url.Values{"role_type": {"sales_rep"}}, SeedSalesRepStaleFlagAccountUserID)
-	assertListContainsID(t, accountUsersPath, url.Values{"is_commission_eligible": {"true"}}, SeedSalesRepStaleFlagAccountUserID)
-	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"is_commission_eligible": {"false"}}, "id", SeedSalesRepStaleFlagAccountUserID))
+	assertListContainsID(t, accountUsersPath, url.Values{"commission_eligibility": {"eligible"}}, SeedSalesRepStaleFlagAccountUserID)
+	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"commission_eligibility": {"ineligible"}}, "id", SeedSalesRepStaleFlagAccountUserID))
 }
 
 // --- Assigning roles ---

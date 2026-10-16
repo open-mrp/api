@@ -1056,12 +1056,12 @@ Other
 
 ## Identity & auth (resources) ✅ finalized
 
-- [ ] **I1** Account users: `status: active | disabled | removed` (all visible; `statuses[]` omitted = all; no `removed_scope` hiding). `PUT …/actions/activate|disable|remove` → `POST`. Seat rules unchanged.
-- [ ] **I2** No generated passwords: email users get a sign-in link; the API never returns or emails a password. (Any flow relying on the emailed password, e.g. portal onboarding, moves to the link.) Username-only users are replaced by the auth redesign (devices and operators).
-- [ ] **I3** `department` → `work_center`; `is_commission_eligible` → `commission_eligibility: eligible | ineligible`; `notification_types` moves to messaging (notification preferences).
-- [ ] **I4** `GET /identity/permission-groups` → `GET /v1/identity/permissions` catalog `{ code, name, description, group }` (no id/owner/timestamps); roles reference codes. (Permission model: see below.)
-- [ ] **I5** API keys: add read-only `status: active | expired | revoked`; create/rotate response `created_api_key { api_key_secret, api_key_info }` → `{ secret, api_key }` (secret shown once); `DELETE /api-keys/{id}` (which already revokes and keeps the record) → `POST /api-keys/{id}/actions/revoke`; rotate keeps `revoke_at`.
-- [ ] **I6** `PUT /identity/accounts/{id}/favicon` becomes internal (account settings all internal at forge.1; a public `GET /identity/account` is additive later).
+- [x] **I1** Account users: `status: active | disabled | removed` (all visible; `statuses[]` omitted = all; no `removed_scope` hiding). `PUT …/actions/activate|disable|remove` → `POST`. Seat rules unchanged. *(IDN1: actions answer with the account user; disabling a removed member is 409 `invalid_state_transition`; list adds `created_after`/`created_before`; `q` is a substring match on the user's name, email or username.)*
+- [x] **I2** No generated passwords: email users get a sign-in link; the API never returns or emails a password. (Any flow relying on the emailed password, e.g. portal onboarding, moves to the link.) Username-only users are replaced by the auth redesign (devices and operators). *(IDN1: the link is a 72-hour password-reset token minted by auth-service `IssueSignInToken`, on the dashboard for your team and on the portal's slug host for customer contacts (never a custom domain); until AUTH ships passwordless it lets the person choose a password. `username`/`password` and contact `preferences` stay as internal request fields for preview.9 and stations.)*
+- [x] **I3** `department` → `work_center`; `is_commission_eligible` → `commission_eligibility: eligible | ineligible`; `notification_types` moves to messaging (notification preferences). *(IDN1: `notification_types` is an internal field until MSG2 replaces it. The permission domain stays `departments:*`, named "Work centers" in the catalog: renaming codes would rewrite every role row and the preview.9 role editor.)*
+- [x] **I4** `GET /identity/permission-groups` → `GET /v1/identity/permissions` catalog `{ code, name, description, group }` (no id/owner/timestamps); roles reference codes. (Permission model: see below.) *(IDN1: `{ object: "permission", code, name, description, area, level }` — `group` is the A4 `area`; filters `areas[]`, `levels[]`, `q`. permission-groups is internal for preview.9.)*
+- [x] **I5** API keys: add read-only `status: active | expired | revoked`; create/rotate response `created_api_key { api_key_secret, api_key_info }` → `{ secret, api_key }` (secret shown once); `DELETE /api-keys/{id}` (which already revokes and keeps the record) → `POST /api-keys/{id}/actions/revoke`; rotate keeps `revoke_at`. *(IDN1: the DELETE stays as an internal route for preview.9.)*
+- [x] **I6** `PUT /identity/accounts/{id}/favicon` becomes internal (account settings all internal at forge.1; a public `GET /identity/account` is additive later).
 - [x] **I7** Customer hierarchy: `parent_customer_id` writable on customer create/update (clearable); remove internal `/identity/child-accounts/*`. Product-line access grants stay internal. *(CUS: the internal `/identity/child-accounts/*` routes stay for 1.0.forge-preview.9 callers only; CLEAN removes them.)*
 
 ## Authentication & permissions redesign ✅ decided
@@ -1085,10 +1085,10 @@ Operators at devices (A3) — designed now, shipped later (additive)
 - [ ] Badge (barcode / QR / NFC issued to an account user) **and** PIN, used only on an enrolled device to identify who is working; not a sign-in elsewhere. Operators may lack email. Scanning station `operator_requirement` gains `badge`. `POST /identity/account-users/{id}/actions/issue-badge` (reissue invalidates the old badge). Records carry `operator`. Not part of forge.1; the `operator` field and actor model leave room for it.
 
 Permissions (A4)
-- [ ] Role: `{ name, template?, access { catalog, sales, purchasing, inventory, production, finance, settings: none | read | edit | full }, grants [codes], revokes [codes], permissions (read-only effective list), notification_defaults (see messaging N3) }`.
-- [ ] Levels: `read` = list/retrieve; `edit` adds create/update; `full` adds delete and the area's sensitive actions. Every permission code belongs to one area and level (recorded in the `/identity/permissions` catalog).
-- [ ] Templates (catalog `GET /v1/identity/role-templates`): `owner, admin, sales, customer_service, purchasing, warehouse, production_supervisor, operator, accounting, read_only`; a starting point, not a live link.
-- [ ] `POST /v1/identity/roles/actions/preview` returns effective permissions before saving. Devices, users, API keys and agents all get permissions through roles.
+- [x] Role: `{ name, template?, access { catalog, sales, purchasing, inventory, production, finance, settings: none | read | edit | full }, grants [codes], revokes [codes], permissions (read-only effective list), notification_defaults (see messaging N3) }`. *(IDN1, without `notification_defaults` (MSG2): `role.access` json + `template_code` are the definition, `role_permission` keeps the effective rows every check reads; a role with no stored access is described from its rows with the levels that need the fewest grants/revokes. Baseline codes (`self`, `messaging`, `notes`, `alerts`, `jobs:read`) sit at level `none`: every role holds them unless revoked, and granting them needs nothing. `type` stays. Delete is 409 `resource_in_use` while a non-removed member or unrevoked key holds the role. Preview.9 `permissions` writes become access none + grants + baseline revokes.)*
+- [x] Levels: `read` = list/retrieve; `edit` adds create/update; `full` adds delete and the area's sensitive actions. Every permission code belongs to one area and level (recorded in the `/identity/permissions` catalog). *(IDN1: sensitive = `costs:read`, `api_keys:*`, `integrations:*`, `billing:*`, `roles:create|update`; `suppliers:delete` is purchasing full.)*
+- [x] Templates (catalog `GET /v1/identity/role-templates`): `owner, admin, sales, customer_service, purchasing, warehouse, production_supervisor, operator, accounting, read_only`; a starting point, not a live link.
+- [x] `POST /v1/identity/roles/actions/preview` returns effective permissions before saving. Devices, users, API keys and agents all get permissions through roles. *(IDN1: answers a list of `permission` objects.)*
 
 Removed
 - [ ] `/v1/auth/actions/login` (password), `/v1/auth/passwords/*`, `/v1/auth/scanner-passwords`.
@@ -1329,7 +1329,7 @@ Any planning policy (one stage to finished goods, or several stages separated by
 
 These are decisions where our design differs from common ERP practice. They supersede earlier sections where they conflict.
 
-- [ ] **Q1 Contacts stay account users, without implied access.**
+- [x] **Q1 Contacts stay account users, without implied access.** *(IDN1: `account_user.invited_at` (00113; data 00029 marks members with an email who never signed in as invited); `portal_access` is `active` once they used the account, `invited` once sent a link. Inviting a supplier contact is 422 (no supplier portal). Contacts can still reach "forgot password" on the portal; blocking sign-in for `none` waits for AUTH.)*
   - A customer's or supplier's contacts are account users of that account (one model for people).
   - Adding a contact never grants portal access and never emails them. New read-only `portal_access: none | invited | active`; `POST /v1/identity/account-users/{id}/actions/invite` sends the sign-in link.
   - Contacts receive email only when listed in the customer's `notification_recipients` or an order's `email_recipients`.
@@ -1380,7 +1380,7 @@ Goal: an agent goes from nothing to a working, safe API key in one call, and a h
   - Installable skills for Claude Code, Cursor and Codex covering our conventions.
   - An error-code index (G5).
   - A CLI (`openmrp sign-up | verify | request`).
-- [ ] **G7 Which agent did it.**
+- [ ] **G7 Which agent did it.** *(IDN1: `api_key.client { name, source }` on create (rotation keeps it), `expires_at` settable, actors' `client` resolved from the key; sign-up keys are AGT's.)*
   - API keys gain an optional `client { name, source }` (e.g. `claude-code`), set at sign-up or key creation.
   - API keys gain `expires_at` (nullable; settable on create; always set for sign-up keys).
   - `actor` for an API key carries `client`, so audit events, notes and movements read "API key · Claude Code".
@@ -1625,6 +1625,9 @@ Identity
 - Account user actions → POST; removed users visible with `status: removed`; `department` → `work_center`; `is_commission_eligible` → `commission_eligibility`.
 - Adding users sends a sign-in link, never a password.
 - Permission groups → `/identity/permissions` catalog; API key `status`, revoke via `actions/revoke`, create/rotate response `{ secret, api_key }`; favicon upload internal; customer parent set via `parent_customer_id` (child-accounts routes removed).
+- (IDN1) Account users: `notification_types` and contact `preferences` are internal until MSG2; list filter `commission_eligibility` replaces `is_commission_eligible`, `statuses[]` replaces `removed_scope` (preview.9 keeps both). Status actions answer with the account user instead of `{}`.
+- (IDN1) Adding a customer contact no longer emails anyone, on preview.9 too: the contact page needs an Invite button (`POST …/actions/invite`) and `portal_access`. Own-team welcome emails carry a sign-in link (password-reset page, 72 hours) instead of a temporary password.
+- (IDN1) Roles: `access`, `grants`, `revokes`, `template` on forge; `permissions` is the catalog's effective list (codes outside the catalog, such as `costs:create`, no longer appear). A forge role created with no access/grants holds the baseline (`self`, `messaging`, `notes`, `alerts`, `jobs:read`). Role delete in use: `resource_conflict` → `resource_in_use`.
 
 Core
 - Request log bodies: read via `GET /core/request-logs/{id}/bodies` (separate call, needs only `request_logs:read`); list/retrieve no longer carry bodies (preview.9 still reads them through the internal `request_body` / `response_body` includes).

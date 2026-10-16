@@ -27,7 +27,9 @@ func TestCustomerPortalUser_DisabledLosesMerchantAccess(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	accountUserID := jsonField(parseJSON(body), "id")
-	defer func() { _, _, _ = merchant.Put(accountUsersPath+"/"+accountUserID+"/actions/remove", nil) }()
+	defer func() {
+		_, _, _ = merchant.Post(accountUsersPath+"/"+accountUserID+"/actions/remove", nil, newIdempotencyKey())
+	}()
 
 	portalUser := loginAsUser(t, username, password, SeedAccountID)
 	merchantOrders := func() int {
@@ -37,7 +39,7 @@ func TestCustomerPortalUser_DisabledLosesMerchantAccess(t *testing.T) {
 	}
 	require.Equal(t, http.StatusOK, merchantOrders(), "an active portal user should reach the merchant")
 
-	status, body, err = customerAdmin.Put(accountUsersPath+"/"+accountUserID+"/actions/disable", nil)
+	status, body, err = customerAdmin.Post(accountUsersPath+"/"+accountUserID+"/actions/disable", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

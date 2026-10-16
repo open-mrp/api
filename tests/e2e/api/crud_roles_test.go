@@ -494,7 +494,7 @@ func TestRoles_DeleteBlockedWhenUsersAssigned(t *testing.T) {
 	deleteStatus, deleteBody, err := apiClient.Delete(rolesPath + "/" + roleID)
 	require.NoError(t, err)
 	requireStatus(t, 409, deleteStatus, deleteBody)
-	requireErrorResponse(t, deleteBody, "resource_conflict", "invalid_request_error")
+	requireErrorResponse(t, deleteBody, "resource_in_use", "invalid_request_error")
 
 	removeAccountUser(accountUserID)
 	delStatus, delBody, err := apiClient.Delete(rolesPath + "/" + roleID)

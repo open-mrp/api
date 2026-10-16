@@ -42,8 +42,10 @@ INSERT INTO api_key (
     role_id,
     created_at,
     updated_at,
-    expires_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), ?)
+    expires_at,
+    client_name,
+    client_source
+) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), ?, ?, ?)
 `
 
 type CreateAPIKeyParams struct {
@@ -55,6 +57,8 @@ type CreateAPIKeyParams struct {
 	OwnerAccountID string
 	RoleID         string
 	ExpiresAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 }
 
 func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (sql.Result, error) {
@@ -67,11 +71,13 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (sql
 		arg.OwnerAccountID,
 		arg.RoleID,
 		arg.ExpiresAt,
+		arg.ClientName,
+		arg.ClientSource,
 	)
 }
 
 const findAPIKeyBaseByDatabaseID = `-- name: FindAPIKeyBaseByDatabaseID :one
-SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at FROM api_key WHERE api_key.id = ?
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source FROM api_key WHERE api_key.id = ?
 `
 
 func (q *Queries) FindAPIKeyBaseByDatabaseID(ctx context.Context, id int64) (ApiKey, error) {
@@ -91,12 +97,14 @@ func (q *Queries) FindAPIKeyBaseByDatabaseID(ctx context.Context, id int64) (Api
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 	)
 	return i, err
 }
 
 const findAPIKeyBaseByTypeID = `-- name: FindAPIKeyBaseByTypeID :one
-SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at FROM api_key WHERE api_key.type_id = ?
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source FROM api_key WHERE api_key.type_id = ?
 `
 
 func (q *Queries) FindAPIKeyBaseByTypeID(ctx context.Context, typeID string) (ApiKey, error) {
@@ -116,12 +124,14 @@ func (q *Queries) FindAPIKeyBaseByTypeID(ctx context.Context, typeID string) (Ap
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 	)
 	return i, err
 }
 
 const findAPIKeyByID = `-- name: FindAPIKeyByID :one
-SELECT id, type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at, last_used_at, expires_at, revoked_at FROM api_key WHERE key_id = ? OR type_id = ?
+SELECT id, type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at, last_used_at, expires_at, revoked_at, client_name, client_source FROM api_key WHERE key_id = ? OR type_id = ?
 `
 
 type FindAPIKeyByIDParams struct {
@@ -146,6 +156,8 @@ func (q *Queries) FindAPIKeyByID(ctx context.Context, arg FindAPIKeyByIDParams) 
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 	)
 	return i, err
 }
@@ -165,6 +177,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -186,6 +200,8 @@ type FindAPIKeyWithRoleByDatabaseIDRow struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 	RoleName       sql.NullString
 	RoleTypeCode   sql.NullString
 }
@@ -207,6 +223,8 @@ func (q *Queries) FindAPIKeyWithRoleByDatabaseID(ctx context.Context, id int64) 
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 		&i.RoleName,
 		&i.RoleTypeCode,
 	)
@@ -228,6 +246,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -249,6 +269,8 @@ type FindAPIKeyWithRoleByKeyIDRow struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 	RoleName       sql.NullString
 	RoleTypeCode   sql.NullString
 }
@@ -270,6 +292,8 @@ func (q *Queries) FindAPIKeyWithRoleByKeyID(ctx context.Context, keyID string) (
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 		&i.RoleName,
 		&i.RoleTypeCode,
 	)
@@ -291,6 +315,8 @@ SELECT
     api_key.last_used_at,
     api_key.expires_at,
     api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -312,6 +338,8 @@ type FindAPIKeyWithRoleByTypeIDRow struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 	RoleName       sql.NullString
 	RoleTypeCode   sql.NullString
 }
@@ -333,6 +361,8 @@ func (q *Queries) FindAPIKeyWithRoleByTypeID(ctx context.Context, typeID string)
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ClientName,
+		&i.ClientSource,
 		&i.RoleName,
 		&i.RoleTypeCode,
 	)
@@ -353,7 +383,9 @@ SELECT
     api_key.updated_at,
     api_key.last_used_at,
     api_key.expires_at,
-    api_key.revoked_at
+    api_key.revoked_at,
+    api_key.client_name,
+    api_key.client_source
 FROM api_key
 WHERE api_key.type_id IN (/*SLICE:ids*/?)
 AND api_key.owner_account_id = ?
@@ -398,6 +430,8 @@ func (q *Queries) GetAPIKeysByIDs(ctx context.Context, arg GetAPIKeysByIDsParams
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ClientName,
+			&i.ClientSource,
 		); err != nil {
 			return nil, err
 		}
@@ -414,7 +448,7 @@ func (q *Queries) GetAPIKeysByIDs(ctx context.Context, arg GetAPIKeysByIDsParams
 
 const listAPIKeysBackward = `-- name: ListAPIKeysBackward :many
 SELECT
-    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at,
+    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -459,6 +493,8 @@ type ListAPIKeysBackwardRow struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 	RoleName       sql.NullString
 	RoleTypeCode   sql.NullString
 }
@@ -497,6 +533,8 @@ func (q *Queries) ListAPIKeysBackward(ctx context.Context, arg ListAPIKeysBackwa
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ClientName,
+			&i.ClientSource,
 			&i.RoleName,
 			&i.RoleTypeCode,
 		); err != nil {
@@ -514,7 +552,7 @@ func (q *Queries) ListAPIKeysBackward(ctx context.Context, arg ListAPIKeysBackwa
 }
 
 const listAPIKeysBaseBackward = `-- name: ListAPIKeysBaseBackward :many
-SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source
 FROM api_key
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
@@ -576,6 +614,8 @@ func (q *Queries) ListAPIKeysBaseBackward(ctx context.Context, arg ListAPIKeysBa
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ClientName,
+			&i.ClientSource,
 		); err != nil {
 			return nil, err
 		}
@@ -591,7 +631,7 @@ func (q *Queries) ListAPIKeysBaseBackward(ctx context.Context, arg ListAPIKeysBa
 }
 
 const listAPIKeysBaseForward = `-- name: ListAPIKeysBaseForward :many
-SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source
 FROM api_key
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
@@ -655,6 +695,8 @@ func (q *Queries) ListAPIKeysBaseForward(ctx context.Context, arg ListAPIKeysBas
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ClientName,
+			&i.ClientSource,
 		); err != nil {
 			return nil, err
 		}
@@ -671,7 +713,7 @@ func (q *Queries) ListAPIKeysBaseForward(ctx context.Context, arg ListAPIKeysBas
 
 const listAPIKeysForward = `-- name: ListAPIKeysForward :many
 SELECT
-    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at,
+    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at, api_key.client_name, api_key.client_source,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
@@ -717,6 +759,8 @@ type ListAPIKeysForwardRow struct {
 	LastUsedAt     sql.NullTime
 	ExpiresAt      sql.NullTime
 	RevokedAt      sql.NullTime
+	ClientName     sql.NullString
+	ClientSource   sql.NullString
 	RoleName       sql.NullString
 	RoleTypeCode   sql.NullString
 }
@@ -756,6 +800,8 @@ func (q *Queries) ListAPIKeysForward(ctx context.Context, arg ListAPIKeysForward
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ClientName,
+			&i.ClientSource,
 			&i.RoleName,
 			&i.RoleTypeCode,
 		); err != nil {

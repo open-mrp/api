@@ -150,7 +150,7 @@ func TestSortingFiltering_APIKeyStatusFilter(t *testing.T) {
 
 	// Create and immediately revoke a key.
 	created := createAPIKeyAndCleanup(t, uniqueName("e2e-filt-revkey"))
-	revokedID := jsonField(jsonObject(created, "api_key_info"), "id")
+	revokedID := jsonField(jsonObject(created, "api_key"), "id")
 	apiClient.Delete(apiKeysPath + "/" + revokedID)
 
 	// Active filter should not include the revoked key. Active keys are either

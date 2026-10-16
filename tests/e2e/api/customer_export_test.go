@@ -242,10 +242,10 @@ func TestCustomerExport_RefusesACallerWithoutCustomersRead(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, http.StatusCreated, status, body)
 	created := parseJSON(body)
-	keyID := jsonField(jsonObject(created, "api_key_info"), "id")
+	keyID := jsonField(jsonObject(created, "api_key"), "id")
 	require.NotEmpty(t, keyID)
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(apiKeysPath + "/" + keyID) })
-	scanner := apiClient.WithBearerToken(jsonField(created, "api_key_secret"), SeedAccountID)
+	scanner := apiClient.WithBearerToken(jsonField(created, "secret"), SeedAccountID)
 
 	status, body, err = scanner.Post(customerExportPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)

@@ -73,8 +73,8 @@ func fetchDocAPIKey(t *testing.T, c *Client) docAPIKeyResult {
 
 	m := parseJSON(resp.Body)
 	return docAPIKeyResult{
-		id:     jsonField(jsonObject(m, "api_key_info"), "id"),
-		secret: jsonField(m, "api_key_secret"),
+		id:     jsonField(jsonObject(m, "api_key"), "id"),
+		secret: jsonField(m, "secret"),
 	}
 }
 
@@ -90,9 +90,9 @@ func TestDocAPIKey_FetchReturnsKey(t *testing.T) {
 
 	m := parseJSON(resp.Body)
 	assert.Equal(t, "created_api_key", jsonField(m, "object"))
-	assert.NotEmpty(t, jsonField(m, "api_key_secret"))
+	assert.NotEmpty(t, jsonField(m, "secret"))
 
-	info := jsonObject(m, "api_key_info")
+	info := jsonObject(m, "api_key")
 	require.NotNil(t, info)
 	assert.Equal(t, "api_key", jsonField(info, "object"))
 	assert.NotEmpty(t, jsonField(info, "id"))

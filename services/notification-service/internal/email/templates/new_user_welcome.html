@@ -22,17 +22,11 @@
                                     <h1 style="margin: 0; margin-bottom: 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #0F172A; text-align: center;">Welcome!</h1>
                                     <p style="margin: 0; margin-bottom: 16px; font-size: 14px; line-height: 20px; color: #475569; text-align: center;">Hi {{.Name}}, an account has been created for you{{if .IsBranded}} on the {{.AccountName}} platform{{end}}.</p>
 
-                                    <p style="margin: 0; margin-bottom: 12px; font-size: 14px; line-height: 22px; color: #0F172A; text-align: center;">Your temporary password is:</p>
-
-                                    <div style="margin: 0 auto 16px auto; max-width: 400px; padding: 12px 16px; background-color: #F1F5F9; border-radius: 8px; text-align: center;">
-                                        <code style="font-size: 16px; font-weight: 600; color: #0F172A; letter-spacing: 1px;">{{.Password}}</code>
-                                    </div>
-
-                                    <p style="margin: 0; margin-bottom: 12px; font-size: 14px; line-height: 22px; color: #0F172A; text-align: center;">Please sign in and change your password as soon as possible.</p>
+                                    <p style="margin: 0; margin-bottom: 12px; font-size: 14px; line-height: 22px; color: #0F172A; text-align: center;">Use the button below to sign in and choose your password.{{if .LinkExpiresInHours}} The link works for {{.LinkExpiresInHours}} hours; after that, use "Forgot password" on the sign-in page.{{end}}</p>
 
                                     {{if .LoginLink}}
                                     <div style="text-align: center; margin-top: 16px;">
-                                        <a href="{{.LoginLink}}" style="display: inline-block; padding: 10px 24px; background-color: #2563EB; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Sign In</a>
+                                        <a href="{{.LoginLink}}" style="display: inline-block; padding: 10px 24px; background-color: #2563EB; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Sign in</a>
                                     </div>
                                     {{end}}
                                 </td>

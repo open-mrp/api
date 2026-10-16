@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/shared/id"
@@ -37,7 +37,7 @@ type counterpartyKind struct {
 	// otherDomain is the other kind's domain, which must not reach this kind's contacts.
 	otherDomain string
 	create      func(t *testing.T) string
-	// welcomed reports whether a new contact is emailed a password; suppliers have no portal to sign in to.
+	// welcomed reports whether a contact can be invited to sign in; suppliers have no portal to sign in to.
 	welcomed bool
 }
 
@@ -176,7 +176,7 @@ func findContact(contacts []map[string]any, contactID string) map[string]any {
 
 func removeContact(t *testing.T, c *Client, contactID string) (int, []byte) {
 	t.Helper()
-	status, body, err := c.Put(accountUsersPath+"/"+contactID+"/actions/remove", nil)
+	status, body, err := c.Post(accountUsersPath+"/"+contactID+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	return status, body
 }
@@ -204,17 +204,13 @@ func queuedEmailCount(t *testing.T, marker string) int {
 
 // sellerPortalLoginLink is where the seed seller's portal users sign in: its verified custom domain when it has one,
 // else its slug on the portal host.
-func sellerPortalLoginLink(t *testing.T) string {
+// sellerPortalSignInBase is the seller's portal under its slug on the shared portal host, where invitation links sign
+// in: a token never goes to a custom domain.
+func sellerPortalSignInBase(t *testing.T) string {
 	t.Helper()
-	var domain string
-	err := authDB(t).QueryRow(`SELECT domain FROM portal_domain WHERE account_id = ? AND status = 'verified'`, SeedAccountID).Scan(&domain)
-	if err == nil {
-		return "https://" + domain + "/auth/login"
-	}
-	require.True(t, errors.Is(err, sql.ErrNoRows), "reading the portal domain: %v", err)
 	var slug string
 	require.NoError(t, authDB(t).QueryRow(`SELECT slug FROM account_portal WHERE owner_account_id = ?`, SeedAccountID).Scan(&slug))
-	return envOr("E2E_PORTAL_URL", "http://localhost:4300") + "/" + slug + "/auth/login"
+	return envOr("E2E_PORTAL_URL", "http://localhost:4300") + "/" + slug
 }
 
 // contactsRoleClient is an API key on the seed seller whose role holds exactly perms, acting in accountID.
@@ -237,10 +233,10 @@ func contactsRoleClient(t *testing.T, accountID string, perms ...string) *Client
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	keyID := jsonField(jsonObject(created, "api_key_info"), "id")
+	keyID := jsonField(jsonObject(created, "api_key"), "id")
 	require.NotEmpty(t, keyID)
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(apiKeysPath + "/" + keyID) })
-	secret := jsonField(created, "api_key_secret")
+	secret := jsonField(created, "secret")
 	require.NotEmpty(t, secret)
 	return apiClient.WithBearerToken(secret, accountID)
 }
@@ -295,8 +291,8 @@ func (s sellerSession) do(t *testing.T, targetAccountID, method, path string, bo
 // --- Create ---
 
 // A new contact comes back with the notification types its preferences enabled and its profile, and is stored under
-// the account it was added to. A customer's contact gets the customer role and a welcome email whose link signs in to
-// the seller's portal; a supplier's gets neither.
+// the account it was added to. A customer's contact gets the customer role; neither kind is emailed until invited, and
+// inviting a customer's contact sends a sign-in link to the seller's portal.
 func TestCounterpartyContacts_Create(t *testing.T) {
 	t.Parallel()
 	markOutbox(t)
@@ -316,10 +312,11 @@ func TestCounterpartyContacts_Create(t *testing.T) {
 			assertIDFormat(t, contactID, id.AccountUserIDPrefix)
 			assertObjectField(t, created, "account_user")
 			assert.Equal(t, "active", jsonField(created, "status"))
-			assert.Equal(t, "false", jsonField(created, "is_commission_eligible"))
+			assert.Equal(t, "none", jsonField(created, "portal_access"), "adding a contact gives no access")
+			assert.Equal(t, "ineligible", jsonField(created, "commission_eligibility"))
 			assert.Equal(t, []string{"order_acknowledgement", "purchase_order_submission"}, notificationTypes(t, created))
 			assertNilField(t, created, "role")
-			assertNilField(t, created, "department")
+			assertNilField(t, created, "work_center")
 			assertNilField(t, created, "last_used_at")
 			assertValidTimestamp(t, jsonField(created, "created_at"), "created_at")
 			assertValidTimestamp(t, jsonField(created, "updated_at"), "updated_at")
@@ -333,15 +330,22 @@ func TestCounterpartyContacts_Create(t *testing.T) {
 			var roleID sql.NullString
 			require.NoError(t, authDB(t).QueryRow(`SELECT account_id, role_id FROM account_user WHERE id = ?`, contactID).Scan(&storedAccountID, &roleID))
 			assert.Equal(t, accountID, storedAccountID, "the contact belongs to the %s's account", kind.name)
+			assert.Zero(t, queuedEmailCount(t, email), "adding a contact never emails them")
 			if kind.welcomed {
 				assert.Equal(t, globalCustomerRoleID, roleID.String, "a customer's contact gets the customer role")
+
+				status, resp, err := c.Post(accountUsersPath+"/"+contactID+"/actions/invite", nil, newIdempotencyKey())
+				require.NoError(t, err)
+				requireStatus(t, 200, status, resp)
+				assert.Equal(t, "invited", jsonField(parseJSON(resp), "portal_access"))
 
 				welcome := queuedSendEmail(t, email)
 				assert.Equal(t, []any{email}, welcome["to"])
 				assert.Equal(t, "new_user_welcome", welcome["template_id"])
 				assert.Contains(t, welcome["subject"], "Welcome to the ")
-				assert.Equal(t, sellerPortalLoginLink(t), emailParam(t, welcome, "LoginLink"))
-				assert.NotEmpty(t, emailParam(t, welcome, "Password"))
+				assert.True(t, strings.HasPrefix(emailParam(t, welcome, "LoginLink"), sellerPortalSignInBase(t)+"/auth/password-reset?t="),
+					"the link signs in on the seller's portal: %s", emailParam(t, welcome, "LoginLink"))
+				assert.Empty(t, emailParam(t, welcome, "Password"), "no password is ever emailed")
 			} else {
 				assert.False(t, roleID.Valid, "a supplier's contact has no role")
 				assert.Zero(t, queuedEmailCount(t, email), "a supplier's contact has no portal and is not emailed")
@@ -373,8 +377,8 @@ func TestCounterpartyContacts_CreateDuplicateConflicts(t *testing.T) {
 
 // --- List ---
 
-// The list holds the account's active contacts with the notification types each receives, finds them by name, leaves
-// removed ones out unless asked, and pages.
+// The list holds the account's contacts with the notification types each receives, every status unless statuses[]
+// narrows it, finds them by name, and pages.
 func TestCounterpartyContacts_List(t *testing.T) {
 	t.Parallel()
 	for _, kind := range counterpartyKinds {
@@ -391,13 +395,13 @@ func TestCounterpartyContacts_List(t *testing.T) {
 			status, body := removeContact(t, c, gone)
 			requireStatus(t, 200, status, body)
 
-			contacts := listContacts(t, c, nil)
-			assert.ElementsMatch(t, []string{a, b}, contactIDs(contacts), "only the active contacts are listed")
+			contacts := listContacts(t, c, url.Values{"statuses[]": {"active"}})
+			assert.ElementsMatch(t, []string{a, b}, contactIDs(contacts), "statuses[]=active lists only the active contacts")
 			assert.Equal(t, []string{"invoice"}, notificationTypes(t, findContact(contacts, a)))
 			assert.Empty(t, notificationTypes(t, findContact(contacts, b)), "a contact with nothing enabled has an empty list")
 			assert.Equal(t, aEmail, jsonField(jsonObject(findContact(contacts, a), "user"), "email"))
 
-			withRemoved := listContacts(t, c, url.Values{"removed_scope": {"included"}})
+			withRemoved := listContacts(t, c, nil)
 			assert.ElementsMatch(t, []string{a, b, gone}, contactIDs(withRemoved))
 			assert.Equal(t, "removed", jsonField(findContact(withRemoved, gone), "status"))
 
@@ -405,7 +409,7 @@ func TestCounterpartyContacts_List(t *testing.T) {
 			assert.Equal(t, []string{a}, contactIDs(found), "search finds the contact by name")
 			assert.Empty(t, listContacts(t, c, url.Values{"q": {"zzzz-no-such-contact"}}))
 
-			first, status, err := c.GetList(accountUsersPath, url.Values{"limit": {"1"}})
+			first, status, err := c.GetList(accountUsersPath, url.Values{"limit": {"1"}, "statuses[]": {"active"}})
 			require.NoError(t, err)
 			require.Equal(t, 200, status)
 			require.Len(t, first.Data, 1)
@@ -525,7 +529,8 @@ func TestCounterpartyContacts_RemoveAndReadd(t *testing.T) {
 
 			status, body := removeContact(t, c, contactID)
 			requireStatus(t, 200, status, body)
-			assert.Nil(t, findContact(listContacts(t, c, nil), contactID), "a removed contact is not listed")
+			assert.Nil(t, findContact(listContacts(t, c, url.Values{"statuses[]": {"active"}}), contactID), "a removed contact is not active")
+			assert.Equal(t, "removed", jsonField(findContact(listContacts(t, c, nil), contactID), "status"), "a removed contact stays listed")
 
 			readded := createContact(t, c, name, email, map[string]bool{
 				"order_acknowledgement": true, "invoice": false, "purchase_order_submission": true,
@@ -571,11 +576,11 @@ func TestCounterpartyContacts_SignedInUserManagesContacts(t *testing.T) {
 			requireStatus(t, 200, status, body)
 			assert.Equal(t, []string{"order_acknowledgement"}, notificationTypes(t, parseJSON(body)))
 
-			status, body = session.do(t, accountID, http.MethodPut, accountUsersPath+"/"+contactID+"/actions/remove", nil)
+			status, body = session.do(t, accountID, http.MethodPost, accountUsersPath+"/"+contactID+"/actions/remove", nil)
 			requireStatus(t, 200, status, body)
 			assert.Equal(t, "removed", jsonField(getContact(t, apiClient.WithAccountID(accountID), contactID), "status"))
 
-			status, body = session.do(t, accountID, http.MethodPut, accountUsersPath+"/"+contactID+"/actions/activate", nil)
+			status, body = session.do(t, accountID, http.MethodPost, accountUsersPath+"/"+contactID+"/actions/activate", nil)
 			requireStatus(t, 200, status, body)
 			assert.Equal(t, "active", jsonField(getContact(t, apiClient.WithAccountID(accountID), contactID), "status"))
 		})
@@ -698,7 +703,7 @@ func TestCounterpartyContacts_TenantIsolation(t *testing.T) {
 // --- Own team ---
 
 // The seller's own users have no relation to carry notification types, so the field stays null, and preferences sent
-// with a new team member are ignored. The welcome email links to the dashboard's sign-in page.
+// with a new team member are ignored. The new member is invited: the email's link signs in on the dashboard.
 func TestCounterpartyContacts_OwnTeamHasNoNotificationTypes(t *testing.T) {
 	t.Parallel()
 	markOutbox(t)
@@ -720,7 +725,11 @@ func TestCounterpartyContacts_OwnTeamHasNoNotificationTypes(t *testing.T) {
 	assertNilField(t, created, "notification_types")
 	assert.Zero(t, storedPreferenceCount(t, jsonField(created, "id")))
 
+	assert.Equal(t, "invited", jsonField(created, "portal_access"))
+
 	welcome := queuedSendEmail(t, email)
 	assert.Equal(t, "Welcome to OpenMRP", welcome["subject"])
-	assert.Equal(t, envOr("E2E_FRONTEND_URL", "http://localhost:4200")+"/auth/login", emailParam(t, welcome, "LoginLink"))
+	assert.True(t, strings.HasPrefix(emailParam(t, welcome, "LoginLink"), envOr("E2E_FRONTEND_URL", "http://localhost:4200")+"/auth/password-reset?t="),
+		"the link signs in on the dashboard: %s", emailParam(t, welcome, "LoginLink"))
+	assert.Empty(t, emailParam(t, welcome, "Password"), "no password is ever emailed")
 }

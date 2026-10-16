@@ -32,7 +32,6 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).GetAPIKey

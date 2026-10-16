@@ -170,6 +170,8 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 		OwnerAccountID: input.OwnerAccountID,
 		RoleID:         input.RoleID,
 		ExpiresAt:      input.ExpiresAt,
+		ClientName:     input.ClientName,
+		ClientSource:   input.ClientSource,
 	}
 
 	_, apiErr = apiKeyRepo.Create(ctx, apiKeyModel)
@@ -251,6 +253,8 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 		RoleID:         oldKey.RoleID,
 		Name:           oldKey.Name,
 		ExpiresAt:      effectiveExpiresAt,
+		ClientName:     oldKey.ClientName,
+		ClientSource:   oldKey.ClientSource,
 	})
 }
 

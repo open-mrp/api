@@ -87,7 +87,7 @@ func dashSuppliersMemberStatus(t *testing.T, c *Client, accountUserID string) st
 
 func dashSuppliersMemberAction(c *Client, accountUserID, action string) func() (int, []byte, error) {
 	return func() (int, []byte, error) {
-		return c.Put(accountUsersPath+"/"+accountUserID+"/actions/"+action, nil)
+		return c.Post(accountUsersPath+"/"+accountUserID+"/actions/"+action, nil, newIdempotencyKey())
 	}
 }
 
@@ -597,7 +597,7 @@ func TestDashAccounts_TeamMemberStatusTransitions(t *testing.T) {
 		{"disable", 200, "disabled"},
 		{"remove", 200, "removed"},
 		{"remove", 200, "removed"},
-		{"disable", 422, "removed"},
+		{"disable", 409, "removed"},
 		{"activate", 200, "active"},
 		{"activate", 200, "active"},
 		{"disable", 200, "disabled"},
@@ -610,9 +610,9 @@ func TestDashAccounts_TeamMemberStatusTransitions(t *testing.T) {
 		require.Equal(t, step.status, dashSuppliersMemberStatus(t, apiClient, id), "after step %d (%s)", i, step.action)
 	}
 
-	assert.Nil(t, findContact(listContacts(t, apiClient, url.Values{"q": {name}}), id), "a removed member is not listed")
-	removed := findContact(listContacts(t, apiClient, url.Values{"q": {name}, "removed_scope": {"included"}}), id)
-	require.NotNil(t, removed, "a removed member is listed when asked for")
+	assert.Nil(t, findContact(listContacts(t, apiClient, url.Values{"q": {name}, "statuses[]": {"active", "disabled"}}), id), "a removed member is filtered out by statuses[]")
+	removed := findContact(listContacts(t, apiClient, url.Values{"q": {name}}), id)
+	require.NotNil(t, removed, "a removed member is listed by default")
 	assert.Equal(t, "removed", jsonField(removed, "status"))
 }
 
@@ -633,7 +633,7 @@ func TestDashAccounts_AnotherTenantGets404ForTheTeam(t *testing.T) {
 	}
 
 	dashSuppliersExpectAll(t, 404, calls)
-	assert.Empty(t, listContacts(t, tenantB, url.Values{"q": {name}, "removed_scope": {"included"}}))
+	assert.Empty(t, listContacts(t, tenantB, url.Values{"q": {name}}))
 	assert.Equal(t, "active", dashSuppliersMemberStatus(t, apiClient, id))
 
 	removeAccountUser(id)
@@ -709,7 +709,7 @@ func TestDashAccounts_CreateAndUpdateRejectInvalidFields(t *testing.T) {
 		{"null email", map[string]any{"email": nil}, "invalid_format", "email"},
 		{"null name", map[string]any{"name": nil, "email": uniqueName("e2e-dash-inval") + "@e2e-test.openmrp.ai"}, "invalid_format", "name"},
 		{"name over 255", map[string]any{"name": strings.Repeat("a", 256), "email": uniqueName("e2e-dash-inval") + "@e2e-test.openmrp.ai"}, "", "name"},
-		{"commission flag not a boolean", map[string]any{"email": uniqueName("e2e-dash-inval") + "@e2e-test.openmrp.ai", "is_commission_eligible": "yes"}, "invalid_format", "is_commission_eligible"},
+		{"commission flag not a boolean", map[string]any{"email": uniqueName("e2e-dash-inval") + "@e2e-test.openmrp.ai", "commission_eligibility": "yes"}, "", "commission_eligibility"},
 	}
 	for _, tc := range creates {
 		t.Run("create "+tc.name, func(t *testing.T) {
@@ -738,7 +738,7 @@ func TestDashAccounts_CreateAndUpdateRejectInvalidFields(t *testing.T) {
 		{"malformed email", map[string]any{"email": "not-an-email"}, "", "email"},
 		{"blank name", map[string]any{"name": ""}, "invalid_format", "name"},
 		{"username too short", map[string]any{"username": "ab"}, "", "username"},
-		{"null commission flag", map[string]any{"is_commission_eligible": nil}, "invalid_format", "is_commission_eligible"},
+		{"null commission flag", map[string]any{"commission_eligibility": nil}, "", "commission_eligibility"},
 	}
 	for _, tc := range updates {
 		t.Run("update "+tc.name, func(t *testing.T) {
@@ -1067,15 +1067,19 @@ func TestDashAccounts_EditingAnotherUsersProfileTakesTheTeamPermission(t *testin
 	requireStatus(t, 200, status, body)
 }
 
-// Once removed from the account a user is no longer its to edit: the profile, photo and read all answer 404.
+// Once removed from the account a user is no longer its to edit: the profile and photo answer 404. The profile stays
+// readable, since records keep naming a removed member.
 func TestDashAccounts_ARemovedMemberIsNoLongerTheAccountsToEdit(t *testing.T) {
 	t.Parallel()
 	u := newSeedAccountUser(t, SeedSalesRepRoleID)
 	removeAccountUser(u.accountUserID)
 	require.Equal(t, "removed", dashSuppliersMemberStatus(t, apiClient, u.accountUserID))
 
+	status, body, err := apiClient.GetListRaw(u.path(), nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
 	dashSuppliersExpectAll(t, 404, []dashSuppliersCall{
-		{"retrieve", func() (int, []byte, error) { return apiClient.GetListRaw(u.path(), nil) }},
 		{"rename", func() (int, []byte, error) {
 			return apiClient.Patch(u.path(), map[string]any{"name": uniqueName("E2E Former")}, newIdempotencyKey())
 		}},

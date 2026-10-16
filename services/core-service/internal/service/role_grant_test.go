@@ -90,13 +90,10 @@ func grantCtx(identity *types.Identity) context.Context {
 func TestCreateRoleRejectsPermissionsTheCallerLacks(t *testing.T) {
 	g := newGrantRoleSvc(t)
 	_, apiErr := g.svc.CreateRole(grantCtx(grantIdentity(constants.RoleTypeCustom, "roles:create", "products:read")), domain.CreateRoleParams{
-		Name: "Pricing",
-		Permissions: []domain.CreateRolePermissionInput{
-			{PermissionCode: "products", Read: true, Update: true},
-			{PermissionCode: "users", Create: true},
-		},
+		Name:   "Pricing",
+		Grants: &[]string{"products:read", "products:update", "team:create"},
 	})
-	requireForbidden(t, apiErr, "permissions", "products:update, users:create")
+	requireForbidden(t, apiErr, "permissions", "products:update, team:create")
 	if strings.Contains(apiErr.PublicMessage, "products:read") {
 		t.Errorf("only missing permissions are named: %q", apiErr.PublicMessage)
 	}
@@ -110,8 +107,8 @@ func TestCreateRoleWithinTheCallersGrantProceeds(t *testing.T) {
 		g := newGrantRoleSvc(t)
 		g.roleRepo.EXPECT().ExistsByName(gomock.Any(), grantAccountID, "Pricing", nil).Return(true, nil)
 		_, apiErr := g.svc.CreateRole(grantCtx(identity), domain.CreateRoleParams{
-			Name:        "Pricing",
-			Permissions: []domain.CreateRolePermissionInput{{PermissionCode: "products", Read: true, Update: true}},
+			Name:   "Pricing",
+			Grants: &[]string{"products:read", "products:update"},
 		})
 		if apiErr == nil || apiErr.Code == apierror.CodeInsufficientPermissions {
 			t.Fatalf("expected to pass the grant check and stop at the name conflict, got %+v", apiErr)
@@ -127,12 +124,12 @@ func grantExistingRole(g grantRoleSvc, roleType constants.RoleType, current ...*
 
 func TestUpdateRoleRejectsAddingPermissionsTheCallerLacks(t *testing.T) {
 	g := newGrantRoleSvc(t)
-	// The role already grants users:create, which the caller lacks; keeping it is fine, adding orders:delete is not.
-	grantExistingRole(g, constants.RoleTypeCustom, &domain.RolePermission{PermissionCode: "users", Create: true})
-	perms := []domain.CreateRolePermissionInput{{PermissionCode: "users", Create: true}, {PermissionCode: "orders", Delete: true}}
-	_, apiErr := g.svc.UpdateRole(grantCtx(grantIdentity(constants.RoleTypeCustom, "roles:update", "orders:read")), domain.UpdateRoleParams{RoleID: "rl_team", Permissions: &perms})
-	requireForbidden(t, apiErr, "permissions", "orders:delete")
-	if strings.Contains(apiErr.PublicMessage, "users:create") {
+	// The role already grants team:create, which the caller lacks; keeping it is fine, adding sales_orders:delete is not.
+	grantExistingRole(g, constants.RoleTypeCustom, &domain.RolePermission{PermissionCode: "team", Create: true})
+	grants := []string{"team:create", "sales_orders:delete"}
+	_, apiErr := g.svc.UpdateRole(grantCtx(grantIdentity(constants.RoleTypeCustom, "roles:update", "sales_orders:read")), domain.UpdateRoleParams{RoleID: "rl_team", Grants: &grants})
+	requireForbidden(t, apiErr, "permissions", "sales_orders:delete")
+	if strings.Contains(apiErr.PublicMessage, "team:create") {
 		t.Errorf("permissions the role already grants are not newly granted: %q", apiErr.PublicMessage)
 	}
 }
@@ -140,14 +137,15 @@ func TestUpdateRoleRejectsAddingPermissionsTheCallerLacks(t *testing.T) {
 func TestUpdateRoleAllowsRemovingPermissions(t *testing.T) {
 	g := newGrantRoleSvc(t)
 	grantExistingRole(g, constants.RoleTypeCustom,
-		&domain.RolePermission{PermissionCode: "users", Create: true},
-		&domain.RolePermission{PermissionCode: "orders", Read: true},
+		&domain.RolePermission{PermissionCode: "team", Create: true},
+		&domain.RolePermission{PermissionCode: "sales_orders", Read: true},
 	)
+	g.roleRepo.EXPECT().UpdateAccess(gomock.Any(), "rl_team", gomock.Any(), gomock.Any()).Return(nil)
 	g.permRepo.EXPECT().DeleteByRoleID(gomock.Any(), "rl_team").Return(nil)
-	g.permRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "rl_team", domain.CreateRolePermissionInput{PermissionCode: "orders", Read: true}).Return(nil)
-	perms := []domain.CreateRolePermissionInput{{PermissionCode: "orders", Read: true}}
+	g.permRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "rl_team", domain.CreateRolePermissionInput{PermissionCode: "sales_orders", Read: true}).Return(nil)
+	grants := []string{"sales_orders:read"}
 
-	_, apiErr := g.svc.UpdateRole(grantCtx(grantIdentity(constants.RoleTypeCustom, "roles:update")), domain.UpdateRoleParams{RoleID: "rl_team", Permissions: &perms})
+	_, apiErr := g.svc.UpdateRole(grantCtx(grantIdentity(constants.RoleTypeCustom, "roles:update")), domain.UpdateRoleParams{RoleID: "rl_team", Grants: &grants})
 	if apiErr != nil {
 		t.Fatalf("removing permissions is always allowed: %+v", apiErr)
 	}

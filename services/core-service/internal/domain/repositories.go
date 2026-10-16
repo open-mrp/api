@@ -7,6 +7,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
@@ -83,6 +84,8 @@ type AccountUserRepo interface {
 	ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string, isCommissionEligible bool) (string, *apierror.APIError)
 	SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
+	// SetInvitedAt records that the member was just sent a sign-in link.
+	SetInvitedAt(ctx context.Context, accountUserID string) *apierror.APIError
 	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)
 	RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError
 	FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]TenancyAccount, *apierror.APIError)
@@ -263,6 +266,8 @@ type RoleRepo interface {
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	Create(ctx context.Context, roleID string, params CreateRoleParams) *apierror.APIError
 	UpdateName(ctx context.Context, roleID, accountID, name string) *apierror.APIError
+	// UpdateAccess stores the role's access levels; the caller rewrites its permission rows to match.
+	UpdateAccess(ctx context.Context, roleID, accountID string, access types.RoleAccess) *apierror.APIError
 	Delete(ctx context.Context, roleID, accountID string) *apierror.APIError
 }
 

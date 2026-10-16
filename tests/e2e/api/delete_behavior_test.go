@@ -67,7 +67,7 @@ func TestDeleteBehavior_DoubleDeleteAPIKey(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
-	id := jsonField(jsonObject(parseJSON(createBody), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(createBody), "api_key"), "id")
 
 	// First revoke.
 	del1Status, del1Body, err := apiClient.Delete(apiKeysPath + "/" + id)

@@ -218,11 +218,16 @@ func (h *gRPCHandler) CreateAPIKey(ctx context.Context, req *pb.CreateAPIKeyRequ
 		}
 	}
 
-	result, apiErr := h.apiKeySvc.CreateAPIKey(ctx, domain.CreateAPIKeyInput{
+	input := domain.CreateAPIKeyInput{
 		RoleID:    req.RoleId,
 		Name:      req.Name,
 		ExpiresAt: expiresAt,
-	})
+	}
+	if req.Client != nil {
+		input.ClientName = &req.Client.Name
+		input.ClientSource = req.Client.Source
+	}
+	result, apiErr := h.apiKeySvc.CreateAPIKey(ctx, input)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -615,4 +620,15 @@ func (h *gRPCHandler) ConfirmRegistrationPayment(ctx context.Context, req *pb.Co
 		Status:          result.Status,
 		PaymentMethodId: result.PaymentMethodID,
 	}, nil
+}
+
+func (h *gRPCHandler) IssueSignInToken(ctx context.Context, req *pb.IssueSignInTokenRequest) (*pb.IssueSignInTokenResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	t, expiresAt, apiErr := h.passwordSvc.IssueSignInToken(ctx, req.UserId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.IssueSignInTokenResponse{Token: t, ExpiresAt: timestamppb.New(expiresAt)}, nil
 }

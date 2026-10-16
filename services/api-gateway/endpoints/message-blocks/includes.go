@@ -6,13 +6,13 @@ import (
 )
 
 // blockIncludeFields is the whitelist of ?include= keys exposed by the message block endpoints.
-// blocked_user is fetched by id via the account_user loader; its user/role/department sub-objects
+// blocked_user is fetched by id via the account_user loader; its user/role/work_center sub-objects
 // recurse through the AccountUser definition's loaders.
 var blockIncludeFields = []string{
 	"blocked_user",
 	"blocked_user.user",
 	"blocked_user.role",
-	"blocked_user.department",
+	"blocked_user.work_center",
 }
 
 func blockIncludeConfig() *apiendpoint.IncludeConfig {

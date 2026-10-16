@@ -665,6 +665,8 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	})
 	if rolesGroup != nil {
 		registry.RegisterGroup(rolesGroup.APIEndpointGroup)
+		registry.RegisterGroup(rolesGroup.Permissions)
+		registry.RegisterGroup(rolesGroup.Templates)
 	}
 
 	// Territories

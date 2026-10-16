@@ -435,6 +435,12 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.RolesEndpointGroup{}).Materialize(&httpgroup.RolesEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.RolesEndpointGroup{}).Materialize(&httpgroup.RolesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).Permissions,
+		*(&httpgroup.RolesEndpointGroup{}).Materialize(&httpgroup.RolesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).Templates,
 		*(&httpgroup.PermissionGroupsEndpointGroup{}).Materialize(&httpgroup.PermissionGroupsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

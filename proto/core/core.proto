@@ -264,7 +264,10 @@ service CoreService {
   rpc UpdateAccountUser(UpdateAccountUserRequest) returns (UpdateAccountUserResponse);
 
   // Transitions an account user to the target status (active, disabled, or removed).
-  rpc UpdateAccountUserStatus(UpdateAccountUserStatusRequest) returns (google.protobuf.Empty);
+  rpc UpdateAccountUserStatus(UpdateAccountUserStatusRequest) returns (UpdateAccountUserResponse);
+
+  // Sends an account user a sign-in link and records that they were invited.
+  rpc InviteAccountUser(InviteAccountUserRequest) returns (UpdateAccountUserResponse);
 
   // Updates the password for an account user (non-admin users without an email address only).
   rpc UpdateAccountUserPassword(UpdateAccountUserPasswordRequest) returns (google.protobuf.Empty);

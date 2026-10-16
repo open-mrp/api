@@ -20,6 +20,8 @@ type IncompleteRegistrationSession struct {
 type CoreAuthClient interface {
 	// GetIncompleteRegistrationSession returns the user's most recent incomplete registration session, or (nil, nil) if none exists.
 	GetIncompleteRegistrationSession(ctx context.Context, userID string) (*IncompleteRegistrationSession, *apierror.APIError)
+	// IssueSignInToken mints the token of a sign-in link for a user being invited.
+	IssueSignInToken(ctx context.Context, userID string) (string, *apierror.APIError)
 }
 
 // ShippoCarrierAccount represents a carrier account registered with Shippo.

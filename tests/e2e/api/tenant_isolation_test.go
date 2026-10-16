@@ -122,7 +122,7 @@ func TestTenantIsolation_APIKeyIsolation(t *testing.T) {
 	clientB := getTenantBClient()
 
 	created := createAPIKeyAndCleanup(t, uniqueName("e2e-iso-key"))
-	id := jsonField(jsonObject(created, "api_key_info"), "id")
+	id := jsonField(jsonObject(created, "api_key"), "id")
 
 	statusCode, _, err := clientB.GetListRaw(apiKeysPath+"/"+id, nil)
 	require.NoError(t, err)

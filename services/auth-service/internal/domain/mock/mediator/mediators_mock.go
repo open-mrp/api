@@ -12,6 +12,7 @@ package mediatormock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	apikey "github.com/open-mrp/api/services/auth-service/internal/apikey"
 	domain "github.com/open-mrp/api/services/auth-service/internal/domain"
@@ -240,6 +241,22 @@ func NewMockPasswordMed(ctrl *gomock.Controller) *MockPasswordMed {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPasswordMed) EXPECT() *MockPasswordMedMockRecorder {
 	return m.recorder
+}
+
+// IssueSignInToken mocks base method.
+func (m *MockPasswordMed) IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IssueSignInToken", ctx, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(time.Time)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// IssueSignInToken indicates an expected call of IssueSignInToken.
+func (mr *MockPasswordMedMockRecorder) IssueSignInToken(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueSignInToken", reflect.TypeOf((*MockPasswordMed)(nil).IssueSignInToken), ctx, userID)
 }
 
 // RequestReset mocks base method.

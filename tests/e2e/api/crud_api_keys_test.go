@@ -25,8 +25,8 @@ func TestAPIKeys_CreateAndGet(t *testing.T) {
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
 	m := parseJSON(createResp.Body)
-	assert.NotEmpty(t, jsonField(m, "api_key_secret"))
-	info := jsonObject(m, "api_key_info")
+	assert.NotEmpty(t, jsonField(m, "secret"))
+	info := jsonObject(m, "api_key")
 	require.NotNil(t, info)
 	assert.Equal(t, "api_key", jsonField(info, "object"))
 	id := jsonField(info, "id")
@@ -71,7 +71,7 @@ func TestAPIKeys_Revoke(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	id := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	delStatus, delBody, err := apiClient.Delete(apiKeysPath + "/" + id)
 	require.NoError(t, err)
@@ -91,15 +91,15 @@ func TestAPIKeys_Rotate(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	origID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, rotStatus, rotBody)
 
 	rotated := parseJSON(rotBody)
-	assert.NotEmpty(t, jsonField(rotated, "api_key_secret"))
-	newID := jsonField(jsonObject(rotated, "api_key_info"), "id")
+	assert.NotEmpty(t, jsonField(rotated, "secret"))
+	newID := jsonField(jsonObject(rotated, "api_key"), "id")
 	assert.NotEqual(t, origID, newID)
 
 	getStatus, getBody, err := apiClient.GetListRaw(apiKeysPath+"/"+origID, nil)
@@ -121,7 +121,7 @@ func TestAPIKeys_RotateScheduledRevocation(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	origID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	revokeAt := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", map[string]any{
@@ -129,7 +129,7 @@ func TestAPIKeys_RotateScheduledRevocation(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, rotStatus, rotBody)
-	newID := jsonField(jsonObject(parseJSON(rotBody), "api_key_info"), "id")
+	newID := jsonField(jsonObject(parseJSON(rotBody), "api_key"), "id")
 
 	getStatus, getBody, err := apiClient.GetListRaw(apiKeysPath+"/"+origID, nil)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestAPIKeys_RotateRevokeAtBeyondCap(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	origID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	revokeAt := time.Now().UTC().Add(31 * 24 * time.Hour).Format(time.RFC3339)
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", map[string]any{
@@ -254,7 +254,7 @@ func TestAPIKeys_ListFilterByStatusRevoked(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
-	id := jsonField(jsonObject(parseJSON(createBody), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(createBody), "api_key"), "id")
 	apiClient.Delete(apiKeysPath + "/" + id)
 
 	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"revoked"}})
@@ -313,7 +313,7 @@ func TestAPIKeys_CreateIdempotent(t *testing.T) {
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
-	id1 := jsonField(jsonObject(parseJSON(body1), "api_key_info"), "id")
+	id1 := jsonField(jsonObject(parseJSON(body1), "api_key"), "id")
 
 	status2, body2, err := apiClient.Post(apiKeysPath, map[string]any{
 		"name":    name,
@@ -321,7 +321,7 @@ func TestAPIKeys_CreateIdempotent(t *testing.T) {
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
-	id2 := jsonField(jsonObject(parseJSON(body2), "api_key_info"), "id")
+	id2 := jsonField(jsonObject(parseJSON(body2), "api_key"), "id")
 	assert.Equal(t, id1, id2)
 
 	apiClient.Delete(apiKeysPath + "/" + id1)
@@ -384,8 +384,8 @@ func TestAPIKeys_OmittedFields(t *testing.T) {
 		requireStatus(t, 201, status, body)
 
 		m := parseJSON(body)
-		assert.NotEmpty(t, jsonField(m, "api_key_secret"))
-		info := jsonObject(m, "api_key_info")
+		assert.NotEmpty(t, jsonField(m, "secret"))
+		info := jsonObject(m, "api_key")
 		require.NotNil(t, info)
 		id := jsonField(info, "id")
 		require.NotEmpty(t, id)

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/event"
@@ -334,4 +335,17 @@ func publishPasswordResetAudit(ctx context.Context, repos domain.RepoFactory, us
 		ResourceID:   userID,
 		Metadata:     map[string]any{"password_rotated": true, "reason": "password_reset"},
 	})
+}
+
+// IssueSignInToken mints the token of a sign-in link for a user core-service adds or invites. It reads and writes
+// nothing, so it takes no idempotency key.
+func (s *passwordSvcImpl) IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError) {
+	ctx, span := passwordSvcTracer.Start(ctx, "service.password.issue_sign_in_token")
+	defer span.End()
+
+	if userID == "" {
+		return "", time.Time{}, tracing.Trace(span, apierror.NewValidationError("user_id is required."))
+	}
+	t, expiresAt, apiErr := s.mediators().Password.IssueSignInToken(ctx, userID)
+	return t, expiresAt, tracing.Trace(span, apiErr)
 }

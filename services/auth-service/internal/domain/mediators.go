@@ -62,6 +62,8 @@ type APIKeyCreateInput struct {
 	RoleID         string
 	Name           string
 	ExpiresAt      *time.Time
+	ClientName     *string
+	ClientSource   *string
 }
 
 type APIKeyRotateInput struct {
@@ -163,6 +165,10 @@ type PasswordMed interface {
 	// Side effects:
 	//   - Sends a password reset email.
 	RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
+
+	// IssueSignInToken mints a password-reset token that lasts SignInLinkTTL, for the sign-in link another service emails
+	// a user it adds or invites. The link signs them in and lets them choose a password.
+	IssueSignInToken(ctx context.Context, userID string) (string, time.Time, *apierror.APIError)
 
 	// ValidatePasswordResetToken validates a password reset token and returns the associated user.
 	//

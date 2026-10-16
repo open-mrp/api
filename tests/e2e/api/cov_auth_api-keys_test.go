@@ -40,7 +40,7 @@ func TestCovAuthApiKeys_CreateExpiresAtRoundTrips(t *testing.T) {
 	requireStatus(t, 201, status, body)
 
 	m := parseJSON(body)
-	info := jsonObject(m, "api_key_info")
+	info := jsonObject(m, "api_key")
 	require.NotNil(t, info)
 	id := jsonField(info, "id")
 	require.NotEmpty(t, id)
@@ -76,7 +76,7 @@ func TestCovAuthApiKeys_RotateExpiresAtOverrideRoundTrips(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	origID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", map[string]any{
 		"expires_at": newExpiresAt.Format(time.RFC3339),
@@ -84,7 +84,7 @@ func TestCovAuthApiKeys_RotateExpiresAtOverrideRoundTrips(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, rotStatus, rotBody)
 
-	rotatedInfo := jsonObject(parseJSON(rotBody), "api_key_info")
+	rotatedInfo := jsonObject(parseJSON(rotBody), "api_key")
 	require.NotNil(t, rotatedInfo)
 	newID := jsonField(rotatedInfo, "id")
 	require.NotEmpty(t, newID)
@@ -110,7 +110,7 @@ func TestCovAuthApiKeys_RotateExpiresAtOverrideRoundTrips(t *testing.T) {
 func TestCovAuthApiKeys_IDFormat(t *testing.T) {
 	t.Parallel()
 	m := createAPIKeyAndCleanup(t, uniqueName("cov-ak-idformat"))
-	info := jsonObject(m, "api_key_info")
+	info := jsonObject(m, "api_key")
 	require.NotNil(t, info)
 	assertIDFormat(t, jsonField(info, "id"), "apke")
 }
@@ -133,7 +133,7 @@ func TestCovAuthApiKeys_ListFilterByStatusExpired(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	id := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(apiKeysPath + "/" + id)
 
@@ -159,7 +159,7 @@ func TestCovAuthApiKeys_ListExpiredBeyond30DaysStillVisible(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	id := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(apiKeysPath + "/" + id)
 
@@ -200,23 +200,23 @@ func TestCovAuthApiKeys_RotateIdempotent(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	origID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 
 	idemKey := newIdempotencyKey()
 	rot1Status, rot1Body, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", nil, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, rot1Status, rot1Body)
 	rot1 := parseJSON(rot1Body)
-	id1 := jsonField(jsonObject(rot1, "api_key_info"), "id")
-	secret1 := jsonField(rot1, "api_key_secret")
+	id1 := jsonField(jsonObject(rot1, "api_key"), "id")
+	secret1 := jsonField(rot1, "secret")
 	require.NotEmpty(t, id1)
 
 	rot2Status, rot2Body, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", nil, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, rot2Status, rot2Body)
 	rot2 := parseJSON(rot2Body)
-	id2 := jsonField(jsonObject(rot2, "api_key_info"), "id")
-	secret2 := jsonField(rot2, "api_key_secret")
+	id2 := jsonField(jsonObject(rot2, "api_key"), "id")
+	secret2 := jsonField(rot2, "secret")
 
 	assert.Equal(t, id1, id2, "replaying the same idempotency key on rotate should return the same key id")
 	assert.Equal(t, secret1, secret2, "replaying the same idempotency key on rotate should return the same secret")
@@ -226,7 +226,7 @@ func TestCovAuthApiKeys_RotateIdempotent(t *testing.T) {
 	rot3Status, rot3Body, err := apiClient.Post(apiKeysPath+"/"+id1+"/actions/rotate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, rot3Status, rot3Body)
-	id3 := jsonField(jsonObject(parseJSON(rot3Body), "api_key_info"), "id")
+	id3 := jsonField(jsonObject(parseJSON(rot3Body), "api_key"), "id")
 	assert.NotEqual(t, id1, id3, "an independent rotate call should mint a distinct key")
 
 	defer apiClient.Delete(apiKeysPath + "/" + origID)
@@ -263,7 +263,7 @@ func TestCovAuthApiKeys_CreateValidation_NameAtMaxLengthAccepted(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	id := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(apiKeysPath + "/" + id)
 }
@@ -301,7 +301,7 @@ func TestCovAuthApiKeys_CreateValidation_MalformedExpiresAt(t *testing.T) {
 func TestCovAuthApiKeys_RotateValidation_MalformedRevokeAt(t *testing.T) {
 	t.Parallel()
 	m := createAPIKeyAndCleanup(t, uniqueName("cov-ak-malrevat"))
-	id := jsonField(jsonObject(m, "api_key_info"), "id")
+	id := jsonField(jsonObject(m, "api_key"), "id")
 	require.NotEmpty(t, id)
 
 	status, body, err := apiClient.Post(apiKeysPath+"/"+id+"/actions/rotate", map[string]any{
@@ -318,7 +318,7 @@ func TestCovAuthApiKeys_RotateValidation_MalformedRevokeAt(t *testing.T) {
 func TestCovAuthApiKeys_RotateValidation_MalformedExpiresAt(t *testing.T) {
 	t.Parallel()
 	m := createAPIKeyAndCleanup(t, uniqueName("cov-ak-malexprot"))
-	id := jsonField(jsonObject(m, "api_key_info"), "id")
+	id := jsonField(jsonObject(m, "api_key"), "id")
 	require.NotEmpty(t, id)
 
 	status, body, err := apiClient.Post(apiKeysPath+"/"+id+"/actions/rotate", map[string]any{
@@ -335,7 +335,7 @@ func TestCovAuthApiKeys_RotateValidation_MalformedExpiresAt(t *testing.T) {
 func TestCovAuthApiKeys_RotatePastRevokeAtCollapsesToImmediate(t *testing.T) {
 	t.Parallel()
 	m := createAPIKeyAndCleanup(t, uniqueName("cov-ak-pastrevat"))
-	origID := jsonField(jsonObject(m, "api_key_info"), "id")
+	origID := jsonField(jsonObject(m, "api_key"), "id")
 	require.NotEmpty(t, origID)
 
 	past := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
@@ -344,7 +344,7 @@ func TestCovAuthApiKeys_RotatePastRevokeAtCollapsesToImmediate(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	newID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+	newID := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 	require.NotEmpty(t, newID)
 	defer apiClient.Delete(apiKeysPath + "/" + newID)
 
@@ -373,7 +373,7 @@ func TestCovAuthApiKeys_CreateNonexistentRoleIDRejected(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	if status == 201 {
-		id := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+		id := jsonField(jsonObject(parseJSON(body), "api_key"), "id")
 		if id != "" {
 			defer apiClient.Delete(apiKeysPath + "/" + id)
 		}
@@ -411,7 +411,7 @@ func TestCovAuthApiKeys_RotateNotFound(t *testing.T) {
 func TestCovAuthApiKeys_RotateAlreadyRevokedKey(t *testing.T) {
 	t.Parallel()
 	m := createAPIKeyAndCleanup(t, uniqueName("cov-ak-rotaterevoked"))
-	id := jsonField(jsonObject(m, "api_key_info"), "id")
+	id := jsonField(jsonObject(m, "api_key"), "id")
 	require.NotEmpty(t, id)
 
 	delStatus, delBody, err := apiClient.Delete(apiKeysPath + "/" + id)
@@ -441,8 +441,8 @@ func TestCovAuthApiKeys_RevokedSecretStopsAuthenticating(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	secret := jsonField(created, "api_key_secret")
-	info := jsonObject(created, "api_key_info")
+	secret := jsonField(created, "secret")
+	info := jsonObject(created, "api_key")
 	require.NotNil(t, info)
 	id := jsonField(info, "id")
 	require.NotEmpty(t, id)
@@ -475,15 +475,15 @@ func TestCovAuthApiKeys_RotatedOutSecretStopsAuthenticating(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	oldSecret := jsonField(created, "api_key_secret")
-	origID := jsonField(jsonObject(created, "api_key_info"), "id")
+	oldSecret := jsonField(created, "secret")
+	origID := jsonField(jsonObject(created, "api_key"), "id")
 	require.NotEmpty(t, origID)
 	require.NotEmpty(t, oldSecret)
 
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, rotStatus, rotBody)
-	newID := jsonField(jsonObject(parseJSON(rotBody), "api_key_info"), "id")
+	newID := jsonField(jsonObject(parseJSON(rotBody), "api_key"), "id")
 	require.NotEmpty(t, newID)
 	defer apiClient.Delete(apiKeysPath + "/" + newID)
 
@@ -503,7 +503,7 @@ func TestCovAuthApiKeys_RotatedOutSecretStopsAuthenticating(t *testing.T) {
 func TestCovAuthApiKeys_NonAdminForbiddenOnList(t *testing.T) {
 	t.Parallel()
 	m := createNonAdminAPIKeyAndCleanup(t, uniqueName("cov-ak-nonadmin-list"))
-	secret := jsonField(m, "api_key_secret")
+	secret := jsonField(m, "secret")
 	require.NotEmpty(t, secret)
 
 	nonAdminClient := apiClient.WithBearerToken(secret, SeedAccountID)
@@ -518,7 +518,7 @@ func TestCovAuthApiKeys_NonAdminForbiddenOnList(t *testing.T) {
 func TestCovAuthApiKeys_NonAdminForbiddenOnCreate(t *testing.T) {
 	t.Parallel()
 	m := createNonAdminAPIKeyAndCleanup(t, uniqueName("cov-ak-nonadmin-create"))
-	secret := jsonField(m, "api_key_secret")
+	secret := jsonField(m, "secret")
 	require.NotEmpty(t, secret)
 
 	nonAdminClient := apiClient.WithBearerToken(secret, SeedAccountID)
@@ -555,7 +555,7 @@ func createNonAdminAPIKeyAndCleanup(t *testing.T, name string) map[string]any {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	parsed := parseJSON(body)
-	info := jsonObject(parsed, "api_key_info")
+	info := jsonObject(parsed, "api_key")
 	require.NotNil(t, info)
 	id := jsonField(info, "id")
 	require.NotEmpty(t, id)

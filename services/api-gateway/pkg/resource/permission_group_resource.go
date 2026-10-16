@@ -14,7 +14,7 @@ const SamplePermissionGroupID = "pg_584hkihly2mh"
 // One area of the product that access can be granted for, such as customers, invoices, or production runs.
 //
 // A role never grants a permission outright; it grants specific actions on it, written as `{code}:{action}` — for example `customers:read`.
-type Permission struct {
+type GroupPermission struct {
 	// Permission ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -35,7 +35,7 @@ type Permission struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var SamplePermission = &Permission{
+var SampleGroupPermission = &GroupPermission{
 	ID:                  SamplePermissionID,
 	Object:              constants.ObjectTypePermission,
 	Code:                "customers:read",
@@ -46,8 +46,8 @@ var SamplePermission = &Permission{
 	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*Permission) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePermission)
+func (*GroupPermission) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleGroupPermission)
 }
 
 // A category of the permission catalog that collects related permissions, such as inventory or invoices.
@@ -65,7 +65,7 @@ type PermissionGroup struct {
 	// Free-form description of the permission group.
 	Description *string `json:"description"`
 	// The individual permissions collected under this group.
-	Permissions *List[Permission] `json:"permissions"`
+	Permissions *List[GroupPermission] `json:"permissions"`
 	// Provenance of this permission group.
 	//
 	// Permission groups form the platform-defined permission catalog and are system-owned; they are the same across every account.
@@ -82,7 +82,7 @@ var SamplePermissionGroup = &PermissionGroup{
 	Code:        "customers",
 	Name:        "Customers",
 	Description: nil,
-	Permissions: NewList([]Permission{*SamplePermission}, PageInfo{}),
+	Permissions: NewList([]GroupPermission{*SampleGroupPermission}, PageInfo{}),
 	Owner:       SampleOwnerSystem,
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

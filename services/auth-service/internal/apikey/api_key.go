@@ -23,6 +23,9 @@ type APIKey struct {
 	LastUsedAt     *time.Time
 	ExpiresAt      *time.Time `audit:"expires_at"`
 	RevokedAt      *time.Time `audit:"revoked_at"`
+	// ClientName and ClientSource name the client the key was made for, such as Claude Code (claude-code).
+	ClientName   *string `audit:"client_name"`
+	ClientSource *string `audit:"client_source"`
 }
 
 // IsExpired reports whether the API key has passed its expiration time.
@@ -72,6 +75,8 @@ func (m *APIKey) ToProto() *pb.APIKeyInfo {
 	if m.RevokedAt != nil {
 		info.RevokedAt = timestamppb.New(*m.RevokedAt)
 	}
+	info.ClientName = m.ClientName
+	info.ClientSource = m.ClientSource
 
 	return info
 }

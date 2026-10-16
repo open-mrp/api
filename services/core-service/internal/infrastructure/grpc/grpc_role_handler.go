@@ -3,7 +3,9 @@ package grpc
 import (
 	"context"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -73,21 +75,20 @@ func (h *gRPCHandler) CreateRole(ctx context.Context, req *pb.CreateRoleRequest)
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	permissions := make([]domain.CreateRolePermissionInput, len(req.Permissions))
-	for i, p := range req.Permissions {
-		permissions[i] = domain.CreateRolePermissionInput{
-			PermissionCode: p.PermissionCode,
-			Create:         p.Create,
-			Read:           p.Read,
-			Update:         p.Update,
-			Delete:         p.Delete,
-		}
+	params := domain.CreateRoleParams{
+		Name:    req.Name,
+		Access:  roleAccessFromProto(req.Access),
+		Revokes: req.Revokes,
 	}
-
-	result, apiErr := h.roleSvc.CreateRole(ctx, domain.CreateRoleParams{
-		Name:        req.Name,
-		Permissions: permissions,
-	})
+	if req.TemplateCode != nil {
+		t := constants.RoleTemplate(*req.TemplateCode)
+		params.Template = &t
+	}
+	if req.HasGrants {
+		grants := req.Grants
+		params.Grants = &grants
+	}
+	result, apiErr := h.roleSvc.CreateRole(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -111,18 +112,14 @@ func (h *gRPCHandler) UpdateRole(ctx context.Context, req *pb.UpdateRoleRequest)
 	if req.Name != "" {
 		params.Name = &req.Name
 	}
-	if req.HasPermissions {
-		permissions := make([]domain.CreateRolePermissionInput, len(req.Permissions))
-		for i, p := range req.Permissions {
-			permissions[i] = domain.CreateRolePermissionInput{
-				PermissionCode: p.PermissionCode,
-				Create:         p.Create,
-				Read:           p.Read,
-				Update:         p.Update,
-				Delete:         p.Delete,
-			}
-		}
-		params.Permissions = &permissions
+	params.Access = roleAccessFromProto(req.Access)
+	if req.HasGrants {
+		grants := req.Grants
+		params.Grants = &grants
+	}
+	if req.HasRevokes {
+		revokes := req.Revokes
+		params.Revokes = &revokes
 	}
 
 	result, apiErr := h.roleSvc.UpdateRole(ctx, params)
@@ -174,6 +171,15 @@ func roleWithPermissionsToProto(rwp *domain.RoleWithPermissions) *pb.RoleDetail 
 	}
 
 	detail := roleToProto(&rwp.Role, nil)
+	def := rwp.Definition()
+	detail.Access = map[string]string{}
+	for area, level := range def.Access {
+		detail.Access[string(area)] = string(level)
+	}
+	detail.Grants = def.Grants
+	detail.Revokes = def.Revokes
+	detail.EffectivePermissions = types.EffectivePermissions(def.Access, def.Grants, def.Revokes)
+	detail.TemplateCode = rwp.Template
 
 	if rwp.Permissions != nil {
 		perms := make([]*pb.RolePermissionDetail, len(rwp.Permissions))
@@ -222,4 +228,15 @@ func rolePermissionToProto(rp *domain.RolePermission) *pb.RolePermissionDetail {
 		CreatedAt:      timestamppb.New(rp.CreatedAt),
 		UpdatedAt:      timestamppb.New(rp.UpdatedAt),
 	}
+}
+
+func roleAccessFromProto(in map[string]string) types.RoleAccess {
+	if len(in) == 0 {
+		return nil
+	}
+	out := types.RoleAccess{}
+	for k, v := range in {
+		out[constants.PermissionArea(k)] = constants.AccessLevel(v)
+	}
+	return out
 }

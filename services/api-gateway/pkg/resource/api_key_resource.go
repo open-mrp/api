@@ -33,6 +33,16 @@ type APIKey struct {
 	//
 	// The key's prefix followed by its last four characters, e.g. `mrp_sk_prod_****hjt4`.
 	RedactedValue string `json:"redacted_value" validate:"required"`
+	// Whether the key authenticates requests.
+	//
+	// - `active`: it does. A key whose revocation is scheduled stays active until then.
+	// - `expired`: it passed its `expires_at`.
+	// - `revoked`: it was revoked; this wins over expiry.
+	Status constants.APIKeyStatus `json:"status" validate:"required"`
+	// The client the key was made for, such as Claude Code, or `null`.
+	//
+	// Records the key creates name it as their actor's `client`.
+	Client *APIKeyClient `json:"client"`
 	// Role assigned to the key, which determines the permissions of requests made with it.
 	Role *Role `json:"role" expandable:"true"`
 	// When the key was last used to authenticate a request.
@@ -53,16 +63,24 @@ type APIKey struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// A newly issued API key together with its secret value, returned when a key is created or rotated.
+// The client an API key was made for.
+type APIKeyClient struct {
+	// The client's name, such as `Claude Code`.
+	Name string `json:"name" validate:"required"`
+	// A stable identifier for the client, such as `claude-code`, or `null`.
+	Source *string `json:"source"`
+}
+
+// A newly issued API key and its secret, returned when a key is created or rotated.
 type CreatedAPIKey struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
-	// The secret used to authenticate requests, sent as a bearer token in the `Authorization` header.
+	// The secret, sent as a bearer token in the `Authorization` header.
 	//
-	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.openmrp.ai/api/managing-api-keys).
-	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
-	// The key's non-secret details, such as its ID, name, role, and expiration.
-	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`
+	// It's shown only once. If it's lost, rotate the key. Learn more about [managing your API keys](https://docs.openmrp.ai/api/managing-api-keys).
+	Secret string `json:"secret" validate:"required" sensitive:"true"`
+	// The key itself.
+	APIKey APIKey `json:"api_key" validate:"required"`
 }
 
 var SampleAPIKey = &APIKey{
@@ -70,6 +88,8 @@ var SampleAPIKey = &APIKey{
 	Object:        constants.ObjectTypeAPIKey,
 	Name:          SampleAPIKeyName,
 	RedactedValue: SampleProdAPIKeyRedactedValue,
+	Status:        constants.APIKeyStatusActive,
+	Client:        &APIKeyClient{Name: "Claude Code", Source: new("claude-code")},
 	Role:          SampleRole,
 	LastUsedAt:    timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	ExpiresAt:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
@@ -79,9 +99,9 @@ var SampleAPIKey = &APIKey{
 }
 
 var SampleCreatedAPIKey = &CreatedAPIKey{
-	Object:       constants.ObjectTypeCreatedAPIKey,
-	APIKeySecret: SampleProdAPIKeyValue,
-	APIKeyInfo:   *SampleAPIKey,
+	Object: constants.ObjectTypeCreatedAPIKey,
+	Secret: SampleProdAPIKeyValue,
+	APIKey: *SampleAPIKey,
 }
 
 func (*APIKey) SchemaExample() any {

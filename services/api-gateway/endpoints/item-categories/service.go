@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -114,6 +116,9 @@ func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *Retrieve
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
+	if apiErr := itemep.RejectPreview9Field(ctx, req.UnitGroupID.IsSet(), "unit_group_id", itemep.UnitGroupsRetired); apiErr != nil {
+		return nil, apiErr
+	}
 	unitGroupID, _ := req.UnitGroupID.Value()
 	pbReq := &pb.CreateItemCategoryRequest{
 		Name:        req.Name,
@@ -242,6 +247,9 @@ func (m *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, re
 }
 
 func (m *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, itemep.UnitGroupsRetired+" To move an item to another unit, use Change Stocking Unit."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ChangeItemCategoryUnitGroupRequest{
 		Id:          req.ItemCategoryID,
 		UnitGroupId: req.UnitGroupID,
@@ -280,6 +288,9 @@ func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req 
 			PropertyNames: ic.PropertyNames,
 		}
 		if ug, ok := ic.UnitGroup.Value(); ok {
+			if apiErr := itemep.RejectPreview9Field(ctx, true, fmt.Sprintf("item_categories[%d].unit_group", i), itemep.UnitGroupsRetired); apiErr != nil {
+				return nil, apiErr
+			}
 			inputs[i].UnitGroup = apirequest.ObjectIdentifierToProto(ug)
 		}
 	}

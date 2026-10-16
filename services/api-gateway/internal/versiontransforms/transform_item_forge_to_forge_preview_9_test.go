@@ -18,14 +18,16 @@ const forgeItemJSON = `{"id":"itm_1","object":"item","type":"service","status":"
 	"burn_rate":null,"supply":"make",
 	"sales":{"unit_price":{"amount":"5.00","currency":"usd","per_unit":{"id":"each","object":"unit","abbreviation":"ea","dimension":"quantity"}},
 		"product_line":null,"portal_visibility":"hidden","lead_time":null},
-	"material":null,"default_manufacturing_method":null,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}`
+	"material":null,"default_manufacturing_method":null,"stocking_unit":null,"default_order_unit":null,
+	"order_units":{"object":"list","data":[{"unit":{"id":"dozen","object":"unit"},"portal_visibility":"visible","discount":null,"quantity":null}]},
+	"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}`
 
 func TestPreview9_ItemShape(t *testing.T) {
 	t.Parallel()
 
 	got := downgrade(t, constants.ObjectTypeItem, forgeItemJSON)
 	assert.Equal(t, "product", got["type"], "a service was a product")
-	for _, k := range []string{"status", "supply", "sales", "material", "default_manufacturing_method"} {
+	for _, k := range []string{"status", "supply", "sales", "material", "default_manufacturing_method", "stocking_unit", "default_order_unit", "order_units"} {
 		assert.NotContains(t, got, k)
 	}
 	assert.Contains(t, got, "notes")

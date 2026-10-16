@@ -46,6 +46,14 @@ type UpsertItemInput struct {
 	Sales field.Optional[UpdateItemSalesInput] `json:"sales,omitzero"`
 	// Purchasing details, for materials only, merged into the item's.
 	Material field.Optional[UpdateItemMaterialInput] `json:"material,omitzero"`
+	// ID of the unit the item's inventory, costs and usage are kept in.
+	//
+	// Required when the row creates a material, part or product. An existing item's must match; to change it, use Change Stocking Unit.
+	StockingUnitID field.Optional[string] `json:"stocking_unit_id,omitzero"`
+	// ID of the unit selected by default when the item is added to an order: the stocking unit or one of `order_units`.
+	DefaultOrderUnitID field.Optional[string] `json:"default_order_unit_id,omitzero"`
+	// Units the item can be ordered in besides its stocking unit. Replaces the item's list when sent.
+	OrderUnits field.Optional[[]ItemOrderUnitInput] `json:"order_units,omitzero" validate:"omitempty,max=100,dive"`
 }
 
 // Request to create or update items in bulk.
@@ -57,10 +65,11 @@ type BulkUpsertItemsRequest struct {
 var sampleBulkUpsertItemsRequest = &BulkUpsertItemsRequest{
 	Items: []UpsertItemInput{
 		{
-			Type:       constants.ItemTypeCodeProduct,
-			SKU:        apiresource.SampleItemSKU,
-			CategoryID: apiresource.SampleItemCategoryID,
-			Attributes: field.Some([]UpsertItemAttribute{{Property: "Size", Value: "Large"}}),
+			Type:           constants.ItemTypeCodeProduct,
+			SKU:            apiresource.SampleItemSKU,
+			CategoryID:     apiresource.SampleItemCategoryID,
+			Attributes:     field.Some([]UpsertItemAttribute{{Property: "Size", Value: "Large"}}),
+			StockingUnitID: field.Some(apiresource.SampleUnitID),
 		},
 	},
 }

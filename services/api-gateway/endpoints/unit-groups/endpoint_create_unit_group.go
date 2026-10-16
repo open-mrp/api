@@ -87,10 +87,9 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroup

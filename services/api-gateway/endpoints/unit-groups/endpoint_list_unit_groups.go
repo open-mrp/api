@@ -35,10 +35,9 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
 			return svc.(UnitGroupSvc).ListUnitGroups

@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -84,6 +85,10 @@ func extractUnitGroupRefsFromItemCategory(_ context.Context, parent any) []any {
 }
 
 func populateUnitGroupOnItemCategory(ctx context.Context, parent any, _ map[string]any) {
+	// Unit groups are retired in 1.0.forge; only preview.9 callers still read them.
+	if !resourceloaders.IsPreview9(ctx) {
+		return
+	}
 	ic := parent.(*apiresource.ItemCategory)
 	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItemCategory, ic.ID, "unit_group")

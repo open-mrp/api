@@ -57,6 +57,12 @@ type UpdateItemRequest struct {
 	Sales field.Clearable[UpdateItemSalesInput] `json:"sales,omitzero"`
 	// Purchasing details to change, for materials only.
 	Material field.Optional[UpdateItemMaterialInput] `json:"material,omitzero"`
+	// ID of the unit selected by default when the item is added to an order: the stocking unit or one of `order_units`.
+	DefaultOrderUnitID field.Optional[string] `json:"default_order_unit_id,omitzero"`
+	// Units the item can be ordered in besides its stocking unit. Replaces the whole list; send `[]` to remove them all.
+	//
+	// A default order unit no longer in the list falls back to the stocking unit.
+	OrderUnits field.Optional[[]ItemOrderUnitInput] `json:"order_units,omitzero" validate:"omitempty,max=100,dive"`
 }
 
 var sampleUpdateItemRequest = &UpdateItemRequest{

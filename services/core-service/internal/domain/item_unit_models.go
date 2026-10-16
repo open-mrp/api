@@ -115,19 +115,12 @@ type ItemUnitsInput struct {
 }
 
 // ChangeStockingUnitMode says how a stocking unit change treats the numbers recorded in the old unit.
-type ChangeStockingUnitMode string
+type ChangeStockingUnitMode = constants.ChangeStockingUnitMode
 
 const (
-	// ChangeStockingUnitModeConvert restates quantities, costs and prices into the new unit of the same dimension.
-	ChangeStockingUnitModeConvert ChangeStockingUnitMode = "convert"
-	// ChangeStockingUnitModeRelabel keeps every number and only changes the unit, to fix one entered in error.
-	ChangeStockingUnitModeRelabel ChangeStockingUnitMode = "relabel"
+	ChangeStockingUnitModeConvert = constants.ChangeStockingUnitModeConvert
+	ChangeStockingUnitModeRelabel = constants.ChangeStockingUnitModeRelabel
 )
-
-// IsValid reports whether m is a known mode.
-func (m ChangeStockingUnitMode) IsValid() bool {
-	return m == ChangeStockingUnitModeConvert || m == ChangeStockingUnitModeRelabel
-}
 
 // ChangeStockingUnitParams asks to move an item to a new stocking unit.
 type ChangeStockingUnitParams struct {

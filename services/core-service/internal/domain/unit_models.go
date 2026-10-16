@@ -111,7 +111,8 @@ type UpsertUnitResult struct {
 	Unit *Unit
 }
 
-// UnitReferences blocks deleting a unit that a recorded value is stated in, or that a unit group converts through.
+// UnitReferences blocks deleting a unit that a recorded value is stated in, that an item is stocked or ordered in, or
+// that a unit group converts through.
 var UnitReferences = RegisterReferences(References{
 	Noun: "unit",
 	Probes: []ReferenceProbe{
@@ -120,5 +121,8 @@ var UnitReferences = RegisterReferences(References{
 		{Label: "rates", Table: "rate", Column: "denominator_unit_id"},
 		{Label: "demand overrides", Table: "demand_override", Column: "unit_id"},
 		{Label: "unit groups", Table: "unit_group", Column: "base_unit_id"},
+		{Label: "items", Table: "item", Column: "stocking_unit_id"},
+		{Label: "items", Table: "item", Column: "default_order_unit_id"},
+		{Label: "items", Table: "item_order_unit", Column: "unit_id"},
 	},
 })

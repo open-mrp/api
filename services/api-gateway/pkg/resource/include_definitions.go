@@ -344,6 +344,9 @@ func init() {
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
 			{Key: "sales.product_line", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "default_manufacturing_method", ObjectType: constants.ObjectTypeManufacturingMethod},
+			{Key: "stocking_unit", ObjectType: constants.ObjectTypeUnit},
+			{Key: "default_order_unit", ObjectType: constants.ObjectTypeUnit},
+			{Key: "order_units", ObjectType: ""},
 		},
 	})
 

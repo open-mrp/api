@@ -35,6 +35,18 @@ type Item struct {
 	Category *ItemCategory `json:"category" expandable:"true"`
 	// The item's attributes, at most one per property, such as `Size: Large`.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
+	// Unit this item's inventory, costs and usage are kept in.
+	//
+	// Quantities in other units of the same dimension are converted to it. To correct it, use Change Stocking Unit. `null` for a service, which is never stocked.
+	StockingUnit *Unit `json:"stocking_unit" expandable:"true"`
+	// Unit selected by default when this item is added to a sales or purchase order.
+	//
+	// Always the stocking unit or one of `order_units`.
+	DefaultOrderUnit *Unit `json:"default_order_unit" expandable:"true"`
+	// Units this item can be ordered in, besides its stocking unit.
+	//
+	// Applies to both sales and purchase orders. Every unit measures the same dimension as the stocking unit.
+	OrderUnits *List[ItemOrderUnit] `json:"order_units" expandable:"true"`
 	// What one stocking unit of the item costs you.
 	//
 	// For items made by a production flow, it's restated from the flow when anything the item is built from changes. `null` without `costs:read`, and always `null` for portal users.
@@ -79,6 +91,24 @@ type ItemSales struct {
 	LeadTime *Quantity `json:"lead_time"`
 }
 
+// A unit an item can be ordered in besides its stocking unit.
+type ItemOrderUnit struct {
+	// The unit.
+	Unit *Unit `json:"unit" validate:"required"`
+	// Whether customers can see and pick this unit in the customer portal.
+	//
+	// `hidden` units can still be used on orders your team enters.
+	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
+	// Discount applied to the line's default price when the item is ordered in this unit, such as a lower per-pair price for a 12-pair pack.
+	//
+	// The price is converted to this unit first, then discounted. `null` when there is none.
+	Discount *Discount `json:"discount"`
+	// How many stocking units one of this unit holds for this item, such as `24` for a case of 24 here and 12 elsewhere.
+	//
+	// Overrides the unit's own conversion ratio for this item. `null` uses the unit's ratio.
+	Quantity *string `json:"quantity" format:"decimal"`
+}
+
 // A material's purchasing details.
 type ItemMaterial struct {
 	// Reorder when on-hand stock falls to this quantity.
@@ -94,17 +124,25 @@ type ItemMaterial struct {
 var sampleDescription = "6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"
 
 var SampleItem = &Item{
-	ID:          SampleItemID,
-	Object:      constants.ObjectTypeItem,
-	Type:        constants.ItemTypeCodeProduct,
-	Status:      constants.ArchiveStatusActive,
-	SKU:         SampleItemSKU,
-	Description: &sampleDescription,
-	Category:    SampleItemCategory,
-	Attributes:  NewList([]Attribute{*SampleAttribute}, PageInfo{}),
-	UnitCost:    SampleUnitPrice,
-	BurnRate:    SampleRate,
-	Supply:      new(constants.SupplyStock),
+	ID:               SampleItemID,
+	Object:           constants.ObjectTypeItem,
+	Type:             constants.ItemTypeCodeProduct,
+	Status:           constants.ArchiveStatusActive,
+	SKU:              SampleItemSKU,
+	Description:      &sampleDescription,
+	Category:         SampleItemCategory,
+	Attributes:       NewList([]Attribute{*SampleAttribute}, PageInfo{}),
+	StockingUnit:     SampleUnit,
+	DefaultOrderUnit: SampleUnit,
+	OrderUnits: NewList([]ItemOrderUnit{{
+		Unit:             SampleUnit,
+		PortalVisibility: constants.CustomerPortalVisibilityVisible,
+		Discount:         SampleDiscount,
+		Quantity:         new("12"),
+	}}, PageInfo{}),
+	UnitCost: SampleUnitPrice,
+	BurnRate: SampleRate,
+	Supply:   new(constants.SupplyStock),
 	Sales: &ItemSales{
 		UnitPrice:        SampleUnitPrice,
 		ProductLine:      SampleProductLine,

@@ -2,9 +2,10 @@ package itemep
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"slices"
 	"testing"
+
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"

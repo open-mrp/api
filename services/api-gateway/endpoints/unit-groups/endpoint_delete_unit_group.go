@@ -32,10 +32,9 @@ func (e *DeleteUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeUnitGroup,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(UnitGroupSvc).DeleteUnitGroup, constants.ObjectTypeUnitGroup, "id")
 		},

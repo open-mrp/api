@@ -60,12 +60,11 @@ func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		// Adding/updating a unit within a group is a sub-resource mutation of the
 		// parent group, so the downstream UpsertUnitGroupUnit checks unit_groups:update.
 		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionUpdate}}},
-		Preview:    true,
 		ObjectType: constants.ObjectTypeUnitGroupUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroupUnit

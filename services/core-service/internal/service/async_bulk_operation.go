@@ -153,6 +153,13 @@ type bulkOperationSpec[TInput, TResolved any] struct {
 	// the job (e.g. the initial bulk read). On redelivery a create converges on its
 	// pre-generated ids and an upsert by natural key.
 	Write func(txCtx context.Context, txRepos domain.RepoFactory, sp db.SavepointRunner, accountID string, rows []TResolved) (BulkWriteResult, *apierror.APIError)
+	// ChunkSize, when set, splits the execute phase into transactions of at most this many
+	// rows, each committed before the next starts, so a large job never holds one long
+	// transaction. Write sees one chunk at a time and indexes it from 0; the engine shifts
+	// the indices back to the request's. A job that fails part-way is re-executed from the
+	// first chunk, so a chunked Write must converge: a row already written is reported
+	// again, not written twice. Zero writes every row in one transaction.
+	ChunkSize int
 	// AfterCommit runs once the writes commit: side effects that must not roll them back, e.g. flow relinking. Return the failure — the engine traces it; the job is terminal by now, so nothing can be recorded on it.
 	AfterCommit func(ctx context.Context, repos domain.RepoFactory, accountID string, writtenIDs []string) *apierror.APIError
 }
@@ -311,8 +318,9 @@ func jobCreatedByID(ctx context.Context, repos domain.RepoFactory, accountID str
 }
 
 // executeBulkOperation is the execute phase, called by the entity's consumer. It loads
-// the job, runs the entity's Write inside one transaction, and settles the job in that
-// same transaction so the rows and the record of having written them commit together.
+// the job, runs the entity's Write inside one transaction (one per chunk when the spec
+// sets ChunkSize), and settles the job in the last of them so the rows and the record of
+// having written them commit together.
 // Exactly-once is provided by the message inbox, so there is no idempotency envelope
 // here; the payload was validated and resolved at enqueue time.
 func executeBulkOperation[TInput, TResolved any](
@@ -363,32 +371,65 @@ func executeBulkOperation[TInput, TResolved any](
 		return tracing.Trace(span, apiErr)
 	}
 
-	var writeResult BulkWriteResult
-	apiErr = deps.txManager.WithTxSavepoint(ctx, func(txCtx context.Context, txRepos domain.RepoFactory, sp db.SavepointRunner) *apierror.APIError {
-		res, apiErr := spec.Write(txCtx, txRepos, sp, accountID, rows)
-		if apiErr != nil {
-			return apiErr
-		}
-		writeResult = res
+	chunks := chunkBounds(len(rows), spec.ChunkSize)
+	var results []domain.RowResult
+	var rowErrors []apierror.RowError
+	var writtenIDs []string
+	for i, c := range chunks {
+		last := i == len(chunks)-1
+		apiErr = deps.txManager.WithTxSavepoint(ctx, func(txCtx context.Context, txRepos domain.RepoFactory, sp db.SavepointRunner) *apierror.APIError {
+			res, apiErr := spec.Write(txCtx, txRepos, sp, accountID, rows[c.start:c.end])
+			if apiErr != nil {
+				return apiErr
+			}
+			for _, r := range res.Results {
+				r.Index += c.start
+				results = append(results, r)
+			}
+			for _, e := range res.Errors {
+				e.Index += c.start
+				rowErrors = append(rowErrors, e)
+			}
+			writtenIDs = append(writtenIDs, res.WrittenIDs...)
+			if !last {
+				return nil
+			}
 
-		// Settled through the transactional service, so the written rows and the record of
-		// what happened — one entry per submitted row, written or rejected — commit
-		// together or not at all. A partly-failed batch still completes: Write only errors
-		// on an infrastructure failure that should roll the whole batch back.
-		outcomes := mergeRowOutcomes(stampResourceType(res.Results, spec.ResourceType), res.Errors)
-		return deps.jobs(txRepos).CompleteJob(txCtx, domain.CompleteJobParams{JobID: job.ID, Results: outcomes})
-	})
-	if apiErr != nil {
-		deps.jobs(deps.repos).FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
-		return tracing.Trace(span, apiErr)
+			// Settled through the transactional service, so the last rows written and the
+			// record of what happened — one entry per submitted row, written or rejected —
+			// commit together or not at all. A partly-failed batch still completes: Write
+			// only errors on an infrastructure failure that should roll the chunk back.
+			outcomes := mergeRowOutcomes(stampResourceType(results, spec.ResourceType), rowErrors)
+			return deps.jobs(txRepos).CompleteJob(txCtx, domain.CompleteJobParams{JobID: job.ID, Results: outcomes})
+		})
+		if apiErr != nil {
+			deps.jobs(deps.repos).FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
+			return tracing.Trace(span, apiErr)
+		}
 	}
 
 	if spec.AfterCommit != nil {
 		// Not returned: the job is already complete, so a failed side effect has nothing to roll back.
-		if apiErr := spec.AfterCommit(ctx, deps.repos, accountID, writeResult.WrittenIDs); apiErr != nil {
+		if apiErr := spec.AfterCommit(ctx, deps.repos, accountID, writtenIDs); apiErr != nil {
 			tracing.Trace(span, apiErr)
 		}
 	}
 
 	return nil
+}
+
+// chunkRange is the half-open row range [start, end) one execute transaction writes.
+type chunkRange struct{ start, end int }
+
+// chunkBounds splits n rows into consecutive ranges of at most size rows; size <= 0 means
+// one range. Zero rows still make one empty range, so the job is settled.
+func chunkBounds(n, size int) []chunkRange {
+	if size <= 0 || size >= n {
+		return []chunkRange{{0, n}}
+	}
+	out := make([]chunkRange, 0, (n+size-1)/size)
+	for start := 0; start < n; start += size {
+		out = append(out, chunkRange{start, min(start+size, n)})
+	}
+	return out
 }

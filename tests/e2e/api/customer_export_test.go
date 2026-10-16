@@ -130,6 +130,7 @@ func TestCustomerExport_RecordsTheListFiltersOnTheJob(t *testing.T) {
 		"Query":                 "harbor",
 		"CustomerGroupIDs":      []any{SeedCustomerGroupID},
 		"PricingGroupIDs":       []any{"acgp_e2eexportprice"},
+		"PriceListIDs":          nil,
 		"SalesRepIDs":           []any{SeedAccountUserID},
 		"StatusCodes":           []any{"normal"},
 		"ShippingTermIDs":       []any{SeedShippingTermID},

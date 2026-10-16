@@ -236,6 +236,8 @@ var noGETPatchBodies = map[string]map[string]any{
 	"update-quantity":  {"value": "1"},
 	"update-rate":      {"value": "1"},
 	"update-pick-line": {"quantity_value": "1"},
+	// The seeded Shippo integration is already active, so the PATCH changes nothing.
+	"update-account-integration": {"status": "active"},
 	// Sales-order line takes a nested `quantity` object (not a flat quantity_value
 	// like pick lines); use a scalar optional field for the no-op PATCH.
 	"update-sales-order-line": {"product_description": "Schema validation update"},

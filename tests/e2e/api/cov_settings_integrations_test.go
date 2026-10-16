@@ -502,8 +502,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 
 	t.Run("CredentialsAsAString", func(t *testing.T) {
 		t.Parallel()
-		status, body := post(t, map[string]any{"name": name(), "provider": "stripe", "credentials": "not-json"})
-		requireStatus(t, 400, status, body)
+		expect422(t, map[string]any{"name": name(), "provider": "stripe", "credentials": "not-json"}, "credentials")
 	})
 
 	t.Run("ProviderUnreachable", func(t *testing.T) {

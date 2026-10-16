@@ -155,7 +155,7 @@ func TestCovCoreSandboxes_DeleteAlreadyDeleted(t *testing.T) {
 
 	delStatus1, delBody1, err := apiClient.Delete(sandboxesPath + "/" + id)
 	require.NoError(t, err)
-	requireStatus(t, 202, delStatus1, delBody1)
+	requireStatus(t, 200, delStatus1, delBody1)
 
 	delStatus2, delBody2, err := apiClient.Delete(sandboxesPath + "/" + id)
 	require.NoError(t, err)

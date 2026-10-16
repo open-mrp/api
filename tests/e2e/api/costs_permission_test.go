@@ -446,7 +446,7 @@ func TestCosts_RequestLogsKeepCostOut(t *testing.T) {
 		return nil
 	})
 
-	got := parseJSON(mustGetAs(t, apiClient, requestLogsPath+"/"+logID, url.Values{"include": {"request_body", "response_body"}}))
+	got := parseJSON(mustGetAs(t, apiClient, requestLogsPath+"/"+logID+"/bodies", nil))
 	assert.Equal(t, "****", jsonField(jsonObject(got, "request_body"), "unit_cost"), "the cost the request set")
 	assert.Equal(t, "****", jsonField(jsonObject(jsonObject(got, "response_body"), "item"), "unit_cost"), "the cost the response carried")
 }

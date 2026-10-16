@@ -17,7 +17,7 @@ import (
 // Audit coverage for notification-service mutations: email bridge configuration, reply drafts,
 // scheduled messages, a participant's own view of a conversation, broadcasts, and preferences.
 
-// auditWindowStart is the starts_at bound that keeps an earlier run's events on the same resource out of a match.
+// auditWindowStart is the occurred_after bound that keeps an earlier run's events on the same resource out of a match.
 func auditWindowStart() string {
 	return time.Now().Add(-5 * time.Second).UTC().Format(time.RFC3339)
 }
@@ -31,7 +31,7 @@ func findAuditEvent(t *testing.T, c *Client, since, resourceID, resourceType, ac
 			"resource_ids":   {resourceID},
 			"resource_types": {resourceType},
 			"actions":        {action},
-			"starts_at":      {since},
+			"occurred_after": {since},
 			"include":        {"changes", "metadata"},
 			"limit":          {"100"},
 		})
@@ -235,11 +235,11 @@ func TestReplyDrafts_AuditEvents(t *testing.T) {
 func auditEventIDsForRoot(t *testing.T, c *Client, since, rootType, rootID, resourceType string) []string {
 	t.Helper()
 	status, body, err := c.GetListRaw(auditEventsPath, url.Values{
-		"root_resource_type": {rootType},
-		"root_resource_id":   {rootID},
-		"resource_types":     {resourceType},
-		"starts_at":          {since},
-		"limit":              {"100"},
+		"root_resource_types": {rootType},
+		"root_resource_ids":   {rootID},
+		"resource_types":      {resourceType},
+		"occurred_after":      {since},
+		"limit":               {"100"},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

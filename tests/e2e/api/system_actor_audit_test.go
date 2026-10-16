@@ -56,8 +56,8 @@ func findPaymentLinkAuditEvent(t *testing.T, since, orderID string) map[string]a
 			"resource_ids":   {orderID},
 			"resource_types": {"sales_order"},
 			"actions":        {"update"},
-			"starts_at":      {since},
-			"include":        {"actor", "changes"},
+			"occurred_after": {since},
+			"include":        {"changes"},
 		})
 		if err != nil {
 			return err
@@ -88,8 +88,9 @@ func TestSystemActor_StripePaymentLinkIsAuditedAsTheSystem(t *testing.T) {
 
 	event := findPaymentLinkAuditEvent(t, since, orderID)
 	actor := jsonObject(event, "actor")
-	require.NotNil(t, actor, "actor is always present when included: %v", event)
-	assert.Equal(t, "system", jsonField(actor, "type"), "a background change is the system's")
+	require.NotNil(t, actor, "actor is always present: %v", event)
+	assert.Equal(t, map[string]any{"type": "system", "id": nil, "name": "Stripe", "client": nil}, actor,
+		"a Stripe webhook's change is the system's, named for the process, with no id")
 	assert.Nil(t, event["source_ip"], "no request caused the change")
 	assert.Nil(t, event["idempotency_key"], "no request caused the change")
 
@@ -98,9 +99,9 @@ func TestSystemActor_StripePaymentLinkIsAuditedAsTheSystem(t *testing.T) {
 
 	// The system is an actor type the list filters by.
 	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
-		"resource_ids": {orderID},
-		"actor_types":  {"system"},
-		"starts_at":    {since},
+		"resource_ids":   {orderID},
+		"actor_types":    {"system"},
+		"occurred_after": {since},
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

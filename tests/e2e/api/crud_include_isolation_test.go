@@ -54,17 +54,12 @@ func TestIncludeIsolation_ListEndpointsReturnNullSubobjectsWithoutInclude(t *tes
 		{
 			name: "audit_events",
 			path: auditEventsPath,
-			keys: []string{"actor", "changes", "metadata", "request"},
+			keys: []string{"changes", "metadata", "request"},
 		},
 		{
 			name: "customers",
 			path: customersPath,
 			keys: []string{"contact_info", "freight_preferences", "defaults", "notification_preferences", "bill_to_address", "ship_to_address", "type", "price_groups", "parent_account", "child_accounts", "credit_limit"},
-		},
-		{
-			name: "email_logs",
-			path: emailLogsPath,
-			keys: []string{"sent_by"},
 		},
 	}
 
@@ -109,19 +104,16 @@ func TestRequestLogs_ListExpandableFieldsNullWithoutInclude(t *testing.T) {
 	for i, item := range list.Data {
 		m := parseJSON(item)
 		assert.Nilf(t, m["account"], "item[%d]: account must be null without ?include=account", i)
-		assert.Nilf(t, m["actor"], "item[%d]: actor must be null without ?include=actor", i)
-		assert.Nilf(t, m["query_params"], "item[%d]: query_params must be null without ?include=query_params", i)
+		assert.NotNilf(t, m["actor"], "item[%d]: actor is always present", i)
 		assert.Nilf(t, m["request_body"], "item[%d]: request_body must be null without ?include=request_body", i)
 		assert.Nilf(t, m["response_body"], "item[%d]: response_body must be null without ?include=response_body", i)
 	}
 }
 
-// TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccountOrActor verifies
-// that a request_log embedded as an audit event's "request" sub-resource is the
-// base resource only. "request.account"/"request.actor" are not part of any
-// endpoint's allowed includes, so the loader must not embed them — the client
-// never asked for them.
-func TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccountOrActor(t *testing.T) {
+// TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccount verifies that a request_log embedded as an audit
+// event's "request" sub-resource is the base resource only: "request.account" is not part of any endpoint's
+// allowed includes, so the loader must not embed it. Its actor is always present.
+func TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccount(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(auditEventsPath+"/"+SeedAuditEventID, url.Values{"include": {"request"}})
 	require.NoError(t, err)
@@ -134,5 +126,5 @@ func TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccountOrActor(t *test
 	assert.Equal(t, "request_log", jsonField(req, "object"), "request sub-resource should be a request_log")
 	assert.NotEmpty(t, jsonField(req, "id"), "request sub-resource should carry its base id")
 	assert.Nil(t, req["account"], "embedded request_log must not carry account (request.account is not requestable)")
-	assert.Nil(t, req["actor"], "embedded request_log must not carry actor (request.actor is not requestable)")
+	assert.NotNil(t, req["actor"], "an embedded request_log carries its actor like any other")
 }

@@ -13,7 +13,7 @@ import (
 // This file closes gaps in the otherwise-extensive coverage of the
 // audit-events group (auditEventsPath, declared in crud_audit_events_test.go):
 // GetByID 404, the never-asserted source_ip/idempotency_key/AuditFieldChange.object
-// fields, actor_types + starts_at/ends_at filters, cursor-based list
+// fields, actor_types + occurred_after/occurred_before filters, cursor-based list
 // pagination, and the list-level "account" include-isolation gap. See
 // tests/e2e/api/crud_audit_events_test.go for the primary suite (32 pre-existing
 // tests) and async_side_effects_test.go for cross-resource changes-field coverage
@@ -170,7 +170,6 @@ func TestCovCoreAuditEvents_FilterByActorTypeUser(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_types": {"user"},
-		"include":     {"actor"},
 		"limit":       {"10"},
 	})
 	require.NoError(t, err)
@@ -178,7 +177,7 @@ func TestCovCoreAuditEvents_FilterByActorTypeUser(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, "user", jsonField(actor, "type"))
 	}
 }
@@ -187,7 +186,6 @@ func TestCovCoreAuditEvents_FilterByActorTypeAPIKey(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_types": {"api_key"},
-		"include":     {"actor"},
 		"limit":       {"10"},
 	})
 	require.NoError(t, err)
@@ -195,7 +193,7 @@ func TestCovCoreAuditEvents_FilterByActorTypeAPIKey(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, "api_key", jsonField(actor, "type"))
 	}
 }
@@ -204,7 +202,6 @@ func TestCovCoreAuditEvents_FilterByMultipleActorTypesUnion(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"actor_types": {"user", "api_key"},
-		"include":     {"actor"},
 		"limit":       {"25"},
 	})
 	require.NoError(t, err)
@@ -214,7 +211,7 @@ func TestCovCoreAuditEvents_FilterByMultipleActorTypesUnion(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		got := jsonField(actor, "type")
 		assert.True(t, allowed[got], "actor.type %q not in requested set", got)
 	}
@@ -229,44 +226,44 @@ func TestCovCoreAuditEvents_FilterByInvalidActorTypeRejected(t *testing.T) {
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
-// --- starts_at / ends_at filters ---
+// --- occurred_after / occurred_before filters ---
 
 func TestCovCoreAuditEvents_FilterByStartDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"starts_at": {"2099-01-01T00:00:00Z"},
-		"limit":     {"5"},
+		"occurred_after": {"2099-01-01T00:00:00Z"},
+		"limit":          {"5"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "starts_at far in the future should exclude all audit events")
+	assertEmptyListData(t, list.Data, "occurred_after far in the future should exclude all audit events")
 }
 
 func TestCovCoreAuditEvents_FilterByEndDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"ends_at": {"2000-01-01T00:00:00Z"},
-		"limit":   {"5"},
+		"occurred_before": {"2000-01-01T00:00:00Z"},
+		"limit":           {"5"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "ends_at far in the past should exclude all audit events")
+	assertEmptyListData(t, list.Data, "occurred_before far in the past should exclude all audit events")
 }
 
 func TestCovCoreAuditEvents_FilterByStartDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"starts_at": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"occurred_after": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "starts_at")
+	assertErrorParam(t, errObj, "occurred_after")
 }
 
 func TestCovCoreAuditEvents_FilterByEndDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"ends_at": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"occurred_before": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "ends_at")
+	assertErrorParam(t, errObj, "occurred_before")
 }
 
 // --- limit boundary validation ---

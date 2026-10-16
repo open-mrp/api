@@ -796,11 +796,11 @@ func expectSupplierMaterialRootedEvents(t *testing.T, supplierID, materialID str
 	t.Helper()
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
-			"root_resource_type": {"supplier"},
-			"root_resource_id":   {supplierID},
-			"resource_types":     {"supplier_material"},
-			"resource_ids":       {materialID},
-			"limit":              {"100"},
+			"root_resource_types": {"supplier"},
+			"root_resource_ids":   {supplierID},
+			"resource_types":      {"supplier_material"},
+			"resource_ids":        {materialID},
+			"limit":               {"100"},
 		})
 		if err != nil {
 			return err

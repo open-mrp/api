@@ -105,7 +105,7 @@ func dashInvoicesAwaitEmailLog(t *testing.T, recipient, subject string) map[stri
 	t.Helper()
 	var found map[string]any
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
-		status, body, err := apiClient.GetListRaw(emailLogsPath, url.Values{"q": {recipient}, "include": {"sent_by"}, "limit": {"100"}})
+		status, body, err := apiClient.GetListRaw(emailLogsPath, url.Values{"q": {recipient}, "include": {"related.record"}, "limit": {"100"}})
 		if err != nil {
 			return err
 		}
@@ -687,7 +687,8 @@ func TestDashInvoices_StatementEmailReplaySendsOnce(t *testing.T) {
 	assert.Equal(t, []any{first, second}, logged["recipients"])
 	assert.True(t, strings.HasPrefix(jsonField(logged, "filename"), "account-statement-"))
 	assert.Equal(t, "sent", jsonField(logged, "send_status"))
-	assert.NotNil(t, jsonObject(logged, "sent_by"), "a statement someone sent is attributed to them")
+	assert.Equal(t, "api_key", jsonField(jsonObject(logged, "sent_by"), "type"), "a statement someone sent is attributed to them")
+	assertEmailLogRelated(t, logged, "customer", customerID)
 
 	status, body, err = apiClient.Post(path, map[string]any{"recipient_emails": []string{first, second}}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -742,6 +743,7 @@ func TestDashInvoices_EmailInvoiceSendsToItsContactsOnce(t *testing.T) {
 	assert.Equal(t, []any{contactEmail}, logged["recipients"])
 	assert.Equal(t, "invoice-"+inv.number+".pdf", jsonField(logged, "filename"))
 	assert.Equal(t, "sent", jsonField(logged, "send_status"))
+	assertEmailLogRelated(t, logged, "invoice", inv.invoiceID)
 
 	status, body = dashInvoicesEmailRecord(t, apiClient, request, newIdempotencyKey())
 	requireStatus(t, http.StatusAccepted, status, body)
@@ -759,7 +761,15 @@ func TestDashInvoices_EmailedInvoiceIsAttributedToItsSender(t *testing.T) {
 	requireStatus(t, http.StatusAccepted, status, body)
 
 	logged := dashInvoicesAwaitEmailLog(t, contactEmail, "Invoice "+paddedNumber(inv.number))
-	assert.NotNil(t, jsonObject(logged, "sent_by"), "the email log names the sender: %v", logged)
+	assert.Equal(t, "api_key", jsonField(jsonObject(logged, "sent_by"), "type"), "the email log names the sender: %v", logged)
+	assertEmailLogRelated(t, logged, "invoice", inv.invoiceID)
+
+	// The related filter finds the email by the invoice it carried.
+	list, _, err := apiClient.GetList(emailLogsPath, url.Values{"related_ids": {inv.invoiceID}})
+	require.NoError(t, err)
+	require.Len(t, list.Data, 1, "one email carried this invoice")
+	assert.Equal(t, jsonField(logged, "id"), DataItemField(list.Data[0], "id"))
+	assert.Nil(t, jsonObject(parseJSON(list.Data[0]), "related")["record"], "related.record is null unless included")
 }
 
 // An invoice whose order names no invoice contact is still marked sent, so the resend sweep leaves

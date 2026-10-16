@@ -46,19 +46,15 @@ func TestCovCoreEmailLogs_ListSearch_RecipientEmail(t *testing.T) {
 	assert.True(t, found, "search q=warehouse@example.com should surface seeded log %s", SeedEmailLogID2)
 }
 
-// TestCovCoreEmailLogs_List_IncludeSentBy pairs with the existing
-// TestIncludeIsolation_ListEndpointsReturnNullSubobjectsWithoutInclude negative
-// case: with ?include=sent_by, list items should have a populated sent_by Actor
-// whose type reflects the true sender. Emails sent by the seeded user resolve to
-// a {us_, user} actor; emails the API sends on the caller's behalf (e.g. the
-// account-user welcome email triggered under the seeded API key) resolve to an
-// {apky_, api_key} actor. The sent_by type must match the sender's kind — it must
-// never be blindly reported as "user".
-func TestCovCoreEmailLogs_List_IncludeSentBy(t *testing.T) {
+// TestCovCoreEmailLogs_List_SentBy checks every list item carries a sent_by ActorRef whose type reflects the true
+// sender. Emails sent by the seeded user resolve to a {us_, user} actor; emails the API sends on the caller's behalf
+// (e.g. the account-user welcome email triggered under the seeded API key) resolve to an {apky_, api_key} actor; an
+// email the platform sent on its own is the system's. The type must never be blindly reported as "user".
+func TestCovCoreEmailLogs_List_SentBy(t *testing.T) {
 	t.Parallel()
 	// Follow all pages so both seeded user-sent logs are inspected regardless of
 	// how many runtime rows (with other senders) sort ahead of them.
-	list, _, err := apiClient.GetList(emailLogsPath, url.Values{"include": {"sent_by"}})
+	list, _, err := apiClient.GetList(emailLogsPath, nil)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 2, "should have at least 2 seeded email logs")
 	items := list.Data
@@ -68,22 +64,22 @@ func TestCovCoreEmailLogs_List_IncludeSentBy(t *testing.T) {
 		items = append(items, list.Data...)
 	}
 
-	validActorTypes := map[string]bool{"user": true, "api_key": true, "agent": true, "group": true}
+	validActorTypes := map[string]bool{"user": true, "api_key": true, "agent": true, "system": true}
 
-	foundPopulated := false
 	sawSeedUser := false
 	for _, item := range items {
 		parsed := parseJSON(item)
 		sentBy := jsonObject(parsed, "sent_by")
-		if sentBy == nil {
-			continue
-		}
-		foundPopulated = true
+		require.NotNil(t, sentBy, "sent_by is always present: %v", parsed)
+		assert.Nil(t, jsonObject(parsed, "related")["record"], "related.record is null unless included")
 
 		actorID := jsonField(sentBy, "id")
 		actorType := jsonField(sentBy, "type")
-		assert.Equal(t, "actor", jsonField(sentBy, "object"))
+		assert.NotContains(t, sentBy, "object", "sent_by is an ActorRef")
 		assert.True(t, validActorTypes[actorType], "sent_by.type %q is not a valid actor type (id %s)", actorType, actorID)
+		if actorType == "system" {
+			assert.Nil(t, sentBy["id"], "the system has no id")
+		}
 
 		// The actor's declared type must be consistent with its id kind, not
 		// hardcoded — a user id is a user, an API-key id is an api_key.
@@ -95,7 +91,6 @@ func TestCovCoreEmailLogs_List_IncludeSentBy(t *testing.T) {
 			assert.Equal(t, "api_key", actorType, "an API-key sender must resolve to an api_key actor, not a user")
 		}
 	}
-	assert.True(t, foundPopulated, "at least one email log in the list should have a populated sent_by with ?include=sent_by")
 	assert.True(t, sawSeedUser, "the seeded user-sent email logs should expose a populated sent_by actor of type user")
 }
 

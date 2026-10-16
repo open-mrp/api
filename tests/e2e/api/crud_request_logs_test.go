@@ -157,7 +157,6 @@ func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_types": {"api_key"},
-		"include":     {"actor"},
 		"limit":       {"10"},
 	})
 	if err != nil {
@@ -169,7 +168,7 @@ func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, "api_key", jsonField(actor, "type"), "All returned logs should have actor.type=api_key")
 	}
 }
@@ -186,8 +185,7 @@ func TestRequestLogs_ListFilterByInvalidActorTypeRejected(t *testing.T) {
 func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"include": {"actor"},
-		"limit":   {"10"},
+		"limit": {"10"},
 	})
 	if err != nil || len(list.Data) == 0 {
 		t.Fatal("No request logs available to discover actor IDs")
@@ -212,7 +210,6 @@ func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_ids": {actorID},
-		"include":   {"actor"},
 		"limit":     {"10"},
 	})
 	require.NoError(t, err)
@@ -221,7 +218,7 @@ func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
 	for _, item := range filtered.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Equal(t, actorID, jsonField(actor, "id"), "All results should match the filtered actor_id")
 	}
 }
@@ -244,7 +241,7 @@ func TestRequestLogs_ListFilterByIdempotencyKey(t *testing.T) {
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"idempotency_key": {SeedRequestLogIdempotencyKey},
 		"limit":           {"10"},
-		"starts_at":       {requestLogSeedEra},
+		"occurred_after":  {requestLogSeedEra},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
@@ -368,7 +365,6 @@ func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_types": {"user", "api_key"},
-		"include":     {"actor"},
 		"limit":       {"25"},
 	})
 	require.NoError(t, err)
@@ -377,7 +373,7 @@ func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		got := jsonField(actor, "type")
 		assert.True(t, allowed[got], "actor.type %q not in requested set", got)
 	}
@@ -421,8 +417,7 @@ func TestRequestLogs_ListFilterByMultipleActorIDs(t *testing.T) {
 	t.Parallel()
 	// Discover an actor.id from recent logs.
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"include": {"actor"},
-		"limit":   {"10"},
+		"limit": {"10"},
 	})
 	if err != nil || len(list.Data) == 0 {
 		t.Fatal("No request logs available to discover actor IDs")
@@ -447,7 +442,6 @@ func TestRequestLogs_ListFilterByMultipleActorIDs(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_ids": {actorID, "actu_zzzzzzzzzzzzzzzz"},
-		"include":   {"actor"},
 		"limit":     {"10"},
 	})
 	require.NoError(t, err)
@@ -476,7 +470,6 @@ func TestRequestLogs_ListFilterByMultipleActorsUnion(t *testing.T) {
 	discoverActorOfType := func(actorType string) string {
 		l, _, derr := apiClient.GetList(requestLogsPath, url.Values{
 			"actor_types": {actorType},
-			"include":     {"actor"},
 			"limit":       {"1"},
 		})
 		if derr != nil || len(l.Data) == 0 {
@@ -498,7 +491,6 @@ func TestRequestLogs_ListFilterByMultipleActorsUnion(t *testing.T) {
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_ids": {actorA, actorB},
-		"include":   {"actor"},
 		"limit":     {"100"},
 	})
 	require.NoError(t, err)
@@ -507,7 +499,7 @@ func TestRequestLogs_ListFilterByMultipleActorsUnion(t *testing.T) {
 	sawA, sawB := false, false
 	for _, item := range filtered.Data {
 		actor := jsonObject(parseJSON(item), "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		got := jsonField(actor, "id")
 		assert.True(t, allowed[got], "actor.id %q not in requested set {%s, %s}", got, actorA, actorB)
 		switch got {
@@ -529,9 +521,9 @@ func TestRequestLogs_ListSearchByIDInRoute(t *testing.T) {
 	t.Parallel()
 	// The seed row is dated when the database was seeded, so reach back past it; a list otherwise covers only the last day.
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"q":         {SeedRequestLogSearchToken},
-		"limit":     {"50"},
-		"starts_at": {requestLogSeedEra},
+		"q":              {SeedRequestLogSearchToken},
+		"limit":          {"50"},
+		"occurred_after": {requestLogSeedEra},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
@@ -745,8 +737,8 @@ func TestRequestLogs_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Nil(t, got["account"], "account should be null without ?include=account")
-	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
-	assert.Nil(t, got["query_params"], "query_params should be null without ?include=query_params")
+	assert.NotNil(t, got["actor"], "actor is always present")
+	assert.Contains(t, got, "query_params", "query_params is always part of the log")
 	assert.Nil(t, got["request_body"], "request_body should be null without ?include=request_body")
 	assert.Nil(t, got["response_body"], "response_body should be null without ?include=response_body")
 }
@@ -770,45 +762,58 @@ func TestRequestLogs_IncludeAccount(t *testing.T) {
 	assert.Equal(t, "account", jsonField(account, "object"))
 }
 
-func TestRequestLogs_IncludeActor(t *testing.T) {
+func TestRequestLogs_ActorIsAnActorRef(t *testing.T) {
 	t.Parallel()
-	id, ok := discoverRequestLogID(t)
-	if !ok {
-		t.Fatal("Could not discover a request log ID")
-		return
-	}
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_types": {"api_key"}, "limit": {"1"}})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "the harness's own API key traffic is logged")
+	id := DataItemField(list.Data[0], "id")
 
-	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+id, url.Values{"include": {"actor"}})
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	actor := jsonObject(got, "actor")
-	require.NotNil(t, actor, "actor should be present with ?include=actor")
+	actor := jsonObject(parseJSON(body), "actor")
+	require.NotNil(t, actor, "actor should always be present")
+	assertActorRef(t, actor, "api_key")
 	assert.NotEmpty(t, jsonField(actor, "id"))
-	assert.Equal(t, "actor", jsonField(actor, "object"))
-	assert.NotEmpty(t, jsonField(actor, "type"))
+	assert.NotEmpty(t, jsonField(actor, "name"), "an API key actor is named for its key")
 }
 
-func TestRequestLogs_IncludeActorRole(t *testing.T) {
+func TestRequestLogs_ActorIsNotAnInclude(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{"actor", "actor.role", "query_params"} {
+		status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"include": {key}})
+		require.NoError(t, err)
+		requireStatus(t, 400, status, body)
+	}
+}
+
+// --- Bodies ---
+
+func TestRequestLogs_RetrieveBodiesNotFound(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/rq_000000000000/bodies", nil)
+	require.NoError(t, err)
+	requireStatus(t, 404, status, body)
+}
+
+// Reading bodies needs request_logs:read and nothing more; a caller without it is refused.
+func TestRequestLogs_RetrieveBodiesPermission(t *testing.T) {
 	t.Parallel()
 	id, ok := discoverRequestLogID(t)
-	if !ok {
-		t.Fatal("Could not discover a request log ID")
-		return
-	}
+	require.True(t, ok, "Could not discover a request log ID")
 
-	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+id, url.Values{"include": {"actor.role"}})
+	reader := customRoleClient(t, "request_logs:read")
+	status, body, err := reader.GetListRaw(requestLogsPath+"/"+id+"/bodies", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	assert.Equal(t, "request_log_bodies", jsonField(parseJSON(body), "object"))
 
-	got := parseJSON(body)
-	actor := jsonObject(got, "actor")
-	require.NotNil(t, actor, "actor should be present with ?include=actor.role")
-	role := jsonObject(actor, "role")
-	require.NotNil(t, role, "actor.role should be present with ?include=actor.role")
-	assert.NotEmpty(t, jsonField(role, "id"))
-	assert.Equal(t, "role", jsonField(role, "object"))
+	outsider := customRoleClient(t, "sales_orders:read")
+	status, body, err = outsider.GetListRaw(requestLogsPath+"/"+id+"/bodies", nil)
+	require.NoError(t, err)
+	requireStatus(t, 403, status, body)
 }
 
 func TestRequestLogs_ListIncludeAccount(t *testing.T) {
@@ -936,46 +941,45 @@ func TestRequestLogs_ListFilterByMinLatencyVerifiesThreshold(t *testing.T) {
 func TestRequestLogs_ListFilterByStartDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"starts_at": {"2099-01-01T00:00:00Z"},
-		"limit":     {"5"},
+		"occurred_after": {"2099-01-01T00:00:00Z"},
+		"limit":          {"5"},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
 		return
 	}
-	assertEmptyListData(t, list.Data, "starts_at far in the future should exclude all logs")
+	assertEmptyListData(t, list.Data, "occurred_after far in the future should exclude all logs")
 }
 
 func TestRequestLogs_ListFilterByEndDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"ends_at": {"2000-01-01T00:00:00Z"},
-		"limit":   {"5"},
+		"occurred_before": {"2000-01-01T00:00:00Z"},
+		"limit":           {"5"},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
 		return
 	}
-	assertEmptyListData(t, list.Data, "ends_at far in the past should exclude all logs")
+	assertEmptyListData(t, list.Data, "occurred_before far in the past should exclude all logs")
 }
 
-// A log stored with no payload object (no query string, no bodies) reads its includes as empty:
-// no query params, and the {} a request or response without a body has always read as.
-// TestRequestLogs_CapturesPayloads covers a log whose includes come from its object.
-func TestRequestLogs_IncludesWithoutStoredPayload(t *testing.T) {
+// A log stored with no payload object (no query string, no bodies) has no query params, and its bodies read as the
+// {} a request or response without a body has always read as. TestRequestLogs_CapturesPayloads covers a log whose
+// fields come from its object.
+func TestRequestLogs_LogWithoutStoredPayload(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID, url.Values{
-		"include": {"query_params", "request_body", "response_body"},
-	})
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID, nil)
 	require.NoError(t, err)
-	skipOnNonClientError(t, requestLogsPath, status)
 	requireStatus(t, 200, status, body)
-
 	got := parseJSON(body)
 	assert.Equal(t, SeedRequestLogQueryParamsID, jsonField(got, "id"))
 	assert.Nil(t, got["query_params"], "a log without a query string has no query_params")
-	assert.Equal(t, map[string]any{}, got["request_body"])
-	assert.Equal(t, map[string]any{}, got["response_body"])
+
+	status, body, err = apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID+"/bodies", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{"object": "request_log_bodies", "request_body": map[string]any{}, "response_body": map[string]any{}}, parseJSON(body))
 }
 
 func TestRequestLogs_CapturesPayloads(t *testing.T) {
@@ -1018,25 +1022,27 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	})
 	require.NotEmpty(t, logID)
 
-	getStatus, getBody, err := apiClient.GetListRaw(requestLogsPath+"/"+logID, url.Values{
-		"include": {"request_body", "response_body", "query_params"},
-	})
+	getStatus, getBody, err := apiClient.GetListRaw(requestLogsPath+"/"+logID, nil)
 	require.NoError(t, err)
-	skipOnNonClientError(t, requestLogsPath, getStatus)
 	requireStatus(t, 200, getStatus, getBody)
-
 	got := parseJSON(getBody)
-	reqBody := jsonObject(got, "request_body")
-	require.NotNil(t, reqBody, "request_body should be present with ?include=request_body")
+	assert.Equal(t, map[string]any{"include": []any{"unit_group"}}, got["query_params"], "query params are value lists")
+	assert.Nil(t, got["request_body"], "bodies are not part of the log")
+
+	bodiesStatus, bodiesBody, err := apiClient.GetListRaw(requestLogsPath+"/"+logID+"/bodies", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, bodiesStatus, bodiesBody)
+	bodies := parseJSON(bodiesBody)
+	assert.ElementsMatch(t, []string{"object", "request_body", "response_body"}, mapKeys(bodies))
+	assert.Equal(t, "request_log_bodies", jsonField(bodies, "object"))
+
+	reqBody := jsonObject(bodies, "request_body")
+	require.NotNil(t, reqBody, "request_body should be the body sent")
 	assert.Equal(t, name, jsonField(reqBody, "name"))
 
-	respObj := jsonObject(got, "response_body")
-	require.NotNil(t, respObj, "response_body should be present with ?include=response_body")
+	respObj := jsonObject(bodies, "response_body")
+	require.NotNil(t, respObj, "response_body should be the body returned")
 	assert.Equal(t, "item_category", jsonField(respObj, "object"))
-
-	qp := jsonObject(got, "query_params")
-	require.NotNil(t, qp, "query_params should be present with ?include=query_params")
-	assert.Equal(t, "unit_group", jsonField(qp, "include"))
 
 	// The bodies above were served from the payloads bucket: the row holds only the key.
 	var payloadKey sql.NullString
@@ -1045,9 +1051,9 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	assert.Equal(t, "request-logs/"+logID+".json.gz", payloadKey.String)
 }
 
-func TestRequestLogs_ListIncludeActor(t *testing.T) {
+func TestRequestLogs_ListActorAlwaysPresent(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"include": {"actor"}, "limit": {"5"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"5"}})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
 		return
@@ -1060,9 +1066,8 @@ func TestRequestLogs_ListIncludeActor(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
-		require.NotNil(t, actor, "actor should be present on list items with ?include=actor")
-		assert.NotEmpty(t, jsonField(actor, "id"))
-		assert.Equal(t, "actor", jsonField(actor, "object"))
+		require.NotNil(t, actor, "actor should be present on every list item")
+		assert.NotContains(t, actor, "object", "an ActorRef is a value shape")
 		assert.NotEmpty(t, jsonField(actor, "type"))
 	}
 }
@@ -1114,8 +1119,8 @@ func fetchScopedRequestLogs(t *testing.T, params url.Values) *ListResponse {
 		params.Set("limit", "50")
 	}
 	// The cohorts are seeded at fixed past dates, so reach back past them; a list otherwise covers only the last day.
-	if params.Get("starts_at") == "" {
-		params.Set("starts_at", requestLogSeedEra)
+	if params.Get("occurred_after") == "" {
+		params.Set("occurred_after", requestLogSeedEra)
 	}
 	list, _, err := apiClient.GetList(requestLogsPath, params)
 	require.NoError(t, err)
@@ -1325,8 +1330,8 @@ func assertStrictlyDescendingIDs(t *testing.T, ids []string) {
 func paginateAllRequestLogIDs(t *testing.T, params url.Values) []string {
 	t.Helper()
 	params.Set("limit", "1")
-	if params.Get("starts_at") == "" {
-		params.Set("starts_at", requestLogSeedEra)
+	if params.Get("occurred_after") == "" {
+		params.Set("occurred_after", requestLogSeedEra)
 	}
 	list, _, err := apiClient.GetList(requestLogsPath, params)
 	require.NoError(t, err)
@@ -1411,7 +1416,7 @@ func TestRequestLogs_DualScopePagination_BackwardReturnsPriorPage(t *testing.T) 
 	page1, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"normalized_routes": {SeedReqLogScopeRoute},
 		"limit":             {"1"},
-		"starts_at":         {requestLogSeedEra},
+		"occurred_after":    {requestLogSeedEra},
 	})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
@@ -1440,7 +1445,6 @@ func TestRequestLogs_FilterByActorIDs_IncludesAndExcludes(t *testing.T) {
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterActorIDsRoute},
 		"actor_ids":         {SeedUserID, SeedUser2ID},
-		"include":           {"actor"},
 	})
 	assert.Len(t, list.Data, 2, "scope + actor_ids=[user1,user2] should return exactly two cohort rows")
 	assertRequestLogMembership(t, list.Data,
@@ -1448,7 +1452,7 @@ func TestRequestLogs_FilterByActorIDs_IncludesAndExcludes(t *testing.T) {
 		[]string{SeedReqLogFilterActorUser3})
 	for _, item := range list.Data {
 		actor := jsonObject(parseJSON(item), "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Contains(t, []string{SeedUserID, SeedUser2ID}, jsonField(actor, "id"))
 	}
 }
@@ -1458,7 +1462,6 @@ func TestRequestLogs_FilterByActorTypes_IncludesAndExcludes(t *testing.T) {
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterActorTypesRoute},
 		"actor_types":       {"user", "api_key"},
-		"include":           {"actor"},
 	})
 	assert.Len(t, list.Data, 2, "scope + actor_types=[user,api_key] should return exactly two cohort rows")
 	assertRequestLogMembership(t, list.Data,
@@ -1466,7 +1469,7 @@ func TestRequestLogs_FilterByActorTypes_IncludesAndExcludes(t *testing.T) {
 		[]string{SeedReqLogFilterTypeInternal})
 	for _, item := range list.Data {
 		actor := jsonObject(parseJSON(item), "actor")
-		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		require.NotNil(t, actor, "actor should always be present")
 		assert.Contains(t, []string{"user", "api_key"}, jsonField(actor, "type"))
 	}
 }
@@ -1542,15 +1545,15 @@ func TestRequestLogs_FilterByStartDate_IncludesAndExcludes(t *testing.T) {
 	// Boundary between old (2023-01-01) and mid (2023-06-01): include mid + new.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"starts_at":         {"2023-03-01T00:00:00Z"},
+		"occurred_after":    {"2023-03-01T00:00:00Z"},
 	})
-	assert.Len(t, list.Data, 2, "scope + starts_at=2023-03-01 should return the mid and new rows")
+	assert.Len(t, list.Data, 2, "scope + occurred_after=2023-03-01 should return the mid and new rows")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateMid, SeedReqLogFilterDateNew},
 		[]string{SeedReqLogFilterDateOld})
 }
 
-// A list without starts_at covers the day before now: the dated cohort is years old, so none of it appears
+// A list without occurred_after covers the day before now: the dated cohort is years old, so none of it appears
 // until the caller reaches back for it.
 func TestRequestLogs_OmittedStartCoversTheLastDay(t *testing.T) {
 	t.Parallel()
@@ -1565,16 +1568,16 @@ func TestRequestLogs_OmittedStartCoversTheLastDay(t *testing.T) {
 	assert.Len(t, all.Data, 3, "an explicit start reaches the whole cohort")
 }
 
-// With only ends_at, the window is the day before it.
+// With only occurred_before, the window is the day before it.
 func TestRequestLogs_EndDateAloneCoversTheDayBeforeIt(t *testing.T) {
 	t.Parallel()
 	list, status, err := apiClient.GetList(requestLogsPath, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"ends_at":           {"2023-06-01T12:00:00Z"},
+		"occurred_before":   {"2023-06-01T12:00:00Z"},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	assert.Len(t, list.Data, 1, "only the row in the day before ends_at")
+	assert.Len(t, list.Data, 1, "only the row in the day before occurred_before")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateMid},
 		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateNew})
@@ -1585,9 +1588,9 @@ func TestRequestLogs_FilterByEndDate_IncludesAndExcludes(t *testing.T) {
 	// Boundary between mid (2023-06-01) and new (2023-12-01): include old + mid.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"ends_at":           {"2023-09-01T00:00:00Z"},
+		"occurred_before":   {"2023-09-01T00:00:00Z"},
 	})
-	assert.Len(t, list.Data, 2, "scope + ends_at=2023-09-01 should return the old and mid rows")
+	assert.Len(t, list.Data, 2, "scope + occurred_before=2023-09-01 should return the old and mid rows")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateMid},
 		[]string{SeedReqLogFilterDateNew})
@@ -1598,8 +1601,8 @@ func TestRequestLogs_FilterByDateRange_IncludesOnlyMiddle(t *testing.T) {
 	// start + end together bracket only the mid (2023-06-01) row.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"starts_at":         {"2023-03-01T00:00:00Z"},
-		"ends_at":           {"2023-09-01T00:00:00Z"},
+		"occurred_after":    {"2023-03-01T00:00:00Z"},
+		"occurred_before":   {"2023-09-01T00:00:00Z"},
 	})
 	assert.Len(t, list.Data, 1, "scope + [2023-03-01, 2023-09-01] should return only the mid row")
 	assertRequestLogMembership(t, list.Data,
@@ -1662,25 +1665,21 @@ func TestRequestLogs_InternalAgent_ScrubsInfra_GetByID(t *testing.T) {
 }
 
 // TestRequestLogs_AgentActor_Hydrates asserts that an agent actor on a request log
-// is hydrated with its display name + handle(slug) from agent-service when expanded
-// via ?include=actor. Agent definitions live in a separate datastore, so (unlike
+// is named from agent-service. Agent definitions live in a separate datastore, so (unlike
 // user/api_key actors) their names cannot be joined in platform-service and must be
 // resolved by the api-gateway presenter.
 func TestRequestLogs_AgentActor_Hydrates(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedReqLogInfraAgentID, url.Values{
-		"include": {"actor"},
-	})
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedReqLogInfraAgentID, url.Values{})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
 	actor := jsonObject(got, "actor")
-	require.NotNil(t, actor, "actor should be present with ?include=actor")
+	require.NotNil(t, actor, "actor should always be present")
 	assert.Equal(t, "agent", jsonField(actor, "type"))
 	assert.Equal(t, SeedReqLogInfraAgentActorID, jsonField(actor, "id"))
 	assert.Equal(t, SeedReqLogInfraAgentActorName, jsonField(actor, "name"),
 		"agent actor name must be hydrated from agent-service")
-	assert.Equal(t, SeedReqLogInfraAgentActorHandle, jsonField(actor, "handle"),
-		"agent actor handle must be hydrated to the agent slug")
+	assertActorRef(t, actor, "agent")
 }

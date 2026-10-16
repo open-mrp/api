@@ -424,11 +424,11 @@ func TestOrderCascadeAudit_PurchaseOrderCreateAuditsItsLines(t *testing.T) {
 
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
-			"root_resource_type": {"purchase_order"},
-			"root_resource_id":   {orderID},
-			"resource_types":     {"purchase_order_line"},
-			"actions":            {"create"},
-			"limit":              {"100"},
+			"root_resource_types": {"purchase_order"},
+			"root_resource_ids":   {orderID},
+			"resource_types":      {"purchase_order_line"},
+			"actions":             {"create"},
+			"limit":               {"100"},
 		})
 		if err != nil {
 			return err

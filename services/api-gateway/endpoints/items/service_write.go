@@ -13,6 +13,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/apiversion"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -47,6 +48,11 @@ func (m *itemSvcImpl) CreateItem(ctx context.Context, req *CreateItemRequest) (*
 			LeadTime:   optionalQuantityPatch(material.LeadTime),
 		}
 	}
+	pbReq.StockingUnitId = req.StockingUnitID.Ptr()
+	pbReq.DefaultOrderUnitId = req.DefaultOrderUnitID.Ptr()
+	pbReq.OrderUnits = orderUnitsToProto(req.OrderUnits)
+	// A preview.9 caller never names units: its item takes them from its category's unit group, as before.
+	pbReq.LegacyUnits = resourceloaders.IsPreview9(ctx)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateItemResponse, error) {
@@ -69,6 +75,9 @@ func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*
 		Sales:      updateSalesToProto(req.Sales.Value()),
 		ClearSales: req.Sales.IsClear(),
 		Material:   updateMaterialToProto(req.Material),
+
+		DefaultOrderUnitId: req.DefaultOrderUnitID.Ptr(),
+		OrderUnits:         orderUnitListToProto(req.OrderUnits),
 	}
 	if !req.Description.IsUnset() {
 		pbReq.UpdateDescription = true
@@ -114,6 +123,10 @@ func (m *itemSvcImpl) BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsR
 			UnitCost:    apirequest.OptionalUnitPriceToProto(in.UnitCost),
 			Sales:       updateSalesToProto(in.Sales.Value()),
 			Material:    updateMaterialToProto(in.Material),
+
+			StockingUnitId:     in.StockingUnitID.Ptr(),
+			DefaultOrderUnitId: in.DefaultOrderUnitID.Ptr(),
+			OrderUnits:         orderUnitListToProto(in.OrderUnits),
 		}
 		if attrs, ok := in.Attributes.Value(); ok {
 			row.HasAttributes = true
@@ -205,3 +218,43 @@ func RequirePreview9(ctx context.Context, replacement string) *apierror.APIError
 	}
 	return apierror.NewNotFoundError("This route was removed in 1.0.forge. " + replacement)
 }
+
+// A unit an item can be ordered in besides its stocking unit.
+type ItemOrderUnitInput struct {
+	// ID of the unit. It must measure the same dimension as the item's stocking unit.
+	UnitID string `json:"unit_id" validate:"required"`
+	// Whether customers can see and pick this unit in the customer portal: `visible` or `hidden`.
+	//
+	// Defaults to `visible`. `hidden` units can still be used on orders your team enters.
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
+	// Discount applied to the line's default price when the item is ordered in this unit, after converting the price to it. Omit for none.
+	Discount field.Optional[apirequest.DiscountInput] `json:"discount,omitzero"`
+	// How many stocking units one of this unit holds for this item, overriding the unit's own ratio. Omit to use the ratio.
+	Quantity field.Optional[string] `json:"quantity,omitzero" format:"decimal"`
+}
+
+func orderUnitsToProto(in []ItemOrderUnitInput) []*pb.ItemOrderUnitInfo {
+	out := make([]*pb.ItemOrderUnitInfo, len(in))
+	for i, ou := range in {
+		info := &pb.ItemOrderUnitInfo{UnitId: ou.UnitID, Quantity: ou.Quantity.Ptr()}
+		if v, ok := ou.PortalVisibility.Value(); ok {
+			info.PortalVisibility = string(v)
+		}
+		if d, ok := ou.Discount.Value(); ok {
+			info.Discount = d.ToProto()
+		}
+		out[i] = info
+	}
+	return out
+}
+
+func orderUnitListToProto(f field.Optional[[]ItemOrderUnitInput]) *pb.ItemOrderUnitList {
+	v, ok := f.Value()
+	if !ok {
+		return nil
+	}
+	return &pb.ItemOrderUnitList{Values: orderUnitsToProto(v)}
+}
+
+// UnitGroupsRetired says what replaced unit groups, for a request that still names one.
+const UnitGroupsRetired = "Unit groups were retired: each item names its own `stocking_unit` and `order_units`."

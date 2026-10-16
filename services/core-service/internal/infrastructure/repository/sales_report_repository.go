@@ -655,7 +655,7 @@ func breakdownLabel(groupBy constants.SalesBreakdownGroupBy) (string, string) {
 			`LEFT JOIN item it ON it.id = p.k
 LEFT JOIN item_category ic ON ic.id = it.item_category_id
 LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu ON bu.id = ug.base_unit_id`
+LEFT JOIN unit bu ON bu.id = COALESCE(it.stocking_unit_id, ug.base_unit_id)`
 	case constants.SalesBreakdownGroupByProductLine:
 		return "pl.name, " + noProduct, "LEFT JOIN product_line pl ON pl.id = p.k"
 	case constants.SalesBreakdownGroupByCustomerGroup:
@@ -1060,7 +1060,7 @@ JOIN item pb ON pb.id = f.item_id
 JOIN item_category ic ON ic.id = pb.item_category_id
 JOIN product_line pl ON pl.id = f.product_line_id
 LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
+LEFT JOIN unit bu_unit ON bu_unit.id = COALESCE(pb.stocking_unit_id, ug.base_unit_id)
 LEFT JOIN account buyer ON buyer.id = f.buyer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id

@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -623,7 +624,10 @@ type UpdateItemRequest struct {
 	Sales    *ItemSalesInput    `protobuf:"bytes,13,opt,name=sales,proto3" json:"sales,omitempty"`
 	Material *ItemMaterialInput `protobuf:"bytes,14,opt,name=material,proto3" json:"material,omitempty"`
 	// Removes the item's sales section (its product row); sales must be unset.
-	ClearSales    bool `protobuf:"varint,15,opt,name=clear_sales,json=clearSales,proto3" json:"clear_sales,omitempty"`
+	ClearSales         bool    `protobuf:"varint,15,opt,name=clear_sales,json=clearSales,proto3" json:"clear_sales,omitempty"`
+	DefaultOrderUnitId *string `protobuf:"bytes,16,opt,name=default_order_unit_id,json=defaultOrderUnitId,proto3,oneof" json:"default_order_unit_id,omitempty"`
+	// Present replaces the item's order units.
+	OrderUnits    *ItemOrderUnitList `protobuf:"bytes,17,opt,name=order_units,json=orderUnits,proto3" json:"order_units,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -749,6 +753,65 @@ func (x *UpdateItemRequest) GetClearSales() bool {
 	return false
 }
 
+func (x *UpdateItemRequest) GetDefaultOrderUnitId() string {
+	if x != nil && x.DefaultOrderUnitId != nil {
+		return *x.DefaultOrderUnitId
+	}
+	return ""
+}
+
+func (x *UpdateItemRequest) GetOrderUnits() *ItemOrderUnitList {
+	if x != nil {
+		return x.OrderUnits
+	}
+	return nil
+}
+
+// A list of order units; present on a write replaces the item's (an empty list removes them all).
+type ItemOrderUnitList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        []*ItemOrderUnitInfo   `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ItemOrderUnitList) Reset() {
+	*x = ItemOrderUnitList{}
+	mi := &file_core_core_items_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemOrderUnitList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemOrderUnitList) ProtoMessage() {}
+
+func (x *ItemOrderUnitList) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_items_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemOrderUnitList.ProtoReflect.Descriptor instead.
+func (*ItemOrderUnitList) Descriptor() ([]byte, []int) {
+	return file_core_core_items_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ItemOrderUnitList) GetValues() []*ItemOrderUnitInfo {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
 type UpdateItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *ItemInfo              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
@@ -758,7 +821,7 @@ type UpdateItemResponse struct {
 
 func (x *UpdateItemResponse) Reset() {
 	*x = UpdateItemResponse{}
-	mi := &file_core_core_items_proto_msgTypes[10]
+	mi := &file_core_core_items_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -770,7 +833,7 @@ func (x *UpdateItemResponse) String() string {
 func (*UpdateItemResponse) ProtoMessage() {}
 
 func (x *UpdateItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[10]
+	mi := &file_core_core_items_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -783,7 +846,7 @@ func (x *UpdateItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateItemResponse.ProtoReflect.Descriptor instead.
 func (*UpdateItemResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{10}
+	return file_core_core_items_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateItemResponse) GetItem() *ItemInfo {
@@ -807,7 +870,7 @@ type ItemSalesInput struct {
 
 func (x *ItemSalesInput) Reset() {
 	*x = ItemSalesInput{}
-	mi := &file_core_core_items_proto_msgTypes[11]
+	mi := &file_core_core_items_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -819,7 +882,7 @@ func (x *ItemSalesInput) String() string {
 func (*ItemSalesInput) ProtoMessage() {}
 
 func (x *ItemSalesInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[11]
+	mi := &file_core_core_items_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -832,7 +895,7 @@ func (x *ItemSalesInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemSalesInput.ProtoReflect.Descriptor instead.
 func (*ItemSalesInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{11}
+	return file_core_core_items_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ItemSalesInput) GetUnitPrice() *UnitPrice {
@@ -874,7 +937,7 @@ type ItemMaterialInput struct {
 
 func (x *ItemMaterialInput) Reset() {
 	*x = ItemMaterialInput{}
-	mi := &file_core_core_items_proto_msgTypes[12]
+	mi := &file_core_core_items_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +949,7 @@ func (x *ItemMaterialInput) String() string {
 func (*ItemMaterialInput) ProtoMessage() {}
 
 func (x *ItemMaterialInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[12]
+	mi := &file_core_core_items_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +962,7 @@ func (x *ItemMaterialInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemMaterialInput.ProtoReflect.Descriptor instead.
 func (*ItemMaterialInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{12}
+	return file_core_core_items_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ItemMaterialInput) GetOrderPoint() *QuantityPatch {
@@ -927,17 +990,23 @@ type CreateItemRequest struct {
 	// active | archived; defaults to active.
 	Status *string `protobuf:"bytes,6,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	// stock | make | buy
-	Supply        *string            `protobuf:"bytes,7,opt,name=supply,proto3,oneof" json:"supply,omitempty"`
-	UnitCost      *UnitPrice         `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
-	Sales         *ItemSalesInput    `protobuf:"bytes,9,opt,name=sales,proto3" json:"sales,omitempty"`
-	Material      *ItemMaterialInput `protobuf:"bytes,10,opt,name=material,proto3" json:"material,omitempty"`
+	Supply   *string            `protobuf:"bytes,7,opt,name=supply,proto3,oneof" json:"supply,omitempty"`
+	UnitCost *UnitPrice         `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	Sales    *ItemSalesInput    `protobuf:"bytes,9,opt,name=sales,proto3" json:"sales,omitempty"`
+	Material *ItemMaterialInput `protobuf:"bytes,10,opt,name=material,proto3" json:"material,omitempty"`
+	// Required for physical items unless legacy_units; never set for services.
+	StockingUnitId     *string              `protobuf:"bytes,11,opt,name=stocking_unit_id,json=stockingUnitId,proto3,oneof" json:"stocking_unit_id,omitempty"`
+	DefaultOrderUnitId *string              `protobuf:"bytes,12,opt,name=default_order_unit_id,json=defaultOrderUnitId,proto3,oneof" json:"default_order_unit_id,omitempty"`
+	OrderUnits         []*ItemOrderUnitInfo `protobuf:"bytes,13,rep,name=order_units,json=orderUnits,proto3" json:"order_units,omitempty"`
+	// A 1.0.forge-preview.9 create: the item is stocked and ordered in its category's unit group, as before.
+	LegacyUnits   bool `protobuf:"varint,14,opt,name=legacy_units,json=legacyUnits,proto3" json:"legacy_units,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateItemRequest) Reset() {
 	*x = CreateItemRequest{}
-	mi := &file_core_core_items_proto_msgTypes[13]
+	mi := &file_core_core_items_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -949,7 +1018,7 @@ func (x *CreateItemRequest) String() string {
 func (*CreateItemRequest) ProtoMessage() {}
 
 func (x *CreateItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[13]
+	mi := &file_core_core_items_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -962,7 +1031,7 @@ func (x *CreateItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateItemRequest.ProtoReflect.Descriptor instead.
 func (*CreateItemRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{13}
+	return file_core_core_items_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateItemRequest) GetType() string {
@@ -1035,6 +1104,34 @@ func (x *CreateItemRequest) GetMaterial() *ItemMaterialInput {
 	return nil
 }
 
+func (x *CreateItemRequest) GetStockingUnitId() string {
+	if x != nil && x.StockingUnitId != nil {
+		return *x.StockingUnitId
+	}
+	return ""
+}
+
+func (x *CreateItemRequest) GetDefaultOrderUnitId() string {
+	if x != nil && x.DefaultOrderUnitId != nil {
+		return *x.DefaultOrderUnitId
+	}
+	return ""
+}
+
+func (x *CreateItemRequest) GetOrderUnits() []*ItemOrderUnitInfo {
+	if x != nil {
+		return x.OrderUnits
+	}
+	return nil
+}
+
+func (x *CreateItemRequest) GetLegacyUnits() bool {
+	if x != nil {
+		return x.LegacyUnits
+	}
+	return false
+}
+
 type CreateItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *ItemInfo              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
@@ -1044,7 +1141,7 @@ type CreateItemResponse struct {
 
 func (x *CreateItemResponse) Reset() {
 	*x = CreateItemResponse{}
-	mi := &file_core_core_items_proto_msgTypes[14]
+	mi := &file_core_core_items_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1056,7 +1153,7 @@ func (x *CreateItemResponse) String() string {
 func (*CreateItemResponse) ProtoMessage() {}
 
 func (x *CreateItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[14]
+	mi := &file_core_core_items_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +1166,7 @@ func (x *CreateItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateItemResponse.ProtoReflect.Descriptor instead.
 func (*CreateItemResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{14}
+	return file_core_core_items_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CreateItemResponse) GetItem() *ItemInfo {
@@ -1088,7 +1185,7 @@ type DeleteItemRequest struct {
 
 func (x *DeleteItemRequest) Reset() {
 	*x = DeleteItemRequest{}
-	mi := &file_core_core_items_proto_msgTypes[15]
+	mi := &file_core_core_items_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1100,7 +1197,7 @@ func (x *DeleteItemRequest) String() string {
 func (*DeleteItemRequest) ProtoMessage() {}
 
 func (x *DeleteItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[15]
+	mi := &file_core_core_items_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1113,7 +1210,7 @@ func (x *DeleteItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteItemRequest.ProtoReflect.Descriptor instead.
 func (*DeleteItemRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{15}
+	return file_core_core_items_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteItemRequest) GetId() string {
@@ -1138,13 +1235,17 @@ type UpsertItemInput struct {
 	UnitCost      *UnitPrice                 `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
 	Sales         *ItemSalesInput            `protobuf:"bytes,10,opt,name=sales,proto3" json:"sales,omitempty"`
 	Material      *ItemMaterialInput         `protobuf:"bytes,11,opt,name=material,proto3" json:"material,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Required when the row creates a physical item; an existing item's must match.
+	StockingUnitId     *string            `protobuf:"bytes,12,opt,name=stocking_unit_id,json=stockingUnitId,proto3,oneof" json:"stocking_unit_id,omitempty"`
+	DefaultOrderUnitId *string            `protobuf:"bytes,13,opt,name=default_order_unit_id,json=defaultOrderUnitId,proto3,oneof" json:"default_order_unit_id,omitempty"`
+	OrderUnits         *ItemOrderUnitList `protobuf:"bytes,14,opt,name=order_units,json=orderUnits,proto3" json:"order_units,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpsertItemInput) Reset() {
 	*x = UpsertItemInput{}
-	mi := &file_core_core_items_proto_msgTypes[16]
+	mi := &file_core_core_items_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1156,7 +1257,7 @@ func (x *UpsertItemInput) String() string {
 func (*UpsertItemInput) ProtoMessage() {}
 
 func (x *UpsertItemInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[16]
+	mi := &file_core_core_items_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1169,7 +1270,7 @@ func (x *UpsertItemInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertItemInput.ProtoReflect.Descriptor instead.
 func (*UpsertItemInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{16}
+	return file_core_core_items_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpsertItemInput) GetType() string {
@@ -1249,6 +1350,27 @@ func (x *UpsertItemInput) GetMaterial() *ItemMaterialInput {
 	return nil
 }
 
+func (x *UpsertItemInput) GetStockingUnitId() string {
+	if x != nil && x.StockingUnitId != nil {
+		return *x.StockingUnitId
+	}
+	return ""
+}
+
+func (x *UpsertItemInput) GetDefaultOrderUnitId() string {
+	if x != nil && x.DefaultOrderUnitId != nil {
+		return *x.DefaultOrderUnitId
+	}
+	return ""
+}
+
+func (x *UpsertItemInput) GetOrderUnits() *ItemOrderUnitList {
+	if x != nil {
+		return x.OrderUnits
+	}
+	return nil
+}
+
 type BulkUpsertItemsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*UpsertItemInput     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -1258,7 +1380,7 @@ type BulkUpsertItemsRequest struct {
 
 func (x *BulkUpsertItemsRequest) Reset() {
 	*x = BulkUpsertItemsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[17]
+	mi := &file_core_core_items_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1270,7 +1392,7 @@ func (x *BulkUpsertItemsRequest) String() string {
 func (*BulkUpsertItemsRequest) ProtoMessage() {}
 
 func (x *BulkUpsertItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[17]
+	mi := &file_core_core_items_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1283,7 +1405,7 @@ func (x *BulkUpsertItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertItemsRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpsertItemsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{17}
+	return file_core_core_items_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *BulkUpsertItemsRequest) GetItems() []*UpsertItemInput {
@@ -1302,7 +1424,7 @@ type BulkUpsertItemsResponse struct {
 
 func (x *BulkUpsertItemsResponse) Reset() {
 	*x = BulkUpsertItemsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[18]
+	mi := &file_core_core_items_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1436,7 @@ func (x *BulkUpsertItemsResponse) String() string {
 func (*BulkUpsertItemsResponse) ProtoMessage() {}
 
 func (x *BulkUpsertItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[18]
+	mi := &file_core_core_items_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1449,7 @@ func (x *BulkUpsertItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertItemsResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpsertItemsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{18}
+	return file_core_core_items_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *BulkUpsertItemsResponse) GetJob() *JobInfo {
@@ -1348,7 +1470,7 @@ type AddItemAttributeRequest struct {
 
 func (x *AddItemAttributeRequest) Reset() {
 	*x = AddItemAttributeRequest{}
-	mi := &file_core_core_items_proto_msgTypes[19]
+	mi := &file_core_core_items_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1360,7 +1482,7 @@ func (x *AddItemAttributeRequest) String() string {
 func (*AddItemAttributeRequest) ProtoMessage() {}
 
 func (x *AddItemAttributeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[19]
+	mi := &file_core_core_items_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1373,7 +1495,7 @@ func (x *AddItemAttributeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddItemAttributeRequest.ProtoReflect.Descriptor instead.
 func (*AddItemAttributeRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{19}
+	return file_core_core_items_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AddItemAttributeRequest) GetItemId() string {
@@ -1406,7 +1528,7 @@ type AddItemAttributeResponse struct {
 
 func (x *AddItemAttributeResponse) Reset() {
 	*x = AddItemAttributeResponse{}
-	mi := &file_core_core_items_proto_msgTypes[20]
+	mi := &file_core_core_items_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1418,7 +1540,7 @@ func (x *AddItemAttributeResponse) String() string {
 func (*AddItemAttributeResponse) ProtoMessage() {}
 
 func (x *AddItemAttributeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[20]
+	mi := &file_core_core_items_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1431,7 +1553,7 @@ func (x *AddItemAttributeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddItemAttributeResponse.ProtoReflect.Descriptor instead.
 func (*AddItemAttributeResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{20}
+	return file_core_core_items_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AddItemAttributeResponse) GetItem() *ItemInfo {
@@ -1452,7 +1574,7 @@ type RemoveItemAttributeRequest struct {
 
 func (x *RemoveItemAttributeRequest) Reset() {
 	*x = RemoveItemAttributeRequest{}
-	mi := &file_core_core_items_proto_msgTypes[21]
+	mi := &file_core_core_items_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1464,7 +1586,7 @@ func (x *RemoveItemAttributeRequest) String() string {
 func (*RemoveItemAttributeRequest) ProtoMessage() {}
 
 func (x *RemoveItemAttributeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[21]
+	mi := &file_core_core_items_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1477,7 +1599,7 @@ func (x *RemoveItemAttributeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveItemAttributeRequest.ProtoReflect.Descriptor instead.
 func (*RemoveItemAttributeRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{21}
+	return file_core_core_items_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RemoveItemAttributeRequest) GetItemId() string {
@@ -1510,7 +1632,7 @@ type RemoveItemAttributeResponse struct {
 
 func (x *RemoveItemAttributeResponse) Reset() {
 	*x = RemoveItemAttributeResponse{}
-	mi := &file_core_core_items_proto_msgTypes[22]
+	mi := &file_core_core_items_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1522,7 +1644,7 @@ func (x *RemoveItemAttributeResponse) String() string {
 func (*RemoveItemAttributeResponse) ProtoMessage() {}
 
 func (x *RemoveItemAttributeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[22]
+	mi := &file_core_core_items_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1535,7 +1657,7 @@ func (x *RemoveItemAttributeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveItemAttributeResponse.ProtoReflect.Descriptor instead.
 func (*RemoveItemAttributeResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{22}
+	return file_core_core_items_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RemoveItemAttributeResponse) GetItem() *ItemInfo {
@@ -1556,7 +1678,7 @@ type ChangeItemCategoryRequest struct {
 
 func (x *ChangeItemCategoryRequest) Reset() {
 	*x = ChangeItemCategoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[23]
+	mi := &file_core_core_items_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1568,7 +1690,7 @@ func (x *ChangeItemCategoryRequest) String() string {
 func (*ChangeItemCategoryRequest) ProtoMessage() {}
 
 func (x *ChangeItemCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[23]
+	mi := &file_core_core_items_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1581,7 +1703,7 @@ func (x *ChangeItemCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeItemCategoryRequest.ProtoReflect.Descriptor instead.
 func (*ChangeItemCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{23}
+	return file_core_core_items_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ChangeItemCategoryRequest) GetItemId() string {
@@ -1614,7 +1736,7 @@ type ChangeItemCategoryResponse struct {
 
 func (x *ChangeItemCategoryResponse) Reset() {
 	*x = ChangeItemCategoryResponse{}
-	mi := &file_core_core_items_proto_msgTypes[24]
+	mi := &file_core_core_items_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1626,7 +1748,7 @@ func (x *ChangeItemCategoryResponse) String() string {
 func (*ChangeItemCategoryResponse) ProtoMessage() {}
 
 func (x *ChangeItemCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[24]
+	mi := &file_core_core_items_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1639,7 +1761,7 @@ func (x *ChangeItemCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeItemCategoryResponse.ProtoReflect.Descriptor instead.
 func (*ChangeItemCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{24}
+	return file_core_core_items_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ChangeItemCategoryResponse) GetItem() *ItemInfo {
@@ -1665,7 +1787,7 @@ type UpdateItemInventoryRequest struct {
 
 func (x *UpdateItemInventoryRequest) Reset() {
 	*x = UpdateItemInventoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[25]
+	mi := &file_core_core_items_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1677,7 +1799,7 @@ func (x *UpdateItemInventoryRequest) String() string {
 func (*UpdateItemInventoryRequest) ProtoMessage() {}
 
 func (x *UpdateItemInventoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[25]
+	mi := &file_core_core_items_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1690,7 +1812,7 @@ func (x *UpdateItemInventoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateItemInventoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateItemInventoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{25}
+	return file_core_core_items_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UpdateItemInventoryRequest) GetItemId() string {
@@ -1751,7 +1873,7 @@ type UpdateItemInventoryResponse struct {
 
 func (x *UpdateItemInventoryResponse) Reset() {
 	*x = UpdateItemInventoryResponse{}
-	mi := &file_core_core_items_proto_msgTypes[26]
+	mi := &file_core_core_items_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1763,7 +1885,7 @@ func (x *UpdateItemInventoryResponse) String() string {
 func (*UpdateItemInventoryResponse) ProtoMessage() {}
 
 func (x *UpdateItemInventoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[26]
+	mi := &file_core_core_items_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1776,7 +1898,7 @@ func (x *UpdateItemInventoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateItemInventoryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateItemInventoryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{26}
+	return file_core_core_items_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdateItemInventoryResponse) GetMessage() string {
@@ -1798,7 +1920,7 @@ type BulkCreateItemInput struct {
 
 func (x *BulkCreateItemInput) Reset() {
 	*x = BulkCreateItemInput{}
-	mi := &file_core_core_items_proto_msgTypes[27]
+	mi := &file_core_core_items_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1810,7 +1932,7 @@ func (x *BulkCreateItemInput) String() string {
 func (*BulkCreateItemInput) ProtoMessage() {}
 
 func (x *BulkCreateItemInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[27]
+	mi := &file_core_core_items_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1823,7 +1945,7 @@ func (x *BulkCreateItemInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateItemInput.ProtoReflect.Descriptor instead.
 func (*BulkCreateItemInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{27}
+	return file_core_core_items_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *BulkCreateItemInput) GetSku() string {
@@ -1864,7 +1986,7 @@ type BulkCreateItemsRequest struct {
 
 func (x *BulkCreateItemsRequest) Reset() {
 	*x = BulkCreateItemsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[28]
+	mi := &file_core_core_items_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1876,7 +1998,7 @@ func (x *BulkCreateItemsRequest) String() string {
 func (*BulkCreateItemsRequest) ProtoMessage() {}
 
 func (x *BulkCreateItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[28]
+	mi := &file_core_core_items_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1889,7 +2011,7 @@ func (x *BulkCreateItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateItemsRequest.ProtoReflect.Descriptor instead.
 func (*BulkCreateItemsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{28}
+	return file_core_core_items_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *BulkCreateItemsRequest) GetItems() []*BulkCreateItemInput {
@@ -1918,7 +2040,7 @@ type BulkCreateItemResult struct {
 
 func (x *BulkCreateItemResult) Reset() {
 	*x = BulkCreateItemResult{}
-	mi := &file_core_core_items_proto_msgTypes[29]
+	mi := &file_core_core_items_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +2052,7 @@ func (x *BulkCreateItemResult) String() string {
 func (*BulkCreateItemResult) ProtoMessage() {}
 
 func (x *BulkCreateItemResult) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[29]
+	mi := &file_core_core_items_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2065,7 @@ func (x *BulkCreateItemResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateItemResult.ProtoReflect.Descriptor instead.
 func (*BulkCreateItemResult) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{29}
+	return file_core_core_items_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *BulkCreateItemResult) GetSku() string {
@@ -1983,7 +2105,7 @@ type BulkCreateItemsResponse struct {
 
 func (x *BulkCreateItemsResponse) Reset() {
 	*x = BulkCreateItemsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[30]
+	mi := &file_core_core_items_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1995,7 +2117,7 @@ func (x *BulkCreateItemsResponse) String() string {
 func (*BulkCreateItemsResponse) ProtoMessage() {}
 
 func (x *BulkCreateItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[30]
+	mi := &file_core_core_items_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2008,7 +2130,7 @@ func (x *BulkCreateItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateItemsResponse.ProtoReflect.Descriptor instead.
 func (*BulkCreateItemsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{30}
+	return file_core_core_items_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *BulkCreateItemsResponse) GetResults() []*BulkCreateItemResult {
@@ -2028,7 +2150,7 @@ type UpsertItemPropertyInput struct {
 
 func (x *UpsertItemPropertyInput) Reset() {
 	*x = UpsertItemPropertyInput{}
-	mi := &file_core_core_items_proto_msgTypes[31]
+	mi := &file_core_core_items_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2040,7 +2162,7 @@ func (x *UpsertItemPropertyInput) String() string {
 func (*UpsertItemPropertyInput) ProtoMessage() {}
 
 func (x *UpsertItemPropertyInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[31]
+	mi := &file_core_core_items_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2053,7 +2175,7 @@ func (x *UpsertItemPropertyInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertItemPropertyInput.ProtoReflect.Descriptor instead.
 func (*UpsertItemPropertyInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{31}
+	return file_core_core_items_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *UpsertItemPropertyInput) GetName() string {
@@ -2085,7 +2207,7 @@ type UpsertPartInput struct {
 
 func (x *UpsertPartInput) Reset() {
 	*x = UpsertPartInput{}
-	mi := &file_core_core_items_proto_msgTypes[32]
+	mi := &file_core_core_items_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2097,7 +2219,7 @@ func (x *UpsertPartInput) String() string {
 func (*UpsertPartInput) ProtoMessage() {}
 
 func (x *UpsertPartInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[32]
+	mi := &file_core_core_items_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2110,7 +2232,7 @@ func (x *UpsertPartInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertPartInput.ProtoReflect.Descriptor instead.
 func (*UpsertPartInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{32}
+	return file_core_core_items_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *UpsertPartInput) GetSku() string {
@@ -2171,7 +2293,7 @@ type BulkUpsertPartsRequest struct {
 
 func (x *BulkUpsertPartsRequest) Reset() {
 	*x = BulkUpsertPartsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[33]
+	mi := &file_core_core_items_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2183,7 +2305,7 @@ func (x *BulkUpsertPartsRequest) String() string {
 func (*BulkUpsertPartsRequest) ProtoMessage() {}
 
 func (x *BulkUpsertPartsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[33]
+	mi := &file_core_core_items_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2196,7 +2318,7 @@ func (x *BulkUpsertPartsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertPartsRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpsertPartsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{33}
+	return file_core_core_items_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *BulkUpsertPartsRequest) GetParts() []*UpsertPartInput {
@@ -2215,7 +2337,7 @@ type BulkUpsertPartsResponse struct {
 
 func (x *BulkUpsertPartsResponse) Reset() {
 	*x = BulkUpsertPartsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[34]
+	mi := &file_core_core_items_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2227,7 +2349,7 @@ func (x *BulkUpsertPartsResponse) String() string {
 func (*BulkUpsertPartsResponse) ProtoMessage() {}
 
 func (x *BulkUpsertPartsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[34]
+	mi := &file_core_core_items_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2240,7 +2362,7 @@ func (x *BulkUpsertPartsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertPartsResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpsertPartsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{34}
+	return file_core_core_items_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *BulkUpsertPartsResponse) GetJob() *JobInfo {
@@ -2268,7 +2390,7 @@ type UpsertProductInput struct {
 
 func (x *UpsertProductInput) Reset() {
 	*x = UpsertProductInput{}
-	mi := &file_core_core_items_proto_msgTypes[35]
+	mi := &file_core_core_items_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2280,7 +2402,7 @@ func (x *UpsertProductInput) String() string {
 func (*UpsertProductInput) ProtoMessage() {}
 
 func (x *UpsertProductInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[35]
+	mi := &file_core_core_items_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2293,7 +2415,7 @@ func (x *UpsertProductInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertProductInput.ProtoReflect.Descriptor instead.
 func (*UpsertProductInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{35}
+	return file_core_core_items_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *UpsertProductInput) GetSku() string {
@@ -2375,7 +2497,7 @@ type BulkUpsertProductsRequest struct {
 
 func (x *BulkUpsertProductsRequest) Reset() {
 	*x = BulkUpsertProductsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[36]
+	mi := &file_core_core_items_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2387,7 +2509,7 @@ func (x *BulkUpsertProductsRequest) String() string {
 func (*BulkUpsertProductsRequest) ProtoMessage() {}
 
 func (x *BulkUpsertProductsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[36]
+	mi := &file_core_core_items_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2400,7 +2522,7 @@ func (x *BulkUpsertProductsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertProductsRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpsertProductsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{36}
+	return file_core_core_items_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *BulkUpsertProductsRequest) GetProducts() []*UpsertProductInput {
@@ -2419,7 +2541,7 @@ type BulkUpsertProductsResponse struct {
 
 func (x *BulkUpsertProductsResponse) Reset() {
 	*x = BulkUpsertProductsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[37]
+	mi := &file_core_core_items_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2431,7 +2553,7 @@ func (x *BulkUpsertProductsResponse) String() string {
 func (*BulkUpsertProductsResponse) ProtoMessage() {}
 
 func (x *BulkUpsertProductsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[37]
+	mi := &file_core_core_items_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2444,7 +2566,7 @@ func (x *BulkUpsertProductsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertProductsResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpsertProductsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{37}
+	return file_core_core_items_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *BulkUpsertProductsResponse) GetJob() *JobInfo {
@@ -2472,7 +2594,7 @@ type UpsertMaterialInput struct {
 
 func (x *UpsertMaterialInput) Reset() {
 	*x = UpsertMaterialInput{}
-	mi := &file_core_core_items_proto_msgTypes[38]
+	mi := &file_core_core_items_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2484,7 +2606,7 @@ func (x *UpsertMaterialInput) String() string {
 func (*UpsertMaterialInput) ProtoMessage() {}
 
 func (x *UpsertMaterialInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[38]
+	mi := &file_core_core_items_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2497,7 +2619,7 @@ func (x *UpsertMaterialInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertMaterialInput.ProtoReflect.Descriptor instead.
 func (*UpsertMaterialInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{38}
+	return file_core_core_items_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *UpsertMaterialInput) GetSku() string {
@@ -2572,7 +2694,7 @@ type BulkUpsertMaterialsRequest struct {
 
 func (x *BulkUpsertMaterialsRequest) Reset() {
 	*x = BulkUpsertMaterialsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[39]
+	mi := &file_core_core_items_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2584,7 +2706,7 @@ func (x *BulkUpsertMaterialsRequest) String() string {
 func (*BulkUpsertMaterialsRequest) ProtoMessage() {}
 
 func (x *BulkUpsertMaterialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[39]
+	mi := &file_core_core_items_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2597,7 +2719,7 @@ func (x *BulkUpsertMaterialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertMaterialsRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpsertMaterialsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{39}
+	return file_core_core_items_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *BulkUpsertMaterialsRequest) GetMaterials() []*UpsertMaterialInput {
@@ -2616,7 +2738,7 @@ type BulkUpsertMaterialsResponse struct {
 
 func (x *BulkUpsertMaterialsResponse) Reset() {
 	*x = BulkUpsertMaterialsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[40]
+	mi := &file_core_core_items_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2628,7 +2750,7 @@ func (x *BulkUpsertMaterialsResponse) String() string {
 func (*BulkUpsertMaterialsResponse) ProtoMessage() {}
 
 func (x *BulkUpsertMaterialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[40]
+	mi := &file_core_core_items_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2641,7 +2763,7 @@ func (x *BulkUpsertMaterialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertMaterialsResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpsertMaterialsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{40}
+	return file_core_core_items_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *BulkUpsertMaterialsResponse) GetJob() *JobInfo {
@@ -2668,7 +2790,7 @@ type ChildAccountProto struct {
 
 func (x *ChildAccountProto) Reset() {
 	*x = ChildAccountProto{}
-	mi := &file_core_core_items_proto_msgTypes[41]
+	mi := &file_core_core_items_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2680,7 +2802,7 @@ func (x *ChildAccountProto) String() string {
 func (*ChildAccountProto) ProtoMessage() {}
 
 func (x *ChildAccountProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[41]
+	mi := &file_core_core_items_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2693,7 +2815,7 @@ func (x *ChildAccountProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChildAccountProto.ProtoReflect.Descriptor instead.
 func (*ChildAccountProto) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{41}
+	return file_core_core_items_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ChildAccountProto) GetRelationId() string {
@@ -2770,7 +2892,7 @@ type ListChildAccountsRequest struct {
 
 func (x *ListChildAccountsRequest) Reset() {
 	*x = ListChildAccountsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[42]
+	mi := &file_core_core_items_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2782,7 +2904,7 @@ func (x *ListChildAccountsRequest) String() string {
 func (*ListChildAccountsRequest) ProtoMessage() {}
 
 func (x *ListChildAccountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[42]
+	mi := &file_core_core_items_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2795,7 +2917,7 @@ func (x *ListChildAccountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChildAccountsRequest.ProtoReflect.Descriptor instead.
 func (*ListChildAccountsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{42}
+	return file_core_core_items_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ListChildAccountsRequest) GetCursor() string {
@@ -2829,7 +2951,7 @@ type ListChildAccountsResponse struct {
 
 func (x *ListChildAccountsResponse) Reset() {
 	*x = ListChildAccountsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[43]
+	mi := &file_core_core_items_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2841,7 +2963,7 @@ func (x *ListChildAccountsResponse) String() string {
 func (*ListChildAccountsResponse) ProtoMessage() {}
 
 func (x *ListChildAccountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[43]
+	mi := &file_core_core_items_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2854,7 +2976,7 @@ func (x *ListChildAccountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChildAccountsResponse.ProtoReflect.Descriptor instead.
 func (*ListChildAccountsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{43}
+	return file_core_core_items_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListChildAccountsResponse) GetItems() []*ChildAccountProto {
@@ -2880,7 +3002,7 @@ type AddChildAccountRequest struct {
 
 func (x *AddChildAccountRequest) Reset() {
 	*x = AddChildAccountRequest{}
-	mi := &file_core_core_items_proto_msgTypes[44]
+	mi := &file_core_core_items_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2892,7 +3014,7 @@ func (x *AddChildAccountRequest) String() string {
 func (*AddChildAccountRequest) ProtoMessage() {}
 
 func (x *AddChildAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[44]
+	mi := &file_core_core_items_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2905,7 +3027,7 @@ func (x *AddChildAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddChildAccountRequest.ProtoReflect.Descriptor instead.
 func (*AddChildAccountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{44}
+	return file_core_core_items_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *AddChildAccountRequest) GetChildAccountId() string {
@@ -2924,7 +3046,7 @@ type AddChildAccountResponse struct {
 
 func (x *AddChildAccountResponse) Reset() {
 	*x = AddChildAccountResponse{}
-	mi := &file_core_core_items_proto_msgTypes[45]
+	mi := &file_core_core_items_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2936,7 +3058,7 @@ func (x *AddChildAccountResponse) String() string {
 func (*AddChildAccountResponse) ProtoMessage() {}
 
 func (x *AddChildAccountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[45]
+	mi := &file_core_core_items_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2949,7 +3071,7 @@ func (x *AddChildAccountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddChildAccountResponse.ProtoReflect.Descriptor instead.
 func (*AddChildAccountResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{45}
+	return file_core_core_items_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *AddChildAccountResponse) GetChildAccount() *ChildAccountProto {
@@ -2968,7 +3090,7 @@ type RemoveChildAccountRequest struct {
 
 func (x *RemoveChildAccountRequest) Reset() {
 	*x = RemoveChildAccountRequest{}
-	mi := &file_core_core_items_proto_msgTypes[46]
+	mi := &file_core_core_items_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2980,7 +3102,7 @@ func (x *RemoveChildAccountRequest) String() string {
 func (*RemoveChildAccountRequest) ProtoMessage() {}
 
 func (x *RemoveChildAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[46]
+	mi := &file_core_core_items_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2993,7 +3115,7 @@ func (x *RemoveChildAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveChildAccountRequest.ProtoReflect.Descriptor instead.
 func (*RemoveChildAccountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{46}
+	return file_core_core_items_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *RemoveChildAccountRequest) GetChildAccountId() string {
@@ -3013,7 +3135,7 @@ type BatchGetChildAccountsByIDsRequest struct {
 
 func (x *BatchGetChildAccountsByIDsRequest) Reset() {
 	*x = BatchGetChildAccountsByIDsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[47]
+	mi := &file_core_core_items_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3025,7 +3147,7 @@ func (x *BatchGetChildAccountsByIDsRequest) String() string {
 func (*BatchGetChildAccountsByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetChildAccountsByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[47]
+	mi := &file_core_core_items_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3038,7 +3160,7 @@ func (x *BatchGetChildAccountsByIDsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use BatchGetChildAccountsByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetChildAccountsByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{47}
+	return file_core_core_items_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *BatchGetChildAccountsByIDsRequest) GetIds() []string {
@@ -3057,7 +3179,7 @@ type BatchGetChildAccountsByIDsResponse struct {
 
 func (x *BatchGetChildAccountsByIDsResponse) Reset() {
 	*x = BatchGetChildAccountsByIDsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[48]
+	mi := &file_core_core_items_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3069,7 +3191,7 @@ func (x *BatchGetChildAccountsByIDsResponse) String() string {
 func (*BatchGetChildAccountsByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetChildAccountsByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[48]
+	mi := &file_core_core_items_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3082,7 +3204,7 @@ func (x *BatchGetChildAccountsByIDsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use BatchGetChildAccountsByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetChildAccountsByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{48}
+	return file_core_core_items_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *BatchGetChildAccountsByIDsResponse) GetItems() []*ChildAccountProto {
@@ -3105,7 +3227,7 @@ type BatchQuantityInfo struct {
 
 func (x *BatchQuantityInfo) Reset() {
 	*x = BatchQuantityInfo{}
-	mi := &file_core_core_items_proto_msgTypes[49]
+	mi := &file_core_core_items_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3117,7 +3239,7 @@ func (x *BatchQuantityInfo) String() string {
 func (*BatchQuantityInfo) ProtoMessage() {}
 
 func (x *BatchQuantityInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[49]
+	mi := &file_core_core_items_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3130,7 +3252,7 @@ func (x *BatchQuantityInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchQuantityInfo.ProtoReflect.Descriptor instead.
 func (*BatchQuantityInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{49}
+	return file_core_core_items_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *BatchQuantityInfo) GetId() string {
@@ -3198,7 +3320,7 @@ type BaseBatchInfo struct {
 
 func (x *BaseBatchInfo) Reset() {
 	*x = BaseBatchInfo{}
-	mi := &file_core_core_items_proto_msgTypes[50]
+	mi := &file_core_core_items_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3210,7 +3332,7 @@ func (x *BaseBatchInfo) String() string {
 func (*BaseBatchInfo) ProtoMessage() {}
 
 func (x *BaseBatchInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[50]
+	mi := &file_core_core_items_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3223,7 +3345,7 @@ func (x *BaseBatchInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BaseBatchInfo.ProtoReflect.Descriptor instead.
 func (*BaseBatchInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{50}
+	return file_core_core_items_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *BaseBatchInfo) GetId() string {
@@ -3397,7 +3519,7 @@ type BatchInfo struct {
 
 func (x *BatchInfo) Reset() {
 	*x = BatchInfo{}
-	mi := &file_core_core_items_proto_msgTypes[51]
+	mi := &file_core_core_items_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3409,7 +3531,7 @@ func (x *BatchInfo) String() string {
 func (*BatchInfo) ProtoMessage() {}
 
 func (x *BatchInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[51]
+	mi := &file_core_core_items_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3422,7 +3544,7 @@ func (x *BatchInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchInfo.ProtoReflect.Descriptor instead.
 func (*BatchInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{51}
+	return file_core_core_items_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *BatchInfo) GetId() string {
@@ -3596,7 +3718,7 @@ type BatchLotInfo struct {
 
 func (x *BatchLotInfo) Reset() {
 	*x = BatchLotInfo{}
-	mi := &file_core_core_items_proto_msgTypes[52]
+	mi := &file_core_core_items_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3608,7 +3730,7 @@ func (x *BatchLotInfo) String() string {
 func (*BatchLotInfo) ProtoMessage() {}
 
 func (x *BatchLotInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[52]
+	mi := &file_core_core_items_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3621,7 +3743,7 @@ func (x *BatchLotInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchLotInfo.ProtoReflect.Descriptor instead.
 func (*BatchLotInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{52}
+	return file_core_core_items_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *BatchLotInfo) GetLotNumber() string {
@@ -3652,7 +3774,7 @@ type LightMachineInfo struct {
 
 func (x *LightMachineInfo) Reset() {
 	*x = LightMachineInfo{}
-	mi := &file_core_core_items_proto_msgTypes[53]
+	mi := &file_core_core_items_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3664,7 +3786,7 @@ func (x *LightMachineInfo) String() string {
 func (*LightMachineInfo) ProtoMessage() {}
 
 func (x *LightMachineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[53]
+	mi := &file_core_core_items_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3677,7 +3799,7 @@ func (x *LightMachineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightMachineInfo.ProtoReflect.Descriptor instead.
 func (*LightMachineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{53}
+	return file_core_core_items_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *LightMachineInfo) GetId() string {
@@ -3733,7 +3855,7 @@ type BatchFlowNodeInfo struct {
 
 func (x *BatchFlowNodeInfo) Reset() {
 	*x = BatchFlowNodeInfo{}
-	mi := &file_core_core_items_proto_msgTypes[54]
+	mi := &file_core_core_items_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3745,7 +3867,7 @@ func (x *BatchFlowNodeInfo) String() string {
 func (*BatchFlowNodeInfo) ProtoMessage() {}
 
 func (x *BatchFlowNodeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[54]
+	mi := &file_core_core_items_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3758,7 +3880,7 @@ func (x *BatchFlowNodeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchFlowNodeInfo.ProtoReflect.Descriptor instead.
 func (*BatchFlowNodeInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{54}
+	return file_core_core_items_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *BatchFlowNodeInfo) GetBatch() *BatchInfo {
@@ -3793,7 +3915,7 @@ type ScanningProductionStepInfoProto struct {
 
 func (x *ScanningProductionStepInfoProto) Reset() {
 	*x = ScanningProductionStepInfoProto{}
-	mi := &file_core_core_items_proto_msgTypes[55]
+	mi := &file_core_core_items_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3805,7 +3927,7 @@ func (x *ScanningProductionStepInfoProto) String() string {
 func (*ScanningProductionStepInfoProto) ProtoMessage() {}
 
 func (x *ScanningProductionStepInfoProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[55]
+	mi := &file_core_core_items_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3818,7 +3940,7 @@ func (x *ScanningProductionStepInfoProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScanningProductionStepInfoProto.ProtoReflect.Descriptor instead.
 func (*ScanningProductionStepInfoProto) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{55}
+	return file_core_core_items_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ScanningProductionStepInfoProto) GetId() string {
@@ -3856,7 +3978,7 @@ type ScanningConsumptionInfo struct {
 
 func (x *ScanningConsumptionInfo) Reset() {
 	*x = ScanningConsumptionInfo{}
-	mi := &file_core_core_items_proto_msgTypes[56]
+	mi := &file_core_core_items_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3868,7 +3990,7 @@ func (x *ScanningConsumptionInfo) String() string {
 func (*ScanningConsumptionInfo) ProtoMessage() {}
 
 func (x *ScanningConsumptionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[56]
+	mi := &file_core_core_items_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3881,7 +4003,7 @@ func (x *ScanningConsumptionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScanningConsumptionInfo.ProtoReflect.Descriptor instead.
 func (*ScanningConsumptionInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{56}
+	return file_core_core_items_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ScanningConsumptionInfo) GetSku() string {
@@ -3936,7 +4058,7 @@ type OpenBatchSummaryItemProto struct {
 
 func (x *OpenBatchSummaryItemProto) Reset() {
 	*x = OpenBatchSummaryItemProto{}
-	mi := &file_core_core_items_proto_msgTypes[57]
+	mi := &file_core_core_items_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3948,7 +4070,7 @@ func (x *OpenBatchSummaryItemProto) String() string {
 func (*OpenBatchSummaryItemProto) ProtoMessage() {}
 
 func (x *OpenBatchSummaryItemProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[57]
+	mi := &file_core_core_items_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3961,7 +4083,7 @@ func (x *OpenBatchSummaryItemProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenBatchSummaryItemProto.ProtoReflect.Descriptor instead.
 func (*OpenBatchSummaryItemProto) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{57}
+	return file_core_core_items_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *OpenBatchSummaryItemProto) GetId() string {
@@ -3987,7 +4109,7 @@ type OpenBatchSummaryScanningStationProto struct {
 
 func (x *OpenBatchSummaryScanningStationProto) Reset() {
 	*x = OpenBatchSummaryScanningStationProto{}
-	mi := &file_core_core_items_proto_msgTypes[58]
+	mi := &file_core_core_items_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3999,7 +4121,7 @@ func (x *OpenBatchSummaryScanningStationProto) String() string {
 func (*OpenBatchSummaryScanningStationProto) ProtoMessage() {}
 
 func (x *OpenBatchSummaryScanningStationProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[58]
+	mi := &file_core_core_items_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4012,7 +4134,7 @@ func (x *OpenBatchSummaryScanningStationProto) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use OpenBatchSummaryScanningStationProto.ProtoReflect.Descriptor instead.
 func (*OpenBatchSummaryScanningStationProto) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{58}
+	return file_core_core_items_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *OpenBatchSummaryScanningStationProto) GetId() string {
@@ -4035,7 +4157,7 @@ type OpenBatchSummaryInfo struct {
 
 func (x *OpenBatchSummaryInfo) Reset() {
 	*x = OpenBatchSummaryInfo{}
-	mi := &file_core_core_items_proto_msgTypes[59]
+	mi := &file_core_core_items_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4047,7 +4169,7 @@ func (x *OpenBatchSummaryInfo) String() string {
 func (*OpenBatchSummaryInfo) ProtoMessage() {}
 
 func (x *OpenBatchSummaryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[59]
+	mi := &file_core_core_items_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4060,7 +4182,7 @@ func (x *OpenBatchSummaryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenBatchSummaryInfo.ProtoReflect.Descriptor instead.
 func (*OpenBatchSummaryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{59}
+	return file_core_core_items_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *OpenBatchSummaryInfo) GetDepartmentName() string {
@@ -4107,7 +4229,7 @@ type GetBatchFlowRequest struct {
 
 func (x *GetBatchFlowRequest) Reset() {
 	*x = GetBatchFlowRequest{}
-	mi := &file_core_core_items_proto_msgTypes[60]
+	mi := &file_core_core_items_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4119,7 +4241,7 @@ func (x *GetBatchFlowRequest) String() string {
 func (*GetBatchFlowRequest) ProtoMessage() {}
 
 func (x *GetBatchFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[60]
+	mi := &file_core_core_items_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4132,7 +4254,7 @@ func (x *GetBatchFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBatchFlowRequest.ProtoReflect.Descriptor instead.
 func (*GetBatchFlowRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{60}
+	return file_core_core_items_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GetBatchFlowRequest) GetBatchId() string {
@@ -4151,7 +4273,7 @@ type GetBatchFlowResponse struct {
 
 func (x *GetBatchFlowResponse) Reset() {
 	*x = GetBatchFlowResponse{}
-	mi := &file_core_core_items_proto_msgTypes[61]
+	mi := &file_core_core_items_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4163,7 +4285,7 @@ func (x *GetBatchFlowResponse) String() string {
 func (*GetBatchFlowResponse) ProtoMessage() {}
 
 func (x *GetBatchFlowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[61]
+	mi := &file_core_core_items_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4176,7 +4298,7 @@ func (x *GetBatchFlowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBatchFlowResponse.ProtoReflect.Descriptor instead.
 func (*GetBatchFlowResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{61}
+	return file_core_core_items_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetBatchFlowResponse) GetNodes() []*BatchFlowNodeInfo {
@@ -4198,7 +4320,7 @@ type ListBatchesByScanningStationRequest struct {
 
 func (x *ListBatchesByScanningStationRequest) Reset() {
 	*x = ListBatchesByScanningStationRequest{}
-	mi := &file_core_core_items_proto_msgTypes[62]
+	mi := &file_core_core_items_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4210,7 +4332,7 @@ func (x *ListBatchesByScanningStationRequest) String() string {
 func (*ListBatchesByScanningStationRequest) ProtoMessage() {}
 
 func (x *ListBatchesByScanningStationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[62]
+	mi := &file_core_core_items_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4223,7 +4345,7 @@ func (x *ListBatchesByScanningStationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListBatchesByScanningStationRequest.ProtoReflect.Descriptor instead.
 func (*ListBatchesByScanningStationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{62}
+	return file_core_core_items_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ListBatchesByScanningStationRequest) GetScanningStationId() string {
@@ -4264,7 +4386,7 @@ type ListBatchesByScanningStationResponse struct {
 
 func (x *ListBatchesByScanningStationResponse) Reset() {
 	*x = ListBatchesByScanningStationResponse{}
-	mi := &file_core_core_items_proto_msgTypes[63]
+	mi := &file_core_core_items_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4276,7 +4398,7 @@ func (x *ListBatchesByScanningStationResponse) String() string {
 func (*ListBatchesByScanningStationResponse) ProtoMessage() {}
 
 func (x *ListBatchesByScanningStationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[63]
+	mi := &file_core_core_items_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4289,7 +4411,7 @@ func (x *ListBatchesByScanningStationResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListBatchesByScanningStationResponse.ProtoReflect.Descriptor instead.
 func (*ListBatchesByScanningStationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{63}
+	return file_core_core_items_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ListBatchesByScanningStationResponse) GetBatches() []*BatchInfo {
@@ -4316,7 +4438,7 @@ type GetBatchPossibleNextStepsRequest struct {
 
 func (x *GetBatchPossibleNextStepsRequest) Reset() {
 	*x = GetBatchPossibleNextStepsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[64]
+	mi := &file_core_core_items_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4328,7 +4450,7 @@ func (x *GetBatchPossibleNextStepsRequest) String() string {
 func (*GetBatchPossibleNextStepsRequest) ProtoMessage() {}
 
 func (x *GetBatchPossibleNextStepsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[64]
+	mi := &file_core_core_items_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4341,7 +4463,7 @@ func (x *GetBatchPossibleNextStepsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBatchPossibleNextStepsRequest.ProtoReflect.Descriptor instead.
 func (*GetBatchPossibleNextStepsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{64}
+	return file_core_core_items_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *GetBatchPossibleNextStepsRequest) GetScanningStationId() string {
@@ -4367,7 +4489,7 @@ type GetBatchPossibleNextStepsResponse struct {
 
 func (x *GetBatchPossibleNextStepsResponse) Reset() {
 	*x = GetBatchPossibleNextStepsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[65]
+	mi := &file_core_core_items_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4379,7 +4501,7 @@ func (x *GetBatchPossibleNextStepsResponse) String() string {
 func (*GetBatchPossibleNextStepsResponse) ProtoMessage() {}
 
 func (x *GetBatchPossibleNextStepsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[65]
+	mi := &file_core_core_items_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4392,7 +4514,7 @@ func (x *GetBatchPossibleNextStepsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetBatchPossibleNextStepsResponse.ProtoReflect.Descriptor instead.
 func (*GetBatchPossibleNextStepsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{65}
+	return file_core_core_items_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *GetBatchPossibleNextStepsResponse) GetSteps() []*ScanningProductionStepInfoProto {
@@ -4412,7 +4534,7 @@ type GetBatchPossibleInitStepsRequest struct {
 
 func (x *GetBatchPossibleInitStepsRequest) Reset() {
 	*x = GetBatchPossibleInitStepsRequest{}
-	mi := &file_core_core_items_proto_msgTypes[66]
+	mi := &file_core_core_items_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4424,7 +4546,7 @@ func (x *GetBatchPossibleInitStepsRequest) String() string {
 func (*GetBatchPossibleInitStepsRequest) ProtoMessage() {}
 
 func (x *GetBatchPossibleInitStepsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[66]
+	mi := &file_core_core_items_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4437,7 +4559,7 @@ func (x *GetBatchPossibleInitStepsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBatchPossibleInitStepsRequest.ProtoReflect.Descriptor instead.
 func (*GetBatchPossibleInitStepsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{66}
+	return file_core_core_items_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *GetBatchPossibleInitStepsRequest) GetScanningStationId() string {
@@ -4463,7 +4585,7 @@ type GetBatchPossibleInitStepsResponse struct {
 
 func (x *GetBatchPossibleInitStepsResponse) Reset() {
 	*x = GetBatchPossibleInitStepsResponse{}
-	mi := &file_core_core_items_proto_msgTypes[67]
+	mi := &file_core_core_items_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4475,7 +4597,7 @@ func (x *GetBatchPossibleInitStepsResponse) String() string {
 func (*GetBatchPossibleInitStepsResponse) ProtoMessage() {}
 
 func (x *GetBatchPossibleInitStepsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[67]
+	mi := &file_core_core_items_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4488,7 +4610,7 @@ func (x *GetBatchPossibleInitStepsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetBatchPossibleInitStepsResponse.ProtoReflect.Descriptor instead.
 func (*GetBatchPossibleInitStepsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{67}
+	return file_core_core_items_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *GetBatchPossibleInitStepsResponse) GetSteps() []*ScanningProductionStepInfoProto {
@@ -4508,7 +4630,7 @@ type AnalyzeOpenBatchesRequest struct {
 
 func (x *AnalyzeOpenBatchesRequest) Reset() {
 	*x = AnalyzeOpenBatchesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[68]
+	mi := &file_core_core_items_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4520,7 +4642,7 @@ func (x *AnalyzeOpenBatchesRequest) String() string {
 func (*AnalyzeOpenBatchesRequest) ProtoMessage() {}
 
 func (x *AnalyzeOpenBatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[68]
+	mi := &file_core_core_items_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4533,7 +4655,7 @@ func (x *AnalyzeOpenBatchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenBatchesRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenBatchesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{68}
+	return file_core_core_items_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *AnalyzeOpenBatchesRequest) GetItemIds() []string {
@@ -4559,7 +4681,7 @@ type AnalyzeOpenBatchesResponse struct {
 
 func (x *AnalyzeOpenBatchesResponse) Reset() {
 	*x = AnalyzeOpenBatchesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[69]
+	mi := &file_core_core_items_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4571,7 +4693,7 @@ func (x *AnalyzeOpenBatchesResponse) String() string {
 func (*AnalyzeOpenBatchesResponse) ProtoMessage() {}
 
 func (x *AnalyzeOpenBatchesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[69]
+	mi := &file_core_core_items_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4584,7 +4706,7 @@ func (x *AnalyzeOpenBatchesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenBatchesResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenBatchesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{69}
+	return file_core_core_items_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *AnalyzeOpenBatchesResponse) GetSummaries() []*OpenBatchSummaryInfo {
@@ -4610,7 +4732,7 @@ type InitializeBatchRequest struct {
 
 func (x *InitializeBatchRequest) Reset() {
 	*x = InitializeBatchRequest{}
-	mi := &file_core_core_items_proto_msgTypes[70]
+	mi := &file_core_core_items_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4622,7 +4744,7 @@ func (x *InitializeBatchRequest) String() string {
 func (*InitializeBatchRequest) ProtoMessage() {}
 
 func (x *InitializeBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[70]
+	mi := &file_core_core_items_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4635,7 +4757,7 @@ func (x *InitializeBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeBatchRequest.ProtoReflect.Descriptor instead.
 func (*InitializeBatchRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{70}
+	return file_core_core_items_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *InitializeBatchRequest) GetBatchId() string {
@@ -4682,7 +4804,7 @@ type InitializeBatchResponse struct {
 
 func (x *InitializeBatchResponse) Reset() {
 	*x = InitializeBatchResponse{}
-	mi := &file_core_core_items_proto_msgTypes[71]
+	mi := &file_core_core_items_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4694,7 +4816,7 @@ func (x *InitializeBatchResponse) String() string {
 func (*InitializeBatchResponse) ProtoMessage() {}
 
 func (x *InitializeBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[71]
+	mi := &file_core_core_items_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4707,7 +4829,7 @@ func (x *InitializeBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeBatchResponse.ProtoReflect.Descriptor instead.
 func (*InitializeBatchResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{71}
+	return file_core_core_items_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *InitializeBatchResponse) GetBatch() *BaseBatchInfo {
@@ -4728,7 +4850,7 @@ type MoveBatchesRequest struct {
 
 func (x *MoveBatchesRequest) Reset() {
 	*x = MoveBatchesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[72]
+	mi := &file_core_core_items_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4740,7 +4862,7 @@ func (x *MoveBatchesRequest) String() string {
 func (*MoveBatchesRequest) ProtoMessage() {}
 
 func (x *MoveBatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[72]
+	mi := &file_core_core_items_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4753,7 +4875,7 @@ func (x *MoveBatchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveBatchesRequest.ProtoReflect.Descriptor instead.
 func (*MoveBatchesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{72}
+	return file_core_core_items_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *MoveBatchesRequest) GetBatchIds() []string {
@@ -4786,7 +4908,7 @@ type MoveBatchesResponse struct {
 
 func (x *MoveBatchesResponse) Reset() {
 	*x = MoveBatchesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[73]
+	mi := &file_core_core_items_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4798,7 +4920,7 @@ func (x *MoveBatchesResponse) String() string {
 func (*MoveBatchesResponse) ProtoMessage() {}
 
 func (x *MoveBatchesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[73]
+	mi := &file_core_core_items_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4811,7 +4933,7 @@ func (x *MoveBatchesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveBatchesResponse.ProtoReflect.Descriptor instead.
 func (*MoveBatchesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{73}
+	return file_core_core_items_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *MoveBatchesResponse) GetBatch() *BaseBatchInfo {
@@ -4832,7 +4954,7 @@ type MergeBatchesRequest struct {
 
 func (x *MergeBatchesRequest) Reset() {
 	*x = MergeBatchesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[74]
+	mi := &file_core_core_items_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4844,7 +4966,7 @@ func (x *MergeBatchesRequest) String() string {
 func (*MergeBatchesRequest) ProtoMessage() {}
 
 func (x *MergeBatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[74]
+	mi := &file_core_core_items_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4857,7 +4979,7 @@ func (x *MergeBatchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeBatchesRequest.ProtoReflect.Descriptor instead.
 func (*MergeBatchesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{74}
+	return file_core_core_items_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *MergeBatchesRequest) GetBatchIds() []string {
@@ -4890,7 +5012,7 @@ type MergeBatchesResponse struct {
 
 func (x *MergeBatchesResponse) Reset() {
 	*x = MergeBatchesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[75]
+	mi := &file_core_core_items_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4902,7 +5024,7 @@ func (x *MergeBatchesResponse) String() string {
 func (*MergeBatchesResponse) ProtoMessage() {}
 
 func (x *MergeBatchesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[75]
+	mi := &file_core_core_items_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4915,7 +5037,7 @@ func (x *MergeBatchesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeBatchesResponse.ProtoReflect.Descriptor instead.
 func (*MergeBatchesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{75}
+	return file_core_core_items_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *MergeBatchesResponse) GetBatch() *BaseBatchInfo {
@@ -4940,7 +5062,7 @@ type SplitBatchRequest struct {
 
 func (x *SplitBatchRequest) Reset() {
 	*x = SplitBatchRequest{}
-	mi := &file_core_core_items_proto_msgTypes[76]
+	mi := &file_core_core_items_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4952,7 +5074,7 @@ func (x *SplitBatchRequest) String() string {
 func (*SplitBatchRequest) ProtoMessage() {}
 
 func (x *SplitBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[76]
+	mi := &file_core_core_items_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4965,7 +5087,7 @@ func (x *SplitBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SplitBatchRequest.ProtoReflect.Descriptor instead.
 func (*SplitBatchRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{76}
+	return file_core_core_items_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *SplitBatchRequest) GetBatchIds() []string {
@@ -5026,7 +5148,7 @@ type SplitBatchResponse struct {
 
 func (x *SplitBatchResponse) Reset() {
 	*x = SplitBatchResponse{}
-	mi := &file_core_core_items_proto_msgTypes[77]
+	mi := &file_core_core_items_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5038,7 +5160,7 @@ func (x *SplitBatchResponse) String() string {
 func (*SplitBatchResponse) ProtoMessage() {}
 
 func (x *SplitBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[77]
+	mi := &file_core_core_items_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5051,7 +5173,7 @@ func (x *SplitBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SplitBatchResponse.ProtoReflect.Descriptor instead.
 func (*SplitBatchResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{77}
+	return file_core_core_items_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *SplitBatchResponse) GetBatch() *BaseBatchInfo {
@@ -5071,7 +5193,7 @@ type GetRemainingQuantityToSplitRequest struct {
 
 func (x *GetRemainingQuantityToSplitRequest) Reset() {
 	*x = GetRemainingQuantityToSplitRequest{}
-	mi := &file_core_core_items_proto_msgTypes[78]
+	mi := &file_core_core_items_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5083,7 +5205,7 @@ func (x *GetRemainingQuantityToSplitRequest) String() string {
 func (*GetRemainingQuantityToSplitRequest) ProtoMessage() {}
 
 func (x *GetRemainingQuantityToSplitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[78]
+	mi := &file_core_core_items_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5096,7 +5218,7 @@ func (x *GetRemainingQuantityToSplitRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetRemainingQuantityToSplitRequest.ProtoReflect.Descriptor instead.
 func (*GetRemainingQuantityToSplitRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{78}
+	return file_core_core_items_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *GetRemainingQuantityToSplitRequest) GetBatchIds() []string {
@@ -5122,7 +5244,7 @@ type GetRemainingQuantityToSplitResponse struct {
 
 func (x *GetRemainingQuantityToSplitResponse) Reset() {
 	*x = GetRemainingQuantityToSplitResponse{}
-	mi := &file_core_core_items_proto_msgTypes[79]
+	mi := &file_core_core_items_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5134,7 +5256,7 @@ func (x *GetRemainingQuantityToSplitResponse) String() string {
 func (*GetRemainingQuantityToSplitResponse) ProtoMessage() {}
 
 func (x *GetRemainingQuantityToSplitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[79]
+	mi := &file_core_core_items_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5147,7 +5269,7 @@ func (x *GetRemainingQuantityToSplitResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetRemainingQuantityToSplitResponse.ProtoReflect.Descriptor instead.
 func (*GetRemainingQuantityToSplitResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{79}
+	return file_core_core_items_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *GetRemainingQuantityToSplitResponse) GetQuantity() *BatchQuantityInfo {
@@ -5171,7 +5293,7 @@ type GetScanningStationConsumptionRequest struct {
 
 func (x *GetScanningStationConsumptionRequest) Reset() {
 	*x = GetScanningStationConsumptionRequest{}
-	mi := &file_core_core_items_proto_msgTypes[80]
+	mi := &file_core_core_items_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5183,7 +5305,7 @@ func (x *GetScanningStationConsumptionRequest) String() string {
 func (*GetScanningStationConsumptionRequest) ProtoMessage() {}
 
 func (x *GetScanningStationConsumptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[80]
+	mi := &file_core_core_items_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5196,7 +5318,7 @@ func (x *GetScanningStationConsumptionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetScanningStationConsumptionRequest.ProtoReflect.Descriptor instead.
 func (*GetScanningStationConsumptionRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{80}
+	return file_core_core_items_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *GetScanningStationConsumptionRequest) GetScanningStationId() string {
@@ -5243,7 +5365,7 @@ type GetScanningStationConsumptionResponse struct {
 
 func (x *GetScanningStationConsumptionResponse) Reset() {
 	*x = GetScanningStationConsumptionResponse{}
-	mi := &file_core_core_items_proto_msgTypes[81]
+	mi := &file_core_core_items_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5255,7 +5377,7 @@ func (x *GetScanningStationConsumptionResponse) String() string {
 func (*GetScanningStationConsumptionResponse) ProtoMessage() {}
 
 func (x *GetScanningStationConsumptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[81]
+	mi := &file_core_core_items_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5268,7 +5390,7 @@ func (x *GetScanningStationConsumptionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetScanningStationConsumptionResponse.ProtoReflect.Descriptor instead.
 func (*GetScanningStationConsumptionResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{81}
+	return file_core_core_items_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *GetScanningStationConsumptionResponse) GetConsumptions() []*ScanningConsumptionInfo {
@@ -5287,7 +5409,7 @@ type CloseBatchRequest struct {
 
 func (x *CloseBatchRequest) Reset() {
 	*x = CloseBatchRequest{}
-	mi := &file_core_core_items_proto_msgTypes[82]
+	mi := &file_core_core_items_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5299,7 +5421,7 @@ func (x *CloseBatchRequest) String() string {
 func (*CloseBatchRequest) ProtoMessage() {}
 
 func (x *CloseBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[82]
+	mi := &file_core_core_items_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5312,7 +5434,7 @@ func (x *CloseBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseBatchRequest.ProtoReflect.Descriptor instead.
 func (*CloseBatchRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{82}
+	return file_core_core_items_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *CloseBatchRequest) GetBatchId() string {
@@ -5331,7 +5453,7 @@ type CloseBatchResponse struct {
 
 func (x *CloseBatchResponse) Reset() {
 	*x = CloseBatchResponse{}
-	mi := &file_core_core_items_proto_msgTypes[83]
+	mi := &file_core_core_items_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5343,7 +5465,7 @@ func (x *CloseBatchResponse) String() string {
 func (*CloseBatchResponse) ProtoMessage() {}
 
 func (x *CloseBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[83]
+	mi := &file_core_core_items_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5356,7 +5478,7 @@ func (x *CloseBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseBatchResponse.ProtoReflect.Descriptor instead.
 func (*CloseBatchResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{83}
+	return file_core_core_items_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *CloseBatchResponse) GetBatch() *BaseBatchInfo {
@@ -5375,7 +5497,7 @@ type DeleteBatchRequest struct {
 
 func (x *DeleteBatchRequest) Reset() {
 	*x = DeleteBatchRequest{}
-	mi := &file_core_core_items_proto_msgTypes[84]
+	mi := &file_core_core_items_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5387,7 +5509,7 @@ func (x *DeleteBatchRequest) String() string {
 func (*DeleteBatchRequest) ProtoMessage() {}
 
 func (x *DeleteBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[84]
+	mi := &file_core_core_items_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5400,7 +5522,7 @@ func (x *DeleteBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBatchRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBatchRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{84}
+	return file_core_core_items_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *DeleteBatchRequest) GetBatchId() string {
@@ -5419,7 +5541,7 @@ type DeleteBatchResponse struct {
 
 func (x *DeleteBatchResponse) Reset() {
 	*x = DeleteBatchResponse{}
-	mi := &file_core_core_items_proto_msgTypes[85]
+	mi := &file_core_core_items_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5431,7 +5553,7 @@ func (x *DeleteBatchResponse) String() string {
 func (*DeleteBatchResponse) ProtoMessage() {}
 
 func (x *DeleteBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[85]
+	mi := &file_core_core_items_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5444,7 +5566,7 @@ func (x *DeleteBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBatchResponse.ProtoReflect.Descriptor instead.
 func (*DeleteBatchResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{85}
+	return file_core_core_items_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *DeleteBatchResponse) GetBatch() *BaseBatchInfo {
@@ -5463,7 +5585,7 @@ type DeleteManyBatchesRequest struct {
 
 func (x *DeleteManyBatchesRequest) Reset() {
 	*x = DeleteManyBatchesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[86]
+	mi := &file_core_core_items_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5475,7 +5597,7 @@ func (x *DeleteManyBatchesRequest) String() string {
 func (*DeleteManyBatchesRequest) ProtoMessage() {}
 
 func (x *DeleteManyBatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[86]
+	mi := &file_core_core_items_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5488,7 +5610,7 @@ func (x *DeleteManyBatchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteManyBatchesRequest.ProtoReflect.Descriptor instead.
 func (*DeleteManyBatchesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{86}
+	return file_core_core_items_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *DeleteManyBatchesRequest) GetBatchIds() []string {
@@ -5511,7 +5633,7 @@ type ListItemCategoriesRequest struct {
 
 func (x *ListItemCategoriesRequest) Reset() {
 	*x = ListItemCategoriesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[87]
+	mi := &file_core_core_items_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5523,7 +5645,7 @@ func (x *ListItemCategoriesRequest) String() string {
 func (*ListItemCategoriesRequest) ProtoMessage() {}
 
 func (x *ListItemCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[87]
+	mi := &file_core_core_items_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5536,7 +5658,7 @@ func (x *ListItemCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListItemCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{87}
+	return file_core_core_items_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ListItemCategoriesRequest) GetCursor() string {
@@ -5584,7 +5706,7 @@ type ListItemCategoriesResponse struct {
 
 func (x *ListItemCategoriesResponse) Reset() {
 	*x = ListItemCategoriesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[88]
+	mi := &file_core_core_items_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5596,7 +5718,7 @@ func (x *ListItemCategoriesResponse) String() string {
 func (*ListItemCategoriesResponse) ProtoMessage() {}
 
 func (x *ListItemCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[88]
+	mi := &file_core_core_items_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5609,7 +5731,7 @@ func (x *ListItemCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListItemCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{88}
+	return file_core_core_items_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *ListItemCategoriesResponse) GetItemCategories() []*ItemCategoryInfo {
@@ -5635,7 +5757,7 @@ type ExportItemCategoriesRequest struct {
 
 func (x *ExportItemCategoriesRequest) Reset() {
 	*x = ExportItemCategoriesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[89]
+	mi := &file_core_core_items_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5647,7 +5769,7 @@ func (x *ExportItemCategoriesRequest) String() string {
 func (*ExportItemCategoriesRequest) ProtoMessage() {}
 
 func (x *ExportItemCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[89]
+	mi := &file_core_core_items_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5660,7 +5782,7 @@ func (x *ExportItemCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportItemCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ExportItemCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{89}
+	return file_core_core_items_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ExportItemCategoriesRequest) GetQuery() string {
@@ -5679,7 +5801,7 @@ type ExportItemCategoriesResponse struct {
 
 func (x *ExportItemCategoriesResponse) Reset() {
 	*x = ExportItemCategoriesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[90]
+	mi := &file_core_core_items_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5691,7 +5813,7 @@ func (x *ExportItemCategoriesResponse) String() string {
 func (*ExportItemCategoriesResponse) ProtoMessage() {}
 
 func (x *ExportItemCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[90]
+	mi := &file_core_core_items_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5704,7 +5826,7 @@ func (x *ExportItemCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportItemCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ExportItemCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{90}
+	return file_core_core_items_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ExportItemCategoriesResponse) GetJob() *JobInfo {
@@ -5724,7 +5846,7 @@ type GetItemCategoryRequest struct {
 
 func (x *GetItemCategoryRequest) Reset() {
 	*x = GetItemCategoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[91]
+	mi := &file_core_core_items_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5736,7 +5858,7 @@ func (x *GetItemCategoryRequest) String() string {
 func (*GetItemCategoryRequest) ProtoMessage() {}
 
 func (x *GetItemCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[91]
+	mi := &file_core_core_items_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5749,7 +5871,7 @@ func (x *GetItemCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemCategoryRequest.ProtoReflect.Descriptor instead.
 func (*GetItemCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{91}
+	return file_core_core_items_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *GetItemCategoryRequest) GetId() string {
@@ -5775,7 +5897,7 @@ type GetItemCategoryResponse struct {
 
 func (x *GetItemCategoryResponse) Reset() {
 	*x = GetItemCategoryResponse{}
-	mi := &file_core_core_items_proto_msgTypes[92]
+	mi := &file_core_core_items_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5787,7 +5909,7 @@ func (x *GetItemCategoryResponse) String() string {
 func (*GetItemCategoryResponse) ProtoMessage() {}
 
 func (x *GetItemCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[92]
+	mi := &file_core_core_items_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5800,7 +5922,7 @@ func (x *GetItemCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemCategoryResponse.ProtoReflect.Descriptor instead.
 func (*GetItemCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{92}
+	return file_core_core_items_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *GetItemCategoryResponse) GetItemCategory() *ItemCategoryInfo {
@@ -5825,7 +5947,7 @@ type CreateItemCategoryRequest struct {
 
 func (x *CreateItemCategoryRequest) Reset() {
 	*x = CreateItemCategoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[93]
+	mi := &file_core_core_items_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5837,7 +5959,7 @@ func (x *CreateItemCategoryRequest) String() string {
 func (*CreateItemCategoryRequest) ProtoMessage() {}
 
 func (x *CreateItemCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[93]
+	mi := &file_core_core_items_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5850,7 +5972,7 @@ func (x *CreateItemCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateItemCategoryRequest.ProtoReflect.Descriptor instead.
 func (*CreateItemCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{93}
+	return file_core_core_items_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *CreateItemCategoryRequest) GetName() string {
@@ -5904,7 +6026,7 @@ type CreateItemCategoryResponse struct {
 
 func (x *CreateItemCategoryResponse) Reset() {
 	*x = CreateItemCategoryResponse{}
-	mi := &file_core_core_items_proto_msgTypes[94]
+	mi := &file_core_core_items_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5916,7 +6038,7 @@ func (x *CreateItemCategoryResponse) String() string {
 func (*CreateItemCategoryResponse) ProtoMessage() {}
 
 func (x *CreateItemCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[94]
+	mi := &file_core_core_items_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5929,7 +6051,7 @@ func (x *CreateItemCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateItemCategoryResponse.ProtoReflect.Descriptor instead.
 func (*CreateItemCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{94}
+	return file_core_core_items_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *CreateItemCategoryResponse) GetItemCategory() *ItemCategoryInfo {
@@ -5955,7 +6077,7 @@ type UpdateItemCategoryRequest struct {
 
 func (x *UpdateItemCategoryRequest) Reset() {
 	*x = UpdateItemCategoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[95]
+	mi := &file_core_core_items_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5967,7 +6089,7 @@ func (x *UpdateItemCategoryRequest) String() string {
 func (*UpdateItemCategoryRequest) ProtoMessage() {}
 
 func (x *UpdateItemCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[95]
+	mi := &file_core_core_items_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5980,7 +6102,7 @@ func (x *UpdateItemCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateItemCategoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateItemCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{95}
+	return file_core_core_items_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *UpdateItemCategoryRequest) GetId() string {
@@ -6041,7 +6163,7 @@ type UpdateItemCategoryResponse struct {
 
 func (x *UpdateItemCategoryResponse) Reset() {
 	*x = UpdateItemCategoryResponse{}
-	mi := &file_core_core_items_proto_msgTypes[96]
+	mi := &file_core_core_items_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6053,7 +6175,7 @@ func (x *UpdateItemCategoryResponse) String() string {
 func (*UpdateItemCategoryResponse) ProtoMessage() {}
 
 func (x *UpdateItemCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[96]
+	mi := &file_core_core_items_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6066,7 +6188,7 @@ func (x *UpdateItemCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateItemCategoryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateItemCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{96}
+	return file_core_core_items_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *UpdateItemCategoryResponse) GetItemCategory() *ItemCategoryInfo {
@@ -6085,7 +6207,7 @@ type DeleteItemCategoryRequest struct {
 
 func (x *DeleteItemCategoryRequest) Reset() {
 	*x = DeleteItemCategoryRequest{}
-	mi := &file_core_core_items_proto_msgTypes[97]
+	mi := &file_core_core_items_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6097,7 +6219,7 @@ func (x *DeleteItemCategoryRequest) String() string {
 func (*DeleteItemCategoryRequest) ProtoMessage() {}
 
 func (x *DeleteItemCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[97]
+	mi := &file_core_core_items_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6110,7 +6232,7 @@ func (x *DeleteItemCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteItemCategoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteItemCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{97}
+	return file_core_core_items_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *DeleteItemCategoryRequest) GetId() string {
@@ -6130,7 +6252,7 @@ type AddItemCategoryPropertyRequest struct {
 
 func (x *AddItemCategoryPropertyRequest) Reset() {
 	*x = AddItemCategoryPropertyRequest{}
-	mi := &file_core_core_items_proto_msgTypes[98]
+	mi := &file_core_core_items_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6142,7 +6264,7 @@ func (x *AddItemCategoryPropertyRequest) String() string {
 func (*AddItemCategoryPropertyRequest) ProtoMessage() {}
 
 func (x *AddItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[98]
+	mi := &file_core_core_items_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6155,7 +6277,7 @@ func (x *AddItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddItemCategoryPropertyRequest.ProtoReflect.Descriptor instead.
 func (*AddItemCategoryPropertyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{98}
+	return file_core_core_items_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *AddItemCategoryPropertyRequest) GetId() string {
@@ -6182,7 +6304,7 @@ type CreateItemCategoryPropertyRequest struct {
 
 func (x *CreateItemCategoryPropertyRequest) Reset() {
 	*x = CreateItemCategoryPropertyRequest{}
-	mi := &file_core_core_items_proto_msgTypes[99]
+	mi := &file_core_core_items_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6194,7 +6316,7 @@ func (x *CreateItemCategoryPropertyRequest) String() string {
 func (*CreateItemCategoryPropertyRequest) ProtoMessage() {}
 
 func (x *CreateItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[99]
+	mi := &file_core_core_items_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6207,7 +6329,7 @@ func (x *CreateItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CreateItemCategoryPropertyRequest.ProtoReflect.Descriptor instead.
 func (*CreateItemCategoryPropertyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{99}
+	return file_core_core_items_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *CreateItemCategoryPropertyRequest) GetId() string {
@@ -6233,7 +6355,7 @@ type CreateItemCategoryPropertyResponse struct {
 
 func (x *CreateItemCategoryPropertyResponse) Reset() {
 	*x = CreateItemCategoryPropertyResponse{}
-	mi := &file_core_core_items_proto_msgTypes[100]
+	mi := &file_core_core_items_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6245,7 +6367,7 @@ func (x *CreateItemCategoryPropertyResponse) String() string {
 func (*CreateItemCategoryPropertyResponse) ProtoMessage() {}
 
 func (x *CreateItemCategoryPropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[100]
+	mi := &file_core_core_items_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6258,7 +6380,7 @@ func (x *CreateItemCategoryPropertyResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use CreateItemCategoryPropertyResponse.ProtoReflect.Descriptor instead.
 func (*CreateItemCategoryPropertyResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{100}
+	return file_core_core_items_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *CreateItemCategoryPropertyResponse) GetProperty() *PropertyInfo {
@@ -6278,7 +6400,7 @@ type RemoveItemCategoryPropertyRequest struct {
 
 func (x *RemoveItemCategoryPropertyRequest) Reset() {
 	*x = RemoveItemCategoryPropertyRequest{}
-	mi := &file_core_core_items_proto_msgTypes[101]
+	mi := &file_core_core_items_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6290,7 +6412,7 @@ func (x *RemoveItemCategoryPropertyRequest) String() string {
 func (*RemoveItemCategoryPropertyRequest) ProtoMessage() {}
 
 func (x *RemoveItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[101]
+	mi := &file_core_core_items_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6303,7 +6425,7 @@ func (x *RemoveItemCategoryPropertyRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RemoveItemCategoryPropertyRequest.ProtoReflect.Descriptor instead.
 func (*RemoveItemCategoryPropertyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{101}
+	return file_core_core_items_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *RemoveItemCategoryPropertyRequest) GetId() string {
@@ -6330,7 +6452,7 @@ type ChangeItemCategoryUnitGroupRequest struct {
 
 func (x *ChangeItemCategoryUnitGroupRequest) Reset() {
 	*x = ChangeItemCategoryUnitGroupRequest{}
-	mi := &file_core_core_items_proto_msgTypes[102]
+	mi := &file_core_core_items_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6342,7 +6464,7 @@ func (x *ChangeItemCategoryUnitGroupRequest) String() string {
 func (*ChangeItemCategoryUnitGroupRequest) ProtoMessage() {}
 
 func (x *ChangeItemCategoryUnitGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[102]
+	mi := &file_core_core_items_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6355,7 +6477,7 @@ func (x *ChangeItemCategoryUnitGroupRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ChangeItemCategoryUnitGroupRequest.ProtoReflect.Descriptor instead.
 func (*ChangeItemCategoryUnitGroupRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{102}
+	return file_core_core_items_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ChangeItemCategoryUnitGroupRequest) GetId() string {
@@ -6385,7 +6507,7 @@ type BulkUpsertItemCategoryInput struct {
 
 func (x *BulkUpsertItemCategoryInput) Reset() {
 	*x = BulkUpsertItemCategoryInput{}
-	mi := &file_core_core_items_proto_msgTypes[103]
+	mi := &file_core_core_items_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6397,7 +6519,7 @@ func (x *BulkUpsertItemCategoryInput) String() string {
 func (*BulkUpsertItemCategoryInput) ProtoMessage() {}
 
 func (x *BulkUpsertItemCategoryInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[103]
+	mi := &file_core_core_items_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6410,7 +6532,7 @@ func (x *BulkUpsertItemCategoryInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertItemCategoryInput.ProtoReflect.Descriptor instead.
 func (*BulkUpsertItemCategoryInput) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{103}
+	return file_core_core_items_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *BulkUpsertItemCategoryInput) GetName() string {
@@ -6457,7 +6579,7 @@ type BulkUpsertItemCategoriesRequest struct {
 
 func (x *BulkUpsertItemCategoriesRequest) Reset() {
 	*x = BulkUpsertItemCategoriesRequest{}
-	mi := &file_core_core_items_proto_msgTypes[104]
+	mi := &file_core_core_items_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6469,7 +6591,7 @@ func (x *BulkUpsertItemCategoriesRequest) String() string {
 func (*BulkUpsertItemCategoriesRequest) ProtoMessage() {}
 
 func (x *BulkUpsertItemCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[104]
+	mi := &file_core_core_items_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6482,7 +6604,7 @@ func (x *BulkUpsertItemCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertItemCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpsertItemCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{104}
+	return file_core_core_items_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *BulkUpsertItemCategoriesRequest) GetItemCategories() []*BulkUpsertItemCategoryInput {
@@ -6501,7 +6623,7 @@ type BulkUpsertItemCategoriesResponse struct {
 
 func (x *BulkUpsertItemCategoriesResponse) Reset() {
 	*x = BulkUpsertItemCategoriesResponse{}
-	mi := &file_core_core_items_proto_msgTypes[105]
+	mi := &file_core_core_items_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6513,7 +6635,7 @@ func (x *BulkUpsertItemCategoriesResponse) String() string {
 func (*BulkUpsertItemCategoriesResponse) ProtoMessage() {}
 
 func (x *BulkUpsertItemCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[105]
+	mi := &file_core_core_items_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6526,7 +6648,7 @@ func (x *BulkUpsertItemCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpsertItemCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpsertItemCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{105}
+	return file_core_core_items_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *BulkUpsertItemCategoriesResponse) GetJob() *JobInfo {
@@ -6554,7 +6676,7 @@ type ConsumptionInfo struct {
 
 func (x *ConsumptionInfo) Reset() {
 	*x = ConsumptionInfo{}
-	mi := &file_core_core_items_proto_msgTypes[106]
+	mi := &file_core_core_items_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6566,7 +6688,7 @@ func (x *ConsumptionInfo) String() string {
 func (*ConsumptionInfo) ProtoMessage() {}
 
 func (x *ConsumptionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[106]
+	mi := &file_core_core_items_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6579,7 +6701,7 @@ func (x *ConsumptionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumptionInfo.ProtoReflect.Descriptor instead.
 func (*ConsumptionInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{106}
+	return file_core_core_items_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ConsumptionInfo) GetId() string {
@@ -6663,7 +6785,7 @@ type GetConsumptionRequest struct {
 
 func (x *GetConsumptionRequest) Reset() {
 	*x = GetConsumptionRequest{}
-	mi := &file_core_core_items_proto_msgTypes[107]
+	mi := &file_core_core_items_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6675,7 +6797,7 @@ func (x *GetConsumptionRequest) String() string {
 func (*GetConsumptionRequest) ProtoMessage() {}
 
 func (x *GetConsumptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[107]
+	mi := &file_core_core_items_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6688,7 +6810,7 @@ func (x *GetConsumptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConsumptionRequest.ProtoReflect.Descriptor instead.
 func (*GetConsumptionRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{107}
+	return file_core_core_items_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *GetConsumptionRequest) GetProductionStepId() string {
@@ -6721,7 +6843,7 @@ type GetConsumptionResponse struct {
 
 func (x *GetConsumptionResponse) Reset() {
 	*x = GetConsumptionResponse{}
-	mi := &file_core_core_items_proto_msgTypes[108]
+	mi := &file_core_core_items_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6733,7 +6855,7 @@ func (x *GetConsumptionResponse) String() string {
 func (*GetConsumptionResponse) ProtoMessage() {}
 
 func (x *GetConsumptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_items_proto_msgTypes[108]
+	mi := &file_core_core_items_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6746,12 +6868,247 @@ func (x *GetConsumptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConsumptionResponse.ProtoReflect.Descriptor instead.
 func (*GetConsumptionResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_items_proto_rawDescGZIP(), []int{108}
+	return file_core_core_items_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *GetConsumptionResponse) GetConsumption() *ConsumptionInfo {
 	if x != nil {
 		return x.Consumption
+	}
+	return nil
+}
+
+// Replaces the order units and default order unit of every item matching all the filters given, in the background.
+type SetItemOrderUnitsRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ItemIds            []string               `protobuf:"bytes,1,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
+	ProductLineIds     []string               `protobuf:"bytes,2,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
+	CategoryIds        []string               `protobuf:"bytes,3,rep,name=category_ids,json=categoryIds,proto3" json:"category_ids,omitempty"`
+	AttributeIds       []string               `protobuf:"bytes,4,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
+	OrderUnits         []*ItemOrderUnitInfo   `protobuf:"bytes,5,rep,name=order_units,json=orderUnits,proto3" json:"order_units,omitempty"`
+	DefaultOrderUnitId *string                `protobuf:"bytes,6,opt,name=default_order_unit_id,json=defaultOrderUnitId,proto3,oneof" json:"default_order_unit_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SetItemOrderUnitsRequest) Reset() {
+	*x = SetItemOrderUnitsRequest{}
+	mi := &file_core_core_items_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetItemOrderUnitsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetItemOrderUnitsRequest) ProtoMessage() {}
+
+func (x *SetItemOrderUnitsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_items_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetItemOrderUnitsRequest.ProtoReflect.Descriptor instead.
+func (*SetItemOrderUnitsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_items_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *SetItemOrderUnitsRequest) GetItemIds() []string {
+	if x != nil {
+		return x.ItemIds
+	}
+	return nil
+}
+
+func (x *SetItemOrderUnitsRequest) GetProductLineIds() []string {
+	if x != nil {
+		return x.ProductLineIds
+	}
+	return nil
+}
+
+func (x *SetItemOrderUnitsRequest) GetCategoryIds() []string {
+	if x != nil {
+		return x.CategoryIds
+	}
+	return nil
+}
+
+func (x *SetItemOrderUnitsRequest) GetAttributeIds() []string {
+	if x != nil {
+		return x.AttributeIds
+	}
+	return nil
+}
+
+func (x *SetItemOrderUnitsRequest) GetOrderUnits() []*ItemOrderUnitInfo {
+	if x != nil {
+		return x.OrderUnits
+	}
+	return nil
+}
+
+func (x *SetItemOrderUnitsRequest) GetDefaultOrderUnitId() string {
+	if x != nil && x.DefaultOrderUnitId != nil {
+		return *x.DefaultOrderUnitId
+	}
+	return ""
+}
+
+type SetItemOrderUnitsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetItemOrderUnitsResponse) Reset() {
+	*x = SetItemOrderUnitsResponse{}
+	mi := &file_core_core_items_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetItemOrderUnitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetItemOrderUnitsResponse) ProtoMessage() {}
+
+func (x *SetItemOrderUnitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_items_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetItemOrderUnitsResponse.ProtoReflect.Descriptor instead.
+func (*SetItemOrderUnitsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_items_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *SetItemOrderUnitsResponse) GetJob() *JobInfo {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
+// Moves an item to a new stocking unit, in the background.
+type ChangeItemStockingUnitRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StockingUnitId string                 `protobuf:"bytes,2,opt,name=stocking_unit_id,json=stockingUnitId,proto3" json:"stocking_unit_id,omitempty"`
+	// convert | relabel
+	Mode          string `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeItemStockingUnitRequest) Reset() {
+	*x = ChangeItemStockingUnitRequest{}
+	mi := &file_core_core_items_proto_msgTypes[112]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeItemStockingUnitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeItemStockingUnitRequest) ProtoMessage() {}
+
+func (x *ChangeItemStockingUnitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_items_proto_msgTypes[112]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeItemStockingUnitRequest.ProtoReflect.Descriptor instead.
+func (*ChangeItemStockingUnitRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_items_proto_rawDescGZIP(), []int{112}
+}
+
+func (x *ChangeItemStockingUnitRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeItemStockingUnitRequest) GetStockingUnitId() string {
+	if x != nil {
+		return x.StockingUnitId
+	}
+	return ""
+}
+
+func (x *ChangeItemStockingUnitRequest) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+type ChangeItemStockingUnitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeItemStockingUnitResponse) Reset() {
+	*x = ChangeItemStockingUnitResponse{}
+	mi := &file_core_core_items_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeItemStockingUnitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeItemStockingUnitResponse) ProtoMessage() {}
+
+func (x *ChangeItemStockingUnitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_items_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeItemStockingUnitResponse.ProtoReflect.Descriptor instead.
+func (*ChangeItemStockingUnitResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_items_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *ChangeItemStockingUnitResponse) GetJob() *JobInfo {
+	if x != nil {
+		return x.Job
 	}
 	return nil
 }
@@ -6810,7 +7167,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x06_notes\"W\n" +
 	"\x13ExportItemsResponse\x12*\n" +
 	"\x05items\x18\x01 \x03(\v2\x14.core.ExportItemInfoR\x05items\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"\xda\x04\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"\xe6\x05\n" +
 	"\x11UpdateItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
@@ -6827,11 +7184,17 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x05sales\x18\r \x01(\v2\x14.core.ItemSalesInputR\x05sales\x123\n" +
 	"\bmaterial\x18\x0e \x01(\v2\x17.core.ItemMaterialInputR\bmaterial\x12\x1f\n" +
 	"\vclear_sales\x18\x0f \x01(\bR\n" +
-	"clearSalesB\x06\n" +
+	"clearSales\x126\n" +
+	"\x15default_order_unit_id\x18\x10 \x01(\tH\x04R\x12defaultOrderUnitId\x88\x01\x01\x128\n" +
+	"\vorder_units\x18\x11 \x01(\v2\x17.core.ItemOrderUnitListR\n" +
+	"orderUnitsB\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\x0e\n" +
 	"\f_category_idB\t\n" +
-	"\a_statusJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x05notesR\fupdate_notes\"8\n" +
+	"\a_statusB\x18\n" +
+	"\x16_default_order_unit_idJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x05notesR\fupdate_notes\"D\n" +
+	"\x11ItemOrderUnitList\x12/\n" +
+	"\x06values\x18\x01 \x03(\v2\x17.core.ItemOrderUnitInfoR\x06values\"8\n" +
 	"\x12UpdateItemResponse\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"\xf5\x01\n" +
 	"\x0eItemSalesInput\x12.\n" +
@@ -6844,7 +7207,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x11ItemMaterialInput\x124\n" +
 	"\vorder_point\x18\x01 \x01(\v2\x13.core.QuantityPatchR\n" +
 	"orderPoint\x120\n" +
-	"\tlead_time\x18\x02 \x01(\v2\x13.core.QuantityPatchR\bleadTime\"\x95\x03\n" +
+	"\tlead_time\x18\x02 \x01(\v2\x13.core.QuantityPatchR\bleadTime\"\x88\x05\n" +
 	"\x11CreateItemRequest\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
@@ -6857,14 +7220,21 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\tunit_cost\x18\b \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12*\n" +
 	"\x05sales\x18\t \x01(\v2\x14.core.ItemSalesInputR\x05sales\x123\n" +
 	"\bmaterial\x18\n" +
-	" \x01(\v2\x17.core.ItemMaterialInputR\bmaterialB\x0e\n" +
+	" \x01(\v2\x17.core.ItemMaterialInputR\bmaterial\x12-\n" +
+	"\x10stocking_unit_id\x18\v \x01(\tH\x03R\x0estockingUnitId\x88\x01\x01\x126\n" +
+	"\x15default_order_unit_id\x18\f \x01(\tH\x04R\x12defaultOrderUnitId\x88\x01\x01\x128\n" +
+	"\vorder_units\x18\r \x03(\v2\x17.core.ItemOrderUnitInfoR\n" +
+	"orderUnits\x12!\n" +
+	"\flegacy_units\x18\x0e \x01(\bR\vlegacyUnitsB\x0e\n" +
 	"\f_descriptionB\t\n" +
 	"\a_statusB\t\n" +
-	"\a_supply\"8\n" +
+	"\a_supplyB\x13\n" +
+	"\x11_stocking_unit_idB\x18\n" +
+	"\x16_default_order_unit_id\"8\n" +
 	"\x12CreateItemResponse\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"#\n" +
 	"\x11DeleteItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xea\x03\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xba\x05\n" +
 	"\x0fUpsertItemInput\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
@@ -6879,9 +7249,15 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\tunit_cost\x18\t \x01(\v2\x0f.core.UnitPriceR\bunitCost\x12*\n" +
 	"\x05sales\x18\n" +
 	" \x01(\v2\x14.core.ItemSalesInputR\x05sales\x123\n" +
-	"\bmaterial\x18\v \x01(\v2\x17.core.ItemMaterialInputR\bmaterialB\x0e\n" +
+	"\bmaterial\x18\v \x01(\v2\x17.core.ItemMaterialInputR\bmaterial\x12-\n" +
+	"\x10stocking_unit_id\x18\f \x01(\tH\x02R\x0estockingUnitId\x88\x01\x01\x126\n" +
+	"\x15default_order_unit_id\x18\r \x01(\tH\x03R\x12defaultOrderUnitId\x88\x01\x01\x128\n" +
+	"\vorder_units\x18\x0e \x01(\v2\x17.core.ItemOrderUnitListR\n" +
+	"orderUnitsB\x0e\n" +
 	"\f_descriptionB\t\n" +
-	"\a_status\"E\n" +
+	"\a_statusB\x13\n" +
+	"\x11_stocking_unit_idB\x18\n" +
+	"\x16_default_order_unit_id\"E\n" +
 	"\x16BulkUpsertItemsRequest\x12+\n" +
 	"\x05items\x18\x01 \x03(\v2\x15.core.UpsertItemInputR\x05items\":\n" +
 	"\x17BulkUpsertItemsResponse\x12\x1f\n" +
@@ -7366,7 +7742,24 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x03 \x03(\tR\bincludes\"Q\n" +
 	"\x16GetConsumptionResponse\x127\n" +
-	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumptionB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumption\"\xb3\x02\n" +
+	"\x18SetItemOrderUnitsRequest\x12\x19\n" +
+	"\bitem_ids\x18\x01 \x03(\tR\aitemIds\x12(\n" +
+	"\x10product_line_ids\x18\x02 \x03(\tR\x0eproductLineIds\x12!\n" +
+	"\fcategory_ids\x18\x03 \x03(\tR\vcategoryIds\x12#\n" +
+	"\rattribute_ids\x18\x04 \x03(\tR\fattributeIds\x128\n" +
+	"\vorder_units\x18\x05 \x03(\v2\x17.core.ItemOrderUnitInfoR\n" +
+	"orderUnits\x126\n" +
+	"\x15default_order_unit_id\x18\x06 \x01(\tH\x00R\x12defaultOrderUnitId\x88\x01\x01B\x18\n" +
+	"\x16_default_order_unit_id\"<\n" +
+	"\x19SetItemOrderUnitsResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"m\n" +
+	"\x1dChangeItemStockingUnitRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
+	"\x10stocking_unit_id\x18\x02 \x01(\tR\x0estockingUnitId\x12\x12\n" +
+	"\x04mode\x18\x03 \x01(\tR\x04mode\"A\n" +
+	"\x1eChangeItemStockingUnitResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03jobB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_items_proto_rawDescOnce sync.Once
@@ -7380,7 +7773,7 @@ func file_core_core_items_proto_rawDescGZIP() []byte {
 	return file_core_core_items_proto_rawDescData
 }
 
-var file_core_core_items_proto_msgTypes = make([]protoimpl.MessageInfo, 109)
+var file_core_core_items_proto_msgTypes = make([]protoimpl.MessageInfo, 114)
 var file_core_core_items_proto_goTypes = []any{
 	(*GetItemInventoryResponse)(nil),              // 0: core.GetItemInventoryResponse
 	(*GetItemCostsRequest)(nil),                   // 1: core.GetItemCostsRequest
@@ -7392,249 +7785,262 @@ var file_core_core_items_proto_goTypes = []any{
 	(*ExportItemInfo)(nil),                        // 7: core.ExportItemInfo
 	(*ExportItemsResponse)(nil),                   // 8: core.ExportItemsResponse
 	(*UpdateItemRequest)(nil),                     // 9: core.UpdateItemRequest
-	(*UpdateItemResponse)(nil),                    // 10: core.UpdateItemResponse
-	(*ItemSalesInput)(nil),                        // 11: core.ItemSalesInput
-	(*ItemMaterialInput)(nil),                     // 12: core.ItemMaterialInput
-	(*CreateItemRequest)(nil),                     // 13: core.CreateItemRequest
-	(*CreateItemResponse)(nil),                    // 14: core.CreateItemResponse
-	(*DeleteItemRequest)(nil),                     // 15: core.DeleteItemRequest
-	(*UpsertItemInput)(nil),                       // 16: core.UpsertItemInput
-	(*BulkUpsertItemsRequest)(nil),                // 17: core.BulkUpsertItemsRequest
-	(*BulkUpsertItemsResponse)(nil),               // 18: core.BulkUpsertItemsResponse
-	(*AddItemAttributeRequest)(nil),               // 19: core.AddItemAttributeRequest
-	(*AddItemAttributeResponse)(nil),              // 20: core.AddItemAttributeResponse
-	(*RemoveItemAttributeRequest)(nil),            // 21: core.RemoveItemAttributeRequest
-	(*RemoveItemAttributeResponse)(nil),           // 22: core.RemoveItemAttributeResponse
-	(*ChangeItemCategoryRequest)(nil),             // 23: core.ChangeItemCategoryRequest
-	(*ChangeItemCategoryResponse)(nil),            // 24: core.ChangeItemCategoryResponse
-	(*UpdateItemInventoryRequest)(nil),            // 25: core.UpdateItemInventoryRequest
-	(*UpdateItemInventoryResponse)(nil),           // 26: core.UpdateItemInventoryResponse
-	(*BulkCreateItemInput)(nil),                   // 27: core.BulkCreateItemInput
-	(*BulkCreateItemsRequest)(nil),                // 28: core.BulkCreateItemsRequest
-	(*BulkCreateItemResult)(nil),                  // 29: core.BulkCreateItemResult
-	(*BulkCreateItemsResponse)(nil),               // 30: core.BulkCreateItemsResponse
-	(*UpsertItemPropertyInput)(nil),               // 31: core.UpsertItemPropertyInput
-	(*UpsertPartInput)(nil),                       // 32: core.UpsertPartInput
-	(*BulkUpsertPartsRequest)(nil),                // 33: core.BulkUpsertPartsRequest
-	(*BulkUpsertPartsResponse)(nil),               // 34: core.BulkUpsertPartsResponse
-	(*UpsertProductInput)(nil),                    // 35: core.UpsertProductInput
-	(*BulkUpsertProductsRequest)(nil),             // 36: core.BulkUpsertProductsRequest
-	(*BulkUpsertProductsResponse)(nil),            // 37: core.BulkUpsertProductsResponse
-	(*UpsertMaterialInput)(nil),                   // 38: core.UpsertMaterialInput
-	(*BulkUpsertMaterialsRequest)(nil),            // 39: core.BulkUpsertMaterialsRequest
-	(*BulkUpsertMaterialsResponse)(nil),           // 40: core.BulkUpsertMaterialsResponse
-	(*ChildAccountProto)(nil),                     // 41: core.ChildAccountProto
-	(*ListChildAccountsRequest)(nil),              // 42: core.ListChildAccountsRequest
-	(*ListChildAccountsResponse)(nil),             // 43: core.ListChildAccountsResponse
-	(*AddChildAccountRequest)(nil),                // 44: core.AddChildAccountRequest
-	(*AddChildAccountResponse)(nil),               // 45: core.AddChildAccountResponse
-	(*RemoveChildAccountRequest)(nil),             // 46: core.RemoveChildAccountRequest
-	(*BatchGetChildAccountsByIDsRequest)(nil),     // 47: core.BatchGetChildAccountsByIDsRequest
-	(*BatchGetChildAccountsByIDsResponse)(nil),    // 48: core.BatchGetChildAccountsByIDsResponse
-	(*BatchQuantityInfo)(nil),                     // 49: core.BatchQuantityInfo
-	(*BaseBatchInfo)(nil),                         // 50: core.BaseBatchInfo
-	(*BatchInfo)(nil),                             // 51: core.BatchInfo
-	(*BatchLotInfo)(nil),                          // 52: core.BatchLotInfo
-	(*LightMachineInfo)(nil),                      // 53: core.LightMachineInfo
-	(*BatchFlowNodeInfo)(nil),                     // 54: core.BatchFlowNodeInfo
-	(*ScanningProductionStepInfoProto)(nil),       // 55: core.ScanningProductionStepInfoProto
-	(*ScanningConsumptionInfo)(nil),               // 56: core.ScanningConsumptionInfo
-	(*OpenBatchSummaryItemProto)(nil),             // 57: core.OpenBatchSummaryItemProto
-	(*OpenBatchSummaryScanningStationProto)(nil),  // 58: core.OpenBatchSummaryScanningStationProto
-	(*OpenBatchSummaryInfo)(nil),                  // 59: core.OpenBatchSummaryInfo
-	(*GetBatchFlowRequest)(nil),                   // 60: core.GetBatchFlowRequest
-	(*GetBatchFlowResponse)(nil),                  // 61: core.GetBatchFlowResponse
-	(*ListBatchesByScanningStationRequest)(nil),   // 62: core.ListBatchesByScanningStationRequest
-	(*ListBatchesByScanningStationResponse)(nil),  // 63: core.ListBatchesByScanningStationResponse
-	(*GetBatchPossibleNextStepsRequest)(nil),      // 64: core.GetBatchPossibleNextStepsRequest
-	(*GetBatchPossibleNextStepsResponse)(nil),     // 65: core.GetBatchPossibleNextStepsResponse
-	(*GetBatchPossibleInitStepsRequest)(nil),      // 66: core.GetBatchPossibleInitStepsRequest
-	(*GetBatchPossibleInitStepsResponse)(nil),     // 67: core.GetBatchPossibleInitStepsResponse
-	(*AnalyzeOpenBatchesRequest)(nil),             // 68: core.AnalyzeOpenBatchesRequest
-	(*AnalyzeOpenBatchesResponse)(nil),            // 69: core.AnalyzeOpenBatchesResponse
-	(*InitializeBatchRequest)(nil),                // 70: core.InitializeBatchRequest
-	(*InitializeBatchResponse)(nil),               // 71: core.InitializeBatchResponse
-	(*MoveBatchesRequest)(nil),                    // 72: core.MoveBatchesRequest
-	(*MoveBatchesResponse)(nil),                   // 73: core.MoveBatchesResponse
-	(*MergeBatchesRequest)(nil),                   // 74: core.MergeBatchesRequest
-	(*MergeBatchesResponse)(nil),                  // 75: core.MergeBatchesResponse
-	(*SplitBatchRequest)(nil),                     // 76: core.SplitBatchRequest
-	(*SplitBatchResponse)(nil),                    // 77: core.SplitBatchResponse
-	(*GetRemainingQuantityToSplitRequest)(nil),    // 78: core.GetRemainingQuantityToSplitRequest
-	(*GetRemainingQuantityToSplitResponse)(nil),   // 79: core.GetRemainingQuantityToSplitResponse
-	(*GetScanningStationConsumptionRequest)(nil),  // 80: core.GetScanningStationConsumptionRequest
-	(*GetScanningStationConsumptionResponse)(nil), // 81: core.GetScanningStationConsumptionResponse
-	(*CloseBatchRequest)(nil),                     // 82: core.CloseBatchRequest
-	(*CloseBatchResponse)(nil),                    // 83: core.CloseBatchResponse
-	(*DeleteBatchRequest)(nil),                    // 84: core.DeleteBatchRequest
-	(*DeleteBatchResponse)(nil),                   // 85: core.DeleteBatchResponse
-	(*DeleteManyBatchesRequest)(nil),              // 86: core.DeleteManyBatchesRequest
-	(*ListItemCategoriesRequest)(nil),             // 87: core.ListItemCategoriesRequest
-	(*ListItemCategoriesResponse)(nil),            // 88: core.ListItemCategoriesResponse
-	(*ExportItemCategoriesRequest)(nil),           // 89: core.ExportItemCategoriesRequest
-	(*ExportItemCategoriesResponse)(nil),          // 90: core.ExportItemCategoriesResponse
-	(*GetItemCategoryRequest)(nil),                // 91: core.GetItemCategoryRequest
-	(*GetItemCategoryResponse)(nil),               // 92: core.GetItemCategoryResponse
-	(*CreateItemCategoryRequest)(nil),             // 93: core.CreateItemCategoryRequest
-	(*CreateItemCategoryResponse)(nil),            // 94: core.CreateItemCategoryResponse
-	(*UpdateItemCategoryRequest)(nil),             // 95: core.UpdateItemCategoryRequest
-	(*UpdateItemCategoryResponse)(nil),            // 96: core.UpdateItemCategoryResponse
-	(*DeleteItemCategoryRequest)(nil),             // 97: core.DeleteItemCategoryRequest
-	(*AddItemCategoryPropertyRequest)(nil),        // 98: core.AddItemCategoryPropertyRequest
-	(*CreateItemCategoryPropertyRequest)(nil),     // 99: core.CreateItemCategoryPropertyRequest
-	(*CreateItemCategoryPropertyResponse)(nil),    // 100: core.CreateItemCategoryPropertyResponse
-	(*RemoveItemCategoryPropertyRequest)(nil),     // 101: core.RemoveItemCategoryPropertyRequest
-	(*ChangeItemCategoryUnitGroupRequest)(nil),    // 102: core.ChangeItemCategoryUnitGroupRequest
-	(*BulkUpsertItemCategoryInput)(nil),           // 103: core.BulkUpsertItemCategoryInput
-	(*BulkUpsertItemCategoriesRequest)(nil),       // 104: core.BulkUpsertItemCategoriesRequest
-	(*BulkUpsertItemCategoriesResponse)(nil),      // 105: core.BulkUpsertItemCategoriesResponse
-	(*ConsumptionInfo)(nil),                       // 106: core.ConsumptionInfo
-	(*GetConsumptionRequest)(nil),                 // 107: core.GetConsumptionRequest
-	(*GetConsumptionResponse)(nil),                // 108: core.GetConsumptionResponse
-	(*QuantityInfo)(nil),                          // 109: core.QuantityInfo
-	(*timestamppb.Timestamp)(nil),                 // 110: google.protobuf.Timestamp
-	(*StringListPatch)(nil),                       // 111: core.StringListPatch
-	(*StringPatch)(nil),                           // 112: core.StringPatch
-	(*UnitPrice)(nil),                             // 113: core.UnitPrice
-	(*ItemInfo)(nil),                              // 114: core.ItemInfo
-	(*QuantityPatch)(nil),                         // 115: core.QuantityPatch
-	(*ObjectIdentifier)(nil),                      // 116: core.ObjectIdentifier
-	(*JobInfo)(nil),                               // 117: core.JobInfo
-	(*QuantityInput)(nil),                         // 118: core.QuantityInput
-	(*PageInfo)(nil),                              // 119: core.PageInfo
-	(*ItemCategoryInfo)(nil),                      // 120: core.ItemCategoryInfo
-	(*PropertyInfo)(nil),                          // 121: core.PropertyInfo
+	(*ItemOrderUnitList)(nil),                     // 10: core.ItemOrderUnitList
+	(*UpdateItemResponse)(nil),                    // 11: core.UpdateItemResponse
+	(*ItemSalesInput)(nil),                        // 12: core.ItemSalesInput
+	(*ItemMaterialInput)(nil),                     // 13: core.ItemMaterialInput
+	(*CreateItemRequest)(nil),                     // 14: core.CreateItemRequest
+	(*CreateItemResponse)(nil),                    // 15: core.CreateItemResponse
+	(*DeleteItemRequest)(nil),                     // 16: core.DeleteItemRequest
+	(*UpsertItemInput)(nil),                       // 17: core.UpsertItemInput
+	(*BulkUpsertItemsRequest)(nil),                // 18: core.BulkUpsertItemsRequest
+	(*BulkUpsertItemsResponse)(nil),               // 19: core.BulkUpsertItemsResponse
+	(*AddItemAttributeRequest)(nil),               // 20: core.AddItemAttributeRequest
+	(*AddItemAttributeResponse)(nil),              // 21: core.AddItemAttributeResponse
+	(*RemoveItemAttributeRequest)(nil),            // 22: core.RemoveItemAttributeRequest
+	(*RemoveItemAttributeResponse)(nil),           // 23: core.RemoveItemAttributeResponse
+	(*ChangeItemCategoryRequest)(nil),             // 24: core.ChangeItemCategoryRequest
+	(*ChangeItemCategoryResponse)(nil),            // 25: core.ChangeItemCategoryResponse
+	(*UpdateItemInventoryRequest)(nil),            // 26: core.UpdateItemInventoryRequest
+	(*UpdateItemInventoryResponse)(nil),           // 27: core.UpdateItemInventoryResponse
+	(*BulkCreateItemInput)(nil),                   // 28: core.BulkCreateItemInput
+	(*BulkCreateItemsRequest)(nil),                // 29: core.BulkCreateItemsRequest
+	(*BulkCreateItemResult)(nil),                  // 30: core.BulkCreateItemResult
+	(*BulkCreateItemsResponse)(nil),               // 31: core.BulkCreateItemsResponse
+	(*UpsertItemPropertyInput)(nil),               // 32: core.UpsertItemPropertyInput
+	(*UpsertPartInput)(nil),                       // 33: core.UpsertPartInput
+	(*BulkUpsertPartsRequest)(nil),                // 34: core.BulkUpsertPartsRequest
+	(*BulkUpsertPartsResponse)(nil),               // 35: core.BulkUpsertPartsResponse
+	(*UpsertProductInput)(nil),                    // 36: core.UpsertProductInput
+	(*BulkUpsertProductsRequest)(nil),             // 37: core.BulkUpsertProductsRequest
+	(*BulkUpsertProductsResponse)(nil),            // 38: core.BulkUpsertProductsResponse
+	(*UpsertMaterialInput)(nil),                   // 39: core.UpsertMaterialInput
+	(*BulkUpsertMaterialsRequest)(nil),            // 40: core.BulkUpsertMaterialsRequest
+	(*BulkUpsertMaterialsResponse)(nil),           // 41: core.BulkUpsertMaterialsResponse
+	(*ChildAccountProto)(nil),                     // 42: core.ChildAccountProto
+	(*ListChildAccountsRequest)(nil),              // 43: core.ListChildAccountsRequest
+	(*ListChildAccountsResponse)(nil),             // 44: core.ListChildAccountsResponse
+	(*AddChildAccountRequest)(nil),                // 45: core.AddChildAccountRequest
+	(*AddChildAccountResponse)(nil),               // 46: core.AddChildAccountResponse
+	(*RemoveChildAccountRequest)(nil),             // 47: core.RemoveChildAccountRequest
+	(*BatchGetChildAccountsByIDsRequest)(nil),     // 48: core.BatchGetChildAccountsByIDsRequest
+	(*BatchGetChildAccountsByIDsResponse)(nil),    // 49: core.BatchGetChildAccountsByIDsResponse
+	(*BatchQuantityInfo)(nil),                     // 50: core.BatchQuantityInfo
+	(*BaseBatchInfo)(nil),                         // 51: core.BaseBatchInfo
+	(*BatchInfo)(nil),                             // 52: core.BatchInfo
+	(*BatchLotInfo)(nil),                          // 53: core.BatchLotInfo
+	(*LightMachineInfo)(nil),                      // 54: core.LightMachineInfo
+	(*BatchFlowNodeInfo)(nil),                     // 55: core.BatchFlowNodeInfo
+	(*ScanningProductionStepInfoProto)(nil),       // 56: core.ScanningProductionStepInfoProto
+	(*ScanningConsumptionInfo)(nil),               // 57: core.ScanningConsumptionInfo
+	(*OpenBatchSummaryItemProto)(nil),             // 58: core.OpenBatchSummaryItemProto
+	(*OpenBatchSummaryScanningStationProto)(nil),  // 59: core.OpenBatchSummaryScanningStationProto
+	(*OpenBatchSummaryInfo)(nil),                  // 60: core.OpenBatchSummaryInfo
+	(*GetBatchFlowRequest)(nil),                   // 61: core.GetBatchFlowRequest
+	(*GetBatchFlowResponse)(nil),                  // 62: core.GetBatchFlowResponse
+	(*ListBatchesByScanningStationRequest)(nil),   // 63: core.ListBatchesByScanningStationRequest
+	(*ListBatchesByScanningStationResponse)(nil),  // 64: core.ListBatchesByScanningStationResponse
+	(*GetBatchPossibleNextStepsRequest)(nil),      // 65: core.GetBatchPossibleNextStepsRequest
+	(*GetBatchPossibleNextStepsResponse)(nil),     // 66: core.GetBatchPossibleNextStepsResponse
+	(*GetBatchPossibleInitStepsRequest)(nil),      // 67: core.GetBatchPossibleInitStepsRequest
+	(*GetBatchPossibleInitStepsResponse)(nil),     // 68: core.GetBatchPossibleInitStepsResponse
+	(*AnalyzeOpenBatchesRequest)(nil),             // 69: core.AnalyzeOpenBatchesRequest
+	(*AnalyzeOpenBatchesResponse)(nil),            // 70: core.AnalyzeOpenBatchesResponse
+	(*InitializeBatchRequest)(nil),                // 71: core.InitializeBatchRequest
+	(*InitializeBatchResponse)(nil),               // 72: core.InitializeBatchResponse
+	(*MoveBatchesRequest)(nil),                    // 73: core.MoveBatchesRequest
+	(*MoveBatchesResponse)(nil),                   // 74: core.MoveBatchesResponse
+	(*MergeBatchesRequest)(nil),                   // 75: core.MergeBatchesRequest
+	(*MergeBatchesResponse)(nil),                  // 76: core.MergeBatchesResponse
+	(*SplitBatchRequest)(nil),                     // 77: core.SplitBatchRequest
+	(*SplitBatchResponse)(nil),                    // 78: core.SplitBatchResponse
+	(*GetRemainingQuantityToSplitRequest)(nil),    // 79: core.GetRemainingQuantityToSplitRequest
+	(*GetRemainingQuantityToSplitResponse)(nil),   // 80: core.GetRemainingQuantityToSplitResponse
+	(*GetScanningStationConsumptionRequest)(nil),  // 81: core.GetScanningStationConsumptionRequest
+	(*GetScanningStationConsumptionResponse)(nil), // 82: core.GetScanningStationConsumptionResponse
+	(*CloseBatchRequest)(nil),                     // 83: core.CloseBatchRequest
+	(*CloseBatchResponse)(nil),                    // 84: core.CloseBatchResponse
+	(*DeleteBatchRequest)(nil),                    // 85: core.DeleteBatchRequest
+	(*DeleteBatchResponse)(nil),                   // 86: core.DeleteBatchResponse
+	(*DeleteManyBatchesRequest)(nil),              // 87: core.DeleteManyBatchesRequest
+	(*ListItemCategoriesRequest)(nil),             // 88: core.ListItemCategoriesRequest
+	(*ListItemCategoriesResponse)(nil),            // 89: core.ListItemCategoriesResponse
+	(*ExportItemCategoriesRequest)(nil),           // 90: core.ExportItemCategoriesRequest
+	(*ExportItemCategoriesResponse)(nil),          // 91: core.ExportItemCategoriesResponse
+	(*GetItemCategoryRequest)(nil),                // 92: core.GetItemCategoryRequest
+	(*GetItemCategoryResponse)(nil),               // 93: core.GetItemCategoryResponse
+	(*CreateItemCategoryRequest)(nil),             // 94: core.CreateItemCategoryRequest
+	(*CreateItemCategoryResponse)(nil),            // 95: core.CreateItemCategoryResponse
+	(*UpdateItemCategoryRequest)(nil),             // 96: core.UpdateItemCategoryRequest
+	(*UpdateItemCategoryResponse)(nil),            // 97: core.UpdateItemCategoryResponse
+	(*DeleteItemCategoryRequest)(nil),             // 98: core.DeleteItemCategoryRequest
+	(*AddItemCategoryPropertyRequest)(nil),        // 99: core.AddItemCategoryPropertyRequest
+	(*CreateItemCategoryPropertyRequest)(nil),     // 100: core.CreateItemCategoryPropertyRequest
+	(*CreateItemCategoryPropertyResponse)(nil),    // 101: core.CreateItemCategoryPropertyResponse
+	(*RemoveItemCategoryPropertyRequest)(nil),     // 102: core.RemoveItemCategoryPropertyRequest
+	(*ChangeItemCategoryUnitGroupRequest)(nil),    // 103: core.ChangeItemCategoryUnitGroupRequest
+	(*BulkUpsertItemCategoryInput)(nil),           // 104: core.BulkUpsertItemCategoryInput
+	(*BulkUpsertItemCategoriesRequest)(nil),       // 105: core.BulkUpsertItemCategoriesRequest
+	(*BulkUpsertItemCategoriesResponse)(nil),      // 106: core.BulkUpsertItemCategoriesResponse
+	(*ConsumptionInfo)(nil),                       // 107: core.ConsumptionInfo
+	(*GetConsumptionRequest)(nil),                 // 108: core.GetConsumptionRequest
+	(*GetConsumptionResponse)(nil),                // 109: core.GetConsumptionResponse
+	(*SetItemOrderUnitsRequest)(nil),              // 110: core.SetItemOrderUnitsRequest
+	(*SetItemOrderUnitsResponse)(nil),             // 111: core.SetItemOrderUnitsResponse
+	(*ChangeItemStockingUnitRequest)(nil),         // 112: core.ChangeItemStockingUnitRequest
+	(*ChangeItemStockingUnitResponse)(nil),        // 113: core.ChangeItemStockingUnitResponse
+	(*QuantityInfo)(nil),                          // 114: core.QuantityInfo
+	(*timestamppb.Timestamp)(nil),                 // 115: google.protobuf.Timestamp
+	(*StringListPatch)(nil),                       // 116: core.StringListPatch
+	(*StringPatch)(nil),                           // 117: core.StringPatch
+	(*UnitPrice)(nil),                             // 118: core.UnitPrice
+	(*ItemOrderUnitInfo)(nil),                     // 119: core.ItemOrderUnitInfo
+	(*ItemInfo)(nil),                              // 120: core.ItemInfo
+	(*QuantityPatch)(nil),                         // 121: core.QuantityPatch
+	(*ObjectIdentifier)(nil),                      // 122: core.ObjectIdentifier
+	(*JobInfo)(nil),                               // 123: core.JobInfo
+	(*QuantityInput)(nil),                         // 124: core.QuantityInput
+	(*PageInfo)(nil),                              // 125: core.PageInfo
+	(*ItemCategoryInfo)(nil),                      // 126: core.ItemCategoryInfo
+	(*PropertyInfo)(nil),                          // 127: core.PropertyInfo
 }
 var file_core_core_items_proto_depIdxs = []int32{
-	109, // 0: core.GetItemInventoryResponse.on_hand:type_name -> core.QuantityInfo
-	109, // 1: core.GetItemInventoryResponse.reserved:type_name -> core.QuantityInfo
-	109, // 2: core.GetItemInventoryResponse.available_to_promise:type_name -> core.QuantityInfo
-	109, // 3: core.GetItemInventoryResponse.short:type_name -> core.QuantityInfo
-	110, // 4: core.ItemTrendPoint.date:type_name -> google.protobuf.Timestamp
+	114, // 0: core.GetItemInventoryResponse.on_hand:type_name -> core.QuantityInfo
+	114, // 1: core.GetItemInventoryResponse.reserved:type_name -> core.QuantityInfo
+	114, // 2: core.GetItemInventoryResponse.available_to_promise:type_name -> core.QuantityInfo
+	114, // 3: core.GetItemInventoryResponse.short:type_name -> core.QuantityInfo
+	115, // 4: core.ItemTrendPoint.date:type_name -> google.protobuf.Timestamp
 	3,   // 5: core.GetItemTrendsResponse.points:type_name -> core.ItemTrendPoint
-	110, // 6: core.ExportItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	110, // 7: core.ExportItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	115, // 6: core.ExportItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	115, // 7: core.ExportItemInfo.updated_at:type_name -> google.protobuf.Timestamp
 	7,   // 8: core.ExportItemsResponse.items:type_name -> core.ExportItemInfo
-	111, // 9: core.UpdateItemRequest.attribute_ids:type_name -> core.StringListPatch
-	112, // 10: core.UpdateItemRequest.supply:type_name -> core.StringPatch
-	113, // 11: core.UpdateItemRequest.unit_cost:type_name -> core.UnitPrice
-	11,  // 12: core.UpdateItemRequest.sales:type_name -> core.ItemSalesInput
-	12,  // 13: core.UpdateItemRequest.material:type_name -> core.ItemMaterialInput
-	114, // 14: core.UpdateItemResponse.item:type_name -> core.ItemInfo
-	113, // 15: core.ItemSalesInput.unit_price:type_name -> core.UnitPrice
-	112, // 16: core.ItemSalesInput.product_line_id:type_name -> core.StringPatch
-	115, // 17: core.ItemSalesInput.lead_time:type_name -> core.QuantityPatch
-	115, // 18: core.ItemMaterialInput.order_point:type_name -> core.QuantityPatch
-	115, // 19: core.ItemMaterialInput.lead_time:type_name -> core.QuantityPatch
-	113, // 20: core.CreateItemRequest.unit_cost:type_name -> core.UnitPrice
-	11,  // 21: core.CreateItemRequest.sales:type_name -> core.ItemSalesInput
-	12,  // 22: core.CreateItemRequest.material:type_name -> core.ItemMaterialInput
-	114, // 23: core.CreateItemResponse.item:type_name -> core.ItemInfo
-	116, // 24: core.UpsertItemInput.category:type_name -> core.ObjectIdentifier
-	31,  // 25: core.UpsertItemInput.attributes:type_name -> core.UpsertItemPropertyInput
-	112, // 26: core.UpsertItemInput.supply:type_name -> core.StringPatch
-	113, // 27: core.UpsertItemInput.unit_cost:type_name -> core.UnitPrice
-	11,  // 28: core.UpsertItemInput.sales:type_name -> core.ItemSalesInput
-	12,  // 29: core.UpsertItemInput.material:type_name -> core.ItemMaterialInput
-	16,  // 30: core.BulkUpsertItemsRequest.items:type_name -> core.UpsertItemInput
-	117, // 31: core.BulkUpsertItemsResponse.job:type_name -> core.JobInfo
-	114, // 32: core.AddItemAttributeResponse.item:type_name -> core.ItemInfo
-	114, // 33: core.RemoveItemAttributeResponse.item:type_name -> core.ItemInfo
-	114, // 34: core.ChangeItemCategoryResponse.item:type_name -> core.ItemInfo
-	27,  // 35: core.BulkCreateItemsRequest.items:type_name -> core.BulkCreateItemInput
-	29,  // 36: core.BulkCreateItemsResponse.results:type_name -> core.BulkCreateItemResult
-	116, // 37: core.UpsertPartInput.category:type_name -> core.ObjectIdentifier
-	113, // 38: core.UpsertPartInput.unit_price:type_name -> core.UnitPrice
-	113, // 39: core.UpsertPartInput.unit_cost:type_name -> core.UnitPrice
-	31,  // 40: core.UpsertPartInput.properties:type_name -> core.UpsertItemPropertyInput
-	32,  // 41: core.BulkUpsertPartsRequest.parts:type_name -> core.UpsertPartInput
-	117, // 42: core.BulkUpsertPartsResponse.job:type_name -> core.JobInfo
-	116, // 43: core.UpsertProductInput.category:type_name -> core.ObjectIdentifier
-	116, // 44: core.UpsertProductInput.product_line:type_name -> core.ObjectIdentifier
-	113, // 45: core.UpsertProductInput.unit_price:type_name -> core.UnitPrice
-	113, // 46: core.UpsertProductInput.unit_cost:type_name -> core.UnitPrice
-	31,  // 47: core.UpsertProductInput.properties:type_name -> core.UpsertItemPropertyInput
-	35,  // 48: core.BulkUpsertProductsRequest.products:type_name -> core.UpsertProductInput
-	117, // 49: core.BulkUpsertProductsResponse.job:type_name -> core.JobInfo
-	116, // 50: core.UpsertMaterialInput.category:type_name -> core.ObjectIdentifier
-	118, // 51: core.UpsertMaterialInput.order_point:type_name -> core.QuantityInput
-	118, // 52: core.UpsertMaterialInput.lead_time:type_name -> core.QuantityInput
-	113, // 53: core.UpsertMaterialInput.unit_price:type_name -> core.UnitPrice
-	113, // 54: core.UpsertMaterialInput.unit_cost:type_name -> core.UnitPrice
-	31,  // 55: core.UpsertMaterialInput.properties:type_name -> core.UpsertItemPropertyInput
-	38,  // 56: core.BulkUpsertMaterialsRequest.materials:type_name -> core.UpsertMaterialInput
-	117, // 57: core.BulkUpsertMaterialsResponse.job:type_name -> core.JobInfo
-	110, // 58: core.ChildAccountProto.created_at:type_name -> google.protobuf.Timestamp
-	110, // 59: core.ChildAccountProto.updated_at:type_name -> google.protobuf.Timestamp
-	110, // 60: core.ChildAccountProto.account_created_at:type_name -> google.protobuf.Timestamp
-	110, // 61: core.ChildAccountProto.account_updated_at:type_name -> google.protobuf.Timestamp
-	41,  // 62: core.ListChildAccountsResponse.items:type_name -> core.ChildAccountProto
-	119, // 63: core.ListChildAccountsResponse.page_info:type_name -> core.PageInfo
-	41,  // 64: core.AddChildAccountResponse.child_account:type_name -> core.ChildAccountProto
-	41,  // 65: core.BatchGetChildAccountsByIDsResponse.items:type_name -> core.ChildAccountProto
-	49,  // 66: core.BaseBatchInfo.quantity:type_name -> core.BatchQuantityInfo
-	49,  // 67: core.BaseBatchInfo.seconds:type_name -> core.BatchQuantityInfo
-	49,  // 68: core.BaseBatchInfo.waste:type_name -> core.BatchQuantityInfo
-	110, // 69: core.BaseBatchInfo.closed_at:type_name -> google.protobuf.Timestamp
-	110, // 70: core.BaseBatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
-	110, // 71: core.BaseBatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	110, // 72: core.BaseBatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	53,  // 73: core.BaseBatchInfo.machines:type_name -> core.LightMachineInfo
-	52,  // 74: core.BaseBatchInfo.lots:type_name -> core.BatchLotInfo
-	49,  // 75: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
-	49,  // 76: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
-	49,  // 77: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
-	53,  // 78: core.BatchInfo.machines:type_name -> core.LightMachineInfo
-	110, // 79: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
-	110, // 80: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
-	110, // 81: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	110, // 82: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	52,  // 83: core.BatchInfo.lots:type_name -> core.BatchLotInfo
-	110, // 84: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
-	110, // 85: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	51,  // 86: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
-	57,  // 87: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
-	58,  // 88: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
-	54,  // 89: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
-	51,  // 90: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
-	119, // 91: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
-	55,  // 92: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	55,  // 93: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	59,  // 94: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
-	50,  // 95: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
-	50,  // 96: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	50,  // 97: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	49,  // 98: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
-	49,  // 99: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
-	49,  // 100: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
-	50,  // 101: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
-	49,  // 102: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
-	49,  // 103: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
-	56,  // 104: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
-	50,  // 105: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
-	50,  // 106: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
-	120, // 107: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
-	119, // 108: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
-	117, // 109: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
-	120, // 110: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	118, // 111: core.CreateItemCategoryRequest.default_lot_size:type_name -> core.QuantityInput
-	120, // 112: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	115, // 113: core.UpdateItemCategoryRequest.default_lot_size:type_name -> core.QuantityPatch
-	120, // 114: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	121, // 115: core.CreateItemCategoryPropertyResponse.property:type_name -> core.PropertyInfo
-	116, // 116: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
-	103, // 117: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
-	117, // 118: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
-	109, // 119: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	109, // 120: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	110, // 121: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	110, // 122: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	106, // 123: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	124, // [124:124] is the sub-list for method output_type
-	124, // [124:124] is the sub-list for method input_type
-	124, // [124:124] is the sub-list for extension type_name
-	124, // [124:124] is the sub-list for extension extendee
-	0,   // [0:124] is the sub-list for field type_name
+	116, // 9: core.UpdateItemRequest.attribute_ids:type_name -> core.StringListPatch
+	117, // 10: core.UpdateItemRequest.supply:type_name -> core.StringPatch
+	118, // 11: core.UpdateItemRequest.unit_cost:type_name -> core.UnitPrice
+	12,  // 12: core.UpdateItemRequest.sales:type_name -> core.ItemSalesInput
+	13,  // 13: core.UpdateItemRequest.material:type_name -> core.ItemMaterialInput
+	10,  // 14: core.UpdateItemRequest.order_units:type_name -> core.ItemOrderUnitList
+	119, // 15: core.ItemOrderUnitList.values:type_name -> core.ItemOrderUnitInfo
+	120, // 16: core.UpdateItemResponse.item:type_name -> core.ItemInfo
+	118, // 17: core.ItemSalesInput.unit_price:type_name -> core.UnitPrice
+	117, // 18: core.ItemSalesInput.product_line_id:type_name -> core.StringPatch
+	121, // 19: core.ItemSalesInput.lead_time:type_name -> core.QuantityPatch
+	121, // 20: core.ItemMaterialInput.order_point:type_name -> core.QuantityPatch
+	121, // 21: core.ItemMaterialInput.lead_time:type_name -> core.QuantityPatch
+	118, // 22: core.CreateItemRequest.unit_cost:type_name -> core.UnitPrice
+	12,  // 23: core.CreateItemRequest.sales:type_name -> core.ItemSalesInput
+	13,  // 24: core.CreateItemRequest.material:type_name -> core.ItemMaterialInput
+	119, // 25: core.CreateItemRequest.order_units:type_name -> core.ItemOrderUnitInfo
+	120, // 26: core.CreateItemResponse.item:type_name -> core.ItemInfo
+	122, // 27: core.UpsertItemInput.category:type_name -> core.ObjectIdentifier
+	32,  // 28: core.UpsertItemInput.attributes:type_name -> core.UpsertItemPropertyInput
+	117, // 29: core.UpsertItemInput.supply:type_name -> core.StringPatch
+	118, // 30: core.UpsertItemInput.unit_cost:type_name -> core.UnitPrice
+	12,  // 31: core.UpsertItemInput.sales:type_name -> core.ItemSalesInput
+	13,  // 32: core.UpsertItemInput.material:type_name -> core.ItemMaterialInput
+	10,  // 33: core.UpsertItemInput.order_units:type_name -> core.ItemOrderUnitList
+	17,  // 34: core.BulkUpsertItemsRequest.items:type_name -> core.UpsertItemInput
+	123, // 35: core.BulkUpsertItemsResponse.job:type_name -> core.JobInfo
+	120, // 36: core.AddItemAttributeResponse.item:type_name -> core.ItemInfo
+	120, // 37: core.RemoveItemAttributeResponse.item:type_name -> core.ItemInfo
+	120, // 38: core.ChangeItemCategoryResponse.item:type_name -> core.ItemInfo
+	28,  // 39: core.BulkCreateItemsRequest.items:type_name -> core.BulkCreateItemInput
+	30,  // 40: core.BulkCreateItemsResponse.results:type_name -> core.BulkCreateItemResult
+	122, // 41: core.UpsertPartInput.category:type_name -> core.ObjectIdentifier
+	118, // 42: core.UpsertPartInput.unit_price:type_name -> core.UnitPrice
+	118, // 43: core.UpsertPartInput.unit_cost:type_name -> core.UnitPrice
+	32,  // 44: core.UpsertPartInput.properties:type_name -> core.UpsertItemPropertyInput
+	33,  // 45: core.BulkUpsertPartsRequest.parts:type_name -> core.UpsertPartInput
+	123, // 46: core.BulkUpsertPartsResponse.job:type_name -> core.JobInfo
+	122, // 47: core.UpsertProductInput.category:type_name -> core.ObjectIdentifier
+	122, // 48: core.UpsertProductInput.product_line:type_name -> core.ObjectIdentifier
+	118, // 49: core.UpsertProductInput.unit_price:type_name -> core.UnitPrice
+	118, // 50: core.UpsertProductInput.unit_cost:type_name -> core.UnitPrice
+	32,  // 51: core.UpsertProductInput.properties:type_name -> core.UpsertItemPropertyInput
+	36,  // 52: core.BulkUpsertProductsRequest.products:type_name -> core.UpsertProductInput
+	123, // 53: core.BulkUpsertProductsResponse.job:type_name -> core.JobInfo
+	122, // 54: core.UpsertMaterialInput.category:type_name -> core.ObjectIdentifier
+	124, // 55: core.UpsertMaterialInput.order_point:type_name -> core.QuantityInput
+	124, // 56: core.UpsertMaterialInput.lead_time:type_name -> core.QuantityInput
+	118, // 57: core.UpsertMaterialInput.unit_price:type_name -> core.UnitPrice
+	118, // 58: core.UpsertMaterialInput.unit_cost:type_name -> core.UnitPrice
+	32,  // 59: core.UpsertMaterialInput.properties:type_name -> core.UpsertItemPropertyInput
+	39,  // 60: core.BulkUpsertMaterialsRequest.materials:type_name -> core.UpsertMaterialInput
+	123, // 61: core.BulkUpsertMaterialsResponse.job:type_name -> core.JobInfo
+	115, // 62: core.ChildAccountProto.created_at:type_name -> google.protobuf.Timestamp
+	115, // 63: core.ChildAccountProto.updated_at:type_name -> google.protobuf.Timestamp
+	115, // 64: core.ChildAccountProto.account_created_at:type_name -> google.protobuf.Timestamp
+	115, // 65: core.ChildAccountProto.account_updated_at:type_name -> google.protobuf.Timestamp
+	42,  // 66: core.ListChildAccountsResponse.items:type_name -> core.ChildAccountProto
+	125, // 67: core.ListChildAccountsResponse.page_info:type_name -> core.PageInfo
+	42,  // 68: core.AddChildAccountResponse.child_account:type_name -> core.ChildAccountProto
+	42,  // 69: core.BatchGetChildAccountsByIDsResponse.items:type_name -> core.ChildAccountProto
+	50,  // 70: core.BaseBatchInfo.quantity:type_name -> core.BatchQuantityInfo
+	50,  // 71: core.BaseBatchInfo.seconds:type_name -> core.BatchQuantityInfo
+	50,  // 72: core.BaseBatchInfo.waste:type_name -> core.BatchQuantityInfo
+	115, // 73: core.BaseBatchInfo.closed_at:type_name -> google.protobuf.Timestamp
+	115, // 74: core.BaseBatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
+	115, // 75: core.BaseBatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	115, // 76: core.BaseBatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	54,  // 77: core.BaseBatchInfo.machines:type_name -> core.LightMachineInfo
+	53,  // 78: core.BaseBatchInfo.lots:type_name -> core.BatchLotInfo
+	50,  // 79: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
+	50,  // 80: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
+	50,  // 81: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
+	54,  // 82: core.BatchInfo.machines:type_name -> core.LightMachineInfo
+	115, // 83: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
+	115, // 84: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
+	115, // 85: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	115, // 86: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	53,  // 87: core.BatchInfo.lots:type_name -> core.BatchLotInfo
+	115, // 88: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
+	115, // 89: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	52,  // 90: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
+	58,  // 91: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
+	59,  // 92: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
+	55,  // 93: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
+	52,  // 94: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
+	125, // 95: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
+	56,  // 96: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	56,  // 97: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	60,  // 98: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
+	51,  // 99: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
+	51,  // 100: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	51,  // 101: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	50,  // 102: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
+	50,  // 103: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
+	50,  // 104: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
+	51,  // 105: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
+	50,  // 106: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
+	50,  // 107: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
+	57,  // 108: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
+	51,  // 109: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
+	51,  // 110: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
+	126, // 111: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
+	125, // 112: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
+	123, // 113: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
+	126, // 114: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	124, // 115: core.CreateItemCategoryRequest.default_lot_size:type_name -> core.QuantityInput
+	126, // 116: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	121, // 117: core.UpdateItemCategoryRequest.default_lot_size:type_name -> core.QuantityPatch
+	126, // 118: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	127, // 119: core.CreateItemCategoryPropertyResponse.property:type_name -> core.PropertyInfo
+	122, // 120: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
+	104, // 121: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
+	123, // 122: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
+	114, // 123: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	114, // 124: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	115, // 125: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	115, // 126: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	107, // 127: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	119, // 128: core.SetItemOrderUnitsRequest.order_units:type_name -> core.ItemOrderUnitInfo
+	123, // 129: core.SetItemOrderUnitsResponse.job:type_name -> core.JobInfo
+	123, // 130: core.ChangeItemStockingUnitResponse.job:type_name -> core.JobInfo
+	131, // [131:131] is the sub-list for method output_type
+	131, // [131:131] is the sub-list for method input_type
+	131, // [131:131] is the sub-list for extension type_name
+	131, // [131:131] is the sub-list for extension extendee
+	0,   // [0:131] is the sub-list for field type_name
 }
 
 func init() { file_core_core_items_proto_init() }
@@ -7651,38 +8057,39 @@ func file_core_core_items_proto_init() {
 	file_core_core_patch_proto_init()
 	file_core_core_items_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[9].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[11].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[13].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[16].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[25].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[27].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[29].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[32].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[35].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[38].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[41].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[14].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[17].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[26].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[28].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[30].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[33].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[36].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[39].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[42].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[50].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[43].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[51].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[53].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[56].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[62].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[70].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[76].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[80].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[87].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[89].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[93].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[95].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[103].OneofWrappers = []any{}
-	file_core_core_items_proto_msgTypes[106].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[52].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[54].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[57].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[63].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[71].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[77].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[81].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[88].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[90].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[94].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[96].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[104].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[107].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[110].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_items_proto_rawDesc), len(file_core_core_items_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   109,
+			NumMessages:   114,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

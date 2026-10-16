@@ -555,6 +555,14 @@ type ItemSvc interface {
 	// BulkUpsertItems accepts typed rows matched by SKU and records them on a job. ExecuteBulkUpsertItems writes them.
 	BulkUpsertItems(ctx context.Context, params BulkUpsertItemsParams) (*Job, *apierror.APIError)
 	ExecuteBulkUpsertItems(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+	// SetItemOrderUnits accepts a replacement of the order units of every item a filter matches and records it on a
+	// job. ExecuteSetItemOrderUnits writes it.
+	SetItemOrderUnits(ctx context.Context, params SetOrderUnitsParams) (*Job, *apierror.APIError)
+	ExecuteSetItemOrderUnits(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+	// ChangeItemStockingUnit accepts a stocking unit change and records it on a job. ExecuteChangeItemStockingUnit
+	// restates the item.
+	ChangeItemStockingUnit(ctx context.Context, params ChangeStockingUnitParams) (*Job, *apierror.APIError)
+	ExecuteChangeItemStockingUnit(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// AddItemAttribute adds an attribute to an item.
 	AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*Item, *apierror.APIError)

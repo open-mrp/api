@@ -3,6 +3,7 @@ package itemep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -26,6 +27,8 @@ type ItemSvc interface {
 	UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError)
 	DeleteItem(ctx context.Context, req *DeleteItemRequest) (*apiresource.Item, *apierror.APIError)
 	BulkUpsertItems(ctx context.Context, req *BulkUpsertItemsRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	SetOrderUnits(ctx context.Context, req *SetOrderUnitsRequest) (*apiresource.AsyncJob, *apierror.APIError)
+	ChangeStockingUnit(ctx context.Context, req *ChangeStockingUnitRequest) (*apiresource.AsyncJob, *apierror.APIError)
 	GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
 	GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError)
 	GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError)

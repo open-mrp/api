@@ -421,6 +421,8 @@ var unverifiableEndpoints = map[string]string{
 	"bulk_upsert_machines":          "variable-domain bulk gate: enqueueBulkOperation checks every spec action (machines [create, update]); endpoint requires both",
 	"bulk_upsert_materials":         "variable-domain bulk gate: enqueueBulkOperation checks every spec action (materials [create, update]); endpoint requires both",
 	"bulk_upsert_items":             "variable-domain bulk gate: enqueueBulkOperation checks every spec action (items [create, update]); endpoint requires both",
+	"set_order_units":               "variable-domain bulk gate: enqueueBulkOperation checks every spec action (items [update]); endpoint declares items:update",
+	"change_stocking_unit":          "variable-domain bulk gate: enqueueBulkOperation checks every spec action (items [update]); endpoint declares items:update",
 	"bulk_upsert_parts":             "variable-domain bulk gate: enqueueBulkOperation checks every spec action (parts [create, update]); endpoint requires both",
 	"bulk_upsert_product_lines":     "variable-domain bulk gate: enqueueBulkOperation checks every spec action (product_lines [create, update]); endpoint requires both",
 	"bulk_upsert_products":          "variable-domain bulk gate: enqueueBulkOperation checks every spec action (items [create, update]); endpoint requires both",

@@ -183,6 +183,8 @@ const (
 	CoreService_UpdateItem_FullMethodName                                 = "/core.CoreService/UpdateItem"
 	CoreService_DeleteItem_FullMethodName                                 = "/core.CoreService/DeleteItem"
 	CoreService_BulkUpsertItems_FullMethodName                            = "/core.CoreService/BulkUpsertItems"
+	CoreService_SetItemOrderUnits_FullMethodName                          = "/core.CoreService/SetItemOrderUnits"
+	CoreService_ChangeItemStockingUnit_FullMethodName                     = "/core.CoreService/ChangeItemStockingUnit"
 	CoreService_AddItemAttribute_FullMethodName                           = "/core.CoreService/AddItemAttribute"
 	CoreService_RemoveItemAttribute_FullMethodName                        = "/core.CoreService/RemoveItemAttribute"
 	CoreService_ChangeItemCategory_FullMethodName                         = "/core.CoreService/ChangeItemCategory"
@@ -762,6 +764,10 @@ type CoreServiceClient interface {
 	DeleteItem(ctx context.Context, in *DeleteItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Creates or updates items of any type by SKU, in the background.
 	BulkUpsertItems(ctx context.Context, in *BulkUpsertItemsRequest, opts ...grpc.CallOption) (*BulkUpsertItemsResponse, error)
+	// Replaces the order units of every matching item, in the background.
+	SetItemOrderUnits(ctx context.Context, in *SetItemOrderUnitsRequest, opts ...grpc.CallOption) (*SetItemOrderUnitsResponse, error)
+	// Moves an item to a new stocking unit, restating what it recorded in the old one, in the background.
+	ChangeItemStockingUnit(ctx context.Context, in *ChangeItemStockingUnitRequest, opts ...grpc.CallOption) (*ChangeItemStockingUnitResponse, error)
 	// Adds an attribute to an item.
 	AddItemAttribute(ctx context.Context, in *AddItemAttributeRequest, opts ...grpc.CallOption) (*AddItemAttributeResponse, error)
 	// Removes an attribute from an item.
@@ -2680,6 +2686,26 @@ func (c *coreServiceClient) BulkUpsertItems(ctx context.Context, in *BulkUpsertI
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BulkUpsertItemsResponse)
 	err := c.cc.Invoke(ctx, CoreService_BulkUpsertItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) SetItemOrderUnits(ctx context.Context, in *SetItemOrderUnitsRequest, opts ...grpc.CallOption) (*SetItemOrderUnitsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetItemOrderUnitsResponse)
+	err := c.cc.Invoke(ctx, CoreService_SetItemOrderUnits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ChangeItemStockingUnit(ctx context.Context, in *ChangeItemStockingUnitRequest, opts ...grpc.CallOption) (*ChangeItemStockingUnitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangeItemStockingUnitResponse)
+	err := c.cc.Invoke(ctx, CoreService_ChangeItemStockingUnit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5558,6 +5584,10 @@ type CoreServiceServer interface {
 	DeleteItem(context.Context, *DeleteItemRequest) (*emptypb.Empty, error)
 	// Creates or updates items of any type by SKU, in the background.
 	BulkUpsertItems(context.Context, *BulkUpsertItemsRequest) (*BulkUpsertItemsResponse, error)
+	// Replaces the order units of every matching item, in the background.
+	SetItemOrderUnits(context.Context, *SetItemOrderUnitsRequest) (*SetItemOrderUnitsResponse, error)
+	// Moves an item to a new stocking unit, restating what it recorded in the old one, in the background.
+	ChangeItemStockingUnit(context.Context, *ChangeItemStockingUnitRequest) (*ChangeItemStockingUnitResponse, error)
 	// Adds an attribute to an item.
 	AddItemAttribute(context.Context, *AddItemAttributeRequest) (*AddItemAttributeResponse, error)
 	// Removes an attribute from an item.
@@ -6389,6 +6419,12 @@ func (UnimplementedCoreServiceServer) DeleteItem(context.Context, *DeleteItemReq
 }
 func (UnimplementedCoreServiceServer) BulkUpsertItems(context.Context, *BulkUpsertItemsRequest) (*BulkUpsertItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkUpsertItems not implemented")
+}
+func (UnimplementedCoreServiceServer) SetItemOrderUnits(context.Context, *SetItemOrderUnitsRequest) (*SetItemOrderUnitsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetItemOrderUnits not implemented")
+}
+func (UnimplementedCoreServiceServer) ChangeItemStockingUnit(context.Context, *ChangeItemStockingUnitRequest) (*ChangeItemStockingUnitResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeItemStockingUnit not implemented")
 }
 func (UnimplementedCoreServiceServer) AddItemAttribute(context.Context, *AddItemAttributeRequest) (*AddItemAttributeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddItemAttribute not implemented")
@@ -9980,6 +10016,42 @@ func _CoreService_BulkUpsertItems_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).BulkUpsertItems(ctx, req.(*BulkUpsertItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_SetItemOrderUnits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetItemOrderUnitsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).SetItemOrderUnits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_SetItemOrderUnits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).SetItemOrderUnits(ctx, req.(*SetItemOrderUnitsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ChangeItemStockingUnit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeItemStockingUnitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ChangeItemStockingUnit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ChangeItemStockingUnit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ChangeItemStockingUnit(ctx, req.(*ChangeItemStockingUnitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -15204,6 +15276,14 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkUpsertItems",
 			Handler:    _CoreService_BulkUpsertItems_Handler,
+		},
+		{
+			MethodName: "SetItemOrderUnits",
+			Handler:    _CoreService_SetItemOrderUnits_Handler,
+		},
+		{
+			MethodName: "ChangeItemStockingUnit",
+			Handler:    _CoreService_ChangeItemStockingUnit_Handler,
 		},
 		{
 			MethodName: "AddItemAttribute",

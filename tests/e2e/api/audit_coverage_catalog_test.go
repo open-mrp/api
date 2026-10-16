@@ -161,7 +161,7 @@ func TestAuditCoverage_BulkUpsertUpdateIncludesAttributes(t *testing.T) {
 			t.Parallel()
 
 			sku := uniqueName("e2e-audit-bup-" + tc.itemType)
-			created, _ := jobResultIDs(bulkUpsertItemsJob(t, map[string]any{"type": tc.itemType, "sku": sku, "category_id": tc.categoryID}))
+			created, _ := jobResultIDs(bulkUpsertItemsJob(t, map[string]any{"type": tc.itemType, "sku": sku, "category_id": tc.categoryID, "stocking_unit_id": tc.unitID}))
 			require.Len(t, created, 1)
 			itemID := created[0]
 

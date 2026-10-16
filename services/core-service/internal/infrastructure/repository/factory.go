@@ -215,6 +215,14 @@ func (r *repoFactoryImpl) NewMaterialDemandRepo() domain.MaterialDemandRepo {
 	return NewMaterialDemandRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewItemUnitsRepo() domain.ItemUnitsRepo {
+	return NewItemUnitsRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewStockingUnitRestateRepo() domain.StockingUnitRestateRepo {
+	return NewStockingUnitRestateRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewUnitConversionRepo() domain.UnitConversionRepo {
 	return NewUnitConversionRepo(r.queries)
 }

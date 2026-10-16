@@ -46,6 +46,8 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 	updateItemEndpoint := apiendpoint.From(&itemep.UpdateItemEndpoint{}).WithService(inner, itemSvc)
 	deleteItemEndpoint := apiendpoint.From(&itemep.DeleteItemEndpoint{}).WithService(inner, itemSvc)
 	bulkUpsertItemsEndpoint := apiendpoint.From(&itemep.BulkUpsertItemsEndpoint{}).WithService(inner, itemSvc)
+	setOrderUnitsEndpoint := apiendpoint.From(&itemep.SetOrderUnitsEndpoint{}).WithService(inner, itemSvc)
+	changeStockingUnitEndpoint := apiendpoint.From(&itemep.ChangeStockingUnitEndpoint{}).WithService(inner, itemSvc)
 	getItemInventoryEndpoint := apiendpoint.From(&itemep.RetrieveItemInventoryEndpoint{}).WithService(inner, itemSvc)
 	getItemLotDefaultEndpoint := apiendpoint.From(&itemep.RetrieveItemLotDefaultEndpoint{}).WithService(inner, itemSvc)
 	getItemCostsEndpoint := apiendpoint.From(&itemep.GetItemCostsEndpoint{}).WithService(inner, itemSvc)
@@ -65,6 +67,8 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 		updateItemEndpoint,
 		deleteItemEndpoint,
 		bulkUpsertItemsEndpoint,
+		setOrderUnitsEndpoint,
+		changeStockingUnitEndpoint,
 		getItemInventoryEndpoint,
 		getItemLotDefaultEndpoint,
 		getItemCostsEndpoint,

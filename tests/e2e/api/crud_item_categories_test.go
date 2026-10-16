@@ -760,7 +760,7 @@ func TestItemCategories_ChangeUnitGroup(t *testing.T) {
 	id := jsonField(parseJSON(createBody), "id")
 
 	// Change unit group to one with the same unit type
-	changeStatus, changeBody, err := apiClient.Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
+	changeStatus, changeBody, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, changeStatus, changeBody)
 
@@ -793,7 +793,7 @@ func TestItemCategories_ChangeUnitGroupRejectsDifferentType(t *testing.T) {
 	id := jsonField(parseJSON(createBody), "id")
 
 	// Attempt to change to a unit group with a different unit type — should be rejected
-	changeStatus, _, err := apiClient.Put(itemCategoriesPath+"/"+id+"/unit-groups/"+differentTypeUnitGroupID, nil)
+	changeStatus, _, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/unit-groups/"+differentTypeUnitGroupID, nil)
 	require.NoError(t, err)
 	assert.True(t, changeStatus == 400 || changeStatus == 422,
 		"Changing to a unit group with a different unit type should return 400 or 422, got %d", changeStatus)

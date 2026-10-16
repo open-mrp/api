@@ -39,7 +39,7 @@ func (s *itemSvcImpl) GetItemLotDefault(ctx context.Context, itemID string) (*do
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	unitID, apiErr := s.itemBaseUnitID(ctx, item)
+	unitID, apiErr := s.itemBaseUnitID(ctx, accountID, item)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -95,11 +95,14 @@ func resolveItemLotDefault(
 	return result, nil
 }
 
-// itemBaseUnitID is the unit an item is counted in, taken from its category's unit group — the same source the rest of the system uses.
-func (s *itemSvcImpl) itemBaseUnitID(ctx context.Context, item *domain.Item) (string, *apierror.APIError) {
+// itemBaseUnitID is the unit an item is counted in: its stocking unit.
+func (s *itemSvcImpl) itemBaseUnitID(ctx context.Context, accountID string, item *domain.Item) (string, *apierror.APIError) {
 	if item.ItemCategoryID == "" {
 		return "", nil
 	}
-	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
-	return unitID, apiErr
+	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, item.ID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	return stocking.BaseUnitID, nil
 }

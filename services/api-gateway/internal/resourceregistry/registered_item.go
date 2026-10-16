@@ -37,6 +37,29 @@ func init() {
 				ExtractIDs:  extractSalesProductLineIDFromItem,
 				Populate:    populateSalesProductLineOnItem,
 			},
+			{
+				Key:         "stocking_unit",
+				Target:      constants.ObjectTypeUnit,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  itemUnitIDExtractor(resourceloaders.ItemStockingUnitMetaKey),
+				Populate: itemUnitPopulator(resourceloaders.ItemStockingUnitMetaKey, func(item *apiresource.Item, u *apiresource.Unit) {
+					item.StockingUnit = u
+				}),
+			},
+			{
+				Key:         "default_order_unit",
+				Target:      constants.ObjectTypeUnit,
+				Cardinality: include.CardinalityOnePtr,
+				ExtractIDs:  itemUnitIDExtractor(resourceloaders.ItemDefaultOrderUnitMetaKey),
+				Populate: itemUnitPopulator(resourceloaders.ItemDefaultOrderUnitMetaKey, func(item *apiresource.Item, u *apiresource.Unit) {
+					item.DefaultOrderUnit = u
+				}),
+			},
+			{
+				// Read with the item; each unit loads with the response's other value-shape units.
+				Key:      "order_units",
+				Populate: populateOrderUnitsOnItem,
+			},
 			// No item names a manufacturing method yet, so the include always reads null.
 			{Key: "default_manufacturing_method", Populate: func(context.Context, any, map[string]any) {}},
 		},
@@ -100,5 +123,32 @@ func populateSalesProductLineOnItem(ctx context.Context, parent any, loaded map[
 	id := salesProductLineID(ctx, item)
 	if v, ok := loaded[id]; ok && id != "" {
 		item.Sales.ProductLine = v.(*apiresource.ProductLine)
+	}
+}
+
+func itemUnitIDExtractor(metaKey string) func(context.Context, any) []string {
+	return func(ctx context.Context, parent any) []string {
+		item := parent.(*apiresource.Item)
+		if id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeItem, item.ID, metaKey); id != "" {
+			return []string{id}
+		}
+		return nil
+	}
+}
+
+func itemUnitPopulator(metaKey string, set func(*apiresource.Item, *apiresource.Unit)) func(context.Context, any, map[string]any) {
+	return func(ctx context.Context, parent any, loaded map[string]any) {
+		item := parent.(*apiresource.Item)
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeItem, item.ID, metaKey)
+		if v, ok := loaded[id]; ok && id != "" {
+			set(item, v.(*apiresource.Unit))
+		}
+	}
+}
+
+func populateOrderUnitsOnItem(ctx context.Context, parent any, _ map[string]any) {
+	item := parent.(*apiresource.Item)
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItem, item.ID, resourceloaders.ItemOrderUnitsMetaKey); ok && v != nil {
+		item.OrderUnits = v.(*apiresource.List[apiresource.ItemOrderUnit])
 	}
 }

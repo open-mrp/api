@@ -52,13 +52,18 @@ func newSellableProductIDs(t *testing.T, namePrefix string) (productID, itemID s
 	return productID, itemID
 }
 
-// forgeItemBody is the smallest valid create body for an item of the type, in a category of the right kind.
+// forgeItemBody is the smallest valid create body for an item of the type, in a category of the right kind and
+// stocked in that category's seeded unit (a service is never stocked).
 func forgeItemBody(itemType, sku string) map[string]any {
-	categoryID := SeedItemCategoryID
+	categoryID, unitID := SeedItemCategoryID, SeedUnitID
 	if itemType == "material" {
-		categoryID = SeedMaterialCategoryID
+		categoryID, unitID = SeedMaterialCategoryID, SeedMaterialUnitID
 	}
-	return map[string]any{"type": itemType, "sku": sku, "category_id": categoryID}
+	body := map[string]any{"type": itemType, "sku": sku, "category_id": categoryID}
+	if itemType != "service" {
+		body["stocking_unit_id"] = unitID
+	}
+	return body
 }
 
 // createForgeItem creates an item (path may carry a query) and deletes it after the test.
@@ -582,8 +587,8 @@ func TestItems_SalesSectionOnlyWhenSold(t *testing.T) {
 		status, respBody, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", map[string]any{
 			"product_id":  itemProductID(t, itemID),
 			"product_sku": uniqueName("E2E-LINE-SKU"),
-			// Line units come from the product line's unit group.
-			"quantity": map[string]any{"value": "1", "unit_id": SeedUnitID},
+			// A line is in the item's stocking unit or one of its order units.
+			"quantity": map[string]any{"value": "1", "unit_id": SeedMaterialUnitID},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, respBody)

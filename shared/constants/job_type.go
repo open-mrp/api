@@ -16,11 +16,16 @@ const (
 	JobTypeShipShipment JobType = "ship_shipment"
 	// Merges customers into one: their records move to the target and the sources are deleted.
 	JobTypeMergeCustomers JobType = "merge_customers"
+	// Replaces the order units of every item matching a filter.
+	JobTypeSetOrderUnits JobType = "set_order_units"
+	// Moves an item to a new stocking unit, restating what it recorded in the old one.
+	JobTypeChangeStockingUnit JobType = "change_stocking_unit"
 )
 
 func (m JobType) IsValid() bool {
 	switch m {
-	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport, JobTypePackPick, JobTypeShipShipment, JobTypeMergeCustomers:
+	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport, JobTypePackPick, JobTypeShipShipment, JobTypeMergeCustomers,
+		JobTypeSetOrderUnits, JobTypeChangeStockingUnit:
 		return true
 	default:
 		return false
@@ -35,5 +40,7 @@ func (m JobType) EnumValues() []string {
 		string(JobTypePackPick),
 		string(JobTypeShipShipment),
 		string(JobTypeMergeCustomers),
+		string(JobTypeSetOrderUnits),
+		string(JobTypeChangeStockingUnit),
 	}
 }

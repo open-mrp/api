@@ -109,7 +109,6 @@ func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {
 		path string
 	}{
 		{"units", unitsPath},
-		{"unit groups", unitGroupsPath},
 		{"product lines", productLinesPath},
 		{"item categories", itemCategoriesPath},
 		{"departments", departmentsPath},

@@ -73,8 +73,6 @@ public_docstrings DELETE /v1/settings/integrations/{id}
 public_docstrings DELETE /v1/settings/portal-domains/{id}
 public_docstrings GET /v1/operations/fulfillment-recommendations
 public_docstrings PATCH /v1/catalog/items/{id}/inventory
-public_docstrings PATCH /v1/catalog/unit-groups/{id}
-public_docstrings PATCH /v1/catalog/unit-groups/{unit_group_id}/units/{id}
 public_docstrings PATCH /v1/identity/account-users/{id}
 
 

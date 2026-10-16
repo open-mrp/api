@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -55,16 +56,13 @@ func ValidateCostRateUnits(ctx context.Context, repo domain.UnitRepo, numeratorU
 	return nil
 }
 
-// ValidateCostDenominatorInUnitGroup ensures a cost's denominator names a unit the priced thing is actually counted in.
+// ValidateCostDenominatorForItem ensures a cost's denominator names a unit the priced thing is actually counted in.
 //
-// A dimension code cannot stand in for a unit group: an each and a carton of eight are both "count", so ValidateCostRateUnits passes a per-each cost for an item stocked by the carton, which then prices its inventory eight times over. Group membership is also what makes a conversion between the two units defined at all.
-func ValidateCostDenominatorInUnitGroup(ctx context.Context, repo domain.UnitRepo, unitGroupID, denominatorUnitID, fieldName string) *apierror.APIError {
-	inGroup, apiErr := repo.IsUnitInGroup(ctx, unitGroupID, denominatorUnitID)
-	if apiErr != nil {
-		return apiErr
+// A dimension code cannot stand in for the item's units: an each and a carton of eight are both "count", so ValidateCostRateUnits passes a per-each cost for an item stocked by the carton, which then prices its inventory eight times over.
+func ValidateCostDenominatorForItem(stocking *domain.ItemStockingUnit, denominatorUnitID, fieldName string) *apierror.APIError {
+	if slices.Contains(stocking.AllowedUnitIDs, denominatorUnitID) || denominatorUnitID == stocking.BaseUnitID {
+		return nil
 	}
-	if !inGroup {
-		return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.per_unit_id must be a unit in the item's unit group.", fieldName))
-	}
-	return nil
+	return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat,
+		fmt.Sprintf("%s.per_unit_id must be the item's stocking unit or one of its order units.", fieldName))
 }

@@ -76,10 +76,9 @@ func (e *BulkUpsertUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*B
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups/actions/bulk-upsert",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionCreate}, {Domain: types.PermissionDomainUnitGroups, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(UnitGroupSvc).BulkUpsertUnitGroups

@@ -57,3 +57,15 @@ func QuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
 	}
 	return apiresource.NewQuantity(apiresource.NormalizeQuantityValue(q.Value, q.UnitType), q.UnitId)
 }
+
+// DiscountFromProto presents a discount from core-service, or nil when absent. Amounts keep every digit.
+func DiscountFromProto(d *pb.Discount) *apiresource.Discount {
+	if d == nil {
+		return nil
+	}
+	return &apiresource.Discount{
+		Type:       constants.DiscountType(d.Type),
+		PercentOff: d.PercentOff,
+		AmountOff:  ExactMoneyFromProto(d.AmountOff),
+	}
+}

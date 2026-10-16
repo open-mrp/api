@@ -83,6 +83,13 @@ message UpdateItemRequest {
   ItemMaterialInput material = 14;
   // Removes the item's sales section (its product row); sales must be unset.
   bool clear_sales = 15;
+  optional string default_order_unit_id = 16;
+  // Present replaces the item's order units.
+  ItemOrderUnitList order_units = 17;
+}
+// A list of order units; present on a write replaces the item's (an empty list removes them all).
+message ItemOrderUnitList {
+  repeated ItemOrderUnitInfo values = 1;
 }
 message UpdateItemResponse {
   ItemInfo item = 1;
@@ -114,6 +121,12 @@ message CreateItemRequest {
   UnitPrice unit_cost = 8;
   ItemSalesInput sales = 9;
   ItemMaterialInput material = 10;
+  // Required for physical items unless legacy_units; never set for services.
+  optional string stocking_unit_id = 11;
+  optional string default_order_unit_id = 12;
+  repeated ItemOrderUnitInfo order_units = 13;
+  // A 1.0.forge-preview.9 create: the item is stocked and ordered in its category's unit group, as before.
+  bool legacy_units = 14;
 }
 message CreateItemResponse {
   ItemInfo item = 1;
@@ -135,6 +148,10 @@ message UpsertItemInput {
   UnitPrice unit_cost = 9;
   ItemSalesInput sales = 10;
   ItemMaterialInput material = 11;
+  // Required when the row creates a physical item; an existing item's must match.
+  optional string stocking_unit_id = 12;
+  optional string default_order_unit_id = 13;
+  ItemOrderUnitList order_units = 14;
 }
 message BulkUpsertItemsRequest {
   repeated UpsertItemInput items = 1;
@@ -615,4 +632,26 @@ message GetConsumptionRequest {
 }
 message GetConsumptionResponse {
   ConsumptionInfo consumption = 1;
+}
+// Replaces the order units and default order unit of every item matching all the filters given, in the background.
+message SetItemOrderUnitsRequest {
+  repeated string item_ids = 1;
+  repeated string product_line_ids = 2;
+  repeated string category_ids = 3;
+  repeated string attribute_ids = 4;
+  repeated ItemOrderUnitInfo order_units = 5;
+  optional string default_order_unit_id = 6;
+}
+message SetItemOrderUnitsResponse {
+  JobInfo job = 1;
+}
+// Moves an item to a new stocking unit, in the background.
+message ChangeItemStockingUnitRequest {
+  string id = 1;
+  string stocking_unit_id = 2;
+  // convert | relabel
+  string mode = 3;
+}
+message ChangeItemStockingUnitResponse {
+  JobInfo job = 1;
 }

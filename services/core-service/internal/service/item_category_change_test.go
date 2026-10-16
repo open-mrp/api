@@ -41,6 +41,9 @@ func newCategoryChangeRepos(t *testing.T) *categoryChangeRepos {
 	r.factory.EXPECT().NewItemCategoryRepo().Return(r.category).AnyTimes()
 	r.factory.EXPECT().NewPartRepo().Return(r.parts).AnyTimes()
 	r.factory.EXPECT().NewOutboxRepo().Return(r.outbox).AnyTimes()
+	units := repositorymock.NewMockItemUnitsRepo(ctrl)
+	units.EXPECT().Unstore(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	r.factory.EXPECT().NewItemUnitsRepo().Return(units).AnyTimes()
 	return r
 }
 

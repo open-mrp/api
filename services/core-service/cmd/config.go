@@ -46,6 +46,7 @@ const (
 	envVercelTeamID               = "VERCEL_TEAM_ID"
 	envAccountMarketingBlurbs     = "ACCOUNT_MARKETING_BLURBS"
 	envMoneyColumnBackfillOff     = "MONEY_COLUMN_BACKFILL_DISABLED"
+	envItemUnitsBackfillOff       = "ITEM_UNITS_BACKFILL_DISABLED"
 )
 
 // config represents the configuration for the core service.
@@ -141,6 +142,10 @@ type config struct {
 	// MoneyColumnBackfillDisabled (optional; default: false) stops the backfills that copy money onto its
 	// owning rows' columns ("true" to stop them), in case they ever weigh on the database.
 	MoneyColumnBackfillDisabled bool
+
+	// ItemUnitsBackfillDisabled (optional; default: false) stops the backfill that stores items' units ("true" to
+	// stop it); items it hasn't reached keep reading units derived from their unit groups.
+	ItemUnitsBackfillDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -186,6 +191,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		VercelTeamID:                env.GetEnv(envVercelTeamID, getenv),
 		AccountMarketingBlurbs:      env.GetEnv(envAccountMarketingBlurbs, getenv),
 		MoneyColumnBackfillDisabled: env.GetEnv(envMoneyColumnBackfillOff, getenv) == "true",
+		ItemUnitsBackfillDisabled:   env.GetEnv(envItemUnitsBackfillOff, getenv) == "true",
 	}
 }
 

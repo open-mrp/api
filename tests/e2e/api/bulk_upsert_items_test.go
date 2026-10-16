@@ -67,7 +67,7 @@ func TestItems_BulkUpsert_CreatesAndUpdates(t *testing.T) {
 	productSKU := uniqueName("e2e-bup-item-prod")
 	job := bulkUpsertItemsJob(t,
 		map[string]any{
-			"type": "material", "sku": materialSKU, "category_id": SeedMaterialCategoryID,
+			"type": "material", "sku": materialSKU, "category_id": SeedMaterialCategoryID, "stocking_unit_id": SeedMaterialUnitID,
 			"description": "bulk yarn",
 			"supply":      "buy",
 			"unit_cost":   priceInputPer("2.00", SeedMaterialUnitID),
@@ -77,7 +77,7 @@ func TestItems_BulkUpsert_CreatesAndUpdates(t *testing.T) {
 			},
 		},
 		map[string]any{
-			"type": "product", "sku": productSKU, "category_id": SeedItemCategoryID,
+			"type": "product", "sku": productSKU, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID,
 			"status": "archived",
 			"sales": map[string]any{
 				"unit_price":        priceInputPer("12.00", SeedUnitID),
@@ -87,7 +87,7 @@ func TestItems_BulkUpsert_CreatesAndUpdates(t *testing.T) {
 		},
 		// Matched by SKU regardless of case.
 		map[string]any{
-			"type": "part", "sku": strings.ToUpper(jsonField(existing, "sku")), "category_id": SeedItemCategoryID,
+			"type": "part", "sku": strings.ToUpper(jsonField(existing, "sku")), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID,
 			"description": "updated by bulk",
 		},
 	)
@@ -137,7 +137,7 @@ func TestItems_BulkUpsert_AttributesByPropertyAndValue(t *testing.T) {
 	value := uniqueName("e2e-bup-item-color")
 	sku := uniqueName("e2e-bup-item-attr")
 	job := bulkUpsertItemsJob(t, map[string]any{
-		"type": "part", "sku": sku, "category_id": SeedItemCategoryID,
+		"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID,
 		"attributes": []any{map[string]any{"property": strings.ToLower(SeedPropertyName), "value": value}},
 	})
 	created, _ := jobResultIDs(job)
@@ -156,7 +156,7 @@ func TestItems_BulkUpsert_AttributesByPropertyAndValue(t *testing.T) {
 
 	// Re-sending the same value reuses the attribute; an empty list removes it.
 	job = bulkUpsertItemsJob(t, map[string]any{
-		"type": "part", "sku": sku, "category_id": SeedItemCategoryID,
+		"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID,
 		"attributes": []any{map[string]any{"property": SeedPropertyName, "value": strings.ToUpper(value)}},
 	})
 	_, updated := jobResultIDs(job)
@@ -164,12 +164,12 @@ func TestItems_BulkUpsert_AttributesByPropertyAndValue(t *testing.T) {
 	assert.Equal(t, []string{attrID}, attributeIDsOf(getItem(t, itemID, "attributes")))
 
 	bulkUpsertItemsJob(t, map[string]any{
-		"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "attributes": []any{},
+		"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID, "attributes": []any{},
 	})
 	assert.Empty(t, attributeIDsOf(getItem(t, itemID, "attributes")))
 	// Without attributes the row leaves them alone.
 	patchItem(t, itemID, map[string]any{"attribute_ids": []string{attrID}})
-	bulkUpsertItemsJob(t, map[string]any{"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "description": "x"})
+	bulkUpsertItemsJob(t, map[string]any{"type": "part", "sku": sku, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID, "description": "x"})
 	assert.Equal(t, []string{attrID}, attributeIDsOf(getItem(t, itemID, "attributes")))
 	patchItem(t, itemID, map[string]any{"attribute_ids": []string{}})
 }
@@ -181,8 +181,8 @@ func TestItems_BulkUpsert_TypeChangeFailsTheRow(t *testing.T) {
 	okSKU := uniqueName("e2e-bup-item-xtype-ok")
 
 	job := bulkUpsertItemsJob(t,
-		map[string]any{"type": "product", "sku": jsonField(existing, "sku"), "category_id": SeedItemCategoryID},
-		map[string]any{"type": "part", "sku": okSKU, "category_id": SeedItemCategoryID},
+		map[string]any{"type": "product", "sku": jsonField(existing, "sku"), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID},
+		map[string]any{"type": "part", "sku": okSKU, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID},
 	)
 	results := jobResults(job)
 	require.Len(t, results, 2)
@@ -202,16 +202,16 @@ func TestItems_BulkUpsert_RejectedAtAccept(t *testing.T) {
 		rows  []map[string]any
 		param string
 	}{
-		{"unknown type", []map[string]any{good(), {"type": "widget", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID}}, "items[1].type"},
+		{"unknown type", []map[string]any{good(), {"type": "widget", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID}}, "items[1].type"},
 		{"unknown category", []map[string]any{good(), {"type": "part", "sku": uniqueName("e2e-bup-item-bad"), "category_id": "itcg_00000000000000000000000000"}}, "items[1].category_id"},
-		{"category of the wrong kind", []map[string]any{{"type": "material", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID}}, "items[0].category_id"},
+		{"category of the wrong kind", []map[string]any{{"type": "material", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID}}, "items[0].category_id"},
 		{"material section on a product", []map[string]any{{
-			"type": "product", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID,
+			"type": "product", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID,
 			"material": map[string]any{"order_point": map[string]any{"value": "1", "unit_id": SeedUnitID}},
 		}}, "items[0].material"},
 		{"duplicate sku", []map[string]any{
-			{"type": "part", "sku": dupSKU, "category_id": SeedItemCategoryID},
-			{"type": "part", "sku": dupSKU, "category_id": SeedItemCategoryID},
+			{"type": "part", "sku": dupSKU, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID},
+			{"type": "part", "sku": dupSKU, "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID},
 		}, "items[1].sku"},
 		{"missing category", []map[string]any{{"type": "part", "sku": uniqueName("e2e-bup-item-bad")}}, "items[0].category_id"},
 	}
@@ -229,7 +229,7 @@ func TestItems_BulkUpsert_RejectedAtAccept(t *testing.T) {
 	// Nothing from a refused batch is written, including its good rows.
 	t.Run("refused batch writes nothing", func(t *testing.T) {
 		row := good()
-		resp := postBulkUpsertItems(t, row, map[string]any{"type": "widget", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID})
+		resp := postBulkUpsertItems(t, row, map[string]any{"type": "widget", "sku": uniqueName("e2e-bup-item-bad"), "category_id": SeedItemCategoryID, "stocking_unit_id": SeedUnitID})
 		requireClientRejection(t, resp.StatusCode, resp.Body)
 		assert.Empty(t, listItemIDs(t, map[string][]string{"skus": {jsonField(row, "sku")}}))
 	})

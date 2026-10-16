@@ -90,12 +90,13 @@ func (s *productionScheduleSvcImpl) resolveLineUnitID(
 		return "", apierror.NewValidationError("This item has no category, so the quantity to produce has no unit.")
 	}
 
-	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, line.ItemID)
 	if apiErr != nil {
 		return "", apiErr
 	}
+	unitID := stocking.BaseUnitID
 	if unitID == "" {
-		return "", apierror.NewValidationError("This item's category has no base unit, so the quantity to produce has no unit.")
+		return "", apierror.NewValidationError("This item has no stocking unit, so the quantity to produce has no unit.")
 	}
 
 	unitByItem[line.ItemID] = unitID

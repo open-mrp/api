@@ -39,7 +39,6 @@ func (e *ExportUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(UnitGroupSvc).ExportUnitGroups

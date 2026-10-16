@@ -46,14 +46,14 @@ SELECT CAST((
     FROM item i
     JOIN item_category ic ON ic.id = i.item_category_id
     JOIN unit_group ug ON ug.id = ic.unit_group_id
-    JOIN unit bu ON bu.id = ug.base_unit_id
+    JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
     WHERE i.id = sqlc.arg('item_id')
 ), 0), 1) AS DECIMAL(65,30)) AS available_to_promise,
     COALESCE(
         (SELECT qu.abbreviation FROM item i
          JOIN item_category ic ON i.item_category_id = ic.id
          JOIN unit_group ug ON ic.unit_group_id = ug.id
-         JOIN unit qu ON ug.base_unit_id = qu.id
+         JOIN unit qu ON qu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
          WHERE i.id = sqlc.arg('item_id') LIMIT 1), ''
     ) AS unit_abbreviation;
 
@@ -107,11 +107,11 @@ SELECT
     ) / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS on_hand_quantity,
     bu.id AS unit_id,
     bu.abbreviation AS unit_abbreviation,
-    ug.unit_type_code AS unit_type
+    bu.unit_dimension_code AS unit_type
 FROM item i
 JOIN item_category ic ON i.item_category_id = ic.id
 JOIN unit_group ug ON ic.unit_group_id = ug.id
-JOIN unit bu ON ug.base_unit_id = bu.id
+JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 WHERE i.id IN (sqlc.slice('item_ids'))
   AND i.account_id = sqlc.arg('owner_account_id')
   AND i.deleted_at IS NULL;
@@ -128,7 +128,7 @@ AND (ir.owner_account_id = sqlc.arg('owner_account_id') OR ir.holder_account_id 
 AND ir.status_code = 'available';
 
 -- FetchInventoryLevelsAsOf is, per item, the last inventory level logged at or before `as_of`, in the
--- item's category base unit; an item with nothing logged by then reads zero. A logged level is the
+-- item's stocking unit; an item with nothing logged by then reads zero. A logged level is the
 -- physical figure — on hand less short — at the moment of the movement that wrote it, not on-hand.
 --
 -- Each item's last instant comes from a loose scan of (account_id, item_id, created_at): one dive
@@ -143,11 +143,11 @@ SELECT STRAIGHT_JOIN
         / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS level,
     bu.id AS unit_id,
     bu.abbreviation AS unit_abbreviation,
-    ug.unit_type_code AS unit_type
+    bu.unit_dimension_code AS unit_type
 FROM item i
 JOIN item_category ic ON i.item_category_id = ic.id
 JOIN unit_group ug ON ic.unit_group_id = ug.id
-JOIN unit bu ON ug.base_unit_id = bu.id
+JOIN unit bu ON bu.id = COALESCE(i.stocking_unit_id, ug.base_unit_id)
 LEFT JOIN (
     SELECT l.account_id, l.item_id, MAX(l.created_at) AS logged_at
     FROM inventory_log l FORCE INDEX (inventory_log_account_id_item_id_created_at_idx)

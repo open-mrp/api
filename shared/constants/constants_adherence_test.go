@@ -200,6 +200,7 @@ var typeRegistry = map[string]any{
 	"AgentTriggerType":                AgentTriggerType(""),
 	"APIKeyStatus":                    APIKeyStatus(""),
 	"DiscountType":                    DiscountType(""),
+	"ChangeStockingUnitMode":          ChangeStockingUnitMode(""),
 	"DashboardPath":                   DashboardPath(""),
 	"DeletedRecordResourceType":       DeletedRecordResourceType(""),
 	"EmailTemplate":                   EmailTemplate(""),

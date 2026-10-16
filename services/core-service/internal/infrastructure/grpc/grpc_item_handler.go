@@ -174,6 +174,11 @@ func itemToProto(i *domain.Item) *pb.ItemInfo {
 		}
 	}
 	itemSectionsToProto(i, pbItem)
+	if i.Units != nil {
+		pbItem.StockingUnitId = i.Units.StockingUnitID
+		pbItem.DefaultOrderUnitId = i.Units.DefaultOrderUnitID
+		pbItem.OrderUnits = orderUnitsToProto(i.Units.OrderUnits)
+	}
 
 	return pbItem
 }

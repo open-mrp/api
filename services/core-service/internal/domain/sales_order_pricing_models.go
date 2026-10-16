@@ -101,14 +101,6 @@ type PricingUnit struct {
 	IsBaseUnit        bool
 }
 
-// PricingUnitGroupUnit is a unit's conversion discount within a unit group.
-type PricingUnitGroupUnit struct {
-	UnitGroupID        string
-	UnitID             string
-	DiscountPercentage string
-	DiscountFixed      string
-}
-
 // PricingAccountPrice is an absolute price override for a product line and recipient. The recipient is either the buyer or its parent account.
 type PricingAccountPrice struct {
 	ID            string
@@ -145,8 +137,8 @@ type PricingBundle struct {
 	Products map[string]*PricingProduct
 	// Units keyed by unit id.
 	Units map[string]*PricingUnit
-	// UnitGroupUnits keyed by unitGroupID -> unitID.
-	UnitGroupUnits map[string]map[string]*PricingUnitGroupUnit
+	// ItemUnits keyed by item id: each product's stocking unit and order units.
+	ItemUnits map[string]*ItemUnits
 	// AccountPrices in created_at ASC order (last match wins, so callers iterate and keep the last applicable).
 	AccountPrices []*PricingAccountPrice
 	// VolumeDiscounts applicable to the buyer.

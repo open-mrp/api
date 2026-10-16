@@ -672,15 +672,12 @@ func basePricingBundle() *domain.PricingBundle {
 				UnitValue:                  "10",
 				UnitValueNumeratorUnitID:   "un_usd",
 				UnitValueDenominatorUnitID: "un_ea",
-				CategoryUnitGroupID:        "ug_1",
 			},
 		},
 		Units: map[string]*domain.PricingUnit{
 			"un_ea": {ID: "un_ea", IsBaseUnit: true},
 		},
-		UnitGroupUnits: map[string]map[string]*domain.PricingUnitGroupUnit{
-			"ug_1": {"un_ea": {UnitGroupID: "ug_1", UnitID: "un_ea"}},
-		},
+		ItemUnits: map[string]*domain.ItemUnits{"it_1": {StockingUnitID: "un_ea", DefaultOrderUnitID: "un_ea"}},
 	}
 }
 

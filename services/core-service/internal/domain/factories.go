@@ -34,6 +34,8 @@ type RepoFactory interface {
 	NewOperatingCalendarRepo() OperatingCalendarRepo
 	NewServiceLevelRepo() ServiceLevelRepo
 	NewItemRepo() ItemRepo
+	NewItemUnitsRepo() ItemUnitsRepo
+	NewStockingUnitRestateRepo() StockingUnitRestateRepo
 	NewItemCategoryRepo() ItemCategoryRepo
 	NewProductLineRepo() ProductLineRepo
 	NewOutboxRepo() messaging.OutboxRepo

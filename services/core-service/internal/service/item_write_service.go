@@ -181,6 +181,17 @@ func createItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Crea
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	// A preview.9 create, and a service created without units, keep the units their groups give them.
+	var units *domain.ItemUnits
+	if itemUnitsInputGiven(&p.Units) || (!p.LegacyUnits && p.Type != constants.ItemTypeCodeService) {
+		units, apiErr = planItemUnits(ctx, repos, p.AccountID, p.Type, nil, p.Units, "")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if units.StockingUnitID != "" {
+			baseUnitID = units.StockingUnitID
+		}
+	}
 	if apiErr := validateItemAttributes(ctx, repos, p.AccountID, p.CategoryID, p.AttributeIDs, "attribute_ids"); apiErr != nil {
 		return nil, apiErr
 	}
@@ -254,6 +265,12 @@ func createItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Crea
 			return nil, apiErr
 		}
 		if apiErr := itemRepo.InsertPart(ctx, partID, itemID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	if units != nil {
+		if apiErr := storeItemUnits(ctx, repos, p.AccountID, itemID, units); apiErr != nil {
 			return nil, apiErr
 		}
 	}
@@ -337,6 +354,23 @@ func updateItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Upda
 		return nil, apiErr
 	}
 
+	if p.Units.StockingUnitID != nil {
+		return nil, apierror.NewFieldError("stocking_unit_id", apierror.CodeInvalidFormat, "To change the stocking unit, use Change Stocking Unit.")
+	}
+	var units *domain.ItemUnits
+	if itemUnitsInputGiven(&p.Units) {
+		units, apiErr = planItemUnits(ctx, repos, p.AccountID, itemType, before.Units, p.Units, "")
+		if apiErr != nil {
+			return nil, apiErr
+		}
+	}
+	// A category change keeps the item's units: store them before the category they were derived from changes.
+	if p.CategoryID != nil && *p.CategoryID != before.ItemCategoryID {
+		if apiErr := repos.NewItemUnitsRepo().Materialize(ctx, []string{p.ItemID}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
 	set := domain.SetItemFieldsParams{
 		AccountID:      p.AccountID,
 		ItemID:         p.ItemID,
@@ -388,6 +422,11 @@ func updateItemInTx(ctx context.Context, repos domain.RepoFactory, p domain.Upda
 	}
 	if p.Material != nil {
 		if apiErr := updateItemMaterial(ctx, repos, before.MaterialSection, p.Material); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+	if units != nil {
+		if apiErr := storeItemUnits(ctx, repos, p.AccountID, p.ItemID, units); apiErr != nil {
 			return nil, apiErr
 		}
 	}

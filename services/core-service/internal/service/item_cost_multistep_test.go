@@ -85,10 +85,9 @@ func newMultistepCostSvc(t *testing.T, flow multistepFlow) *itemSvcImpl {
 		UnitCostDenominatorRatio: decimal.NewFromInt(1),
 	}}, nil).AnyTimes()
 	itemRepo.EXPECT().GetStockingUnit(gomock.Any(), msAccount, msItem).
-		Return(&domain.ItemStockingUnit{UnitGroupID: msGroup, BaseUnitID: msEach}, nil).AnyTimes()
+		Return(&domain.ItemStockingUnit{BaseUnitID: msEach, AllowedUnitIDs: []string{msEach}}, nil).AnyTimes()
 
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
-	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), msGroup, msEach).Return(true, nil).AnyTimes()
 	unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).AnyTimes()
 
 	repos := factorymock.NewMockRepoFactory(ctrl)

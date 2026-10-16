@@ -2097,3 +2097,31 @@ type ReferenceRepo interface {
 	// InUseBy returns the labels of the probes with at least one row referencing id, in probe order.
 	InUseBy(ctx context.Context, id string, probes []ReferenceProbe) ([]string, *apierror.APIError)
 }
+
+// ItemUnitsRepo reads and writes items' units.
+type ItemUnitsRepo interface {
+	// Get returns each item's units, keyed by item id. An item whose units are not stored yet gets them derived from
+	// its unit groups. Unknown ids are omitted.
+	Get(ctx context.Context, itemIDs []string) (map[string]*ItemUnits, *apierror.APIError)
+	// Materialize stores the derived units of every given item whose units are not stored yet. Items already stored
+	// are left alone.
+	Materialize(ctx context.Context, itemIDs []string) *apierror.APIError
+	// SetStockingUnit stores the item's stocking unit.
+	SetStockingUnit(ctx context.Context, itemID, unitID string) *apierror.APIError
+	// Replace stores the item's default order unit and replaces its order units.
+	Replace(ctx context.Context, accountID, itemID, defaultOrderUnitID string, orderUnits []ItemOrderUnit) *apierror.APIError
+	// Unstore drops the item's stored units, so they derive from its unit groups again.
+	Unstore(ctx context.Context, itemID string) *apierror.APIError
+	// RemoveOrderUnits removes the given order units from the item.
+	RemoveOrderUnits(ctx context.Context, itemID string, unitIDs []string) *apierror.APIError
+	// MatchItems returns up to limit of the account's items matching every filter given, by id.
+	MatchItems(ctx context.Context, accountID string, filter SetOrderUnitsFilter, limit int) ([]ItemTypeRef, *apierror.APIError)
+}
+
+// StockingUnitRestateRepo rewrites the numbers an item recorded in its stocking unit when that unit changes.
+type StockingUnitRestateRepo interface {
+	// Restate moves every quantity and per-unit rate or price of the item stated in fromUnitID to toUnitID,
+	// multiplying quantities by factor and dividing per-unit amounts by it (factor 1 relabels). It returns how many
+	// rows changed.
+	Restate(ctx context.Context, accountID, itemID, fromUnitID, toUnitID string, factor decimal.Decimal) (int64, *apierror.APIError)
+}

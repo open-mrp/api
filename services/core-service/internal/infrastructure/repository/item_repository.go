@@ -485,6 +485,9 @@ func applyItemStitches(ctx context.Context, queries *sqlc.Queries, items []*doma
 		if apiErr := stitchItemSections(ctx, queries, items); apiErr != nil {
 			return apiErr
 		}
+		if apiErr := stitchItemUnits(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
 	}
 	if slices.Contains(incs, "category.properties") {
 		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
@@ -695,11 +698,21 @@ func (r *itemRepoImpl) GetStockingUnit(ctx context.Context, accountID, itemID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.ItemStockingUnit{
-		UnitGroupID:         row.UnitGroupID,
+	units, apiErr := NewItemUnitsRepo(r.queries).Get(ctx, []string{itemID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	stocking := &domain.ItemStockingUnit{
 		BaseUnitID:          row.BaseUnitID,
 		CostNumeratorUnitID: row.CostNumeratorUnitID.String,
-	}, nil
+	}
+	if u := units[itemID]; u != nil {
+		if u.StockingUnitID != "" {
+			stocking.BaseUnitID = u.StockingUnitID
+		}
+		stocking.AllowedUnitIDs = u.AllowedUnitIDs()
+	}
+	return stocking, nil
 }
 
 func (r *itemRepoImpl) UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError {
@@ -1213,4 +1226,23 @@ func (r *itemRepoImpl) FindItemsProducedFromConsumed(ctx context.Context, accoun
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return rows, nil
+}
+
+// stitchItemUnits loads each item's stocking unit, default order unit and order units.
+func stitchItemUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item) *apierror.APIError {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, len(items))
+	for i, item := range items {
+		ids[i] = item.ID
+	}
+	units, apiErr := NewItemUnitsRepo(queries).Get(ctx, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, item := range items {
+		item.Units = units[item.ID]
+	}
+	return nil
 }

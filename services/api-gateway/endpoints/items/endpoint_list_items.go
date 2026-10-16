@@ -27,6 +27,7 @@ var ItemIncludeKeys = []string{
 	"category", "category.properties", "category.unit_group", "category.unit_group.base_unit",
 	"category.unit_group.associated_units", "category.unit_group.associated_units.unit",
 	"attributes", "attributes.property", "sales.product_line", "default_manufacturing_method",
+	"stocking_unit", "default_order_unit", "order_units",
 }
 
 func itemIncludes() *apiendpoint.IncludeConfig {

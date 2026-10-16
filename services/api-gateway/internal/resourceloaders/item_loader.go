@@ -2,8 +2,10 @@ package resourceloaders
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"strings"
+
+	"github.com/open-mrp/apikit/include"
+	"github.com/open-mrp/apikit/sensitive"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -67,6 +69,9 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 		if item.Sales != nil && item.Sales.ProductLineId != nil {
 			meta.Set(constants.ObjectTypeItem, item.Id, ItemSalesProductLineMetaKey, *item.Sales.ProductLineId)
 		}
+		meta.Set(constants.ObjectTypeItem, item.Id, ItemStockingUnitMetaKey, item.StockingUnitId)
+		meta.Set(constants.ObjectTypeItem, item.Id, ItemDefaultOrderUnitMetaKey, item.DefaultOrderUnitId)
+		meta.Set(constants.ObjectTypeItem, item.Id, ItemOrderUnitsMetaKey, ItemOrderUnitsFromProto(item.OrderUnits, !sensitive.Visible(ctx, "internal")))
 
 		attrs := make([]apiresource.Attribute, 0, len(item.Attributes))
 		for _, a := range item.Attributes {
@@ -109,6 +114,31 @@ func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties b
 
 // ItemSalesProductLineMetaKey stashes the product line an item's sales section names, for `sales.product_line`.
 const ItemSalesProductLineMetaKey = "sales.product_line_id"
+
+// Meta keys for an item's units: the stocking and default order unit ids, and the order units list.
+const (
+	ItemStockingUnitMetaKey     = "stocking_unit_id"
+	ItemDefaultOrderUnitMetaKey = "default_order_unit_id"
+	ItemOrderUnitsMetaKey       = "order_units_list"
+)
+
+// ItemOrderUnitsFromProto presents an item's order units, without the hidden ones for a portal caller. Each unit
+// loads before the response is written.
+func ItemOrderUnitsFromProto(in []*pb.ItemOrderUnitInfo, portal bool) *apiresource.List[apiresource.ItemOrderUnit] {
+	out := make([]apiresource.ItemOrderUnit, 0, len(in))
+	for _, ou := range in {
+		if ou == nil || (portal && ou.PortalVisibility == string(constants.CustomerPortalVisibilityHidden)) {
+			continue
+		}
+		out = append(out, apiresource.ItemOrderUnit{
+			Unit:             apiresource.UnitStub(ou.UnitId),
+			PortalVisibility: constants.CustomerPortalVisibility(ou.PortalVisibility),
+			Discount:         DiscountFromProto(ou.Discount),
+			Quantity:         ou.Quantity,
+		})
+	}
+	return apiresource.NewList(out, apiresource.PageInfo{})
+}
 
 // IsPreview9 reports whether the request asked for 1.0.forge-preview.9.
 func IsPreview9(ctx context.Context) bool {

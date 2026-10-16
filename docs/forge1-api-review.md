@@ -196,7 +196,7 @@ Docstrings
 | Create | Creates a unit. ¶ The new unit belongs to your account. Its conversion ratio is relative to the base unit of its dimension. |
 | Retrieve | Retrieves a unit. ¶ Works for your account's units and for system units. |
 | Update | Updates a unit. ¶ Only fields you send are changed. System units can't be updated, and `dimension` can't change after creation. |
-| Delete | Deletes a unit. ¶ Only units your account created can be deleted, and only while no quantity, rate or price is recorded in it and no unit group uses it as its base unit. To stop offering a unit that is in use, remove it from its unit groups. |
+| Delete | Deletes a unit. ¶ Only units your account created can be deleted, and only while no quantity, rate or price is recorded in it. |
 | Bulk upsert | Creates or updates units in bulk. ¶ Each row is matched to an existing unit by `abbreviation` (case-insensitive). Unmatched rows create new units. The work runs in the background; the response is an async job to poll. |
 | `name` | Display name, such as `Kilogram`. ¶ Unique (case-insensitive) among your account's units and the system units. |
 | `abbreviation` | Short label, such as `kg`. ¶ Unique (case-insensitive) among your account's units and the system units. |
@@ -210,40 +210,40 @@ Docstrings
 ## Unit groups — `/v1/catalog/unit-groups` ✅ retired, replaced by order units
 
 Decided
-- [ ] Remove all 12 public unit group endpoints, the internal export, and the `unit_group` / `unit_group_unit` objects.
-- [ ] Remove `item_category.unit_group` / `unit_group_id`, `product_line.unit_group` / `unit_group_id`, the `unit_group_ids` filter on list units, and `unit_group` on the analytics material.
-- [ ] Remove the 3 system groups. The dashboard's import uses the "time" and "price" groups for lead-time unit and currency: currency becomes `usd`; lead time gets an explicit unit when items are reviewed.
-- [ ] Each item gets `stocking_unit` (set at create). Migration: `item.stocking_unit_id` = the category group's base unit. Hot paths (scan floor, inventory, analytics) join `item → unit` directly.
-- [ ] Stocking unit must be correctable without delete/re-create (mechanism pending).
-- [ ] Orderable units carry a default unit (auto-selected on order lines) and a portal visibility; hidden units don't appear in the customer portal at all.
-- [ ] Purchase orders follow the same model as sales orders ("sales orders in reverse").
-- [ ] Pack discounts (e.g. a 12-pr pack costs a little less per pair than a 6-pr pack) are a real use case and must survive in some form; float storage goes.
-- [ ] Product-line analytics rollups stop depending on groups (target unit decided in the analytics review).
+- [x] Remove all 12 public unit group endpoints, the internal export, and the `unit_group` / `unit_group_unit` objects. *(ITM2: the routes are out of the public API and answer only 1.0.forge-preview.9 callers (404 otherwise); the objects and tables go in CLEAN.)*
+- [ ] Remove `item_category.unit_group` / `unit_group_id`, `product_line.unit_group` / `unit_group_id`, the `unit_group_ids` filter on list units, and `unit_group` on the analytics material. *(ITM2: still internal (absent from the public spec) for the preview.9 dashboard: they only seed the units of items not stored yet. The fields, the analytics material `unit_group` and the columns go in CLEAN.)*
+- [ ] Remove the 3 system groups. The dashboard's import uses the "time" and "price" groups for lead-time unit and currency: currency becomes `usd`; lead time gets an explicit unit when items are reviewed. *(ITM2: left for CLEAN with the tables; preview.9 imports still read them.)*
+- [x] Each item gets `stocking_unit` (set at create). Migration: `item.stocking_unit_id` = the category group's base unit. Hot paths (scan floor, inventory, analytics) join `item → unit` directly. *(ITM2: item.stocking_unit_id (00099), paced ItemUnitsBackfill; reads use COALESCE(item.stocking_unit_id, group base) until CLEAN drops the fallback join.)*
+- [x] Stocking unit must be correctable without delete/re-create (mechanism pending). *(ITM2: Change Stocking Unit.)*
+- [x] Orderable units carry a default unit (auto-selected on order lines) and a portal visibility; hidden units don't appear in the customer portal at all. *(ITM2: portal callers never see hidden order units and can't order in them; auto-selecting on lines is SO2/PO.)*
+- [x] Purchase orders follow the same model as sales orders ("sales orders in reverse"). *(ITM2: PO lines, receiving and adjustments accept the stocking unit or an order unit; line defaults are PO.)*
+- [x] Pack discounts (e.g. a 12-pr pack costs a little less per pair than a 6-pr pack) are a real use case and must survive in some form; float storage goes. *(ITM2: `order_units[].discount`, decimal columns.)*
+- [ ] Product-line analytics rollups stop depending on groups (target unit decided in the analytics review). *(ITM2: not done: product-line order-quantity rollups still convert through the line's group.)*
 
 Replacement (decided round 2)
 
 Items (materials, parts, products, generic items)
-- [ ] `stocking_unit` (expandable Unit). `stocking_unit_id` required on create; not updatable by PATCH.
-- [ ] `default_order_unit` (expandable Unit). `default_order_unit_id` optional on create/update; must be the stocking unit or an order unit; defaults to the stocking unit.
-- [ ] `order_units` (expandable List): `{ unit, portal_visibility: visible | hidden, discount }`. Request `order_units: [{ unit_id, portal_visibility?, discount? }]`; on update `field.Optional`, replaces the list. Every order unit shares the stocking unit's dimension. Stored per item (`item_order_unit`, PK `(item_id, unit_id)`).
-- [ ] `discount`: `null | { type: "percent_off", percent_off: "decimal" } | { type: "amount_off", amount_off: Money }`. Applied when a line's price defaults: price converted to the ordered unit, then discounted. Same on sales and purchase orders. Decimal/Money storage, no floats.
-- [ ] Sales order lines and purchase order lines: unit must be the item's stocking unit or one of its order units; the line's unit defaults to `default_order_unit`.
-- [ ] `hidden` order units never appear in the customer portal; staff can still use them.
-- [ ] Purchasing (receiving, inventory adjustments) uses the same allowed set as orders.
+- [x] `stocking_unit` (expandable Unit). `stocking_unit_id` required on create; not updatable by PATCH.
+- [x] `default_order_unit` (expandable Unit). `default_order_unit_id` optional on create/update; must be the stocking unit or an order unit; defaults to the stocking unit.
+- [x] `order_units` (expandable List): `{ unit, portal_visibility: visible | hidden, discount }`. Request `order_units: [{ unit_id, portal_visibility?, discount? }]`; on update `field.Optional`, replaces the list. Every order unit shares the stocking unit's dimension. Stored per item (`item_order_unit`, PK `(item_id, unit_id)`).
+- [x] `discount`: `null | { type: "percent_off", percent_off: "decimal" } | { type: "amount_off", amount_off: Money }`. Applied when a line's price defaults: price converted to the ordered unit, then discounted. Same on sales and purchase orders. Decimal/Money storage, no floats.
+- [ ] Sales order lines and purchase order lines: unit must be the item's stocking unit or one of its order units; the line's unit defaults to `default_order_unit`. *(ITM2: the unit check is done (sales pricing, PO lines, receiving); defaulting the line unit is SO2/PO.)*
+- [x] `hidden` order units never appear in the customer portal; staff can still use them.
+- [x] Purchasing (receiving, inventory adjustments) uses the same allowed set as orders.
 
 New endpoints
-- [ ] `POST /v1/catalog/items/actions/set-order-units` — `{ filter: { item_ids | product_line_ids | category_ids | attribute filters }, order_units, default_order_unit_id }` → 202 job. Replaces both on every matching item.
-- [ ] `POST /v1/catalog/items/{id}/actions/change-stocking-unit` — `{ stocking_unit_id, mode: convert | relabel }` → **always 202 + async job** (some items restate 100K+ rows). `convert`: same dimension only; restates levels, lots, rates by ratio. `relabel`: numbers kept, any dimension; order units of another dimension are removed and reported in the async job result. One audit event on the item, mode in metadata.
+- [x] `POST /v1/catalog/items/actions/set-order-units` — `{ filter: { item_ids | product_line_ids | category_ids | attribute filters }, order_units, default_order_unit_id }` → 202 job. Replaces both on every matching item. *(ITM2: filters combine (all must match), at most 10,000 items; an item the units don't suit fails its own result row.)*
+- [x] `POST /v1/catalog/items/{id}/actions/change-stocking-unit` — `{ stocking_unit_id, mode: convert | relabel }` → **always 202 + async job** (some items restate 100K+ rows). `convert`: same dimension only; restates levels, lots, rates by ratio. `relabel`: numbers kept, any dimension; order units of another dimension are removed and reported in the async job result. One audit event on the item, mode in metadata. *(ITM2: restates the inventory ledger and logs, production quantities, the order point and the item's price, cost and burn rate in 500-row statements; convert keeps the old unit as an order unit. Order, invoice and pick lines keep their own units.)*
 
 Later, additive
 - Supplier-specific order units (`supplier_material.order_units`).
 - Pack prices as `UnitPrice` per pack (prices review); may take precedence over the order-unit discount.
 
 Migration
-- [ ] `item.stocking_unit_id` = category group's base unit.
-- [ ] `order_units` = product line group members (products) or category group members (other items), carrying `is_visible` → `portal_visibility` and the one fixed discount → `amount_off`.
-- [ ] `default_order_unit_id` = stocking unit.
-- [ ] Then drop `unit_group`, `unit_group_unit`, and the `unit_group_id` columns.
+- [x] `item.stocking_unit_id` = category group's base unit.
+- [x] `order_units` = product line group members (products) or category group members (other items), carrying `is_visible` → `portal_visibility` and the one fixed discount → `amount_off`. *(ITM2: a percent-only discount becomes percent_off; a member with both becomes the amount it takes off the current price.)*
+- [x] `default_order_unit_id` = stocking unit.
+- [ ] Then drop `unit_group`, `unit_group_unit`, and the `unit_group_id` columns. *(ITM2: CLEAN, after a final backfill pass stores every item's units.)*
 
 Docstrings
 
@@ -1264,7 +1264,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
 - [ ] **Y1** `item.default_manufacturing_method` (expandable) names the method used for new production. "One active method per item" is no longer the contract, so alternates are additive.
 - [ ] **Y2** Methods gain `output_quantity` (Quantity, default 1 stocking unit). Material quantities are per that much output.
 - [ ] **Y3** Order and invoice lines gain a nullable `discount` (Discount shape). `amount = quantity × unit_price − discount`.
-- [ ] **Y4** An order unit can carry its own `quantity` of stocking units for this item (e.g. a "Case" of 24 here, 12 elsewhere), overriding the unit's account-wide ratio. Order, PO and invoice lines snapshot `stocking_quantity`, so ratio edits never rewrite history.
+- [ ] **Y4** An order unit can carry its own `quantity` of stocking units for this item (e.g. a "Case" of 24 here, 12 elsewhere), overriding the unit's account-wide ratio. Order, PO and invoice lines snapshot `stocking_quantity`, so ratio edits never rewrite history. *(ITM2: `order_units[].quantity` is stored and used by pricing; the line snapshots are SO2/PO/AR1.)*
 - [x] **Y5** The `sales` section is allowed on any physical item type (`material`, `part`, `product`) and on `service`. `type` says what the item is; sourcing stays in method `supply` and planning. *(Dane: a material or part is sold only when it has a product row, created by sending `sales` and removed by `sales: null`.)*
 - [ ] **Y6** Operation `work_center` stays required; a `process` concept is additive later.
 - [ ] **Y7** Inventory movements record read-only `unit_cost` (UnitPrice) at the time of the movement.
@@ -1481,6 +1481,9 @@ Unit groups
 - Order-line unit pickers read the item's `order_units` + stocking unit and preselect `default_order_unit` (sales and purchase orders, receiving).
 - `customer_portal_visibility` → `portal_visibility`; pack discounts move from unit-group rows to `order_units[].discount` (typed, Money/decimal).
 - New UI: per-item order units, bulk "set order units" (job), and "change stocking unit" with convert/relabel (job).
+- Order line units: a line may use the item's stocking unit, which a product line group without it used to refuse. A list price's order-unit discount is now taken off after converting to the ordered unit (migrated values keep today's prices).
+- Bulk reconcile accepts the item's stocking unit and order units (was its category group's members); the error says "not one of this item's units".
+- Changing an item's category through the preview.9 change-category route re-derives its units from the new category's group (as before); a forge `category_id` update keeps the item's units.
 
 Item categories
 - `type` values `material_category | product_category` → `material | product`; list filter `type` → `types[]`.

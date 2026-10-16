@@ -238,7 +238,7 @@ JOIN product_line pl ON pl.id = fg.product_line_id
 JOIN quantity q_in ON q_in.id = il.quantity_id
 JOIN unit u_in ON u_in.id = q_in.unit_id
 LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
+LEFT JOIN unit bu_unit ON bu_unit.id = COALESCE(pb.stocking_unit_id, ug.base_unit_id)
 LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
 LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
 LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
@@ -843,7 +843,7 @@ LEFT JOIN quantity lt_q ON lt_q.id = m.lead_time_id
 LEFT JOIN unit lt_u ON lt_u.id = lt_q.unit_id
 JOIN item_category ic ON ic.id = it.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu ON bu.id = ug.base_unit_id
+JOIN unit bu ON bu.id = COALESCE(it.stocking_unit_id, ug.base_unit_id)
 WHERE it.account_id = sqlc.arg('owner_account_id')
   AND it.deleted_at IS NULL;
 

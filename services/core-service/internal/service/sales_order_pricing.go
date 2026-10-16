@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
 )
@@ -119,17 +120,15 @@ func resolveSalesOrderCreateLines(
 			return nil, tracing.Trace(span, apierror.NewFieldError("product_id", apierror.CodeInvalidFormat, "Product not found."))
 		}
 
-		// The quantity unit must belong to the product's unit group (the product line's group when present, else the item category's).
-		unitGroupID := product.CategoryUnitGroupID
-		if product.ProductLineUnitGroupID != nil && *product.ProductLineUnitGroupID != "" {
-			unitGroupID = *product.ProductLineUnitGroupID
+		// The quantity unit must be the item's stocking unit or one of its order units; customers can't use a hidden one.
+		units := bundle.ItemUnits[product.ItemID]
+		if !units.Allows(line.QuantityUnitID) {
+			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat,
+				"The unit must be the item's stocking unit or one of its order units."))
 		}
-		groupUnits, ok := bundle.UnitGroupUnits[unitGroupID]
-		if !ok {
-			return nil, tracing.Trace(span, apierror.NewValidationError("The product's unit group is not configured."))
-		}
-		if _, ok := groupUnits[line.QuantityUnitID]; !ok {
-			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat, "The unit is not valid for this product."))
+		if ou := units.OrderUnit(line.QuantityUnitID); !isInternalActor && ou != nil && ou.PortalVisibility == constants.CustomerPortalVisibilityHidden {
+			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat,
+				"The unit must be the item's stocking unit or one of its order units."))
 		}
 
 		// Unit price: internal override, else computed via the pricing algorithm.
@@ -190,42 +189,35 @@ func computeUnitPrice(
 
 	baseValue := parseDecimal(product.UnitValue)
 
-	// --- A. Unit-conversion discount for the ordered unit -------------------
-	// Group = product line's unit group when present, else the item category's.
-	unitGroupID := product.CategoryUnitGroupID
-	if product.ProductLineUnitGroupID != nil && *product.ProductLineUnitGroupID != "" {
-		unitGroupID = *product.ProductLineUnitGroupID
-	}
-
-	discounted := baseValue
-	if groupUnits, ok := bundle.UnitGroupUnits[unitGroupID]; ok {
-		if ugu, ok := groupUnits[orderedUnitID]; ok {
-			discountFixed := parseDecimal(ugu.DiscountFixed)
-			discountPct := parseDecimal(ugu.DiscountPercentage)
-			// (baseValue - discountFixed) * (1 - discountPercentage)
-			discounted = baseValue.Sub(discountFixed).Mul(decimal.NewFromInt(1).Sub(discountPct))
-		}
-	}
-
-	// --- B. Convert base -> ordered unit ------------------------------------
-	// factor = normalizeQuantity(1, orderedUnit) / normalizeQuantity(1, baseDenominatorUnit)
+	// --- A. Convert base -> ordered unit ------------------------------------
+	// factor = normalizeQuantity(1, orderedUnit) / normalizeQuantity(1, baseDenominatorUnit). An order unit that holds
+	// its own quantity of stocking units for this item measures that many stocking units instead of its ratio.
+	units := bundle.ItemUnits[product.ItemID]
+	orderUnit := units.OrderUnit(orderedUnitID)
 	baseDenomUnit := bundle.Units[product.UnitValueDenominatorUnitID]
 	orderedUnit := bundle.Units[orderedUnitID]
 
-	converted := discounted
+	converted := baseValue
 	denominatorUnitID := orderedUnitID
 	if orderedUnit != nil && baseDenomUnit != nil {
 		one := decimal.NewFromInt(1)
 		normOrdered := normalizeQuantity(one, orderedUnit)
+		if orderUnit != nil && orderUnit.StockingQuantity != nil && units != nil {
+			if stocking := bundle.Units[units.StockingUnitID]; stocking != nil {
+				normOrdered = normalizeQuantity(parseDecimal(*orderUnit.StockingQuantity), stocking)
+			}
+		}
 		normBase := normalizeQuantity(one, baseDenomUnit)
 		if !normBase.IsZero() {
-			factor := normOrdered.Div(normBase)
-			converted = discounted.Mul(factor)
+			converted = baseValue.Mul(normOrdered.Div(normBase))
 		}
 	} else if orderedUnit == nil {
 		// Ordered unit unknown: cannot convert; keep base denominator unit.
 		denominatorUnitID = product.UnitValueDenominatorUnitID
 	}
+
+	// --- B. The order unit's discount, off the converted price ---------------
+	converted = orderUnit.ApplyDiscount(converted)
 
 	// --- C. Volume discount multiplier --------------------------------------
 	final := converted

@@ -63,15 +63,26 @@ type CreateItemRequest struct {
 	Sales field.Optional[CreateItemSalesInput] `json:"sales,omitzero"`
 	// Purchasing details, for materials only.
 	Material field.Optional[CreateItemMaterialInput] `json:"material,omitzero"`
+	// ID of the unit the item's inventory, costs and usage are kept in.
+	//
+	// Required for materials, parts and products; a service is never stocked and takes none. To correct it later, use Change Stocking Unit.
+	StockingUnitID field.Optional[string] `json:"stocking_unit_id,omitzero"`
+	// ID of the unit selected by default when the item is added to an order: the stocking unit or one of `order_units`.
+	//
+	// Defaults to the stocking unit, or for a service to its first order unit.
+	DefaultOrderUnitID field.Optional[string] `json:"default_order_unit_id,omitzero"`
+	// Units the item can be ordered in besides its stocking unit, each measuring the stocking unit's dimension.
+	OrderUnits []ItemOrderUnitInput `json:"order_units,omitzero" validate:"omitempty,max=100,dive"`
 }
 
 var sampleCreateItemRequest = &CreateItemRequest{
-	Type:         constants.ItemTypeCodeProduct,
-	SKU:          apiresource.SampleItemSKU,
-	Description:  field.Some("6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"),
-	CategoryID:   apiresource.SampleItemCategoryID,
-	AttributeIDs: []string{apiresource.SampleAttributeID},
-	UnitCost:     field.Some(apirequest.UnitPriceInput{Amount: "112.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
+	Type:           constants.ItemTypeCodeProduct,
+	SKU:            apiresource.SampleItemSKU,
+	Description:    field.Some("6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"),
+	CategoryID:     apiresource.SampleItemCategoryID,
+	AttributeIDs:   []string{apiresource.SampleAttributeID},
+	StockingUnitID: field.Some(apiresource.SampleUnitID),
+	UnitCost:       field.Some(apirequest.UnitPriceInput{Amount: "112.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	Sales: field.Some(CreateItemSalesInput{
 		UnitPrice:        field.Some(apirequest.UnitPriceInput{Amount: "199.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 		ProductLineID:    field.Some(apiresource.SampleProductLineID),

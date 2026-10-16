@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -65,6 +67,9 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) UnitGroupSvc {
 }
 
 func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.export", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportUnitGroupsResponse, error) {
 			return m.coreClient.ExportUnitGroups(ctx, &pb.ExportUnitGroupsRequest{Query: req.Query}, opts...)
@@ -77,6 +82,9 @@ func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnit
 }
 
 func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListUnitGroupsRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
@@ -111,10 +119,16 @@ func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGrou
 }
 
 func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	return loadUnitGroupByID(ctx, req.UnitGroupID)
 }
 
 func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	associatedUnits := make([]*pb.CreateUnitGroupUnitParam, len(req.AssociatedUnits))
 	for i, au := range req.AssociatedUnits {
 		discountPct := "1"
@@ -158,6 +172,9 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 }
 
 func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpdateUnitGroupRequest{
 		Id:         req.UnitGroupID,
 		Name:       req.Name.Ptr(),
@@ -205,6 +222,9 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 }
 
 func (m *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, req *DeleteUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteUnitGroupRequest{
 		Id: req.UnitGroupID,
 	}
@@ -222,6 +242,9 @@ func (m *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, req *DeleteUnitG
 }
 
 func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	discountPct := "1"
 	if v, ok := req.DiscountPercentage.Value(); ok {
 		discountPct = strconv.FormatFloat(v, 'f', -1, 64)
@@ -256,6 +279,9 @@ func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateU
 }
 
 func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.UpsertUnitGroupUnitRequest{
 		UnitGroupId:     req.UnitGroupID,
 		UnitGroupUnitId: req.AssociatedUnitID,
@@ -287,6 +313,9 @@ func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateU
 }
 
 func (m *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.DeleteUnitGroupUnitRequest{
 		UnitGroupId:     req.UnitGroupID,
 		UnitGroupUnitId: req.AssociatedUnitID,
@@ -305,6 +334,9 @@ func (m *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, req *DeleteU
 }
 
 func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ListUnitGroupUnitsRequest{
 		UnitGroupId: req.UnitGroupID,
 	}
@@ -336,6 +368,9 @@ func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnit
 }
 
 func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	return loadUnitGroupUnitByID(ctx, req.UnitGroupUnitID)
 }
 
@@ -368,6 +403,9 @@ func loadUnitGroupUnitByID(ctx context.Context, id string) (*apiresource.UnitGro
 }
 
 func (m *unitGroupSvcImpl) BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, unitGroupsRemoved); apiErr != nil {
+		return nil, apiErr
+	}
 	unitGroups := make([]*pb.BulkUpsertUnitGroupInput, 0, len(req.UnitGroups))
 	for _, ug := range req.UnitGroups {
 		conversions := make([]*pb.BulkUpsertUnitGroupConversionInput, 0, len(ug.UnitConversions))

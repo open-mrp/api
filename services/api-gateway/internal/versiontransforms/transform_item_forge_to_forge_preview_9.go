@@ -26,7 +26,7 @@ func init() {
 const itemsRoute = "/v1/catalog/items"
 
 // preview9ItemDropped are the item fields preview.9 never had.
-var preview9ItemDropped = []string{"status", "supply", "sales", "material", "default_manufacturing_method"}
+var preview9ItemDropped = []string{"status", "supply", "sales", "material", "default_manufacturing_method", "stocking_unit", "default_order_unit", "order_units"}
 
 func (itemForgeToPreview9) Transform(_ object.Type, data map[string]any) map[string]any {
 	walkObjects(data, func(obj map[string]any) {

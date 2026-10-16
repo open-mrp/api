@@ -50,6 +50,10 @@ const (
 	ShipShipment BulkOperation = "ship_shipment"
 	// Merges customers into one — not a row batch; same {job_id} payload and consumer as pack.
 	MergeCustomers BulkOperation = "merge_customers"
+	// Replaces the order units of the items a filter matched.
+	SetItemOrderUnits BulkOperation = "set_item_order_units"
+	// Moves one item to a new stocking unit — not a row batch; same {job_id} payload and consumer.
+	ChangeItemStockingUnit BulkOperation = "change_item_stocking_unit"
 )
 
 // lists every registered bulk operation; the rabbitmq bindings declare a queue per entry
@@ -74,4 +78,6 @@ var BulkOperations = []BulkOperation{
 	PackPick,
 	ShipShipment,
 	MergeCustomers,
+	SetItemOrderUnits,
+	ChangeItemStockingUnit,
 }

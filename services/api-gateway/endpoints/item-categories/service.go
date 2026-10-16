@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -242,6 +244,9 @@ func (m *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, re
 }
 
 func (m *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	if apiErr := itemep.RequirePreview9(ctx, itemep.UnitGroupsRetired+" To move an item to another unit, use Change Stocking Unit."); apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.ChangeItemCategoryUnitGroupRequest{
 		Id:          req.ItemCategoryID,
 		UnitGroupId: req.UnitGroupID,

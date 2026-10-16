@@ -370,3 +370,14 @@ func carrierBillingTypeNull(t *constants.CarrierBillingType) gosql.NullString {
 	}
 	return gosql.NullString{String: string(*t), Valid: true}
 }
+
+func (r *supplierRepoImpl) AllocateNextNumber(ctx context.Context, sysPropertyID, ownerAccountID string) (int64, *apierror.APIError) {
+	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.allocate_next_number")
+	defer span.End()
+
+	number, apiErr := supplierNumbers(r.queries, ownerAccountID).next(ctx, sysPropertyID)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return number, nil
+}

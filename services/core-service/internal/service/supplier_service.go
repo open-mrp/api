@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -211,16 +212,30 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
 
+			// Every create takes a number, typed in or allocated, so it queues behind the owner's other number
+			// writers before anything else is read.
 			if apiErr := txSupplierRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
 				return apiErr
 			}
 
-			exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, params.Number, nil)
-			if apiErr != nil {
-				return apiErr
-			}
-			if exists {
-				return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
+			if params.Number != "" {
+				exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, params.Number, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if exists {
+					return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
+				}
+			} else {
+				sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				next, apiErr := txSupplierRepo.AllocateNextNumber(txCtx, sysPropertyID, params.OwnerAccountID)
+				if apiErr != nil {
+					return apiErr
+				}
+				params.Number = strconv.FormatInt(next, 10)
 			}
 
 			var refs customerRefs
@@ -524,8 +539,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	// Dashboard uses suppliers:update permission for single delete.
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionDelete); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -592,7 +606,6 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	// Dashboard uses suppliers:delete permission for bulk delete.
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionDelete); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

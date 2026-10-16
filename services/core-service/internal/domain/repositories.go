@@ -2006,6 +2006,8 @@ type SupplierRepo interface {
 	// LockNumbers holds the owner's supplier numbers until the transaction ends. Take it before the transaction's first read, then check ExistsByNumber.
 	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
+	// AllocateNextNumber reserves the owner's next supplier number, skipping any number a supplier already carries. Call it under LockNumbers.
+	AllocateNextNumber(ctx context.Context, sysPropertyID, ownerAccountID string) (int64, *apierror.APIError)
 	// FindByNames resolves supplier display names to supplier account IDs within the
 	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.
 	FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*SupplierNameMatch, *apierror.APIError)

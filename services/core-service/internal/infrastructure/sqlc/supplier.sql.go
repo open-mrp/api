@@ -12,6 +12,23 @@ import (
 	"time"
 )
 
+const allocateNextSupplierNumber = `-- name: AllocateNextSupplierNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'supplier_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextSupplierNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Reserves the owner's next supplier number and returns it via LAST_INSERT_ID. A series of its own, so suppliers and
+// customers never share numbers.
+func (q *Queries) AllocateNextSupplierNumber(ctx context.Context, arg AllocateNextSupplierNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextSupplierNumber, arg.ID, arg.AccountID)
+}
+
 const countSupplierMaterials = `-- name: CountSupplierMaterials :many
 SELECT smc.supplier_account_id, COUNT(*) AS material_count
 FROM supplier_material smc
@@ -340,6 +357,24 @@ func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSu
 	return i, err
 }
 
+const highestNumericSupplierNumber = `-- name: HighestNumericSupplierNumber :one
+SELECT CAST(COALESCE(MAX(CAST(external_number AS UNSIGNED)), 0) AS SIGNED) AS highest
+FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'supplier'
+AND external_number REGEXP '^0*[0-9]{1,10}$'
+AND CAST(external_number AS UNSIGNED) < 2147483647
+`
+
+// HighestNumericSupplierNumber is the highest all-digit supplier number the owner uses that the counter (an INT) could
+// also hand out. It is read only when the counter is created or turns out to be behind a number someone typed in.
+func (q *Queries) HighestNumericSupplierNumber(ctx context.Context, ownerAccountID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, highestNumericSupplierNumber, ownerAccountID)
+	var highest int64
+	err := row.Scan(&highest)
+	return highest, err
+}
+
 const insertSupplierAccount = `-- name: InsertSupplierAccount :exec
 INSERT INTO account (id, name, account_type_code, onboarding_status_code, default_billing_address_id, default_shipping_address_id, created_at, updated_at)
 VALUES (?, ?, 'company', 'unclaimed', ?, ?, NOW(3), NOW(3))
@@ -619,12 +654,36 @@ WHERE id = ?
 FOR UPDATE
 `
 
-// No unique index guards supplier numbers, so their writers queue on the owner's account row. Take it before the transaction's first read so the number check sees every earlier holder's commit.
+// Supplier number writers queue on the owner's account row, as customer numbers do. Take it before the transaction's first read so the number check sees every earlier holder's commit.
 func (q *Queries) LockSupplierNumbers(ctx context.Context, ownerAccountID string) (string, error) {
 	row := q.db.QueryRowContext(ctx, lockSupplierNumbers, ownerAccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const raiseSupplierNumberCounter = `-- name: RaiseSupplierNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'supplier_number', ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = GREATEST(value, ?), updated_at = NOW(3)
+`
+
+type RaiseSupplierNumberCounterParams struct {
+	ID        string
+	AccountID string
+	Value     int32
+}
+
+// RaiseSupplierNumberCounter moves the counter up to value, creating it there if the owner has none. It never moves
+// it down.
+func (q *Queries) RaiseSupplierNumberCounter(ctx context.Context, arg RaiseSupplierNumberCounterParams) error {
+	_, err := q.db.ExecContext(ctx, raiseSupplierNumberCounter,
+		arg.ID,
+		arg.AccountID,
+		arg.Value,
+		arg.Value,
+	)
+	return err
 }
 
 const supplierExistsByNumber = `-- name: SupplierExistsByNumber :one
@@ -651,6 +710,31 @@ func (q *Queries) SupplierExistsByNumber(ctx context.Context, arg SupplierExists
 	var supplier_exists bool
 	err := row.Scan(&supplier_exists)
 	return supplier_exists, err
+}
+
+const supplierNumberValueInUse = `-- name: SupplierNumberValueInUse :one
+SELECT EXISTS (
+    SELECT 1 FROM account_relation
+    WHERE owner_account_id = ?
+    AND account_relation_role_code = 'supplier'
+    AND (
+        external_number = ?
+        OR (external_number LIKE '0%' AND external_number REGEXP '^[0-9]+$' AND CAST(external_number AS UNSIGNED) = ?)
+    )
+) AS in_use
+`
+
+type SupplierNumberValueInUseParams struct {
+	OwnerAccountID string
+	Number         string
+	Value          string
+}
+
+func (q *Queries) SupplierNumberValueInUse(ctx context.Context, arg SupplierNumberValueInUseParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, supplierNumberValueInUse, arg.OwnerAccountID, arg.Number, arg.Value)
+	var in_use bool
+	err := row.Scan(&in_use)
+	return in_use, err
 }
 
 const updateSupplierRelation = `-- name: UpdateSupplierRelation :exec

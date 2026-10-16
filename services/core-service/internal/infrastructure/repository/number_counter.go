@@ -12,7 +12,7 @@ import (
 )
 
 // numberCounter hands out an account's next number in a series kept in sys_property: production runs,
-// customers.
+// customers, suppliers.
 //
 // The counter is authoritative. The usual allocation is one upsert, which holds the counter's row lock
 // until the transaction ends so concurrent allocators queue, and one point lookup confirming no record
@@ -127,6 +127,23 @@ func customerNumbers(q *sqlc.Queries, ownerAccountID string) numberCounter {
 		},
 		raise: func(ctx context.Context, sysPropertyID string, value int32) error {
 			return q.RaiseCustomerNumberCounter(ctx, sqlc.RaiseCustomerNumberCounterParams{ID: sysPropertyID, AccountID: ownerAccountID, Value: value})
+		},
+	}
+}
+
+func supplierNumbers(q *sqlc.Queries, ownerAccountID string) numberCounter {
+	return numberCounter{
+		allocate: func(ctx context.Context, sysPropertyID string) (sql.Result, error) {
+			return q.AllocateNextSupplierNumber(ctx, sqlc.AllocateNextSupplierNumberParams{ID: sysPropertyID, AccountID: ownerAccountID})
+		},
+		inUse: func(ctx context.Context, number string) (bool, error) {
+			return q.SupplierNumberValueInUse(ctx, sqlc.SupplierNumberValueInUseParams{OwnerAccountID: ownerAccountID, Number: number, Value: number})
+		},
+		highest: func(ctx context.Context) (int64, error) {
+			return q.HighestNumericSupplierNumber(ctx, ownerAccountID)
+		},
+		raise: func(ctx context.Context, sysPropertyID string, value int32) error {
+			return q.RaiseSupplierNumberCounter(ctx, sqlc.RaiseSupplierNumberCounterParams{ID: sysPropertyID, AccountID: ownerAccountID, Value: value})
 		},
 	}
 }

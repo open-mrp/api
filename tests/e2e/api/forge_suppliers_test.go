@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -249,6 +250,41 @@ func TestForgeSuppliers_DeleteReturnsStubAndRefusesInUse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 409, status, "%s", body)
 	assert.Contains(t, jsonField(requireErrorResponse(t, body, "resource_in_use", "invalid_request_error"), "message"), "supplier items")
+}
+
+func TestForgeSuppliers_NumberIsAssignedWhenOmitted(t *testing.T) {
+	t.Parallel()
+
+	first := createAndCleanup(t, suppliersPath, map[string]any{"name": uniqueName("e2e-fs-auto")})
+	n, err := strconv.Atoi(jsonField(first, "number"))
+	require.NoError(t, err, "an assigned supplier number is numeric: %v", first)
+	second := createAndCleanup(t, suppliersPath, map[string]any{"name": uniqueName("e2e-fs-auto")})
+	m, err := strconv.Atoi(jsonField(second, "number"))
+	require.NoError(t, err)
+	assert.Greater(t, m, n, "each omitted number takes the next one")
+
+	status, body, err := apiClient.Post(suppliersPath, map[string]any{"name": uniqueName("e2e-fs-auto-dup"), "number": jsonField(first, "number")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireErrorParam(t, 409, status, body, "number")
+}
+
+func TestForgeSuppliers_DeleteNeedsTheDeletePermission(t *testing.T) {
+	t.Parallel()
+
+	supplierID := jsonField(forgeSupplier(t, "e2e-fs-del-perm", nil), "id")
+	updaterRole := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-sup-updater"), "permissions": []string{"suppliers:read", "suppliers:update"}})
+	updater := roleScopedClient(t, jsonField(updaterRole, "id"))
+	status, body, err := updater.Delete(suppliersPath + "/" + supplierID)
+	require.NoError(t, err)
+	assert.Equal(t, 403, status, "suppliers:update alone cannot delete a supplier: %s", body)
+	forgeSupplierRead(t, supplierID)
+
+	deleterRole := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-sup-deleter"), "permissions": []string{"suppliers:read", "suppliers:delete"}})
+	deleter := roleScopedClient(t, jsonField(deleterRole, "id"))
+	status, body, err = deleter.Delete(suppliersPath + "/" + supplierID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{"id": supplierID, "object": "supplier", "deleted": true}, parseJSON(body))
 }
 
 func TestForgeSuppliers_ListFilters(t *testing.T) {

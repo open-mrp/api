@@ -108,10 +108,10 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplier
 func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.CreateSupplierRequest{
 		Name:         req.Name,
-		Number:       req.Number,
 		Instructions: req.Instructions.Ptr(),
 		Includes:     resourceloaders.SupplierCoreIncludes(ctx),
 	}
+	pbReq.Number, _ = req.Number.Value()
 	if v, ok := req.Status.Value(); ok {
 		status := string(v)
 		pbReq.Status = &status

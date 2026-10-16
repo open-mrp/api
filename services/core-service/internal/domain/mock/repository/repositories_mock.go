@@ -20703,6 +20703,21 @@ func (m *MockSupplierRepo) EXPECT() *MockSupplierRepoMockRecorder {
 	return m.recorder
 }
 
+// AllocateNextNumber mocks base method.
+func (m *MockSupplierRepo) AllocateNextNumber(ctx context.Context, sysPropertyID, ownerAccountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllocateNextNumber", ctx, sysPropertyID, ownerAccountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AllocateNextNumber indicates an expected call of AllocateNextNumber.
+func (mr *MockSupplierRepoMockRecorder) AllocateNextNumber(ctx, sysPropertyID, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateNextNumber", reflect.TypeOf((*MockSupplierRepo)(nil).AllocateNextNumber), ctx, sysPropertyID, ownerAccountID)
+}
+
 // Create mocks base method.
 func (m *MockSupplierRepo) Create(ctx context.Context, accountID, relationID string, params domain.CreateSupplierParams, billToAddressID, shipToAddressID *string) (*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()

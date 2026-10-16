@@ -188,6 +188,12 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.NotificationPreferencesEndpointGroup{}).Materialize(&httpgroup.NotificationPreferencesEndpointGroupConfig{
 			NotificationClient: notificationClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.NotificationDefaultsEndpointGroup{}).Materialize(&httpgroup.NotificationDefaultsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.SubscriptionsEndpointGroup{}).Materialize(&httpgroup.SubscriptionsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.MessagingContactsEndpointGroup{}).Materialize(&httpgroup.MessagingContactsEndpointGroupConfig{
 			NotificationClient: notificationClient,
 		}).APIEndpointGroup,

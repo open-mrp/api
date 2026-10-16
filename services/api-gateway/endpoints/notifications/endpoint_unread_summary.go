@@ -29,7 +29,6 @@ func (e *UnreadSummaryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadSu
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeNotificationUnreadSummary,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

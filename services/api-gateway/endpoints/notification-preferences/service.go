@@ -2,6 +2,7 @@ package notificationpreferenceep
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -21,6 +23,8 @@ import (
 type NotificationPreferenceSvc interface {
 	ListNotificationPreferences(ctx context.Context, req *ListNotificationPreferencesRequest) (*apiresource.List[apiresource.NotificationPreference], *apierror.APIError)
 	UpsertNotificationPreference(ctx context.Context, req *UpsertNotificationPreferenceRequest) (*apiresource.NotificationPreference, *apierror.APIError)
+	GetNotificationPreferences(ctx context.Context, req *RetrieveNotificationPreferencesRequest) (*apiresource.NotificationPreferences, *apierror.APIError)
+	UpdateNotificationPreferences(ctx context.Context, req *UpdateNotificationPreferencesRequest) (*apiresource.NotificationPreferences, *apierror.APIError)
 }
 
 type NotificationPreferenceSvcConfig struct {
@@ -88,6 +92,49 @@ func (s *notificationPreferenceSvcImpl) UpsertNotificationPreference(ctx context
 	}
 	result := notificationPreferenceFromProto(resp)
 	return &result, nil
+}
+
+func (s *notificationPreferenceSvcImpl) GetNotificationPreferences(ctx context.Context, _ *RetrieveNotificationPreferencesRequest) (*apiresource.NotificationPreferences, *apierror.APIError) {
+	resp, rpcErr := grpcutil.CallRPC(ctx, notificationPreferenceSvcTracer, "service.notification_preferences.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.NotificationPreferencesInfo, error) {
+			return s.messagingClient.GetNotificationPreferences(ctx, &pb.GetNotificationPreferencesRequest{}, opts...)
+		})
+	if rpcErr != nil {
+		return nil, rpcErr
+	}
+	return preferencesFromProto(resp), nil
+}
+
+func (s *notificationPreferenceSvcImpl) UpdateNotificationPreferences(ctx context.Context, req *UpdateNotificationPreferencesRequest) (*apiresource.NotificationPreferences, *apierror.APIError) {
+	patch, apiErr := req.SettingsPatch().ToPatch("")
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	patchJSON, err := json.Marshal(patch)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to encode the preferences.")
+	}
+	pbReq := &pb.UpdateNotificationPreferencesRequest{PatchJson: patchJSON, PausedUntilSet: req.PausedUntil.WasProvided()}
+	if t, ok := req.PausedUntil.Value(); ok {
+		pbReq.PausedUntil = timestamppb.New(t)
+	}
+	resp, rpcErr := grpcutil.CallRPC(ctx, notificationPreferenceSvcTracer, "service.notification_preferences.update", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.NotificationPreferencesInfo, error) {
+			return s.messagingClient.UpdateNotificationPreferences(ctx, pbReq, opts...)
+		})
+	if rpcErr != nil {
+		return nil, rpcErr
+	}
+	return preferencesFromProto(resp), nil
+}
+
+func preferencesFromProto(p *pb.NotificationPreferencesInfo) *apiresource.NotificationPreferences {
+	var paused *time.Time
+	if p.PausedUntil != nil {
+		t := p.PausedUntil.AsTime()
+		paused = &t
+	}
+	return apiresource.NotificationPreferencesOf(notifyprefs.Parse(p.SettingsJson), paused)
 }
 
 func notificationPreferenceFromProto(p *pb.NotificationPreferenceInfo) apiresource.NotificationPreference {

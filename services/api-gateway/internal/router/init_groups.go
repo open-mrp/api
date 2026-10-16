@@ -822,13 +822,19 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 			registry.RegisterGroup(messageBlocksGroup.APIEndpointGroup)
 		}
 
-		// Notification preferences (per-category channel toggles)
+		// Notification preferences, account notification defaults and record subscriptions
 		notificationPreferencesGroup := (&httpgroup.NotificationPreferencesEndpointGroup{}).Materialize(&httpgroup.NotificationPreferencesEndpointGroupConfig{
 			NotificationClient: config.NotificationClient,
 		})
 		if notificationPreferencesGroup != nil {
 			registry.RegisterGroup(notificationPreferencesGroup.APIEndpointGroup)
 		}
+		registry.RegisterGroup((&httpgroup.NotificationDefaultsEndpointGroup{}).Materialize(&httpgroup.NotificationDefaultsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		}).APIEndpointGroup)
+		registry.RegisterGroup((&httpgroup.SubscriptionsEndpointGroup{}).Materialize(&httpgroup.SubscriptionsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		}).APIEndpointGroup)
 
 		// Messaging contacts (the messaging directory)
 		messagingContactsGroup := (&httpgroup.MessagingContactsEndpointGroup{}).Materialize(&httpgroup.MessagingContactsEndpointGroupConfig{

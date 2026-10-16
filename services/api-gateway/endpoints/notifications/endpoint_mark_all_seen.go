@@ -28,7 +28,6 @@ func (e *MarkAllSeenEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkAllSee
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MarkAllSeenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(NotificationSvc).MarkAllSeen

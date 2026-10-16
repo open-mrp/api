@@ -29,7 +29,6 @@ func (e *UnreadCountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadCoun
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeNotificationUnreadCount,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

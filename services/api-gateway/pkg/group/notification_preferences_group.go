@@ -36,11 +36,13 @@ func (*NotificationPreferencesEndpointGroup) Materialize(config *NotificationPre
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Notification Preferences",
-		Description:  "Manage per-category notification channel preferences (in-app, email, push).",
-		ResourceType: &apiresource.NotificationPreference{},
+		Description:  "Where your notifications go: a default, settings per notification type, automatic subscription and pausing.",
+		ResourceType: &apiresource.NotificationPreferences{},
 	}
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
+		apiendpoint.From(&notificationpreferenceep.RetrieveNotificationPreferencesEndpoint{}).WithService(inner, preferenceSvc),
+		apiendpoint.From(&notificationpreferenceep.UpdateNotificationPreferencesEndpoint{}).WithService(inner, preferenceSvc),
 		apiendpoint.From(&notificationpreferenceep.ListNotificationPreferencesEndpoint{}).WithService(inner, preferenceSvc),
 		apiendpoint.From(&notificationpreferenceep.UpsertNotificationPreferenceEndpoint{}).WithService(inner, preferenceSvc),
 	}

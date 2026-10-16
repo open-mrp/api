@@ -37,7 +37,7 @@ func newRouter(cfg *BaseConfig) *router {
 		TrustedProxyHops: cfg.TrustedProxyHops,
 		SkipPaths:        []string{"/healthz"},
 		MaxBodyBytes:     omrpctx.MaxLoggedBodyBytes,
-	})(gatewaymw.RequestedVersion(versiontransforms.RoutePreview9Jobs(versiontransforms.RoutePreview9Identity(versiontransforms.RoutePreview9Settings(versiontransforms.RoutePreview9Messaging(versiontransforms.RoutePreview9WorkCenters(versiontransforms.RoutePreview9Addresses(versiontransforms.RoutePreview9Analytics(versiontransforms.RoutePreview9PackList(versiontransforms.RoutePreview9Inventory(versiontransforms.Preview9ItemListActiveOnly(r.Router))))))))))))
+	})(gatewaymw.RequestedVersion(versiontransforms.RoutePreview9Jobs(versiontransforms.RoutePreview9Identity(versiontransforms.RoutePreview9Settings(versiontransforms.RoutePreview9NotificationPreferences(versiontransforms.RoutePreview9Messaging(versiontransforms.RoutePreview9WorkCenters(versiontransforms.RoutePreview9Addresses(versiontransforms.RoutePreview9Analytics(versiontransforms.RoutePreview9PackList(versiontransforms.RoutePreview9Inventory(versiontransforms.Preview9ItemListActiveOnly(r.Router)))))))))))))
 	return r
 }
 

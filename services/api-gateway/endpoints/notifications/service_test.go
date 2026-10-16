@@ -2,9 +2,12 @@ package notificationep
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"testing"
 	"time"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -83,7 +86,7 @@ func TestNotificationFromProto_FullMapping(t *testing.T) {
 
 	assert.Equal(t, "nf_abc", n.ID)
 	assert.Equal(t, constants.ObjectTypeNotification, n.Object)
-	assert.Equal(t, constants.NotificationCategory("order.updated"), n.Category)
+	assert.Equal(t, constants.NotificationCategory("order.updated"), n.Type)
 	assert.Equal(t, constants.NotificationStatusSeen, n.Status)
 	assert.Equal(t, constants.NotificationPriority("high"), n.Priority)
 	assert.Equal(t, "Order updated", n.Title)
@@ -95,10 +98,14 @@ func TestNotificationFromProto_FullMapping(t *testing.T) {
 	assert.Nil(t, n.DismissedAt)
 	assert.True(t, created.Equal(n.CreatedAt))
 	assert.True(t, updated.Equal(n.UpdatedAt))
-	require.NotNil(t, n.ChangeCount)
-	assert.Equal(t, int64(5), *n.ChangeCount)
+	assert.Equal(t, int64(5), n.Occurrences)
+	require.NotNil(t, n.Related)
+	assert.Nil(t, n.Related.Record, "related.record is expandable")
+	ref, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, "nf_abc", chatmap.MetaRelatedRecord)
+	require.True(t, ok)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeSalesOrder, ID: "so_1024"}, ref)
 
-	// The link is expandable: nil on the base resource, stashed for ?include=resource as a
+	// preview.9's link is expandable: nil on the base resource, stashed for ?include=resource as a
 	// polymorphic Entity reference.
 	assert.Nil(t, n.Resource, "resource is expandable and must be nil on the base resource")
 	res := stashedResource(ctx, "nf_abc")
@@ -173,6 +180,7 @@ func TestNotificationFromProto_NilsAndEmpties(t *testing.T) {
 	n := notificationFromProto(ctx, info)
 
 	assert.Equal(t, constants.NotificationStatusUnseen, n.Status)
+	assert.Equal(t, int64(1), n.Occurrences, "a notification stands for one event unless it counts more")
 	assert.Nil(t, n.Body)
 	assert.Nil(t, n.Resource)
 	assert.Nil(t, stashedResource(ctx, "nf_x"), "no link → nothing stashed (not a partial Entity)")
@@ -194,6 +202,20 @@ func TestNotificationFromProto_PartialLinkIgnored(t *testing.T) {
 	n := notificationFromProto(ctx, info)
 	assert.Nil(t, n.Resource)
 	assert.Nil(t, stashedResource(ctx, "nf_x"), "a link type without an id must not produce a partial Entity")
+}
+
+func TestNotificationFromProto_SupportCaseLinksItsConversation(t *testing.T) {
+	info := &pb.NotificationInfo{
+		Id: "nf_case", Category: "chat.message", Title: "t", Priority: "normal",
+		LinkResourceType: strptr("support_case"), LinkResourceId: strptr("cv_1"),
+		CreatedAt: timestamppb.Now(), UpdatedAt: timestamppb.Now(),
+	}
+	ctx := include.WithLoadMeta(context.Background())
+	notificationFromProto(ctx, info)
+	ref, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, "nf_case", chatmap.MetaRelatedRecord)
+	require.True(t, ok)
+	assert.Equal(t, recordstub.Ref{Type: constants.RecordTypeConversation, ID: "cv_1"}, ref)
+	assert.Equal(t, constants.ObjectTypeSupportCase, stashedResource(ctx, "nf_case").Type, "preview.9 still reads support_case")
 }
 
 func TestNotificationFromProto_Nil(t *testing.T) {

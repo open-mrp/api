@@ -13,6 +13,7 @@ var routeSegmentToSampleID = map[string]string{
 	"machine-downtime-events":      apiresource.SampleMachineDowntimeEventID,
 	"demand-overrides":             apiresource.SampleDemandOverrideID,
 	"notes":                        apiresource.SampleNoteID,
+	"subscriptions":                apiresource.SampleSubscriptionID,
 	"price-lists":                  apiresource.SamplePriceListID,
 	"rules":                        apiresource.SamplePriceListRuleID,
 	"manufacturing-methods":        apiresource.SampleManufacturingMethodID,

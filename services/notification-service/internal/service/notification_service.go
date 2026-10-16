@@ -233,6 +233,7 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 		SentByID:     data.SentByID,
 		Subject:      new(data.Subject),
 		Filename:     data.Filename,
+		Related:      data.Related,
 		SesMessageID: new(data.SesMessageID),
 		Recipients:   data.To,
 	}
@@ -280,6 +281,7 @@ func (s *notificationSvcImpl) LogFailedEmail(ctx context.Context, messageID stri
 		SentByID:     data.SentByID,
 		Subject:      new(data.Subject),
 		Filename:     data.Filename,
+		Related:      data.Related,
 		SesMessageID: &placeholderID,
 		Recipients:   data.To,
 	}

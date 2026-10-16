@@ -21,6 +21,7 @@ var documentEmailTracer = tracing.GetTracer("core-service.service.document_email
 // needs — a ship mails the customer and the sales rep from one render.
 type invoiceEmail struct {
 	accountID  string
+	invoiceID  string
 	subject    string
 	params     map[string]any
 	replyTo    string
@@ -70,6 +71,7 @@ func buildInvoiceEmail(ctx context.Context, repos domain.RepoFactory, branding B
 
 	out := &invoiceEmail{
 		accountID: accountID,
+		invoiceID: invoiceID,
 		subject:   fmt.Sprintf("Invoice %s", textutil.FormatRecordNumber(invoice.Number)),
 		params:    params,
 		replyTo:   doc.Header.AccountEmail,
@@ -92,6 +94,7 @@ func (e *invoiceEmail) addressedTo(recipients []string) messaging.EmailSendData 
 		TemplateID: constants.EmailTemplateInvoice,
 		Params:     e.params,
 		AccountID:  &e.accountID,
+		Related:    &messaging.EmailRelated{Type: constants.RecordTypeInvoice, ID: e.invoiceID},
 	}
 	applyMerchantReplyTo(&data, e.replyTo)
 
@@ -261,6 +264,7 @@ func buildPurchaseOrderSubmissionEmail(ctx context.Context, repos domain.RepoFac
 		TemplateID: constants.EmailTemplatePurchaseOrderSubmission,
 		Params:     doc.emailParams(),
 		AccountID:  &accountID,
+		Related:    &messaging.EmailRelated{Type: constants.RecordTypePurchaseOrder, ID: purchaseOrderID},
 	}
 	applyMerchantReplyTo(emailData, doc.Header.AccountEmail)
 

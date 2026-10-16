@@ -27,6 +27,7 @@ type Account struct {
 	InternalStripeSubscriptionID sql.NullString
 	SubscriptionStatus           sql.NullString
 	SubscriptionCurrentPeriodEnd sql.NullTime
+	DefaultSiteID                sql.NullString
 }
 
 type AccountAddress struct {
@@ -312,6 +313,9 @@ type AccountRelation struct {
 	CarrierBillingType       sql.NullString
 	CreditLimitAmount        sql.NullString
 	CreditLimitCurrency      sql.NullString
+	Instructions             sql.NullString
+	SupplyCode               sql.NullString
+	IsActive                 bool
 }
 
 type AccountRelationNotificationPreference struct {
@@ -832,6 +836,8 @@ type EmailLog struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+	RelatedType  sql.NullString
+	RelatedID    sql.NullString
 }
 
 type EmailMessage struct {
@@ -1177,6 +1183,7 @@ type ItemCategory struct {
 	AccountID            sql.NullString
 	ItemCategoryTypeCode string
 	UnitGroupID          string
+	DefaultLotSizeID     sql.NullString
 }
 
 type ItemCategoryType struct {
@@ -1687,11 +1694,13 @@ type ProductLine struct {
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 	AccountID             sql.NullString
-	UnitGroupID           string
 	IsCommissionExempt    bool
 	IsFreightExempt       bool
 	DefaultLotID          sql.NullString
 	FulfillmentPolicyCode sql.NullString
+	IsActive              bool
+	SupplyCode            sql.NullString
+	UnitGroupID           sql.NullString
 }
 
 type ProductLineTarget struct {
@@ -2190,6 +2199,7 @@ type RequestLog struct {
 	IdentityType         sql.NullString
 	ActorType            sql.NullString
 	PayloadKey           sql.NullString
+	QueryParams          json.RawMessage
 }
 
 type Role struct {
@@ -2532,6 +2542,7 @@ type StorageLocation struct {
 	ParentID                sql.NullString
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	IsActive                bool
 }
 
 type StorageLocationType struct {

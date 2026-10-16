@@ -12,8 +12,8 @@ import (
 )
 
 const createEmailLog = `-- name: CreateEmailLog :exec
-INSERT INTO email_log (id, has_sent, account_id, sent_by_id, subject, filename, ses_message_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO email_log (id, has_sent, account_id, sent_by_id, subject, filename, ses_message_id, related_type, related_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateEmailLogParams struct {
@@ -24,6 +24,8 @@ type CreateEmailLogParams struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+	RelatedType  sql.NullString
+	RelatedID    sql.NullString
 }
 
 func (q *Queries) CreateEmailLog(ctx context.Context, arg CreateEmailLogParams) error {
@@ -35,6 +37,8 @@ func (q *Queries) CreateEmailLog(ctx context.Context, arg CreateEmailLogParams) 
 		arg.Subject,
 		arg.Filename,
 		arg.SesMessageID,
+		arg.RelatedType,
+		arg.RelatedID,
 	)
 	return err
 }

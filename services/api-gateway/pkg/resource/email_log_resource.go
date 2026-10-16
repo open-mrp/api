@@ -29,10 +29,10 @@ type EmailLog struct {
 	Subject *string `json:"subject"`
 	// Filename of the document attached to the email.
 	Filename *string `json:"filename"`
-	// The user or API key that sent the email.
-	//
-	// Emails the platform sends automatically, such as system notifications, are not attributed to an actor.
-	SentBy *Actor `json:"sent_by" expandable:"true"`
+	// Who sent the email. Emails the platform sends on its own, such as system notifications, are sent by `system`.
+	SentBy *ActorRef `json:"sent_by" validate:"required"`
+	// The record the email carried, such as the invoice it attached. Emails logged before forge.1 have none.
+	Related *EmailLogRelated `json:"related" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -49,9 +49,21 @@ var SampleEmailLog = &EmailLog{
 	Recipients: []string{"customer@example.com"},
 	Subject:    &sampleEmailLogSubject,
 	Filename:   &sampleEmailLogFilename,
-	SentBy:     SampleActor,
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	SentBy:     SampleActorRef,
+	Related: &EmailLogRelated{
+		Object: constants.ObjectTypeEmailLogRelated,
+		Record: &Record{ID: SampleInvoiceID, Object: constants.ObjectTypeRecord, Type: constants.RecordTypeInvoice, Number: new("INV-1001"), Status: new("open"), Metadata: map[string]string{}},
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+// The record an email carried, as a lightweight reference. Retrieve the record by its ID for full details.
+type EmailLogRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=email_log_related"`
+	// The record the email carried: the invoice it attached, the order it acknowledged, or the customer a statement was for.
+	Record *Record `json:"record" expandable:"true"`
 }
 
 func (*EmailLog) SchemaExample() any {

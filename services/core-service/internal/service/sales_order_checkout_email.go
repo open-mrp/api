@@ -75,6 +75,7 @@ func buildOrderCheckoutEmail(ctx context.Context, repos domain.RepoFactory, bran
 		TemplateID: constants.EmailTemplateOrderCheckout,
 		Params:     data.checkoutEmailParams(checkoutURL),
 		AccountID:  &accountID,
+		Related:    &messaging.EmailRelated{Type: constants.RecordTypeSalesOrder, ID: order.ID},
 	}
 	applyMerchantReplyTo(emailData, data.AccountEmail)
 	return emailData

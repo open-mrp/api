@@ -93,41 +93,56 @@ func mapEmailLogRow(
 	return el
 }
 
-func mapForwardEmailLogRow(row sqlc.ListEmailLogsForwardRow) *domain.EmailLog {
-	return mapEmailLogRow(
-		row.ID, row.HasSent,
-		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
-		row.SentByName, row.SentByUsername, row.SentByEmail,
-		row.SentByApiKeyID, row.SentByApiKeyName,
-		row.CreatedAt, row.UpdatedAt,
-	)
-}
-
-func mapBackwardEmailLogRow(row sqlc.ListEmailLogsBackwardRow) *domain.EmailLog {
-	return mapEmailLogRow(
-		row.ID, row.HasSent,
-		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
-		row.SentByName, row.SentByUsername, row.SentByEmail,
-		row.SentByApiKeyID, row.SentByApiKeyName,
-		row.CreatedAt, row.UpdatedAt,
-	)
-}
-
 func mapGetEmailLogRow(row sqlc.GetEmailLogRow) *domain.EmailLog {
-	return mapEmailLogRow(
+	el := mapEmailLogRow(
 		row.ID, row.HasSent,
 		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
 		row.SentByName, row.SentByUsername, row.SentByEmail,
 		row.SentByApiKeyID, row.SentByApiKeyName,
 		row.CreatedAt, row.UpdatedAt,
 	)
+	el.RelatedType, el.RelatedID = db.StringFromNullString(row.RelatedType), db.StringFromNullString(row.RelatedID)
+	return el
 }
 
-func buildEmailLogSearchParams(query *string) gosql.NullString {
-	if query == nil || *query == "" {
-		return gosql.NullString{}
+func (r *emailLogRepoImpl) List(ctx context.Context, params domain.ListEmailLogsParams) (*domain.ListEmailLogsResult, *apierror.APIError) {
+	ctx, span := emailLogRepoTracer.Start(ctx, "repository.email_log.list")
+	defer span.End()
+
+	var cursorDir *pagination.Direction
+	var cursorCreatedAt gosql.NullTime
+	var cursorID gosql.NullString
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
+		}
+		cursorDir = &cur.Direction
+		cursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		cursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
-	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
+	dir := pagination.DirectionForward
+	if cursorDir != nil {
+		dir = *cursorDir
+	}
+
+	page := buildEmailLogListPage(params, dir, cursorCreatedAt, cursorID, params.Limit+1)
+	query, args := buildEmailLogListQuery(page, dir)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer rows.Close()
+	emailLogs, err := scanEmailLogListRows(rows)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	result, pageInfo := pagination.BuildPageString(emailLogs, params.Limit, cursorDir, emailLogCreatedAt, emailLogID)
+	if apiErr := r.enrichWithRecipients(ctx, result); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return &domain.ListEmailLogsResult{EmailLogs: result, PageInfo: pageInfo}, nil
 }
 
 func (r *emailLogRepoImpl) fetchRecipients(ctx context.Context, emailLogID string) ([]string, *apierror.APIError) {
@@ -149,85 +164,6 @@ func (r *emailLogRepoImpl) enrichWithRecipients(ctx context.Context, emailLogs [
 		el.Recipients = recipients
 	}
 	return nil
-}
-
-func (r *emailLogRepoImpl) List(ctx context.Context, params domain.ListEmailLogsParams) (*domain.ListEmailLogsResult, *apierror.APIError) {
-	ctx, span := emailLogRepoTracer.Start(ctx, "repository.email_log.list")
-	defer span.End()
-
-	searchQuery := buildEmailLogSearchParams(params.Query)
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListEmailLogsBackward(ctx, sqlc.ListEmailLogsBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			emailLogs := make([]*domain.EmailLog, len(rows))
-			for i, row := range rows {
-				emailLogs[i] = mapBackwardEmailLogRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(emailLogs, params.Limit, cursorDir, emailLogCreatedAt, emailLogID)
-			if apiErr := r.enrichWithRecipients(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			return &domain.ListEmailLogsResult{EmailLogs: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListEmailLogsForward(ctx, sqlc.ListEmailLogsForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		emailLogs := make([]*domain.EmailLog, len(rows))
-		for i, row := range rows {
-			emailLogs[i] = mapForwardEmailLogRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(emailLogs, params.Limit, cursorDir, emailLogCreatedAt, emailLogID)
-		if apiErr := r.enrichWithRecipients(ctx, result); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return &domain.ListEmailLogsResult{EmailLogs: result, PageInfo: pageInfo}, nil
-	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListEmailLogsForward(ctx, sqlc.ListEmailLogsForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	emailLogs := make([]*domain.EmailLog, len(rows))
-	for i, row := range rows {
-		emailLogs[i] = mapForwardEmailLogRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(emailLogs, params.Limit, cursorDir, emailLogCreatedAt, emailLogID)
-	if apiErr := r.enrichWithRecipients(ctx, result); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return &domain.ListEmailLogsResult{EmailLogs: result, PageInfo: pageInfo}, nil
 }
 
 func (r *emailLogRepoImpl) Get(ctx context.Context, params domain.GetEmailLogParams) (*domain.EmailLog, *apierror.APIError) {

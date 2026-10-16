@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -23,6 +24,8 @@ func emailLogToProto(el *domain.EmailLog) *pb.EmailLogInfo {
 		SesMessageId: el.SESMessageID,
 		CreatedAt:    timestamppb.New(el.CreatedAt),
 		UpdatedAt:    timestamppb.New(el.UpdatedAt),
+		RelatedType:  el.RelatedType,
+		RelatedId:    el.RelatedID,
 	}
 
 	if el.SentBy != nil {
@@ -37,16 +40,37 @@ func emailLogToProto(el *domain.EmailLog) *pb.EmailLogInfo {
 	return info
 }
 
+// hasSentFilter is the send statuses as a has_sent filter: nil when they name both or neither.
+func hasSentFilter(statuses []string) *bool {
+	var sent, pending bool
+	for _, s := range statuses {
+		switch constants.EmailSendStatus(s) {
+		case constants.EmailSendStatusSent:
+			sent = true
+		case constants.EmailSendStatusPending:
+			pending = true
+		}
+	}
+	if sent == pending {
+		return nil
+	}
+	return &sent
+}
+
 func (h *gRPCHandler) ListEmailLogs(ctx context.Context, req *pb.ListEmailLogsRequest) (*pb.ListEmailLogsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
 	params := domain.ListEmailLogsParams{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: req.Includes,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Query:         req.Query,
+		Includes:      req.Includes,
+		HasSent:       hasSentFilter(req.SendStatuses),
+		CreatedAfter:  timestampPtr(req.CreatedAfter),
+		CreatedBefore: timestampPtr(req.CreatedBefore),
+		RelatedIDs:    req.RelatedIds,
 	}
 
 	result, apiErr := h.emailLogSvc.ListEmailLogs(ctx, params)

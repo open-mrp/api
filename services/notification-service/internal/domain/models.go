@@ -13,6 +13,8 @@ type EmailLog struct {
 	Subject      *string
 	Filename     *string
 	SesMessageID *string
+	// Related is the record the email carried, or nil.
+	Related *EmailRelated
 	// Recipients are the addresses the email was sent to, persisted as email_recipient rows. The list view reads and searches these, so a log written without them shows a blank recipients column.
 	Recipients []string
 	CreatedAt  time.Time

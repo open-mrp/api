@@ -2000,7 +2000,7 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 
 	// The sales rep is notified on every ship, independent of email_customer (legacy postShipActions
 	// always emails the rep); the customer receives it only when asked.
-	if apiErr := s.emailSalesRepOnShip(txCtx, shipment, doc, attachment); apiErr != nil {
+	if apiErr := s.emailSalesRepOnShip(txCtx, shipment, invoiceID, doc, attachment); apiErr != nil {
 		return apiErr
 	}
 	if emailCustomer {
@@ -2064,7 +2064,7 @@ func (s *shipmentSvcImpl) emailCustomerInvoiceOnShip(txCtx context.Context, ship
 	if apiErr != nil {
 		return apiErr
 	}
-	if apiErr := s.publishInvoiceEmail(txCtx, accountID, shipment, doc, recipients, attachment); apiErr != nil {
+	if apiErr := s.publishInvoiceEmail(txCtx, accountID, shipment, invoiceID, doc, recipients, attachment); apiErr != nil {
 		return apiErr
 	}
 	if len(recipients) == 0 {
@@ -2075,7 +2075,7 @@ func (s *shipmentSvcImpl) emailCustomerInvoiceOnShip(txCtx context.Context, ship
 
 // Notifies the order's sales rep of the shipment's invoice. Never flags the invoice sent — that
 // tracks whether the customer received it, and the rep copy is an internal notification.
-func (s *shipmentSvcImpl) emailSalesRepOnShip(txCtx context.Context, shipment *domain.Shipment, doc invoiceDoc, attachment *string) *apierror.APIError {
+func (s *shipmentSvcImpl) emailSalesRepOnShip(txCtx context.Context, shipment *domain.Shipment, invoiceID string, doc invoiceDoc, attachment *string) *apierror.APIError {
 	email, apiErr := s.repos.NewSalesOrderRepo().GetSalesRepEmail(txCtx, shipment.AccountID, shipment.SalesOrderID)
 	if apiErr != nil {
 		return apiErr
@@ -2083,12 +2083,12 @@ func (s *shipmentSvcImpl) emailSalesRepOnShip(txCtx context.Context, shipment *d
 	if email == nil {
 		return nil
 	}
-	return s.publishInvoiceEmail(txCtx, shipment.AccountID, shipment, doc, []string{*email}, attachment)
+	return s.publishInvoiceEmail(txCtx, shipment.AccountID, shipment, invoiceID, doc, []string{*email}, attachment)
 }
 
 // Stages an invoice email in the outbox, atomically with the invoice it bills. No-op on an empty
 // recipient list. The send itself is async, so a downstream email failure never fails the ship.
-func (s *shipmentSvcImpl) publishInvoiceEmail(txCtx context.Context, accountID string, shipment *domain.Shipment, doc invoiceDoc, recipients []string, attachment *string) *apierror.APIError {
+func (s *shipmentSvcImpl) publishInvoiceEmail(txCtx context.Context, accountID string, shipment *domain.Shipment, invoiceID string, doc invoiceDoc, recipients []string, attachment *string) *apierror.APIError {
 	if s.notificationPub == nil || len(recipients) == 0 {
 		return nil
 	}
@@ -2114,6 +2114,7 @@ func (s *shipmentSvcImpl) publishInvoiceEmail(txCtx context.Context, accountID s
 		TemplateID: constants.EmailTemplateInvoice,
 		Params:     params,
 		AccountID:  &accountID,
+		Related:    &messaging.EmailRelated{Type: constants.RecordTypeInvoice, ID: invoiceID},
 	}
 	if attachment != nil {
 		filename := fmt.Sprintf("invoice-%s.pdf", invoiceNumber)

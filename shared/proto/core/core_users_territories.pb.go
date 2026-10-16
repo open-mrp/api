@@ -3260,16 +3260,19 @@ func (x *EmailLogActor) GetHandle() string {
 }
 
 type EmailLogInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	HasSent       bool                   `protobuf:"varint,2,opt,name=has_sent,json=hasSent,proto3" json:"has_sent,omitempty"`
-	Recipients    []string               `protobuf:"bytes,3,rep,name=recipients,proto3" json:"recipients,omitempty"`
-	Subject       *string                `protobuf:"bytes,4,opt,name=subject,proto3,oneof" json:"subject,omitempty"`
-	Filename      *string                `protobuf:"bytes,5,opt,name=filename,proto3,oneof" json:"filename,omitempty"`
-	SesMessageId  *string                `protobuf:"bytes,6,opt,name=ses_message_id,json=sesMessageId,proto3,oneof" json:"ses_message_id,omitempty"`
-	SentBy        *EmailLogActor         `protobuf:"bytes,7,opt,name=sent_by,json=sentBy,proto3,oneof" json:"sent_by,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	HasSent      bool                   `protobuf:"varint,2,opt,name=has_sent,json=hasSent,proto3" json:"has_sent,omitempty"`
+	Recipients   []string               `protobuf:"bytes,3,rep,name=recipients,proto3" json:"recipients,omitempty"`
+	Subject      *string                `protobuf:"bytes,4,opt,name=subject,proto3,oneof" json:"subject,omitempty"`
+	Filename     *string                `protobuf:"bytes,5,opt,name=filename,proto3,oneof" json:"filename,omitempty"`
+	SesMessageId *string                `protobuf:"bytes,6,opt,name=ses_message_id,json=sesMessageId,proto3,oneof" json:"ses_message_id,omitempty"`
+	SentBy       *EmailLogActor         `protobuf:"bytes,7,opt,name=sent_by,json=sentBy,proto3,oneof" json:"sent_by,omitempty"`
+	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// The record the email carried (a constants.RecordType and its id); unset on emails logged before it was recorded.
+	RelatedType   *string `protobuf:"bytes,11,opt,name=related_type,json=relatedType,proto3,oneof" json:"related_type,omitempty"`
+	RelatedId     *string `protobuf:"bytes,12,opt,name=related_id,json=relatedId,proto3,oneof" json:"related_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3367,12 +3370,31 @@ func (x *EmailLogInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *EmailLogInfo) GetRelatedType() string {
+	if x != nil && x.RelatedType != nil {
+		return *x.RelatedType
+	}
+	return ""
+}
+
+func (x *EmailLogInfo) GetRelatedId() string {
+	if x != nil && x.RelatedId != nil {
+		return *x.RelatedId
+	}
+	return ""
+}
+
 type ListEmailLogsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Cursor   *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit    int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query    *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
+	// sent | pending.
+	SendStatuses  []string               `protobuf:"bytes,5,rep,name=send_statuses,json=sendStatuses,proto3" json:"send_statuses,omitempty"`
+	CreatedAfter  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_after,json=createdAfter,proto3,oneof" json:"created_after,omitempty"`
+	CreatedBefore *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_before,json=createdBefore,proto3,oneof" json:"created_before,omitempty"`
+	RelatedIds    []string               `protobuf:"bytes,8,rep,name=related_ids,json=relatedIds,proto3" json:"related_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3431,6 +3453,34 @@ func (x *ListEmailLogsRequest) GetQuery() string {
 func (x *ListEmailLogsRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListEmailLogsRequest) GetSendStatuses() []string {
+	if x != nil {
+		return x.SendStatuses
+	}
+	return nil
+}
+
+func (x *ListEmailLogsRequest) GetCreatedAfter() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAfter
+	}
+	return nil
+}
+
+func (x *ListEmailLogsRequest) GetCreatedBefore() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedBefore
+	}
+	return nil
+}
+
+func (x *ListEmailLogsRequest) GetRelatedIds() []string {
+	if x != nil {
+		return x.RelatedIds
 	}
 	return nil
 }
@@ -5593,7 +5643,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
 	"\x06handle\x18\x04 \x01(\tH\x01R\x06handle\x88\x01\x01B\a\n" +
 	"\x05_nameB\t\n" +
-	"\a_handle\"\xab\x03\n" +
+	"\a_handle\"\x97\x04\n" +
 	"\fEmailLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bhas_sent\x18\x02 \x01(\bR\ahasSent\x12\x1e\n" +
@@ -5608,20 +5658,32 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12&\n" +
+	"\frelated_type\x18\v \x01(\tH\x04R\vrelatedType\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"related_id\x18\f \x01(\tH\x05R\trelatedId\x88\x01\x01B\n" +
 	"\n" +
 	"\b_subjectB\v\n" +
 	"\t_filenameB\x11\n" +
 	"\x0f_ses_message_idB\n" +
 	"\n" +
-	"\b_sent_byJ\x04\b\b\x10\t\"\x95\x01\n" +
+	"\b_sent_byB\x0f\n" +
+	"\r_related_typeB\r\n" +
+	"\v_related_idJ\x04\b\b\x10\t\"\x8e\x03\n" +
 	"\x14ListEmailLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\x12#\n" +
+	"\rsend_statuses\x18\x05 \x03(\tR\fsendStatuses\x12D\n" +
+	"\rcreated_after\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\fcreatedAfter\x88\x01\x01\x12F\n" +
+	"\x0ecreated_before\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x03R\rcreatedBefore\x88\x01\x01\x12\x1f\n" +
+	"\vrelated_ids\x18\b \x03(\tR\n" +
+	"relatedIdsB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"w\n" +
+	"\x06_queryB\x10\n" +
+	"\x0e_created_afterB\x11\n" +
+	"\x0f_created_before\"w\n" +
 	"\x15ListEmailLogsResponse\x121\n" +
 	"\n" +
 	"email_logs\x18\x01 \x03(\v2\x12.core.EmailLogInfoR\temailLogs\x12+\n" +
@@ -5999,55 +6061,57 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	51, // 48: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
 	76, // 49: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
 	76, // 50: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	52, // 51: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
-	77, // 52: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
-	52, // 53: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
-	76, // 54: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 55: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	76, // 56: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
-	76, // 57: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
-	76, // 58: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
-	76, // 59: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
-	76, // 60: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
-	76, // 61: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
-	76, // 62: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	76, // 63: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	76, // 64: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 65: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	57, // 66: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	77, // 67: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
-	57, // 68: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	76, // 69: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 70: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	57, // 71: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	76, // 72: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 73: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
-	81, // 74: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
-	76, // 75: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	76, // 76: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
-	74, // 77: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
-	77, // 78: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
-	74, // 79: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 80: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	82, // 81: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
-	85, // 82: core.UpdateInvoiceRequest.metadata:type_name -> core.MetadataPatch
-	74, // 83: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 84: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	86, // 85: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	77, // 86: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	84, // 87: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
-	87, // 88: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	88, // 89: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	76, // 90: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 91: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	89, // 92: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
-	90, // 93: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
-	75, // 94: core.InvoiceInfo.metadata:type_name -> core.InvoiceInfo.MetadataEntry
-	95, // [95:95] is the sub-list for method output_type
-	95, // [95:95] is the sub-list for method input_type
-	95, // [95:95] is the sub-list for extension type_name
-	95, // [95:95] is the sub-list for extension extendee
-	0,  // [0:95] is the sub-list for field type_name
+	76, // 51: core.ListEmailLogsRequest.created_after:type_name -> google.protobuf.Timestamp
+	76, // 52: core.ListEmailLogsRequest.created_before:type_name -> google.protobuf.Timestamp
+	52, // 53: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
+	77, // 54: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
+	52, // 55: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
+	76, // 56: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 57: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 58: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
+	76, // 59: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 60: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
+	76, // 61: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 62: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
+	76, // 63: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 64: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	76, // 65: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 66: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 67: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	57, // 68: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	77, // 69: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	57, // 70: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
+	76, // 71: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 72: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	57, // 73: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	76, // 74: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 75: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
+	81, // 76: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
+	76, // 77: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 78: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	74, // 79: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
+	77, // 80: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	74, // 81: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	84, // 82: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	82, // 83: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
+	85, // 84: core.UpdateInvoiceRequest.metadata:type_name -> core.MetadataPatch
+	74, // 85: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	84, // 86: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	86, // 87: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	77, // 88: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	84, // 89: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
+	87, // 90: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	88, // 91: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	76, // 92: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 93: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	89, // 94: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
+	90, // 95: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
+	75, // 96: core.InvoiceInfo.metadata:type_name -> core.InvoiceInfo.MetadataEntry
+	97, // [97:97] is the sub-list for method output_type
+	97, // [97:97] is the sub-list for method input_type
+	97, // [97:97] is the sub-list for extension type_name
+	97, // [97:97] is the sub-list for extension extendee
+	0,  // [0:97] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }

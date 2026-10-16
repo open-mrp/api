@@ -23,8 +23,11 @@ type EmailLog struct {
 	Filename     *string
 	SESMessageID *string
 	SentBy       *EmailLogActor
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// RelatedType and RelatedID name the record the email carried; empty on emails logged before it was recorded.
+	RelatedType *string
+	RelatedID   *string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ListEmailLogsParams struct {
@@ -32,7 +35,12 @@ type ListEmailLogsParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
-	Includes  []string
+	// HasSent filters by whether the email was handed off; nil for both.
+	HasSent       *bool
+	CreatedAfter  *time.Time
+	CreatedBefore *time.Time
+	RelatedIDs    []string
+	Includes      []string
 }
 
 type ListEmailLogsResult struct {

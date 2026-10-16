@@ -20,8 +20,10 @@ import (
 // A filter the server silently ignores still answers 200 with a full page, so every filter case
 // pairs a positive match against a value that must narrow the list to nothing.
 
-// inventoryChangeLogsExportPath is the forge export that replaced the change logs' own; it writes the same file.
-const inventoryChangeLogsExportPath = "/v1/operations/inventory-movements/actions/export"
+const inventoryChangeLogsExportPath = inventoryChangeLogsPath + "/actions/export"
+
+// movementsExportPath is the forge export that replaced the change logs' own; it writes the same file.
+const movementsExportPath = "/v1/operations/inventory-movements/actions/export"
 
 // Collects the ids the change-log list returns under the given filters.
 func inventoryChangeLogIDsFiltered(t *testing.T, params url.Values) []string {

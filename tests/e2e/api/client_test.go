@@ -97,7 +97,7 @@ func (c *Client) applyAuth(req *http.Request) {
 	}
 	req.Header.Set("OpenMRP-Account", c.accountID)
 	version := c.apiVersion
-	if !c.exactVersion {
+	if !c.exactVersion && !(req.Method == http.MethodGet && isItemInventoryPath(req.URL.Path)) {
 		version = requestVersion(c.apiVersion, req.URL.Path)
 	}
 	req.Header.Set("OpenMRP-Version", version)
@@ -126,15 +126,21 @@ func requestVersion(version, path string) string {
 	return version
 }
 
-// isRetiredItemInventoryPath reports whether path is an item's /inventory or /lot-default, whose preview.9 shapes the
-// older inventory tests assert. forge tests reach /inventory through an exact-version client.
+// isRetiredItemInventoryPath reports whether path is an item's /inventory (whose PATCH only preview.9 answers; its GET
+// is forge's inventory level, which applyAuth leaves on the client's version) or its /lot-default.
 func isRetiredItemInventoryPath(path string) bool {
+	return isItemSubPath(path, "inventory") || isItemSubPath(path, "lot-default")
+}
+
+func isItemInventoryPath(path string) bool { return isItemSubPath(path, "inventory") }
+
+func isItemSubPath(path, sub string) bool {
 	rest, ok := strings.CutPrefix(path, "/v1/catalog/items/")
 	if !ok {
 		return false
 	}
 	id, suffix, ok := strings.Cut(rest, "/")
-	return ok && id != "" && (suffix == "inventory" || suffix == "lot-default")
+	return ok && id != "" && suffix == sub
 }
 
 // isSupplierMaterialsPath reports whether path is under /v1/operations/suppliers/{id}/materials, which supplier items

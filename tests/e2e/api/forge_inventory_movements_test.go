@@ -45,7 +45,7 @@ func adjustBody(itemID, value string) map[string]any {
 // itemLevel reads an item's inventory level on forge.
 func itemLevel(t *testing.T, itemID string, params url.Values) map[string]any {
 	t.Helper()
-	status, raw, err := apiClient.Exact().GetListRaw(itemsPath+"/"+itemID+"/inventory", params)
+	status, raw, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", params)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	return parseJSON(raw)
@@ -400,7 +400,7 @@ func TestInventoryLevels_List(t *testing.T) {
 	})
 	t.Run("services have no level", func(t *testing.T) {
 		service := createForgeItem(t, itemsPath, forgeItemBody("service", uniqueName("e2e-lvl-svc")))
-		status, raw, err := apiClient.Exact().GetListRaw(itemsPath+"/"+jsonField(service, "id")+"/inventory", nil)
+		status, raw, err := apiClient.GetListRaw(itemsPath+"/"+jsonField(service, "id")+"/inventory", nil)
 		require.NoError(t, err)
 		requireStatus(t, 404, status, raw)
 	})

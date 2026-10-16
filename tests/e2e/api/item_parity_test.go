@@ -361,7 +361,7 @@ func TestItemParity_JSONBodyOverTheCapIs413(t *testing.T) {
 		limit      string
 	}{
 		{"default cap", itemsPath, padded(`{"type":"material","sku":"e2e-too-large","category_id":"`+SeedMaterialCategoryID+`"`, (1<<20)+16), "1 MB"},
-		{"bulk cap", bulkReconcilePath, padded(`{"reconcile_type":"force","data":[]`, (8<<20)+16), "8 MB"},
+		{"bulk cap", movementsPath + "/actions/bulk-create", padded(`{"operation":"reconcile","movements":[]`, (8<<20)+16), "8 MB"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

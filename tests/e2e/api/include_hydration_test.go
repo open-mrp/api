@@ -135,7 +135,7 @@ func TestItemCosts_UnitsAreResolvedWithoutAnInclude(t *testing.T) {
 func TestItemInventory_ExpandedFiguresCarryTheirUnit(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Exact().GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "item inventory must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -151,7 +151,7 @@ func TestItemInventory_ExpandedFiguresCarryTheirUnit(t *testing.T) {
 func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
+	status, body, err := apiClient.WithAPIVersion(preview9Version).GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

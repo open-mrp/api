@@ -25,7 +25,7 @@ func assertQuantityInfoShape(t *testing.T, qi map[string]any, label string) {
 
 func TestItemInventory_Get_ResponseShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Exact().GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{"include": {"item"}})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{"include": {"item"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -42,7 +42,7 @@ func TestItemInventory_Get_ResponseShape(t *testing.T) {
 func TestItemInventory_Get_NotFound(t *testing.T) {
 	t.Parallel()
 	fakeID := "it_01zzzzzzzzzzzzzzzzzzzzzzz"
-	status, _, err := apiClient.Exact().GetListRaw(itemsPath+"/"+fakeID+"/inventory", nil)
+	status, _, err := apiClient.GetListRaw(itemsPath+"/"+fakeID+"/inventory", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, status, "unknown item id should return 404 for inventory")
 }

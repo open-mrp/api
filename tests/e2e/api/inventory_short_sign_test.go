@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"net/url"
 	"strconv"
 	"testing"
 
@@ -85,9 +84,7 @@ func seedCrossUnitAllocatedIssue(t *testing.T) {
 // inventoryMeasure reads one figure off the item inventory endpoint as a number.
 func inventoryMeasure(t *testing.T, itemID, field string) float64 {
 	t.Helper()
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{
-		"include": {"on_hand,reserved,available_to_promise,short"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

@@ -495,7 +495,8 @@ func TestDashItems_InventoryFiguresAreNullWithoutInclude(t *testing.T) {
 	t.Parallel()
 	itemID := dashItemsMaterial(t, uniqueName("e2e-dashitems-invnull"))
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
+	preview9 := apiClient.WithAPIVersion(preview9Version)
+	status, body, err := preview9.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	got := parseJSON(body)
@@ -504,7 +505,7 @@ func TestDashItems_InventoryFiguresAreNullWithoutInclude(t *testing.T) {
 		assertNilField(t, got, field)
 	}
 
-	status, body, err = apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand,bogus"}})
+	status, body, err = preview9.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand,bogus"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireRetiredRouteError(t, body, "parameter_invalid")
@@ -608,10 +609,8 @@ func TestDashItems_InventoryRejectsInvalidFields(t *testing.T) {
 		{"missing unit", "missing_field", map[string]any{"quantity": map[string]any{"value": "1"}}},
 	} {
 		status, body := dashItemsPatchInventory(t, apiClient, itemID, tc.body)
-		assertClientRejection(t, status, body, "%s: %s", tc.name, string(body))
-		if status == 400 {
-			requireRetiredRouteError(t, body, "")
-		}
+		assert.Contains(t, []int{400, 422}, status, "%s: %s", tc.name, string(body))
+		requireRetiredRouteError(t, body, "")
 	}
 	dashItemsAssertUnchanged(t, itemID, "0", 0)
 }
@@ -742,7 +741,7 @@ func TestDashItems_InventoryReadOnlyRoleCannotAdjust(t *testing.T) {
 		requireStatus(t, 200, status, body)
 		assert.Contains(t, string(body), itemID, "GET %s", path)
 	}
-	status, body, err := reader.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand"}})
+	status, body, err := reader.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

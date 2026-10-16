@@ -62,7 +62,7 @@ func bulkReconcile(t *testing.T, rows []map[string]any, reconcileType string) ma
 func onHandValue(t *testing.T, itemID string) string {
 	t.Helper()
 
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", url.Values{"include": {"on_hand"}})
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+itemID+"/inventory", nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "item inventory must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)

@@ -75,6 +75,10 @@ func streamInventoryChangeLogExportRows(
 		ChangedByUserIDs: filters.ChangedByUserIDs,
 		StartDate:        filters.StartDate,
 		EndDate:          filters.EndDate,
+		Types:            filters.Types,
+		ActorIDs:         filters.ActorIDs,
+		ActorTypes:       filters.ActorTypes,
+		LocationIDs:      filters.LocationIDs,
 	}
 	for {
 		page, apiErr := logs.List(ctx, params)

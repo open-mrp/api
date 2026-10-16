@@ -115,7 +115,7 @@ func TestInventoryChangeLogExport_WithoutAWindowExportsAnItemsWholeHistory(t *te
 	t.Parallel()
 	_, itemID := changeLogExportItem(t)
 
-	resp, err := apiClient.DoFull(http.MethodPost, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+	resp, err := apiClient.DoFull(http.MethodPost, movementsExportPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, resp.StatusCode, resp.Body)
 	accepted := parseJSON(resp.Body)
@@ -167,7 +167,7 @@ func TestInventoryChangeLogExport_NamesTheFileForItsWindow(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			filename, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, tc.filters))
+			filename, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, tc.filters))
 			assert.Equal(t, tc.filename, filename)
 			want := listedChangeLogCells(t, tc.listed)
 			require.Len(t, want, tc.rows)
@@ -181,7 +181,7 @@ func TestInventoryChangeLogExport_WithNoFiltersCoversTheWholeAccount(t *testing.
 	t.Parallel()
 	sku, itemID := changeLogExportItem(t)
 
-	filename, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, nil))
+	filename, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, nil))
 	assert.Equal(t, "inventory-change-logs-all-all.xlsx", filename)
 
 	head := listedChangeLogCells(t, url.Values{"limit": {"2"}})
@@ -227,7 +227,7 @@ func TestInventoryChangeLogExport_AppliesEachFilter(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			_, rows := exportedChangeLogRows(t, completedExportJob(t, inventoryChangeLogsExportPath, tc.filters))
+			_, rows := exportedChangeLogRows(t, completedExportJob(t, movementsExportPath, tc.filters))
 			assertChangeLogRows(t, listedChangeLogCells(t, tc.listed), rows)
 		})
 	}
@@ -248,7 +248,7 @@ func TestInventoryChangeLogExport_RejectsInvalidFilters(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			status, body, err := apiClient.Post(inventoryChangeLogsExportPath, tc.body, newIdempotencyKey())
+			status, body, err := apiClient.Post(movementsExportPath, tc.body, newIdempotencyKey())
 			require.NoError(t, err)
 			requireClientRejection(t, status, body)
 			errObj := requireErrorResponse(t, body, "", "invalid_request_error")
@@ -266,10 +266,10 @@ func TestInventoryChangeLogExport_SameKeyReplaysTheSameJob(t *testing.T) {
 	key := newIdempotencyKey()
 	body := map[string]any{"item_ids": []string{SeedInventoryChangeLogItemID}}
 
-	status, first, err := apiClient.Post(inventoryChangeLogsExportPath, body, key)
+	status, first, err := apiClient.Post(movementsExportPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, status, first)
-	status, second, err := apiClient.Post(inventoryChangeLogsExportPath, body, key)
+	status, second, err := apiClient.Post(movementsExportPath, body, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, status, second)
 
@@ -281,7 +281,7 @@ func TestInventoryChangeLogExport_SameKeyReplaysTheSameJob(t *testing.T) {
 func TestInventoryChangeLogExport_RequiresAuthentication(t *testing.T) {
 	t.Parallel()
 	anon := apiClient.WithBearerToken("", SeedAccountID)
-	status, body, err := anon.Post(inventoryChangeLogsExportPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := anon.Post(movementsExportPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusUnauthorized, status, body)
 }
@@ -291,7 +291,7 @@ func TestInventoryChangeLogExport_RefusesARoleWithoutInventoryLogsRead(t *testin
 	t.Parallel()
 
 	refused := customRoleClient(t, "items:read", "jobs:read")
-	status, body, err := refused.Post(inventoryChangeLogsExportPath, map[string]any{}, newIdempotencyKey())
+	status, body, err := refused.Post(movementsExportPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusForbidden, status, body)
 	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
@@ -299,7 +299,7 @@ func TestInventoryChangeLogExport_RefusesARoleWithoutInventoryLogsRead(t *testin
 
 	_, itemID := changeLogExportItem(t)
 	holder := customRoleClient(t, "inventory_logs:read", "jobs:read")
-	job := completedExportJobAs(t, holder, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	job := completedExportJobAs(t, holder, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	_, rows := exportedChangeLogRows(t, job)
 	assertChangeLogRows(t, listedChangeLogCells(t, url.Values{"item_ids": {itemID}}), rows)
 }
@@ -312,14 +312,14 @@ func TestInventoryChangeLogExport_TenantsExportAndReadOnlyTheirOwn(t *testing.T)
 	_, itemID := changeLogExportItem(t)
 	tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
 
-	jobB := completedExportJobAs(t, tenantB, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	jobB := completedExportJobAs(t, tenantB, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	var accountID string
 	require.NoError(t, authDB(t).QueryRow("SELECT account_id FROM job WHERE job_id = ?", jsonField(jobB, "id")).Scan(&accountID))
 	assert.Equal(t, SeedTenantBAccountID, accountID, "tenant B's export is recorded against tenant B")
 	_, rows := exportedChangeLogRows(t, jobB)
 	assert.Empty(t, rows, "tenant A's item has no history in tenant B's log")
 
-	jobA := completedExportJob(t, inventoryChangeLogsExportPath, map[string]any{"item_ids": []string{itemID}})
+	jobA := completedExportJob(t, movementsExportPath, map[string]any{"item_ids": []string{itemID}})
 	_, rows = exportedChangeLogRows(t, jobA)
 	assert.Len(t, rows, 3, "tenant A's own export holds the item's history")
 

@@ -34,7 +34,7 @@ func reconcileTestLookups() *reconcileLookups {
 			// A built-in each and an account's own "EA": neither is in the yarn group.
 			"ea": {{ID: recEach, Abbreviation: "ea"}, {ID: recAcctEA, Abbreviation: "EA"}},
 		},
-		groupUnits: map[string]map[string]bool{recGroupID: {recPound: true, recGrain: true}},
+		itemUnits: map[string]map[string]bool{recItemID: {recPound: true, recGrain: true}},
 		factors: map[string]domain.UnitFactors{
 			recPound: {RatioNum: decimal.RequireFromString("45359237"), RatioDen: decimal.RequireFromString("100000"), DimensionCode: "mass"},
 			recGrain: {RatioNum: decimal.RequireFromString("6479891"), RatioDen: decimal.RequireFromString("100000000"), DimensionCode: "mass"},
@@ -67,7 +67,7 @@ func TestPlanBulkReconcile_ConvertsTheRowIntoTheBaseUnit(t *testing.T) {
 
 // Only the item's unit group says how its units relate, so a unit outside it is an error even when
 // it measures the same dimension, and a count unit against a mass item certainly is.
-func TestPlanBulkReconcile_UnitOutsideTheGroupIsAnErrorRow(t *testing.T) {
+func TestPlanBulkReconcile_UnitNotTheItemsIsAnErrorRow(t *testing.T) {
 	t.Parallel()
 
 	rows, result := planBulkReconcile([]domain.BulkReconcileItemInput{
@@ -86,8 +86,8 @@ func TestPlanBulkReconcile_UnitOutsideTheGroupIsAnErrorRow(t *testing.T) {
 		assert.Equal(t, recItemID, e.ItemID, "an error names the item its row resolved to")
 		assert.Equal(t, "YARN", e.SKU)
 	}
-	assert.Contains(t, result.Errors[0].Error, "not in this item's unit group")
-	assert.Contains(t, result.Errors[1].Error, "not in this item's unit group")
+	assert.Contains(t, result.Errors[0].Error, "not one of this item's units")
+	assert.Contains(t, result.Errors[1].Error, "not one of this item's units")
 	assert.Contains(t, result.Errors[2].Error, "not found")
 }
 
@@ -96,7 +96,7 @@ func TestPlanBulkReconcile_PicksTheGroupMemberAmongSameAbbreviationUnits(t *test
 	t.Parallel()
 
 	lookups := reconcileTestLookups()
-	lookups.groupUnits[recGroupID][recAcctEA] = true
+	lookups.itemUnits[recItemID][recAcctEA] = true
 	lookups.factors[recAcctEA] = domain.UnitFactors{RatioNum: decimal.NewFromInt(453), RatioDen: decimal.NewFromInt(1), DimensionCode: "mass"}
 
 	rows, result := planBulkReconcile([]domain.BulkReconcileItemInput{reconcileInput("YARN", "ea", "1")}, lookups)

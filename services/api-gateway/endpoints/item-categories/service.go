@@ -116,9 +116,6 @@ func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *Retrieve
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
-	if apiErr := itemep.RejectPreview9Field(ctx, req.UnitGroupID.IsSet(), "unit_group_id", itemep.UnitGroupsRetired); apiErr != nil {
-		return nil, apiErr
-	}
 	unitGroupID, _ := req.UnitGroupID.Value()
 	pbReq := &pb.CreateItemCategoryRequest{
 		Name:        req.Name,
@@ -288,9 +285,6 @@ func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req 
 			PropertyNames: ic.PropertyNames,
 		}
 		if ug, ok := ic.UnitGroup.Value(); ok {
-			if apiErr := itemep.RejectPreview9Field(ctx, true, fmt.Sprintf("item_categories[%d].unit_group", i), itemep.UnitGroupsRetired); apiErr != nil {
-				return nil, apiErr
-			}
 			inputs[i].UnitGroup = apirequest.ObjectIdentifierToProto(ug)
 		}
 	}

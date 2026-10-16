@@ -256,13 +256,5 @@ func orderUnitListToProto(f field.Optional[[]ItemOrderUnitInput]) *pb.ItemOrderU
 	return &pb.ItemOrderUnitList{Values: orderUnitsToProto(v)}
 }
 
-// RejectPreview9Field refuses a request field 1.0.forge removed when anyone but a 1.0.forge-preview.9 caller sends it.
-func RejectPreview9Field(ctx context.Context, sent bool, param, replacement string) *apierror.APIError {
-	if !sent || resourceloaders.IsPreview9(ctx) {
-		return nil
-	}
-	return apierror.NewParameterUnknownError(param, param+" was removed in 1.0.forge. "+replacement)
-}
-
 // UnitGroupsRetired says what replaced unit groups, for a request that still names one.
 const UnitGroupsRetired = "Unit groups were retired: each item names its own `stocking_unit` and `order_units`."

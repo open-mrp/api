@@ -240,12 +240,12 @@ func TestCovCatalogItemCategories_ChangeUnitGroupRepeatCallIdempotent(t *testing
 	// Sellable Socks unit group — same type (quantity) as SeedUnitGroupID (Socks).
 	sameTypeUnitGroupID := "ungp_1gf7a8200f8x8jjpq5a9kdrhd"
 
-	status1, body1, err := apiClient.Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
+	status1, body1, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 
 	// Repeating the same PUT should succeed identically with no error on the second call.
-	status2, body2, err := apiClient.Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
+	status2, body2, err := apiClient.WithAPIVersion(preview9Version).Put(itemCategoriesPath+"/"+id+"/unit-groups/"+sameTypeUnitGroupID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, body2)
 

@@ -204,7 +204,7 @@ func TestItemParity_BulkReconcileUnitOutsideTheItemsGroupIsAnErrorRow(t *testing
 		resp := bulkReconcile(t, []map[string]any{{"sku": sku, "unit": unit, "quantity": "4"}}, "force")
 		errs := errorRows(resp)
 		require.Contains(t, errs, sku, "%s is outside the yarn group: %v", unit, resp)
-		assert.Contains(t, errs[sku], "not in this item's unit group")
+		assert.Contains(t, errs[sku], "not one of this item's units")
 		assert.Empty(t, jsonListData(resp, "reconciled_items"))
 	}
 	assert.Empty(t, ledgerRows(t, itemID, "inventory_receipt"), "an errored row writes nothing")
@@ -248,7 +248,7 @@ func TestItemParity_BulkReconcileReportsEveryRowOnce(t *testing.T) {
 	errs := errorRows(resp)
 	require.Len(t, errs, 2, "%v", resp)
 	assert.Contains(t, errs[badUnit], "not found")
-	assert.Contains(t, errs[wrongGroup], "not in this item's unit group")
+	assert.Contains(t, errs[wrongGroup], "not one of this item's units")
 
 	assertExactDecimal(t, "2.25", readInventory(t, poundsItem).onHand.String())
 	assertExactDecimal(t, "2", readInventory(t, grainsItem).onHand.String())

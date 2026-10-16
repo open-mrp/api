@@ -39,8 +39,8 @@ type reconcileLookups struct {
 	itemsBySKU map[string]domain.ItemSKUInfo
 	// unitsByAbbreviation is keyed by lower-cased abbreviation: an account may define a unit sharing a built-in's.
 	unitsByAbbreviation map[string][]*domain.Unit
-	// groupUnits is each unit group's members, its base unit included.
-	groupUnits map[string]map[string]bool
+	// itemUnits is each item's stocking unit and order units, keyed by item id.
+	itemUnits map[string]map[string]bool
 	factors    map[string]domain.UnitFactors
 }
 
@@ -147,17 +147,14 @@ func (s *itemSvcImpl) loadReconcileLookups(ctx context.Context, accountID string
 	lookups := &reconcileLookups{
 		itemsBySKU:          make(map[string]domain.ItemSKUInfo, len(items)),
 		unitsByAbbreviation: make(map[string][]*domain.Unit, len(units)),
-		groupUnits:          make(map[string]map[string]bool),
+		itemUnits:           make(map[string]map[string]bool),
 	}
 	unitIDs := make([]string, 0, len(units)+len(items))
-	groupIDs := make([]string, 0, len(items))
+	itemIDs := make([]string, 0, len(items))
 	for _, item := range items {
 		lookups.itemsBySKU[item.SKU] = item
-		if lookups.groupUnits[item.UnitGroupID] == nil {
-			lookups.groupUnits[item.UnitGroupID] = map[string]bool{}
-			groupIDs = append(groupIDs, item.UnitGroupID)
-		}
-		lookups.groupUnits[item.UnitGroupID][item.BaseUnitID] = true
+		lookups.itemUnits[item.ItemID] = map[string]bool{item.BaseUnitID: true}
+		itemIDs = append(itemIDs, item.ItemID)
 		unitIDs = append(unitIDs, item.BaseUnitID)
 	}
 	for _, unit := range units {
@@ -166,13 +163,13 @@ func (s *itemSvcImpl) loadReconcileLookups(ctx context.Context, accountID string
 		unitIDs = append(unitIDs, unit.ID)
 	}
 
-	members, apiErr := s.repos.NewUnitGroupRepo().FindUnitsByGroupIDs(ctx, groupIDs)
+	allowed, apiErr := s.repos.NewItemUnitsRepo().Get(ctx, itemIDs)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	for _, member := range members {
-		if lookups.groupUnits[member.UnitGroupID] != nil {
-			lookups.groupUnits[member.UnitGroupID][member.UnitID] = true
+	for itemID, u := range allowed {
+		for _, unitID := range u.AllowedUnitIDs() {
+			lookups.itemUnits[itemID][unitID] = true
 		}
 	}
 
@@ -184,8 +181,7 @@ func (s *itemSvcImpl) loadReconcileLookups(ctx context.Context, accountID string
 }
 
 // planBulkReconcile sorts the submitted rows, in order, into those to write, unknown SKUs (skipped)
-// and unusable units (errors). A row's unit must belong to its item's unit group: membership is what
-// defines how many of one unit make the item's base unit.
+// and unusable units (errors). A row's unit must be the item's stocking unit or one of its order units.
 func planBulkReconcile(data []domain.BulkReconcileItemInput, lookups *reconcileLookups) ([]reconcileRow, *domain.BulkReconcileItemsResult) {
 	result := &domain.BulkReconcileItemsResult{}
 	rows := make([]reconcileRow, 0, len(data))
@@ -206,13 +202,13 @@ func planBulkReconcile(data []domain.BulkReconcileItemInput, lookups *reconcileL
 		}
 		var unit *domain.Unit
 		for _, candidate := range candidates {
-			if lookups.groupUnits[item.UnitGroupID][candidate.ID] {
+			if lookups.itemUnits[item.ItemID][candidate.ID] {
 				unit = candidate
 				break
 			}
 		}
 		if unit == nil {
-			rowError(fmt.Sprintf("Unit '%s' is not in this item's unit group; use its base unit or another unit its category allows", d.Unit))
+			rowError(fmt.Sprintf("Unit '%s' is not one of this item's units; use its stocking unit or one of its order units", d.Unit))
 			continue
 		}
 

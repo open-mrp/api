@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
-
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -71,9 +69,6 @@ func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) 
 }
 
 func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
-	if apiErr := itemep.RejectPreview9Field(ctx, len(req.UnitGroupIDs) > 0, "unit_group_ids", itemep.UnitGroupsRetired); apiErr != nil {
-		return nil, apiErr
-	}
 	dimensions := make([]string, len(req.Dimensions))
 	for i, d := range req.Dimensions {
 		dimensions[i] = string(d)

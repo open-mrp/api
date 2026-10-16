@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
-
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -113,9 +111,6 @@ func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrievePr
 }
 
 func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
-	if apiErr := itemep.RejectPreview9Field(ctx, req.UnitGroupID.IsSet(), "unit_group_id", itemep.UnitGroupsRetired); apiErr != nil {
-		return nil, apiErr
-	}
 	pbReq := &pb.CreateProductLineRequest{
 		Name:             req.Name,
 		Description:      req.Description.Ptr(),
@@ -139,9 +134,6 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 }
 
 func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
-	if apiErr := itemep.RejectPreview9Field(ctx, req.UnitGroupID.IsSet(), "unit_group_id", itemep.UnitGroupsRetired); apiErr != nil {
-		return nil, apiErr
-	}
 	pbReq := &pb.UpdateProductLineRequest{
 		Id:               req.ProductLineID,
 		Name:             req.Name.Ptr(),
@@ -191,9 +183,6 @@ func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *Bu
 			FreightPolicy:    string(pl.FreightPolicy),
 		}
 		if ug, ok := pl.UnitGroup.Value(); ok {
-			if apiErr := itemep.RejectPreview9Field(ctx, true, fmt.Sprintf("product_lines[%d].unit_group", i), itemep.UnitGroupsRetired); apiErr != nil {
-				return nil, apiErr
-			}
 			inputs[i].UnitGroup = apirequest.ObjectIdentifierToProto(ug)
 		}
 	}

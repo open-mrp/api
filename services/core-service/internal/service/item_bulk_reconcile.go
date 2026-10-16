@@ -41,7 +41,7 @@ type reconcileLookups struct {
 	unitsByAbbreviation map[string][]*domain.Unit
 	// itemUnits is each item's stocking unit and order units, keyed by item id.
 	itemUnits map[string]map[string]bool
-	factors    map[string]domain.UnitFactors
+	factors   map[string]domain.UnitFactors
 }
 
 // BulkReconcileItems reconciles inventory for many items by SKU, converting each row into its item's base unit.

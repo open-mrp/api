@@ -119,6 +119,8 @@ func (*BulkUpsertProductionStepsRequest) SchemaExample() any {
 
 // Creates or updates multiple production steps for the account, matched by name (case-insensitive).
 // Validates and resolves synchronously, then writes asynchronously — 202 with a job to poll.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type BulkUpsertProductionStepsEndpoint struct{}
 
 func (e *BulkUpsertProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductionStepsRequest, *apiresource.AsyncJob] {
@@ -131,7 +133,6 @@ func (e *BulkUpsertProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Public:            false,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}, {Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}}, RequireAll: true},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAsyncJob,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.AsyncJob, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkUpsertProductionSteps

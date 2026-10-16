@@ -137,6 +137,7 @@ func Run(
 	resourceloaders.SetDemandOverrideClient(coreClient.DemandOverride)
 	resourceloaders.SetNoteClient(coreClient.Note)
 	resourceloaders.SetPriceListClient(coreClient.PriceList)
+	resourceloaders.SetManufacturingMethodClient(coreClient.ManufacturingMethod)
 	resourceloaders.SetPortalDomainClient(coreClient.PortalDomain)
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)

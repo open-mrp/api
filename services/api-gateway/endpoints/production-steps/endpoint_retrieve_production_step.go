@@ -19,6 +19,8 @@ type RetrieveProductionStepRequest struct {
 }
 
 // Returns a production step by ID.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type RetrieveProductionStepEndpoint struct{}
 
 func (e *RetrieveProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionStepRequest, *apiresource.ProductionStep] {
@@ -30,7 +32,6 @@ func (e *RetrieveProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}}},
 		ObjectType:        constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {

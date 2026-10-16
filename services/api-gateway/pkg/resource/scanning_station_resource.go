@@ -49,10 +49,8 @@ type ScanningStation struct {
 	//
 	// Null unless included.
 	WorkCenter *WorkCenter `json:"work_center" expandable:"true"`
-	// Production steps connected to this station.
-	//
-	// A production step can be connected to at most one scanning station, so connecting a step here disconnects it from any other station. Manage the connections with Connect Production Steps to Scanning Station.
-	ProductionSteps *List[ProductionStep] `json:"production_steps" expandable:"true"`
+	// Production steps connected to this station. For 1.0.forge-preview.9 callers; a station is set on manufacturing method operations instead.
+	ProductionSteps *List[ProductionStep] `json:"production_steps" expandable:"true" visibility:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

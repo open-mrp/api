@@ -615,14 +615,16 @@ type Color struct {
 }
 
 type Consumption struct {
-	ID               string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	ItemID           string
-	QuantityID       string
-	ProductionStepID sql.NullString
-	WasteQuantityID  string
-	Instructions     sql.NullString
+	ID                    string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	ItemID                string
+	QuantityID            string
+	ProductionStepID      sql.NullString
+	WasteQuantityID       string
+	Instructions          sql.NullString
+	ManufacturingMethodID sql.NullString
+	SupplyCode            string
 }
 
 type Conversation struct {
@@ -1337,6 +1339,20 @@ type MachineItem struct {
 	UpdatedAt time.Time
 }
 
+type ManufacturingMethod struct {
+	ID                   string
+	AccountID            string
+	ItemID               string
+	Version              int32
+	StatusCode           string
+	OutputQuantityValue  string
+	OutputQuantityUnitID string
+	SalesOrderLineID     sql.NullString
+	ActivatedAt          sql.NullTime
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
 type Material struct {
 	ID           string
 	CreatedAt    time.Time
@@ -1491,6 +1507,13 @@ type MessagingReport struct {
 	ReporterAccountUserID string
 	Reason                string
 	CreatedAt             time.Time
+}
+
+type MethodOperationMachine struct {
+	AccountID   string
+	OperationID string
+	MachineID   string
+	CreatedAt   time.Time
 }
 
 type Note struct {
@@ -2159,6 +2182,13 @@ type ProductionStep struct {
 	OverheadRateAmount    sql.NullString
 	OverheadRateCurrency  sql.NullString
 	OverheadRatePerUnitID sql.NullString
+	ManufacturingMethodID sql.NullString
+	Position              int32
+	SequenceCode          string
+	TypeCode              string
+	SetupTimeQuantityID   sql.NullString
+	MachineTimeID         sql.NullString
+	WorkInstructions      sql.NullString
 }
 
 type Property struct {

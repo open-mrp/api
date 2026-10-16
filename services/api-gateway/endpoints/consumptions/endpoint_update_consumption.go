@@ -58,6 +58,8 @@ func (*UpdateConsumptionRequest) SchemaExample() any {
 // Updates a production step's material input.
 //
 // Omitted fields are left unchanged. Each quantity is only rewritten when its value and unit are sent together, and changing the consumed item recomputes the production flow around the step.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type UpdateConsumptionEndpoint struct{}
 
 func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConsumptionRequest, *apiresource.Consumption] {
@@ -69,7 +71,6 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},

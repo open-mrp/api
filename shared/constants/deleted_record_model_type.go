@@ -36,6 +36,12 @@ const (
 	DeletedRecordResourceTypePriceList DeletedRecordResourceType = "price_list"
 	// DeletedRecordResourceTypePriceListRule identifies deleted price_list_rule records.
 	DeletedRecordResourceTypePriceListRule DeletedRecordResourceType = "price_list_rule"
+	// DeletedRecordResourceTypeManufacturingMethod identifies deleted manufacturing_method records.
+	DeletedRecordResourceTypeManufacturingMethod DeletedRecordResourceType = "manufacturing_method"
+	// DeletedRecordResourceTypeMethodOperation identifies deleted method_operation records.
+	DeletedRecordResourceTypeMethodOperation DeletedRecordResourceType = "method_operation"
+	// DeletedRecordResourceTypeMethodMaterial identifies deleted method_material records.
+	DeletedRecordResourceTypeMethodMaterial DeletedRecordResourceType = "method_material"
 	// DeletedRecordResourceTypeMessagingGroup identifies deleted messaging_group records.
 	DeletedRecordResourceTypeMessagingGroup DeletedRecordResourceType = "messaging_group"
 	// DeletedRecordResourceTypeCustomer identifies deleted customer records.
@@ -136,6 +142,9 @@ func (m DeletedRecordResourceType) IsValid() bool {
 		DeletedRecordResourceTypeNote,
 		DeletedRecordResourceTypePriceList,
 		DeletedRecordResourceTypePriceListRule,
+		DeletedRecordResourceTypeManufacturingMethod,
+		DeletedRecordResourceTypeMethodOperation,
+		DeletedRecordResourceTypeMethodMaterial,
 		DeletedRecordResourceTypeMessagingGroup,
 		DeletedRecordResourceTypeCustomer,
 		DeletedRecordResourceTypeCustomerProductLineAccess,
@@ -200,6 +209,9 @@ func (m DeletedRecordResourceType) EnumValues() []string {
 		string(DeletedRecordResourceTypeNote),
 		string(DeletedRecordResourceTypePriceList),
 		string(DeletedRecordResourceTypePriceListRule),
+		string(DeletedRecordResourceTypeManufacturingMethod),
+		string(DeletedRecordResourceTypeMethodOperation),
+		string(DeletedRecordResourceTypeMethodMaterial),
 		string(DeletedRecordResourceTypeMessagingGroup),
 		string(DeletedRecordResourceTypeCustomer),
 		string(DeletedRecordResourceTypeCustomerProductLineAccess),

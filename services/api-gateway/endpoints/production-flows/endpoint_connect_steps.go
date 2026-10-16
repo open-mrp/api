@@ -34,6 +34,8 @@ func (*ConnectStepsRequest) SchemaExample() any {
 // The source step becomes an upstream dependency of the target step, and connecting a pair that is already connected has no effect.
 //
 // Connections are otherwise derived from item relationships: changing which items a step produces or consumes recomputes every connection on that step, which discards connections made here.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type ConnectStepsEndpoint struct{}
 
 func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource] {
@@ -45,7 +47,6 @@ func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectSt
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
 		}},

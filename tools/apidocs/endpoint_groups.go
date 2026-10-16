@@ -49,6 +49,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		PriceList: struct {
 			pbgrpc.CorePriceListServiceClient
 		}{},
+		ManufacturingMethod: struct {
+			pbgrpc.CoreManufacturingMethodServiceClient
+		}{},
 		ProductionSchedule: struct {
 			pbgrpc.CoreProductionScheduleServiceClient
 		}{},
@@ -207,6 +210,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.PriceListsEndpointGroup{}).Materialize(&httpgroup.PriceListsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ManufacturingMethodsEndpointGroup{}).Materialize(&httpgroup.ManufacturingMethodsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{

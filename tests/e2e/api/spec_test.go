@@ -300,6 +300,8 @@ func isExcludedPath(path string) bool {
 // pagination tests because they use offset pagination or no pagination at all.
 var excludedPaginationOperations = map[string]bool{
 	"list-sales-targets": true, // uses offset pagination, not cursor
+	// Every seeded method has one operation. Covered by TestMethodOperations_ListPages.
+	"list-method-operations": true,
 	// Active announcements are per-account_user; the API-key harness has no feed data to
 	// paginate. Covered by messaging_announcements_test.go.
 	"list-announcements": true,
@@ -362,6 +364,10 @@ var excludedListOperations = map[string]bool{
 // These are stale OpenAPI entries removed from runtime routing.
 var excludedUpdateOperations = map[string]bool{
 	"update-carrier-option": true,
+	// Only draft methods change, and every seeded method is active. Covered by crud_manufacturing_methods_test.go.
+	"update-manufacturing-method": true,
+	"update-method-operation":     true,
+	"update-method-material":      true,
 	// Chat edits are participant-scoped (account_user required). Covered by messaging_chat tests.
 	"update-conversation": true,
 	"edit-message":        true,

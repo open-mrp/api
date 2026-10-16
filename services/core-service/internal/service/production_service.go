@@ -167,6 +167,10 @@ func (s *productionSvcImpl) UpdateProduction(ctx context.Context, params domain.
 				}
 			}
 
+			if apiErr := txSvc.repos.NewManufacturingMethodRepo().SyncLegacyStep(txCtx, params.ProductionStepID); apiErr != nil {
+				return apiErr
+			}
+
 			fetched, apiErr := productionRepo.Get(txCtx, params.AccountID, params.ProductionStepID, params.ProductionID)
 			if apiErr != nil {
 				return apiErr

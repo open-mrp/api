@@ -20,7 +20,7 @@ func init() {
 			// consumptions.consumed_item.
 			{Key: "production", Target: constants.ObjectTypeProduction, ExtractRefs: extractProductionRefFromProductionStep, Populate: populateProductionOnProductionStep},
 			{Key: "consumptions", Target: constants.ObjectTypeConsumption, ExtractRefs: extractConsumptionRefsFromProductionStep, Populate: populateConsumptionsOnProductionStep},
-			{Key: "machines", Target: constants.ObjectTypeMachine, ExtractRefs: extractMachineRefsFromProductionStep, Populate: populateMachinesOnProductionStep},
+			{Key: "machines", Target: constants.ObjectTypeMachine, Cardinality: include.CardinalityList, ExtractIDs: extractMachineIDsFromProductionStep, Populate: populateMachinesOnProductionStep},
 			{
 				Key:         "scanning_station",
 				Target:      constants.ObjectTypeScanningStation,
@@ -69,14 +69,15 @@ func populateConsumptionsOnProductionStep(ctx context.Context, parent any, _ map
 	ps.Consumptions = v.(*apiresource.List[apiresource.Consumption])
 }
 
-func populateMachinesOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
+func populateMachinesOnProductionStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProductionStep, ps.ID, "machines")
-	if !ok {
-		return
+	machines := make([]apiresource.Machine, 0)
+	for _, id := range flowStepMachineIDs(ctx, ps.ID) {
+		if m, ok := loaded[id].(*apiresource.Machine); ok {
+			machines = append(machines, *m)
+		}
 	}
-	ps.Machines = v.(*apiresource.List[apiresource.Machine])
+	ps.Machines = apiresource.NewList(machines, apiresource.PageInfo{})
 }
 
 func extractScanningStationIDFromProductionStep(ctx context.Context, parent any) []string {
@@ -181,14 +182,6 @@ func populateProducedItemOnProduction(ctx context.Context, parent any, loaded ma
 	}
 }
 
-func extractMachineRefsFromProductionStep(_ context.Context, parent any) []any {
-	ps := parent.(*apiresource.ProductionStep)
-	if ps.Machines == nil {
-		return nil
-	}
-	refs := make([]any, len(ps.Machines.Data))
-	for i := range ps.Machines.Data {
-		refs[i] = &ps.Machines.Data[i]
-	}
-	return refs
+func extractMachineIDsFromProductionStep(ctx context.Context, parent any) []string {
+	return flowStepMachineIDs(ctx, parent.(*apiresource.ProductionStep).ID)
 }

@@ -52,6 +52,8 @@ func (*UpdateProductionStepRequest) SchemaExample() any {
 // Partially updates a production step.
 //
 // Returns a conflict error if another production step in the account already uses the requested name.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type UpdateProductionStepEndpoint struct{}
 
 func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionStepRequest, *apiresource.ProductionStep] {
@@ -63,7 +65,6 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}}},
 		ObjectType:        constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {

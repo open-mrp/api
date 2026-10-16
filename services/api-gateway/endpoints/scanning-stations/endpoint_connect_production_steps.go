@@ -35,6 +35,8 @@ func (*ConnectProductionStepsRequest) SchemaExample() any {
 // Every production step in your account whose name contains the provided value is connected. A production step can be connected to at most one scanning station, so matching steps are moved off any station they were previously connected to. Steps already connected to this station that do not match are left connected, so this adds to the station's steps rather than replacing them.
 //
 // Nothing about the station is returned, so retrieve the scanning station afterward to confirm which steps are now connected.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type ConnectProductionStepsEndpoint struct{}
 
 func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource] {
@@ -46,7 +48,6 @@ func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).ConnectProductionSteps

@@ -112,6 +112,8 @@ func (*CreateProductionStepRequest) SchemaExample() any {
 // The step is automatically connected into the production flow graph based on the items it produces and consumes.
 //
 // Returns a conflict error if a production step with the same name already exists in the account.
+//
+// Kept for 1.0.forge-preview.9 callers only; 1.0.forge has manufacturing methods instead.
 type CreateProductionStepEndpoint struct{}
 
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {
@@ -123,7 +125,6 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}}},
 		ObjectType:        constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {

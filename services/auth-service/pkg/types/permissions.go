@@ -48,6 +48,7 @@ const (
 	PermissionDomainProductionRuns                PermissionDomain = "production_runs"
 	PermissionDomainProductionStepTransformations PermissionDomain = "production_step_transformations"
 	PermissionDomainProductionSteps               PermissionDomain = "production_steps"
+	PermissionDomainManufacturingMethods          PermissionDomain = "manufacturing_methods"
 	PermissionDomainProductLines                  PermissionDomain = "product_lines"
 	PermissionDomainProductVariations             PermissionDomain = "product_variations"
 	PermissionDomainProperties                    PermissionDomain = "properties"
@@ -154,6 +155,7 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainProductionRuns,
 		PermissionDomainProductionStepTransformations,
 		PermissionDomainProductionSteps,
+		PermissionDomainManufacturingMethods,
 		PermissionDomainProductLines,
 		PermissionDomainProductVariations,
 		PermissionDomainProperties,

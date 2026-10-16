@@ -923,28 +923,28 @@ Production steps are replaced by **manufacturing methods**: the bill of material
 Why: in production every step has exactly one output and no item is made by more than one step (5,788 steps), so each step is already "the one-operation method of its output item", and the step graph is a hand-maintained multi-level bill of materials. The method model keeps everything, adds versioning, and derives the graph.
 
 Manufacturing method (`/v1/operations/manufacturing-methods`)
-- [ ] `{ id, object: "manufacturing_method", item, version, status: draft | active | archived, operations (List), materials (List), created_at, updated_at }`. One `active` method per item.
-- [ ] **Versioned**: edits happen on a `draft`; `POST …/actions/activate` makes it the item's active method (the previous active one becomes `archived`); `POST …/actions/new-version` copies the active method into a new draft. Active and archived methods are immutable.
+- [x] `{ id, object: "manufacturing_method", item, version, status: draft | active | archived, operations (List), materials (List), created_at, updated_at }`. One `active` method per item. *(MM: plus `output_quantity` (Y2) and an always-null expandable `sales_order_line` (O7). Methods live in `manufacturing_method`; operations are `production_step` rows and materials `consumption` rows, so batches, runs, schedules and OEE that name a step already name its operation. New operations and materials take `mdoe_` / `mdml_` IDs. `operations` / `materials` embed the first 10 with `next_page_url`.)*
+- [x] **Versioned**: edits happen on a `draft`; `POST …/actions/activate` makes it the item's active method (the previous active one becomes `archived`); `POST …/actions/new-version` copies the active method into a new draft. Active and archived methods are immutable. *(MM: activation archives the item's other active standard methods and moves execution to the new version (its last operation takes the production row, operations take their machines and step links). Editing or deleting a non-draft is 409 `invalid_state_transition`; drafts can be deleted. `new-version` copies any version. A method is capped at 100 operations and 500 materials. Execution of multi-operation methods beyond the last operation's output arrives with jobs (JOB/EXE).)*
 - [ ] Production runs **copy the method version** they're released with (run operations and materials), so later edits never change a run in progress.
 
 Operations (`…/manufacturing-methods/{id}/operations`; editable only on drafts)
-- [ ] `{ id, object: "method_operation", position, sequence: after_previous | with_previous, work_center, machines, scanning_station, setup_time (time Quantity per run, X5), labor_time, machine_time (Rates: time per unit of output), labor_rate, overhead_rate (UnitPrice; default from the work center, overridable; `costs:read`), leveling_percent, allowance_percent (whole numbers), work_instructions }`.
-- [ ] Today's step fields map here: labor rate/time, overhead rate, leveling factor (→ percent), allowances (→ percent), machines, scanning station, department (→ work center). `notes` dropped.
+- [x] `{ id, object: "method_operation", position, sequence: after_previous | with_previous, work_center, machines, scanning_station, setup_time (time Quantity per run, X5), labor_time, machine_time (Rates: time per unit of output), labor_rate, overhead_rate (UnitPrice; default from the work center, overridable; `costs:read`), leveling_percent, allowance_percent (whole numbers), work_instructions }`. *(MM: plus `type: inside` (O6). `work_center_id` and `labor_time` are required on create; `labor_rate` defaults to the work center's (422 when it has none), `overhead_rate` to zero. Percents are decimal strings over the stored fractions. Archived machines are rejected (422 `resource_archived`); deleting an operation that materials are consumed at is 409 `resource_in_use`.)*
+- [x] Today's step fields map here: labor rate/time, overhead rate, leveling factor (→ percent), allowances (→ percent), machines, scanning station, department (→ work center). `notes` dropped.
 
 Materials (`…/manufacturing-methods/{id}/materials`; editable only on drafts)
-- [ ] `{ id, object: "method_material", item, quantity, scrap_quantity, operation (the operation that consumes it), supply: make | stock | buy, work_instructions }`.
-- [ ] `supply: make` points at the material's own active method — the multi-level structure. **The production graph is derived** from this; no `in_steps` / `out_steps` / `upstream_step_ids` / `connect-steps`.
+- [x] `{ id, object: "method_material", item, quantity, scrap_quantity, operation (the operation that consumes it), supply: make | stock | buy, work_instructions }`. *(MM: `operation` defaults to the first operation; `supply` to `make` when the item has an active method, else `stock`; `scrap_quantity` to zero.)*
+- [x] `supply: make` points at the material's own active method — the multi-level structure. **The production graph is derived** from this; no `in_steps` / `out_steps` / `upstream_step_ids` / `connect-steps`.
 
 Reads
-- [ ] `GET /v1/catalog/items/{id}/production-flow` (was `/production-flows/by-item/{item_id}`): read-only tree of active methods from raw materials to the item.
-- [ ] List methods: `item_ids[]`, `statuses[]`, `work_center_ids[]`.
+- [x] `GET /v1/catalog/items/{id}/production-flow` (was `/production-flows/by-item/{item_id}`): read-only tree of active methods from raw materials to the item. *(MM: a paged List of methods, the item's default method first, then the methods of its `make` materials level by level.)*
+- [x] List methods: `item_ids[]`, `statuses[]`, `work_center_ids[]`. *(MM: plus `created_after` / `created_before`.)*
 
 Removed
 - [ ] `/v1/operations/production-steps/*` (incl. bulk-create, `productions/{id}`), `/production-steps/{id}/consumptions/*`, `/production-flows/*`. Bulk import moves to `POST /manufacturing-methods/actions/bulk-upsert` (job).
-- [ ] `PUT /scanning-stations/{id}/production-steps` → stations are set on operations.
+- [x] `PUT /scanning-stations/{id}/production-steps` → stations are set on operations. *(MM: the route and a station's `production_steps` include are internal, for preview.9 callers.)*
 
 Migration
-- [ ] Each production step → version 1, `active`, method for its output item: one operation (the step's labor, rates, factors, machines, station, department) and its consumptions as materials (`supply: make` when the consumed item has a method, else `stock`). The 21 outputs with no step and orphaned productions are reviewed by hand. Step links are dropped (implied by materials). References to steps (scanning stations, runs, batches, schedules, OEE) move to methods/operations.
+- [x] Each production step → version 1, `active`, method for its output item: one operation (the step's labor, rates, factors, machines, station, department) and its consumptions as materials (`supply: make` when the consumed item has a method, else `stock`). The 21 outputs with no step and orphaned productions are reviewed by hand. Step links are dropped (implied by materials). References to steps (scanning stations, runs, batches, schedules, OEE) move to methods/operations. *(MM: paced backfill `manufacturing_methods_from_steps` (kill switch `MANUFACTURING_METHOD_BACKFILL_DISABLED`), schema 00109, permission data 00027. Method IDs derive from the step. Steps written through the preview.9 routes, bulk imports and the sandbox seed are adopted as they are written. A second step for the same item becomes another active method (Y1 alternates); its default is the newest. Step links stay for active methods, which execution reads.)*
 
 Work centers (was departments), machines, scanning stations
 - [x] `notes` removed (all three). Work center `labor_rate` → UnitPrice. Machines get `status: active | archived`. Scanning station `type` / `operator_requirement` enums stay. Bulk upserts become public (jobs). Delete blocked while in use. *(WC: work center delete blocks on machines, stations, production steps and account users; machine on batches and downtime events; station on batches, production steps and inventory changes. A work center's location must be active; archived machines can't move into a work center or be named on new downtime events or production steps. Machines and stations move between work centers with `work_center_id` on update. Embedded `machines` / `scanning_stations` are the first 10 with `next_page_url` to the list's new `work_center_ids[]` filter.)*
@@ -1238,7 +1238,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - invoice and bill `due_at` → `due_on`
   - sales order `expires_at` → `expires_on`
   - purchase order `promised_at` → `promised_on`
-- [ ] **X5 Setup time is per run:** `method_operation.setup_time` is a time `Quantity` per run. `labor_time` and `machine_time` stay Rates per unit of output.
+- [x] **X5 Setup time is per run:** `method_operation.setup_time` is a time `Quantity` per run. `labor_time` and `machine_time` stay Rates per unit of output.
 - [ ] **X6 Cancel is a state.**
   - Sales orders: `draft | issued | fulfilled | canceled` (`estimate` → `draft`).
   - Purchase orders: `draft | issued | completed | canceled`.
@@ -1262,12 +1262,12 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - **Rate limits:** document the `RateLimit-*` headers and 429 `rate_limited`.
   - **Deprecation:** each stable version is supported at least 24 months after its successor ships, with `Deprecation` / `Sunset` headers.
 - [ ] **X11 Background work is an `async_job`.** `job` is the manufacturing job (P1), so the object a long-running action returns is `async_job`: 202 with `Location` pointing at `/v1/core/async-jobs/{id}`. Shape `{ id, object: "async_job", type, resource_type, status: queued | running | completed | failed | canceled, results (List of `async_job_result { index, status: created | updated | failed, resource, sub_resources, error }`), error, started_at, completed_at, failed_at, canceled_at, created_at, updated_at }` plus OpenMRP's `created_by` and `export`. Today's `created` / `started` / `cancelled` become `queued` / `running` / `canceled`. The shape is `object.AsyncJob` in apikit.
-- [ ] **Y1** `item.default_manufacturing_method` (expandable) names the method used for new production. "One active method per item" is no longer the contract, so alternates are additive.
-- [ ] **Y2** Methods gain `output_quantity` (Quantity, default 1 stocking unit). Material quantities are per that much output.
+- [x] **Y1** `item.default_manufacturing_method` (expandable) names the method used for new production. "One active method per item" is no longer the contract, so alternates are additive.
+- [x] **Y2** Methods gain `output_quantity` (Quantity, default 1 stocking unit). Material quantities are per that much output.
 - [ ] **Y3** Order and invoice lines gain a nullable `discount` (Discount shape). `amount = quantity × unit_price − discount`.
 - [ ] **Y4** An order unit can carry its own `quantity` of stocking units for this item (e.g. a "Case" of 24 here, 12 elsewhere), overriding the unit's account-wide ratio. Order, PO and invoice lines snapshot `stocking_quantity`, so ratio edits never rewrite history. *(ITM2: `order_units[].quantity` is stored and used by pricing; the line snapshots are SO2/PO/AR1.)*
 - [x] **Y5** The `sales` section is allowed on any physical item type (`material`, `part`, `product`) and on `service`. `type` says what the item is; sourcing stays in method `supply` and planning. *(Dane: a material or part is sold only when it has a product row, created by sending `sales` and removed by `sales: null`.)*
-- [ ] **Y6** Operation `work_center` stays required; a `process` concept is additive later.
+- [x] **Y6** Operation `work_center` stays required; a `process` concept is additive later.
 - [ ] **Y7** Inventory movements record read-only `unit_cost` (UnitPrice) at the time of the movement.
 
 Additive roadmap (not forge.1): outbound webhooks, taxes, multi-currency, serial/lot tracking modes and holds, quality, GL and accounting sync, costing methods, quotes, returns and transfers as source documents, warehouse routes and putaway, supplier prices and lead times, item revisions (as method versions; SKU stays unique), by-products and kits, typed custom fields (`custom_fields` reserved).
@@ -1283,10 +1283,10 @@ forge.1 stays make-to-stock first, but these shapes keep make to order additive.
   - Sales order lines get read-only `supply`, resolved when the line is added: customer default, then the item chain.
   - `issue` reserves inventory only for `stock` lines. `make` lines are pegged to production (O1); `buy` lines get purchase orders later.
   - Replaces `fulfillment_policy` (product lines, customer defaults) and planning `strategy`, so the break recorded for when planning goes public is no longer needed.
-- [ ] **O4 Method material `supply` meanings:** `make` = production pegged to this work; `stock` = taken from inventory however it was replenished; `buy` = purchased for this work. `customer` (customer-supplied) is a later value.
+- [x] **O4 Method material `supply` meanings:** `make` = production pegged to this work; `stock` = taken from inventory however it was replenished; `buy` = purchased for this work. `customer` (customer-supplied) is a later value.
 - [ ] **O5 Free the word "quote":** sales order `actions/quote-prices` → `preview-prices`, `quote-freight` → `estimate-freight`, `quote-commitment` → `preview-commitment`. `/v1/sales/quotes` is reserved for a future quote resource.
-- [ ] **O6 Operation `type: inside`** (the only value at forge.1). `work_center` is nullable in the schema and documented as always set for `inside`, so `outside` (supplier, cost, lead time, PO pegging) is additive. Revises Y6.
-- [ ] **O7 Order-specific methods:** manufacturing methods gain nullable `sales_order_line` (always `null` at forge.1). List methods returns standard methods by default. `default_manufacturing_method` is "used when nothing more specific applies".
+- [x] **O6 Operation `type: inside`** (the only value at forge.1). `work_center` is nullable in the schema and documented as always set for `inside`, so `outside` (supplier, cost, lead time, PO pegging) is additive. Revises Y6.
+- [x] **O7 Order-specific methods:** manufacturing methods gain nullable `sales_order_line` (always `null` at forge.1). List methods returns standard methods by default. `default_manufacturing_method` is "used when nothing more specific applies".
 - [ ] **O8 Per-line commitment:** the order's `commitment` is the default for every line; line `commitment` is reserved (`null` = the order's). Production pegged to demand takes its `due_on` and `firmness` from that demand.
 - [ ] **O9 Costs:** order line `unit_cost` = "the item's cost when the line was added (an estimate)". Movement `unit_cost` on `output` = "valuation under the account's costing method". Run `costs { estimated, actual }` is reserved for job costing.
 
@@ -1648,6 +1648,8 @@ Production execution
 
 Production structure
 - Production steps, consumptions and flows are replaced by versioned **manufacturing methods** (operations + materials per item; draft → activate). New method editor: edit drafts, activate versions; the production graph is derived from materials (no step linking UI).
+  - *(MM)* Under preview.9 the production step, consumption, production-flow and connect-steps routes keep working over the same rows: a step is an active method's operation. Operations created through the methods API carry generated step names (`<SKU> v<version> op <position>`); draft and archived versions' operations are not production steps (404). A step created through preview.9 creates an active method for its item, and deleting a method's only step deletes the method.
+  - *(MM)* `production_steps` on scanning stations is internal (still served, not in the 1.0.forge reference).
 - `in_steps`/`out_steps`, connect-steps and `productions/{id}` are gone; scanning stations are set on operations; leveling/allowances are whole-number percents; `notes` removed from work centers, machines, stations. **Departments are renamed work centers** (routes, fields, filters).
 - Work center `machines` / `scanning_stations` includes hold the first 10, newest first (was every member, by name); the rest are pageable: follow the embedded list's `page_info.next_page_url` (`GET /machines?work_center_ids[]=…&cursor=…` / `GET /scanning-stations?work_center_ids[]=…&cursor=…`), which continues after the 10th member in the same newest-first order. This applies on preview.9 too, where the department response carries the same link and following it with `OpenMRP-Version: 1.0.forge-preview.9` returns preview.9-shaped machines/stations (with `department`). Machines show `status` and can be archived; deleting a work center, machine or station in use is 409 `resource_in_use` (machine/station/department delete used to succeed and leave dangling references). Unknown or archived `machine_ids` / unknown `scanning_station_ids` on a work center are now 422.
 

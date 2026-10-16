@@ -85,8 +85,8 @@ func priceListIdentity(ctx context.Context, read bool) (*types.Identity, *apierr
 	return identity, nil
 }
 
-// idempotentWrite runs fn once per idempotency key in a transaction and caches its result.
-func idempotentWrite[T any](ctx context.Context, s *priceListSvcImpl, identity *types.Identity,
+// priceListIdempotentWrite runs fn once per idempotency key in a transaction and caches its result.
+func priceListIdempotentWrite[T any](ctx context.Context, s *priceListSvcImpl, identity *types.Identity,
 	fn func(context.Context, *priceListSvcImpl) (*T, *apierror.APIError)) (*T, *apierror.APIError) {
 	meds := s.mediators()
 	key, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -274,7 +274,7 @@ func (s *priceListSvcImpl) CreatePriceList(ctx context.Context, params domain.Cr
 	}
 	list.ID = listID
 
-	result, apiErr := idempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceList, *apierror.APIError) {
+	result, apiErr := priceListIdempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceList, *apierror.APIError) {
 		if apiErr := ensurePriceListsSynced(txCtx, txSvc.repos, list.AccountID); apiErr != nil {
 			return nil, apiErr
 		}
@@ -306,7 +306,7 @@ func (s *priceListSvcImpl) UpdatePriceList(ctx context.Context, params domain.Up
 		return nil, tracing.Trace(span, apierror.NewFieldError("name", apierror.CodeInvalidFormat, "A price list needs a name."))
 	}
 	accountID := identity.Target.AccountID
-	result, apiErr := idempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceList, *apierror.APIError) {
+	result, apiErr := priceListIdempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceList, *apierror.APIError) {
 		old, apiErr := txSvc.getList(txCtx, accountID, params.PriceListID)
 		if apiErr != nil {
 			return nil, apiErr
@@ -446,7 +446,7 @@ func (s *priceListSvcImpl) CreatePriceListRule(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	result, apiErr := idempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceListRule, *apierror.APIError) {
+	result, apiErr := priceListIdempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceListRule, *apierror.APIError) {
 		if _, apiErr := txSvc.getList(txCtx, accountID, params.PriceListID); apiErr != nil {
 			return nil, apiErr
 		}
@@ -489,7 +489,7 @@ func (s *priceListSvcImpl) UpdatePriceListRule(ctx context.Context, params domai
 		price = &p
 	}
 
-	result, apiErr := idempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceListRule, *apierror.APIError) {
+	result, apiErr := priceListIdempotentWrite(ctx, s, identity, func(txCtx context.Context, txSvc *priceListSvcImpl) (*domain.PriceListRule, *apierror.APIError) {
 		old, apiErr := txSvc.getRule(txCtx, accountID, params.PriceListID, params.RuleID)
 		if apiErr != nil {
 			return nil, apiErr

@@ -65,14 +65,6 @@ func init() {
 	})
 }
 
-// metaIDs extracts the IDs a parent's load meta holds under key.
-func metaIDs(parentType constants.ObjectType, idOf func(any) string, key string) func(ctx context.Context, parent any) []string {
-	return func(ctx context.Context, parent any) []string {
-		ids, _ := include.GetLoadMeta(ctx).GetStrings(parentType, idOf(parent), key)
-		return ids
-	}
-}
-
 // loadedInOrder is the loaded records of ids, in ids' order, skipping any that didn't load.
 func loadedInOrder[T any](ids []string, loaded map[string]any) []T {
 	out := make([]T, 0, len(ids))

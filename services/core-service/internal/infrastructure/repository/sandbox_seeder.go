@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/queries"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/apikit/tracing"
 )
 
@@ -90,6 +91,11 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 		return fmt.Errorf("copy seeded money columns: %w", err)
 	}
 
+	// Its production steps are written as steps; each becomes the active manufacturing method of what it produces.
+	if err := syncAccountManufacturingMethods(ctx, tx, accountID); err != nil {
+		return fmt.Errorf("adopt seeded production steps: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit seed tx: %w", err)
 	}
@@ -157,4 +163,31 @@ func substituteVars(stmt string, vars map[string]string) string {
 		escaped := strings.ReplaceAll(value, `'`, `''`)
 		return "'" + escaped + "'"
 	})
+}
+
+// syncAccountManufacturingMethods gives every production step of an account its manufacturing method.
+func syncAccountManufacturingMethods(ctx context.Context, tx *sql.Tx, accountID string) error {
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM production_step WHERE account_id = ? ORDER BY created_at, id", accountID)
+	if err != nil {
+		return err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	repo := NewManufacturingMethodRepo(sqlc.New(tx))
+	for _, id := range ids {
+		if apiErr := repo.SyncLegacyStep(ctx, id); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }

@@ -89,7 +89,6 @@ public_docstrings POST /v1/operations/shipments/actions/rate-shop
 public_docstrings POST /v1/sales/sales-orders/{id}/actions/quote-freight
 public_docstrings POST /v1/sales/sales-orders/{id}/lines/actions/reorder
 public_docstrings PUT /v1/ai/agents/{id}/status
-public_docstrings PUT /v1/identity/account-users/{id}/actions/activate
 public_docstrings PUT /v1/identity/account-users/{id}/actions/disable
 public_docstrings PUT /v1/operations/production-schedule-settings/items/{item_id}
 public_docstrings PUT /v1/operations/production-schedule-settings/resources

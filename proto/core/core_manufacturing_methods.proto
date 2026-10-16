@@ -1,0 +1,259 @@
+syntax = "proto3";
+
+// CoreManufacturingMethodService handles manufacturing methods: how an item is made, as versioned operations and
+// materials. Only drafts are edited; activating one makes it the item's method for new production.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+import "core/core_patch.proto";
+import "core/primitives.proto";
+import "core/value_shapes.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreManufacturingMethodService {
+  rpc ListManufacturingMethods(ListManufacturingMethodsRequest) returns (ListManufacturingMethodsResponse);
+  rpc BatchGetManufacturingMethodsByIDs(BatchGetManufacturingMethodsByIDsRequest) returns (BatchGetManufacturingMethodsByIDsResponse);
+  rpc CreateManufacturingMethod(CreateManufacturingMethodRequest) returns (ManufacturingMethodResponse);
+  rpc UpdateManufacturingMethod(UpdateManufacturingMethodRequest) returns (ManufacturingMethodResponse);
+  rpc DeleteManufacturingMethod(ManufacturingMethodIDRequest) returns (google.protobuf.Empty);
+  rpc ActivateManufacturingMethod(ManufacturingMethodIDRequest) returns (ManufacturingMethodResponse);
+  rpc NewManufacturingMethodVersion(ManufacturingMethodIDRequest) returns (ManufacturingMethodResponse);
+  // GetDefaultManufacturingMethodIDs maps items to the method used for their new production.
+  rpc GetDefaultManufacturingMethodIDs(GetDefaultManufacturingMethodIDsRequest) returns (GetDefaultManufacturingMethodIDsResponse);
+  // GetProductionFlow lists every active method behind an item, the item's own first.
+  rpc GetMethodProductionFlow(GetMethodProductionFlowRequest) returns (GetMethodProductionFlowResponse);
+
+  rpc ListMethodOperations(ListMethodMembersRequest) returns (ListMethodOperationsResponse);
+  rpc BatchGetMethodOperationsByIDs(BatchGetMethodOperationsByIDsRequest) returns (BatchGetMethodOperationsByIDsResponse);
+  rpc CreateMethodOperation(CreateMethodOperationRequest) returns (MethodOperationResponse);
+  rpc UpdateMethodOperation(UpdateMethodOperationRequest) returns (MethodOperationResponse);
+  rpc DeleteMethodOperation(MethodMemberIDRequest) returns (google.protobuf.Empty);
+
+  rpc ListMethodMaterials(ListMethodMembersRequest) returns (ListMethodMaterialsResponse);
+  rpc BatchGetMethodMaterialsByIDs(BatchGetMethodMaterialsByIDsRequest) returns (BatchGetMethodMaterialsByIDsResponse);
+  rpc CreateMethodMaterial(CreateMethodMaterialRequest) returns (MethodMaterialResponse);
+  rpc UpdateMethodMaterial(UpdateMethodMaterialRequest) returns (MethodMaterialResponse);
+  rpc DeleteMethodMaterial(MethodMemberIDRequest) returns (google.protobuf.Empty);
+}
+
+message ManufacturingMethodInfo {
+  string id = 1;
+  string item_id = 2;
+  int32 version = 3;
+  // constants.ManufacturingMethodStatus.
+  string status = 4;
+  QuantityValue output_quantity = 5;
+  optional string sales_order_line_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  // The first operations and materials, one more than an embedded list shows, and the cursors after the last shown.
+  repeated string operation_ids = 9;
+  optional string operations_next_cursor = 10;
+  repeated string material_ids = 11;
+  optional string materials_next_cursor = 12;
+}
+
+message MethodOperationInfo {
+  string id = 1;
+  string manufacturing_method_id = 2;
+  int32 position = 3;
+  // constants.OperationSequence.
+  string sequence = 4;
+  // constants.OperationType.
+  string type = 5;
+  optional string work_center_id = 6;
+  repeated string machine_ids = 7;
+  optional string scanning_station_id = 8;
+  QuantityValue setup_time = 9;
+  RateInput labor_time = 10;
+  RateInput machine_time = 11;
+  UnitPrice labor_rate = 12;
+  UnitPrice overhead_rate = 13;
+  string leveling_percent = 14;
+  string allowance_percent = 15;
+  optional string work_instructions = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+}
+
+message MethodMaterialInfo {
+  string id = 1;
+  string manufacturing_method_id = 2;
+  string item_id = 3;
+  optional string operation_id = 4;
+  QuantityValue quantity = 5;
+  QuantityValue scrap_quantity = 6;
+  // constants.Supply.
+  string supply = 7;
+  optional string work_instructions = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListManufacturingMethodsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string item_ids = 3;
+  repeated string statuses = 4;
+  repeated string work_center_ids = 5;
+  CreatedRange created = 6;
+}
+
+message ListManufacturingMethodsResponse {
+  repeated ManufacturingMethodInfo manufacturing_methods = 1;
+  PageInfo page_info = 2;
+}
+
+message BatchGetManufacturingMethodsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetManufacturingMethodsByIDsResponse {
+  repeated ManufacturingMethodInfo manufacturing_methods = 1;
+}
+
+// A quantity written on a method: value in unit_id.
+message MethodQuantityInput {
+  string value = 1;
+  string unit_id = 2;
+}
+
+message CreateManufacturingMethodRequest {
+  string item_id = 1;
+  // Unset: one of the item's stocking unit.
+  MethodQuantityInput output_quantity = 2;
+}
+
+message UpdateManufacturingMethodRequest {
+  string id = 1;
+  MethodQuantityInput output_quantity = 2;
+}
+
+message ManufacturingMethodIDRequest {
+  string id = 1;
+}
+
+message ManufacturingMethodResponse {
+  ManufacturingMethodInfo manufacturing_method = 1;
+}
+
+message GetDefaultManufacturingMethodIDsRequest {
+  repeated string item_ids = 1;
+}
+
+message GetDefaultManufacturingMethodIDsResponse {
+  // Item ID → method ID, for items that have one.
+  map<string, string> method_ids = 1;
+}
+
+message GetMethodProductionFlowRequest {
+  string item_id = 1;
+}
+
+message GetMethodProductionFlowResponse {
+  repeated string manufacturing_method_ids = 1;
+}
+
+message ListMethodMembersRequest {
+  string manufacturing_method_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+}
+
+message MethodMemberIDRequest {
+  string manufacturing_method_id = 1;
+  string id = 2;
+}
+
+message ListMethodOperationsResponse {
+  repeated MethodOperationInfo operations = 1;
+  PageInfo page_info = 2;
+}
+
+message BatchGetMethodOperationsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetMethodOperationsByIDsResponse {
+  repeated MethodOperationInfo operations = 1;
+}
+
+// Parent field absent: no change. clear: remove the rate. Otherwise set value.
+message MethodRatePatch {
+  bool clear = 1;
+  RateInput value = 2;
+}
+
+// An operation write. Unset fields take their defaults on create and keep their values on update.
+message MethodOperationInput {
+  optional int32 position = 1;
+  optional string sequence = 2;
+  optional string work_center_id = 3;
+  // Present: the operation's machines afterwards (clear for none).
+  StringListPatch machine_ids = 4;
+  StringPatch scanning_station_id = 5;
+  QuantityPatch setup_time = 6;
+  RateInput labor_time = 7;
+  MethodRatePatch machine_time = 8;
+  UnitPrice labor_rate = 9;
+  UnitPrice overhead_rate = 10;
+  optional string leveling_percent = 11;
+  optional string allowance_percent = 12;
+  StringPatch work_instructions = 13;
+}
+
+message CreateMethodOperationRequest {
+  string manufacturing_method_id = 1;
+  MethodOperationInput operation = 2;
+}
+
+message UpdateMethodOperationRequest {
+  string manufacturing_method_id = 1;
+  string id = 2;
+  MethodOperationInput operation = 3;
+}
+
+message MethodOperationResponse {
+  MethodOperationInfo operation = 1;
+}
+
+message ListMethodMaterialsResponse {
+  repeated MethodMaterialInfo materials = 1;
+  PageInfo page_info = 2;
+}
+
+message BatchGetMethodMaterialsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetMethodMaterialsByIDsResponse {
+  repeated MethodMaterialInfo materials = 1;
+}
+
+// A material write. Unset fields take their defaults on create and keep their values on update.
+message MethodMaterialInput {
+  optional string item_id = 1;
+  optional string operation_id = 2;
+  MethodQuantityInput quantity = 3;
+  MethodQuantityInput scrap_quantity = 4;
+  optional string supply = 5;
+  StringPatch work_instructions = 6;
+}
+
+message CreateMethodMaterialRequest {
+  string manufacturing_method_id = 1;
+  MethodMaterialInput material = 2;
+}
+
+message UpdateMethodMaterialRequest {
+  string manufacturing_method_id = 1;
+  string id = 2;
+  MethodMaterialInput material = 3;
+}
+
+message MethodMaterialResponse {
+  MethodMaterialInfo material = 1;
+}

@@ -140,6 +140,10 @@ const (
 	SeedConsumedItemID    = "it_01seedyrn1item00000"
 	SeedConsumptionUnitID = "un_01seedpound00000000"
 	SeedProductionID      = "pn_01seedprod_knitlg00"
+	// The manufacturing method the Sew Large Sock step became (shared/db/seed/e2e/0099_derived_manufacturing_methods.sql):
+	// its operation is the step, with a machine and a scanning station, and its first material is knitted sock it makes.
+	SeedSewLargeMethodID   = "pnmd_0e0db326b98024620a39a480"
+	SeedSewLargeMaterialID = "cp_01seedcons_sl_lknit"
 
 	// Orders
 	SeedSalesOrderID     = "or_01k0a8bs2yejxbsvqhrx4drkq1" // ORD-001: issued, $50 partial settlement allocation -> partially_paid
@@ -501,34 +505,35 @@ const (
 // pathParamSeeds maps path parameter names to seed IDs.
 // Used to substitute path parameters in OpenAPI paths like /v1/catalog/properties/{property_id}/attributes.
 var pathParamSeeds = map[string]string{
-	"closure_id":         SeedOperatingCalendarClosureID,
-	"property_id":        SeedPropertyID,
-	"product_line_id":    SeedProductLineID,
-	"category_id":        SeedItemCategoryID, // PUT change-item-category (/items/{id}/category/{category_id})
-	"attribute_id":       SeedAttributeID,    // PUT add-item-attribute (/items/{id}/attributes/{attribute_id})
-	"item_category_id":   SeedItemCategoryID,
-	"unit_group_id":      SeedUnitGroupID,
-	"department_id":      SeedDepartmentID,
-	"customer_id":        SeedCustomerAccountID,
-	"sales_order_id":     SeedSalesOrderID,
-	"shipment_id":        SeedShipmentID,
-	"pick_id":            SeedPickID,
-	"invoice_id":         SeedInvoiceID,
-	"account_group_id":   SeedCustomerGroupID,
-	"price_list_id":      SeedPriceListID,
-	"location_id":        SeedLocationID,
-	"account_id":         SeedCustomerAccountID,
-	"carrier_id":         SeedCarrierID,
-	"item_id":            SeedLsnItemID,
-	"production_step_id": SeedProductionStepID,
-	"supplier_id":        SeedSupplierAccountID,
-	"vendor_account_id":  SeedAccountID, // selling company's account for customer tenancy
-	"agent_id":           SeedAgentConfigID,
-	"line_id":            SeedSalesOrderLineID,
-	"receiving_order_id": SeedReceivingOrderID,
-	"target_id":          SeedSalesTargetID,
-	"review_id":          SeedHubspotCompanyReviewID,
-	"document_type":      "price_list",
+	"closure_id":              SeedOperatingCalendarClosureID,
+	"property_id":             SeedPropertyID,
+	"product_line_id":         SeedProductLineID,
+	"category_id":             SeedItemCategoryID, // PUT change-item-category (/items/{id}/category/{category_id})
+	"attribute_id":            SeedAttributeID,    // PUT add-item-attribute (/items/{id}/attributes/{attribute_id})
+	"item_category_id":        SeedItemCategoryID,
+	"unit_group_id":           SeedUnitGroupID,
+	"department_id":           SeedDepartmentID,
+	"customer_id":             SeedCustomerAccountID,
+	"sales_order_id":          SeedSalesOrderID,
+	"shipment_id":             SeedShipmentID,
+	"pick_id":                 SeedPickID,
+	"invoice_id":              SeedInvoiceID,
+	"account_group_id":        SeedCustomerGroupID,
+	"price_list_id":           SeedPriceListID,
+	"location_id":             SeedLocationID,
+	"account_id":              SeedCustomerAccountID,
+	"carrier_id":              SeedCarrierID,
+	"item_id":                 SeedLsnItemID,
+	"production_step_id":      SeedProductionStepID,
+	"supplier_id":             SeedSupplierAccountID,
+	"vendor_account_id":       SeedAccountID, // selling company's account for customer tenancy
+	"agent_id":                SeedAgentConfigID,
+	"line_id":                 SeedSalesOrderLineID,
+	"receiving_order_id":      SeedReceivingOrderID,
+	"target_id":               SeedSalesTargetID,
+	"review_id":               SeedHubspotCompanyReviewID,
+	"document_type":           "price_list",
+	"manufacturing_method_id": SeedSewLargeMethodID,
 	// session_id is excluded from test discovery (excludedPaths in spec.go)
 }
 
@@ -627,6 +632,10 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/registration-flows/":                                      SeedRegistrationFlowID,
 	"/v1/sales/sales-orders/":                                            SeedSalesOrderID,
 	"/v1/sales/volume-discounts/":                                        SeedVolumeDiscountID,
+	"/v1/operations/manufacturing-methods/{manufacturing_method_id}/operations/": SeedSewLargeProductionStepID,
+	"/v1/operations/manufacturing-methods/{manufacturing_method_id}/materials/":  SeedSewLargeMaterialID,
+	"/v1/operations/manufacturing-methods/":                                      SeedSewLargeMethodID,
+	"/v1/catalog/items/{id}/production-flow":                                     SeedLsnItemID,
 
 	"/v1/ai/agents/":                        SeedCustomAgentDefinitionID,
 	"/v1/ai/memories/":                      SeedAgentMemoryID,

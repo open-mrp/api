@@ -480,33 +480,12 @@ func stashProductionStepMeta(meta *include.LoadMeta, s *pb.ProductionStepInfo) {
 	}
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "consumptions", apiresource.NewList(consumptions, apiresource.PageInfo{}))
 
-	machines := make([]apiresource.Machine, len(s.Machines))
+	// Machines load through the machine loader, so ?include=machines carries each one whole.
+	machineIDs := make([]string, len(s.Machines))
 	for i, m := range s.Machines {
-		sn := m.GetSerialNumber()
-		if sn == "" {
-			sn = "—"
-		}
-		mCreated := stepTS
-		if m.CreatedAt != nil {
-			mCreated = grpcutil.TimestampToTime(m.CreatedAt)
-		}
-		mUpdated := stepTS
-		if m.UpdatedAt != nil {
-			mUpdated = grpcutil.TimestampToTime(m.UpdatedAt)
-		}
-		if m.DepartmentId != nil && *m.DepartmentId != "" {
-			meta.Set(constants.ObjectTypeMachine, m.Id, "work_center_id", *m.DepartmentId)
-		}
-		machines[i] = apiresource.Machine{
-			ID:           m.Id,
-			Object:       constants.ObjectTypeMachine,
-			Name:         m.Name,
-			SerialNumber: sn,
-			CreatedAt:    mCreated,
-			UpdatedAt:    mUpdated,
-		}
+		machineIDs[i] = m.Id
 	}
-	meta.Set(constants.ObjectTypeProductionStep, s.Id, "machines", apiresource.NewList(machines, apiresource.PageInfo{}))
+	meta.Set(constants.ObjectTypeProductionStep, s.Id, "machine_ids", machineIDs)
 
 	// Stash only the ids; the scanning station and department are hydrated on demand through their
 	// shared batched loaders so ?include= carries the full resource (station label type/size, the

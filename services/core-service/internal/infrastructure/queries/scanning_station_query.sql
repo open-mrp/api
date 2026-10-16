@@ -22,11 +22,14 @@ AND ss.account_id = sqlc.arg('account_id');
 -- name: ListProductionStepsByScanningStationID :many
 -- FORCE INDEX reads just the station's steps, already in name order. Left free, production sometimes
 -- walks the account's (account_id, name) key to skip the sort, reading every step the account has.
-SELECT id, name, leveling_factor, allowances, created_at, updated_at
-FROM production_step FORCE INDEX (production_step_account_station_name_idx)
-WHERE scanning_station_id = sqlc.arg('scanning_station_id')
-AND account_id = sqlc.arg('account_id')
-ORDER BY name ASC;
+-- Draft and archived method versions' operations aren't scanned here.
+SELECT ps.id, ps.name, ps.leveling_factor, ps.allowances, ps.created_at, ps.updated_at
+FROM production_step ps FORCE INDEX (production_step_account_station_name_idx)
+LEFT JOIN manufacturing_method mm ON mm.id = ps.manufacturing_method_id
+WHERE ps.scanning_station_id = sqlc.arg('scanning_station_id')
+AND ps.account_id = sqlc.arg('account_id')
+AND (ps.manufacturing_method_id IS NULL OR mm.status_code = 'active')
+ORDER BY ps.name ASC;
 
 -- name: InsertScanningStation :exec
 INSERT INTO scanning_station (

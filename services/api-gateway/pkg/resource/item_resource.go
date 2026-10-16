@@ -63,9 +63,9 @@ type Item struct {
 	Sales *ItemSales `json:"sales"`
 	// Purchasing details, for materials. `null` for other types, and always `null` for portal users.
 	Material *ItemMaterial `json:"material" sensitive:"internal"`
-	// The manufacturing method used for new production of this item when nothing more specific applies.
+	// The manufacturing method used for new production of this item when nothing more specific applies: its active method.
 	//
-	// Always `null` for portal users.
+	// Null unless included, and when the item has no active method. Always `null` for portal users.
 	DefaultManufacturingMethod *ManufacturingMethod `json:"default_manufacturing_method" expandable:"true" sensitive:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

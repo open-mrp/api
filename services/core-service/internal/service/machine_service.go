@@ -400,6 +400,9 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 		if apiErr := domain.MachineReferences.RequireUnused(txCtx, txSvc.repos.NewReferenceRepo(), machine.ID); apiErr != nil {
 			return apiErr
 		}
+		if apiErr := txSvc.repos.NewManufacturingMethodRepo().RemoveMachineFromOperations(txCtx, machine.ID); apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMachine, machine.ID, accountID, machine); apiErr != nil {
 			return apiErr

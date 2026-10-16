@@ -14,16 +14,17 @@ import (
 
 // Reasons an item's cost basis moved, carried on the event for whoever reads the outbox later.
 const (
-	CostBasisProductionStepCreated   = "production_step_created"
-	CostBasisProductionStepUpdated   = "production_step_updated"
-	CostBasisProductionStepDeleted   = "production_step_deleted"
-	CostBasisProductionStepsImported = "production_steps_imported"
-	CostBasisConsumptionCreated      = "consumption_created"
-	CostBasisConsumptionUpdated      = "consumption_updated"
-	CostBasisConsumptionDeleted      = "consumption_deleted"
-	CostBasisProductionUpdated       = "production_updated"
-	CostBasisRateUpdated             = "rate_updated"
-	CostBasisUnitCostUpdated         = "unit_cost_updated"
+	CostBasisProductionStepCreated        = "production_step_created"
+	CostBasisProductionStepUpdated        = "production_step_updated"
+	CostBasisProductionStepDeleted        = "production_step_deleted"
+	CostBasisProductionStepsImported      = "production_steps_imported"
+	CostBasisConsumptionCreated           = "consumption_created"
+	CostBasisConsumptionUpdated           = "consumption_updated"
+	CostBasisConsumptionDeleted           = "consumption_deleted"
+	CostBasisProductionUpdated            = "production_updated"
+	CostBasisRateUpdated                  = "rate_updated"
+	CostBasisUnitCostUpdated              = "unit_cost_updated"
+	CostBasisManufacturingMethodActivated = "manufacturing_method_activated"
 )
 
 // PublishItemCostBasisChanged writes, on the outbox of the transaction that made the change, the event

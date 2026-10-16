@@ -416,7 +416,8 @@ func TestCovSettingsIntegrations_ListSearch(t *testing.T) {
 			assert.Equal(t, "Shippo Integration", DataItemField(item, "name"))
 			assert.Equal(t, "shippo", DataItemField(item, "provider"))
 			assert.Equal(t, "active", DataItemField(item, "status"))
-			assert.Equal(t, "unknown", DataItemField(item, "connection_status"), "no provider call has settled the seeded row")
+			// Other tests rate and buy labels through this Shippo account, which settles it to connected.
+			assert.Contains(t, []string{"unknown", "connected"}, DataItemField(item, "connection_status"))
 		}
 	}
 	assert.True(t, found, "q=Shippo should find the seeded shippo integration (SeedAccountIntegrationID)")

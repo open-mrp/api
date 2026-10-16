@@ -42,7 +42,7 @@ type RequestLog struct {
 	// The query-string parameters the request was made with: each parameter's values, in the order sent.
 	//
 	// `null` when the request had none.
-	QueryParams map[string][]string `json:"query_params"`
+	QueryParams *map[string][]string `json:"query_params"`
 	// HTTP response status code (e.g. `200`, `404`).
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
@@ -104,7 +104,7 @@ var SampleRequestLog = &RequestLog{
 	Host:            SampleRequestLogHost,
 	Path:            SampleRequestLogPath,
 	NormalizedRoute: SampleRequestLogPath,
-	QueryParams:     map[string][]string{"limit": {"10"}},
+	QueryParams:     &map[string][]string{"limit": {"10"}},
 	StatusCode:      200,
 	LatencyUs:       12345,
 	APIVersion:      new(SampleRequestLogAPIVersion),

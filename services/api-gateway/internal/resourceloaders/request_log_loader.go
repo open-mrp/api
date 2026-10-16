@@ -81,7 +81,7 @@ func RequestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
 
 // queryParamsFromJSON reads stored query parameters, where a parameter sent once is a string and one sent more than
 // once is a list of strings. Anything else reads as no parameters.
-func queryParamsFromJSON(s *string) map[string][]string {
+func queryParamsFromJSON(s *string) *map[string][]string {
 	if s == nil || *s == "" {
 		return nil
 	}
@@ -104,5 +104,5 @@ func queryParamsFromJSON(s *string) map[string][]string {
 			out[k] = values
 		}
 	}
-	return out
+	return &out
 }

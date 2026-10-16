@@ -178,34 +178,34 @@ var counterpartyWrites = []counterpartyWrite{
 	},
 	{
 		name: "disable account user", own: "team:update", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPut, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/disable", wantOwn: http.StatusOK,
+		method: http.MethodPost, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/disable", wantOwn: http.StatusOK,
 		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/disable")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/disable", nil)
 		},
 		counterpartyWrite: func(t *testing.T, c *Client, account string) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/disable")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/disable", nil)
 		},
 		wantCounterparty: http.StatusOK,
 	},
 	{
 		name: "activate account user", own: "team:update", customer: "customers:update", supplier: "suppliers:update",
-		method: http.MethodPut, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/activate", wantOwn: http.StatusOK,
+		method: http.MethodPost, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/activate", wantOwn: http.StatusOK,
 		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/activate")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/activate", nil)
 		},
 		counterpartyWrite: func(t *testing.T, c *Client, account string) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/activate")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/activate", nil)
 		},
 		wantCounterparty: http.StatusOK,
 	},
 	{
 		name: "remove account user", own: "team:delete", customer: "customers:delete", supplier: "suppliers:delete",
-		method: http.MethodPut, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/remove", wantOwn: http.StatusOK,
+		method: http.MethodPost, refusedPath: accountUsersPath + "/" + counterpartyMissingAccountUser + "/actions/remove", wantOwn: http.StatusOK,
 		ownWrite: func(t *testing.T, c *Client) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/remove")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, SeedAccountID)+"/actions/remove", nil)
 		},
 		counterpartyWrite: func(t *testing.T, c *Client, account string) (int, []byte) {
-			return counterpartyPut(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/remove")
+			return counterpartyPost(t, c, accountUsersPath+"/"+counterpartyContact(t, account)+"/actions/remove", nil)
 		},
 		wantCounterparty: http.StatusOK,
 	},

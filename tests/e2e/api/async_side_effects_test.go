@@ -633,7 +633,7 @@ func TestAddresses_RequestLogs(t *testing.T) {
 func TestAPIKeys_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAPIKeyAndCleanup(t, uniqueName("e2e-key-audit"))
-	info := jsonObject(created, "api_key_info")
+	info := jsonObject(created, "api_key")
 	id := jsonField(info, "id")
 
 	expectAuditEvent(t, id, "api_key", "create")
@@ -642,7 +642,7 @@ func TestAPIKeys_AuditEvents(t *testing.T) {
 func TestAPIKeys_RequestLogs(t *testing.T) {
 	t.Parallel()
 	created := createAPIKeyAndCleanup(t, uniqueName("e2e-key-rlog"))
-	info := jsonObject(created, "api_key_info")
+	info := jsonObject(created, "api_key")
 	id := jsonField(info, "id")
 	require.NotEmpty(t, id)
 

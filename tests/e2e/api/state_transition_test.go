@@ -83,8 +83,8 @@ func TestStateTransition_RevokedAPIKey_CannotAuthenticate(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 
 	parsed := parseJSON(createBody)
-	secret := jsonField(parsed, "api_key_secret")
-	info := jsonObject(parsed, "api_key_info")
+	secret := jsonField(parsed, "secret")
+	info := jsonObject(parsed, "api_key")
 	id := jsonField(info, "id")
 
 	// Create a client using the new key.
@@ -118,7 +118,7 @@ func TestStateTransition_RevokedAPIKey_StillVisibleInList(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 
-	id := jsonField(jsonObject(parseJSON(createBody), "api_key_info"), "id")
+	id := jsonField(jsonObject(parseJSON(createBody), "api_key"), "id")
 
 	// Revoke.
 	apiClient.Delete(apiKeysPath + "/" + id)
@@ -145,8 +145,8 @@ func TestStateTransition_RotatedKey_OldKeyRevoked(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 
 	origParsed := parseJSON(createBody)
-	origSecret := jsonField(origParsed, "api_key_secret")
-	origID := jsonField(jsonObject(origParsed, "api_key_info"), "id")
+	origSecret := jsonField(origParsed, "secret")
+	origID := jsonField(jsonObject(origParsed, "api_key"), "id")
 
 	// Rotate.
 	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", nil, newIdempotencyKey())
@@ -154,8 +154,8 @@ func TestStateTransition_RotatedKey_OldKeyRevoked(t *testing.T) {
 	requireStatus(t, 201, rotStatus, rotBody)
 
 	rotParsed := parseJSON(rotBody)
-	newSecret := jsonField(rotParsed, "api_key_secret")
-	newID := jsonField(jsonObject(rotParsed, "api_key_info"), "id")
+	newSecret := jsonField(rotParsed, "secret")
+	newID := jsonField(jsonObject(rotParsed, "api_key"), "id")
 	t.Cleanup(func() { apiClient.Delete(apiKeysPath + "/" + newID) })
 
 	assert.NotEqual(t, origSecret, newSecret, "Rotated key should have a different secret")

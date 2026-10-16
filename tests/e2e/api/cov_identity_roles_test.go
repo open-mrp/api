@@ -34,8 +34,10 @@ func TestCovIdentityRoles_OmittedFields(t *testing.T) {
 		assertObjectField(t, got, "role")
 		assert.Equal(t, name, jsonField(got, "name"))
 		assert.Equal(t, "user", jsonField(got, "type"))
-		// permissions was omitted on create → no permissions rows exist, so even with ?include=permissions the value comes back null (see TestCovIdentityRoles_ClearPermissionsReturnsNull below for the same nil-vs-empty-array behavior on an explicit clear).
-		assertNilField(t, got, "permissions")
+		// A role created with only a name has access none everywhere and holds the baseline every member holds.
+		assert.Equal(t, "none", jsonField(jsonObject(got, "access"), "sales"))
+		assert.Contains(t, got["permissions"], "messaging:read")
+		assert.NotContains(t, got["permissions"], "sales_orders:read")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 	})
@@ -106,10 +108,10 @@ func TestCovIdentityRoles_OmittedFields(t *testing.T) {
 	})
 }
 
-// TestCovIdentityRoles_ClearPermissionsReturnsNull verifies the doc-promised "pass an empty array to remove all permissions" semantics on PATCH.
+// TestCovIdentityRoles_ClearPermissionsReturnsEmptyList verifies the doc-promised "pass an empty array to remove all permissions" semantics on PATCH.
 //
 // Verified against the live stack: after clearing, GET/PATCH with ?include=permissions returns `"permissions": null`, not `[]`. This mirrors omitted-permissions-on-create (also null): the loader's formatRolePermissions returns a nil `[]string` when there are zero permission rows, and the JSON encoder renders a nil slice as `null` rather than `[]`. Asserting actual behavior per task instructions rather than the task doc's unverified `[]` prediction.
-func TestCovIdentityRoles_ClearPermissionsReturnsNull(t *testing.T) {
+func TestCovIdentityRoles_ClearPermissionsReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covroles-clear")
@@ -140,13 +142,13 @@ func TestCovIdentityRoles_ClearPermissionsReturnsNull(t *testing.T) {
 
 	updated := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(updated, "name"), "name should be unaffected by clearing permissions")
-	assertNilField(t, updated, "permissions")
+	assert.Equal(t, []any{}, updated["permissions"], "an included permission list is a list, empty when the role holds nothing")
 
 	// Confirm the clear persisted via a fresh GET.
 	getStatus2, getBody2, err := apiClient.GetListRaw(rolesPath+"/"+id, url.Values{"include": {"permissions"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
-	assertNilField(t, parseJSON(getBody2), "permissions")
+	assert.Equal(t, []any{}, parseJSON(getBody2)["permissions"])
 }
 
 // --- Response Shape ---

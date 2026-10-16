@@ -1052,9 +1052,9 @@ func TestProductionRuns_RequiresPermission(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	created := parseJSON(body)
-	keyID := jsonField(jsonObject(created, "api_key_info"), "id")
+	keyID := jsonField(jsonObject(created, "api_key"), "id")
 	defer apiClient.Delete(apiKeysPath + "/" + keyID)
-	salesRep := apiClient.WithBearerToken(jsonField(created, "api_key_secret"), SeedAccountID)
+	salesRep := apiClient.WithBearerToken(jsonField(created, "secret"), SeedAccountID)
 
 	runID := jsonField(createRunWithBatches(t, plannedBatch("1")), "id")
 

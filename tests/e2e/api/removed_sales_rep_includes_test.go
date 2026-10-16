@@ -52,7 +52,7 @@ func TestRemovedSalesRep_IncludesStayReadable(t *testing.T) {
 	repUserID, repEmail := jsonField(repUser, "id"), jsonField(repUser, "email")
 	require.NotEmpty(t, repEmail)
 
-	status, raw, err = apiClient.Put(accountUsersPath+"/"+repID+"/actions/remove", nil)
+	status, raw, err = apiClient.Post(accountUsersPath+"/"+repID+"/actions/remove", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 

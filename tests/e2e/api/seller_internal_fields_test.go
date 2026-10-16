@@ -24,7 +24,7 @@ var sellerInternalFields = map[string][]string{
 	"customer":          {"note", "commission_policy"},
 	"customer_defaults": {"fulfillment_policy"},
 	"account_group":     {"commission_policy"},
-	"account_user":      {"is_commission_eligible", "last_used_at"},
+	"account_user":      {"commission_eligibility", "last_used_at"},
 	"conversation":      {"legal_hold"},
 }
 
@@ -222,8 +222,8 @@ func TestSellerInternal_CustomerPortalReadsItsRecordWithoutNotesCommissionOrActi
 	assert.NotEmpty(t, jsonField(jsonObject(staff, "group"), "commission_policy"), "the seller reads the group's commission policy")
 	rep := jsonObject(jsonObject(staff, "defaults"), "sales_rep")
 	require.NotNil(t, rep, "the seed customer has a sales rep")
-	_, isBool := rep["is_commission_eligible"].(bool)
-	assert.True(t, isBool, "the seller reads whether its rep earns commission")
+	_, isSet := rep["commission_eligibility"].(string)
+	assert.True(t, isSet, "the seller reads whether its rep earns commission")
 	assert.Equal(t, "Call the buyer, not the plant", jsonField(childAccount(t, staff, childID), "instructions"))
 
 	own := parseJSON(mustGetAs(t, getCustomerPortalClient(), path, include))
@@ -240,7 +240,7 @@ func TestSellerInternal_CustomerPortalReadsItsRecordWithoutNotesCommissionOrActi
 	portalRep := jsonObject(jsonObject(own, "defaults"), "sales_rep")
 	require.NotNil(t, portalRep, "the customer still sees who its rep is")
 	assert.Equal(t, jsonField(rep, "id"), jsonField(portalRep, "id"))
-	assertNilField(t, portalRep, "is_commission_eligible")
+	assertNilField(t, portalRep, "commission_eligibility")
 	assertNilField(t, portalRep, "last_used_at")
 
 	requireStatusAs(t, http.StatusNotFound, "supplier portal", getSupplierPortalClient(t), path, nil)

@@ -214,10 +214,10 @@ func TestIncludeReads_SupplierReaderGetsMaterialItems(t *testing.T) {
 func TestIncludeReads_TeamReaderGetsUserRoleAndDepartment(t *testing.T) {
 	t.Parallel()
 	reader := customRoleClient(t, "team:read")
-	includes := []string{"user", "role", "department"}
+	includes := []string{"user", "role", "work_center"}
 
 	retrieved := requireSameIncludes(t, reader, accountUsersPath+"/"+SeedAccountUser2ID, includes...)
-	listed := listedRow(t, reader, accountUsersPath, url.Values{"limit": {"100"}}, SeedAccountUser2ID, includes...)
+	listed := listedRow(t, reader, accountUsersPath, url.Values{"limit": {"100"}, "statuses[]": {"active"}}, SeedAccountUser2ID, includes...)
 	assertSameIncludes(t, retrieved, listed, "the listed account user", includes...)
 
 	requireRefusedRead(t, reader, rolesPath+"/"+SeedSalesRepRoleID)

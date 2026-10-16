@@ -1097,12 +1097,12 @@ func resolveCommissionEligibility(roleType string, requested *bool, current bool
 	switch constants.RoleType(roleType) {
 	case constants.RoleTypeSalesRep:
 		if requested != nil && !*requested {
-			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Sales rep users are always eligible for commission.")
+			return false, apierror.NewFieldError("commission_eligibility", apierror.CodeInvalidFormat, "Sales rep users are always eligible for commission.")
 		}
 		return true, nil
 	case constants.RoleTypeScanner, constants.RoleTypeAgent:
 		if requested != nil && *requested {
-			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Scanning station and agent users cannot be eligible for commission.")
+			return false, apierror.NewFieldError("commission_eligibility", apierror.CodeInvalidFormat, "Scanning station and agent users cannot be eligible for commission.")
 		}
 		return false, nil
 	default:

@@ -377,8 +377,8 @@ func TestCounterpartyContacts_CreateDuplicateConflicts(t *testing.T) {
 
 // --- List ---
 
-// The list holds the account's active contacts with the notification types each receives, finds them by name, leaves
-// removed ones out unless asked, and pages.
+// The list holds the account's contacts with the notification types each receives, every status unless statuses[]
+// narrows it, finds them by name, and pages.
 func TestCounterpartyContacts_List(t *testing.T) {
 	t.Parallel()
 	for _, kind := range counterpartyKinds {
@@ -395,13 +395,13 @@ func TestCounterpartyContacts_List(t *testing.T) {
 			status, body := removeContact(t, c, gone)
 			requireStatus(t, 200, status, body)
 
-			contacts := listContacts(t, c, nil)
-			assert.ElementsMatch(t, []string{a, b}, contactIDs(contacts), "only the active contacts are listed")
+			contacts := listContacts(t, c, url.Values{"statuses[]": {"active"}})
+			assert.ElementsMatch(t, []string{a, b}, contactIDs(contacts), "statuses[]=active lists only the active contacts")
 			assert.Equal(t, []string{"invoice"}, notificationTypes(t, findContact(contacts, a)))
 			assert.Empty(t, notificationTypes(t, findContact(contacts, b)), "a contact with nothing enabled has an empty list")
 			assert.Equal(t, aEmail, jsonField(jsonObject(findContact(contacts, a), "user"), "email"))
 
-			withRemoved := listContacts(t, c, url.Values{"statuses[]": {"removed"}})
+			withRemoved := listContacts(t, c, nil)
 			assert.ElementsMatch(t, []string{a, b, gone}, contactIDs(withRemoved))
 			assert.Equal(t, "removed", jsonField(findContact(withRemoved, gone), "status"))
 
@@ -409,7 +409,7 @@ func TestCounterpartyContacts_List(t *testing.T) {
 			assert.Equal(t, []string{a}, contactIDs(found), "search finds the contact by name")
 			assert.Empty(t, listContacts(t, c, url.Values{"q": {"zzzz-no-such-contact"}}))
 
-			first, status, err := c.GetList(accountUsersPath, url.Values{"limit": {"1"}})
+			first, status, err := c.GetList(accountUsersPath, url.Values{"limit": {"1"}, "statuses[]": {"active"}})
 			require.NoError(t, err)
 			require.Equal(t, 200, status)
 			require.Len(t, first.Data, 1)
@@ -529,7 +529,8 @@ func TestCounterpartyContacts_RemoveAndReadd(t *testing.T) {
 
 			status, body := removeContact(t, c, contactID)
 			requireStatus(t, 200, status, body)
-			assert.Nil(t, findContact(listContacts(t, c, nil), contactID), "a removed contact is not listed")
+			assert.Nil(t, findContact(listContacts(t, c, url.Values{"statuses[]": {"active"}}), contactID), "a removed contact is not active")
+			assert.Equal(t, "removed", jsonField(findContact(listContacts(t, c, nil), contactID), "status"), "a removed contact stays listed")
 
 			readded := createContact(t, c, name, email, map[string]bool{
 				"order_acknowledgement": true, "invoice": false, "purchase_order_submission": true,

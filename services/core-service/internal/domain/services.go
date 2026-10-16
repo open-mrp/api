@@ -854,6 +854,8 @@ type ProductionFlowSvc interface {
 }
 
 type CustomerSvc interface {
+	// PriceListIDs maps each of the caller account's customers to the price lists assigned to it directly.
+	PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError)
 	// ListCustomers returns a paginated list of customers for the caller's account.
 	ListCustomers(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
 

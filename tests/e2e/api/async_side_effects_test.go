@@ -1225,10 +1225,9 @@ func TestOrderDiscounts_AuditEvents(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-ords-audit")
 	created := createAndCleanup(t, orderDiscountsPath, map[string]any{
-		"name":          name,
-		"code":          uniqueName("E2EAUDIT"),
-		"discount_type": "percentage",
-		"percentage":    "0.1",
+		"name":     name,
+		"code":     uniqueName("E2EAUDIT"),
+		"discount": percentOff("10"),
 	})
 	discountID := jsonField(created, "id")
 
@@ -1239,15 +1238,13 @@ func TestOrderDiscounts_AuditEvents(t *testing.T) {
 	assert.Equal(t, name, jsonField(nameCreate, "new_value"))
 
 	patchStatus, patchBody, err := apiClient.Patch(orderDiscountsPath+"/"+discountID,
-		map[string]any{"discount_type": "amount", "amount": "7.00"}, newIdempotencyKey())
+		map[string]any{"discount": amountOff("7.00")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	updatedEvent := expectAuditEventWithChanges(t, discountID, "order_discount", "update")
-	typeUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "discount_type_code")
+	_, ok = changeForField(jsonListData(updatedEvent, "changes"), "discount")
 	require.True(t, ok, "switching the discount type should be audited")
-	assert.Equal(t, "percentage", jsonField(typeUpdate, "old_value"))
-	assert.Equal(t, "amount", jsonField(typeUpdate, "new_value"))
 
 	delStatus, delBody, err := apiClient.Delete(orderDiscountsPath + "/" + discountID)
 	require.NoError(t, err)

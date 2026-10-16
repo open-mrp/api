@@ -4771,6 +4771,21 @@ func (mr *MockCustomerSvcMockRecorder) MergeCustomers(ctx, params any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).MergeCustomers), ctx, params)
 }
 
+// PriceListIDs mocks base method.
+func (m *MockCustomerSvc) PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PriceListIDs", ctx, customerAccountIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PriceListIDs indicates an expected call of PriceListIDs.
+func (mr *MockCustomerSvcMockRecorder) PriceListIDs(ctx, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PriceListIDs", reflect.TypeOf((*MockCustomerSvc)(nil).PriceListIDs), ctx, customerAccountIDs)
+}
+
 // UpdateCustomer mocks base method.
 func (m *MockCustomerSvc) UpdateCustomer(ctx context.Context, params domain.UpdateCustomerParams) (*domain.Customer, *apierror.APIError) {
 	m.ctrl.T.Helper()

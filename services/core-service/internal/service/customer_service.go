@@ -1900,3 +1900,15 @@ func managedRecipientsAuditValue(refs []domain.NotificationRecipientRef) []manag
 	slices.SortFunc(out, func(a, b managedRecipientAuditValue) int { return strings.Compare(a.AccountUserID, b.AccountUserID) })
 	return out
 }
+
+func (s *customerSvcImpl) PriceListIDs(ctx context.Context, customerAccountIDs []string) (map[string][]string, *apierror.APIError) {
+	identity, ok := appctx.Identity[*types.Identity](ctx)
+	if !ok || identity == nil {
+		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+	if len(customerAccountIDs) == 0 || !identity.IsTargetAccountSet() {
+		return map[string][]string{}, nil
+	}
+	assigned, apiErr := s.repos.NewPriceListRepo().CustomerListIDsByAccounts(ctx, identity.Target.AccountID, customerAccountIDs)
+	return assigned, apiErr
+}

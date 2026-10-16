@@ -344,7 +344,7 @@ func (e *RetrieveItemInventoryLevelEndpoint) Materialize() *apiendpoint.APIEndpo
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInventoryLevel,
-			Fields:     []string{"item", "location"},
+			Fields:     []string{"item"},
 		}),
 	})
 }

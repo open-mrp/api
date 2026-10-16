@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Numbers handed out from a per-account counter: production runs and customers. Runs created at once
+// Numbers handed out from a per-account counter: production runs, customers and suppliers. Runs created at once
 // must each get their own number without the creates deadlocking, a number someone typed in or renamed
 // to is never handed out again, and a typed-in customer number goes to one customer when two people
 // save it at once.
@@ -187,4 +187,43 @@ func TestNumbering_ScansStartTheirRunsWhileOtherRunsAreCreated(t *testing.T) {
 		requireStatus(t, http.StatusOK, status, raw)
 		assert.NotEmpty(t, jsonField(parseJSON(raw), "started_at"), "a scanned run %s is started", runID)
 	}
+}
+
+func TestNumbering_AnAllocatedSupplierNumberSkipsOneTypedIn(t *testing.T) {
+	t.Parallel()
+	clientB := getTenantBClient()
+	createSupplierB := func(number string) (int, map[string]any) {
+		t.Helper()
+		body := map[string]any{"name": uniqueName("e2e-sup-number-skip")}
+		if number != "" {
+			body["number"] = number
+		}
+		status, raw, err := clientB.Post(suppliersPath, body, newIdempotencyKey())
+		require.NoError(t, err)
+		if status == http.StatusConflict && number != "" {
+			return status, nil
+		}
+		requireStatus(t, http.StatusCreated, status, raw)
+		supplier := parseJSON(raw)
+		id := jsonField(supplier, "id")
+		t.Cleanup(func() { clientB.Delete(suppliersPath + "/" + id) })
+		return status, supplier
+	}
+
+	// Other tests can create tenant B suppliers in parallel and take the number this test means to type in first, so
+	// the next free one is retried.
+	var typedIn string
+	for range 5 {
+		_, first := createSupplierB("")
+		n, err := strconv.Atoi(jsonField(first, "number"))
+		require.NoError(t, err, "an allocated supplier number is numeric")
+		if status, _ := createSupplierB(strconv.Itoa(n + 1)); status == http.StatusCreated {
+			typedIn = strconv.Itoa(n + 1)
+			break
+		}
+	}
+	require.NotEmpty(t, typedIn, "a number just past the counter could be typed in")
+
+	_, next := createSupplierB("")
+	assert.NotEqual(t, typedIn, jsonField(next, "number"), "the counter skips the number someone typed in")
 }

@@ -209,7 +209,6 @@ func TestSupplierParity_CreateValidation(t *testing.T) {
 	t.Parallel()
 	for name, body := range map[string]map[string]any{
 		"missing name":       {"number": uniqueName("SUP")},
-		"missing number":     {"name": uniqueName("e2e-sup-val")},
 		"blank instructions": {"name": uniqueName("e2e-sup-val"), "number": uniqueName("SUP"), "instructions": ""},
 	} {
 		status, resp, err := apiClient.Post(suppliersPath, body, newIdempotencyKey())

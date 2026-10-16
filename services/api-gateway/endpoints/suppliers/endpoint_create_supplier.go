@@ -19,8 +19,8 @@ import (
 type CreateSupplierRequest struct {
 	// The supplier's business name, as shown throughout the app and on documents.
 	Name string `json:"name" validate:"required,max=255"`
-	// Supplier number, unique within your account, such as `SUP-001`.
-	Number string `json:"number" validate:"required,max=255"`
+	// Supplier number, unique within your account. If omitted, the next number in your sequence is assigned.
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Whether the supplier can be named on new records: `active` or `archived`. Defaults to `active`.
 	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 	// Your team's standing instructions for this supplier's orders.
@@ -43,7 +43,7 @@ var sampleCreateSupplierState = "IL"
 var sampleCreateSupplierPostalCode = "60601"
 var sampleCreateSupplierRequest = &CreateSupplierRequest{
 	Name:         apiresource.SampleSupplierName,
-	Number:       apiresource.SampleSupplierNumber,
+	Number:       field.Some(apiresource.SampleSupplierNumber),
 	Instructions: field.Some("Confirm every delivery date by email."),
 	Contact: field.Some(SupplierContactInput{
 		Email: field.Set("orders@acmesupplies.com"),
@@ -69,7 +69,7 @@ func (*CreateSupplierRequest) SchemaExample() any {
 
 // Creates a supplier.
 //
-// Give its billing and ship-from addresses inline; they become the supplier's default addresses. `number` must be unique within your account.
+// Give its billing and ship-from addresses inline; they become the supplier's default addresses. `number` must be unique within your account; omit it to be assigned the next one.
 type CreateSupplierEndpoint struct{}
 
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.Supplier] {

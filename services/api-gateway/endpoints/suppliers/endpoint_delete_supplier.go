@@ -36,7 +36,7 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		ObjectType:        constants.ObjectTypeSupplier,
 		// Single delete checks suppliers:update downstream (Dashboard convention), not suppliers:delete.
 		Auth: authz.Policy{Permissions: []types.Permission{
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionDelete},
 		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(SupplierSvc).DeleteSupplier, constants.ObjectTypeSupplier, "id")

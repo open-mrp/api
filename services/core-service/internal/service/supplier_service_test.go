@@ -243,7 +243,7 @@ func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
 	require.Nil(t, apiErr)
 }
 
-// No unique index guards the number, so two concurrent creates both pass a check made without the owner's lock.
+// Two concurrent creates would both pass a check made without the owner's lock.
 func TestCreateSupplier_ChecksTheNumberOnlyUnderTheOwnersLock(t *testing.T) {
 	t.Parallel()
 	d := newSupplierTestDeps(t)
@@ -257,6 +257,65 @@ func TestCreateSupplier_ChecksTheNumberOnlyUnderTheOwnersLock(t *testing.T) {
 	require.NotNil(t, apiErr)
 	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
 	assert.Equal(t, "number", apiErr.Param)
+}
+
+func TestCreateSupplier_AllocatesTheNextNumberWhenNoneIsTyped(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	gomock.InOrder(
+		d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), supplierTestOwnerID).Return(nil),
+		d.supplierRepo.EXPECT().AllocateNextNumber(gomock.Any(), gomock.Any(), supplierTestOwnerID).Return(int64(1007), nil),
+	)
+	d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	d.supplierRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ string, params domain.CreateSupplierParams, _, _ *string) (*domain.Supplier, *apierror.APIError) {
+			assert.Equal(t, "1007", params.Number)
+			return &domain.Supplier{ID: "ac_new"}, nil
+		})
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_new", Number: "1007"}, nil)
+
+	created, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{Name: "Acme"})
+
+	require.Nil(t, apiErr)
+	assert.Equal(t, "1007", created.Number)
+}
+
+func TestCreateSupplier_ATypedNumberIsNotAllocated(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), supplierTestOwnerID).Return(nil)
+	d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), supplierTestOwnerID, "S-9", nil).Return(false, nil)
+	d.supplierRepo.EXPECT().AllocateNextNumber(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	d.supplierRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_new"}, nil)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_new", Number: "S-9"}, nil)
+
+	_, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{Name: "Acme", Number: "S-9"})
+
+	require.Nil(t, apiErr)
+}
+
+func TestDeleteSupplier_NeedsTheDeletePermission(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Times(0)
+	owner := supplierTestOwnerID
+	custom := string(constants.RoleTypeCustom)
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: owner},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "us_sup",
+			AccountID:    &owner,
+			RoleType:     &custom,
+			Permissions:  map[string]bool{"suppliers:read": true, "suppliers:update": true},
+		},
+	})
+
+	_, apiErr := d.supplierSvc.DeleteSupplier(ctx, domain.DeleteSupplierParams{SupplierID: "ac_sup"})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusForbidden, apiErr.Code.Status())
 }
 
 // The lock precedes every read: a read before it would pin the snapshot the number check sees.

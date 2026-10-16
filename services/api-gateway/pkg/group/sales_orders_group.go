@@ -48,8 +48,11 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 	bulkDeleteEndpoint := apiendpoint.From(&salesorderep.BulkDeleteSalesOrdersEndpoint{}).WithService(inner, svc)
 	issueEndpoint := apiendpoint.From(&salesorderep.IssueSalesOrderEndpoint{}).WithService(inner, svc)
 	unissueEndpoint := apiendpoint.From(&salesorderep.UnissueSalesOrderEndpoint{}).WithService(inner, svc)
-	closeEndpoint := apiendpoint.From(&salesorderep.CloseSalesOrderEndpoint{}).WithService(inner, svc)
-	openEndpoint := apiendpoint.From(&salesorderep.OpenSalesOrderEndpoint{}).WithService(inner, svc)
+	cancelEndpoint := apiendpoint.From(&salesorderep.CancelSalesOrderEndpoint{}).WithService(inner, svc)
+	preview9IssueEndpoint := apiendpoint.From(&salesorderep.Preview9IssueSalesOrderEndpoint{}).WithService(inner, svc)
+	preview9UnissueEndpoint := apiendpoint.From(&salesorderep.Preview9UnissueSalesOrderEndpoint{}).WithService(inner, svc)
+	preview9CloseEndpoint := apiendpoint.From(&salesorderep.Preview9CloseSalesOrderEndpoint{}).WithService(inner, svc)
+	preview9OpenEndpoint := apiendpoint.From(&salesorderep.Preview9OpenSalesOrderEndpoint{}).WithService(inner, svc)
 	checkoutEndpoint := apiendpoint.From(&salesorderep.CheckoutSalesOrderEndpoint{}).WithService(inner, svc)
 	quotePricesEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderPricesEndpoint{}).WithService(inner, svc)
 	quoteFreightEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderFreightEndpoint{}).WithService(inner, svc)
@@ -69,8 +72,11 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 		bulkDeleteEndpoint,
 		issueEndpoint,
 		unissueEndpoint,
-		closeEndpoint,
-		openEndpoint,
+		cancelEndpoint,
+		preview9IssueEndpoint,
+		preview9UnissueEndpoint,
+		preview9CloseEndpoint,
+		preview9OpenEndpoint,
 		checkoutEndpoint,
 		quotePricesEndpoint,
 		quoteFreightEndpoint,

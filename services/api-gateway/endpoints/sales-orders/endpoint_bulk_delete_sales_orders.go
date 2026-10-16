@@ -28,7 +28,7 @@ func (*BulkDeleteSalesOrdersRequest) SchemaExample() any {
 
 // Deletes multiple sales orders in a single atomic operation.
 //
-// Each order is torn down exactly as it would be by deleting it on its own. Fulfilled orders cannot be deleted; if any requested order fails this check, no orders are deleted.
+// Each order is torn down exactly as it would be by deleting it on its own. An order with a shipment or invoice can't be deleted (409 `resource_in_use`); if any requested order fails this check, none are deleted.
 type BulkDeleteSalesOrdersEndpoint struct{}
 
 func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteSalesOrdersRequest, *apiresource.EmptyResource] {
@@ -40,7 +40,6 @@ func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSalesOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SalesOrderSvc).BulkDeleteSalesOrders

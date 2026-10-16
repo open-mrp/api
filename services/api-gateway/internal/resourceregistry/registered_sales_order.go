@@ -2,8 +2,9 @@ package resourceregistry
 
 import (
 	"context"
-	"github.com/open-mrp/apikit/include"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
@@ -15,14 +16,15 @@ func init() {
 		ObjectType: constants.ObjectTypeSalesOrder,
 		Load:       resourceloaders.LoadSalesOrders,
 		Subs: []include.SubField{
-			{
-				Key:         "customer",
-				Target:      constants.ObjectTypeCustomer,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractCustomerIDFromSO,
-				Populate:    populateCustomerOnSO,
-			},
-			{Key: "sales_rep", Populate: populateSalesRepOnSO},
+			salesOrderRef("customer", constants.ObjectTypeCustomer, resourceloaders.SalesOrderMetaCustomerID, func(so *apiresource.SalesOrder, v any) {
+				so.Customer = v.(*apiresource.Customer)
+			}),
+			SiteSub(constants.ObjectTypeSalesOrder, salesOrderIDOf, func(parent any, site *apiresource.Location) {
+				parent.(*apiresource.SalesOrder).Site = site
+			}),
+			salesOrderRef("sales_rep", constants.ObjectTypeAccountUser, resourceloaders.SalesOrderMetaSalesRepID, func(so *apiresource.SalesOrder, v any) {
+				so.SalesRep = v.(*apiresource.AccountUser)
+			}),
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeCreatedBy,
@@ -30,14 +32,41 @@ func init() {
 				ExtractIDs:  extractSelfIDForCreatedBy,
 				Populate:    populateCreatedByOnSO,
 			},
-			{Key: "bill_to_address", Populate: populateBillToAddressOnSO},
-			{Key: "ship_to_address", Populate: populateShipToAddressOnSO},
-			{Key: "freight", Populate: populateFreightOnSO},
-			{Key: "payment_term", Populate: populatePaymentTermOnSO},
-			{Key: "shipping_term", Populate: populateShippingTermOnSO},
-			{Key: "order_discount", Target: constants.ObjectTypeOrderDiscount, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractOrderDiscountIDFromSO, Populate: populateOrderDiscountOnSO},
+			AddressSnapshotSub(constants.ObjectTypeSalesOrder, "bill_to", func(parent any) (string, *apiresource.AddressSnapshot) {
+				so := parent.(*apiresource.SalesOrder)
+				return so.ID, so.BillTo
+			}),
+			AddressSnapshotSub(constants.ObjectTypeSalesOrder, "ship_to", func(parent any) (string, *apiresource.AddressSnapshot) {
+				so := parent.(*apiresource.SalesOrder)
+				return so.ID, so.ShipTo
+			}),
+			salesOrderRef("freight.carrier", constants.ObjectTypeCarrier, resourceloaders.SalesOrderMetaCarrierID, func(so *apiresource.SalesOrder, v any) {
+				so.Freight.Carrier = v.(*apiresource.Carrier)
+			}),
+			salesOrderRef("freight.service_level", constants.ObjectTypeServiceLevel, resourceloaders.SalesOrderMetaServiceLevelID, func(so *apiresource.SalesOrder, v any) {
+				so.Freight.ServiceLevel = v.(*apiresource.ServiceLevel)
+			}),
+			salesOrderRef("payment_term", constants.ObjectTypePaymentTerm, resourceloaders.SalesOrderMetaPaymentTermID, func(so *apiresource.SalesOrder, v any) {
+				so.PaymentTerm = v.(*apiresource.PaymentTerm)
+			}),
+			salesOrderRef("shipping_term", constants.ObjectTypeShippingTerm, resourceloaders.SalesOrderMetaShippingTermID, func(so *apiresource.SalesOrder, v any) {
+				so.ShippingTerm = v.(*apiresource.ShippingTerm)
+			}),
+			salesOrderRef("order_discount", constants.ObjectTypeOrderDiscount, resourceloaders.SalesOrderMetaOrderDiscountID, func(so *apiresource.SalesOrder, v any) {
+				so.OrderDiscount = v.(*apiresource.OrderDiscount)
+			}),
+			salesOrderStashed("bill_to_address", resourceloaders.SalesOrderMetaBillToAddress, func(so *apiresource.SalesOrder, v any) {
+				so.BillToAddress = v.(*apiresource.Address)
+			}),
+			salesOrderStashed("ship_to_address", resourceloaders.SalesOrderMetaShipToAddress, func(so *apiresource.SalesOrder, v any) {
+				so.ShipToAddress = v.(*apiresource.Address)
+			}),
+			salesOrderStashed("contacts", resourceloaders.SalesOrderMetaContacts, func(so *apiresource.SalesOrder, v any) {
+				so.Contacts = v.(*apiresource.OrderContact)
+			}),
 			{Key: "totals", Populate: populateTotalsOnSO},
-			{Key: "contacts", Populate: populateContactsOnSO},
+			{Key: "email_recipients", Populate: populateRecipientsOnSO},
+			{Key: "email_recipients.account_user", Populate: populateRecipientUsersOnSO},
 			{
 				Key:         "related.pick",
 				Target:      constants.ObjectTypePick,
@@ -46,11 +75,11 @@ func init() {
 				Populate:    populatePickOnSORelated,
 			},
 			{
-				Key:         "related.production_run",
+				Key:         "related.jobs",
 				Target:      constants.ObjectTypeProductionRun,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractProductionRunIDFromSORelated,
-				Populate:    populateProductionRunOnSORelated,
+				Cardinality: include.CardinalityList,
+				ExtractIDs:  extractJobIDsFromSORelated,
+				Populate:    populateJobsOnSORelated,
 			},
 			{
 				Key:         "related.shipments",
@@ -76,6 +105,47 @@ func init() {
 	})
 }
 
+func salesOrderIDOf(parent any) string { return parent.(*apiresource.SalesOrder).ID }
+
+// salesOrderRef declares an include that loads one record an order names by the ID its presenter stashed under
+// metaKey, and sets it with set.
+func salesOrderRef(key string, target constants.ObjectType, metaKey string, set func(so *apiresource.SalesOrder, v any)) include.SubField {
+	idOf := func(ctx context.Context, parent any) string {
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, salesOrderIDOf(parent), metaKey)
+		return id
+	}
+	return include.SubField{
+		Key:         key,
+		Target:      target,
+		Cardinality: include.CardinalityOnePtr,
+		ExtractIDs: func(ctx context.Context, parent any) []string {
+			if id := idOf(ctx, parent); id != "" {
+				return []string{id}
+			}
+			return nil
+		},
+		Populate: func(ctx context.Context, parent any, loaded map[string]any) {
+			so := parent.(*apiresource.SalesOrder)
+			if so.Freight == nil {
+				so.Freight = &apiresource.SalesOrderFreight{}
+			}
+			if v, ok := loaded[idOf(ctx, parent)]; ok && v != nil {
+				set(so, v)
+			}
+		},
+	}
+}
+
+// salesOrderStashed declares an include its presenter already built, stashed under metaKey.
+func salesOrderStashed(key, metaKey string, set func(so *apiresource.SalesOrder, v any)) include.SubField {
+	return include.SubField{Key: key, Populate: func(ctx context.Context, parent any, _ map[string]any) {
+		so := parent.(*apiresource.SalesOrder)
+		if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, metaKey); ok {
+			set(so, v)
+		}
+	}}
+}
+
 // created_by is resolved lazily from each order's create audit event (via platform-service), keyed by the order's own ID — so ExtractIDs returns the order ID and the loader registered for ObjectTypeCreatedBy fetches the creator.
 func extractSelfIDForCreatedBy(_ context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
@@ -92,15 +162,6 @@ func populateCreatedByOnSO(_ context.Context, parent any, loaded map[string]any)
 	}
 }
 
-func populateSalesRepOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "sales_rep")
-	if !ok {
-		return
-	}
-	so.SalesRep = v.(*apiresource.Actor)
-}
-
 func populateTotalsOnSO(ctx context.Context, parent any, _ map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
 	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "totals")
@@ -110,16 +171,29 @@ func populateTotalsOnSO(ctx context.Context, parent any, _ map[string]any) {
 	so.Totals = v.(*apiresource.SalesOrderTotals)
 }
 
-func populateContactsOnSO(ctx context.Context, parent any, _ map[string]any) {
+func populateRecipientsOnSO(ctx context.Context, parent any, _ map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "contacts")
-	if !ok {
-		return
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaRecipients); ok {
+		so.EmailRecipients = v.(*apiresource.List[apiresource.EmailRecipient])
 	}
-	so.Contacts = v.(*apiresource.OrderContact)
 }
 
-// ensureSORelated lazily creates the related group on first expanded member, so the group serializes to null when no related include (pick/production_run/shipments) was requested.
+// populateRecipientUsersOnSO sets each recipient's account user, which core-service loaded with the recipients:
+// they belong to the customer's account, which the account-user loader can't reach.
+func populateRecipientUsersOnSO(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	if so.EmailRecipients == nil {
+		populateRecipientsOnSO(ctx, parent, nil)
+	}
+	if so.EmailRecipients == nil {
+		return
+	}
+	for i := range so.EmailRecipients.Data {
+		so.EmailRecipients.Data[i].AccountUser = resourceloaders.SalesOrderRecipientUser(ctx, so.ID, i)
+	}
+}
+
+// ensureSORelated lazily creates the related group on first expanded member, so the group serializes to null when no related include was requested.
 func ensureSORelated(so *apiresource.SalesOrder) *apiresource.SalesOrderRelated {
 	if so.Related == nil {
 		so.Related = &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated}
@@ -137,7 +211,7 @@ func openClosedStatus(done *time.Time) string {
 
 func extractPickIDFromSORelated(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_pick_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaPickID)
 	if id == "" {
 		return nil
 	}
@@ -146,7 +220,7 @@ func extractPickIDFromSORelated(ctx context.Context, parent any) []string {
 
 func populatePickOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_pick_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaPickID)
 	if id == "" {
 		return
 	}
@@ -162,47 +236,42 @@ func populatePickOnSORelated(ctx context.Context, parent any, loaded map[string]
 	ensureSORelated(so).Pick = rec
 }
 
-func extractProductionRunIDFromSORelated(ctx context.Context, parent any) []string {
+func extractJobIDsFromSORelated(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_production_run_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaJobIDs)
+	return ids
 }
 
-func populateProductionRunOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
+// populateJobsOnSORelated lists the production started for the order. Until jobs replace production runs, that is
+// the order's production run.
+func populateJobsOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_production_run_id")
-	if id == "" {
-		return
+	records := make([]apiresource.Record, 0)
+	for _, id := range extractJobIDsFromSORelated(ctx, parent) {
+		v, ok := loaded[id]
+		if !ok {
+			continue
+		}
+		pr := v.(*apiresource.ProductionRun)
+		rec := apiresource.NewRecord(id, constants.RecordTypeProductionRun)
+		rec.Number = &pr.Number
+		status := openClosedStatus(pr.CompletedAt)
+		rec.Status = &status
+		records = append(records, *rec)
 	}
-	v, ok := loaded[id]
-	if !ok {
-		return
-	}
-	pr := v.(*apiresource.ProductionRun)
-	rec := apiresource.NewRecord(id, constants.RecordTypeProductionRun)
-	rec.Number = &pr.Number
-	status := openClosedStatus(pr.CompletedAt)
-	rec.Status = &status
-	ensureSORelated(so).ProductionRun = rec
+	ensureSORelated(so).Jobs = apiresource.NewList(records, apiresource.PageInfo{})
 }
 
 func extractShipmentIDsFromSORelated(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_shipment_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaShipmentIDs)
 	return ids
 }
 
 func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_shipment_ids")
-	if len(ids) == 0 {
-		return
-	}
-	records := make([]apiresource.Record, 0, len(ids))
-	for _, id := range ids {
+	records := make([]apiresource.Record, 0)
+	for _, id := range extractShipmentIDsFromSORelated(ctx, parent) {
 		v, ok := loaded[id]
 		if !ok {
 			continue
@@ -212,9 +281,8 @@ func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[st
 		rec.Number = &s.Number
 		status := string(s.Status)
 		rec.Status = &status
-		// Surface tracking number/URL, carrier, and ship date (stashed by the shipment
-		// loader) so the sales-order detail page can preview each linked shipment without
-		// expanding the full shipment resource.
+		// Tracking number/URL, carrier, and ship date (stashed by the shipment loader) let an order preview each
+		// shipment without expanding it.
 		if m, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, id, "record_metadata"); ok {
 			if meta, ok := m.(map[string]string); ok && len(meta) > 0 {
 				rec.Metadata = meta
@@ -222,26 +290,19 @@ func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[st
 		}
 		records = append(records, *rec)
 	}
-	if len(records) == 0 {
-		return
-	}
 	ensureSORelated(so).Shipments = apiresource.NewList(records, apiresource.PageInfo{})
 }
 
 func extractInvoiceIDsFromSORelated(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_invoice_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, resourceloaders.SalesOrderMetaInvoiceIDs)
 	return ids
 }
 
 func populateInvoicesOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_invoice_ids")
-	if len(ids) == 0 {
-		return
-	}
-	records := make([]apiresource.Record, 0, len(ids))
-	for _, id := range ids {
+	records := make([]apiresource.Record, 0)
+	for _, id := range extractInvoiceIDsFromSORelated(ctx, parent) {
 		v, ok := loaded[id]
 		if !ok {
 			continue
@@ -253,91 +314,7 @@ func populateInvoicesOnSORelated(ctx context.Context, parent any, loaded map[str
 		rec.Status = &status
 		records = append(records, *rec)
 	}
-	if len(records) == 0 {
-		return
-	}
 	ensureSORelated(so).Invoices = apiresource.NewList(records, apiresource.PageInfo{})
-}
-
-func extractCustomerIDFromSO(ctx context.Context, parent any) []string {
-	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "customer_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateCustomerOnSO(ctx context.Context, parent any, loaded map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "customer_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
-		so.Customer = v.(*apiresource.Customer)
-	}
-}
-
-func populateBillToAddressOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "bill_to_address")
-	if !ok {
-		return
-	}
-	so.BillToAddress = v.(*apiresource.Address)
-}
-
-func populateShipToAddressOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "ship_to_address")
-	if !ok {
-		return
-	}
-	so.ShipToAddress = v.(*apiresource.Address)
-}
-
-func populateFreightOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "freight")
-	if !ok {
-		return
-	}
-	so.Freight = v.(*apiresource.Freight)
-}
-
-func populatePaymentTermOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "payment_term")
-	if !ok {
-		return
-	}
-	so.PaymentTerm = v.(*apiresource.PaymentTerm)
-}
-
-func populateShippingTermOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "shipping_term")
-	if !ok {
-		return
-	}
-	so.ShippingTerm = v.(*apiresource.ShippingTerm)
-}
-
-func extractOrderDiscountIDFromSO(ctx context.Context, parent any) []string {
-	so := parent.(*apiresource.SalesOrder)
-	if id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "order_discount_id"); id != "" {
-		return []string{id}
-	}
-	return nil
-}
-
-func populateOrderDiscountOnSO(ctx context.Context, parent any, loaded map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "order_discount_id")
-	if v, ok := loaded[id]; ok {
-		so.OrderDiscount = v.(*apiresource.OrderDiscount)
-	}
 }
 
 func extractLineRefsFromSO(_ context.Context, parent any) []any {

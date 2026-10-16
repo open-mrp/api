@@ -111,10 +111,9 @@ func errorParam(t *testing.T, w *httptest.ResponseRecorder) string {
 }
 
 const createOrderBody = `{
-	"buyer_account_id": "ac_buyer",
-	"priority_code": "normal",
-	"bill_to_address_id": "ad_bill",
-	"ship_to_address_id": "ad_ship",
+	"customer_id": "ac_buyer",
+	"bill_to": {"address_id": "ad_bill"},
+	"ship_to": {"address_id": "ad_ship"},
 	"lines": [{"product_id": "pr_1", "quantity": {"value": "1", "unit_id": "un_ea"}%s}]%s
 }`
 
@@ -181,7 +180,7 @@ func TestUpdateSalesOrder_MetadataPatch(t *testing.T) {
 		body string
 		want *pb.MetadataPatch
 	}{
-		{"omitted leaves metadata alone", `{"note": "x"}`, nil},
+		{"omitted leaves metadata alone", `{"instructions": "x"}`, nil},
 		{"null clears every key", `{"metadata": null}`, &pb.MetadataPatch{Clear: true}},
 		{"empty object changes nothing", `{"metadata": {}}`, &pb.MetadataPatch{Set: map[string]string{}}},
 		{"a string sets, null removes, an empty string is a value",

@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
@@ -115,6 +118,75 @@ func (r *salesOrderRepoImpl) writeOwnerParty(ctx context.Context, order *domain.
 		Metadata:     metadata.Encode(order.Metadata),
 	})
 	return db.MapSQLError(err)
+}
+
+// The derived payment status of `so` as SQL, matching GetSalesOrderPaymentStatuses: paid with a Stripe payment, or
+// when fulfilled with every invoice paid in full; else partially paid once anything is allocated to its invoices.
+const (
+	salesOrderPaidSQL = "(EXISTS (SELECT 1 FROM order_payment_intent opi WHERE opi.sales_order_id = so.id)" +
+		" OR (so.sales_order_status_code = 'fulfilled'" +
+		" AND EXISTS (SELECT 1 FROM invoice inv WHERE inv.sales_order_id = so.id)" +
+		" AND NOT EXISTS (SELECT 1 FROM invoice inv WHERE inv.sales_order_id = so.id AND inv.is_paid_in_full = false)))"
+	salesOrderAllocatedSQL = "EXISTS (SELECT 1 FROM transaction_allocation ta JOIN invoice inv ON inv.id = ta.invoice_id" +
+		" JOIN quantity taq ON taq.id = ta.amount_id WHERE inv.sales_order_id = so.id AND taq.value > 0)"
+)
+
+// salesOrderPaymentStatusPredicate is the list filter for statuses, or "" for none (or every status).
+func salesOrderPaymentStatusPredicate(statuses []string) string {
+	want := map[constants.SalesOrderPaymentStatus]bool{}
+	for _, s := range statuses {
+		want[constants.SalesOrderPaymentStatus(s)] = true
+	}
+	var preds []string
+	if want[constants.SalesOrderPaymentStatusPaid] {
+		preds = append(preds, salesOrderPaidSQL)
+	}
+	if want[constants.SalesOrderPaymentStatusPartiallyPaid] {
+		preds = append(preds, "(NOT "+salesOrderPaidSQL+" AND "+salesOrderAllocatedSQL+")")
+	}
+	if want[constants.SalesOrderPaymentStatusUnpaid] {
+		preds = append(preds, "(NOT "+salesOrderPaidSQL+" AND NOT "+salesOrderAllocatedSQL+")")
+	}
+	if len(preds) == 0 || len(preds) == 3 {
+		return ""
+	}
+	return "(" + strings.Join(preds, " OR ") + ")"
+}
+
+// filterSearchMatches keeps the exact-search matches the created range and payment statuses admit; the search reads
+// a handful of orders by their number, so these filters apply to what it found.
+func (r *salesOrderRepoImpl) filterSearchMatches(ctx context.Context, params domain.ListSalesOrdersParams, orders []*domain.SalesOrder) ([]*domain.SalesOrder, *apierror.APIError) {
+	var statuses map[string]constants.SalesOrderPaymentStatus
+	if len(params.PaymentStatuses) > 0 && len(orders) > 0 {
+		ids := make([]string, len(orders))
+		for i, o := range orders {
+			ids[i] = o.ID
+		}
+		var apiErr *apierror.APIError
+		if statuses, apiErr = r.GetPaymentStatuses(ctx, params.AccountID, ids); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+	out := orders[:0]
+	for _, o := range orders {
+		if params.CreatedAfter != nil && o.CreatedAt.Before(*params.CreatedAfter) {
+			continue
+		}
+		if params.CreatedBefore != nil && !o.CreatedAt.Before(*params.CreatedBefore) {
+			continue
+		}
+		if len(params.PaymentStatuses) > 0 {
+			status, ok := statuses[o.ID]
+			if !ok {
+				status = constants.SalesOrderPaymentStatusUnpaid
+			}
+			if !slices.Contains(params.PaymentStatuses, string(status)) {
+				continue
+			}
+		}
+		out = append(out, o)
+	}
+	return out, nil
 }
 
 // GetItemLeadTimeDays is the longest sales lead time of the items on the order's lines, in whole days rounded up; nil

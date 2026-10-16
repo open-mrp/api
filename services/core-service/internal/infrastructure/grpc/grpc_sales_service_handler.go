@@ -468,26 +468,11 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	}
 
 	if o.EmailRecipients != nil {
-		info.EmailRecipients = orderRecipientsToProto(o.EmailRecipients)
+		info.EmailRecipients = customerRecipientsToProto(o.EmailRecipients)
 		info.HasEmailRecipients = true
 	}
 
 	return info
-}
-
-// orderRecipientsToProto is an order's recipients with the documents each receives.
-func orderRecipientsToProto(refs []domain.NotificationRecipientRef) []*pb.EmailRecipient {
-	out := make([]*pb.EmailRecipient, 0, len(refs))
-	for _, ref := range refs {
-		r := &pb.EmailRecipient{AccountUserId: ref.AccountUserID}
-		for _, code := range ref.NotificationTypeCodes {
-			if doc, ok := constants.AccountRelationNotificationType(code).RecipientDocument(); ok {
-				r.Documents = append(r.Documents, string(doc))
-			}
-		}
-		out = append(out, r)
-	}
-	return out
 }
 
 // orderRecipientsFromProto is requested order recipients as the notification types an order stores.
@@ -577,6 +562,17 @@ func (h *salesGRPCHandler) ListSalesOrders(ctx context.Context, req *pb.ListSale
 		BuyerAccountID:   req.BuyerAccountId,
 		Includes:         req.Includes,
 	}
+	if req.Created != nil {
+		if req.Created.CreatedAfter != nil {
+			t := req.Created.CreatedAfter.AsTime()
+			params.CreatedAfter = &t
+		}
+		if req.Created.CreatedBefore != nil {
+			t := req.Created.CreatedBefore.AsTime()
+			params.CreatedBefore = &t
+		}
+	}
+	params.PaymentStatuses = req.PaymentStatuses
 
 	result, apiErr := h.salesOrderSvc.ListSalesOrders(ctx, params)
 	if apiErr != nil {
@@ -780,6 +776,14 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		ShipByOverrideDate:    fieldpb.TimestampClearableFromProto(req.ShipByOverrideDate),
 	}
 
+	if list := req.AcknowledgementEmailContacts; list != nil {
+		contacts := protoToEmailContactInputs(list.Contacts)
+		params.AcknowledgementEmailContacts = &contacts
+	}
+	if list := req.InvoiceEmailContacts; list != nil {
+		contacts := protoToEmailContactInputs(list.Contacts)
+		params.InvoiceEmailContacts = &contacts
+	}
 	if req.HasEmailRecipients {
 		recipients := orderRecipientsFromProto(req.EmailRecipients)
 		params.EmailRecipients = &recipients

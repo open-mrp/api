@@ -52,19 +52,22 @@ func TestRelatedPick_OpenWhenNotFinished(t *testing.T) {
 	}
 }
 
-func TestRelatedProductionRun_PopulatesNumberAndStatus(t *testing.T) {
+func TestRelatedJobs_PopulatesNumberAndStatus(t *testing.T) {
 	ctx := include.WithLoadMeta(context.Background())
-	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_production_run_id", "pr_1")
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_job_ids", []string{"pr_1"})
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	completed := time.Now()
-	populateProductionRunOnSORelated(ctx, so, map[string]any{
+	populateJobsOnSORelated(ctx, so, map[string]any{
 		"pr_1": &apiresource.ProductionRun{ID: "pr_1", Number: "1", CompletedAt: &completed},
 	})
 
-	rec := so.Related.ProductionRun
-	if rec == nil || rec.Number == nil || *rec.Number != "1" {
-		t.Fatalf("production_run number not populated, got %+v", rec)
+	if so.Related == nil || so.Related.Jobs == nil || len(so.Related.Jobs.Data) != 1 {
+		t.Fatalf("related.jobs not populated, got %+v", so.Related)
+	}
+	rec := so.Related.Jobs.Data[0]
+	if rec.Number == nil || *rec.Number != "1" {
+		t.Fatalf("job number not populated, got %+v", rec)
 	}
 	if rec.Status == nil || *rec.Status != "closed" {
 		t.Errorf("production_run status = %v, want closed (CompletedAt set)", rec.Status)
@@ -97,16 +100,19 @@ func TestRelatedShipments_PopulateNumberAndStatus(t *testing.T) {
 	}
 }
 
-// When the order references no related records (nothing stashed), the related group must stay nil so it serializes to null rather than an empty object.
-func TestRelated_NilWhenNothingStashed(t *testing.T) {
+// An included list with no records reads as an empty list; an included pick the order hasn't got stays null.
+func TestRelated_EmptyWhenNothingStashed(t *testing.T) {
 	ctx := include.WithLoadMeta(context.Background())
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	populatePickOnSORelated(ctx, so, nil)
-	populateProductionRunOnSORelated(ctx, so, nil)
+	if so.Related != nil {
+		t.Fatalf("a missing pick must not create the related group, got %+v", so.Related)
+	}
+	populateJobsOnSORelated(ctx, so, nil)
 	populateShipmentsOnSORelated(ctx, so, nil)
 
-	if so.Related != nil {
-		t.Errorf("related must stay nil when no related records exist, got %+v", so.Related)
+	if so.Related == nil || so.Related.Pick != nil || len(so.Related.Jobs.Data) != 0 || len(so.Related.Shipments.Data) != 0 {
+		t.Errorf("want empty jobs and shipments and no pick, got %+v", so.Related)
 	}
 }

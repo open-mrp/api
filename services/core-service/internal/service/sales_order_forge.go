@@ -162,8 +162,9 @@ func (s *salesOrderSvcImpl) customerOrderRecipients(ctx context.Context, ownerAc
 	return out, nil
 }
 
-// attachEmailRecipients fills in each order's email recipients, as an empty list when it has none.
-func attachEmailRecipients(ctx context.Context, repo domain.SalesOrderRepo, orders []*domain.SalesOrder) *apierror.APIError {
+// attachEmailRecipients fills in each order's email recipients with their account users on the buyer's account, as an
+// empty list when it has none. A recipient whose account user no longer exists is left out.
+func attachEmailRecipients(ctx context.Context, repos domain.RepoFactory, orders []*domain.SalesOrder) *apierror.APIError {
 	if len(orders) == 0 {
 		return nil
 	}
@@ -171,14 +172,32 @@ func attachEmailRecipients(ctx context.Context, repo domain.SalesOrderRepo, orde
 	for i, o := range orders {
 		ids[i] = o.ID
 	}
-	byOrder, apiErr := repo.GetEmailRecipients(ctx, ids)
+	byOrder, apiErr := repos.NewSalesOrderRepo().GetEmailRecipients(ctx, ids)
 	if apiErr != nil {
 		return apiErr
 	}
+	usersByBuyer := map[string][]string{}
 	for _, o := range orders {
-		o.EmailRecipients = byOrder[o.ID]
-		if o.EmailRecipients == nil {
-			o.EmailRecipients = []domain.NotificationRecipientRef{}
+		for _, ref := range byOrder[o.ID] {
+			usersByBuyer[o.BuyerAccountID] = append(usersByBuyer[o.BuyerAccountID], ref.AccountUserID)
+		}
+	}
+	details := map[string]*domain.AccountUserDetail{}
+	for buyer, userIDs := range usersByBuyer {
+		found, apiErr := repos.NewAccountUserRepo().GetByIDs(ctx, buyer, userIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, d := range found {
+			details[buyer+"\x00"+d.ID] = d
+		}
+	}
+	for _, o := range orders {
+		o.EmailRecipients = []domain.NotificationRecipient{}
+		for _, ref := range byOrder[o.ID] {
+			if d, ok := details[o.BuyerAccountID+"\x00"+ref.AccountUserID]; ok {
+				o.EmailRecipients = append(o.EmailRecipients, domain.NotificationRecipient{AccountUser: d, NotificationTypeCodes: ref.NotificationTypeCodes})
+			}
 		}
 	}
 	return nil

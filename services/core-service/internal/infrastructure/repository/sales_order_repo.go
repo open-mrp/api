@@ -244,6 +244,10 @@ func (r *salesOrderRepoImpl) searchList(
 		}
 		orders = append(orders, so)
 	}
+	orders, apiErr := r.filterSearchMatches(ctx, params, orders)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	result, pageInfo := pagination.BuildPageString(orders, params.Limit, nil, salesOrderCreatedAt, salesOrderID)
 	if buyerAccountID.Valid {

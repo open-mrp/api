@@ -45,6 +45,10 @@ type SalesOrderLine struct {
 	UnitCost *UnitPrice `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
+	// When this line is due to ship, if it differs from the order.
+	//
+	// Reserved: always `null` for now, meaning the line follows the order's `commitment`.
+	Commitment *SalesOrderCommitment `json:"commitment"`
 	// Key-value pairs you attach to the line for your own references, such as its ID in another system.
 	Metadata map[string]string `json:"metadata"`
 	// Creation timestamp.

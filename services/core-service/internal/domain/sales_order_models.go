@@ -174,7 +174,7 @@ type SalesOrder struct {
 
 	// EmailRecipients are the order's recipients and the documents each receives (populated when email_recipients is
 	// included).
-	EmailRecipients []NotificationRecipientRef
+	EmailRecipients []NotificationRecipient
 
 	// Fulfillment progress as fractions between 0 and 1 aggregated over the order's sale-type lines (always populated, independent of the lines include).
 	PickedCompletion   float64
@@ -232,8 +232,13 @@ type ListSalesOrdersParams struct {
 	ShipByAfter      *string
 	ShipByBefore     *string
 	PastDue          *bool
-	AccountID        string
-	BuyerAccountID   *string
+	// CreatedAfter (inclusive) and CreatedBefore (exclusive) bound the created date.
+	CreatedAfter  *time.Time
+	CreatedBefore *time.Time
+	// PaymentStatuses are constants.SalesOrderPaymentStatus values.
+	PaymentStatuses []string
+	AccountID       string
+	BuyerAccountID  *string
 	// Includes to expand (e.g. "lines"); inline-joined fields are always present.
 	Includes []string
 }
@@ -349,6 +354,9 @@ type UpdateSalesOrderParams struct {
 	ShipByOverrideDate   field.Clearable[time.Time]
 	// When non-nil, replaces the order's email recipients. An empty slice clears them; nil leaves them untouched.
 	EmailRecipients *[]NotificationRecipientRef
+	// When non-nil, replace the order's recipients of acknowledgments or invoices alone.
+	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
+	InvoiceEmailContacts         *[]SalesOrderEmailContactInput
 	// BillTo and ShipTo replace the order's copy of an address: a saved address (AddressID) or one given inline.
 	BillTo   *AddressSnapshot
 	ShipTo   *AddressSnapshot

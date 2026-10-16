@@ -18,9 +18,9 @@ type RetrieveSalesOrderRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 }
 
-// Returns a sales order by ID.
+// Retrieves a sales order.
 //
-// A customer or supplier portal retrieves only an order its own account placed; any other order is reported as not found.
+// Customer and supplier portal users can only retrieve orders their own account placed.
 type RetrieveSalesOrderEndpoint struct{}
 
 func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder] {
@@ -32,15 +32,11 @@ func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).GetSalesOrder
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer", "sales_rep", "created_by", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.product.item", "lines.product.item.category", "lines.product.item.category.properties", "lines.product.item.category.unit_group", "lines.product.item.category.unit_group.base_unit", "lines.product.item.category.unit_group.associated_units", "lines.product.item.category.unit_group.associated_units.unit", "lines.product.product_line", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
-		}),
+		IncludeConfig: salesOrderIncludeConfig(),
 	})
 }

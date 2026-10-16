@@ -177,6 +177,11 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, result.SalesOrders, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if includesSalesOrderEmailRecipients(params.Includes) {
+		if apiErr := attachEmailRecipients(ctx, s.repos, result.SalesOrders); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	return result, nil
 }
@@ -227,6 +232,11 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 
 	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, []*domain.SalesOrder{order}, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	if includesSalesOrderEmailRecipients(params.Includes) {
+		if apiErr := attachEmailRecipients(ctx, s.repos, []*domain.SalesOrder{order}); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return order, nil
@@ -334,9 +344,6 @@ func enrichSalesOrders(ctx context.Context, repo domain.SalesOrderRepo, accountI
 	}
 	if includesSalesOrderContacts(includes) {
 		reads = append(reads, func() *apierror.APIError { return attachSalesOrderContacts(ctx, repo, orders) })
-	}
-	if includesSalesOrderEmailRecipients(includes) {
-		reads = append(reads, func() *apierror.APIError { return attachEmailRecipients(ctx, repo, orders) })
 	}
 
 	errs := make([]*apierror.APIError, len(reads))
@@ -749,7 +756,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 			if includesSalesOrderEmailRecipients(params.Includes) {
-				if apiErr := attachEmailRecipients(txCtx, txOrderRepo, []*domain.SalesOrder{order}); apiErr != nil {
+				if apiErr := attachEmailRecipients(txCtx, txSvc.repos, []*domain.SalesOrder{order}); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1008,12 +1015,37 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				result = updated
 			}
 
+			replacingRecipients := params.EmailRecipients != nil || params.AcknowledgementEmailContacts != nil || params.InvoiceEmailContacts != nil
 			var recipientsBefore map[string][]domain.NotificationRecipientRef
-			if params.EmailRecipients != nil {
+			if replacingRecipients {
 				if recipientsBefore, apiErr = txRepo.GetEmailRecipients(txCtx, []string{params.SalesOrderID}); apiErr != nil {
 					return apiErr
 				}
+			}
+			if params.EmailRecipients != nil {
 				if apiErr := txRepo.ReplaceEmailRecipients(txCtx, params.SalesOrderID, *params.EmailRecipients); apiErr != nil {
+					return apiErr
+				}
+			}
+			for _, byType := range []struct {
+				contacts *[]domain.SalesOrderEmailContactInput
+				code     constants.AccountRelationNotificationType
+				param    string
+			}{
+				{params.AcknowledgementEmailContacts, constants.AccountRelationNotificationTypeOrderAcknowledgement, "acknowledgement_email_contacts"},
+				{params.InvoiceEmailContacts, constants.AccountRelationNotificationTypeInvoice, "invoice_email_contacts"},
+			} {
+				if byType.contacts == nil {
+					continue
+				}
+				refs := make([]domain.NotificationRecipientRef, len(*byType.contacts))
+				for i, c := range *byType.contacts {
+					refs[i] = domain.NotificationRecipientRef{AccountUserID: c.AccountUserID, NotificationTypeCodes: []string{string(byType.code)}}
+				}
+				if apiErr := txSvc.checkOrderRecipients(txCtx, updated.BuyerAccountID, refs, byType.param); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *byType.contacts, string(byType.code)); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1032,14 +1064,18 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 			if includesSalesOrderEmailRecipients(params.Includes) {
-				if apiErr := attachEmailRecipients(txCtx, txRepo, []*domain.SalesOrder{result}); apiErr != nil {
+				if apiErr := attachEmailRecipients(txCtx, txSvc.repos, []*domain.SalesOrder{result}); apiErr != nil {
 					return apiErr
 				}
 			}
 
 			changes := audit.ComputeChanges(existing, updated)
-			if params.EmailRecipients != nil {
-				changes = appendRecipientsChange(changes, recipientsBefore[params.SalesOrderID], *params.EmailRecipients)
+			if replacingRecipients {
+				after, apiErr := txRepo.GetEmailRecipients(txCtx, []string{params.SalesOrderID})
+				if apiErr != nil {
+					return apiErr
+				}
+				changes = appendRecipientsChange(changes, recipientsBefore[params.SalesOrderID], after[params.SalesOrderID])
 			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{

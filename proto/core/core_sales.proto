@@ -11,6 +11,7 @@ import "core/core_patch.proto";
 import "core/core_production_run.proto";
 import "core/value_shapes.proto";
 import "core/primitives.proto";
+import "core/core_identity_context.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -436,7 +437,7 @@ message SalesOrderInfo {
   optional int32 promised_lead_time_days = 119;
   optional string promised_lead_time_source = 120;
   // The order's email recipients, set only when has_email_recipients (the email_recipients include).
-  repeated EmailRecipient email_recipients = 121;
+  repeated CustomerRecipientProto email_recipients = 121;
   bool has_email_recipients = 122;
 }
 
@@ -530,6 +531,10 @@ message ListSalesOrdersRequest {
   optional string ship_by_after = 15;
   optional string ship_by_before = 16;
   optional bool past_due = 17;
+  // Created-date range; supersedes start_date and end_date.
+  CreatedRange created = 18;
+  // Derived payment statuses: unpaid, partially_paid, paid.
+  repeated string payment_statuses = 19;
 }
 
 message ListSalesOrdersResponse {
@@ -651,8 +656,10 @@ message UpdateSalesOrderRequest {
   Int32Patch lead_time_override_days = 36;
   TimestampPatch ship_by_override_date = 37;
   optional string customer_id = 30;
-  // Per-document contact lists (31, 32) became email_recipients (43).
-  reserved 31, 32;
+  // When set, replace the order's recipients of acknowledgments / invoices alone (preview.9 callers); email_recipients
+  // replaces them all.
+  optional SalesOrderEmailContactList acknowledgement_email_contacts = 31;
+  optional SalesOrderEmailContactList invoice_email_contacts = 32;
   repeated string includes = 33;
   MetadataPatch metadata = 40;
   // Replaces the order's copy of an address: a saved address (address_id) or one given inline.

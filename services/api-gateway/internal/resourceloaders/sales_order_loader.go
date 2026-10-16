@@ -13,14 +13,35 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/timeutil"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
 var salesOrderLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.sales_order")
 
-// Fetches orders by ID as expandable references. Lines and customer stay unpopulated; the
-// relations a nested order can expand are stashed alongside — see stashNestedSalesOrderMeta.
+// Load-meta keys a sales order's presenter stashes for its includes.
+const (
+	SalesOrderMetaCustomerID      = "customer_id"
+	SalesOrderMetaSalesRepID      = "sales_rep_id"
+	SalesOrderMetaCarrierID       = "carrier_id"
+	SalesOrderMetaServiceLevelID  = "service_level_id"
+	SalesOrderMetaPaymentTermID   = "payment_term_id"
+	SalesOrderMetaShippingTermID  = "shipping_term_id"
+	SalesOrderMetaOrderDiscountID = "order_discount_id"
+	SalesOrderMetaRecipients      = "email_recipients"
+	SalesOrderMetaRecipientUsers  = "email_recipient_users"
+	SalesOrderMetaPickID          = "related_pick_id"
+	SalesOrderMetaJobIDs          = "related_job_ids"
+	SalesOrderMetaShipmentIDs     = "related_shipment_ids"
+	SalesOrderMetaInvoiceIDs      = "related_invoice_ids"
+	SalesOrderMetaBillToAddress   = "bill_to_address"
+	SalesOrderMetaShipToAddress   = "ship_to_address"
+	SalesOrderMetaContacts        = "contacts"
+)
+
+// Fetches orders by ID as expandable references. Lines stay unpopulated; the relations a nested order can expand
+// are stashed alongside.
 func LoadSalesOrders(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -37,51 +58,9 @@ func LoadSalesOrders(ctx context.Context, ids []string) (map[string]any, *apierr
 	}
 	out := make(map[string]any, len(resp.SalesOrders))
 	for _, so := range resp.SalesOrders {
-		out[so.Id] = salesOrderReferenceFromProto(so)
-		stashNestedSalesOrderMeta(ctx, so)
+		out[so.Id] = new(SalesOrderFromProto(ctx, so))
 	}
 	return out, nil
-}
-
-func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrder {
-	ackStatus := constants.AcknowledgmentStatusNotSent
-	if info.IsAcknowledgmentSent {
-		ackStatus = constants.AcknowledgmentStatusSent
-	}
-	ref := &apiresource.SalesOrder{
-		ID:                          info.Id,
-		Object:                      constants.ObjectTypeSalesOrder,
-		Number:                      info.Number,
-		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
-		Note:                        info.Note,
-		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
-		Priority:                    constants.PriorityCode(info.PriorityCode),
-		PaymentStatus:               salesOrderPaymentStatusFromProto(info.PaymentStatus),
-		AcknowledgmentStatus:        ackStatus,
-		Metadata:                    apiresource.MetadataFromProto(info.Metadata),
-		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
-	}
-	// The pick-ticket PDF prints the promised date off the order it hangs from.
-	if info.PromisedAt != nil {
-		t := grpcutil.TimestampToTime(info.PromisedAt)
-		ref.Commitment = &apiresource.Commitment{Object: constants.ObjectTypeCommitment, PromisedAt: &t}
-	}
-	// Lifecycle timestamps ride the batch projection, so carry them onto the reference to match the
-	// canonical order — an ?include=order that dropped them was returning a stale stub.
-	if info.IssuedAt != nil {
-		t := grpcutil.TimestampToTime(info.IssuedAt)
-		ref.IssuedAt = &t
-	}
-	if info.CompletedAt != nil {
-		t := grpcutil.TimestampToTime(info.CompletedAt)
-		ref.CompletedAt = &t
-	}
-	if info.FirstShipAt != nil {
-		t := grpcutil.TimestampToTime(info.FirstShipAt)
-		ref.FirstShipAt = &t
-	}
-	return ref
 }
 
 // Translates the caller's `sales_order.*` include keys into the names core understands, so a
@@ -99,8 +78,8 @@ func nestedSalesOrderIncludes(ctx context.Context) []string {
 // rides the detail projection.
 var nestedSalesOrderIncludeKeys = []string{"sales_order.related.shipments"}
 
-// Defaults to unpaid for an empty or unrecognized value, so a nested order never claims a
-// payment state the backend did not assert.
+// Defaults to unpaid for an empty or unrecognized value, so an order never claims a payment state the backend did
+// not assert.
 func salesOrderPaymentStatusFromProto(status string) constants.SalesOrderPaymentStatus {
 	s := constants.SalesOrderPaymentStatus(status)
 	if !s.IsValid() {
@@ -109,27 +88,116 @@ func salesOrderPaymentStatusFromProto(status string) constants.SalesOrderPayment
 	return s
 }
 
-// Records what a nested order exposes so `?include=sales_order.ship_to_address` resolves on a
-// parent; narrower than the endpoint's stash, which stays separate because it serves live traffic.
-func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
-	if info == nil {
-		return
+// SalesOrderFromProto is an order as the API returns it, less its lines and totals, with what its includes load
+// stashed beside it.
+func SalesOrderFromProto(ctx context.Context, info *pb.SalesOrderInfo) apiresource.SalesOrder {
+	ackStatus := constants.AcknowledgmentStatusNotSent
+	if info.IsAcknowledgmentSent {
+		ackStatus = constants.AcknowledgmentStatusSent
 	}
+	so := apiresource.SalesOrder{
+		ID:                          info.Id,
+		Object:                      constants.ObjectTypeSalesOrder,
+		Number:                      info.Number,
+		Status:                      constants.SalesOrderStatusCode(info.StatusCode).Status(),
+		Currency:                    constants.CurrencyUSD,
+		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
+		Instructions:                info.Instructions,
+		PaymentStatus:               salesOrderPaymentStatusFromProto(info.PaymentStatus),
+		AcknowledgmentStatus:        ackStatus,
+		Freight:                     &apiresource.SalesOrderFreight{},
+		Commitment:                  salesOrderCommitmentFromProto(info),
+		LineCount:                   info.LineCount,
+		IssuedAt:                    grpcutil.TimestampToTimePtr(info.IssuedAt),
+		FulfilledAt:                 grpcutil.TimestampToTimePtr(info.CompletedAt),
+		FirstShippedAt:              grpcutil.TimestampToTimePtr(info.FirstShipAt),
+		Metadata:                    apiresource.MetadataFromProto(info.Metadata),
+		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
+	}
+	if info.ExpiredAt != nil {
+		so.ExpiresOn = new(timeutil.DateOf(info.ExpiredAt.AsTime()))
+	}
+	if info.CarrierBillingType != nil {
+		so.Freight.CarrierBilling = &apiresource.CarrierBilling{
+			Type:          constants.CarrierBillingType(*info.CarrierBillingType),
+			AccountNumber: info.CarrierBillingAccount,
+		}
+	}
+	so.BillTo = StashAddressSnapshot(ctx, constants.ObjectTypeSalesOrder, so.ID, "bill_to", info.BillTo)
+	so.ShipTo = StashAddressSnapshot(ctx, constants.ObjectTypeSalesOrder, so.ID, "ship_to", info.ShipTo)
+	stashSalesOrderRefs(ctx, info)
+	return so
+}
+
+// salesOrderCommitmentFromProto is the commitment stamped on an order, with the bases it was asked for. A record
+// carries the commitment it was made on, not a projection forward from it.
+func salesOrderCommitmentFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrderCommitment {
+	c := &apiresource.SalesOrderCommitment{
+		LeadTimeOverride:       DaysQuantity(info.LeadTimeOverrideDays),
+		PromisedLeadTime:       DaysQuantity(info.PromisedLeadTimeDays),
+		TransitDays:            info.TransitDays,
+		CalendarAdjustmentDays: info.CalendarAdjustmentDays,
+		ShipByCutoffAt:         grpcutil.TimestampToTimePtr(info.ShipByCutoffAt),
+		PromisedOn:             dateOf(info.PromisedAt.AsTime(), info.PromisedAt != nil),
+		ShipByOverrideOn:       dateOf(info.ShipByOverrideDate.AsTime(), info.ShipByOverrideDate != nil),
+		ShipByOn:               dateOf(info.ShipByDate.AsTime(), info.ShipByDate != nil),
+	}
+	if info.PromisedLeadTimeSource != nil {
+		c.PromisedLeadTimeSource = new(constants.PromisedLeadTimeSource(*info.PromisedLeadTimeSource))
+	}
+	if info.CommitmentFirmness != nil {
+		c.Firmness = new(constants.CommitmentFirmness(*info.CommitmentFirmness))
+	}
+	if info.LeadTimeSourceCode != nil {
+		c.LeadTimeSource = new(constants.LeadTimeSource(*info.LeadTimeSourceCode))
+	}
+	if info.TransitSourceCode != nil {
+		c.TransitSource = new(constants.TransitSource(*info.TransitSourceCode))
+	}
+	return c
+}
+
+// dateOf is t's UTC day when ok, else nil: business days travel as midnight UTC.
+func dateOf(t time.Time, ok bool) *timeutil.Date {
+	if !ok {
+		return nil
+	}
+	return new(timeutil.DateOf(t.UTC()))
+}
+
+// stashSalesOrderRefs stashes the IDs of the records an order names, its email recipients and its related records,
+// for the includes that load them.
+func stashSalesOrderRefs(ctx context.Context, info *pb.SalesOrderInfo) {
 	meta := include.GetLoadMeta(ctx)
-
-	// The customer is resolved by id, so stash the FK: without it order.customer stays nil on every
-	// order reached as a nested include.
-	if info.CustomerId != "" {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "customer_id", info.CustomerId)
+	set := func(key string, id *string) {
+		if id != nil && *id != "" {
+			meta.Set(constants.ObjectTypeSalesOrder, info.Id, key, *id)
+		}
 	}
-
-	// Populated only when the caller asked for it — core skips the lookup otherwise.
+	set(SalesOrderMetaCustomerID, &info.CustomerId)
+	set(SalesOrderMetaSalesRepID, info.SalesRepId)
+	set(SalesOrderMetaCarrierID, info.CarrierId)
+	set(SalesOrderMetaServiceLevelID, info.ServiceLevelId)
+	set(SalesOrderMetaPaymentTermID, info.PaymentTermId)
+	set(SalesOrderMetaShippingTermID, info.ShippingTermId)
+	set(SalesOrderMetaOrderDiscountID, info.OrderDiscountId)
+	set(SalesOrderMetaPickID, info.PickId)
+	if info.SiteId != nil {
+		StashSiteID(ctx, constants.ObjectTypeSalesOrder, info.Id, *info.SiteId)
+	}
+	if info.ProductionRunId != nil {
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaJobIDs, []string{*info.ProductionRunId})
+	}
 	if len(info.ShipmentIds) > 0 {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "related_shipment_ids", info.ShipmentIds)
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaShipmentIDs, info.ShipmentIds)
 	}
-
+	if len(info.InvoiceIds) > 0 {
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaInvoiceIDs, info.InvoiceIds)
+	}
+	// The live saved addresses and the recipients' addresses by document, which preview.9 callers read.
 	if info.BillingAddressId != "" {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "bill_to_address", OrderAddress(
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaBillToAddress, OrderAddress(
 			info.BillingAddressId, info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
 			info.BillToLocality, info.BillToState, info.BillToPostalCode, info.BillToCountry,
 			info.BillToPhone, info.BillToEmail, info.BillToIsDropShip,
@@ -137,95 +205,48 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 		))
 	}
 	if info.ShippingAddressId != "" {
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "ship_to_address", OrderAddress(
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaShipToAddress, OrderAddress(
 			info.ShippingAddressId, info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
 			info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
 			info.ShipToPhone, info.ShipToEmail, info.ShipToIsDropShip,
 			grpcutil.TimestampToTime(info.ShipToCreatedAt), grpcutil.TimestampToTime(info.ShipToUpdatedAt),
 		))
 	}
+	meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaContacts, &apiresource.OrderContact{
+		Object:          constants.ObjectTypeOrderContact,
+		Invoice:         nonNilStrings(info.InvoiceEmails),
+		Acknowledgement: nonNilStrings(info.AcknowledgementEmails),
+	})
 
-	// Carrier and service level have no standalone include; both reach the client through freight.
-	freight := &apiresource.Freight{Object: constants.ObjectTypeFreight}
-	if info.CarrierBillingType != nil {
-		bt := constants.CarrierBillingType(*info.CarrierBillingType)
-		freight.BillingType = &bt
-	}
-	freight.BillingAccountNumber = info.CarrierBillingAccount
-	if info.CarrierId != nil {
-		carrier := &apiresource.Carrier{ID: *info.CarrierId, Object: constants.ObjectTypeCarrier}
-		if info.CarrierName != nil {
-			carrier.Name = *info.CarrierName
+	if info.HasEmailRecipients {
+		recipients := make([]apiresource.EmailRecipient, len(info.EmailRecipients))
+		users := make([]*apiresource.AccountUser, len(info.EmailRecipients))
+		for i, r := range info.EmailRecipients {
+			docs := make([]constants.RecipientDocument, len(r.Documents))
+			for j, d := range r.Documents {
+				docs[j] = constants.RecipientDocument(d)
+			}
+			recipients[i] = apiresource.EmailRecipient{Documents: docs}
+			if r.AccountUser != nil {
+				users[i] = AccountUserFromDetail(ctx, r.AccountUser)
+			}
 		}
-		carrier.PortalVisibility = portalVisibility(info.CarrierIsPortalEnabled)
-		if info.CarrierCreatedAt != nil {
-			carrier.CreatedAt = info.CarrierCreatedAt.AsTime()
-		}
-		if info.CarrierUpdatedAt != nil {
-			carrier.UpdatedAt = info.CarrierUpdatedAt.AsTime()
-		}
-		freight.Carrier = carrier
-	}
-	if info.ServiceLevelId != nil {
-		sl := &apiresource.ServiceLevel{ID: *info.ServiceLevelId, Object: constants.ObjectTypeServiceLevel}
-		if info.ServiceLevelName != nil {
-			sl.Name = *info.ServiceLevelName
-		}
-		sl.PortalVisibility = portalVisibility(info.ServiceLevelIsPortalEnabled)
-		if info.ServiceLevelToken != nil {
-			sl.Code = constants.ServiceLevelCode(*info.ServiceLevelToken)
-		}
-		if info.ServiceLevelCreatedAt != nil {
-			sl.CreatedAt = info.ServiceLevelCreatedAt.AsTime()
-		}
-		if info.ServiceLevelUpdatedAt != nil {
-			sl.UpdatedAt = info.ServiceLevelUpdatedAt.AsTime()
-		}
-		freight.ServiceLevel = sl
-	}
-	meta.Set(constants.ObjectTypeSalesOrder, info.Id, "freight", freight)
-
-	if info.PaymentTermId != nil {
-		pt := &apiresource.PaymentTerm{ID: *info.PaymentTermId, Object: constants.ObjectTypePaymentTerm}
-		if info.PaymentTermName != nil {
-			pt.Name = *info.PaymentTermName
-		}
-		pt.Status = constants.ArchiveStatusArchived
-		if info.PaymentTermIsActive != nil && *info.PaymentTermIsActive {
-			pt.Status = constants.ArchiveStatusActive
-		}
-		if info.PaymentTermCreatedAt != nil {
-			pt.CreatedAt = info.PaymentTermCreatedAt.AsTime()
-		}
-		if info.PaymentTermUpdatedAt != nil {
-			pt.UpdatedAt = info.PaymentTermUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "payment_term", pt)
-	}
-
-	if info.ShippingTermId != nil {
-		st := &apiresource.ShippingTerm{ID: *info.ShippingTermId, Object: constants.ObjectTypeShippingTerm}
-		if info.ShippingTermName != nil {
-			st.Name = *info.ShippingTermName
-		}
-		if info.ShippingTermType != nil {
-			st.Type = constants.ShippingTermType(*info.ShippingTermType)
-		}
-		if info.ShippingTermCreatedAt != nil {
-			st.CreatedAt = info.ShippingTermCreatedAt.AsTime()
-		}
-		if info.ShippingTermUpdatedAt != nil {
-			st.UpdatedAt = info.ShippingTermUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeSalesOrder, info.Id, "shipping_term", st)
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaRecipients, apiresource.NewList(recipients, apiresource.PageInfo{}))
+		meta.Set(constants.ObjectTypeSalesOrder, info.Id, SalesOrderMetaRecipientUsers, users)
 	}
 }
 
-func portalVisibility(enabled *bool) constants.CustomerPortalVisibility {
-	if enabled != nil && *enabled {
-		return constants.CustomerPortalVisibilityVisible
+// SalesOrderRecipientUser is the account user of an order's i-th email recipient, when they were loaded.
+func SalesOrderRecipientUser(ctx context.Context, orderID string, i int) *apiresource.AccountUser {
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, orderID, SalesOrderMetaRecipientUsers)
+	if !ok {
+		return nil
 	}
-	return constants.CustomerPortalVisibilityHidden
+	users := v.([]*apiresource.AccountUser)
+	if i < 0 || i >= len(users) {
+		return nil
+	}
+	return users[i]
 }
 
 // OrderAddress is an order's address as the order query joins it.

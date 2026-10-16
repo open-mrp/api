@@ -98,7 +98,8 @@ func TestPreview9_AddressRequestBodies(t *testing.T) {
 
 	order := upgradeBody(constants.ObjectTypeSalesOrder, http.MethodPatch, "/v1/sales/sales-orders/{id}", map[string]any{
 		"billing_address": map[string]any{"id": "ad_1", "street_line_1": "2 Oak"}})
-	assert.Equal(t, map[string]any{"id": "ad_1", "line_1": "2 Oak"}, order["billing_address"])
+	// An order keeps its own copy of the address, so the saved one it named isn't edited.
+	assert.Equal(t, map[string]any{"line_1": "2 Oak"}, order["bill_to"])
 
 	rate := upgradeBody("", http.MethodPost, "/v1/operations/shipments/actions/estimate-rate", map[string]any{
 		"to_address": map[string]any{"name": "Dock", "locality": "Columbus", "country": "US"}})

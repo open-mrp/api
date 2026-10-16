@@ -69,7 +69,7 @@ func TestSalesOrderPresenter(t *testing.T) {
 		UpdatedAt:                   now,
 	}
 
-	result := salesOrderDetailFromProto(info)
+	result := SalesOrderFromProto(include.WithLoadMeta(context.Background()), info)
 	resourcetest.ValidateExpandableStubs(t, "SalesOrder", result)
 }
 

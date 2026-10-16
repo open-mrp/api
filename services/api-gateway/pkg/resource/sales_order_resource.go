@@ -11,42 +11,6 @@ import (
 const SampleSalesOrderID = "or_9lqo07quiwyb"
 const SampleSalesOrderNumber = "SO-001"
 
-// Sales order type sub-resource.
-//
-// NOTE: currently unreferenced — sales orders and purchase orders both expose status, type, and priority as plain codes.
-type SalesOrderType struct {
-	// Type code.
-	Code string `json:"code" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_type"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
-var SampleSalesOrderType = &SalesOrderType{
-	Code:   "standard",
-	Object: constants.ObjectTypeSalesOrderType,
-	Name:   "Standard",
-}
-
-// Sales order status sub-resource.
-//
-// NOTE: currently unreferenced (see the SalesOrderType note).
-type SalesOrderStatusDetail struct {
-	// Status code.
-	Code string `json:"code" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_status"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
-var SampleSalesOrderStatusDetail = &SalesOrderStatusDetail{
-	Code:   "estimate",
-	Object: constants.ObjectTypeSalesOrderStatus,
-	Name:   "Estimate",
-}
-
 // The monetary amount that has reached one fulfillment stage, together with how far that stage has progressed.
 type SalesOrderStageTotal struct {
 	// Resource type identifier.
@@ -77,111 +41,177 @@ type SalesOrderTotals struct {
 	Invoiced SalesOrderStageTotal `json:"invoiced"`
 }
 
-// A sales order's email recipients, grouped by the notification they receive.
-type OrderContact struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=order_contact"`
-	// Email addresses that receive invoices for this order.
-	Invoice []string `json:"invoice"`
-	// Email addresses that receive order acknowledgements for this order.
-	Acknowledgement []string `json:"acknowledgement"`
-}
-
-// The fulfillment records produced from a sales order.
+// Lightweight references to the records produced from a sales order.
 //
-// The group itself is returned only when at least one of its members has been expanded.
+// The group itself is returned only when at least one of its members is included.
 type SalesOrderRelated struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_related"`
-	// The pick created when the order was issued.
+	// The pick created when the order was issued. `null` unless included.
 	Pick *Record `json:"pick" expandable:"true"`
-	// The production run created for this order, if one was started.
-	ProductionRun *Record `json:"production_run" expandable:"true"`
-	// Shipments made against this order.
+	// The production work started for the order. `null` unless included.
+	Jobs *List[Record] `json:"jobs" expandable:"true"`
+	// Shipments made against the order. `null` unless included.
 	Shipments *List[Record] `json:"shipments" expandable:"true"`
-	// Invoices raised against this order.
+	// Invoices raised against the order. `null` unless included.
 	Invoices *List[Record] `json:"invoices" expandable:"true"`
 }
 
-// An order placed by a customer, tracked from estimate through fulfillment.
+// How a sales order ships: the carrier and service level, and who the carrier bills.
+type SalesOrderFreight struct {
+	// The carrier that ships the order. `null` unless included.
+	Carrier *Carrier `json:"carrier" expandable:"true"`
+	// The carrier's service level the order ships on. `null` unless included.
+	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
+	// Who the carrier bills for the order's freight. `null` when not set.
+	CarrierBilling *CarrierBilling `json:"carrier_billing"`
+}
+
+// Who a carrier bills for freight.
+type CarrierBilling struct {
+	// `sender`: you pay the carrier. `third_party`: the carrier bills `account_number`.
+	Type constants.CarrierBillingType `json:"type" validate:"required"`
+	// The carrier account billed when `type` is `third_party`.
+	AccountNumber *string `json:"account_number"`
+}
+
+// When a sales order is due to ship: what was promised or pinned, the resulting ship-by date, and which rule decided it.
+type SalesOrderCommitment struct {
+	// The date delivery was promised to the customer.
+	//
+	// The ship-by date is worked back from it through the carrier's transit and the customer's receiving days. At most one of `promised_on`, `lead_time_override` and `ship_by_override_on` is set.
+	PromisedOn *timeutil.Date `json:"promised_on"`
+	// Business days from the order being issued to it being due to ship, for this order alone in place of the customer's lead time.
+	LeadTimeOverride *Quantity `json:"lead_time_override"`
+	// The exact date the order is due to ship, bypassing transit and the customer's receiving days.
+	//
+	// Moved back to the nearest earlier day you ship on.
+	ShipByOverrideOn *timeutil.Date `json:"ship_by_override_on"`
+	// Whether the customer can accept the order late.
+	//
+	// `soft`: they can. `hard`: they can't. `null` when not set.
+	Firmness *constants.CommitmentFirmness `json:"firmness"`
+	// The date the order is due to ship. Set when the order is issued and cleared if it is unissued.
+	//
+	// Always a day you ship on. Moves while the order is open when what it was worked out from changes; a change to the customer's lead time or a calendar doesn't move a date already promised.
+	ShipByOn *timeutil.Date `json:"ship_by_on"`
+	// The lead time the ship-by date was promised on, in business days on your working calendar.
+	//
+	// The later of the customer's lead time and the slowest item's sales lead time, or the order's own `lead_time_override`. `null` when a date was promised or pinned instead, or before the order is issued.
+	PromisedLeadTime *Quantity `json:"promised_lead_time"`
+	// Where `promised_lead_time` came from.
+	//
+	// `customer`: the customer's lead time (its own, its parent customer's, its group's or your account default). `item`: an item's sales lead time, longer than the customer's. `override`: the order's `lead_time_override`.
+	PromisedLeadTimeSource *constants.PromisedLeadTimeSource `json:"promised_lead_time_source"`
+	// Which rule produced the ship-by date, at the level of the customer chain.
+	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source" visibility:"internal"`
+	// Business days the carrier needs for the order's lane, subtracted from `promised_on`.
+	TransitDays *int32 `json:"transit_days" visibility:"internal"`
+	// Where `transit_days` came from.
+	TransitSource *constants.TransitSource `json:"transit_source" visibility:"internal"`
+	// Days the receiving and shipping calendars pulled the ship-by date back beyond transit.
+	CalendarAdjustmentDays *int32 `json:"calendar_adjustment_days" visibility:"internal"`
+	// The ship-by date at your pickup cutoff, when your shipping calendar sets one.
+	ShipByCutoffAt *time.Time `json:"ship_by_cutoff_at" visibility:"internal"`
+}
+
+// A sales order's email recipients' addresses, grouped by the document they receive.
+type OrderContact struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=order_contact"`
+	// Addresses that receive the order's invoices.
+	Invoice []string `json:"invoice"`
+	// Addresses that receive the order's acknowledgment.
+	Acknowledgement []string `json:"acknowledgement"`
+}
+
+// An order a customer placed with you, from draft through fulfillment.
 type SalesOrder struct {
 	// Sales order ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// Human-readable order number, e.g. `SO-001`.
-	//
-	// Assigned automatically when the order is created; unique within your account.
+	// Order number, unique within your account, such as `SO-001`. Assigned when the order is created.
 	Number string `json:"number" validate:"required"`
-	// The customer's own purchase order number, for cross-referencing.
+	// Where the order is in its lifecycle.
 	//
-	// Unique among this customer's orders.
+	// `draft`: not yet committed. `issued`: being fulfilled. `fulfilled`: every line shipped or closed (set automatically). `canceled`: stopped before anything shipped. Issue, unissue and cancel are the only actions; `fulfilled` follows the shipments.
+	Status constants.SalesOrderStatus `json:"status" validate:"required"`
+	// The order's currency. Every amount on the order is in it.
+	Currency constants.Currency `json:"currency" validate:"required"`
+	// The customer's own purchase order number. Unique among the customer's orders.
 	CustomerPurchaseOrderNumber *string `json:"customer_purchase_order_number"`
-	// Free-form note about the order.
-	Note *string `json:"note"`
-	// Order lifecycle status.
+	// Your team's instructions for the order, such as how to pack it.
 	//
-	// - `estimate`: a draft quote that has not yet been committed; not counted as a real order.
-	// - `issued`: the order has been issued and is being fulfilled.
-	// - `fulfilled`: the order has been completed and closed.
+	// Copied from the customer's when the order was created without its own. Always `null` for customer and supplier portal users.
+	Instructions *string `json:"instructions" sensitive:"internal"`
+	// How much of the order has been paid.
 	//
-	// Status changes are made through the issue, unissue, close, and reopen action endpoints rather than by updating this field.
-	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
-	// Fulfillment priority, used to rank orders on the shop floor.
-	Priority constants.PriorityCode `json:"priority" validate:"required"`
-	// Payment state of the order, derived from settlement allocations, invoices, and Stripe payments.
+	// Derived from invoices, payments and settlements; read-only.
 	PaymentStatus constants.SalesOrderPaymentStatus `json:"payment_status" validate:"required"`
-	// Stripe payment intent IDs recorded against this order.
-	PaymentIntentIDs []string `json:"payment_intent_ids"`
-	// Whether an order acknowledgment has been sent to the customer.
+	// Whether an order acknowledgment was sent.
 	//
-	// Becomes `sent` when the order is issued with customer notification requested and the order has acknowledgement contacts to send to. It can also be set directly when an acknowledgement was sent outside OpenMRP.
+	// Becomes `sent` when the order is issued with `notify_customer` and has acknowledgment recipients. Set it yourself when you acknowledged the order outside OpenMRP.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
-	// The customer this order is for.
+	// The customer the order is for. `null` unless included.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The sales representative credited with the order.
+	// The site the order ships from. `null` when the order uses your default site, and unless included.
+	Site *Location `json:"site" expandable:"true"`
+	// Your account user credited with the order. `null` unless included.
 	//
-	// Chosen automatically at creation when none is supplied, from the customer's default rep or the sales territory covering the ship-to address.
-	SalesRep *Actor `json:"sales_rep" expandable:"true"`
-	// Who created this order, and their relation (internal/customer/system).
+	// Chosen when the order is created without one: the customer's default sales rep, else the sales territory covering the ship-to address.
+	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`
+	// Who created the order, and their relation (internal/customer/system). `null` unless included.
 	CreatedBy *CreatedBy `json:"created_by" expandable:"true"`
-	// Address the order is billed to.
-	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// Address the order ships to.
-	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Carrier selection and freight billing for this order.
+	// The address the order is billed to, as it was when set on the order.
 	//
-	// The freight charge itself is carried as a line on the order, not on this object.
-	Freight *Freight `json:"freight" expandable:"true"`
-	// Payment terms agreed for this order.
+	// `address` is the saved address it came from, if any. Later changes to that address don't affect this order.
+	BillTo *AddressSnapshot `json:"bill_to"`
+	// The address the order ships to, as it was when set on the order.
+	//
+	// `address` is the saved address it came from, if any. Later changes to that address don't affect this order.
+	ShipTo *AddressSnapshot `json:"ship_to"`
+	// How the order ships. The freight charge itself is a line on the order.
+	Freight *SalesOrderFreight `json:"freight" validate:"required"`
+	// The order's payment term. `null` unless included.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Shipping terms agreed for this order.
+	// The order's shipping term. `null` unless included.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// Order-level discount applied to this order.
-	//
-	// The discount is charged through a negative-priced line on the order, so it is already reflected in the order totals.
+	// The order discount applied to the order. `null` unless included.
 	OrderDiscount *OrderDiscount `json:"order_discount" expandable:"true"`
-	// The order's lines, including the automatically generated freight and discount lines.
+	// Who receives the order's documents by email: each recipient is one of the customer's users and the documents they get.
+	//
+	// Copied from the customer's `notification_recipients` when the order was created without its own. `null` unless included.
+	EmailRecipients *List[EmailRecipient] `json:"email_recipients" expandable:"true"`
+	// When the order is due to ship: what was promised or pinned, the resulting ship-by date, and which rule decided it.
+	Commitment *SalesOrderCommitment `json:"commitment" validate:"required"`
+	// The order's lines. `null` unless included.
 	Lines *List[SalesOrderLine] `json:"lines" expandable:"true"`
-	// Number of lines on this order.
+	// Number of lines on the order.
 	LineCount int32 `json:"line_count"`
-	// Derived monetary totals and per-stage fulfillment progress.
+	// Derived monetary totals and per-stage fulfillment progress. `null` unless included.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
-	// Fulfillment records produced from this order.
+	// The saved address the order bills to, as it reads now. `null` unless included.
+	BillToAddress *Address `json:"bill_to_address" expandable:"true" visibility:"internal"`
+	// The saved address the order ships to, as it reads now. `null` unless included.
+	ShipToAddress *Address `json:"ship_to_address" expandable:"true" visibility:"internal"`
+	// The order's email recipients' addresses, by document. `null` unless included.
+	Contacts *OrderContact `json:"contacts" expandable:"true" visibility:"internal"`
+	// Lightweight references to the records produced from this order: its pick, production work, shipments and invoices.
+	//
+	// Retrieve a record by its ID for full details.
 	Related *SalesOrderRelated `json:"related"`
-	// Email recipients grouped by notification purpose.
-	Contacts *OrderContact `json:"contacts" expandable:"true"`
-	// When the order was issued (moved out of `estimate`).
+	// When the order was issued.
 	IssuedAt *time.Time `json:"issued_at"`
-	// When the order was fulfilled and closed.
-	CompletedAt *time.Time `json:"completed_at"`
-	// When the first shipment against this order went out.
-	FirstShipAt *time.Time `json:"first_ship_at"`
-	// When this estimate expires, if an expiration was set.
-	ExpiredAt *time.Time `json:"expired_at"`
-	// When this order is due to ship: the date promised or pinned, what it resolved to, and which rule decided.
-	Commitment *Commitment `json:"commitment"`
+	// When the order became fulfilled or was canceled.
+	FulfilledAt *time.Time `json:"fulfilled_at"`
+	// When the first shipment against the order went out.
+	FirstShippedAt *time.Time `json:"first_shipped_at"`
+	// The date a draft quoted to the customer expires, if one was set.
+	ExpiresOn *timeutil.Date `json:"expires_on"`
 	// Key-value pairs you attach to the order for your own references, such as its ID in another system.
+	//
+	// Your own: the other party to the order keeps its own metadata and never sees yours.
 	Metadata map[string]string `json:"metadata"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -190,7 +220,7 @@ type SalesOrder struct {
 }
 
 var sampleCustomerPurchaseOrderNumber = "PO-12345"
-var sampleNote = "Rush order"
+var sampleSalesOrderInstructions = "Pack in double-wall cartons."
 
 var SampleSalesOrderTotals = &SalesOrderTotals{
 	Object:   constants.ObjectTypeSalesOrderTotals,
@@ -200,39 +230,54 @@ var SampleSalesOrderTotals = &SalesOrderTotals{
 	Invoiced: SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: "0.000000000000000000000000000000", Completion: 0},
 }
 
+var (
+	sampleShipByOn          = timeutil.NewDate(2026, time.August, 20)
+	samplePromisedLeadTime  = &Quantity{Value: "12", Unit: SampleDayUnit}
+	samplePromisedLTSource  = constants.PromisedLeadTimeSourceCustomer
+	sampleCommitmentFirmnes = constants.CommitmentFirmnessSoft
+)
+
+// SampleSalesOrderCommitment is an order promised on its customer's lead time.
+var SampleSalesOrderCommitment = &SalesOrderCommitment{
+	Firmness:               &sampleCommitmentFirmnes,
+	ShipByOn:               &sampleShipByOn,
+	PromisedLeadTime:       samplePromisedLeadTime,
+	PromisedLeadTimeSource: &samplePromisedLTSource,
+}
+
 var SampleSalesOrder = &SalesOrder{
 	ID:                          SampleSalesOrderID,
 	Object:                      constants.ObjectTypeSalesOrder,
 	Number:                      SampleSalesOrderNumber,
+	Status:                      constants.SalesOrderStatusIssued,
+	Currency:                    constants.CurrencyUSD,
 	CustomerPurchaseOrderNumber: &sampleCustomerPurchaseOrderNumber,
-	Note:                        &sampleNote,
-	Status:                      constants.SalesOrderStatusCodeEstimate,
-	Priority:                    SamplePriorityCode,
+	Instructions:                &sampleSalesOrderInstructions,
 	PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
-	PaymentIntentIDs:            []string{},
 	AcknowledgmentStatus:        constants.AcknowledgmentStatusNotSent,
 	Customer:                    SampleCustomer,
-	SalesRep:                    SampleActor,
+	SalesRep:                    SampleAccountUser,
 	CreatedBy:                   SampleCreatedBy,
-	BillToAddress:               SampleAddress,
-	ShipToAddress:               SampleAddress,
-	Freight:                     SampleFreight,
-	PaymentTerm:                 SamplePaymentTerm,
-	ShippingTerm:                SampleShippingTerm,
-	OrderDiscount:               SampleOrderDiscount,
-	Lines:                       NewList([]SalesOrderLine{*SampleSalesOrderLine}, PageInfo{}),
-	LineCount:                   1,
-	Totals:                      SampleSalesOrderTotals,
-	Related:                     &SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated},
-	Contacts: &OrderContact{
-		Object:          constants.ObjectTypeOrderContact,
-		Invoice:         []string{"ap@acme.example.com"},
-		Acknowledgement: []string{"purchasing@acme.example.com"},
+	BillTo:                      SampleAddressSnapshot,
+	ShipTo:                      SampleAddressSnapshot,
+	Freight: &SalesOrderFreight{
+		Carrier:        SampleCarrier,
+		ServiceLevel:   SampleServiceLevel,
+		CarrierBilling: &CarrierBilling{Type: constants.CarrierBillingTypeSender},
 	},
-	Commitment: SampleCommitment,
-	Metadata:   map[string]string{"edi_po": "81078093", "edi_partner": "acme"},
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	PaymentTerm:     SamplePaymentTerm,
+	ShippingTerm:    SampleShippingTerm,
+	OrderDiscount:   SampleOrderDiscount,
+	EmailRecipients: NewList([]EmailRecipient{*SampleEmailRecipient}, PageInfo{}),
+	Commitment:      SampleSalesOrderCommitment,
+	Lines:           NewList([]SalesOrderLine{*SampleSalesOrderLine}, PageInfo{}),
+	LineCount:       1,
+	Totals:          SampleSalesOrderTotals,
+	Related:         &SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated},
+	IssuedAt:        new(timeutil.TimestampToTime(sampleCreatedAtTimestamp)),
+	Metadata:        map[string]string{"edi_po": "81078093"},
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*SalesOrder) SchemaExample() any {

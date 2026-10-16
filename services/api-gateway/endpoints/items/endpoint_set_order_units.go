@@ -35,7 +35,7 @@ type SetOrderUnitsFilter struct {
 
 // Request to set the order units of many items.
 type SetOrderUnitsRequest struct {
-	// The items to change. Send at least one filter; at most 10,000 items may match.
+	// The items to change. Send at least one filter; at most 1,000 items may match.
 	Filter SetOrderUnitsFilter `json:"filter" validate:"required"`
 	// Units the items can be ordered in besides their stocking units. Replaces each item's list; send `[]` to remove them all.
 	OrderUnits []ItemOrderUnitInput `json:"order_units" validate:"max=100,dive"`
@@ -60,7 +60,7 @@ func (*SetOrderUnitsRequest) SchemaExample() any {
 
 // Sets orderable units on many items at once.
 //
-// Replaces `order_units` and `default_order_unit` on every item matching the filter. The work runs in the background; the response is an async job to poll.
+// Replaces `order_units` and `default_order_unit` on every item matching the filter. The work runs in the background; the response is an async job to poll. Items are written in batches of 100, so a job that fails part-way may have changed some of them; running it again leaves items that already have the requested units as they are.
 type SetOrderUnitsEndpoint struct{}
 
 func (e *SetOrderUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetOrderUnitsRequest, *apiresource.AsyncJob] {

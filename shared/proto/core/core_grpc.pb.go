@@ -120,6 +120,7 @@ const (
 	CoreService_ExportPriceList_FullMethodName                            = "/core.CoreService/ExportPriceList"
 	CoreService_ListAccountIntegrations_FullMethodName                    = "/core.CoreService/ListAccountIntegrations"
 	CoreService_CreateAccountIntegration_FullMethodName                   = "/core.CoreService/CreateAccountIntegration"
+	CoreService_RotateAccountIntegrationCredentials_FullMethodName        = "/core.CoreService/RotateAccountIntegrationCredentials"
 	CoreService_UpdateAccountIntegration_FullMethodName                   = "/core.CoreService/UpdateAccountIntegration"
 	CoreService_DeleteAccountIntegration_FullMethodName                   = "/core.CoreService/DeleteAccountIntegration"
 	CoreService_BatchGetAccountIntegrationsByIDs_FullMethodName           = "/core.CoreService/BatchGetAccountIntegrationsByIDs"
@@ -638,8 +639,10 @@ type CoreServiceClient interface {
 	ExportPriceList(ctx context.Context, in *ExportPriceListRequest, opts ...grpc.CallOption) (*ExportPriceListResponse, error)
 	// Returns a paginated list of account integrations (credentials excluded).
 	ListAccountIntegrations(ctx context.Context, in *ListAccountIntegrationsRequest, opts ...grpc.CallOption) (*ListAccountIntegrationsResponse, error)
-	// Creates or upserts an integration; updates existing if same code exists.
+	// Connects a provider once it accepts the credentials; a second integration for a provider is refused unless replace_existing.
 	CreateAccountIntegration(ctx context.Context, in *CreateAccountIntegrationRequest, opts ...grpc.CallOption) (*CreateAccountIntegrationResponse, error)
+	// Replaces an integration's credentials once the provider accepts them.
+	RotateAccountIntegrationCredentials(ctx context.Context, in *RotateAccountIntegrationCredentialsRequest, opts ...grpc.CallOption) (*RotateAccountIntegrationCredentialsResponse, error)
 	// Updates name and/or is_active on an integration; credentials cannot be changed.
 	UpdateAccountIntegration(ctx context.Context, in *UpdateAccountIntegrationRequest, opts ...grpc.CallOption) (*UpdateAccountIntegrationResponse, error)
 	// Deletes an account integration and returns the deleted resource.
@@ -2066,6 +2069,16 @@ func (c *coreServiceClient) CreateAccountIntegration(ctx context.Context, in *Cr
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateAccountIntegrationResponse)
 	err := c.cc.Invoke(ctx, CoreService_CreateAccountIntegration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) RotateAccountIntegrationCredentials(ctx context.Context, in *RotateAccountIntegrationCredentialsRequest, opts ...grpc.CallOption) (*RotateAccountIntegrationCredentialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotateAccountIntegrationCredentialsResponse)
+	err := c.cc.Invoke(ctx, CoreService_RotateAccountIntegrationCredentials_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5513,8 +5526,10 @@ type CoreServiceServer interface {
 	ExportPriceList(context.Context, *ExportPriceListRequest) (*ExportPriceListResponse, error)
 	// Returns a paginated list of account integrations (credentials excluded).
 	ListAccountIntegrations(context.Context, *ListAccountIntegrationsRequest) (*ListAccountIntegrationsResponse, error)
-	// Creates or upserts an integration; updates existing if same code exists.
+	// Connects a provider once it accepts the credentials; a second integration for a provider is refused unless replace_existing.
 	CreateAccountIntegration(context.Context, *CreateAccountIntegrationRequest) (*CreateAccountIntegrationResponse, error)
+	// Replaces an integration's credentials once the provider accepts them.
+	RotateAccountIntegrationCredentials(context.Context, *RotateAccountIntegrationCredentialsRequest) (*RotateAccountIntegrationCredentialsResponse, error)
 	// Updates name and/or is_active on an integration; credentials cannot be changed.
 	UpdateAccountIntegration(context.Context, *UpdateAccountIntegrationRequest) (*UpdateAccountIntegrationResponse, error)
 	// Deletes an account integration and returns the deleted resource.
@@ -6295,6 +6310,9 @@ func (UnimplementedCoreServiceServer) ListAccountIntegrations(context.Context, *
 }
 func (UnimplementedCoreServiceServer) CreateAccountIntegration(context.Context, *CreateAccountIntegrationRequest) (*CreateAccountIntegrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAccountIntegration not implemented")
+}
+func (UnimplementedCoreServiceServer) RotateAccountIntegrationCredentials(context.Context, *RotateAccountIntegrationCredentialsRequest) (*RotateAccountIntegrationCredentialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateAccountIntegrationCredentials not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdateAccountIntegration(context.Context, *UpdateAccountIntegrationRequest) (*UpdateAccountIntegrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountIntegration not implemented")
@@ -8962,6 +8980,24 @@ func _CoreService_CreateAccountIntegration_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).CreateAccountIntegration(ctx, req.(*CreateAccountIntegrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_RotateAccountIntegrationCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateAccountIntegrationCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).RotateAccountIntegrationCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_RotateAccountIntegrationCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).RotateAccountIntegrationCredentials(ctx, req.(*RotateAccountIntegrationCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -15194,6 +15230,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateAccountIntegration",
 			Handler:    _CoreService_CreateAccountIntegration_Handler,
+		},
+		{
+			MethodName: "RotateAccountIntegrationCredentials",
+			Handler:    _CoreService_RotateAccountIntegrationCredentials_Handler,
 		},
 		{
 			MethodName: "UpdateAccountIntegration",

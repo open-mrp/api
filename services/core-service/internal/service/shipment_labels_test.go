@@ -121,6 +121,7 @@ func newLabelHarness(t *testing.T, ctrl *gomock.Controller) *labelHarness {
 
 	h.repoFactory.EXPECT().NewCarrierRepo().Return(h.carrierRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewAccountIntegrationRepo().Return(h.integrationRepo).AnyTimes()
+	h.integrationRepo.EXPECT().FindByCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.AccountIntegration{ConnectionStatus: constants.IntegrationConnectionStatusConnected}, nil).AnyTimes()
 	h.repoFactory.EXPECT().NewShippingCaseRepo().Return(h.caseRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewShipmentRepo().Return(h.shipmentRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewSalesOrderRepo().Return(h.orderRepo).AnyTimes()

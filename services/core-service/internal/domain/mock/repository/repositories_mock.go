@@ -4835,6 +4835,21 @@ func (mr *MockAccountIntegrationRepoMockRecorder) List(ctx, params any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).List), ctx, params)
 }
 
+// SetConnectionStatus mocks base method.
+func (m *MockAccountIntegrationRepo) SetConnectionStatus(ctx context.Context, accountID string, code constants.IntegrationCode, status constants.IntegrationConnectionStatus) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetConnectionStatus", ctx, accountID, code, status)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetConnectionStatus indicates an expected call of SetConnectionStatus.
+func (mr *MockAccountIntegrationRepoMockRecorder) SetConnectionStatus(ctx, accountID, code, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConnectionStatus", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).SetConnectionStatus), ctx, accountID, code, status)
+}
+
 // Update mocks base method.
 func (m *MockAccountIntegrationRepo) Update(ctx context.Context, params domain.UpdateAccountIntegrationParams) (*domain.AccountIntegration, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4851,18 +4866,18 @@ func (mr *MockAccountIntegrationRepoMockRecorder) Update(ctx, params any) *gomoc
 }
 
 // UpdateCredentials mocks base method.
-func (m *MockAccountIntegrationRepo) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*domain.AccountIntegration, *apierror.APIError) {
+func (m *MockAccountIntegrationRepo) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, connection constants.IntegrationConnectionStatus) (*domain.AccountIntegration, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCredentials", ctx, accountID, id, name, encryptedCredentials)
+	ret := m.ctrl.Call(m, "UpdateCredentials", ctx, accountID, id, name, encryptedCredentials, connection)
 	ret0, _ := ret[0].(*domain.AccountIntegration)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // UpdateCredentials indicates an expected call of UpdateCredentials.
-func (mr *MockAccountIntegrationRepoMockRecorder) UpdateCredentials(ctx, accountID, id, name, encryptedCredentials any) *gomock.Call {
+func (mr *MockAccountIntegrationRepoMockRecorder) UpdateCredentials(ctx, accountID, id, name, encryptedCredentials, connection any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).UpdateCredentials), ctx, accountID, id, name, encryptedCredentials)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).UpdateCredentials), ctx, accountID, id, name, encryptedCredentials, connection)
 }
 
 // MockHubspotSyncRepo is a mock of HubspotSyncRepo interface.
@@ -21631,6 +21646,21 @@ func (mr *MockPortalDomainRepoMockRecorder) ListByAccount(ctx, accountID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccount", reflect.TypeOf((*MockPortalDomainRepo)(nil).ListByAccount), ctx, accountID)
 }
 
+// ListToRecheck mocks base method.
+func (m *MockPortalDomainRepo) ListToRecheck(ctx context.Context, checkedBefore time.Time, limit int32) ([]*domain.PortalDomain, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListToRecheck", ctx, checkedBefore, limit)
+	ret0, _ := ret[0].([]*domain.PortalDomain)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListToRecheck indicates an expected call of ListToRecheck.
+func (mr *MockPortalDomainRepoMockRecorder) ListToRecheck(ctx, checkedBefore, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListToRecheck", reflect.TypeOf((*MockPortalDomainRepo)(nil).ListToRecheck), ctx, checkedBefore, limit)
+}
+
 // MarkVerified mocks base method.
 func (m *MockPortalDomainRepo) MarkVerified(ctx context.Context, portalDomainID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -21658,6 +21688,20 @@ func (m *MockPortalDomainRepo) ResolveVerifiedHost(ctx context.Context, domainNa
 func (mr *MockPortalDomainRepoMockRecorder) ResolveVerifiedHost(ctx, domainName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveVerifiedHost", reflect.TypeOf((*MockPortalDomainRepo)(nil).ResolveVerifiedHost), ctx, domainName)
+}
+
+// TouchChecked mocks base method.
+func (m *MockPortalDomainRepo) TouchChecked(ctx context.Context, portalDomainID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TouchChecked", ctx, portalDomainID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// TouchChecked indicates an expected call of TouchChecked.
+func (mr *MockPortalDomainRepoMockRecorder) TouchChecked(ctx, portalDomainID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TouchChecked", reflect.TypeOf((*MockPortalDomainRepo)(nil).TouchChecked), ctx, portalDomainID)
 }
 
 // UpdateProviderState mocks base method.

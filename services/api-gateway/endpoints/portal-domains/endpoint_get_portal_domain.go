@@ -18,9 +18,9 @@ type GetPortalDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Returns a single portal domain, including its current status and the DNS records that must be published for it.
+// Retrieves a portal domain.
 //
-// Reading a domain never re-checks it with the serving provider — the status is the one recorded when the domain was connected or last verified — so run the verify action to move a `pending` or `securing` domain forward.
+// The status is as of the last check. Pending domains are checked automatically; Verify checks now.
 type GetPortalDomainEndpoint struct{}
 
 func (e *GetPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPortalDomainRequest, *apiresource.PortalDomain] {
@@ -32,7 +32,6 @@ func (e *GetPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPor
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePortalDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPortalDomainRequest) (*apiresource.PortalDomain, *apierror.APIError) {

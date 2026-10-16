@@ -326,3 +326,41 @@ func (suite *PortalDomainSvcTestSuite) TestResolvePortalHost_NormalizesAndResolv
 	suite.Nil(apiErr)
 	suite.Equal("acme", result.Slug)
 }
+
+// The background check advances a due domain like the verify action does, acting as the scheduler, and counts it once
+// it is verified.
+func (suite *PortalDomainSvcTestSuite) TestRecheckPendingDomains_VerifiesADueDomain() {
+	pending := &domain.PortalDomain{ID: testPortalDomainID, AccountID: testPortalAccountID, Domain: testPortalHost, Status: constants.PortalDomainStatusSecuring}
+	verified := *pending
+	verified.Status = constants.PortalDomainStatusVerified
+
+	suite.portalDomainRepo.EXPECT().ListToRecheck(gomock.Any(), gomock.Any(), int32(20)).Return([]*domain.PortalDomain{pending}, nil)
+	suite.portalDomainRepo.EXPECT().TouchChecked(gomock.Any(), testPortalDomainID).Return(nil)
+	suite.provider.EXPECT().GetDomainState(gomock.Any(), testPortalHost).Return(&domain.PortalDomainProviderState{Verified: true, Serving: true}, nil)
+	suite.portalDomainRepo.EXPECT().UpdateProviderState(gomock.Any(), testPortalDomainID, constants.PortalDomainStatusVerified, gomock.Any()).Return(nil)
+	suite.portalDomainRepo.EXPECT().MarkVerified(gomock.Any(), testPortalDomainID).Return(nil)
+	suite.portalDomainRepo.EXPECT().GetByID(gomock.Any(), testPortalAccountID, testPortalDomainID).DoAndReturn(
+		func(ctx context.Context, _, _ string) (*domain.PortalDomain, *apierror.APIError) {
+			identity, ok := appctx.Identity[*types.Identity](ctx)
+			suite.Require().True(ok)
+			suite.Equal(testPortalAccountID, identity.Target.AccountID)
+			return &verified, nil
+		})
+
+	n, apiErr := suite.svc.RecheckPendingDomains(context.Background(), 5*time.Minute, 20)
+	suite.Nil(apiErr)
+	suite.Equal(1, n)
+}
+
+// A provider failure skips the domain; it was touched, so it waits its turn again.
+func (suite *PortalDomainSvcTestSuite) TestRecheckPendingDomains_SkipsADomainTheProviderFailsOn() {
+	pending := &domain.PortalDomain{ID: testPortalDomainID, AccountID: testPortalAccountID, Domain: testPortalHost, Status: constants.PortalDomainStatusPending}
+
+	suite.portalDomainRepo.EXPECT().ListToRecheck(gomock.Any(), gomock.Any(), int32(5)).Return([]*domain.PortalDomain{pending}, nil)
+	suite.portalDomainRepo.EXPECT().TouchChecked(gomock.Any(), testPortalDomainID).Return(nil)
+	suite.provider.EXPECT().GetDomainState(gomock.Any(), testPortalHost).Return(nil, apierror.NewServiceUnavailableError(nil, "down"))
+
+	n, apiErr := suite.svc.RecheckPendingDomains(context.Background(), time.Minute, 5)
+	suite.Nil(apiErr)
+	suite.Equal(0, n)
+}

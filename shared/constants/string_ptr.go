@@ -13,7 +13,7 @@ func stringPtrEnum[T ~string](v *T) *string {
 }
 
 func (m *AccountGroupType) StringPtr() *string { return stringPtrEnum(m) }
-func (m *AccountIntegrationStatus) StringPtr() *string {
+func (m *IntegrationConnectionStatus) StringPtr() *string {
 	return stringPtrEnum(m)
 }
 func (m *HubspotSyncJobStatus) StringPtr() *string       { return stringPtrEnum(m) }

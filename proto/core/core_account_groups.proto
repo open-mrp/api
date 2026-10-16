@@ -446,11 +446,15 @@ message AccountIntegrationInfo {
   bool is_active = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+  // connected | invalid_credentials | unknown: whether the provider accepted the last call.
+  string connection_status = 7;
 }
 message ListAccountIntegrationsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  // Unset lists active and disabled integrations.
+  optional bool is_active = 4;
 }
 message ListAccountIntegrationsResponse {
   repeated AccountIntegrationInfo account_integrations = 1;
@@ -461,6 +465,10 @@ message CreateAccountIntegrationRequest {
   string integration_code = 2;
   // JSON-encoded credentials specific to the integration type.
   string credentials = 3;
+  // Unset starts the integration active.
+  optional bool is_active = 4;
+  // Rotates the provider's existing integration in place instead of refusing a second one (1.0.forge-preview.9's upsert).
+  bool replace_existing = 5;
 }
 message CreateAccountIntegrationResponse {
   AccountIntegrationInfo account_integration = 1;
@@ -471,6 +479,14 @@ message UpdateAccountIntegrationRequest {
   optional bool is_active = 3;
 }
 message UpdateAccountIntegrationResponse {
+  AccountIntegrationInfo account_integration = 1;
+}
+message RotateAccountIntegrationCredentialsRequest {
+  string id = 1;
+  // JSON-encoded credentials for the integration's provider.
+  string credentials = 2;
+}
+message RotateAccountIntegrationCredentialsResponse {
   AccountIntegrationInfo account_integration = 1;
 }
 message DeleteAccountIntegrationRequest {

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
@@ -14,8 +15,10 @@ type AccountIntegration struct {
 	IntegrationCode constants.IntegrationCode `audit:"integration_code"`
 	Name            string                    `audit:"name"`
 	IsActive        bool                      `audit:"is_active"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// ConnectionStatus is whether the provider accepted OpenMRP's last call with these credentials.
+	ConnectionStatus constants.IntegrationConnectionStatus `audit:"connection_status"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type ListAccountIntegrationsParams struct {
@@ -23,6 +26,8 @@ type ListAccountIntegrationsParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	// IsActive narrows to active (true) or disabled (false) integrations; nil lists both.
+	IsActive *bool
 }
 
 type ListAccountIntegrationsResult struct {
@@ -35,7 +40,25 @@ type CreateAccountIntegrationParams struct {
 	IntegrationCode constants.IntegrationCode
 	Name            string
 	Credentials     string // raw JSON credentials before encryption
+	// IsActive is the starting status; nil starts active.
+	IsActive *bool
+	// ReplaceExisting rotates the provider's existing integration in place instead of refusing a second one. Only
+	// 1.0.forge-preview.9 callers, whose create was an upsert, set it.
+	ReplaceExisting bool
+	// ConnectionStatus is the provider's verdict on Credentials, set by the service after checking them.
+	ConnectionStatus constants.IntegrationConnectionStatus
 }
+
+type RotateAccountIntegrationCredentialsParams struct {
+	AccountID   string
+	ID          string
+	Credentials string // raw JSON credentials before encryption
+}
+
+// ErrProviderRejectedCredentials marks a provider call refused because the integration's credentials are no longer
+// accepted (a revoked or rotated key). Provider clients wrap it into the APIError they return so the integration's
+// connection status can be recorded without changing the error the caller sees.
+var ErrProviderRejectedCredentials = errors.New("provider rejected the integration credentials")
 
 type UpdateAccountIntegrationParams struct {
 	AccountID string

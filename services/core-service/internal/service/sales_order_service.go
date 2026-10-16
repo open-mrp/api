@@ -17,6 +17,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/integrationhealth"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/audit"
@@ -2842,7 +2843,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
 		}
 
-		checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
+		checkoutClient := s.stripeClient(params.AccountID, stripeCreds.PrivateKey)
 
 		// Resolve the buyer's Stripe customer, creating one on demand. The session is
 		// billed to a Stripe customer rather than a bare customer_email
@@ -3106,7 +3107,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
 		}
 
-		checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
+		checkoutClient := s.stripeClient(targetAccountID, stripeCreds.PrivateKey)
 
 		// 4. Resolve or create Stripe customer
 		customerRepo := s.repos.NewCustomerRepo()
@@ -3333,7 +3334,7 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 		return tracing.Trace(span, apierror.NewValidationError("Stripe integration has no webhook secret configured for this account."))
 	}
 
-	checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
+	checkoutClient := s.stripeClient(accountID, stripeCreds.PrivateKey)
 	event, paymentIntent, apiErr := checkoutClient.ConstructWebhookEvent(rawPayload, signature, stripeCreds.WebhookSecret)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -3363,6 +3364,11 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 	default:
 		return nil
 	}
+}
+
+// stripeClient is the account's Stripe client, recording each call's outcome on its Stripe integration.
+func (s *salesOrderSvcImpl) stripeClient(accountID, privateKey string) domain.StripeCheckoutClient {
+	return integrationhealth.Stripe(s.checkoutClientFactory.Build(privateKey), integrationhealth.ForAccount(s.repos, accountID, constants.IntegrationCodeStripe))
 }
 
 // accountStripeCredentials decrypts an account's active Stripe integration credentials. The blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
@@ -3419,7 +3425,7 @@ func (s *salesOrderSvcImpl) ReconcileAccountStripePayout(ctx context.Context, ac
 		return tracing.Trace(span, apiErr)
 	}
 	ctx = omrpctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
-	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.checkoutClientFactory.Build(stripeCreds.PrivateKey), event))
+	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.stripeClient(accountID, stripeCreds.PrivateKey), event))
 }
 
 // handleAccountPaymentIntentSucceeded links the payment intent to its order and records the receivables payment transaction, mirroring the legacy webhook. Both steps are idempotent so Stripe retries and duplicate deliveries are safe.

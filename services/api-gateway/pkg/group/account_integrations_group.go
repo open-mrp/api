@@ -36,13 +36,14 @@ func (*AccountIntegrationsEndpointGroup) Materialize(config *AccountIntegrations
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Account Integrations",
-		Description:  "List and manage third-party account integrations.",
+		Description:  "Connect providers (Stripe, Shippo, HubSpot) and manage their credentials.",
 		ResourceType: &apiresource.AccountIntegration{},
 	}
 
 	listEndpoint := apiendpoint.From(&accountintegrationep.ListAccountIntegrationsEndpoint{}).WithService(inner, accountIntegrationSvc)
 	createEndpoint := apiendpoint.From(&accountintegrationep.CreateAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
 	updateEndpoint := apiendpoint.From(&accountintegrationep.UpdateAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
+	rotateEndpoint := apiendpoint.From(&accountintegrationep.RotateAccountIntegrationCredentialsEndpoint{}).WithService(inner, accountIntegrationSvc)
 	deleteEndpoint := apiendpoint.From(&accountintegrationep.DeleteAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
 	getStripePublishableKeyEndpoint := apiendpoint.From(&accountintegrationep.GetStripePublishableKeyEndpoint{}).WithService(inner, accountIntegrationSvc)
 	getStripeStatusEndpoint := apiendpoint.From(&accountintegrationep.GetStripeStatusEndpoint{}).WithService(inner, accountIntegrationSvc)
@@ -51,6 +52,7 @@ func (*AccountIntegrationsEndpointGroup) Materialize(config *AccountIntegrations
 		listEndpoint,
 		createEndpoint,
 		updateEndpoint,
+		rotateEndpoint,
 		deleteEndpoint,
 		getStripePublishableKeyEndpoint,
 		getStripeStatusEndpoint,

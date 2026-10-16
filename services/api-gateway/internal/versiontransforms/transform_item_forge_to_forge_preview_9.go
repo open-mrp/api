@@ -1,8 +1,10 @@
 package versiontransforms
 
 import (
+	"net/http"
 	"net/url"
 
+	"github.com/open-mrp/api/shared/apiversion"
 	"github.com/open-mrp/apikit/object"
 	"github.com/open-mrp/apikit/version"
 )
@@ -76,8 +78,22 @@ func (itemForgeToPreview9) TransformQuery(_ object.Type, route string, query url
 		query.Del("supplier_id")
 		query.Add("supplier_ids[]", v)
 	}
-	if !query.Has("statuses") && !query.Has("statuses[]") {
-		query.Set("statuses[]", "active")
-	}
 	return query
+}
+
+// Preview9ItemListActiveOnly lists only active items to a preview.9 caller that names no status, as archived items are
+// the ones its list hid as deleted. It wraps the router because a query transformer can't tell the list from create,
+// which share the route, and create refuses a statuses parameter.
+func Preview9ItemListActiveOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == itemsRoute && r.Header.Get(apiversion.Header) == apiversion.V1_0_Forge_Preview9.String() {
+			query := r.URL.Query()
+			if !query.Has("statuses") && !query.Has("statuses[]") {
+				query.Set("statuses[]", "active")
+				r = r.Clone(r.Context())
+				r.URL.RawQuery = query.Encode()
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

@@ -2020,9 +2020,10 @@ func (h *gRPCHandler) ListAccountIntegrations(ctx context.Context, req *pb.ListA
 	}
 
 	params := domain.ListAccountIntegrationsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		IsActive: req.IsActive,
 	}
 
 	result, apiErr := h.accountIntegrationSvc.ListAccountIntegrations(ctx, params)
@@ -2073,6 +2074,8 @@ func (h *gRPCHandler) CreateAccountIntegration(ctx context.Context, req *pb.Crea
 		Name:            req.Name,
 		IntegrationCode: constants.IntegrationCode(req.IntegrationCode),
 		Credentials:     req.Credentials,
+		IsActive:        req.IsActive,
+		ReplaceExisting: req.ReplaceExisting,
 	}
 
 	integration, apiErr := h.accountIntegrationSvc.CreateAccountIntegration(ctx, params)
@@ -2081,6 +2084,27 @@ func (h *gRPCHandler) CreateAccountIntegration(ctx context.Context, req *pb.Crea
 	}
 
 	return &pb.CreateAccountIntegrationResponse{
+		AccountIntegration: accountIntegrationToProto(integration),
+	}, nil
+}
+
+func (h *gRPCHandler) RotateAccountIntegrationCredentials(ctx context.Context, req *pb.RotateAccountIntegrationCredentialsRequest) (*pb.RotateAccountIntegrationCredentialsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	integration, apiErr := h.accountIntegrationSvc.RotateAccountIntegrationCredentials(ctx, domain.RotateAccountIntegrationCredentialsParams{
+		ID:          req.Id,
+		Credentials: req.Credentials,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.RotateAccountIntegrationCredentialsResponse{
 		AccountIntegration: accountIntegrationToProto(integration),
 	}, nil
 }
@@ -2157,12 +2181,13 @@ func (h *gRPCHandler) GetStripeStatus(ctx context.Context, req *pb.GetStripeStat
 
 func accountIntegrationToProto(ai *domain.AccountIntegration) *pb.AccountIntegrationInfo {
 	return &pb.AccountIntegrationInfo{
-		Id:              ai.ID,
-		Name:            ai.Name,
-		IntegrationCode: string(ai.IntegrationCode),
-		IsActive:        ai.IsActive,
-		CreatedAt:       timestamppb.New(ai.CreatedAt),
-		UpdatedAt:       timestamppb.New(ai.UpdatedAt),
+		Id:               ai.ID,
+		Name:             ai.Name,
+		IntegrationCode:  string(ai.IntegrationCode),
+		IsActive:         ai.IsActive,
+		ConnectionStatus: string(ai.ConnectionStatus),
+		CreatedAt:        timestamppb.New(ai.CreatedAt),
+		UpdatedAt:        timestamppb.New(ai.UpdatedAt),
 	}
 }
 

@@ -2,7 +2,9 @@ package stripe
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -26,6 +28,16 @@ func NewCheckoutClientFactory() domain.StripeCheckoutClientFactory {
 }
 
 type checkoutClientFactory struct{}
+
+// markRejected tags an error Stripe answered with 401 (a revoked or rolled key) so the integration's connection
+// status can record it.
+func markRejected(err error) error {
+	var stripeErr *gostripe.Error
+	if errors.As(err, &stripeErr) && stripeErr.HTTPStatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("%w: %w", domain.ErrProviderRejectedCredentials, err)
+	}
+	return err
+}
 
 func (f *checkoutClientFactory) Build(apiKey string) domain.StripeCheckoutClient {
 	return &checkoutClientImpl{apiKey: apiKey}
@@ -108,7 +120,7 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 
 	if err != nil {
 		span.RecordError(err)
-		return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to create Stripe checkout session: %v", err))
+		return nil, apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to create Stripe checkout session: %v", err))
 	}
 
 	return &domain.StripeCheckoutSession{URL: sess.URL}, nil
@@ -170,7 +182,7 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 
 	if err != nil {
 		span.RecordError(err)
-		return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to create embedded Stripe checkout session: %v", err))
+		return nil, apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to create embedded Stripe checkout session: %v", err))
 	}
 
 	if sess.ClientSecret == "" {
@@ -202,7 +214,7 @@ func (c *checkoutClientImpl) CreateStripeCustomer(ctx context.Context, params do
 
 	if err != nil {
 		span.RecordError(err)
-		return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to create Stripe customer: %v", err))
+		return nil, apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to create Stripe customer: %v", err))
 	}
 
 	return &domain.StripeCustomer{
@@ -233,7 +245,7 @@ func (c *checkoutClientImpl) UpdateStripeCustomer(ctx context.Context, params do
 
 	if err != nil {
 		span.RecordError(err)
-		return apierror.NewInternalError(err, fmt.Sprintf("Failed to update Stripe customer: %v", err))
+		return apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to update Stripe customer: %v", err))
 	}
 
 	return nil
@@ -293,7 +305,7 @@ func (c *checkoutClientImpl) ListPayoutPaymentIntentIDs(ctx context.Context, pay
 	for bt, err := range sc.V1BalanceTransactions.List(ctx, params) {
 		if err != nil {
 			span.RecordError(err)
-			return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to list payout balance transactions: %v", err))
+			return nil, apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to list payout balance transactions: %v", err))
 		}
 		if bt.Type != gostripe.BalanceTransactionTypeCharge && bt.Type != gostripe.BalanceTransactionTypePayment {
 			continue
@@ -304,7 +316,7 @@ func (c *checkoutClientImpl) ListPayoutPaymentIntentIDs(ctx context.Context, pay
 		charge, err := sc.V1Charges.Retrieve(ctx, bt.Source.ID, nil)
 		if err != nil {
 			span.RecordError(err)
-			return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to resolve charge for payout balance transaction: %v", err))
+			return nil, apierror.NewInternalError(markRejected(err), fmt.Sprintf("Failed to resolve charge for payout balance transaction: %v", err))
 		}
 		if charge.PaymentIntent == nil || charge.PaymentIntent.ID == "" {
 			continue

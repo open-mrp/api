@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	gosql "database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -190,6 +192,31 @@ func portalDomainFromRow(row sqlc.PortalDomain) *domain.PortalDomain {
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
+}
+
+func (r *portalDomainRepoImpl) ListToRecheck(ctx context.Context, checkedBefore time.Time, limit int32) ([]*domain.PortalDomain, *apierror.APIError) {
+	ctx, span := portalDomainRepoTracer.Start(ctx, "repository.portal_domain.list_to_recheck")
+	defer span.End()
+
+	rows, err := r.queries.ListPortalDomainsToRecheck(ctx, sqlc.ListPortalDomainsToRecheckParams{
+		CheckedBefore: gosql.NullTime{Time: checkedBefore, Valid: true},
+		Limit:         limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.PortalDomain, len(rows))
+	for i, row := range rows {
+		out[i] = portalDomainFromRow(row)
+	}
+	return out, nil
+}
+
+func (r *portalDomainRepoImpl) TouchChecked(ctx context.Context, portalDomainID string) *apierror.APIError {
+	ctx, span := portalDomainRepoTracer.Start(ctx, "repository.portal_domain.touch_checked")
+	defer span.End()
+
+	return tracing.Trace(span, db.MapSQLError(r.queries.TouchPortalDomainChecked(ctx, portalDomainID)))
 }
 
 // marshalDNSRecords encodes DNS records for the nullable JSON column; empty → NULL.

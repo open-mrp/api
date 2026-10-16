@@ -132,6 +132,9 @@ func (c *clientImpl) parseErrorResponse(resp *http.Response) *apierror.APIError 
 	if resp.StatusCode == http.StatusBadRequest {
 		return apierror.NewValidationError("SHIPPO: " + msg)
 	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return apierror.NewInternalError(fmt.Errorf("%w: shippo status %d: %s", domain.ErrProviderRejectedCredentials, resp.StatusCode, msg), "Shippo API error.")
+	}
 	return apierror.NewInternalError(fmt.Errorf("shippo status %d: %s", resp.StatusCode, msg), "Shippo API error.")
 }
 

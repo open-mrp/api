@@ -1599,7 +1599,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 				if apiErr != nil {
 					return nil, tracing.Trace(span, apiErr)
 				}
-				shippoClient, apiErr = s.shippoFactory.Build(apiKey)
+				shippoClient, apiErr = buildShippoClient(s.shippoFactory, s.repos, params.AccountID, apiKey)
 				if apiErr != nil {
 					return nil, tracing.Trace(span, apiErr)
 				}
@@ -2557,7 +2557,7 @@ func accountShippoClient(ctx context.Context, repos domain.RepoFactory, factory 
 		return nil, apiErr
 	}
 
-	return factory.Build(apiKey)
+	return buildShippoClient(factory, repos, accountID, apiKey)
 }
 
 // Names the account's system freight product, whose order line carries the shipping charge.

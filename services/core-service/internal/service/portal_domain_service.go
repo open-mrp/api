@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -11,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
+	"github.com/open-mrp/api/shared/omrpctx"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
@@ -319,42 +321,11 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 
 		var result *domain.PortalDomain
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *portalDomainSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewPortalDomainRepo()
-
-			target := portalDomainStatusFromState(state)
-			if apiErr := txRepo.UpdateProviderState(txCtx, row.ID, target, state.DNSRecords); apiErr != nil {
-				return apiErr
-			}
-
-			// Stamp verified_at only when the certificate is live and the domain is actually serving.
-			if target == constants.PortalDomainStatusVerified {
-				if apiErr := txRepo.MarkVerified(txCtx, row.ID); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			updated, apiErr := txRepo.GetByID(txCtx, accountID, row.ID)
+			updated, apiErr := txSvc.applyProviderState(txCtx, row, accountID, state)
 			if apiErr != nil {
 				return apiErr
 			}
-			if updated == nil {
-				return apierror.NewInvariantViolationError("Portal domain row missing after verify.")
-			}
-
-			// Audit any status transition (pending → securing → verified).
-			if target != row.Status {
-				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:  domain.ServiceName,
-					Action:       constants.AuditActionUpdate,
-					ResourceType: constants.ObjectTypePortalDomain,
-					ResourceID:   row.ID,
-					Changes:      audit.ComputeChanges(row, updated),
-				}); apiErr != nil {
-					return apiErr
-				}
-			}
 			result = updated
-
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 		if apiErr != nil {
@@ -365,6 +336,85 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// applyProviderState records the provider's view of a domain (status, records, verified_at) and audits a status
+// change. It runs inside the caller's transaction.
+func (s *portalDomainSvcImpl) applyProviderState(ctx context.Context, row *domain.PortalDomain, accountID string, state *domain.PortalDomainProviderState) (*domain.PortalDomain, *apierror.APIError) {
+	repo := s.repos.NewPortalDomainRepo()
+
+	target := portalDomainStatusFromState(state)
+	if apiErr := repo.UpdateProviderState(ctx, row.ID, target, state.DNSRecords); apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Stamp verified_at only when the certificate is live and the domain is actually serving.
+	if target == constants.PortalDomainStatusVerified {
+		if apiErr := repo.MarkVerified(ctx, row.ID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	updated, apiErr := repo.GetByID(ctx, accountID, row.ID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if updated == nil {
+		return nil, apierror.NewInvariantViolationError("Portal domain row missing after verify.")
+	}
+
+	// Audit any status transition (pending → securing → verified).
+	if target != row.Status {
+		if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypePortalDomain,
+			ResourceID:   row.ID,
+			Changes:      audit.ComputeChanges(row, updated),
+		}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+	return updated, nil
+}
+
+// RecheckPendingDomains is the background half of verification, so a customer who published their records never has
+// to come back and press Verify.
+func (s *portalDomainSvcImpl) RecheckPendingDomains(ctx context.Context, interval time.Duration, limit int32) (int, *apierror.APIError) {
+	ctx, span := portalDomainSvcTracer.Start(ctx, "service.portal_domain.recheck_pending_domains")
+	defer span.End()
+
+	repo := s.repos.NewPortalDomainRepo()
+	due, apiErr := repo.ListToRecheck(ctx, time.Now().Add(-interval), limit)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	verified := 0
+	for _, row := range due {
+		// Touch first so a domain the provider keeps failing on rotates to the back of the queue.
+		if apiErr := repo.TouchChecked(ctx, row.ID); apiErr != nil {
+			return verified, tracing.Trace(span, apiErr)
+		}
+		state, apiErr := s.provider.GetDomainState(ctx, row.Domain)
+		if apiErr != nil {
+			continue
+		}
+		// The check is the scheduler's, acting on the domain's account, so its audit event has an actor.
+		checkCtx := omrpctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, row.AccountID)
+		var updated *domain.PortalDomain
+		apiErr = s.withTx(checkCtx, func(txCtx context.Context, txSvc *portalDomainSvcImpl) *apierror.APIError {
+			var apiErr *apierror.APIError
+			updated, apiErr = txSvc.applyProviderState(txCtx, row, row.AccountID, state)
+			return apiErr
+		})
+		if apiErr != nil {
+			continue
+		}
+		if updated.Status == constants.PortalDomainStatusVerified {
+			verified++
+		}
+	}
+	return verified, nil
 }
 
 func (s *portalDomainSvcImpl) DeletePortalDomain(ctx context.Context, portalDomainID string) *apierror.APIError {

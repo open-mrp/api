@@ -37,12 +37,21 @@ func LoadAccountIntegrations(ctx context.Context, ids []string) (map[string]any,
 // AccountIntegrationFromProto maps the gRPC AccountIntegrationInfo to the apiresource shape. Exported so endpoint service methods that already hold a proto response (e.g. Delete, which can't fan back through LoadXs) can reuse it directly.
 func AccountIntegrationFromProto(ai *pb.AccountIntegrationInfo) *apiresource.AccountIntegration {
 	return &apiresource.AccountIntegration{
-		ID:              ai.Id,
-		Object:          constants.ObjectTypeAccountIntegration,
-		Name:            ai.Name,
-		IntegrationCode: constants.IntegrationCode(ai.IntegrationCode),
-		Status:          constants.AccountIntegrationStatusFromActive(ai.IsActive),
-		CreatedAt:       grpcutil.TimestampToTime(ai.CreatedAt),
-		UpdatedAt:       grpcutil.TimestampToTime(ai.UpdatedAt),
+		ID:               ai.Id,
+		Object:           constants.ObjectTypeAccountIntegration,
+		Name:             ai.Name,
+		IntegrationCode:  constants.IntegrationCode(ai.IntegrationCode),
+		Status:           constants.PauseStatusFromIsActive(ai.IsActive),
+		ConnectionStatus: connectionStatus(ai.ConnectionStatus),
+		CreatedAt:        grpcutil.TimestampToTime(ai.CreatedAt),
+		UpdatedAt:        grpcutil.TimestampToTime(ai.UpdatedAt),
 	}
+}
+
+// connectionStatus reads the stored status; a row from before the column existed has none, which is unknown.
+func connectionStatus(s string) constants.IntegrationConnectionStatus {
+	if s == "" {
+		return constants.IntegrationConnectionStatusUnknown
+	}
+	return constants.IntegrationConnectionStatus(s)
 }

@@ -35,6 +35,23 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 	return out, nil
 }
 
+// LoadReferencedAccountUsers loads the account users other resources name, such as a customer's default sales rep. A
+// member since removed from the account stays named, as history, but no longer resolves its user: the profile is no
+// longer one the account reads.
+func LoadReferencedAccountUsers(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
+	out, apiErr := LoadAccountUsers(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	meta := include.GetLoadMeta(ctx)
+	for id, v := range out {
+		if v.(*apiresource.AccountUser).Status == constants.AccountUserStatusRemoved {
+			meta.Set(constants.ObjectTypeAccountUser, id, "user_id", "")
+		}
+	}
+	return out, nil
+}
+
 // AccountUserFromDetail maps an account user and stashes the references its includes resolve from.
 func AccountUserFromDetail(ctx context.Context, au *pb.AccountUserDetail) *apiresource.AccountUser {
 	meta := include.GetLoadMeta(ctx)

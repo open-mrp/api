@@ -240,9 +240,9 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	name := uniqueName("e2e-au-allf")
 	email := name + "@e2e-test.openmrp.ai"
 	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         email,
-		"role_id":       SeedAdminRoleID,
+		"name":           name,
+		"email":          email,
+		"role_id":        SeedAdminRoleID,
 		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -733,9 +733,9 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 
 		// Create with all fields
 		createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
-			"name":          name,
-			"email":         email,
-			"role_id":       SeedAdminRoleID,
+			"name":           name,
+			"email":          email,
+			"role_id":        SeedAdminRoleID,
 			"work_center_id": SeedDepartmentID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)

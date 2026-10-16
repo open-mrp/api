@@ -58,7 +58,7 @@ func TestRemovedSalesRep_IncludesStayReadable(t *testing.T) {
 
 	// Records the caller may read carry their rep's user along, whatever the caller may read of the team.
 	callers := map[string]*Client{
-		"admin": apiClient,
+		"admin":                  apiClient,
 		"role without team read": customRoleClient(t, "customers:read", "sales_rep_territories:read", "transactions:read"),
 	}
 	for name, client := range callers {

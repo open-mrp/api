@@ -68,9 +68,9 @@ func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         email,
-		"role_id":       SeedAdminRoleID,
+		"name":           name,
+		"email":          email,
+		"role_id":        SeedAdminRoleID,
 		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 
 	// Clear both via explicit null.
 	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
-		"role_id":       nil,
+		"role_id":        nil,
 		"work_center_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -315,8 +315,8 @@ func TestCovIdentityAccountUsers_CreateInvalidDepartmentIDShouldFail(t *testing.
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-baddept")
 	resp, err := apiClient.PostFull(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         name + "@e2e-test.openmrp.ai",
+		"name":           name,
+		"email":          name + "@e2e-test.openmrp.ai",
 		"work_center_id": "dp_doesnotexist00000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)

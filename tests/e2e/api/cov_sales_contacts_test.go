@@ -152,9 +152,9 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
-		"name":          name,
-		"email":         email,
-		"role_id":       SeedAdminRoleID,
+		"name":           name,
+		"email":          email,
+		"role_id":        SeedAdminRoleID,
 		"work_center_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)

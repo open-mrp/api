@@ -12,7 +12,7 @@ import (
 func init() {
 	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeAccountUser,
-		Load:       resourceloaders.LoadReferencedAccountUsers,
+		Load:       resourceloaders.LoadAccountUsers,
 		Subs: []include.SubField{
 			{
 				Key:         "user",

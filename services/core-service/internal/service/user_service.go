@@ -126,7 +126,7 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.checkUserInTargetAccount(ctx, identity, user.ID); apiErr != nil {
+	if apiErr := s.checkUserReadableInTargetAccount(ctx, identity, user.ID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -148,6 +148,23 @@ func (s *userSvcImpl) checkUserInTargetAccount(ctx context.Context, identity *ty
 			return apierror.NewNotFoundError("User not found.")
 		}
 		return apiErr
+	}
+	return nil
+}
+
+// checkUserReadableInTargetAccount is checkUserInTargetAccount for a read, which also finds a user whose membership
+// is disabled or removed: records that still name a former member, such as a customer's sales rep, show who they
+// were.
+func (s *userSvcImpl) checkUserReadableInTargetAccount(ctx context.Context, identity *types.Identity, userID string) *apierror.APIError {
+	if identity.Actor != nil && identity.Actor.ID == userID {
+		return nil
+	}
+	users, apiErr := s.repos.NewUserRepo().GetByIDs(ctx, identity.Target.AccountID, []string{userID})
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(users) == 0 {
+		return apierror.NewNotFoundError("User not found.")
 	}
 	return nil
 }
@@ -389,7 +406,7 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 
 	// A photo URL is a link to a person's face, and resolving one for a user in another tenancy is
 	// not a read this caller is entitled to.
-	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
+	if apiErr := s.checkUserReadableInTargetAccount(ctx, identity, userID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

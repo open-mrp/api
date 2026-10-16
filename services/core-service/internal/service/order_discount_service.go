@@ -141,11 +141,14 @@ func (s *orderDiscountSvcImpl) BatchGetOrderDiscountsByIDs(ctx context.Context, 
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// An order's discount is read with the order, including by the buyer who applied it.
+	if !identity.IsIncludeRead() {
+		if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))

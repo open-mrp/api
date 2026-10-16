@@ -6615,8 +6615,10 @@ type ListCustomersRequest struct {
 	// standalone, parent or child.
 	RelationshipTypes []string      `protobuf:"bytes,22,rep,name=relationship_types,json=relationshipTypes,proto3" json:"relationship_types,omitempty"`
 	Created           *CreatedRange `protobuf:"bytes,23,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Customers assigned any of these price lists directly.
+	PriceListIds  []string `protobuf:"bytes,24,rep,name=price_list_ids,json=priceListIds,proto3" json:"price_list_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCustomersRequest) Reset() {
@@ -6806,6 +6808,13 @@ func (x *ListCustomersRequest) GetRelationshipTypes() []string {
 func (x *ListCustomersRequest) GetCreated() *CreatedRange {
 	if x != nil {
 		return x.Created
+	}
+	return nil
+}
+
+func (x *ListCustomersRequest) GetPriceListIds() []string {
+	if x != nil {
+		return x.PriceListIds
 	}
 	return nil
 }
@@ -12307,7 +12316,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tupdatedAt\x88\x01\x01B\r\n" +
 	"\v_created_atB\r\n" +
-	"\v_updated_at\"\x98\b\n" +
+	"\v_updated_at\"\xbe\b\n" +
 	"\x14ListCustomersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -12335,7 +12344,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\bincludes\x18\x14 \x03(\tR\bincludes\x12\x1a\n" +
 	"\bstatuses\x18\x15 \x03(\tR\bstatuses\x12-\n" +
 	"\x12relationship_types\x18\x16 \x03(\tR\x11relationshipTypes\x12,\n" +
-	"\acreated\x18\x17 \x01(\v2\x12.core.CreatedRangeR\acreatedB\t\n" +
+	"\acreated\x18\x17 \x01(\v2\x12.core.CreatedRangeR\acreated\x12$\n" +
+	"\x0eprice_list_ids\x18\x18 \x03(\tR\fpriceListIdsB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x14\n" +
 	"\x12_is_parent_accountB\a\n" +

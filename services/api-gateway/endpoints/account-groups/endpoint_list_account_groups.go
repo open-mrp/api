@@ -39,6 +39,7 @@ func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionRead}}},
 		ObjectType:        constants.ObjectTypeAccountGroup,
+		IncludeConfig:     accountGroupIncludeConfig(),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError) {
 			return svc.(AccountGroupSvc).ListAccountGroups
 		},

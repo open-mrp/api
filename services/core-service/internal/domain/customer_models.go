@@ -152,6 +152,7 @@ type ListCustomersParams struct {
 	Limit            int32
 	Query            *string
 	CustomerGroupIDs []string
+	PriceListIDs     []string
 	PricingGroupIDs  []string
 	SalesRepIDs      []string
 	StatusCodes      []string

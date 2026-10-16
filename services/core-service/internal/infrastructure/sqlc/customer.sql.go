@@ -2326,6 +2326,46 @@ func (q *Queries) ListPriceGroupRelationIDs(ctx context.Context, accountGroupIds
 	return items, nil
 }
 
+const listPriceListRelationIDs = `-- name: ListPriceListRelationIDs :many
+SELECT DISTINCT account_relation_id
+FROM price_list_customer
+WHERE price_list_id IN (/*SLICE:price_list_ids*/?)
+`
+
+// The relations assigned any of the price lists directly, so a customer list can read them by id.
+func (q *Queries) ListPriceListRelationIDs(ctx context.Context, priceListIds []string) ([]string, error) {
+	query := listPriceListRelationIDs
+	var queryParams []interface{}
+	if len(priceListIds) > 0 {
+		for _, v := range priceListIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:price_list_ids*/?", strings.Repeat(",?", len(priceListIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:price_list_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var account_relation_id string
+		if err := rows.Scan(&account_relation_id); err != nil {
+			return nil, err
+		}
+		items = append(items, account_relation_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockCustomerNumbers = `-- name: LockCustomerNumbers :one
 SELECT id FROM account
 WHERE id = ?

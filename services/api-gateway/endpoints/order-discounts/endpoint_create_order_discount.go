@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -16,41 +17,29 @@ import (
 
 // Request to create an order discount.
 type CreateOrderDiscountRequest struct {
-	// Display name of the discount.
+	// Display name of the discount, such as `Spring promotion`.
 	Name string `json:"name" validate:"required,max=255"`
-	// The code a buyer enters to apply this discount to an order.
-	//
-	// Codes are unique within your account and are compared without regard to letter case, so `SAVE10` collides with `save10`.
+	// The code a buyer enters. Unique within your account, matched case-insensitively, so `SAVE10` collides with `save10`.
 	Code string `json:"code" validate:"required,max=255"`
-	// The fraction of the order total to take off, as a decimal string.
-	//
-	// This is a multiplier, not a whole percent: send `0.1` to take 10% off. Only read when `discount_type` is `percentage`. Leaving it out stores `0`, which produces a discount that takes nothing off.
-	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// The flat amount to take off the order total, as a decimal string.
-	//
-	// Only read when `discount_type` is `amount`. Leaving it out stores `0`, which produces a discount that takes nothing off.
-	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
-	// How the discount is calculated.
-	//
-	// - `percentage`: the order total is reduced by the fraction in `percentage`.
-	// - `amount`: the order total is reduced by the flat amount in `amount`.
-	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
+	// How much comes off: `{ "type": "percent_off", "percent_off": "10" }` for 10% off the order total, or `{ "type": "amount_off", "amount_off": { "amount": "25.00", "currency": "usd" } }`.
+	Discount apirequest.DiscountInput `json:"discount" validate:"required"`
+	// Whether the code can be applied to new orders. Defaults to `active`.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleCreateOrderDiscountRequest = &CreateOrderDiscountRequest{
-	Name:         "10% Off",
-	Code:         "SAVE10",
-	Percentage:   field.Some("0.1"),
-	DiscountType: constants.OrderDiscountTypePercentage,
+	Name:     "10% Off",
+	Code:     "SAVE10",
+	Discount: apirequest.DiscountInput{Type: constants.DiscountTypePercentOff, PercentOff: field.Some("10")},
 }
 
 func (*CreateOrderDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateOrderDiscountRequest)
 }
 
-// Creates an order discount that buyers can then redeem on a sales order by its code.
+// Creates an order discount.
 //
-// The code must be unique within your account; reusing a code that another discount already holds returns a conflict error. Creating the discount does not apply it to anything — a discount only affects an order once that order references it.
+// Buyers apply it to an order by entering its code. Reusing a code another discount holds returns 409 `resource_conflict`.
 type CreateOrderDiscountEndpoint struct{}
 
 func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount] {
@@ -62,7 +51,6 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},

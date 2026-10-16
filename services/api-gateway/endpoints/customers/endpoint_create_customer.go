@@ -43,6 +43,8 @@ type CreateCustomerRequest struct {
 	GroupID string `json:"group_id" validate:"required"`
 	// IDs of the pricing account groups the customer belongs to.
 	PriceGroupIDs []string `json:"price_group_ids,omitzero" visibility:"internal"`
+	// IDs of the price lists assigned directly to the customer, at most 100.
+	PriceListIDs []string `json:"price_list_ids,omitzero" validate:"omitempty,max=100"`
 	// ID of the customer this one belongs to, making it a child customer.
 	ParentCustomerID field.Optional[string] `json:"parent_customer_id,omitzero"`
 	// The customer's first billing address. It becomes `defaults.bill_to_address`.

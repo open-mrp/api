@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -50,9 +51,10 @@ func NewOrderDiscountSvc(config *OrderDiscountSvcConfig) OrderDiscountSvc {
 
 func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {
 	pbReq := &pb.ListOrderDiscountsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Statuses: archiveStatusStrings(req.Statuses),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListOrderDiscountsResponse, error) {
@@ -84,11 +86,10 @@ func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *Retrie
 
 func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 	pbReq := &pb.CreateOrderDiscountRequest{
-		Name:         req.Name,
-		Code:         req.Code,
-		Percentage:   req.Percentage.Ptr(),
-		Amount:       req.Amount.Ptr(),
-		DiscountType: string(req.DiscountType),
+		Name:     req.Name,
+		Code:     req.Code,
+		Discount: req.Discount.ToProto(),
+		Status:   req.Status.Ptr().StringPtr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateOrderDiscountResponse, error) {
@@ -102,12 +103,13 @@ func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *Cre
 
 func (m *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, req *UpdateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 	pbReq := &pb.UpdateOrderDiscountRequest{
-		Id:           req.OrderDiscountID,
-		Name:         req.Name.Ptr(),
-		Code:         req.Code.Ptr(),
-		Percentage:   req.Percentage.Ptr(),
-		Amount:       req.Amount.Ptr(),
-		DiscountType: req.DiscountType.Ptr().StringPtr(),
+		Id:     req.OrderDiscountID,
+		Name:   req.Name.Ptr(),
+		Code:   req.Code.Ptr(),
+		Status: req.Status.Ptr().StringPtr(),
+	}
+	if d, ok := req.Discount.Value(); ok {
+		pbReq.Discount = d.ToProto()
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateOrderDiscountResponse, error) {
@@ -162,4 +164,12 @@ func loadOrderDiscountByID(ctx context.Context, id string) (*apiresource.OrderDi
 		return nil, apierror.NewNotFoundError("Order discount not found.")
 	}
 	return v.(*apiresource.OrderDiscount), nil
+}
+
+func archiveStatusStrings(values []constants.ArchiveStatus) []string {
+	out := make([]string, len(values))
+	for i, v := range values {
+		out[i] = string(v)
+	}
+	return out
 }

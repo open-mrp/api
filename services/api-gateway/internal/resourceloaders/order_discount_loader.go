@@ -36,15 +36,14 @@ func LoadOrderDiscounts(ctx context.Context, ids []string) (map[string]any, *api
 
 func OrderDiscountFromProto(d *pb.OrderDiscountInfo) *apiresource.OrderDiscount {
 	return &apiresource.OrderDiscount{
-		ID:           d.Id,
-		Object:       constants.ObjectTypeOrderDiscount,
-		Name:         d.Name,
-		Code:         d.Code,
-		Percentage:   d.Percentage,
-		Amount:       d.Amount,
-		DiscountType: constants.OrderDiscountType(d.DiscountType),
-		OrderCount:   d.OrderCount,
-		CreatedAt:    grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(d.UpdatedAt),
+		ID:            d.Id,
+		Object:        constants.ObjectTypeOrderDiscount,
+		Status:        constants.ArchiveStatus(d.Status),
+		Name:          d.Name,
+		Code:          d.Code,
+		Discount:      DiscountFromProto(d.Discount),
+		TimesRedeemed: d.OrderCount,
+		CreatedAt:     grpcutil.TimestampToTime(d.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 }

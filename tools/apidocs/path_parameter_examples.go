@@ -13,6 +13,8 @@ var routeSegmentToSampleID = map[string]string{
 	"machine-downtime-events":      apiresource.SampleMachineDowntimeEventID,
 	"demand-overrides":             apiresource.SampleDemandOverrideID,
 	"notes":                        apiresource.SampleNoteID,
+	"price-lists":                  apiresource.SamplePriceListID,
+	"rules":                        apiresource.SamplePriceListRuleID,
 	"production-schedules":         apiresource.SampleProductionScheduleID,
 	"announcements":                apiresource.SampleAnnouncementID,
 	"notifications":                apiresource.SampleNotificationID,
@@ -113,6 +115,7 @@ var pathParamToSampleID = map[string]string{
 	"slug":               apiresource.SampleAccountPortalSlug,
 	"place_id":           "ChIJN1gggt_t2Z44AR4PVM_67p73Y",
 	"member_id":          apiresource.SampleMessagingGroupMemberID,
+	"price_list_id":      apiresource.SamplePriceListID,
 }
 
 // fieldNameSampleIDs maps request struct field names to sample IDs when they do not follow the Sample{FieldName} constant naming convention.

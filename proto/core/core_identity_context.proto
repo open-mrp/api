@@ -660,6 +660,8 @@ message ListCustomersRequest {
   // standalone, parent or child.
   repeated string relationship_types = 22;
   CreatedRange created = 23;
+  // Customers assigned any of these price lists directly.
+  repeated string price_list_ids = 24;
 }
 message ListCustomersResponse {
   repeated CustomerProto customers = 1;

@@ -18,7 +18,7 @@ type RetrieveOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
-// Returns an order discount by ID.
+// Retrieves an order discount.
 type RetrieveOrderDiscountEndpoint struct{}
 
 func (e *RetrieveOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveOrderDiscountRequest, *apiresource.OrderDiscount] {
@@ -30,7 +30,6 @@ func (e *RetrieveOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},

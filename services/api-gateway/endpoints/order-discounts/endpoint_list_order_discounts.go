@@ -17,15 +17,15 @@ import (
 // Request to list order discounts.
 type ListOrderDiscountsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name` or `code`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return discounts with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 }
 
-// Returns a paginated list of the order discounts defined for the current account, newest first.
+// Returns a list of order discounts.
 //
-// Pass `q` to narrow the list to discounts whose name or code contains the search text.
+// Returns your account's order discounts, newest first.
 type ListOrderDiscountsEndpoint struct{}
 
 func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]] {
@@ -37,7 +37,6 @@ func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {

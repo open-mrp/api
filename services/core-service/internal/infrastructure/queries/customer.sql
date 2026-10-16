@@ -4,6 +4,12 @@ SELECT DISTINCT account_relation_id
 FROM account_relation_price_group
 WHERE account_group_id IN (sqlc.slice('account_group_ids'));
 
+-- name: ListPriceListRelationIDs :many
+-- The relations assigned any of the price lists directly, so a customer list can read them by id.
+SELECT DISTINCT account_relation_id
+FROM price_list_customer
+WHERE price_list_id IN (sqlc.slice('price_list_ids'));
+
 -- name: ListCustomersPriceGroups :many
 SELECT
     arpg.account_relation_id,

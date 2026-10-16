@@ -350,6 +350,7 @@ func (h *gRPCHandler) ListCustomers(ctx context.Context, req *pb.ListCustomersRe
 
 	params.CustomerGroupIDs = req.CustomerGroupIds
 	params.PricingGroupIDs = req.PricingGroupIds
+	params.PriceListIDs = req.PriceListIds
 	params.SalesRepIDs = req.SalesRepIds
 	params.StatusCodes = req.StatusCodes
 	params.ShippingTermIDs = req.ShippingTermIds

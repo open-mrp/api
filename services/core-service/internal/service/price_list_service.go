@@ -68,21 +68,18 @@ func (s *priceListSvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 	})
 }
 
-// priceListIdentity is the caller, a member of the account the lists belong to, holding discounts:action. Portal
-// users never see price lists.
-func priceListIdentity(ctx context.Context, action types.Action) (*types.Identity, *apierror.APIError) {
+// priceListIdentity is the caller, a member of the account the lists belong to; each method checks its discounts
+// permission. Portal users never see price lists.
+func priceListIdentity(ctx context.Context, read bool) (*types.Identity, *apierror.APIError) {
 	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
 	}
 	check := identity.CheckIsInternalActor
-	if action == types.ActionRead {
+	if read {
 		check = identity.CheckIsInternalActorForRead
 	}
 	if apiErr := check(); apiErr != nil {
-		return nil, apiErr
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, action); apiErr != nil {
 		return nil, apiErr
 	}
 	return identity, nil
@@ -172,8 +169,11 @@ func (s *priceListSvcImpl) ListPriceLists(ctx context.Context, params domain.Lis
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.list")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	params.AccountID = identity.Target.AccountID
@@ -200,8 +200,11 @@ func (s *priceListSvcImpl) GetPriceList(ctx context.Context, listID string) (*do
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.get")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	list, apiErr := s.getList(ctx, identity.Target.AccountID, listID)
@@ -212,8 +215,11 @@ func (s *priceListSvcImpl) BatchGetPriceLists(ctx context.Context, ids []string,
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.batch_get")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, nil, tracing.Trace(span, apiErr)
 	}
 	repo := s.repos.NewPriceListRepo()
@@ -235,8 +241,11 @@ func (s *priceListSvcImpl) CreatePriceList(ctx context.Context, params domain.Cr
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.create")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionCreate)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	list := &domain.PriceList{
@@ -286,8 +295,11 @@ func (s *priceListSvcImpl) UpdatePriceList(ctx context.Context, params domain.Up
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.update")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if params.Name != nil && strings.TrimSpace(*params.Name) == "" {
@@ -329,8 +341,11 @@ func (s *priceListSvcImpl) DeletePriceList(ctx context.Context, listID string) (
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.delete")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionDelete)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionDelete); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID
@@ -361,8 +376,11 @@ func (s *priceListSvcImpl) ListPriceListRules(ctx context.Context, params domain
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.list_rules")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	params.AccountID = identity.Target.AccountID
@@ -377,8 +395,11 @@ func (s *priceListSvcImpl) GetPriceListRule(ctx context.Context, listID, ruleID 
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.get_rule")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if _, apiErr := s.getList(ctx, identity.Target.AccountID, listID); apiErr != nil {
@@ -392,8 +413,11 @@ func (s *priceListSvcImpl) BatchGetPriceListRules(ctx context.Context, ids []str
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.batch_get_rules")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionRead)
+	identity, apiErr := priceListIdentity(ctx, true)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	rules, apiErr := s.repos.NewPriceListRepo().GetRulesByIDs(ctx, identity.Target.AccountID, ids)
@@ -404,8 +428,11 @@ func (s *priceListSvcImpl) CreatePriceListRule(ctx context.Context, params domai
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.create_rule")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionCreate)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID
@@ -445,8 +472,11 @@ func (s *priceListSvcImpl) UpdatePriceListRule(ctx context.Context, params domai
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.update_rule")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionUpdate)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID
@@ -501,8 +531,11 @@ func (s *priceListSvcImpl) DeletePriceListRule(ctx context.Context, listID, rule
 	ctx, span := priceListSvcTracer.Start(ctx, "service.price_list.delete_rule")
 	defer span.End()
 
-	identity, apiErr := priceListIdentity(ctx, types.ActionDelete)
+	identity, apiErr := priceListIdentity(ctx, false)
 	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionDelete); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID

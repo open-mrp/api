@@ -1018,37 +1018,9 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "shipping_term", st)
 	}
 
-	// Order discount
+	// Order discount: loaded by ID when included.
 	if info.OrderDiscountId != nil {
-		od := &apiresource.OrderDiscount{
-			ID:     *info.OrderDiscountId,
-			Object: constants.ObjectTypeOrderDiscount,
-		}
-		if info.OrderDiscountName != nil {
-			od.Name = *info.OrderDiscountName
-		}
-		if info.OrderDiscountCode != nil {
-			od.Code = *info.OrderDiscountCode
-		}
-		if info.OrderDiscountPercentage != nil {
-			od.Percentage = *info.OrderDiscountPercentage
-		}
-		if info.OrderDiscountAmount != nil {
-			od.Amount = *info.OrderDiscountAmount
-		}
-		if info.OrderDiscountDiscountType != nil {
-			od.DiscountType = constants.OrderDiscountType(*info.OrderDiscountDiscountType)
-		}
-		if info.OrderDiscountOrderCount != nil {
-			od.OrderCount = *info.OrderDiscountOrderCount
-		}
-		if info.OrderDiscountCreatedAt != nil {
-			od.CreatedAt = info.OrderDiscountCreatedAt.AsTime()
-		}
-		if info.OrderDiscountUpdatedAt != nil {
-			od.UpdatedAt = info.OrderDiscountUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "order_discount", od)
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "order_discount_id", *info.OrderDiscountId)
 	}
 
 	// Lines

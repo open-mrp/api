@@ -34,9 +34,8 @@ func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		ObjectType:        constants.ObjectTypeVolumeDiscount,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},
 		}},

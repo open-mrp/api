@@ -116,9 +116,8 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
+		Public:            false,
 		AgentTool:         true,
-		Preview:           true,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionUpdate},
 		}},

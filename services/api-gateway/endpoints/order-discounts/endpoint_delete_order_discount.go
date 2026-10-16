@@ -19,11 +19,9 @@ type DeleteOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
-// Deletes an order discount and returns a deleted stub.
+// Deletes an order discount.
 //
-// Deletion is permanent; further requests against the deleted ID return an error.
-//
-// The code can no longer be redeemed, but sales orders that already used the discount keep the reduction that was applied to them; their totals are not recalculated.
+// The code can no longer be applied; orders that already used it keep their discount. Archive it instead by setting `status` to `archived` to keep its history.
 type DeleteOrderDiscountEndpoint struct{}
 
 func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *object.Deleted] {
@@ -35,7 +33,6 @@ func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},

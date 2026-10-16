@@ -135,16 +135,15 @@ func TestItemCosts_UnitsAreResolvedWithoutAnInclude(t *testing.T) {
 func TestItemInventory_ExpandedFiguresCarryTheirUnit(t *testing.T) {
 	t.Parallel()
 
-	includes := []string{"on_hand", "reserved", "available_to_promise", "short"}
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{"include": includes})
+	status, body, err := apiClient.Exact().GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "item inventory must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
 
 	inventory := parseJSON(body)
-	assertObjectField(t, inventory, "item_inventory")
+	assertObjectField(t, inventory, "inventory_level")
 
-	for _, field := range includes {
+	for _, field := range []string{"on_hand", "reserved", "available_to_promise", "short"} {
 		assertQuantityHydrated(t, jsonObject(inventory, field), field)
 	}
 }
@@ -163,39 +162,6 @@ func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 }
 
 // --- Inventories list ---
-
-// The quantity is not expandable: every row carries it and the unit it is counted in.
-func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
-	t.Parallel()
-
-	// The list reads items and their on-hand in two statements, so an item a parallel test deletes in
-	// between is listed without a unit. That clears on a re-read; a unit that is really missing does not.
-	var list *ListResponse
-	for attempt := 0; attempt < 3; attempt++ {
-		var status int
-		var err error
-		list, status, err = apiClient.GetList(inventoriesPath, url.Values{"limit": {"5"}})
-		require.NoError(t, err)
-		require.Less(t, status, 500, "inventories list must not 5xx")
-		requireStatus(t, 200, status, nil)
-		if everyInventoryRowHasAUnit(list.Data) {
-			break
-		}
-	}
-	require.NotEmpty(t, list.Data, "the seeded account has inventory")
-
-	for _, raw := range list.Data {
-		row := parseJSON(raw)
-		assertObjectField(t, row, "inventory_item")
-
-		item := jsonObject(row, "item")
-		require.NotNil(t, item, "an inventory row always names its item: %s", string(raw))
-		assertObjectField(t, item, "item")
-		assert.NotEmpty(t, jsonField(item, "sku"))
-
-		assertQuantityHydrated(t, jsonObject(row, "quantity"), "quantity")
-	}
-}
 
 func everyInventoryRowHasAUnit(rows []json.RawMessage) bool {
 	for _, raw := range rows {

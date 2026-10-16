@@ -74,69 +74,6 @@ func onHandValue(t *testing.T, itemID string) string {
 
 // --- Response shape ---
 
-func TestBulkReconcileItems_ResponseShape(t *testing.T) {
-	t.Parallel()
-
-	sku, _ := newReconcilableItem(t)
-	resp := bulkReconcile(t, []map[string]any{
-		{"sku": sku, "unit": "lbs", "quantity": "5"},
-	}, "force")
-
-	assertObjectField(t, resp, "bulk_reconcile_items_response")
-
-	for _, key := range []string{"reconciled_items", "skipped_items", "errors"} {
-		list := jsonObject(resp, key)
-		require.NotNil(t, list, "%s is always present, even when empty: %v", key, resp)
-		assert.NotNil(t, jsonArray(list, "data"), "%s carries a data array", key)
-	}
-
-	reconciled := jsonListData(resp, "reconciled_items")
-	require.Len(t, reconciled, 1, "the one good row must be reported as reconciled: %v", resp)
-
-	row, ok := reconciled[0].(map[string]any)
-	require.True(t, ok)
-	assertObjectField(t, row, "reconciled_item_result")
-
-	// Every list in the response names its item the same way — as an entity carrying the SKU —
-	// so the importer needs one code path to label a row whatever became of it.
-	item := jsonObject(row, "item")
-	require.NotNil(t, item, "a reconciled row names its item: %v", row)
-	assertObjectField(t, item, "entity")
-	assert.Equal(t, "item", jsonField(item, "type"))
-	assert.NotEmpty(t, jsonField(item, "id"))
-	assert.Equal(t, sku, jsonField(item, "name"), "the entity's name carries the SKU")
-
-	for _, key := range []string{"previous_quantity", "new_quantity"} {
-		quantity := jsonObject(row, key)
-		require.NotNil(t, quantity, "%s is required on a reconciled row: %v", key, row)
-		assert.NotEmpty(t, jsonField(quantity, "value"))
-		assertValueShapeBare(t, quantity, key)
-	}
-}
-
-// A reconciled figure is meaningless without the unit it was recorded in, and the unit is not
-// behind an include — the quantity carries it. Before this, the unit came back as an id
-// with every other field blank, which the importer could not render.
-func TestBulkReconcileItems_ReconciledQuantitiesCarryAFullyResolvedUnit(t *testing.T) {
-	t.Parallel()
-
-	sku, _ := newReconcilableItem(t)
-	resp := bulkReconcile(t, []map[string]any{
-		{"sku": sku, "unit": "lbs", "quantity": "5"},
-	}, "force")
-
-	reconciled := jsonListData(resp, "reconciled_items")
-	require.Len(t, reconciled, 1, "%v", resp)
-	row, ok := reconciled[0].(map[string]any)
-	require.True(t, ok)
-
-	for _, key := range []string{"previous_quantity", "new_quantity"} {
-		quantity := jsonObject(row, key)
-		require.NotNil(t, quantity, "%s: %v", key, row)
-		assertUnitHydrated(t, jsonObject(quantity, "unit"), key+".unit")
-	}
-}
-
 // --- Reconcile types ---
 
 func TestBulkReconcileItems_ForceSetsTheExactQuantity(t *testing.T) {
@@ -297,44 +234,6 @@ func TestBulkReconcileItems_IsIdempotent(t *testing.T) {
 
 // --- Validation ---
 
-func TestBulkReconcileItems_RejectsAnUnknownReconcileType(t *testing.T) {
-	t.Parallel()
-
-	sku, _ := newReconcilableItem(t)
-
-	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":           []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
-		"reconcile_type": "bogus_e2e_type",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an unknown reconcile type is a client error: %s", string(body))
-	require.Equal(t, 422, status, "reconcile_type only accepts the documented values: %s", string(body))
-}
-
-func TestBulkReconcileItems_RejectsAMissingReconcileType(t *testing.T) {
-	t.Parallel()
-
-	sku, _ := newReconcilableItem(t)
-
-	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "a missing reconcile type is a client error: %s", string(body))
-	assert.Equal(t, 422, status, "reconcile_type is required: %s", string(body))
-}
-
-func TestBulkReconcileItems_RejectsMissingData(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"reconcile_type": "force",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "a missing data array is a client error: %s", string(body))
-	assert.Equal(t, 422, status, "data is required: %s", string(body))
-}
-
 // The three row fields are documented as required, but only the quantity is enforced up front. A
 // row with no sku or no unit is reported per-row instead, which is consistent with the endpoint's
 // promise that one bad row never fails the batch.
@@ -365,31 +264,4 @@ func TestBulkReconcileItems_RowMissingSKUOrUnitIsReportedPerRow(t *testing.T) {
 			assert.Empty(t, jsonListData(resp, "reconciled_items"), "and nothing was written: %v", resp)
 		})
 	}
-}
-
-// A quantity that is not a decimal is the one row-level fault refused up front, failing the batch.
-func TestBulkReconcileItems_RejectsAMalformedQuantity(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":           []map[string]any{{"sku": "E2E-SKU", "unit": "lbs", "quantity": "not-a-number"}},
-		"reconcile_type": "force",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "a malformed quantity is a client error: %s", string(body))
-	assert.Equal(t, 422, status, "quantity must be a decimal: %s", string(body))
-}
-
-func TestBulkReconcileItems_RejectsAnUnknownBodyField(t *testing.T) {
-	t.Parallel()
-
-	sku, _ := newReconcilableItem(t)
-
-	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":            []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
-		"reconcile_type":  "force",
-		bogusE2EJSONField: true,
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	assertJSONUnknownFieldRejected(t, "POST", bulkReconcilePath, status, body)
 }

@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -48,6 +49,21 @@ func itemLevel(t *testing.T, itemID string, params url.Values) map[string]any {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, raw)
 	return parseJSON(raw)
+}
+
+// eventuallyOnHand waits for an item's on-hand level to settle at want: stock taken out is an issue that allocation
+// draws against the item's receipts just after the movement commits.
+func eventuallyOnHand(t *testing.T, itemID, want string) map[string]any {
+	t.Helper()
+	var level map[string]any
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		level = itemLevel(t, itemID, nil)
+		if got := jsonField(jsonObject(level, "on_hand"), "value"); got != want {
+			return fmt.Errorf("on_hand %s, want %s", got, want)
+		}
+		return nil
+	})
+	return level
 }
 
 // --- Create ---
@@ -106,9 +122,8 @@ func TestInventoryMovements_CreateAllFields(t *testing.T) {
 	})
 
 	t.Run("level follows", func(t *testing.T) {
-		level := itemLevel(t, itemID, nil)
+		level := eventuallyOnHand(t, itemID, "10")
 		assertObjectField(t, level, "inventory_level")
-		assert.Equal(t, "10", jsonField(jsonObject(level, "on_hand"), "value"))
 		assert.Equal(t, "0", jsonField(jsonObject(level, "reserved"), "value"))
 		assert.Equal(t, "10", jsonField(jsonObject(level, "available_to_promise"), "value"))
 		assert.Equal(t, "0", jsonField(jsonObject(level, "short"), "value"))
@@ -129,7 +144,7 @@ func TestInventoryMovements_Reconcile(t *testing.T) {
 	requireStatus(t, 201, status, raw)
 	assert.Equal(t, "reconciliation", jsonField(got, "type"))
 	assert.Equal(t, "-6", jsonField(jsonObject(got, "quantity"), "value"), "a count records the difference it made")
-	assert.Equal(t, "24", jsonField(jsonObject(itemLevel(t, itemID, nil), "on_hand"), "value"))
+	eventuallyOnHand(t, itemID, "24")
 
 	// Counting what's already there still records the count, as a movement of nothing.
 	status, same, raw := postMovement(t, count, newIdempotencyKey())
@@ -236,14 +251,17 @@ func TestInventoryMovements_ListFilters(t *testing.T) {
 		return out
 	}
 
+	// The item's first movement is the zero opening balance OpenMRP records when an item is created.
 	all := ids(url.Values{"item_ids[]": {itemID}})
+	require.Len(t, all, 3)
 	assert.Equal(t, []string{jsonField(counted, "id"), jsonField(adjusted, "id")}, all[:2], "newest first")
+	assert.Equal(t, []string{all[2]}, ids(url.Values{"item_ids[]": {itemID}, "actor_types[]": {"system"}}))
 	assert.Equal(t, []string{jsonField(counted, "id")}, ids(url.Values{"item_ids[]": {itemID}, "types[]": {"reconciliation"}}))
 	assert.Equal(t, []string{jsonField(adjusted, "id")}, ids(url.Values{"location_ids[]": {jsonField(location, "id")}}))
-	assert.ElementsMatch(t, all, ids(url.Values{"item_ids[]": {itemID}, "actor_types[]": {"api_key"}}))
+	assert.Equal(t, all[:2], ids(url.Values{"item_ids[]": {itemID}, "actor_types[]": {"api_key"}}))
 	assert.Empty(t, ids(url.Values{"item_ids[]": {itemID}, "actor_types[]": {"device"}}))
 	actorID := jsonField(jsonObject(adjusted, "actor"), "id")
-	assert.Subset(t, ids(url.Values{"actor_ids[]": {actorID}, "item_ids[]": {itemID}}), all)
+	assert.Equal(t, all[:2], ids(url.Values{"actor_ids[]": {actorID}, "item_ids[]": {itemID}}))
 
 	t.Run("bad type is rejected", func(t *testing.T) {
 		status, raw, err := apiClient.GetListRaw(movementsPath, url.Values{"types[]": {"scan"}})
@@ -255,6 +273,35 @@ func TestInventoryMovements_ListFilters(t *testing.T) {
 		require.NoError(t, err)
 		requireStatus(t, 404, status, raw)
 	})
+}
+
+// A change log written before movements stored a type and actor reads them from what it did record.
+func TestInventoryMovements_LegacyEntriesReadAsMovements(t *testing.T) {
+	t.Parallel()
+	status, raw, err := apiClient.GetListRaw(movementsPath+"/"+SeedInventoryChangeLogID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, raw)
+	got := parseJSON(raw)
+	assert.Equal(t, "adjustment", jsonField(got, "type"), "a user action is an adjustment")
+	actor := jsonObject(got, "actor")
+	require.NotNil(t, actor)
+	assert.Equal(t, "device", jsonField(actor, "type"), "it was recorded at a scanning station")
+	assert.Equal(t, "sgsn_01k0a8201zegarjfsjaw5n7yfv", jsonField(actor, "id"))
+
+	status, raw, err = apiClient.GetListRaw(movementsPath+"/inmv_01seedmvfull0000", url.Values{"include": {"related,lot,location"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, raw)
+	full := parseJSON(raw)
+	assert.Equal(t, "found", jsonField(full, "reason"))
+	assert.Equal(t, "system", jsonField(jsonObject(full, "actor"), "type"))
+	assertNilField(t, jsonObject(full, "actor"), "id")
+	related := jsonObject(full, "related")
+	require.NotNil(t, related)
+	assert.Equal(t, "record", jsonField(related, "object"))
+	assert.Equal(t, "shipment", jsonField(related, "type"))
+	assert.Equal(t, SeedShipmentID, jsonField(related, "id"))
+	assert.Equal(t, "LOT-DLV-001", jsonField(jsonObject(full, "lot"), "lot_number"))
+	assert.Equal(t, SeedLocationID, jsonField(jsonObject(full, "location"), "id"))
 }
 
 // --- Bulk ---
@@ -287,7 +334,7 @@ func TestInventoryMovements_BulkCreate(t *testing.T) {
 		statuses[r.(map[string]any)["status"].(string)]++
 	}
 	assert.Equal(t, map[string]int{"created": 2, "failed": 1}, statuses)
-	assert.Equal(t, "35", jsonField(jsonObject(itemLevel(t, itemID, nil), "on_hand"), "value"), "rows of one item apply in order")
+	eventuallyOnHand(t, itemID, "35")
 
 	t.Run("rows name exactly one item", func(t *testing.T) {
 		status, raw, err := apiClient.Post(movementsPath+"/actions/bulk-create", map[string]any{

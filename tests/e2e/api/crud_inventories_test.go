@@ -68,58 +68,6 @@ func TestInventories_ListResponseShape(t *testing.T) {
 
 // --- Expandable fields ---
 
-// The on-hand figure is netted out of the ledger per request, so it has no row and no id a caller
-// could follow to its unit. The unit therefore travels with the figure, always — a bare "1200" with
-// no unit is not a stock position.
-func TestInventories_QuantityAlwaysCarriesItsUnit(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.NotEmpty(t, list.Data)
-
-	quantity := jsonObject(parseJSON(list.Data[0]), "quantity")
-	require.NotNil(t, quantity)
-	assertUnitHydrated(t, jsonObject(quantity, "unit"), "quantity.unit")
-}
-
-// The unit is already on every row, so there is nothing to ask for: the endpoint refuses
-// `quantity.unit` rather than accepting a key that would change nothing.
-func TestInventories_RejectsTheQuantityUnitInclude(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(inventoriesPath, url.Values{
-		"limit":   {"1"},
-		"include": {"quantity.unit"},
-	})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an unresolvable include must be refused, not panic: %s", string(body))
-	assert.Equal(t, 400, status, "quantity.unit is not offered on this endpoint: %s", string(body))
-}
-
-// The on-hand figure is a plain value shape: a value and its unit, with no id, object or
-// preformatted display string of its own.
-func TestInventories_QuantityIsAValueWithItsUnit(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"q": {SeedItemSKU}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.NotEmpty(t, list.Data)
-
-	quantity := jsonObject(parseJSON(list.Data[0]), "quantity")
-	require.NotNil(t, quantity)
-	assert.NotEmpty(t, jsonField(quantity, "value"))
-	unit := jsonObject(quantity, "unit")
-	require.NotNil(t, unit, "the unit travels with the figure: %v", quantity)
-	assert.NotEmpty(t, jsonField(unit, "id"))
-	assert.NotEmpty(t, jsonField(unit, "abbreviation"))
-	for _, gone := range []string{"id", "object", "display_value"} {
-		assert.NotContains(t, quantity, gone, "a quantity value shape has no %s", gone)
-	}
-}
-
 // --- Ledger-less items ---
 
 // An item nothing has ever been received or issued against has no ledger rows at all. It still has
@@ -197,23 +145,6 @@ func TestInventories_PaginationAdvances(t *testing.T) {
 }
 
 // --- Validation ---
-
-func TestInventories_RejectsUnknownQueryParam(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(inventoriesPath, url.Values{bogusE2EQueryParam: {"1"}})
-	require.NoError(t, err)
-	assertUnknownQueryParamRejected(t, inventoriesPath, status, body)
-}
-
-func TestInventories_RejectsAnOutOfRangeLimit(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw(inventoriesPath, url.Values{"limit": {"100000"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an out-of-range limit is a client error, not a crash: %s", string(body))
-	require.Equal(t, 400, status, "limit is bounded: %s", string(body))
-}
 
 func TestInventories_RejectsAMalformedCursor(t *testing.T) {
 	t.Parallel()

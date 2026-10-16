@@ -15,7 +15,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-// Covers POST /v1/operations/inventory-change-logs/actions/export, the export that runs as a job: the file it produces and the window it is named for, the filters reaching the worker, and who may start one and read its job.
+// Covers POST /v1/operations/inventory-movements/actions/export (which replaced the change logs' own export and writes the same file), checked against the preview.9 change-log list; the export that runs as a job: the file it produces and the window it is named for, the filters reaching the worker, and who may start one and read its job.
 //
 // Other tests write to the log concurrently, so row-for-row checks are made on an item the test creates and nobody else touches, and the account-wide export is checked by its head and containment.
 
@@ -150,17 +150,17 @@ func TestInventoryChangeLogExport_NamesTheFileForItsWindow(t *testing.T) {
 		rows     int
 	}{
 		"both bounds": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": rfc3339(startsAt), "ends_at": rfc3339(endsAt)},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": rfc3339(startsAt), "occurred_before": rfc3339(endsAt)},
 			url.Values{"item_ids": {itemID}, "starts_at": {rfc3339(startsAt)}, "ends_at": {rfc3339(endsAt)}},
 			"inventory-change-logs-" + day(startsAt) + "-" + day(endsAt) + ".xlsx", 3,
 		},
 		"open end": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": rfc3339(startsAt)},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": rfc3339(startsAt)},
 			url.Values{"item_ids": {itemID}, "starts_at": {rfc3339(startsAt)}},
 			"inventory-change-logs-" + day(startsAt) + "-all.xlsx", 3,
 		},
 		"a window that closed before the item existed": {
-			map[string]any{"item_ids": []string{itemID}, "starts_at": "2000-01-01T00:00:00Z", "ends_at": "2000-01-02T00:00:00Z"},
+			map[string]any{"item_ids": []string{itemID}, "occurred_after": "2000-01-01T00:00:00Z", "occurred_before": "2000-01-02T00:00:00Z"},
 			url.Values{"item_ids": {itemID}, "starts_at": {"2000-01-01T00:00:00Z"}, "ends_at": {"2000-01-02T00:00:00Z"}},
 			"inventory-change-logs-2000-01-01-2000-01-02.xlsx", 0,
 		},
@@ -202,26 +202,26 @@ func TestInventoryChangeLogExport_AppliesEachFilter(t *testing.T) {
 		filters map[string]any
 		listed  url.Values
 	}{
-		"action type": {
-			map[string]any{"item_ids": []string{itemID}, "action_types": []string{"user_correction"}},
-			url.Values{"item_ids": {itemID}, "action_types": {"user_correction"}},
+		// The opening entry and both corrections are adjustments.
+		"type": {
+			map[string]any{"item_ids": []string{itemID}, "types": []string{"adjustment"}},
+			url.Values{"item_ids": {itemID}, "action_types": {"user_action", "user_correction"}},
 		},
+		// Entries logged before movements had types read as adjustments (user actions) and receipts (system actions).
 		"every filter on the seeded entries": {
 			map[string]any{
-				"item_ids":            []string{SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
-				"action_types":        []string{"user_action", "system_action"},
-				"changed_by_user_ids": []string{SeedUserID},
-				"starts_at":           "2099-01-01T00:00:00Z",
+				"item_ids":       []string{SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+				"types":          []string{"adjustment", "receipt"},
+				"occurred_after": "2099-01-01T00:00:00Z",
 			},
 			url.Values{
-				"item_ids":            {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
-				"action_types":        {"user_action", "system_action"},
-				"changed_by_user_ids": {SeedUserID},
-				"starts_at":           {"2099-01-01T00:00:00Z"},
+				"item_ids":     {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+				"action_types": {"user_action", "system_action"},
+				"starts_at":    {"2099-01-01T00:00:00Z"},
 			},
 		},
-		"an unknown user narrows to nothing": {
-			map[string]any{"item_ids": []string{itemID}, "changed_by_user_ids": []string{"us_nosuchuser00"}},
+		"an unknown actor narrows to nothing": {
+			map[string]any{"item_ids": []string{itemID}, "actor_ids": []string{"us_nosuchuser00"}},
 			url.Values{"item_ids": {itemID}, "changed_by_user_ids": {"us_nosuchuser00"}},
 		},
 	} {
@@ -239,10 +239,10 @@ func TestInventoryChangeLogExport_RejectsInvalidFilters(t *testing.T) {
 		body  map[string]any
 		param string
 	}{
-		"unknown action type": {map[string]any{"action_types": []string{"bogus_e2e_action"}}, "action_types"},
-		"start is not a date": {map[string]any{"starts_at": "yesterday"}, "starts_at"},
-		"null start":          {map[string]any{"starts_at": nil}, "starts_at"},
-		"null end":            {map[string]any{"ends_at": nil}, "ends_at"},
+		"unknown type":        {map[string]any{"types": []string{"bogus_e2e_type"}}, "types"},
+		"start is not a date": {map[string]any{"occurred_after": "yesterday"}, "occurred_after"},
+		"null start":          {map[string]any{"occurred_after": nil}, "occurred_after"},
+		"null end":            {map[string]any{"occurred_before": nil}, "occurred_before"},
 		"ids are not a list":  {map[string]any{"item_ids": SeedInventoryChangeLogItemID}, "item_ids"},
 		"unknown field":       {map[string]any{bogusE2EJSONField: "x"}, ""},
 	} {

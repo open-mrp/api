@@ -313,8 +313,8 @@ func TestItemParity_BulkReconcileRefusesMoreThanTheRowCap(t *testing.T) {
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{"data": rows, "reconcile_type": "force"}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s", string(body))
-	requireStatus(t, 422, status, body)
-	assertErrorParam(t, requireErrorResponse(t, body, "invalid_format", "invalid_request_error"), "data")
+	requireStatus(t, 400, status, body)
+	assert.Equal(t, "data", requireRetiredRouteError(t, body, "invalid_format")["param"])
 }
 
 // An import past the default 1 MB is what the raised bulk cap is for: it is read whole and applied.

@@ -330,7 +330,7 @@ type RetrieveItemInventoryLevelEndpoint struct{}
 
 func (e *RetrieveItemInventoryLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemInventoryLevelRequest, *apiresource.InventoryLevel] {
 	return (&apiendpoint.APIEndpoint[*RetrieveItemInventoryLevelRequest, *apiresource.InventoryLevel]{
-		Title:             "Retrieve Item Inventory",
+		Title:             "Retrieve Item Inventory Level",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/inventory",

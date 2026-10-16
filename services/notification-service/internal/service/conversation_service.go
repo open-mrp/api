@@ -326,36 +326,47 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "The status is invalid."))
 	}
 
-	rows, apiErr := s.repoFactory.NewConversationRepo().ListForUser(ctx, domain.ConversationListFilter{
-		AccountID:                 accountID,
-		AccountUserID:             callerAcus,
-		Type:                      input.Type,
-		Status:                    status,
-		ParticipantAccountUserIDs: input.ParticipantAccountUserIDs,
-		Limit:                     limit + 1,
-		CursorLastMessageAt:       cursor.lastMessageAt,
-		CursorID:                  cursor.id,
-		CursorInNullTail:          cursor.inNullTail,
+	// The page and its participants share one snapshot: read separately, a member removed in between
+	// matches the participant_ids filter yet is missing from that conversation's participants.
+	page := &domain.ConversationPage{}
+	var rows []*domain.Conversation
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		var apiErr *apierror.APIError
+		rows, apiErr = f.NewConversationRepo().ListForUser(txCtx, domain.ConversationListFilter{
+			AccountID:                 accountID,
+			AccountUserID:             callerAcus,
+			Type:                      input.Type,
+			Status:                    status,
+			ParticipantAccountUserIDs: input.ParticipantAccountUserIDs,
+			Limit:                     limit + 1,
+			CursorLastMessageAt:       cursor.lastMessageAt,
+			CursorID:                  cursor.id,
+			CursorInNullTail:          cursor.inNullTail,
+		})
+		if apiErr != nil {
+			return apiErr
+		}
+		page.HasNextPage = len(rows) > int(limit)
+		if page.HasNextPage {
+			rows = rows[:limit]
+		}
+		// Hydrate participants for the returned page so the inbox UI can render DM/group names + avatars without an N+1 GET per row (which trips the gateway rate limit for large teams). Bounded by the page size.
+		partRepo := f.NewParticipantRepo()
+		for _, conv := range rows {
+			participants, apiErr := partRepo.List(txCtx, conv.ID)
+			if apiErr != nil {
+				return apiErr
+			}
+			conv.Participants = participants
+		}
+		return nil
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	page := &domain.ConversationPage{}
-	if len(rows) > int(limit) {
-		rows = rows[:limit]
-		page.HasNextPage = true
+	if page.HasNextPage {
 		next := encodeConversationCursor(rows[len(rows)-1])
 		page.NextCursor = &next
-	}
-	// Hydrate participants for the returned page so the inbox UI can render DM/group names + avatars without an N+1 GET per row (which trips the gateway rate limit for large teams). Bounded by the page size.
-	partRepo := s.repoFactory.NewParticipantRepo()
-	for _, conv := range rows {
-		participants, apiErr := partRepo.List(ctx, conv.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		conv.Participants = participants
 	}
 
 	// Hydrate each conversation's most-recent message for inbox list previews via a single batched fetch keyed on last_message_id — not an N+1 GET per row.

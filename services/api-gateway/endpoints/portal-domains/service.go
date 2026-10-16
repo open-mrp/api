@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -50,30 +51,6 @@ func NewPortalDomainSvc(config *PortalDomainSvcConfig) PortalDomainSvc {
 	return &portalDomainSvcImpl{portalDomainClient: config.PortalDomainClient}
 }
 
-func portalDomainFromProto(d *pb.PortalDomainInfo) *apiresource.PortalDomain {
-	records := make([]apiresource.DNSRecord, 0, len(d.DnsRecords))
-	for _, r := range d.DnsRecords {
-		records = append(records, apiresource.DNSRecord{
-			Object: constants.ObjectTypeDNSRecord,
-			Type:   constants.DNSRecordType(r.Type),
-			Name:   r.Name,
-			Value:  r.Value,
-			Reason: constants.DNSRecordReason(r.Reason),
-		})
-	}
-
-	return &apiresource.PortalDomain{
-		ID:         d.Id,
-		Object:     constants.ObjectTypePortalDomain,
-		Domain:     d.Domain,
-		Status:     constants.PortalDomainStatus(d.Status),
-		DNSRecords: apiresource.NewList(records, apiresource.PageInfo{}),
-		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
-		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),
-	}
-}
-
 func publicAccountFromProto(a *pb.PublicAccountInfo) *apiresource.PublicAccount {
 	return &apiresource.PublicAccount{
 		ID:           a.Id,
@@ -94,10 +71,14 @@ func (s *portalDomainSvcImpl) CreatePortalDomain(ctx context.Context, req *Creat
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return portalDomainFromProto(resp.PortalDomain), nil
+	return resourceloaders.PortalDomainFromProto(resp.PortalDomain), nil
 }
 
-func (s *portalDomainSvcImpl) ListPortalDomains(ctx context.Context, _ *ListPortalDomainsRequest) (*apiresource.List[apiresource.PortalDomain], *apierror.APIError) {
+func (s *portalDomainSvcImpl) ListPortalDomains(ctx context.Context, req *ListPortalDomainsRequest) (*apiresource.List[apiresource.PortalDomain], *apierror.APIError) {
+	// An account holds at most one domain, so the list is a single page and never issues a cursor.
+	if req.Cursor != nil {
+		return nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
+	}
 	resp, apiErr := grpcutil.CallRPC(ctx, portalDomainSvcTracer, "service.portal_domains.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPortalDomainsResponse, error) {
 			return s.portalDomainClient.ListPortalDomains(ctx, &pb.ListPortalDomainsRequest{}, opts...)
@@ -107,7 +88,7 @@ func (s *portalDomainSvcImpl) ListPortalDomains(ctx context.Context, _ *ListPort
 	}
 	items := make([]apiresource.PortalDomain, len(resp.PortalDomains))
 	for i, d := range resp.PortalDomains {
-		items[i] = *portalDomainFromProto(d)
+		items[i] = *resourceloaders.PortalDomainFromProto(d)
 	}
 	return apiresource.NewList(items, apiresource.PageInfo{}), nil
 }
@@ -121,7 +102,7 @@ func (s *portalDomainSvcImpl) GetPortalDomain(ctx context.Context, req *GetPorta
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return portalDomainFromProto(resp.PortalDomain), nil
+	return resourceloaders.PortalDomainFromProto(resp.PortalDomain), nil
 }
 
 func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, req *VerifyPortalDomainRequest) (*apiresource.PortalDomain, *apierror.APIError) {
@@ -133,7 +114,7 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, req *Verif
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return portalDomainFromProto(resp.PortalDomain), nil
+	return resourceloaders.PortalDomainFromProto(resp.PortalDomain), nil
 }
 
 func (s *portalDomainSvcImpl) DeletePortalDomain(ctx context.Context, req *DeletePortalDomainRequest) (*apiresource.EmptyResource, *apierror.APIError) {

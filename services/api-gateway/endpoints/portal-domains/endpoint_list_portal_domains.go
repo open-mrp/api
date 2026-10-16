@@ -10,14 +10,17 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
-// Request to list the account's portal domains.
-type ListPortalDomainsRequest struct{}
+// Request to list portal domains.
+type ListPortalDomainsRequest struct {
+	object.ListRequest
+}
 
-// Lists the account's portal domains.
+// Returns a list of your account's portal domains.
 //
-// An account can only hold one custom portal domain, so this returns either zero or one entry. Reading it is the usual way to discover whether a domain is connected and what state it is in.
+// An account has at most one portal domain, so the list holds zero or one.
 type ListPortalDomainsEndpoint struct{}
 
 func (e *ListPortalDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPortalDomainsRequest, *apiresource.List[apiresource.PortalDomain]] {
@@ -29,7 +32,6 @@ func (e *ListPortalDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePortalDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPortalDomainsRequest) (*apiresource.List[apiresource.PortalDomain], *apierror.APIError) {

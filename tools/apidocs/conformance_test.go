@@ -14,6 +14,11 @@ import (
 
 const conformanceBaselinePath = "testdata/conformance_baseline.txt"
 
+func init() {
+	// Create Integration "Connects a provider to your account."
+	conformance.DocVerbs = append(conformance.DocVerbs, "Connects")
+}
+
 // TestConformance holds every endpoint to every forge.1 rule. Endpoints that broke a rule before the forge.1 sweep are
 // listed in testdata/conformance_baseline.txt as "rule METHOD route"; the unit that fixes one deletes its line. A new
 // violation fails, and so does a baseline line that no longer fails, so the list only shrinks.

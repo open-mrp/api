@@ -10,43 +10,44 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/field"
 )
 
-// Request to create or upsert an account integration.
+// Request to connect a provider.
 type CreateAccountIntegrationRequest struct {
 	// Display name of the integration.
 	Name string `json:"name" validate:"required,max=255"`
-	// Integration provider code.
+	// The provider to connect.
 	//
 	// - `stripe`: Stripe payment processing.
-	// - `shippo`: Shippo shipping and label generation.
+	// - `shippo`: Shippo shipping rates and labels.
 	// - `hubspot`: HubSpot CRM.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
-	// JSON string containing the provider's credentials.
+	// The provider's credentials. Which keys are required depends on `provider`.
 	//
-	// Required keys depend on the provider:
-	//
-	// - `stripe`: `private_key` (`sk_...`), `publishable_key` (`pk_...`), and `webhook_secret` (`whsec_...`).
-	// - `shippo`: `api_key` (`shippo_live_...` or `shippo_test_...`).
-	// - `hubspot`: `access_token` (`pat-...`).
-	//
-	// For Stripe and Shippo, sandbox accounts must supply test keys and production accounts must supply live keys; credentials that do not match are rejected. HubSpot tokens make no such distinction.
-	Credentials string `json:"credentials" validate:"required" sensitive:"true"`
+	// For Stripe and Shippo, sandbox accounts must use test keys and live accounts live keys.
+	Credentials *IntegrationCredentials `json:"credentials" validate:"required" sensitive:"true"`
+	// Whether OpenMRP uses this integration: `active` or `disabled`. Defaults to `active`.
+	Status field.Optional[constants.PauseStatus] `json:"status,omitzero"`
 }
 
 var sampleCreateAccountIntegrationRequest = &CreateAccountIntegrationRequest{
 	Name:            "My Stripe Integration",
 	IntegrationCode: constants.IntegrationCodeStripe,
-	Credentials:     `{"private_key":"sk_test_...","publishable_key":"pk_test_...","webhook_secret":"whsec_..."}`, // #nosec G101 -- sample request data
+	Credentials: &IntegrationCredentials{
+		PrivateKey:     field.Some("sk_test_..."),
+		PublishableKey: field.Some("pk_test_..."),
+		WebhookSecret:  field.Some("whsec_..."), // #nosec G101 -- sample request data
+	},
 }
 
 func (*CreateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountIntegrationRequest)
 }
 
-// Connects a third-party provider to the account, or replaces the name and credentials of the provider's existing connection.
+// Connects a provider to your account.
 //
-// An account can have at most one integration per `provider`, so calling this again for a provider that is already connected rotates its credentials in place and returns the same integration rather than creating a second one. Credentials are checked for the provider's expected key format, encrypted at rest, and never returned in API responses.
+// One connection per provider. `credentials` depends on `provider` and is never returned. Sandbox accounts must use test keys, and live accounts live keys.
 type CreateAccountIntegrationEndpoint struct{}
 
 func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration] {
@@ -59,7 +60,6 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).CreateAccountIntegration

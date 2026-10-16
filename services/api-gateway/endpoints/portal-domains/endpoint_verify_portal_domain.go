@@ -18,9 +18,9 @@ type VerifyPortalDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Re-checks a portal domain against the serving provider and advances its status.
+// Verifies a portal domain now.
 //
-// Run this after publishing the DNS records, and keep polling it: the domain stays `pending` while its records are missing or misconfigured, moves to `securing` once they are correct and its TLS certificate is being issued, and reaches `verified` only once that certificate is live and the portal answers on the domain. The response carries the updated domain along with the records still required. Verifying an already-verified domain returns it unchanged.
+// Pending domains are checked automatically; run this after publishing the DNS records to skip the wait. The domain moves from `pending` to `securing` once its records are correct, and to `verified` once its certificate is live. Verifying a `verified` domain returns it unchanged.
 type VerifyPortalDomainEndpoint struct{}
 
 func (e *VerifyPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*VerifyPortalDomainRequest, *apiresource.PortalDomain] {
@@ -32,7 +32,6 @@ func (e *VerifyPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ver
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypePortalDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VerifyPortalDomainRequest) (*apiresource.PortalDomain, *apierror.APIError) {

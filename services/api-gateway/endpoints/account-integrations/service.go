@@ -8,9 +8,11 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/apiversion"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
@@ -18,6 +20,7 @@ import (
 type AccountIntegrationSvc interface {
 	ListAccountIntegrations(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError)
 	CreateAccountIntegration(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError)
+	RotateAccountIntegrationCredentials(ctx context.Context, req *RotateAccountIntegrationCredentialsRequest) (*apiresource.AccountIntegration, *apierror.APIError)
 	UpdateAccountIntegration(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError)
 	DeleteAccountIntegration(ctx context.Context, req *DeleteAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError)
 	GetStripePublishableKey(ctx context.Context, req *GetStripePublishableKeyRequest) (*apiresource.StripePublishableKey, *apierror.APIError)
@@ -51,9 +54,10 @@ func NewAccountIntegrationSvc(config *AccountIntegrationSvcConfig) AccountIntegr
 
 func (m *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError) {
 	pbReq := &pb.ListAccountIntegrationsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		IsActive: constants.IsActiveFilter(req.Statuses),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAccountIntegrationsResponse, error) {
@@ -80,10 +84,20 @@ func (m *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context,
 }
 
 func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
+	credentials, apiErr := req.Credentials.encode(req.IntegrationCode)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 	pbReq := &pb.CreateAccountIntegrationRequest{
 		Name:            req.Name,
 		IntegrationCode: string(req.IntegrationCode),
-		Credentials:     req.Credentials,
+		Credentials:     credentials,
+		// preview.9's create was an upsert: connecting a provider again rotated its credentials in place.
+		ReplaceExisting: isPreview9(ctx),
+	}
+	if status, ok := req.Status.Value(); ok {
+		active := status.IsActive()
+		pbReq.IsActive = &active
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountIntegrationResponse, error) {
@@ -95,12 +109,35 @@ func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 	return loadAccountIntegrationByID(ctx, resp.AccountIntegration.Id)
 }
 
+func (m *accountIntegrationSvcImpl) RotateAccountIntegrationCredentials(ctx context.Context, req *RotateAccountIntegrationCredentialsRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
+	existing, apiErr := loadAccountIntegrationByID(ctx, req.ID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	credentials, apiErr := req.Credentials.encode(existing.IntegrationCode)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	pbReq := &pb.RotateAccountIntegrationCredentialsRequest{Id: req.ID, Credentials: credentials}
+	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.rotate-credentials", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.RotateAccountIntegrationCredentialsResponse, error) {
+			return m.coreClient.RotateAccountIntegrationCredentials(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return loadAccountIntegrationByID(ctx, resp.AccountIntegration.Id)
+}
+
+func isPreview9(ctx context.Context) bool {
+	v, ok := appctx.GetAPIVersionFromContext(ctx)
+	return ok && v.Equal(apiversion.V1_0_Forge_Preview9)
+}
+
 func (m *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
-	// The public API models the lifecycle as a status enum; storage is still a
-	// boolean, so map status -> is_active when the field is present.
 	var isActive *bool
 	if status, ok := req.Status.Value(); ok {
-		active := status == constants.AccountIntegrationStatusActive
+		active := status.IsActive()
 		isActive = &active
 	}
 	pbReq := &pb.UpdateAccountIntegrationRequest{

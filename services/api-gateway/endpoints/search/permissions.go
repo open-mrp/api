@@ -19,15 +19,15 @@ var searchReadPermissions = types.AnyOfPermissions{
 
 // searchObjectTypes are the resource types unified search can return.
 var searchObjectTypes = map[constants.ObjectType]struct{}{
-	constants.ObjectTypeSalesOrder:       {},
-	constants.ObjectTypePurchaseOrder:    {},
-	constants.ObjectTypeInvoice:          {},
-	constants.ObjectTypeCustomer:         {},
-	constants.ObjectTypeItem:             {},
-	constants.ObjectTypeProduct:          {},
-	constants.ObjectTypeShipment:         {},
-	constants.ObjectTypeMessagingContact: {},
-	constants.ObjectTypeAgentDefinition:  {},
+	constants.ObjectTypeSalesOrder:      {},
+	constants.ObjectTypePurchaseOrder:   {},
+	constants.ObjectTypeInvoice:         {},
+	constants.ObjectTypeCustomer:        {},
+	constants.ObjectTypeItem:            {},
+	constants.ObjectTypeProduct:         {},
+	constants.ObjectTypeShipment:        {},
+	constants.ObjectTypeAccountUser:     {},
+	constants.ObjectTypeAgentDefinition: {},
 }
 
 func isSearchObjectType(objectType constants.ObjectType) bool {

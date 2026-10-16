@@ -51,8 +51,8 @@ func (*SearchEndpointGroup) Materialize(config *SearchEndpointGroupConfig) *Sear
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Search",
-		Description:  "Unified free-text search across resource types, returning lightweight entity references.",
-		ResourceType: &apiresource.Entity{},
+		Description:  "Free-text search across several resource types at once.",
+		ResourceType: &apiresource.SearchResult{},
 	}
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{

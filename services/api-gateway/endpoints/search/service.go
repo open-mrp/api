@@ -24,7 +24,7 @@ import (
 
 // SearchSvc backs the unified search endpoint by fanning out to the per-type list RPCs and projecting their results into lightweight Entity references.
 type SearchSvc interface {
-	Search(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.Entity], *apierror.APIError)
+	Search(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.SearchResult], *apierror.APIError)
 }
 
 type SearchSvcConfig struct {
@@ -74,14 +74,14 @@ type searchSvcImpl struct {
 	providers      []searchProvider
 }
 
-// searchScope narrows a search beyond the free-text term. A non-empty customerID restricts results to
-// that customer's own records (the customer's account id) — used so a customer-visible reply can only
+// searchScope narrows a search beyond the free-text term. Non-empty customerIDs restrict results to
+// those customers' own records (their account ids) — used so a customer-visible reply can only
 // tag resources the customer is entitled to see.
 type searchScope struct {
-	customerID string
+	customerIDs []string
 }
 
-// searchProvider searches a single resource type. permission is the read permission the caller must hold for results of this type to be included. customerSafe marks a provider whose results may be offered when the search is scoped to a customer (the provider must honor scope.customerID); providers that are not customer-safe are excluded entirely from a customer-scoped search.
+// searchProvider searches a single resource type. permission is the read permission the caller must hold for results of this type to be included. customerSafe marks a provider whose results may be offered when the search is scoped to a customer (the provider must honor scope.customerIDss); providers that are not customer-safe are excluded entirely from a customer-scoped search.
 type searchProvider struct {
 	objectType   constants.ObjectType
 	permission   types.Permission
@@ -106,7 +106,7 @@ func NewSearchSvc(config *SearchSvcConfig) SearchSvc {
 		chatClient:     config.ChatClient,
 		agentClient:    config.AgentClient,
 	}
-	// customerSafe providers (sales orders, invoices, shipments) honor scope.customerID and may be
+	// customerSafe providers (sales orders, invoices, shipments) honor scope.customerIDs and may be
 	// offered when composing a customer-visible reply; every other type is excluded from a
 	// customer-scoped search so a tag can never reference a record the customer may not see.
 	svc.providers = []searchProvider{
@@ -117,13 +117,13 @@ func NewSearchSvc(config *SearchSvcConfig) SearchSvc {
 		{constants.ObjectTypeItem, types.Permission{Domain: types.PermissionDomainItems, Action: types.ActionRead}, false, svc.searchItems},
 		{constants.ObjectTypeProduct, types.Permission{Domain: types.PermissionDomainItems, Action: types.ActionRead}, false, svc.searchProducts},
 		{constants.ObjectTypeShipment, types.Permission{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, true, svc.searchShipments},
-		{constants.ObjectTypeMessagingContact, types.Permission{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}, false, svc.searchContacts},
+		{constants.ObjectTypeAccountUser, types.Permission{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}, false, svc.searchContacts},
 		{constants.ObjectTypeAgentDefinition, types.Permission{Domain: types.PermissionDomainAgents, Action: types.ActionRead}, false, svc.searchAgents},
 	}
 	return svc
 }
 
-func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.Entity], *apierror.APIError) {
+func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.SearchResult], *apierror.APIError) {
 	identity, ok := appctx.Identity[*types.Identity](ctx)
 	if !ok || identity == nil {
 		return nil, apierror.NewAuthorizationError("You do not have permission to access this resource.")
@@ -142,8 +142,10 @@ func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apires
 	}
 
 	scope := searchScope{}
-	if req.Customer != nil {
-		scope.customerID = strings.TrimSpace(*req.Customer)
+	for _, id := range req.CustomerIDs {
+		if id = strings.TrimSpace(id); id != "" {
+			scope.customerIDs = append(scope.customerIDs, id)
+		}
 	}
 
 	active := selectActiveSearchProviders(m.providers, typeFilter, identity, scope)
@@ -152,7 +154,7 @@ func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apires
 		if apiErr := identity.CheckHasAnyPermission(searchReadPermissions...); apiErr != nil {
 			return nil, apiErr
 		}
-		return apiresource.NewList[apiresource.Entity](nil, apiresource.PageInfo{}), nil
+		return apiresource.NewList[apiresource.SearchResult](nil, apiresource.PageInfo{}), nil
 	}
 
 	// Fan out concurrently. A single type failing degrades to no results for that type rather than failing the whole search, so the picker stays usable.
@@ -177,7 +179,7 @@ func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apires
 	}
 	wg.Wait()
 
-	return apiresource.NewList(interleave(results, int(req.Limit)), apiresource.PageInfo{}), nil
+	return apiresource.NewList(searchResults(ctx, interleave(results, int(req.Limit))), apiresource.PageInfo{}), nil
 }
 
 // searchQueryFromRequest normalizes the free-text term, collapsing a missing or whitespace-only value to the empty string. Callers decide whether an empty query is allowed (it is only when the search is scoped with `types`).
@@ -210,7 +212,7 @@ func selectActiveSearchProviders(providers []searchProvider, typeFilter map[cons
 		}
 		// A customer-scoped search only ever surfaces customer-safe types, so a tag composed into a
 		// customer-visible reply can never reference a privileged record.
-		if scope.customerID != "" && !p.customerSafe {
+		if len(scope.customerIDs) > 0 && !p.customerSafe {
 			continue
 		}
 		if identity.CheckHasPermission(p.permission.Domain, p.permission.Action) != nil {
@@ -245,8 +247,8 @@ func interleave(results [][]apiresource.Entity, limit int) []apiresource.Entity 
 
 func (m *searchSvcImpl) searchSalesOrders(ctx context.Context, query string, limit int32, scope searchScope) ([]apiresource.Entity, *apierror.APIError) {
 	req := &corepb.ListSalesOrdersRequest{Query: &query, Limit: limit}
-	if scope.customerID != "" {
-		req.CustomerIds = []string{scope.customerID}
+	if len(scope.customerIDs) > 0 {
+		req.CustomerIds = scope.customerIDs
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, searchSvcTracer, "service.search.sales_orders", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.ListSalesOrdersResponse, error) {
@@ -283,8 +285,8 @@ func (m *searchSvcImpl) searchInvoices(ctx context.Context, query string, limit 
 	// Global search finds an invoice by any part of its fields, as it always has.
 	match := string(constants.InvoiceSearchMatchContains)
 	req := &corepb.ListInvoicesRequest{Query: &query, QueryMatch: &match, Limit: limit}
-	if scope.customerID != "" {
-		req.CustomerIds = []string{scope.customerID}
+	if len(scope.customerIDs) > 0 {
+		req.CustomerIds = scope.customerIDs
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, searchSvcTracer, "service.search.invoices", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.ListInvoicesResponse, error) {
@@ -361,8 +363,8 @@ func (m *searchSvcImpl) searchProducts(ctx context.Context, query string, limit 
 
 func (m *searchSvcImpl) searchShipments(ctx context.Context, query string, limit int32, scope searchScope) ([]apiresource.Entity, *apierror.APIError) {
 	req := &corepb.ListShipmentsRequest{Query: &query, Limit: limit}
-	if scope.customerID != "" {
-		req.CustomerIds = []string{scope.customerID}
+	if len(scope.customerIDs) > 0 {
+		req.CustomerIds = scope.customerIDs
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, searchSvcTracer, "service.search.shipments", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.ListShipmentsResponse, error) {
@@ -394,7 +396,7 @@ func (m *searchSvcImpl) searchContacts(ctx context.Context, query string, _ int3
 			continue
 		}
 		name := c.Name
-		out = append(out, *apiresource.NewEntity(*c.AccountUserId, constants.ObjectTypeMessagingContact, &name, nonEmpty(c.Type)))
+		out = append(out, *apiresource.NewEntity(*c.AccountUserId, constants.ObjectTypeAccountUser, &name, nonEmpty(c.Type)))
 	}
 	return out, nil
 }

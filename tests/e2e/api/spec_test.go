@@ -317,6 +317,9 @@ var excludedPaginationOperations = map[string]bool{
 var excludedListOperations = map[string]bool{
 	"list-carrier-options":     true,
 	"list-address-suggestions": true, // requires mandatory `input` query param
+	// Retrieves whose names contain "list"; they return one price list or rule, not a list.
+	"retrieve-price-list":      true,
+	"retrieve-price-list-rule": true,
 	// Per-user notification feed: scoped to the caller's account_user, which the API-key
 	// harness has none of, so the generic tests (which assume API-key-visible seed data)
 	// don't apply. Covered end-to-end by messaging_notifications_test.go.

@@ -190,6 +190,14 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 		return &domain.ListShipmentsResult{Shipments: []*domain.Shipment{}, PageInfo: pagination.PageInfo{}}, nil
 	}
 	q.BuyerIDs = buyerIDs
+	if q.Search.Valid {
+		if q.SearchIDs, apiErr = r.searchMatches(ctx, q.AccountID, db.NewNgramSubstring(*params.Query)); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if q.SearchIDs != nil && len(q.SearchIDs) == 0 {
+			return &domain.ListShipmentsResult{Shipments: []*domain.Shipment{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+	}
 	if q.Drive, apiErr = r.chooseDrive(ctx, q); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -259,6 +267,9 @@ func (r *shipmentRepoImpl) chooseDrive(ctx context.Context, q shipmentListQuery)
 		candidates[shipmentDriveSalesReps] = q.SalesRepIDs
 	}
 	drive, fewest := shipmentDriveListOrder, shipmentMatchCap
+	if q.SearchIDs != nil && len(q.SearchIDs) < fewest {
+		drive, fewest = shipmentDriveSearch, len(q.SearchIDs)
+	}
 	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines, shipmentDriveSalesReps} {
 		ids, ok := candidates[candidate]
 		if !ok {
@@ -274,6 +285,40 @@ func (r *shipmentRepoImpl) chooseDrive(ctx context.Context, q shipmentListQuery)
 		}
 	}
 	return drive, nil
+}
+
+// searchMatches is the shipments the phrase matches, or nil when it matches more than shipmentMatchCap
+// (or no FULLTEXT key can narrow it) and is tested on each shipment walked instead.
+func (r *shipmentRepoImpl) searchMatches(ctx context.Context, accountID string, phrase db.NgramSubstring) ([]string, *apierror.APIError) {
+	if !phrase.Indexed() {
+		return nil, nil
+	}
+	query, args := buildShipmentSearchIDsQuery(accountID, phrase)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer func() { _ = rows.Close() }()
+	read, seen := 0, map[string]bool{}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		read++
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	if read > shipmentMatchCap {
+		return nil, nil
+	}
+	return ids, nil
 }
 
 func (r *shipmentRepoImpl) listIDs(ctx context.Context, q shipmentListQuery) ([]string, *apierror.APIError) {

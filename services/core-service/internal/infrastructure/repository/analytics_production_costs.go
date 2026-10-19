@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"sync"
 
 	"github.com/shopspring/decimal"
 
@@ -149,10 +150,37 @@ func (r *analyticsRepoImpl) GetProductionCostSteps(ctx context.Context, accountI
 	}
 	nullIDs := toNullStringSlice(stepIDs)
 
-	productions, err := r.queries.ListProductionCostProductions(ctx, sqlc.ListProductionCostProductionsParams{AccountID: accountID, StepIds: nullIDs})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// The three reads share only the step ids, and each looks up a quantity or rate row per row it
+	// returns, which is what they spend their time on (the consumptions' p99 was 3.0s reading 11k
+	// rows). Report reads run outside any transaction, so they take separate pooled connections and
+	// the request waits on the slowest rather than their sum. The first error wins, as in sequence.
+	var (
+		wg           sync.WaitGroup
+		productions  []sqlc.ListProductionCostProductionsRow
+		steps        []sqlc.ListProductionCostStepsRow
+		consumptions []sqlc.ListProductionCostConsumptionsRow
+		errs         [3]error
+	)
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		productions, errs[0] = r.queries.ListProductionCostProductions(ctx, sqlc.ListProductionCostProductionsParams{AccountID: accountID, StepIds: nullIDs})
+	}()
+	go func() {
+		defer wg.Done()
+		steps, errs[1] = r.queries.ListProductionCostSteps(ctx, sqlc.ListProductionCostStepsParams{AccountID: accountID, StepIds: stepIDs})
+	}()
+	go func() {
+		defer wg.Done()
+		consumptions, errs[2] = r.queries.ListProductionCostConsumptions(ctx, sqlc.ListProductionCostConsumptionsParams{AccountID: accountID, StepIds: nullIDs})
+	}()
+	wg.Wait()
+	for _, err := range errs {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
+
 	earliest := make(map[string]domain.StepProduction, len(stepIDs))
 	for _, p := range productions {
 		if _, seen := earliest[p.ProductionStepID.String]; seen {
@@ -175,10 +203,6 @@ func (r *analyticsRepoImpl) GetProductionCostSteps(ctx context.Context, accountI
 		}}
 	}
 
-	steps, err := r.queries.ListProductionCostSteps(ctx, sqlc.ListProductionCostStepsParams{AccountID: accountID, StepIds: stepIDs})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 	for _, s := range steps {
 		production, ok := earliest[s.ID]
 		if !ok {
@@ -207,10 +231,6 @@ func (r *analyticsRepoImpl) GetProductionCostSteps(ctx context.Context, accountI
 		out[s.ID] = domain.ProductionCostStep{Step: step, Consumptions: []domain.CostFlowConsumption{}}
 	}
 
-	consumptions, err := r.queries.ListProductionCostConsumptions(ctx, sqlc.ListProductionCostConsumptionsParams{AccountID: accountID, StepIds: nullIDs})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 	for _, c := range consumptions {
 		step, ok := out[c.ProductionStepID.String]
 		if !ok {

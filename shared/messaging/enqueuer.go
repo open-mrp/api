@@ -31,7 +31,7 @@ type EnqueuerConfig struct {
 	// PollInterval (optional; default: 250ms in production, 10ms in test) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
 
-	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	// MaxPollInterval (optional; default: 30s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
 	//
 	// Outbox writes wake their own process's enqueuer on commit (NotifyOnCommit, called by every outbox repo's Create), so the idle poll only paces rows nothing kicked: DelaySeconds retries, failed-publish retries, and rows orphaned by a crashed pod. Each service's poll is the only one that picks those up, so the ceiling is how long they can wait past due.
 	MaxPollInterval time.Duration
@@ -42,7 +42,7 @@ type EnqueuerConfig struct {
 	// LockDurationSeconds (optional; default: 60) is how long (in seconds) a message remains locked to this enqueuer before the lock expires and the message becomes eligible for another instance to pick up.
 	LockDurationSeconds int
 
-	// CleanupInterval (optional; default: 30s) controls how frequently the enqueuer runs its expired-lock cleanup pass, releasing locks held by crashed processes.
+	// CleanupInterval (optional; default: 5m in production, 500ms in test) controls how frequently the enqueuer runs its expired-lock cleanup pass, clearing locks held by crashed processes. The poll already claims rows whose lock has expired, so this only tidies lock columns and can run rarely.
 	CleanupInterval time.Duration
 
 	// RetryBackoff (optional; default: 1s base, 2x multiplier, 1h max, 25% jitter; in test mode 10ms base, 2x multiplier, 2s max, 10% jitter) configures the exponential backoff with jitter used to compute the delay before retrying a failed outbox message.
@@ -89,7 +89,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 			// Keep e2e cadence tight so async side-effects are observed quickly: no backoff.
 			c.MaxPollInterval = c.PollInterval
 		} else {
-			c.MaxPollInterval = 5 * time.Second
+			c.MaxPollInterval = 30 * time.Second
 		}
 	}
 	if c.MaxPollInterval < c.PollInterval {
@@ -105,7 +105,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		if c.PlatformMode.IsTest() {
 			c.CleanupInterval = 500 * time.Millisecond
 		} else {
-			c.CleanupInterval = 30 * time.Second
+			c.CleanupInterval = 5 * time.Minute
 		}
 	}
 	if c.RetryBackoff == nil {

@@ -1109,20 +1109,21 @@ type InvoiceLine struct {
 }
 
 type Item struct {
-	ID             string
-	Sku            string
-	Description    sql.NullString
-	Notes          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      sql.NullTime
-	UnitValueID    string
-	BurnRateID     string
-	AccountID      string
-	UnitCostID     string
-	ItemCategoryID string
-	IsDirty        bool
-	ItemTypeCode   string
+	ID                 string
+	Sku                string
+	Description        sql.NullString
+	Notes              sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          sql.NullTime
+	UnitValueID        string
+	BurnRateID         string
+	AccountID          string
+	UnitCostID         string
+	ItemCategoryID     string
+	IsDirty            bool
+	ItemTypeCode       string
+	BurnRateComputedAt sql.NullTime
 }
 
 type ItemAttribute struct {

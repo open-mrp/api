@@ -38,8 +38,9 @@ type Item struct {
 
 // RecalcItemBurnRateEvent is the outbox command payload asking a consumer to recompute an item's burn rate from history. It carries only the item's identity; the rate is recomputed from current state, so repeated commands coalesce and a redelivery recomputes the same absolute value.
 type RecalcItemBurnRateEvent struct {
-	AccountID string `json:"account_id"`
-	ItemID    string `json:"item_id"`
+	AccountID string   `json:"account_id"`
+	ItemID    string   `json:"item_id,omitempty"`
+	ItemIDs   []string `json:"item_ids,omitempty"`
 }
 
 // AllocateOpenIssuesEvent is the outbox command payload asking a consumer to allocate one page of an item's open inventory issues against available receipts, resuming after the (AfterCreatedAt, AfterID) cursor. AfterID is empty and AfterCreatedAt the zero time for the first page.
@@ -467,6 +468,7 @@ type BurnRateConsumptionLog struct {
 
 // StaleBurnRateItem identifies an item whose burn rate the periodic sweeper should recompute.
 type StaleBurnRateItem struct {
-	ItemID    string
-	AccountID string
+	ItemID     string
+	AccountID  string
+	ComputedAt *time.Time
 }

@@ -1137,30 +1137,56 @@ func (r *itemRepoImpl) ListConsumptionChangeLogsForBurnRate(ctx context.Context,
 	return logs, nil
 }
 
-func (r *itemRepoImpl) ScanBurnRateItems(ctx context.Context, afterID string, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, string, *apierror.APIError) {
-	ctx, span := itemRepoTracer.Start(ctx, "repository.item.scan_burn_rate_items")
+func (r *itemRepoImpl) ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list_stale_burn_rate_items")
 	defer span.End()
 
-	rows, err := r.queries.ScanBurnRateItems(ctx, sqlc.ScanBurnRateItemsParams{
-		StaleBefore: staleBefore,
-		AfterID:     afterID,
+	rows, err := r.queries.ListStaleBurnRateItems(ctx, sqlc.ListStaleBurnRateItemsParams{
+		StaleBefore: gosql.NullTime{Time: staleBefore, Valid: true},
 		Limit:       limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, "", tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
+	}
+	items := make([]domain.StaleBurnRateItem, len(rows))
+	for i, row := range rows {
+		items[i] = domain.StaleBurnRateItem{ItemID: row.ID, AccountID: row.AccountID, ComputedAt: nullTimePtr(row.BurnRateComputedAt)}
+	}
+	return items, nil
+}
+
+func (r *itemRepoImpl) MarkBurnRatesComputed(ctx context.Context, itemIDs []string) *apierror.APIError {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.mark_burn_rates_computed")
+	defer span.End()
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	return tracing.Trace(span, db.MapSQLError(r.queries.MarkBurnRatesComputed(ctx, itemIDs)))
+}
+
+func (r *itemRepoImpl) OldestChangeLogsSince(ctx context.Context, accountID string, itemIDs []string, since time.Time) (map[string]time.Time, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.oldest_change_logs_since")
+	defer span.End()
+	if len(itemIDs) == 0 {
+		return map[string]time.Time{}, nil
 	}
 
-	var stale []domain.StaleBurnRateItem
+	rows, err := r.queries.ListOldestChangeLogsSince(ctx, sqlc.ListOldestChangeLogsSinceParams{
+		AccountID: accountID,
+		ItemIds:   itemIDs,
+		Since:     since,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make(map[string]time.Time, len(rows))
 	for _, row := range rows {
-		if row.Stale == 1 {
-			stale = append(stale, domain.StaleBurnRateItem{ItemID: row.ID, AccountID: row.AccountID})
+		out[row.ItemID] = since
+		if oldest := interfaceToTimePtr(row.Oldest); oldest != nil {
+			out[row.ItemID] = *oldest
 		}
 	}
-	lastID := ""
-	if len(rows) == int(limit) {
-		lastID = rows[len(rows)-1].ID
-	}
-	return stale, lastID, nil
+	return out, nil
 }
 
 func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]domain.ItemSKUInfo, *apierror.APIError) {

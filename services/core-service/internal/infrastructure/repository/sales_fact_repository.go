@@ -199,17 +199,6 @@ func (r *salesFactRepoImpl) ListInvoicesAfter(ctx context.Context, after *domain
 	return out, nil
 }
 
-func (r *salesFactRepoImpl) ListInvoiceIDsCreatedSince(ctx context.Context, since time.Time, limit int32) ([]string, *apierror.APIError) {
-	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_invoice_ids_created_since")
-	defer span.End()
-
-	ids, err := r.queries.ListInvoiceIDsCreatedSince(ctx, sqlc.ListInvoiceIDsCreatedSinceParams{CreatedAt: since, Limit: limit})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return ids, nil
-}
-
 func (r *salesFactRepoImpl) ListFactInvoiceIDsAfter(ctx context.Context, afterInvoiceID string, limit int32) ([]string, *apierror.APIError) {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_fact_invoice_ids_after")
 	defer span.End()

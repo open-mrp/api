@@ -936,8 +936,8 @@ func Run(
 	defer scheduleCadence.Stop()
 
 	// sales_line_fact pre-prices invoice lines for sales analytics. Audit events mark what changed and wake
-	// the refresher (one pod, under a lease), which recomputes marked scopes, re-prices recent invoices for
-	// writes that publish no event, and reconciles every invoice daily. Its first reconcile pass is the backfill.
+	// the refresher (one pod, under a lease), which recomputes marked scopes and reconciles every invoice
+	// weekly. Its first reconcile pass is the backfill.
 	salesFactRefresher := service.NewSalesFactRefresher(&service.SalesFactRefresherConfig{
 		Repos: repoFactory,
 		Lease: leaseSvc,
@@ -962,9 +962,9 @@ func Run(
 		return err
 	}
 	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
-	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
-		QueueBaseName: messaging.CoreEventSalesFactQueue,
-		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,
+	if err := audit.Consume(ctx, rabbitmq, audit.ConsumeConfig{
+		Queue:   messaging.CoreEventSalesFactQueue,
+		OnEvent: service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,
 	}); err != nil {
 		return err
 	}

@@ -86,6 +86,10 @@ func TestSalesFactScopeFor(t *testing.T) {
 		{"unit renamed", update(constants.ObjectTypeUnit, "name"), "", "", false},
 		{"unit group base unit changed", update(constants.ObjectTypeUnitGroup, "base_unit.id"), domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
 		{"category unit group changed", update(constants.ObjectTypeItemCategory, "unit_group_id"), domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"unit group deleted", audit.ObservedEvent{Action: constants.AuditActionDelete, ResourceType: constants.ObjectTypeUnitGroup, ResourceID: "ug_1"}, domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"category deleted", audit.ObservedEvent{Action: constants.AuditActionDelete, ResourceType: constants.ObjectTypeItemCategory, ResourceID: "ic_1"}, domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"product line deleted", audit.ObservedEvent{Action: constants.AuditActionDelete, ResourceType: constants.ObjectTypeProductLine, ResourceID: "pl_1"}, domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"product line renamed", update(constants.ObjectTypeProductLine, "name"), "", "", false},
 		{"unrelated", audit.ObservedEvent{ResourceType: constants.ObjectTypeShipment, ResourceID: "sh_1"}, "", "", false},
 	}
 	for _, tt := range tests {

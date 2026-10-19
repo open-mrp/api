@@ -955,11 +955,13 @@ FROM item FORCE INDEX (item_account_id_sku_key)
 WHERE account_id = sqlc.arg('account_id')
   AND sku LIKE sqlc.narg('like_query');
 
--- ScanBurnRateItems backs the burn-rate sweeper: the next page of items after the cursor, each flagged stale
--- when the recompute path has not touched its burn rate since stale_before. The page bounds items read, not flagged.
--- name: ScanBurnRateItems :many
-SELECT p.id, p.account_id,
-       CAST(COALESCE(p.deleted_at IS NULL AND r.updated_at < sqlc.arg('stale_before'), 0) AS SIGNED) AS stale
-FROM (SELECT i.id, i.account_id, i.burn_rate_id, i.deleted_at FROM item i WHERE i.id > sqlc.arg('after_id') ORDER BY i.id LIMIT ?) p
-LEFT JOIN rate r ON r.id = p.burn_rate_id
-ORDER BY p.id;
+-- name: ListStaleBurnRateItems :many
+SELECT id, account_id, burn_rate_computed_at
+FROM item FORCE INDEX (item_burn_rate_computed_idx)
+WHERE deleted_at IS NULL
+  AND (burn_rate_computed_at IS NULL OR burn_rate_computed_at < sqlc.arg('stale_before'))
+ORDER BY burn_rate_computed_at, id
+LIMIT ?;
+
+-- name: MarkBurnRatesComputed :exec
+UPDATE item SET burn_rate_computed_at = NOW(3) WHERE id IN (sqlc.slice('item_ids'));

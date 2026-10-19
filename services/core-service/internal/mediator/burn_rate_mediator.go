@@ -19,6 +19,8 @@ import (
 
 const burnRateDenominatorUnitID = "day"
 
+const burnRateValueScale = 30
+
 var burnRateMedTracer = tracing.GetTracer("core-service.burn_rate_mediator")
 
 // burnRateTimeSpanDays returns elapsed days between two consumption log timestamps. When both fall in the same instant, use one day so multiple same-day events still yield a rate.
@@ -61,9 +63,7 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 //  4. Divide the total by the days elapsed between the first and last log.
 //  5. Persist the resulting per-day rate to the item's burn rate.
 //
-// Every path marks the burn rate fresh (advances rate.updated_at). ScanBurnRateItems flags
-// items by rate.updated_at, so an item whose recompute yields no new value must still be touched;
-// otherwise a genuinely idle item never leaves the stale set and the sweep re-enqueues it forever.
+// Every path records the recompute on item.burn_rate_computed_at, which the stale-item sweep reads, so an item whose recompute yields no new value still leaves the stale set. The rate row is written only when its value or units change.
 func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError {
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.recalculate_from_history")
 	defer span.End()
@@ -91,7 +91,7 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 	if len(logs) < 2 {
-		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
+		return tracing.Trace(span, m.markComputed(ctx, itemID))
 	}
 
 	unitConvRepo := m.repos.NewUnitConversionRepo()
@@ -110,12 +110,12 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	}
 
 	if totalConsumption.IsZero() {
-		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
+		return tracing.Trace(span, m.markComputed(ctx, itemID))
 	}
 
 	timeSpanDays := burnRateTimeSpanDays(logs[0].CreatedAt, logs[len(logs)-1].CreatedAt)
 	if timeSpanDays <= 0 {
-		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
+		return tracing.Trace(span, m.markComputed(ctx, itemID))
 	}
 
 	burnRateMeasure := totalConsumption.Div(decimal.NewFromFloat(timeSpanDays))
@@ -126,6 +126,13 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	)
 
 	rateRepo := m.repos.NewRateRepo()
+	current, apiErr := rateRepo.Get(ctx, item.BurnRateID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if burnRateUnchanged(current, burnRateMeasure, baseUnitID) {
+		return tracing.Trace(span, m.markComputed(ctx, itemID))
+	}
 	value := valueStr
 	num := baseUnitID
 	den := burnRateDenominatorUnitID
@@ -139,16 +146,22 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 
-	return nil
+	return tracing.Trace(span, m.markComputed(ctx, itemID))
 }
 
-// markBurnRateFresh advances the burn rate's updated_at without changing its value, recording that
-// the item was recomputed. Passing only the RateID relies on UpdateRateByID's COALESCE to leave the
-// value and units untouched while still setting updated_at = NOW(3), so an item with no new rate to
-// write still drops out of the stale-item sweep's window.
-func (m *burnRateMedImpl) markBurnRateFresh(ctx context.Context, rateID string) *apierror.APIError {
-	_, apiErr := m.repos.NewRateRepo().Update(ctx, domain.UpdateRateParams{RateID: rateID})
-	return apiErr
+func (m *burnRateMedImpl) markComputed(ctx context.Context, itemID string) *apierror.APIError {
+	return m.repos.NewItemRepo().MarkBurnRatesComputed(ctx, []string{itemID})
+}
+
+func burnRateUnchanged(current *domain.Rate, value decimal.Decimal, baseUnitID string) bool {
+	if current == nil || current.NumeratorUnitID != baseUnitID || current.DenominatorUnitID != burnRateDenominatorUnitID {
+		return false
+	}
+	stored, err := decimal.NewFromString(current.Value)
+	if err != nil {
+		return false
+	}
+	return stored.Equal(value.Round(burnRateValueScale))
 }
 
 // MaybeRecalculateAfterConsumption enqueues a burn-rate recalculation when a consumption change log was recorded. The recompute runs off the caller's transaction via the outbox, so the shared rate row's lock is not held for the length of that transaction.
@@ -181,19 +194,18 @@ func MaybeRecalculateAfterConsumption(
 	return nil
 }
 
-// EnqueueRecalc writes an outbox command to recompute an item's burn rate. Used by the periodic
-// sweeper to refresh items no ongoing consumption has touched; the recompute runs on the shared
-// consumer, one short transaction per item, so a swept batch never contends as a single unit.
-func EnqueueRecalc(ctx context.Context, repos domain.RepoFactory, accountID, itemID string) *apierror.APIError {
-	return enqueueBurnRateRecalc(ctx, repos.NewOutboxRepo(), accountID, itemID)
+// EnqueueRecalcBatch writes one outbox command to recompute several of the account's items. Used by the periodic sweeper; the consumer recomputes each item in its own short transaction, so a swept batch never contends as a single unit.
+func EnqueueRecalcBatch(ctx context.Context, repos domain.RepoFactory, accountID string, itemIDs []string) *apierror.APIError {
+	return enqueueBurnRateRecalcEvent(ctx, repos.NewOutboxRepo(), domain.RecalcItemBurnRateEvent{AccountID: accountID, ItemIDs: itemIDs})
 }
 
 // enqueueBurnRateRecalc writes an outbox command to recompute the item's burn rate off the current transaction.
 func enqueueBurnRateRecalc(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string) *apierror.APIError {
-	payload, err := json.Marshal(domain.RecalcItemBurnRateEvent{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
+	return enqueueBurnRateRecalcEvent(ctx, outboxRepo, domain.RecalcItemBurnRateEvent{AccountID: accountID, ItemID: itemID})
+}
+
+func enqueueBurnRateRecalcEvent(ctx context.Context, outboxRepo messaging.OutboxRepo, event domain.RecalcItemBurnRateEvent) *apierror.APIError {
+	payload, err := json.Marshal(event)
 	if err != nil {
 		return apierror.NewInternalError(err, "Failed to marshal recalc item burn rate event.")
 	}

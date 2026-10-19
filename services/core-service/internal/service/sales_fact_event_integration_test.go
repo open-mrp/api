@@ -18,8 +18,8 @@ import (
 )
 
 // These prove the event-driven refresher keeps sales_line_fact and sales_fact_rollup equal to their
-// source with no help from the idle run: each pod's IdleInterval outlasts the test, and the edited
-// invoices are older than the rolling recompute's window, so only a wake can refresh them.
+// source with no help from the idle run: each pod's IdleInterval outlasts the test, and no reconcile
+// pass is due, so only a wake can refresh them.
 
 // eventPod is one core-service replica: a refresher under the shared lease and the marker that wakes it.
 type eventPod struct {
@@ -53,14 +53,12 @@ func startEventPod(t *testing.T, pool *sql.DB, repos domain.RepoFactory, holder 
 	return p
 }
 
-// publish delivers an audit event the way the fanout does: to every replica.
+// publish delivers an audit event the way the shared queue does: to one replica.
 func publish(ctx context.Context, e audit.ObservedEvent, pods ...*eventPod) {
-	for _, p := range pods {
-		p.marker.HandleAuditEvent(ctx, e)
-	}
+	_ = pods[0].marker.HandleAuditEvent(ctx, e)
 }
 
-// oldSeedInvoice returns an invoice of the seed account, with facts, that the rolling recompute does not reach.
+// oldSeedInvoice returns an older invoice of the seed account, with facts.
 func oldSeedInvoice(t *testing.T, ctx context.Context, pool *sql.DB) string {
 	t.Helper()
 	var id string
@@ -243,7 +241,7 @@ func TestSalesFactEventsKeepFactsAndRollupsAccurateAcrossPods(t *testing.T) {
 	a := startEventPod(t, pool, repos, "pod-a")
 	b := startEventPod(t, pool, repos, "pod-b")
 	settle(t, a, b)
-	// The startup run's rolling recompute reaches the seed invoice; re-edit it so only the wake can fix it.
+	// Re-edit the seed invoice after the startup runs, so only the wake can fix it.
 	byInvoiceAgain := bumpFirstLine(t, ctx, pool, seedInvoiceID)
 	restoreEdits(t, pool, repos, byInvoiceAgain)
 	idleRuns := totalRuns(a, b)

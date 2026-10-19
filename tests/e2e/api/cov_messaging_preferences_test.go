@@ -96,9 +96,10 @@ func TestCovMessagingPreferences_InvalidCategoryRejected(t *testing.T) {
 		"digest":         "instant",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 422, resp.StatusCode, resp.Body)
-
-	errObj := requireErrorResponse(t, resp.Body, "invalid_format", "invalid_request_error")
+	// preview.9 reads body validation failures as 400.
+	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	errObj := jsonObject(parseJSON(resp.Body), "error")
+	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
 	assertErrorParam(t, errObj, "category")
 }
 
@@ -182,7 +183,9 @@ func TestCovMessagingPreferences_APIKeyActorForbiddenOnPut(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 403, resp.StatusCode, resp.Body)
 
-	errObj := requireErrorResponse(t, resp.Body, "insufficient_permissions", "invalid_request_error")
+	// preview.9's error shape.
+	errObj := jsonObject(parseJSON(resp.Body), "error")
+	assert.Equal(t, "insufficient_permissions", jsonField(errObj, "code"))
 	assert.Equal(t, "Notification preferences are only available to users with an account membership.", errObj["message"])
 }
 

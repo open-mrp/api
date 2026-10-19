@@ -8,7 +8,8 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+
+	"github.com/open-mrp/apikit/db"
 )
 
 const getAccountUserRoleNotificationDefaults = `-- name: GetAccountUserRoleNotificationDefaults :one
@@ -19,9 +20,9 @@ WHERE au.id = ?
 `
 
 // The notification defaults of the person's role.
-func (q *Queries) GetAccountUserRoleNotificationDefaults(ctx context.Context, id string) (json.RawMessage, error) {
+func (q *Queries) GetAccountUserRoleNotificationDefaults(ctx context.Context, id string) (db.NullableRawMessage, error) {
 	row := q.db.QueryRowContext(ctx, getAccountUserRoleNotificationDefaults, id)
-	var notification_defaults json.RawMessage
+	var notification_defaults db.NullableRawMessage
 	err := row.Scan(&notification_defaults)
 	return notification_defaults, err
 }
@@ -66,8 +67,8 @@ type UpsertNotificationSettingParams struct {
 	ID            string
 	AccountID     string
 	AccountUserID string
-	Defaults      json.RawMessage
-	AutoSubscribe json.RawMessage
+	Defaults      db.NullableRawMessage
+	AutoSubscribe db.NullableRawMessage
 	PausedUntil   sql.NullTime
 }
 

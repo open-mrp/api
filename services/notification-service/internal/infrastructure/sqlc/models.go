@@ -1588,8 +1588,8 @@ type NotificationSetting struct {
 	ID            string
 	AccountID     string
 	AccountUserID string
-	Defaults      json.RawMessage
-	AutoSubscribe json.RawMessage
+	Defaults      db.NullableRawMessage
+	AutoSubscribe db.NullableRawMessage
 	PausedUntil   sql.NullTime
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
@@ -2385,7 +2385,7 @@ type Role struct {
 	UpdatedAt            time.Time
 	Access               json.RawMessage
 	TemplateCode         sql.NullString
-	NotificationDefaults json.RawMessage
+	NotificationDefaults db.NullableRawMessage
 }
 
 type RolePermission struct {

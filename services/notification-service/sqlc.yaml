@@ -66,4 +66,15 @@ sql:
             go_type:
               import: "github.com/open-mrp/apikit/db"
               type: "NullableRawMessage"
-
+          - column: "notification_setting.defaults"
+            go_type:
+              import: "github.com/open-mrp/apikit/db"
+              type: "NullableRawMessage"
+          - column: "notification_setting.auto_subscribe"
+            go_type:
+              import: "github.com/open-mrp/apikit/db"
+              type: "NullableRawMessage"
+          - column: "role.notification_defaults"
+            go_type:
+              import: "github.com/open-mrp/apikit/db"
+              type: "NullableRawMessage"

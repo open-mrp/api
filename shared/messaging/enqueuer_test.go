@@ -370,3 +370,18 @@ func (m *endlessRepo) CleanupExpiredLocks(context.Context, int32) (int64, error)
 func (m *endlessRepo) PurgePublished(context.Context, int, int32) (int64, error) {
 	return 0, nil
 }
+
+func TestEnqueuerConfigIdleDefaults(t *testing.T) {
+	t.Parallel()
+
+	// Commits wake the enqueuer, so the idle poll only paces retries and orphans, and the poll claims expired locks itself.
+	prod := (&EnqueuerConfig{ServiceName: "svc"}).WithDefaults()
+	if prod.PollInterval != 250*time.Millisecond || prod.MaxPollInterval != 30*time.Second || prod.CleanupInterval != 5*time.Minute {
+		t.Fatalf("production defaults: poll %s, max poll %s, cleanup %s", prod.PollInterval, prod.MaxPollInterval, prod.CleanupInterval)
+	}
+
+	test := (&EnqueuerConfig{ServiceName: "svc", PlatformMode: constants.PlatformModeTest}).WithDefaults()
+	if test.MaxPollInterval != test.PollInterval || test.CleanupInterval != 500*time.Millisecond {
+		t.Fatalf("test defaults: poll %s, max poll %s, cleanup %s", test.PollInterval, test.MaxPollInterval, test.CleanupInterval)
+	}
+}

@@ -116,6 +116,9 @@ func (s *schedulerSvc) Stop() {
 
 func (s *schedulerSvc) pollLoop(ctx context.Context) {
 	defer s.wg.Done()
+	// Cancelled on Stop too, which releases the held lease so another pod takes over at its next tick.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -127,7 +130,7 @@ func (s *schedulerSvc) pollLoop(ctx context.Context) {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			_ = s.lease.WithLease(ctx, schedulerLeaseName, schedulerLeaseTTL, func(leaseCtx context.Context) error {
+			_ = s.lease.WithHeldLease(ctx, schedulerLeaseName, schedulerLeaseTTL, func(leaseCtx context.Context) error {
 				s.checkSchedules(leaseCtx)
 				s.reapStalledRuns(leaseCtx)
 				return nil

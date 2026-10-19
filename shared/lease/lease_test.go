@@ -339,3 +339,147 @@ func TestTTLOr(t *testing.T) {
 		})
 	}
 }
+
+func TestWithHeldLease_RenewsInsteadOfReacquiring(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	runs := 0
+	for range 3 {
+		err := l.WithHeldLease(t.Context(), "test", time.Minute, func(context.Context) error {
+			runs++
+			return nil
+		})
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, 3, runs)
+	require.Equal(t, int32(1), repo.calls.acquire.Load(), "only the first call acquires")
+	require.Equal(t, int32(2), repo.calls.renew.Load(), "later calls renew")
+	require.Zero(t, repo.calls.release.Load(), "the lease is kept between calls")
+	require.Equal(t, "pod-a", repo.rows["test"].holder)
+}
+
+func TestWithHeldLease_OtherHoldersSkipUntilItExpires(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	now := time.Now()
+	repo.now = func() time.Time { return now }
+	a := NewWithHolder(repo, "pod-a")
+	b := NewWithHolder(repo, "pod-b")
+
+	run := func(l *Lease) bool {
+		ran := false
+		require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, func(context.Context) error {
+			ran = true
+			return nil
+		}))
+		return ran
+	}
+
+	require.True(t, run(a))
+	require.False(t, run(b), "pod-b must skip while pod-a holds the lease between calls")
+	require.True(t, run(a))
+
+	// pod-a stops renewing (crashed): once the row expires pod-b takes over, and pod-a's next renewal finds it gone.
+	now = now.Add(2 * time.Minute)
+	require.True(t, run(b))
+	require.False(t, run(a))
+	require.True(t, run(b))
+}
+
+func TestWithHeldLease_ReacquiresAfterRowIsDeleted(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	noop := func(context.Context) error { return nil }
+	require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, noop))
+	repo.mu.Lock()
+	delete(repo.rows, "test")
+	repo.mu.Unlock()
+
+	ran := false
+	require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, func(context.Context) error {
+		ran = true
+		return nil
+	}))
+	require.True(t, ran, "a failed renewal falls back to acquiring")
+	require.Equal(t, int32(2), repo.calls.acquire.Load())
+}
+
+func TestWithHeldLease_RenewErrorSkipsTickAndKeepsLease(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	noop := func(context.Context) error { return nil }
+	require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, noop))
+
+	repo.mu.Lock()
+	repo.failRenew = errors.New("db blip")
+	repo.mu.Unlock()
+	ran := false
+	require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, func(context.Context) error {
+		ran = true
+		return nil
+	}))
+	require.False(t, ran)
+	require.Equal(t, int32(1), repo.calls.acquire.Load(), "a renew error must not fall through to acquiring")
+
+	repo.mu.Lock()
+	repo.failRenew = nil
+	repo.mu.Unlock()
+	require.NoError(t, l.WithHeldLease(t.Context(), "test", time.Minute, noop))
+	require.Equal(t, int32(1), repo.calls.acquire.Load(), "the next call renews the lease it kept")
+}
+
+func TestWithHeldLease_ReleasesWhenContextCancelled(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	require.NoError(t, l.WithHeldLease(ctx, "test", time.Minute, func(context.Context) error { return nil }))
+	cancel()
+
+	require.Eventually(t, func() bool { return repo.calls.release.Load() == 1 }, time.Second, 5*time.Millisecond)
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	require.Empty(t, repo.rows, "shutdown hands the lease over at once")
+}
+
+func TestWithHeldLease_LostDuringRunIsForgotten(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	err := l.WithHeldLease(ctx, "test", 30*time.Millisecond, func(ctx context.Context) error {
+		repo.mu.Lock()
+		repo.rows["test"] = memRow{holder: "pod-b", expiresAt: time.Now().Add(time.Hour)}
+		repo.mu.Unlock()
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	require.ErrorIs(t, err, context.Canceled)
+
+	// pod-a no longer holds it, so cancelling must not release pod-b's row.
+	cancel()
+	time.Sleep(20 * time.Millisecond)
+	require.Zero(t, repo.calls.release.Load())
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	require.Equal(t, "pod-b", repo.rows["test"].holder)
+}
+
+func TestWithHeldLease_RejectsNonPositiveTTL(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	err := l.WithHeldLease(t.Context(), "test", 0, func(context.Context) error { return nil })
+	require.ErrorContains(t, err, "ttl must be positive")
+	require.Zero(t, repo.calls.acquire.Load())
+}

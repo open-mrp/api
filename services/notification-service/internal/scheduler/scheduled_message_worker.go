@@ -30,7 +30,7 @@ type ScheduledMessageWorkerConfig struct {
 	PollInterval time.Duration
 	// BatchSize (optional; default 100) bounds messages delivered per tick.
 	BatchSize int32
-	// LeaseTTL (optional; default 5m) bounds how long the worker holds its lease.
+	// LeaseTTL (optional; default 2m) is how long the lease outlives its last renewal. The holder keeps it across ticks, so this is also how long delivery stalls after the holder crashes. Keep it above PollInterval, or every tick acquires afresh.
 	LeaseTTL time.Duration
 }
 
@@ -52,7 +52,7 @@ func (c *ScheduledMessageWorkerConfig) WithDefaults() *ScheduledMessageWorkerCon
 		PlatformMode: c.PlatformMode,
 		PollInterval: pollInterval,
 		BatchSize:    int32(cmp.Or(int(c.BatchSize), 100)), // #nosec G115 - small config value
-		LeaseTTL:     lease.TTLOr(c.LeaseTTL, 5*time.Minute),
+		LeaseTTL:     lease.TTLOr(c.LeaseTTL, 2*time.Minute),
 	}
 }
 
@@ -133,7 +133,7 @@ func (w *ScheduledMessageWorker) loop() {
 		case <-w.ctx.Done():
 			return
 		case <-ticker.C:
-			_ = w.lease.WithLease(w.ctx, w.leaseName, w.config.LeaseTTL, func(ctx context.Context) error {
+			_ = w.lease.WithHeldLease(w.ctx, w.leaseName, w.config.LeaseTTL, func(ctx context.Context) error {
 				if n, apiErr := w.deliverer.DeliverDueScheduledMessages(ctx, w.config.BatchSize); apiErr != nil {
 					slog.Error("Failed to deliver due scheduled messages", "error", apiErr.PublicMessage)
 				} else if n > 0 {

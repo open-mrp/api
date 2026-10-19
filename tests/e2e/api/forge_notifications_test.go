@@ -515,5 +515,7 @@ func TestForgePreferences_ChatMessageTypeOffSuppressesTheBell(t *testing.T) {
 	list, _, err := asPreview9(acct.owner).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	require.Len(t, list.Data, 1)
-	assert.Equal(t, "false", DataItemField(list.Data[0], "in_app_enabled"))
+	var row map[string]any
+	require.NoError(t, json.Unmarshal(list.Data[0], &row))
+	assert.Equal(t, false, row["in_app_enabled"])
 }

@@ -74,19 +74,16 @@ type SalesFactRefresherConfig struct {
 	// TickInterval (optional; default: 5s) is how soon the refresher runs again while work is left over: a backlog larger than one batch, a reconcile or rollup pass in progress, a step that failed, or a wake another pod's lease kept it from serving. Zero or negative values are treated as unset.
 	TickInterval time.Duration
 
-	// IdleInterval (optional; default: 1m) is how often the refresher runs with nothing to wake it. That run starts the rolling recompute and reconcile passes when due, and drains any mark whose wake was lost. Zero or negative values are treated as unset.
+	// IdleInterval (optional; default: 1m) is how often the refresher runs with nothing to wake it. That run starts the reconcile and sweep passes when due, and drains any mark whose wake was lost. Zero or negative values are treated as unset.
 	IdleInterval time.Duration
 
 	// WakeDelay (optional; default: 1s) is how long the refresher waits after a mark wakes it, so a burst of edits is drained in one run. Zero or negative values are treated as unset.
 	WakeDelay time.Duration
 
-	// RecentWindow (optional; default: 7d) is how far back the rolling recompute reaches. It catches writes that mark nothing, such as the dashboard's. Zero or negative values are treated as unset.
-	RecentWindow time.Duration
+	// ReconcileDays (optional; default: 7) is how many days apart the full fact reconcile passes start. Dirty marks keep the facts current between them; a unit change restarts the pass at once. Zero or negative values are treated as unset.
+	ReconcileDays int
 
-	// RecentInterval (optional; default: 2m) is how often the rolling recompute runs. Zero or negative values are treated as unset.
-	RecentInterval time.Duration
-
-	// PassLocation (optional; default: America/New_York) is the timezone whose midnight starts each daily pass (fact reconcile, rollup sweep, buyer summary sweep). A pass that has not started since the most recent midnight there starts on the next tick.
+	// PassLocation (optional; default: America/New_York) is the timezone whose midnight starts each pass (fact reconcile, rollup sweep, buyer summary sweep). A pass that is due starts on the first tick after a midnight there.
 	PassLocation *time.Location
 
 	// ReconcileBudget (optional; default: 2s) caps the reconcile work done in one tick, so a pass is spread across ticks instead of loading the database in one burst. Zero or negative values are treated as unset.
@@ -116,11 +113,8 @@ func (c *SalesFactRefresherConfig) WithDefaults() *SalesFactRefresherConfig {
 	if c.WakeDelay <= 0 {
 		c.WakeDelay = time.Second
 	}
-	if c.RecentWindow <= 0 {
-		c.RecentWindow = 7 * 24 * time.Hour
-	}
-	if c.RecentInterval <= 0 {
-		c.RecentInterval = 2 * time.Minute
+	if c.ReconcileDays <= 0 {
+		c.ReconcileDays = 7
 	}
 	if c.PassLocation == nil {
 		loc, err := time.LoadLocation(salesFactPassTZ)
@@ -149,16 +143,13 @@ func (c *SalesFactRefresherConfig) validate() error {
 	return nil
 }
 
-// SalesFactRefresher keeps sales_line_fact, and the sales_fact_rollup buckets summed from it, in step with invoices. Three paths feed it, each covering what the one before misses:
-//   - dirty marks, written from audit events within seconds of an edit made through this API;
-//   - a rolling recompute of recent invoices, for writes that publish no audit event (the dashboard, generic rate and quantity edits);
-//   - a reconcile pass over every invoice each night after midnight in PassLocation, which corrects anything older that drifted. Its first pass is the backfill.
+// SalesFactRefresher keeps sales_line_fact, and the sales_fact_rollup buckets summed from it, in step with invoices. Two paths feed it:
+//   - dirty marks, written within seconds of an edit from the audit events every write through this API publishes, delivered at least once;
+//   - a reconcile pass over every invoice every ReconcileDays, started after midnight in PassLocation, which corrects anything that drifted without a mark. Its first pass is the backfill.
 //
 // Dirty marks wake it (see Wake), so it runs within WakeDelay of an edit and otherwise only every IdleInterval.
 type SalesFactRefresher struct {
 	cfg *SalesFactRefresherConfig
-
-	lastRecent time.Time
 
 	// backlog is set during a Tick by any step that left work for a later run.
 	backlog bool
@@ -192,7 +183,7 @@ func (s *SalesFactRefresher) Wake() {
 func (s *SalesFactRefresher) Start(ctx context.Context) error {
 	s.wg.Add(1)
 	go s.loop(ctx)
-	slog.Info("Sales fact refresher started", "tick", s.cfg.TickInterval, "recent_window", s.cfg.RecentWindow)
+	slog.Info("Sales fact refresher started", "tick", s.cfg.TickInterval, "reconcile_days", s.cfg.ReconcileDays)
 	return nil
 }
 
@@ -261,14 +252,6 @@ func (s *SalesFactRefresher) Tick(ctx context.Context) bool {
 	if apiErr := s.drainDirty(ctx); apiErr != nil {
 		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: draining dirty marks failed", "error", apiErr)
-	}
-	if now := s.cfg.Now(); now.Sub(s.lastRecent) >= s.cfg.RecentInterval {
-		if apiErr := s.refreshRecent(ctx, now); apiErr != nil {
-			s.backlog = true
-			slog.ErrorContext(ctx, "Sales fact refresher: rolling recompute failed", "error", apiErr)
-		} else {
-			s.lastRecent = now
-		}
 	}
 	if apiErr := s.reconcile(ctx); apiErr != nil {
 		s.backlog = true
@@ -365,34 +348,17 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 	return tracing.Trace(span, repo.ClearDirty(ctx, marks))
 }
 
-func (s *SalesFactRefresher) refreshRecent(ctx context.Context, now time.Time) *apierror.APIError {
-	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.refresh_recent")
-	defer span.End()
-
-	// The cap only guards against a pathological burst; a week is normally ~1k invoices.
-	ids, apiErr := s.cfg.Repos.NewSalesFactRepo().ListInvoiceIDsCreatedSince(ctx, now.Add(-s.cfg.RecentWindow), 20_000)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	changed, apiErr := s.refreshInvoices(ctx, ids)
-	span.SetAttributes(attribute.Int("sales_fact.invoices", len(ids)), attribute.Int("sales_fact.drift_lines", changed))
-	if changed > 0 {
-		slog.InfoContext(ctx, "Sales fact refresher: rolling recompute corrected facts", "lines", changed)
-	}
-	return tracing.Trace(span, apiErr)
-}
-
-// passDue reports whether a daily pass last started at started should start again: never started, or not since the most recent midnight in PassLocation.
-func (s *SalesFactRefresher) passDue(started *time.Time, now time.Time) bool {
+// passDue reports whether a pass run every days days, last started at started, should start again: never started, or not since the midnight in PassLocation days-1 days before the most recent one.
+func (s *SalesFactRefresher) passDue(started *time.Time, now time.Time, days int) bool {
 	if started == nil {
 		return true
 	}
 	local := now.In(s.cfg.PassLocation)
-	midnight := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.cfg.PassLocation)
+	midnight := time.Date(local.Year(), local.Month(), local.Day()-(days-1), 0, 0, 0, 0, s.cfg.PassLocation)
 	return started.Before(midnight)
 }
 
-// reconcile advances the full pass by up to ReconcileBudget, starting a new pass after each midnight in PassLocation.
+// reconcile advances the full pass by up to ReconcileBudget, starting a new pass after a midnight in PassLocation once ReconcileDays have passed since the last one started.
 func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.reconcile")
 	defer span.End()
@@ -404,7 +370,7 @@ func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 	}
 	now := s.cfg.Now().UTC()
 	if state.Cursor == nil {
-		if !s.passDue(state.PassStartedAt, now) {
+		if !s.passDue(state.PassStartedAt, now, s.cfg.ReconcileDays) {
 			return nil
 		}
 		state.Cursor = &domain.SalesFactInvoiceCursor{CreatedAt: salesFactSweepOrigin}
@@ -713,7 +679,7 @@ func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError
 		}
 	}
 	if state.Cursor == nil {
-		if !s.passDue(state.PassStartedAt, now) {
+		if !s.passDue(state.PassStartedAt, now, 1) {
 			return nil
 		}
 		state.Cursor = &domain.SalesBuyerKey{}
@@ -892,7 +858,7 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 	}
 	now := s.cfg.Now().UTC()
 	if state.Cursor == nil {
-		if !s.passDue(state.PassStartedAt, now) {
+		if !s.passDue(state.PassStartedAt, now, 1) {
 			return nil
 		}
 		state.Cursor = &domain.SalesRollupDay{Day: salesFactSweepOrigin}
@@ -1008,18 +974,17 @@ func NewSalesFactMarker(repos domain.RepoFactory, onMarked func()) *SalesFactMar
 	return &SalesFactMarker{repos: repos, onMarked: onMarked}
 }
 
-// HandleAuditEvent marks the scope an event can change facts for. Every replica receives every event, so a mark is written once per replica; marking is idempotent.
-func (m *SalesFactMarker) HandleAuditEvent(ctx context.Context, e audit.ObservedEvent) {
+// HandleAuditEvent marks the scope an event can change facts for. Events come off one queue shared by the replicas, so each is marked once; a failed mark is returned for the delivery to be retried, and marking again is harmless.
+func (m *SalesFactMarker) HandleAuditEvent(ctx context.Context, e audit.ObservedEvent) error {
 	scope, scopeID, ok := salesFactScopeFor(e)
 	if !ok || e.AccountID == "" || scopeID == "" {
-		return
+		return nil
 	}
 	if apiErr := m.repos.NewSalesFactRepo().MarkDirty(ctx, scope, scopeID, e.AccountID); apiErr != nil {
-		// The rolling recompute and reconcile pass still pick the change up, just later.
-		slog.WarnContext(ctx, "Sales fact marker: failed to mark scope", "scope", scope, "id", scopeID, "error", apiErr)
-		return
+		return apiErr
 	}
 	m.onMarked()
+	return nil
 }
 
 // salesFactScopeFor maps an audit event to the scope whose facts it can change, and the scope id to mark.
@@ -1035,6 +1000,7 @@ func salesFactScopeFor(e audit.ObservedEvent) (domain.SalesFactScope, string, bo
 		return false
 	}
 	update := e.Action == constants.AuditActionUpdate
+	deleted := e.Action == constants.AuditActionDelete
 	switch e.ResourceType {
 	case constants.ObjectTypeInvoice:
 		return domain.SalesFactScopeInvoice, e.ResourceID, true
@@ -1056,14 +1022,16 @@ func salesFactScopeFor(e audit.ObservedEvent) (domain.SalesFactScope, string, bo
 		return domain.SalesFactScopeItem, e.ResourceID, update && changed("item_category_id")
 	case constants.ObjectTypeCustomer:
 		// A merge deletes the customers merged away; their orders now belong to another buyer.
-		return domain.SalesFactScopeBuyer, e.ResourceID, e.Action == constants.AuditActionDelete
+		return domain.SalesFactScopeBuyer, e.ResourceID, deleted
 	case constants.ObjectTypeUnit:
 		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID,
 			update && changed("ratio_numerator", "ratio_denominator", "offset_numerator", "offset_denominator")
 	case constants.ObjectTypeUnitGroup:
-		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, update && changed("base_unit")
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, deleted || update && changed("base_unit")
 	case constants.ObjectTypeItemCategory:
-		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, update && changed("unit_group_id")
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, deleted || update && changed("unit_group_id")
+	case constants.ObjectTypeProductLine:
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, deleted
 	}
 	return "", "", false
 }

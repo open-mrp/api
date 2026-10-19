@@ -348,3 +348,58 @@ func (q *Queries) ListConsumptionChangeLogsForBurnRate(ctx context.Context, arg 
 	}
 	return items, nil
 }
+
+const listOldestChangeLogsSince = `-- name: ListOldestChangeLogsSince :many
+SELECT item_id, MIN(created_at) AS oldest
+FROM inventory_change_log FORCE INDEX (inventory_change_log_account_id_item_id_created_at_id_idx)
+WHERE account_id = ?
+  AND item_id IN (/*SLICE:item_ids*/?)
+  AND created_at >= ?
+GROUP BY item_id
+`
+
+type ListOldestChangeLogsSinceParams struct {
+	AccountID string
+	ItemIds   []string
+	Since     time.Time
+}
+
+type ListOldestChangeLogsSinceRow struct {
+	ItemID string
+	Oldest interface{}
+}
+
+func (q *Queries) ListOldestChangeLogsSince(ctx context.Context, arg ListOldestChangeLogsSinceParams) ([]ListOldestChangeLogsSinceRow, error) {
+	query := listOldestChangeLogsSince
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Since)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOldestChangeLogsSinceRow
+	for rows.Next() {
+		var i ListOldestChangeLogsSinceRow
+		if err := rows.Scan(&i.ItemID, &i.Oldest); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

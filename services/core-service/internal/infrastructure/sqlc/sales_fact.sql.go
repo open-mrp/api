@@ -182,40 +182,6 @@ func (q *Queries) ListInvoiceIDsBySalesOrders(ctx context.Context, salesOrderIds
 	return items, nil
 }
 
-const listInvoiceIDsCreatedSince = `-- name: ListInvoiceIDsCreatedSince :many
-SELECT id FROM invoice WHERE created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?
-`
-
-type ListInvoiceIDsCreatedSinceParams struct {
-	CreatedAt time.Time
-	Limit     int32
-}
-
-// Newest first: when the cap bites, the invoices left out are the oldest in the window, the least
-// likely to be changing, and the reconcile pass still reaches them.
-func (q *Queries) ListInvoiceIDsCreatedSince(ctx context.Context, arg ListInvoiceIDsCreatedSinceParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listInvoiceIDsCreatedSince, arg.CreatedAt, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listInvoicesForFactSweep = `-- name: ListInvoicesForFactSweep :many
 SELECT id, created_at
 FROM invoice

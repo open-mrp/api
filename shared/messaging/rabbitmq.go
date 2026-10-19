@@ -900,6 +900,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Sales fact mark queue (handled by core-service): a second copy of every audit event
+	if err := r.declareAndBindQueue(
+		CoreEventSalesFactQueue,
+		[]string{string(contracts.PlatformEventAuditLogged)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Account follow-up scheduling command queue (handled by platform-service)
 	if err := r.declareAndBindQueue(
 		PlatformCmdScheduleAccountFollowupQueue,

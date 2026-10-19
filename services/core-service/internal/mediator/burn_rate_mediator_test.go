@@ -90,8 +90,9 @@ func (suite *BurnRateMedTestSuite) expectItemAndBaseUnit() {
 		Return(testBaseUnitID, "", nil)
 }
 
-// A freshness-only touch keeps value and units untouched: only the RateID is populated.
-var freshnessTouchParams = domain.UpdateRateParams{RateID: testBurnRateID}
+func (suite *BurnRateMedTestSuite) expectMarkedComputed() {
+	suite.itemRepo.EXPECT().MarkBurnRatesComputed(gomock.Any(), []string{testItemID}).Return(nil)
+}
 
 // An item with fewer than two consumption logs cannot yield a new rate, but it must still be marked
 // fresh so the stale-item sweep stops re-selecting it. This is the regression that caused the runaway.
@@ -101,7 +102,7 @@ func (suite *BurnRateMedTestSuite) TestRecalculate_InsufficientHistory_MarksFres
 		ListConsumptionChangeLogsForBurnRate(gomock.Any(), testAccountID, testItemID).
 		Return([]domain.BurnRateConsumptionLog{{Value: "-5", UnitID: testBaseUnitID, CreatedAt: time.Now()}}, nil)
 
-	suite.rateRepo.EXPECT().Update(gomock.Any(), freshnessTouchParams).Return(&domain.Rate{ID: testBurnRateID}, nil)
+	suite.expectMarkedComputed()
 
 	apiErr := suite.med.RecalculateFromHistory(context.Background(), testAccountID, testItemID)
 	assert.Nil(suite.T(), apiErr)
@@ -123,14 +124,13 @@ func (suite *BurnRateMedTestSuite) TestRecalculate_ZeroConsumption_MarksFresh() 
 			return m, nil
 		}).Times(2)
 
-	suite.rateRepo.EXPECT().Update(gomock.Any(), freshnessTouchParams).Return(&domain.Rate{ID: testBurnRateID}, nil)
+	suite.expectMarkedComputed()
 
 	apiErr := suite.med.RecalculateFromHistory(context.Background(), testAccountID, testItemID)
 	assert.Nil(suite.T(), apiErr)
 }
 
-// With real consumption over a known span, the computed per-day rate is written to the burn rate,
-// which also advances updated_at via UpdateRateByID's NOW(3).
+// With real consumption over a known span, the computed per-day rate is written to the burn rate.
 func (suite *BurnRateMedTestSuite) TestRecalculate_ComputesAndWritesRate() {
 	suite.expectItemAndBaseUnit()
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -147,6 +147,9 @@ func (suite *BurnRateMedTestSuite) TestRecalculate_ComputesAndWritesRate() {
 		}).Times(2)
 
 	// Total consumption 20 over a 2-day span => 10/day, in base units per day.
+	suite.rateRepo.EXPECT().Get(gomock.Any(), testBurnRateID).
+		Return(&domain.Rate{ID: testBurnRateID, Value: "4", NumeratorUnitID: testBaseUnitID, DenominatorUnitID: burnRateDenominatorUnitID}, nil)
+	suite.expectMarkedComputed()
 	suite.rateRepo.EXPECT().
 		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateRateParams{})).
 		DoAndReturn(func(_ context.Context, params domain.UpdateRateParams) (*domain.Rate, *apierror.APIError) {
@@ -159,6 +162,52 @@ func (suite *BurnRateMedTestSuite) TestRecalculate_ComputesAndWritesRate() {
 			assert.Equal(suite.T(), burnRateDenominatorUnitID, *params.DenominatorUnitID)
 			return &domain.Rate{ID: testBurnRateID}, nil
 		})
+
+	apiErr := suite.med.RecalculateFromHistory(context.Background(), testAccountID, testItemID)
+	assert.Nil(suite.T(), apiErr)
+}
+
+func (suite *BurnRateMedTestSuite) TestRecalculate_UnchangedRateIsNotRewritten() {
+	suite.expectItemAndBaseUnit()
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	suite.itemRepo.EXPECT().
+		ListConsumptionChangeLogsForBurnRate(gomock.Any(), testAccountID, testItemID).
+		Return([]domain.BurnRateConsumptionLog{
+			{Value: "-10", UnitID: testBaseUnitID, CreatedAt: start},
+			{Value: "-10", UnitID: testBaseUnitID, CreatedAt: start.Add(72 * time.Hour)},
+		}, nil)
+	suite.unitConv.EXPECT().
+		ConvertValue(gomock.Any(), gomock.Any(), testBaseUnitID, testBaseUnitID).
+		DoAndReturn(func(_ context.Context, m decimal.Decimal, _, _ string) (decimal.Decimal, *apierror.APIError) {
+			return m, nil
+		}).Times(2)
+	// 20 over 3 days, as the last write stored it in DECIMAL(65,30).
+	suite.rateRepo.EXPECT().Get(gomock.Any(), testBurnRateID).
+		Return(&domain.Rate{ID: testBurnRateID, Value: "6.666666666666666700000000000000", NumeratorUnitID: testBaseUnitID, DenominatorUnitID: burnRateDenominatorUnitID}, nil)
+	suite.expectMarkedComputed()
+
+	apiErr := suite.med.RecalculateFromHistory(context.Background(), testAccountID, testItemID)
+	assert.Nil(suite.T(), apiErr)
+}
+
+func (suite *BurnRateMedTestSuite) TestRecalculate_NewUnitsRewriteAnEqualValue() {
+	suite.expectItemAndBaseUnit()
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	suite.itemRepo.EXPECT().
+		ListConsumptionChangeLogsForBurnRate(gomock.Any(), testAccountID, testItemID).
+		Return([]domain.BurnRateConsumptionLog{
+			{Value: "-10", UnitID: testBaseUnitID, CreatedAt: start},
+			{Value: "-10", UnitID: testBaseUnitID, CreatedAt: start.Add(48 * time.Hour)},
+		}, nil)
+	suite.unitConv.EXPECT().
+		ConvertValue(gomock.Any(), gomock.Any(), testBaseUnitID, testBaseUnitID).
+		DoAndReturn(func(_ context.Context, m decimal.Decimal, _, _ string) (decimal.Decimal, *apierror.APIError) {
+			return m, nil
+		}).Times(2)
+	suite.rateRepo.EXPECT().Get(gomock.Any(), testBurnRateID).
+		Return(&domain.Rate{ID: testBurnRateID, Value: "10.000000000000000000000000000000", NumeratorUnitID: "unit_old", DenominatorUnitID: burnRateDenominatorUnitID}, nil)
+	suite.rateRepo.EXPECT().Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateRateParams{})).Return(&domain.Rate{ID: testBurnRateID}, nil)
+	suite.expectMarkedComputed()
 
 	apiErr := suite.med.RecalculateFromHistory(context.Background(), testAccountID, testItemID)
 	assert.Nil(suite.T(), apiErr)

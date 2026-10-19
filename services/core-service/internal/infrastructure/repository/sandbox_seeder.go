@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/queries"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -80,6 +81,12 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 	// The seed writes lines in plain SQL, so their copies are filled here.
 	if err := syncAccountOrderCopies(ctx, tx, accountID); err != nil {
 		return fmt.Errorf("copy seeded line quantities: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at)
+SELECT ?, id, account_id, NOW(3) FROM invoice WHERE account_id = ?
+ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at)`, string(domain.SalesFactScopeInvoice), accountID); err != nil {
+		return fmt.Errorf("mark seeded invoices for sales facts: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

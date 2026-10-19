@@ -85,30 +85,42 @@ func (c *RecalcItemBurnRateConsumer) handleMessage(ctx context.Context, msg amqp
 		accountID = amqpMsg.Identity.Target.AccountID
 	}
 
+	itemIDs := evt.ItemIDs
+	if evt.ItemID != "" {
+		itemIDs = append(itemIDs, evt.ItemID)
+	}
+
 	// A malformed command will never become well-formed. Discarding records the drop as terminal and surfaces it to the failure monitor, rather than ACKing it as if the recalculation had run.
 	switch {
 	case accountID == "":
-		slog.ErrorContext(ctx, "recalc_item_burn_rate: no account on event or identity", "item_id", evt.ItemID)
+		slog.ErrorContext(ctx, "recalc_item_burn_rate: no account on event or identity", "item_ids", itemIDs)
 		return c.inboxConsumer.Discard(ctx, "no account on event or identity")
-	case evt.ItemID == "":
+	case len(itemIDs) == 0:
 		slog.ErrorContext(ctx, "recalc_item_burn_rate: no item on event")
 		return c.inboxConsumer.Discard(ctx, "no item on event")
 	}
 
 	span.SetAttributes(
 		attribute.String("account.id", accountID),
-		attribute.String("item.id", evt.ItemID),
+		attribute.Int("item.count", len(itemIDs)),
 	)
 
-	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		if apiErr := mediator.NewMediatorFactory().Build(f).BurnRate.RecalculateFromHistory(txCtx, accountID, evt.ItemID); apiErr != nil {
+	for i, itemID := range itemIDs {
+		last := i == len(itemIDs)-1
+		apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+			apiErr := mediator.NewMediatorFactory().Build(f).BurnRate.RecalculateFromHistory(txCtx, accountID, itemID)
+			if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+				return apiErr
+			}
+			if !last {
+				return nil
+			}
+			return completeInboxRecord(txCtx, f)
+		})
+		if apiErr != nil {
+			span.RecordError(apiErr)
 			return apiErr
 		}
-		return completeInboxRecord(txCtx, f)
-	})
-	if apiErr != nil {
-		span.RecordError(apiErr)
-		return apiErr
 	}
 	return nil
 }

@@ -108,3 +108,11 @@ AND icl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 AND icl.action_type_code IN ('scan', 'system_action')
 AND CAST(q.value AS DECIMAL(65,30)) < 0
 ORDER BY icl.created_at ASC;
+
+-- name: ListOldestChangeLogsSince :many
+SELECT item_id, MIN(created_at) AS oldest
+FROM inventory_change_log FORCE INDEX (inventory_change_log_account_id_item_id_created_at_id_idx)
+WHERE account_id = sqlc.arg('account_id')
+  AND item_id IN (sqlc.slice('item_ids'))
+  AND created_at >= sqlc.arg('since')
+GROUP BY item_id;

@@ -9,8 +9,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/tracing"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var burnRateSweepTracer = tracing.GetTracer("core-service.burn_rate_scheduler")
@@ -30,13 +32,14 @@ const (
 	// this and never surface; this bounds only how stale an idle item's rate can get.
 	burnRateStaleThreshold = 24 * time.Hour
 
-	// burnRateSweepBatchSize caps how many items one tick enqueues. This, not the poll interval, is the
+	// burnRateSweepBatchSize caps how many stale items one tick reads. This, not the poll interval, is the
 	// guard against a thundering herd: even when every item is stale (e.g. first deploy), the backlog
 	// drains a bounded batch per tick rather than flooding the consumer at once.
 	burnRateSweepBatchSize = 500
 
-	// burnRateSweepScanPage is how many items one sweep query reads; each read is an item and its rate by primary key.
-	burnRateSweepScanPage = 250
+	burnRateSweepMessageItems = 100
+
+	burnRateWindow = 30 * 24 * time.Hour
 )
 
 // BurnRateSchedulerConfig configures the periodic burn-rate sweep.
@@ -90,10 +93,7 @@ type burnRateScheduler struct {
 	pollInterval   time.Duration
 	staleThreshold time.Duration
 	batchSize      int32
-	scanPage       int32
-
-	// cursor is the last item id the sweep read, so each tick resumes the lap where the last one stopped.
-	cursor string
+	now            func() time.Time
 
 	stopCh chan struct{}
 	wg     sync.WaitGroup
@@ -111,7 +111,7 @@ func NewBurnRateScheduler(config *BurnRateSchedulerConfig) *burnRateScheduler {
 		pollInterval:   config.PollInterval,
 		staleThreshold: config.StaleThreshold,
 		batchSize:      config.BatchSize,
-		scanPage:       burnRateSweepScanPage,
+		now:            time.Now,
 		stopCh:         make(chan struct{}),
 	}
 }
@@ -151,47 +151,84 @@ func (s *burnRateScheduler) pollLoop(ctx context.Context) {
 	}
 }
 
-// enqueueStaleRecalcs re-enqueues a burn-rate recompute for up to batchSize stale items, reading items in id
-// order from where the last tick stopped and wrapping at most once, so each tick reads every item at most once.
+// enqueueStaleRecalcs reads up to batchSize of the stalest items and enqueues a recompute, one command per batch of an account's items, for each whose result can have changed since its last recompute: one never recomputed, or one with a change log that has since left the 30-day window. A rate is computed only from the logs in that window, and new logs enqueue their own recompute, so for every other item a recompute would write the same rate; those are only marked computed.
 //
-// The tick only enqueues; the actual recompute runs on the shared consumer, one short transaction per
-// item. It never recomputes inline, which would hold the lease for the length of the whole batch and
-// serialize the sweep behind it.
+// The tick only enqueues; the actual recompute runs on the shared consumer, one short transaction per item. It never recomputes inline, which would hold the lease for the length of the whole batch and serialize the sweep behind it.
 func (s *burnRateScheduler) enqueueStaleRecalcs(ctx context.Context) {
 	ctx, span := burnRateSweepTracer.Start(ctx, "service.burn_rate_scheduler.enqueue_stale")
 	defer span.End()
 
-	staleBefore := time.Now().UTC().Add(-s.staleThreshold)
-	start, wrapped, enqueued := s.cursor, false, int32(0)
-	for enqueued < s.batchSize {
-		items, last, apiErr := s.repos.NewItemRepo().ScanBurnRateItems(ctx, s.cursor, staleBefore, s.scanPage)
+	now := s.now().UTC()
+	itemRepo := s.repos.NewItemRepo()
+	items, apiErr := itemRepo.ListStaleBurnRateItems(ctx, now.Add(-s.staleThreshold), s.batchSize)
+	if apiErr != nil {
+		slog.Error("Burn rate sweep: failed to list stale items", "error", apiErr)
+		return
+	}
+
+	var accounts []string
+	byAccount := map[string][]domain.StaleBurnRateItem{}
+	for _, item := range items {
+		if _, ok := byAccount[item.AccountID]; !ok {
+			accounts = append(accounts, item.AccountID)
+		}
+		byAccount[item.AccountID] = append(byAccount[item.AccountID], item)
+	}
+
+	windowStart := now.Add(-burnRateWindow)
+	enqueued, skipped := 0, 0
+	for _, accountID := range accounts {
+		recompute, unchanged, apiErr := s.partitionStale(ctx, accountID, byAccount[accountID], windowStart)
 		if apiErr != nil {
-			slog.Error("Burn rate sweep: failed to scan items", "error", apiErr)
-			return
+			slog.Error("Burn rate sweep: failed to read change logs", "account_id", accountID, "error", apiErr)
+			continue
 		}
-		for _, item := range items {
-			if enqueued == s.batchSize {
-				// The next tick resumes after the last item enqueued.
-				return
+		if len(unchanged) > 0 {
+			if apiErr := itemRepo.MarkBurnRatesComputed(ctx, unchanged); apiErr != nil {
+				slog.Error("Burn rate sweep: failed to mark unchanged items", "account_id", accountID, "error", apiErr)
+			} else {
+				skipped += len(unchanged)
 			}
-			if apiErr := mediator.EnqueueRecalc(ctx, s.repos, item.AccountID, item.ItemID); apiErr != nil {
-				// One bad enqueue should not abort the batch; it is retried on a later tick, since the
-				// item stays stale until a recompute lands.
-				slog.Error("Burn rate sweep: failed to enqueue recalc",
-					"account_id", item.AccountID, "item_id", item.ItemID, "error", apiErr)
-			}
-			enqueued++
-			s.cursor = item.ItemID
 		}
-		s.cursor = last
-		if last == "" {
-			if wrapped || start == "" {
-				return
+		for start := 0; start < len(recompute); start += burnRateSweepMessageItems {
+			batch := recompute[start:min(start+burnRateSweepMessageItems, len(recompute))]
+			if apiErr := mediator.EnqueueRecalcBatch(ctx, s.repos, accountID, batch); apiErr != nil {
+				// The items stay stale, so a later tick retries them.
+				slog.Error("Burn rate sweep: failed to enqueue recalc", "account_id", accountID, "items", len(batch), "error", apiErr)
+				continue
 			}
-			wrapped = true
-		}
-		if wrapped && s.cursor != "" && s.cursor >= start {
-			return
+			enqueued += len(batch)
 		}
 	}
+	span.SetAttributes(attribute.Int("burn_rate.stale", len(items)), attribute.Int("burn_rate.enqueued", enqueued), attribute.Int("burn_rate.skipped", skipped))
+}
+
+func (s *burnRateScheduler) partitionStale(ctx context.Context, accountID string, items []domain.StaleBurnRateItem, windowStart time.Time) (recompute, unchanged []string, apiErr *apierror.APIError) {
+	var since *time.Time
+	var computed []string
+	for _, item := range items {
+		if item.ComputedAt == nil {
+			recompute = append(recompute, item.ItemID)
+			continue
+		}
+		computed = append(computed, item.ItemID)
+		if from := item.ComputedAt.Add(-burnRateWindow); since == nil || from.Before(*since) {
+			since = &from
+		}
+	}
+	if len(computed) == 0 {
+		return recompute, nil, nil
+	}
+	oldest, apiErr := s.repos.NewItemRepo().OldestChangeLogsSince(ctx, accountID, computed, *since)
+	if apiErr != nil {
+		return nil, nil, apiErr
+	}
+	for _, itemID := range computed {
+		if at, ok := oldest[itemID]; ok && at.Before(windowStart) {
+			recompute = append(recompute, itemID)
+		} else {
+			unchanged = append(unchanged, itemID)
+		}
+	}
+	return recompute, unchanged, nil
 }

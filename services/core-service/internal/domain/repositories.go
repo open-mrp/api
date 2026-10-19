@@ -207,9 +207,9 @@ type ItemRepo interface {
 	// bulk upsert category validation.
 	GetCategoryBaseUnitIDs(ctx context.Context, categoryIDs []string) (map[string]CategoryRef, *apierror.APIError)
 	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
-	// ScanBurnRateItems reads the next limit items after afterID in id order, returning those whose burn
-	// rate has not been recomputed since staleBefore and the last id read ("" once past the last item).
-	ScanBurnRateItems(ctx context.Context, afterID string, staleBefore time.Time, limit int32) (stale []StaleBurnRateItem, lastID string, apiErr *apierror.APIError)
+	ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]StaleBurnRateItem, *apierror.APIError)
+	MarkBurnRatesComputed(ctx context.Context, itemIDs []string) *apierror.APIError
+	OldestChangeLogsSince(ctx context.Context, accountID string, itemIDs []string, since time.Time) (map[string]time.Time, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
 	// FindBySKU returns the existing item's ID and its unit_value rate ID for the given SKU within the account. Returns (nil, nil, nil) when no match exists. Used by bulk upsert flows.
 	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
@@ -964,7 +964,6 @@ type SalesFactRepo interface {
 
 	// ListInvoicesAfter pages every account's invoices in (created_at, id) order after the cursor; a nil cursor starts at the oldest.
 	ListInvoicesAfter(ctx context.Context, after *SalesFactInvoiceCursor, limit int32) ([]SalesFactInvoiceCursor, *apierror.APIError)
-	ListInvoiceIDsCreatedSince(ctx context.Context, since time.Time, limit int32) ([]string, *apierror.APIError)
 	// ListFactInvoiceIDsAfter pages the distinct invoices sales_line_fact holds, in id order.
 	ListFactInvoiceIDsAfter(ctx context.Context, afterInvoiceID string, limit int32) ([]string, *apierror.APIError)
 	// FilterExistingInvoiceIDs returns the subset of ids that still exist in invoice.

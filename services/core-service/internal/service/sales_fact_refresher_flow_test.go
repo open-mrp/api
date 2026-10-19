@@ -213,11 +213,10 @@ func TestAUnitChangeRestartsTheReconcilePass(t *testing.T) {
 	require.Nil(t, r.drainDirty(context.Background()))
 }
 
-// expectQuietPasses sets up a tick whose rolling recompute, reconcile and rollup sweep have nothing due.
+// expectQuietPasses sets up a tick whose reconcile and sweeps have nothing due.
 func expectQuietPasses(r *SalesFactRefresher, repo *repositorymock.MockSalesFactRepo) {
 	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
 	r.cfg.Now = func() time.Time { return now }
-	r.lastRecent = now
 	started := now.Add(-time.Hour)
 	repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{PassStartedAt: &started, LastCompletedAt: &started}, nil).AnyTimes()
 	repo.EXPECT().GetRollupSync(gomock.Any()).Return(&domain.SalesRollupSync{PassStartedAt: &started, LastCompletedAt: &started}, nil).AnyTimes()
@@ -340,7 +339,7 @@ func TestAReconcilePassInProgressLeavesABacklog(t *testing.T) {
 			clock := now
 			// Each read of the clock advances it, so the budget runs out after one page.
 			r.cfg.Now = func() time.Time { clock = clock.Add(r.cfg.ReconcileBudget / 2); return clock }
-			started := now.AddDate(0, 0, -2)
+			started := now.AddDate(0, 0, -8)
 			repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{PassStartedAt: &started, LastCompletedAt: &started}, nil)
 			repo.EXPECT().ListInvoicesAfter(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.page, nil)
 			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil).Times(computeBatches(len(tt.page)))
@@ -390,7 +389,7 @@ func TestTheMarkerWakesTheRefresherAfterItsMarkIsWritten(t *testing.T) {
 			return nil
 		})
 
-	m.HandleAuditEvent(context.Background(), audit.ObservedEvent{AccountID: "ac_1", ResourceType: constants.ObjectTypeInvoice, ResourceID: "iv_1"})
+	require.NoError(t, m.HandleAuditEvent(context.Background(), audit.ObservedEvent{AccountID: "ac_1", ResourceType: constants.ObjectTypeInvoice, ResourceID: "iv_1"}))
 
 	require.Equal(t, 1, *wakes)
 }
@@ -406,8 +405,9 @@ func TestTheMarkerDoesNotWakeTheRefresherWithoutAMark(t *testing.T) {
 			m, repo, wakes := newMockMarker(t)
 			repo.EXPECT().MarkDirty(gomock.Any(), gomock.Any(), "iv_fail", gomock.Any()).Return(apierror.NewInternalError(nil, "down")).AnyTimes()
 
-			m.HandleAuditEvent(context.Background(), e)
+			err := m.HandleAuditEvent(context.Background(), e)
 
+			require.Equal(t, e.ResourceID == "iv_fail", err != nil, "only a failed mark is returned for a retry")
 			require.Zero(t, *wakes)
 		})
 	}
@@ -420,7 +420,7 @@ func TestAMarkerWithoutAWakeStillMarks(t *testing.T) {
 	factory.EXPECT().NewSalesFactRepo().Return(repo).AnyTimes()
 	repo.EXPECT().MarkDirty(gomock.Any(), domain.SalesFactScopeInvoice, "iv_1", "ac_1").Return(nil)
 
-	NewSalesFactMarker(factory, nil).HandleAuditEvent(context.Background(), audit.ObservedEvent{AccountID: "ac_1", ResourceType: constants.ObjectTypeInvoice, ResourceID: "iv_1"})
+	_ = NewSalesFactMarker(factory, nil).HandleAuditEvent(context.Background(), audit.ObservedEvent{AccountID: "ac_1", ResourceType: constants.ObjectTypeInvoice, ResourceID: "iv_1"})
 }
 
 func TestTheFirstBuyerSweepRestartsTheFactReconcileToFillOrderDates(t *testing.T) {
@@ -552,9 +552,33 @@ func TestADailyPassStartsOnlyAfterMidnightEastern(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.due, r.passDue(tt.started, tt.now.UTC()))
+			require.Equal(t, tt.due, r.passDue(tt.started, tt.now.UTC(), 1))
 		})
 	}
+}
+
+func TestTheReconcilePassStartsAfterMidnightOnceItsDaysHavePassed(t *testing.T) {
+	r, _, _ := newMockRefresher(t)
+	et, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+	at := func(m time.Month, d, h int) time.Time { return time.Date(2026, m, d, h, 0, 0, 0, et) }
+	started := ptrTime(at(10, 1, 0))
+
+	require.False(t, r.passDue(started, at(10, 7, 23).UTC(), 7))
+	require.True(t, r.passDue(started, at(10, 8, 1).UTC(), 7))
+	require.True(t, r.passDue(ptrTime(at(10, 1, 23)), at(10, 8, 0).UTC(), 7))
+	require.False(t, r.passDue(ptrTime(at(10, 2, 0)), at(10, 8, 23).UTC(), 7))
+}
+
+func TestAReconcilePassDoesNotStartBeforeItsDays(t *testing.T) {
+	r, repo, _ := newMockRefresher(t)
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	r.cfg.Now = func() time.Time { return now }
+	started := now.AddDate(0, 0, -3)
+	repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{PassStartedAt: &started, LastCompletedAt: &started}, nil)
+	repo.EXPECT().ListInvoicesAfter(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	require.Nil(t, r.reconcile(context.Background()))
 }
 
 // computeBatches is how many recomputes refreshInvoices runs for n invoices.

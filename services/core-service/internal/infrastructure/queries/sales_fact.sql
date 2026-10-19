@@ -100,11 +100,6 @@ WHERE created_at >= sqlc.arg('after_created_at')
 ORDER BY created_at, id
 LIMIT ?;
 
--- name: ListInvoiceIDsCreatedSince :many
--- Newest first: when the cap bites, the invoices left out are the oldest in the window, the least
--- likely to be changing, and the reconcile pass still reaches them.
-SELECT id FROM invoice WHERE created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?;
-
 -- name: MarkSalesFactDirty :exec
 INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at)
 VALUES (?, ?, ?, NOW(3))

@@ -54,6 +54,27 @@ func Subscribe(ctx context.Context, broker messaging.MessageBroker, cfg Subscrib
 	}, opts...)
 }
 
+// ConsumeConfig configures Consume.
+type ConsumeConfig struct {
+	// Queue (required) is the durable queue, bound to audit events, that the replicas share.
+	Queue string
+
+	// OnEvent (required) is called once per delivered audit event. A returned error retries the delivery, so it must be idempotent.
+	OnEvent func(context.Context, ObservedEvent) error
+}
+
+// Consume delivers each audit event published by any service to one replica, at least once.
+func Consume(ctx context.Context, broker messaging.MessageBroker, cfg ConsumeConfig) error {
+	return broker.ConsumeMessages(ctx, cfg.Queue, func(ctx context.Context, d amqp.Delivery) error {
+		event, ok := decodeObservedEvent(d.Body)
+		if !ok {
+			slog.Warn("audit consumer: dropping undecodable audit event", "queue", cfg.Queue, "message_id", d.MessageId)
+			return nil
+		}
+		return cfg.OnEvent(ctx, event)
+	})
+}
+
 func decodeObservedEvent(body []byte) (ObservedEvent, bool) {
 	var envelope contracts.AmqpMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {

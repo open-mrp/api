@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.10.3](https://github.com/open-mrp/api/compare/v4.10.2...v4.10.3) (2026-10-19)
+
+
+### Performance Improvements
+
+* make the sales fact refresher and burn rate sweep incremental ([#342](https://github.com/open-mrp/api/issues/342)) ([4f90d2a](https://github.com/open-mrp/api/commit/4f90d2aeba004ae1ca8635c2879982fefa9b9582))
+* read shipment search matches, schedule demand and production costs by key ([#344](https://github.com/open-mrp/api/issues/344)) ([9976f16](https://github.com/open-mrp/api/commit/9976f16678ea8fec53589044db28c1cfd5be10da))
+* slow the idle outbox poll and hold scheduler leases across ticks ([#341](https://github.com/open-mrp/api/issues/341)) ([2530c05](https://github.com/open-mrp/api/commit/2530c05f9c1cccb08e41800da1d692d71c797034))
+
 ## [4.10.2](https://github.com/open-mrp/api/compare/v4.10.1...v4.10.2) (2026-10-14)
 
 

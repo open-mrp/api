@@ -77,21 +77,6 @@ func (mr *MockAccountRepoMockRecorder) ClearStripeCustomer(ctx, accountID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearStripeCustomer", reflect.TypeOf((*MockAccountRepo)(nil).ClearStripeCustomer), ctx, accountID)
 }
 
-// CountNonSandboxByPlanCode mocks base method.
-func (m *MockAccountRepo) CountNonSandboxByPlanCode(ctx context.Context, planCode string) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountNonSandboxByPlanCode", ctx, planCode)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountNonSandboxByPlanCode indicates an expected call of CountNonSandboxByPlanCode.
-func (mr *MockAccountRepoMockRecorder) CountNonSandboxByPlanCode(ctx, planCode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountNonSandboxByPlanCode", reflect.TypeOf((*MockAccountRepo)(nil).CountNonSandboxByPlanCode), ctx, planCode)
-}
-
 // Create mocks base method.
 func (m *MockAccountRepo) Create(ctx context.Context, id, name string, accountTypeCode domain.AccountType, planCode constants.PlanCode) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -2629,20 +2614,6 @@ func (m *MockRegistrationRepo) CreateAccountBranding(ctx context.Context, accoun
 func (mr *MockRegistrationRepoMockRecorder) CreateAccountBranding(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccountBranding", reflect.TypeOf((*MockRegistrationRepo)(nil).CreateAccountBranding), ctx, accountID)
-}
-
-// CreateAccountForRegistration mocks base method.
-func (m *MockRegistrationRepo) CreateAccountForRegistration(ctx context.Context, params domain.CreateAccountParams) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAccountForRegistration", ctx, params)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// CreateAccountForRegistration indicates an expected call of CreateAccountForRegistration.
-func (mr *MockRegistrationRepoMockRecorder) CreateAccountForRegistration(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccountForRegistration", reflect.TypeOf((*MockRegistrationRepo)(nil).CreateAccountForRegistration), ctx, params)
 }
 
 // CreateAccountPortal mocks base method.

@@ -88,9 +88,6 @@ service CoreService {
   // Resolves an account from a Stripe customer ID.
   rpc GetAccountByStripeCustomerID(GetAccountByStripeCustomerIDRequest) returns (GetAccountByStripeCustomerIDResponse);
 
-  // Creates production account, sandbox, roles, permissions, and account-user for a new registration.
-  rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
-
   // Returns a paginated list of units (account-specific and system) with filtering support.
   rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
 
@@ -818,7 +815,6 @@ service CoreService {
   rpc CheckDuplicate(CheckDuplicateRequest) returns (CheckDuplicateResponse);
   // Emails a record (invoice, sales order, or purchase order) with PDF attachment.
   rpc EmailRecord(EmailRecordRequest) returns (EmailRecordResponse);
-  rpc RequestDemo(RequestDemoRequest) returns (RequestDemoResponse);
   rpc SubmitFeedback(SubmitFeedbackRequest) returns (SubmitFeedbackResponse);
 
   // Catalog (supports customer actor access)

@@ -232,18 +232,6 @@ func (r *accountRepoImpl) GetSeatLimitByPlanCode(ctx context.Context, planCode s
 	return &val, nil
 }
 
-func (r *accountRepoImpl) CountNonSandboxByPlanCode(ctx context.Context, planCode string) (int64, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.count_non_sandbox_by_plan_code")
-	defer span.End()
-
-	count, err := r.queries.CountNonSandboxAccountsByPlanCode(ctx, planCode)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-
-	return count, nil
-}
-
 func (r *accountRepoImpl) UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_agent_spending_cap")
 	defer span.End()

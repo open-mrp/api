@@ -58,21 +58,6 @@ func (mr *MockStripeClientMockRecorder) CommitBillingIntent(ctx, intentID, payme
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitBillingIntent", reflect.TypeOf((*MockStripeClient)(nil).CommitBillingIntent), ctx, intentID, paymentIntentID, cadenceID)
 }
 
-// CreateBillingCadence mocks base method.
-func (m *MockStripeClient) CreateBillingCadence(ctx context.Context, billingProfileID, idempotencyKey string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateBillingCadence", ctx, billingProfileID, idempotencyKey)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateBillingCadence indicates an expected call of CreateBillingCadence.
-func (mr *MockStripeClientMockRecorder) CreateBillingCadence(ctx, billingProfileID, idempotencyKey any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBillingCadence", reflect.TypeOf((*MockStripeClient)(nil).CreateBillingCadence), ctx, billingProfileID, idempotencyKey)
-}
-
 // CreateBillingIntent mocks base method.
 func (m *MockStripeClient) CreateBillingIntent(ctx context.Context, cadenceID string, actions []domain.BillingIntentAction, idempotencyKey string) (string, error) {
 	m.ctrl.T.Helper()
@@ -101,21 +86,6 @@ func (m *MockStripeClient) CreateBillingPortalSession(ctx context.Context, custo
 func (mr *MockStripeClientMockRecorder) CreateBillingPortalSession(ctx, customerID, returnURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBillingPortalSession", reflect.TypeOf((*MockStripeClient)(nil).CreateBillingPortalSession), ctx, customerID, returnURL)
-}
-
-// CreateBillingProfile mocks base method.
-func (m *MockStripeClient) CreateBillingProfile(ctx context.Context, customerID, idempotencyKey string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateBillingProfile", ctx, customerID, idempotencyKey)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateBillingProfile indicates an expected call of CreateBillingProfile.
-func (mr *MockStripeClientMockRecorder) CreateBillingProfile(ctx, customerID, idempotencyKey any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBillingProfile", reflect.TypeOf((*MockStripeClient)(nil).CreateBillingProfile), ctx, customerID, idempotencyKey)
 }
 
 // CreateCreditGrant mocks base method.
@@ -161,21 +131,6 @@ func (m *MockStripeClient) CreatePaymentIntent(ctx context.Context, amountCents 
 func (mr *MockStripeClientMockRecorder) CreatePaymentIntent(ctx, amountCents, currency, customerID, returnURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePaymentIntent", reflect.TypeOf((*MockStripeClient)(nil).CreatePaymentIntent), ctx, amountCents, currency, customerID, returnURL)
-}
-
-// CreateSetupIntent mocks base method.
-func (m *MockStripeClient) CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*domain.StripeSetupIntent, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSetupIntent", ctx, customerID, idempotencyKey)
-	ret0, _ := ret[0].(*domain.StripeSetupIntent)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateSetupIntent indicates an expected call of CreateSetupIntent.
-func (mr *MockStripeClientMockRecorder) CreateSetupIntent(ctx, customerID, idempotencyKey any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSetupIntent", reflect.TypeOf((*MockStripeClient)(nil).CreateSetupIntent), ctx, customerID, idempotencyKey)
 }
 
 // FetchObject mocks base method.
@@ -251,21 +206,6 @@ func (m *MockStripeClient) GetRateCardTokenRates(ctx context.Context, rateCardID
 func (mr *MockStripeClientMockRecorder) GetRateCardTokenRates(ctx, rateCardID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRateCardTokenRates", reflect.TypeOf((*MockStripeClient)(nil).GetRateCardTokenRates), ctx, rateCardID)
-}
-
-// GetSetupIntent mocks base method.
-func (m *MockStripeClient) GetSetupIntent(ctx context.Context, setupIntentID string) (*domain.StripeSetupIntent, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSetupIntent", ctx, setupIntentID)
-	ret0, _ := ret[0].(*domain.StripeSetupIntent)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSetupIntent indicates an expected call of GetSetupIntent.
-func (mr *MockStripeClientMockRecorder) GetSetupIntent(ctx, setupIntentID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSetupIntent", reflect.TypeOf((*MockStripeClient)(nil).GetSetupIntent), ctx, setupIntentID)
 }
 
 // ReportMeterEvent mocks base method.

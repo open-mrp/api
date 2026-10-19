@@ -153,17 +153,6 @@ func TestConversationActions_RefuseANonUserCaller(t *testing.T) {
 	})
 }
 
-// Every registration action is authorized against the person registering, so an API key cannot
-// drive somebody else's signup to completion.
-func TestRegistrationSession_ActionsRequireTheRegisteringUser(t *testing.T) {
-	t.Parallel()
-
-	runUnknownIDCases(t, map[string]unknownIDCase{
-		"update":   {method: "PATCH", path: registrationSessionsPath + "/rgfw_doesnotexist", body: map[string]any{"step": "user_details"}, want: 401},
-		"complete": {method: "POST", path: registrationSessionsPath + "/rgfw_doesnotexist/accounts", want: 401},
-	})
-}
-
 // ──────────────────────────────────────────────
 // Bulk delete
 // ──────────────────────────────────────────────

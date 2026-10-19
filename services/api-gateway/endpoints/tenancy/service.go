@@ -203,19 +203,6 @@ func tenancyAccountPlanFromProto(p *pb.TenancyAccountPlanProto) *apiresource.Ten
 	}
 }
 
-func tenancyPendingRegistrationFromProto(pr *pb.TenancyPendingRegistrationProto) *apiresource.TenancyPendingRegistration {
-	if pr == nil {
-		return nil
-	}
-	return &apiresource.TenancyPendingRegistration{
-		Object:    constants.ObjectTypeTenancyPendingRegistration,
-		SessionID: pr.SessionId,
-		PlanCode:  constants.PlanCode(pr.PlanCode),
-		Step:      constants.RegistrationStep(pr.Step),
-		CreatedAt: grpcutil.TimestampToTime(pr.CreatedAt),
-	}
-}
-
 func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	if resp == nil {
 		return &apiresource.Tenancy{
@@ -226,8 +213,7 @@ func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	}
 
 	result := &apiresource.Tenancy{
-		Object:              constants.ObjectTypeTenancy,
-		PendingRegistration: tenancyPendingRegistrationFromProto(resp.PendingRegistration),
+		Object: constants.ObjectTypeTenancy,
 	}
 
 	if resp.CurrentAccount != nil {

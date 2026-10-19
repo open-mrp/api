@@ -51,7 +51,7 @@ type UtilsSvcConfig struct {
 	// PortalURL (optional; default: "") is the customer portal base URL used in links when the merchant has no verified custom domain. It is not validated at construction.
 	PortalURL string
 
-	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts and marketing-site demo requests.
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts.
 	OperatorEmail string
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
@@ -430,37 +430,6 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 	}
 
 	return nil
-}
-
-// RequestDemo is intentionally anonymous for public OpenAPI; POST uses idempotency keys.
-func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDemoParams) *apierror.APIError {
-	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.request_demo")
-	defer span.End()
-
-	slog.InfoContext(ctx, "demo request received",
-		"name", params.Name,
-		"email", params.Email,
-		"company", params.Company,
-	)
-
-	// The log line alone lost every demo request that arrived at this endpoint rather than the
-	// dashboard's, which is the whole point of the lead form.
-	emailData := messaging.EmailSendData{
-		To:         []string{s.operatorEmail},
-		Subject:    "Demo Request",
-		TemplateID: constants.EmailTemplateDemoRequest,
-		Params: map[string]any{
-			"Name":        params.Name,
-			"Email":       params.Email,
-			"Company":     params.Company,
-			"PhoneNumber": ptrutil.Deref(params.PhoneNumber),
-			"Message":     ptrutil.Deref(params.Message),
-		},
-	}
-
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
-		return txSvc.notificationPublisher.PublishSendEmail(event.WithRepos(txCtx, txSvc.repos), emailData)
-	})
 }
 
 func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitFeedbackParams) *apierror.APIError {

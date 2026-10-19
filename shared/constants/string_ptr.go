@@ -44,7 +44,6 @@ func (m *IntegrationCode) StringPtr() *string {
 	return stringPtrEnum(m)
 }
 func (m *CommissionPolicy) StringPtr() *string { return stringPtrEnum(m) }
-func (m *RegistrationStep) StringPtr() *string { return stringPtrEnum(m) }
 func (m *AccountStatusCode) StringPtr() *string {
 	return stringPtrEnum(m)
 }

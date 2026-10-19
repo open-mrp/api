@@ -304,7 +304,6 @@ func TestMerchantFacingTemplatesSendAsMerchant(t *testing.T) {
 	// And the converse: a credential email must never leave from a tenant's domain.
 	for _, id := range []constants.EmailTemplate{
 		constants.EmailTemplatePasswordReset,
-		constants.EmailTemplateRegistrationVerify,
 		constants.EmailTemplateNewUserWelcome,
 		constants.EmailTemplateChatMessage,
 	} {

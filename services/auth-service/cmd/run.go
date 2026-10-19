@@ -97,22 +97,6 @@ func Run(
 		coreClient = cachedCoreClient
 	}
 
-	// Billing service client (optional — only if billing service is configured)
-	var billingClient domain.AuthBillingClient
-	if cfg.BillingServiceURL != "" {
-		bc, billingErr := grpc.NewAuthBillingClient(cfg.BillingServiceURL)
-		if billingErr != nil {
-			return billingErr
-		}
-		defer bc.Close()
-		billingClient = bc
-
-		logger.Info("Waiting for Billing Service to be ready...")
-		if billingErr := billingClient.WaitForReady(ctx); billingErr != nil {
-			return billingErr
-		}
-	}
-
 	txManager := service.NewTransactionManager(db, queries)
 	authConfig := service.BuildAuthSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
 	authConfig.TxManager = txManager
@@ -138,16 +122,11 @@ func Run(
 	docAPIKeyConfig.TxManager = txManager
 	docAPIKeySvc := service.NewDocAPIKeySvc(docAPIKeyConfig)
 
-	registrationSessionConfig := service.BuildRegistrationSessionSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient, billingClient)
-	registrationSessionConfig.TxManager = txManager
-	registrationSessionConfig.OperatorEmail = cfg.OperatorEmail
-	registrationSessionSvc := service.NewRegistrationSessionSvc(registrationSessionConfig)
-
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err
 	}
-	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc, registrationSessionSvc)
+	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc)
 
 	logger.Info("Auth service started", "port", cfg.Port)
 

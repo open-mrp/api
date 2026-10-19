@@ -91,11 +91,6 @@ type SwitchPlanResult struct {
 	IntentID *string
 }
 
-type BillingProfileResult struct {
-	ProfileID string
-	CadenceID string
-}
-
 type AccountSubscriptionInfo struct {
 	SubscriptionStatus           *string
 	SubscriptionCurrentPeriodEnd *time.Time

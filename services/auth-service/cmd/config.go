@@ -9,15 +9,13 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	"github.com/open-mrp/api/shared/env"
-	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
-	defaultPort              = contracts.GRPCPort
-	defaultRabbitMQURI       = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
-	defaultPortalURL         = "https://portal.openmrp.ai"
-	defaultCoreServiceURL    = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
-	defaultBillingServiceURL = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
+	defaultPort           = contracts.GRPCPort
+	defaultRabbitMQURI    = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultPortalURL      = "https://portal.openmrp.ai"
+	defaultCoreServiceURL = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
 )
 
 const (
@@ -25,15 +23,13 @@ const (
 	envDBURL                  = "DB_URL"
 	envFrontendURL            = "FRONTEND_URL"
 	envPortalURL              = "PORTAL_URL"
-	envOperatorEmail          = "OPERATOR_EMAIL"
 	envJWTSecret              = "JWT_SECRET"
 	envPepper                 = "PEPPER"
 	envRabbitMQURI            = "RABBITMQ_URI"
 	envCoreServiceURL         = "CORE_SERVICE_URL"
 	envPlatformServiceURL     = "PLATFORM_SERVICE_URL"
 	envDocAPIKeyEncryptionKey = "DOC_API_KEY_ENCRYPTION_KEY" // #nosec G101 - Env var name, not a credential
-	envBillingServiceURL      = "BILLING_SERVICE_URL"
-	envCursorHMACKey          = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
+	envCursorHMACKey          = "CURSOR_HMAC_KEY"            // #nosec G101 - Env var name, not a credential
 	envPlatformMode           = "PLATFORM"
 	envLookupCacheDisabled    = "LOOKUP_CACHE_DISABLED"
 )
@@ -51,9 +47,6 @@ type config struct {
 
 	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal, used in slug-scoped links sent to portal customers.
 	PortalURL string
-
-	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives registration-limit alerts.
-	OperatorEmail string
 
 	// JWTSecret (required) is the secret used to sign JWT tokens.
 	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
@@ -77,9 +70,6 @@ type config struct {
 	// docAPIKeyEncryptionKeyErr records a DOC_API_KEY_ENCRYPTION_KEY decode failure from
 	// withDefaults so validate can surface it as a component-scoped error.
 	docAPIKeyEncryptionKeyErr error
-
-	// BillingServiceURL (optional; default: "billing-service:9092") is the billing service address for gRPC.
-	BillingServiceURL string
 
 	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
 	CursorHMACKey []byte
@@ -114,14 +104,12 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		DBURL:                     env.GetEnv(envDBURL, getenv),
 		FrontendURL:               env.GetEnv(envFrontendURL, getenv),
 		PortalURL:                 cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
-		OperatorEmail:             cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
 		JWTSecret:                 env.GetEnv(envJWTSecret, getenv),
 		Pepper:                    []byte(env.GetEnv(envPepper, getenv)),
 		RabbitMQURI:               cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		CoreServiceURL:            cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
 		PlatformServiceURL:        env.GetEnv(envPlatformServiceURL, getenv),
 		DocAPIKeyEncryptionKey:    key,
-		BillingServiceURL:         cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
 		CursorHMACKey:             []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		PlatformMode:              platformMode,
 		LookupCacheDisabled:       env.GetEnv(envLookupCacheDisabled, getenv) == "true",

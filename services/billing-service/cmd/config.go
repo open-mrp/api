@@ -27,7 +27,6 @@ const (
 	envCursorHMACKey              = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
 	envFrontendURL                = "FRONTEND_URL"
 	envStripeWebhookVerboseErrors = "STRIPE_WEBHOOK_VERBOSE_ERRORS"
-	envStripePublishableKey       = "STRIPE_PUBLISHABLE_KEY" // #nosec G101 - Env var name, not a credential
 	envPlatformMode               = "PLATFORM"
 )
 
@@ -68,11 +67,6 @@ type config struct {
 	// StripeWebhookVerboseErrors (optional; default: false) when true, 400 responses for webhook signature
 	// failures include the underlying Stripe error in the message (for development).
 	StripeWebhookVerboseErrors bool
-
-	// StripePublishableKey (required) is the Stripe publishable key sent to clients
-	// for Stripe.js initialization.
-	// Not enforced when PlatformMode is "test".
-	StripePublishableKey string
 }
 
 func (c *config) withDefaults(getenv func(string) string) *config {
@@ -105,7 +99,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		CursorHMACKey:              []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		StripeWebhookVerboseErrors: verboseWebhookErrors,
-		StripePublishableKey:       env.GetEnv(envStripePublishableKey, getenv),
 	}
 }
 
@@ -125,9 +118,6 @@ func (c *config) validate() error {
 		}
 		if c.StripeSecretKey == "" {
 			return fmt.Errorf("billing-service: STRIPE_SECRET_KEY is required")
-		}
-		if c.StripePublishableKey == "" {
-			return fmt.Errorf("billing-service: STRIPE_PUBLISHABLE_KEY is required")
 		}
 	}
 	if c.CoreServiceURL == "" {

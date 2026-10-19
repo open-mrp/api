@@ -84,6 +84,5 @@ As of the latest review, those routes are grouped under api-gateway as: `account
 **Exceptions (no resource audit expected for the API resource model):**
 
 - `address-validation` validate action: does not persist domain state in core.
-- `utils` request-demo: marketing / lead capture, not a persisted API resource in the usual sense (product choice if a synthetic event is ever required).
 
 **Conformance spot-check (publish sites):** callers use each service’s `domain.ServiceName`; `ResourceID` is always a type-prefixed ID (e.g. account subscription updates on the account row use the account type ID, not internal keys); `EventData.Metadata` is rarely needed and should not repeat actor or target account—identity is already on the AMQP payload in `shared/audit/publisher.go`.

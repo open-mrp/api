@@ -739,3 +739,20 @@ func jsonListData(m map[string]any, key string) []any {
 	}
 	return jsonArray(obj, "data")
 }
+
+const accessTokenCookieName = "__Secure-openmrp.access-token"
+
+// accessTokenFromSetCookie pulls the access token out of a response's Set-Cookie
+// headers, for endpoints that log the user in via cookies rather than returning
+// the token in the body.
+func accessTokenFromSetCookie(t *testing.T, header http.Header) string {
+	t.Helper()
+	for _, raw := range header["Set-Cookie"] {
+		c, err := http.ParseSetCookie(raw)
+		if err == nil && c.Name == accessTokenCookieName && c.Value != "" {
+			return c.Value
+		}
+	}
+	t.Fatalf("no %s cookie in response", accessTokenCookieName)
+	return ""
+}

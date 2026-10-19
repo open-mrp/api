@@ -27,33 +27,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ValidateCredential_FullMethodName               = "/auth.AuthService/ValidateCredential"
-	AuthService_Login_FullMethodName                            = "/auth.AuthService/Login"
-	AuthService_Register_FullMethodName                         = "/auth.AuthService/Register"
-	AuthService_RefreshToken_FullMethodName                     = "/auth.AuthService/RefreshToken"
-	AuthService_RequestPasswordReset_FullMethodName             = "/auth.AuthService/RequestPasswordReset"
-	AuthService_ResetPassword_FullMethodName                    = "/auth.AuthService/ResetPassword"
-	AuthService_RevokeRefreshToken_FullMethodName               = "/auth.AuthService/RevokeRefreshToken"
-	AuthService_UpdatePassword_FullMethodName                   = "/auth.AuthService/UpdatePassword"
-	AuthService_CreateAPIKey_FullMethodName                     = "/auth.AuthService/CreateAPIKey"
-	AuthService_RotateAPIKey_FullMethodName                     = "/auth.AuthService/RotateAPIKey"
-	AuthService_RevokeAPIKey_FullMethodName                     = "/auth.AuthService/RevokeAPIKey"
-	AuthService_ListAPIKeys_FullMethodName                      = "/auth.AuthService/ListAPIKeys"
-	AuthService_GetAPIKey_FullMethodName                        = "/auth.AuthService/GetAPIKey"
-	AuthService_BatchGetAPIKeysByIDs_FullMethodName             = "/auth.AuthService/BatchGetAPIKeysByIDs"
-	AuthService_GetOrCreateDocAPIKey_FullMethodName             = "/auth.AuthService/GetOrCreateDocAPIKey"
-	AuthService_CreateRegistrationSession_FullMethodName        = "/auth.AuthService/CreateRegistrationSession"
-	AuthService_ResendVerificationEmail_FullMethodName          = "/auth.AuthService/ResendVerificationEmail"
-	AuthService_VerifyRegistrationToken_FullMethodName          = "/auth.AuthService/VerifyRegistrationToken"
-	AuthService_GetRegistrationSession_FullMethodName           = "/auth.AuthService/GetRegistrationSession"
-	AuthService_CreateUserForRegistration_FullMethodName        = "/auth.AuthService/CreateUserForRegistration"
-	AuthService_UpdateRegistrationSession_FullMethodName        = "/auth.AuthService/UpdateRegistrationSession"
-	AuthService_ListRegistrationSessions_FullMethodName         = "/auth.AuthService/ListRegistrationSessions"
-	AuthService_SetupRegistrationBilling_FullMethodName         = "/auth.AuthService/SetupRegistrationBilling"
-	AuthService_ConfirmRegistrationPayment_FullMethodName       = "/auth.AuthService/ConfirmRegistrationPayment"
-	AuthService_CompleteRegistration_FullMethodName             = "/auth.AuthService/CompleteRegistration"
-	AuthService_MagicLogin_FullMethodName                       = "/auth.AuthService/MagicLogin"
-	AuthService_GetIncompleteRegistrationSession_FullMethodName = "/auth.AuthService/GetIncompleteRegistrationSession"
+	AuthService_ValidateCredential_FullMethodName   = "/auth.AuthService/ValidateCredential"
+	AuthService_Login_FullMethodName                = "/auth.AuthService/Login"
+	AuthService_Register_FullMethodName             = "/auth.AuthService/Register"
+	AuthService_RefreshToken_FullMethodName         = "/auth.AuthService/RefreshToken"
+	AuthService_RequestPasswordReset_FullMethodName = "/auth.AuthService/RequestPasswordReset"
+	AuthService_ResetPassword_FullMethodName        = "/auth.AuthService/ResetPassword"
+	AuthService_RevokeRefreshToken_FullMethodName   = "/auth.AuthService/RevokeRefreshToken"
+	AuthService_UpdatePassword_FullMethodName       = "/auth.AuthService/UpdatePassword"
+	AuthService_CreateAPIKey_FullMethodName         = "/auth.AuthService/CreateAPIKey"
+	AuthService_RotateAPIKey_FullMethodName         = "/auth.AuthService/RotateAPIKey"
+	AuthService_RevokeAPIKey_FullMethodName         = "/auth.AuthService/RevokeAPIKey"
+	AuthService_ListAPIKeys_FullMethodName          = "/auth.AuthService/ListAPIKeys"
+	AuthService_GetAPIKey_FullMethodName            = "/auth.AuthService/GetAPIKey"
+	AuthService_BatchGetAPIKeysByIDs_FullMethodName = "/auth.AuthService/BatchGetAPIKeysByIDs"
+	AuthService_GetOrCreateDocAPIKey_FullMethodName = "/auth.AuthService/GetOrCreateDocAPIKey"
+	AuthService_MagicLogin_FullMethodName           = "/auth.AuthService/MagicLogin"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -91,30 +80,8 @@ type AuthServiceClient interface {
 	BatchGetAPIKeysByIDs(ctx context.Context, in *BatchGetAPIKeysByIDsRequest, opts ...grpc.CallOption) (*BatchGetAPIKeysByIDsResponse, error)
 	// Returns a sandbox API key for API docs, reusing or creating as needed.
 	GetOrCreateDocAPIKey(ctx context.Context, in *GetOrCreateDocAPIKeyRequest, opts ...grpc.CallOption) (*GetOrCreateDocAPIKeyResponse, error)
-	// Creates a registration session (or returns existing). Sends a verification email.
-	CreateRegistrationSession(ctx context.Context, in *CreateRegistrationSessionRequest, opts ...grpc.CallOption) (*CreateRegistrationSessionResponse, error)
-	// Resends the verification email for a registration session.
-	ResendVerificationEmail(ctx context.Context, in *ResendVerificationEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Verifies the email token and advances the session step. Idempotent.
-	VerifyRegistrationToken(ctx context.Context, in *VerifyRegistrationTokenRequest, opts ...grpc.CallOption) (*VerifyRegistrationTokenResponse, error)
-	// Returns the current state of a registration session.
-	GetRegistrationSession(ctx context.Context, in *GetRegistrationSessionRequest, opts ...grpc.CallOption) (*GetRegistrationSessionResponse, error)
-	// Creates or resolves a user for a registration session. Returns user ID and tokens.
-	CreateUserForRegistration(ctx context.Context, in *CreateUserForRegistrationRequest, opts ...grpc.CallOption) (*CreateUserForRegistrationResponse, error)
-	// Updates a registration session's step, form data, or Stripe fields.
-	UpdateRegistrationSession(ctx context.Context, in *UpdateRegistrationSessionRequest, opts ...grpc.CallOption) (*UpdateRegistrationSessionResponse, error)
-	// Returns a paginated list of open registration sessions for the authenticated user.
-	ListRegistrationSessions(ctx context.Context, in *ListRegistrationSessionsRequest, opts ...grpc.CallOption) (*ListRegistrationSessionsResponse, error)
-	// Creates a Stripe customer and billing profile for a registration session.
-	SetupRegistrationBilling(ctx context.Context, in *SetupRegistrationBillingRequest, opts ...grpc.CallOption) (*SetupRegistrationBillingResponse, error)
-	// Verifies a Setup Intent succeeded and marks payment as completed.
-	ConfirmRegistrationPayment(ctx context.Context, in *ConfirmRegistrationPaymentRequest, opts ...grpc.CallOption) (*ConfirmRegistrationPaymentResponse, error)
-	// Finalizes registration: creates accounts, roles, permissions, and account-users.
-	CompleteRegistration(ctx context.Context, in *CompleteRegistrationRequest, opts ...grpc.CallOption) (*CompleteRegistrationResponse, error)
 	// Exchanges a magic-login token (from the "already registered" email) for a token pair.
 	MagicLogin(ctx context.Context, in *MagicLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	// Returns the caller's most recent incomplete registration session, or no session if none exists.
-	GetIncompleteRegistrationSession(ctx context.Context, in *GetIncompleteRegistrationSessionRequest, opts ...grpc.CallOption) (*GetIncompleteRegistrationSessionResponse, error)
 }
 
 type authServiceClient struct {
@@ -275,120 +242,10 @@ func (c *authServiceClient) GetOrCreateDocAPIKey(ctx context.Context, in *GetOrC
 	return out, nil
 }
 
-func (c *authServiceClient) CreateRegistrationSession(ctx context.Context, in *CreateRegistrationSessionRequest, opts ...grpc.CallOption) (*CreateRegistrationSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateRegistrationSessionResponse)
-	err := c.cc.Invoke(ctx, AuthService_CreateRegistrationSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ResendVerificationEmail(ctx context.Context, in *ResendVerificationEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, AuthService_ResendVerificationEmail_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) VerifyRegistrationToken(ctx context.Context, in *VerifyRegistrationTokenRequest, opts ...grpc.CallOption) (*VerifyRegistrationTokenResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(VerifyRegistrationTokenResponse)
-	err := c.cc.Invoke(ctx, AuthService_VerifyRegistrationToken_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) GetRegistrationSession(ctx context.Context, in *GetRegistrationSessionRequest, opts ...grpc.CallOption) (*GetRegistrationSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetRegistrationSessionResponse)
-	err := c.cc.Invoke(ctx, AuthService_GetRegistrationSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) CreateUserForRegistration(ctx context.Context, in *CreateUserForRegistrationRequest, opts ...grpc.CallOption) (*CreateUserForRegistrationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateUserForRegistrationResponse)
-	err := c.cc.Invoke(ctx, AuthService_CreateUserForRegistration_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) UpdateRegistrationSession(ctx context.Context, in *UpdateRegistrationSessionRequest, opts ...grpc.CallOption) (*UpdateRegistrationSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateRegistrationSessionResponse)
-	err := c.cc.Invoke(ctx, AuthService_UpdateRegistrationSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ListRegistrationSessions(ctx context.Context, in *ListRegistrationSessionsRequest, opts ...grpc.CallOption) (*ListRegistrationSessionsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListRegistrationSessionsResponse)
-	err := c.cc.Invoke(ctx, AuthService_ListRegistrationSessions_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) SetupRegistrationBilling(ctx context.Context, in *SetupRegistrationBillingRequest, opts ...grpc.CallOption) (*SetupRegistrationBillingResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetupRegistrationBillingResponse)
-	err := c.cc.Invoke(ctx, AuthService_SetupRegistrationBilling_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ConfirmRegistrationPayment(ctx context.Context, in *ConfirmRegistrationPaymentRequest, opts ...grpc.CallOption) (*ConfirmRegistrationPaymentResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ConfirmRegistrationPaymentResponse)
-	err := c.cc.Invoke(ctx, AuthService_ConfirmRegistrationPayment_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) CompleteRegistration(ctx context.Context, in *CompleteRegistrationRequest, opts ...grpc.CallOption) (*CompleteRegistrationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CompleteRegistrationResponse)
-	err := c.cc.Invoke(ctx, AuthService_CompleteRegistration_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *authServiceClient) MagicLogin(ctx context.Context, in *MagicLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, AuthService_MagicLogin_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) GetIncompleteRegistrationSession(ctx context.Context, in *GetIncompleteRegistrationSessionRequest, opts ...grpc.CallOption) (*GetIncompleteRegistrationSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetIncompleteRegistrationSessionResponse)
-	err := c.cc.Invoke(ctx, AuthService_GetIncompleteRegistrationSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -430,30 +287,8 @@ type AuthServiceServer interface {
 	BatchGetAPIKeysByIDs(context.Context, *BatchGetAPIKeysByIDsRequest) (*BatchGetAPIKeysByIDsResponse, error)
 	// Returns a sandbox API key for API docs, reusing or creating as needed.
 	GetOrCreateDocAPIKey(context.Context, *GetOrCreateDocAPIKeyRequest) (*GetOrCreateDocAPIKeyResponse, error)
-	// Creates a registration session (or returns existing). Sends a verification email.
-	CreateRegistrationSession(context.Context, *CreateRegistrationSessionRequest) (*CreateRegistrationSessionResponse, error)
-	// Resends the verification email for a registration session.
-	ResendVerificationEmail(context.Context, *ResendVerificationEmailRequest) (*emptypb.Empty, error)
-	// Verifies the email token and advances the session step. Idempotent.
-	VerifyRegistrationToken(context.Context, *VerifyRegistrationTokenRequest) (*VerifyRegistrationTokenResponse, error)
-	// Returns the current state of a registration session.
-	GetRegistrationSession(context.Context, *GetRegistrationSessionRequest) (*GetRegistrationSessionResponse, error)
-	// Creates or resolves a user for a registration session. Returns user ID and tokens.
-	CreateUserForRegistration(context.Context, *CreateUserForRegistrationRequest) (*CreateUserForRegistrationResponse, error)
-	// Updates a registration session's step, form data, or Stripe fields.
-	UpdateRegistrationSession(context.Context, *UpdateRegistrationSessionRequest) (*UpdateRegistrationSessionResponse, error)
-	// Returns a paginated list of open registration sessions for the authenticated user.
-	ListRegistrationSessions(context.Context, *ListRegistrationSessionsRequest) (*ListRegistrationSessionsResponse, error)
-	// Creates a Stripe customer and billing profile for a registration session.
-	SetupRegistrationBilling(context.Context, *SetupRegistrationBillingRequest) (*SetupRegistrationBillingResponse, error)
-	// Verifies a Setup Intent succeeded and marks payment as completed.
-	ConfirmRegistrationPayment(context.Context, *ConfirmRegistrationPaymentRequest) (*ConfirmRegistrationPaymentResponse, error)
-	// Finalizes registration: creates accounts, roles, permissions, and account-users.
-	CompleteRegistration(context.Context, *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error)
 	// Exchanges a magic-login token (from the "already registered" email) for a token pair.
 	MagicLogin(context.Context, *MagicLoginRequest) (*LoginResponse, error)
-	// Returns the caller's most recent incomplete registration session, or no session if none exists.
-	GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -509,41 +344,8 @@ func (UnimplementedAuthServiceServer) BatchGetAPIKeysByIDs(context.Context, *Bat
 func (UnimplementedAuthServiceServer) GetOrCreateDocAPIKey(context.Context, *GetOrCreateDocAPIKeyRequest) (*GetOrCreateDocAPIKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrCreateDocAPIKey not implemented")
 }
-func (UnimplementedAuthServiceServer) CreateRegistrationSession(context.Context, *CreateRegistrationSessionRequest) (*CreateRegistrationSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateRegistrationSession not implemented")
-}
-func (UnimplementedAuthServiceServer) ResendVerificationEmail(context.Context, *ResendVerificationEmailRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method ResendVerificationEmail not implemented")
-}
-func (UnimplementedAuthServiceServer) VerifyRegistrationToken(context.Context, *VerifyRegistrationTokenRequest) (*VerifyRegistrationTokenResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method VerifyRegistrationToken not implemented")
-}
-func (UnimplementedAuthServiceServer) GetRegistrationSession(context.Context, *GetRegistrationSessionRequest) (*GetRegistrationSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetRegistrationSession not implemented")
-}
-func (UnimplementedAuthServiceServer) CreateUserForRegistration(context.Context, *CreateUserForRegistrationRequest) (*CreateUserForRegistrationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateUserForRegistration not implemented")
-}
-func (UnimplementedAuthServiceServer) UpdateRegistrationSession(context.Context, *UpdateRegistrationSessionRequest) (*UpdateRegistrationSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateRegistrationSession not implemented")
-}
-func (UnimplementedAuthServiceServer) ListRegistrationSessions(context.Context, *ListRegistrationSessionsRequest) (*ListRegistrationSessionsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListRegistrationSessions not implemented")
-}
-func (UnimplementedAuthServiceServer) SetupRegistrationBilling(context.Context, *SetupRegistrationBillingRequest) (*SetupRegistrationBillingResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetupRegistrationBilling not implemented")
-}
-func (UnimplementedAuthServiceServer) ConfirmRegistrationPayment(context.Context, *ConfirmRegistrationPaymentRequest) (*ConfirmRegistrationPaymentResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ConfirmRegistrationPayment not implemented")
-}
-func (UnimplementedAuthServiceServer) CompleteRegistration(context.Context, *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CompleteRegistration not implemented")
-}
 func (UnimplementedAuthServiceServer) MagicLogin(context.Context, *MagicLoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MagicLogin not implemented")
-}
-func (UnimplementedAuthServiceServer) GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetIncompleteRegistrationSession not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -836,186 +638,6 @@ func _AuthService_GetOrCreateDocAPIKey_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_CreateRegistrationSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateRegistrationSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).CreateRegistrationSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_CreateRegistrationSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CreateRegistrationSession(ctx, req.(*CreateRegistrationSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_ResendVerificationEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResendVerificationEmailRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ResendVerificationEmail(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ResendVerificationEmail_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ResendVerificationEmail(ctx, req.(*ResendVerificationEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_VerifyRegistrationToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VerifyRegistrationTokenRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).VerifyRegistrationToken(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_VerifyRegistrationToken_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).VerifyRegistrationToken(ctx, req.(*VerifyRegistrationTokenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_GetRegistrationSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRegistrationSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).GetRegistrationSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_GetRegistrationSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).GetRegistrationSession(ctx, req.(*GetRegistrationSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_CreateUserForRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserForRegistrationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).CreateUserForRegistration(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_CreateUserForRegistration_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CreateUserForRegistration(ctx, req.(*CreateUserForRegistrationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_UpdateRegistrationSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRegistrationSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).UpdateRegistrationSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_UpdateRegistrationSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).UpdateRegistrationSession(ctx, req.(*UpdateRegistrationSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_ListRegistrationSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRegistrationSessionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ListRegistrationSessions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ListRegistrationSessions_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListRegistrationSessions(ctx, req.(*ListRegistrationSessionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_SetupRegistrationBilling_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetupRegistrationBillingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).SetupRegistrationBilling(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_SetupRegistrationBilling_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).SetupRegistrationBilling(ctx, req.(*SetupRegistrationBillingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_ConfirmRegistrationPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfirmRegistrationPaymentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ConfirmRegistrationPayment(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ConfirmRegistrationPayment_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ConfirmRegistrationPayment(ctx, req.(*ConfirmRegistrationPaymentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_CompleteRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CompleteRegistrationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).CompleteRegistration(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_CompleteRegistration_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CompleteRegistration(ctx, req.(*CompleteRegistrationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuthService_MagicLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MagicLoginRequest)
 	if err := dec(in); err != nil {
@@ -1030,24 +652,6 @@ func _AuthService_MagicLogin_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).MagicLogin(ctx, req.(*MagicLoginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_GetIncompleteRegistrationSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetIncompleteRegistrationSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).GetIncompleteRegistrationSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_GetIncompleteRegistrationSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).GetIncompleteRegistrationSession(ctx, req.(*GetIncompleteRegistrationSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1120,52 +724,8 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_GetOrCreateDocAPIKey_Handler,
 		},
 		{
-			MethodName: "CreateRegistrationSession",
-			Handler:    _AuthService_CreateRegistrationSession_Handler,
-		},
-		{
-			MethodName: "ResendVerificationEmail",
-			Handler:    _AuthService_ResendVerificationEmail_Handler,
-		},
-		{
-			MethodName: "VerifyRegistrationToken",
-			Handler:    _AuthService_VerifyRegistrationToken_Handler,
-		},
-		{
-			MethodName: "GetRegistrationSession",
-			Handler:    _AuthService_GetRegistrationSession_Handler,
-		},
-		{
-			MethodName: "CreateUserForRegistration",
-			Handler:    _AuthService_CreateUserForRegistration_Handler,
-		},
-		{
-			MethodName: "UpdateRegistrationSession",
-			Handler:    _AuthService_UpdateRegistrationSession_Handler,
-		},
-		{
-			MethodName: "ListRegistrationSessions",
-			Handler:    _AuthService_ListRegistrationSessions_Handler,
-		},
-		{
-			MethodName: "SetupRegistrationBilling",
-			Handler:    _AuthService_SetupRegistrationBilling_Handler,
-		},
-		{
-			MethodName: "ConfirmRegistrationPayment",
-			Handler:    _AuthService_ConfirmRegistrationPayment_Handler,
-		},
-		{
-			MethodName: "CompleteRegistration",
-			Handler:    _AuthService_CompleteRegistration_Handler,
-		},
-		{
 			MethodName: "MagicLogin",
 			Handler:    _AuthService_MagicLogin_Handler,
-		},
-		{
-			MethodName: "GetIncompleteRegistrationSession",
-			Handler:    _AuthService_GetIncompleteRegistrationSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

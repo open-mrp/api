@@ -63,61 +63,6 @@ type DocAPIKeyRepo interface {
 	Delete(ctx context.Context, id int64) *apierror.APIError
 }
 
-type RegistrationSessionRepo interface {
-	// GetByEmail returns the most recent active (uncompleted) registration session for the given email. Returns a not-found error if none exists.
-	GetByEmail(ctx context.Context, email string) (*RegistrationSession, *apierror.APIError)
-
-	// GetByTypeID returns the registration session with the given type ID. Returns a not-found error if none exists.
-	GetByTypeID(ctx context.Context, typeID string) (*RegistrationSession, *apierror.APIError)
-
-	// GetByToken returns the registration session matching the verification token. Returns a not-found error if no session has the given token.
-	GetByToken(ctx context.Context, token string) (*RegistrationSession, *apierror.APIError)
-
-	// GetByID returns the registration session with the given database ID. Returns a not-found error if none exists.
-	GetByID(ctx context.Context, id int64) (*RegistrationSession, *apierror.APIError)
-
-	// GetIncompleteByUserID returns the most recent incomplete registration session for the given user, or (nil, nil) if none exists.
-	GetIncompleteByUserID(ctx context.Context, userID string) (*RegistrationSession, *apierror.APIError)
-
-	// Create persists a new registration session and returns the database-assigned ID.
-	Create(ctx context.Context, session *RegistrationSession) (int64, *apierror.APIError)
-
-	// UpdatePlanCode changes the plan code on a registration session.
-	UpdatePlanCode(ctx context.Context, id int64, planCode string) *apierror.APIError
-
-	// UpdateToken replaces the verification token for the given session.
-	UpdateToken(ctx context.Context, id int64, verificationToken string) *apierror.APIError
-
-	// UpdateEmailVerified marks the session's email as verified and sets the is_existing_user flag.
-	UpdateEmailVerified(ctx context.Context, id int64, isExistingUser *bool) *apierror.APIError
-
-	// UpdateStep advances the session to the given step and persists the session data.
-	UpdateStep(ctx context.Context, id int64, step constants.RegistrationStep, sessionData RegistrationSessionData) *apierror.APIError
-
-	// UpdateUser sets the user ID on the session and persists updated session data.
-	UpdateUser(ctx context.Context, id int64, userID string, sessionData RegistrationSessionData) *apierror.APIError
-
-	// UpdateStripeCustomer sets the Stripe customer ID and checkout session ID on the registration session.
-	UpdateStripeCustomer(ctx context.Context, id int64, stripeCustomerID *string, stripeCheckoutSessionID *string) *apierror.APIError
-
-	// UpdatePaymentCompleted sets the payment completed flag and Stripe subscription ID on the registration session.
-	UpdatePaymentCompleted(ctx context.Context, id int64, paymentCompleted bool, stripeSubscriptionID *string) *apierror.APIError
-
-	// ListByUserID returns open (uncompleted) registration sessions for the given user with cursor-based pagination.
-	ListByUserID(ctx context.Context, userID string, cursor *string, limit int32) ([]*RegistrationSession, pagination.PageInfo, *apierror.APIError)
-
-	// UpdateAccountID sets the account ID on the registration session without marking it as completed.
-	UpdateAccountID(ctx context.Context, id int64, accountID string) *apierror.APIError
-
-	// Complete marks the registration session as completed and records the account ID.
-	Complete(ctx context.Context, id int64, accountID *string) *apierror.APIError
-}
-
-type RegistrationQueueRepo interface {
-	// Create inserts a registration queue entry for the session, deduplicating on registration_session_id. The returned bool is true only when this call actually inserted a new row (so callers can suppress follow-on side effects like alert emails on retries).
-	Create(ctx context.Context, email, name, planCode, registrationSessionID string) (bool, *apierror.APIError)
-}
-
 type IdempotencyKeyRepo interface {
 	GetByScopeHash(ctx context.Context, scopeHash string) (*IdempotencyKey, *apierror.APIError)
 	Create(ctx context.Context, key *IdempotencyKey) (*IdempotencyKey, *apierror.APIError)

@@ -716,16 +716,6 @@ message EmailRecordRequest {
   EmailRecordType type = 2;
 }
 message EmailRecordResponse {}
-message RequestDemoRequest {
-  string name = 1;
-  string email = 2;
-  string company = 3;
-  optional string phone_number = 4;
-  optional string message = 5;
-}
-message RequestDemoResponse {
-  string message = 1;
-}
 message SubmitFeedbackRequest {
   string question = 1;
   string answer = 2;

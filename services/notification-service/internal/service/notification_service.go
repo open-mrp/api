@@ -346,7 +346,7 @@ func (s *notificationSvcImpl) isSandboxSend(ctx context.Context, data domain.Ema
 	if s.isSandboxRequest(ctx) {
 		return true
 	}
-	// Platform mail (a demo request, a 5xx alert) carries no account and was never suppressed.
+	// Platform mail, such as a 5xx alert, carries no account and was never suppressed.
 	if data.AccountID == nil || *data.AccountID == "" {
 		return false
 	}

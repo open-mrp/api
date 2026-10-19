@@ -107,7 +107,7 @@ func TestSendEmail_SendsForALiveAccount(t *testing.T) {
 	require.Equal(t, &sesID, got)
 }
 
-// Platform mail — a demo request, a 5xx alert — belongs to no tenant and was never suppressed. It
+// Platform mail, such as a 5xx alert, belongs to no tenant and was never suppressed. It
 // must not cost a lookup either.
 func TestSendEmail_PlatformMailSkipsTheAccountLookup(t *testing.T) {
 	t.Parallel()

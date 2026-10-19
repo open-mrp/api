@@ -47,7 +47,6 @@ const (
 	CoreService_ClearAccountStripeCustomer_FullMethodName                 = "/core.CoreService/ClearAccountStripeCustomer"
 	CoreService_UpdateAgentSpendingCap_FullMethodName                     = "/core.CoreService/UpdateAgentSpendingCap"
 	CoreService_GetAccountByStripeCustomerID_FullMethodName               = "/core.CoreService/GetAccountByStripeCustomerID"
-	CoreService_CompleteRegistration_FullMethodName                       = "/core.CoreService/CompleteRegistration"
 	CoreService_ListUnits_FullMethodName                                  = "/core.CoreService/ListUnits"
 	CoreService_GetUnit_FullMethodName                                    = "/core.CoreService/GetUnit"
 	CoreService_CreateUnit_FullMethodName                                 = "/core.CoreService/CreateUnit"
@@ -376,7 +375,6 @@ const (
 	CoreService_GetUserPhotoURL_FullMethodName                            = "/core.CoreService/GetUserPhotoURL"
 	CoreService_CheckDuplicate_FullMethodName                             = "/core.CoreService/CheckDuplicate"
 	CoreService_EmailRecord_FullMethodName                                = "/core.CoreService/EmailRecord"
-	CoreService_RequestDemo_FullMethodName                                = "/core.CoreService/RequestDemo"
 	CoreService_SubmitFeedback_FullMethodName                             = "/core.CoreService/SubmitFeedback"
 	CoreService_ListCatalogProductLines_FullMethodName                    = "/core.CoreService/ListCatalogProductLines"
 	CoreService_ListCatalogProducts_FullMethodName                        = "/core.CoreService/ListCatalogProducts"
@@ -487,8 +485,6 @@ type CoreServiceClient interface {
 	UpdateAgentSpendingCap(ctx context.Context, in *UpdateAgentSpendingCapRequest, opts ...grpc.CallOption) (*UpdateAgentSpendingCapResponse, error)
 	// Resolves an account from a Stripe customer ID.
 	GetAccountByStripeCustomerID(ctx context.Context, in *GetAccountByStripeCustomerIDRequest, opts ...grpc.CallOption) (*GetAccountByStripeCustomerIDResponse, error)
-	// Creates production account, sandbox, roles, permissions, and account-user for a new registration.
-	CompleteRegistration(ctx context.Context, in *CompleteRegistrationRequest, opts ...grpc.CallOption) (*CompleteRegistrationResponse, error)
 	// Returns a paginated list of units (account-specific and system) with filtering support.
 	ListUnits(ctx context.Context, in *ListUnitsRequest, opts ...grpc.CallOption) (*ListUnitsResponse, error)
 	// Returns a single unit by ID (account-owned or system).
@@ -1040,7 +1036,6 @@ type CoreServiceClient interface {
 	CheckDuplicate(ctx context.Context, in *CheckDuplicateRequest, opts ...grpc.CallOption) (*CheckDuplicateResponse, error)
 	// Emails a record (invoice, sales order, or purchase order) with PDF attachment.
 	EmailRecord(ctx context.Context, in *EmailRecordRequest, opts ...grpc.CallOption) (*EmailRecordResponse, error)
-	RequestDemo(ctx context.Context, in *RequestDemoRequest, opts ...grpc.CallOption) (*RequestDemoResponse, error)
 	SubmitFeedback(ctx context.Context, in *SubmitFeedbackRequest, opts ...grpc.CallOption) (*SubmitFeedbackResponse, error)
 	// Customers only see product lines they have access to.
 	ListCatalogProductLines(ctx context.Context, in *ListCatalogProductLinesRequest, opts ...grpc.CallOption) (*ListCatalogProductLinesResponse, error)
@@ -1315,16 +1310,6 @@ func (c *coreServiceClient) GetAccountByStripeCustomerID(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAccountByStripeCustomerIDResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetAccountByStripeCustomerID_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) CompleteRegistration(ctx context.Context, in *CompleteRegistrationRequest, opts ...grpc.CallOption) (*CompleteRegistrationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CompleteRegistrationResponse)
-	err := c.cc.Invoke(ctx, CoreService_CompleteRegistration_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4611,16 +4596,6 @@ func (c *coreServiceClient) EmailRecord(ctx context.Context, in *EmailRecordRequ
 	return out, nil
 }
 
-func (c *coreServiceClient) RequestDemo(ctx context.Context, in *RequestDemoRequest, opts ...grpc.CallOption) (*RequestDemoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RequestDemoResponse)
-	err := c.cc.Invoke(ctx, CoreService_RequestDemo_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *coreServiceClient) SubmitFeedback(ctx context.Context, in *SubmitFeedbackRequest, opts ...grpc.CallOption) (*SubmitFeedbackResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitFeedbackResponse)
@@ -5269,8 +5244,6 @@ type CoreServiceServer interface {
 	UpdateAgentSpendingCap(context.Context, *UpdateAgentSpendingCapRequest) (*UpdateAgentSpendingCapResponse, error)
 	// Resolves an account from a Stripe customer ID.
 	GetAccountByStripeCustomerID(context.Context, *GetAccountByStripeCustomerIDRequest) (*GetAccountByStripeCustomerIDResponse, error)
-	// Creates production account, sandbox, roles, permissions, and account-user for a new registration.
-	CompleteRegistration(context.Context, *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error)
 	// Returns a paginated list of units (account-specific and system) with filtering support.
 	ListUnits(context.Context, *ListUnitsRequest) (*ListUnitsResponse, error)
 	// Returns a single unit by ID (account-owned or system).
@@ -5822,7 +5795,6 @@ type CoreServiceServer interface {
 	CheckDuplicate(context.Context, *CheckDuplicateRequest) (*CheckDuplicateResponse, error)
 	// Emails a record (invoice, sales order, or purchase order) with PDF attachment.
 	EmailRecord(context.Context, *EmailRecordRequest) (*EmailRecordResponse, error)
-	RequestDemo(context.Context, *RequestDemoRequest) (*RequestDemoResponse, error)
 	SubmitFeedback(context.Context, *SubmitFeedbackRequest) (*SubmitFeedbackResponse, error)
 	// Customers only see product lines they have access to.
 	ListCatalogProductLines(context.Context, *ListCatalogProductLinesRequest) (*ListCatalogProductLinesResponse, error)
@@ -5962,9 +5934,6 @@ func (UnimplementedCoreServiceServer) UpdateAgentSpendingCap(context.Context, *U
 }
 func (UnimplementedCoreServiceServer) GetAccountByStripeCustomerID(context.Context, *GetAccountByStripeCustomerIDRequest) (*GetAccountByStripeCustomerIDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccountByStripeCustomerID not implemented")
-}
-func (UnimplementedCoreServiceServer) CompleteRegistration(context.Context, *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CompleteRegistration not implemented")
 }
 func (UnimplementedCoreServiceServer) ListUnits(context.Context, *ListUnitsRequest) (*ListUnitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUnits not implemented")
@@ -6950,9 +6919,6 @@ func (UnimplementedCoreServiceServer) CheckDuplicate(context.Context, *CheckDupl
 func (UnimplementedCoreServiceServer) EmailRecord(context.Context, *EmailRecordRequest) (*EmailRecordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EmailRecord not implemented")
 }
-func (UnimplementedCoreServiceServer) RequestDemo(context.Context, *RequestDemoRequest) (*RequestDemoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RequestDemo not implemented")
-}
 func (UnimplementedCoreServiceServer) SubmitFeedback(context.Context, *SubmitFeedbackRequest) (*SubmitFeedbackResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitFeedback not implemented")
 }
@@ -7510,24 +7476,6 @@ func _CoreService_GetAccountByStripeCustomerID_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetAccountByStripeCustomerID(ctx, req.(*GetAccountByStripeCustomerIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_CompleteRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CompleteRegistrationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).CompleteRegistration(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_CompleteRegistration_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).CompleteRegistration(ctx, req.(*CompleteRegistrationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -13436,24 +13384,6 @@ func _CoreService_EmailRecord_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreService_RequestDemo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestDemoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).RequestDemo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_RequestDemo_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).RequestDemo(ctx, req.(*RequestDemoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CoreService_SubmitFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SubmitFeedbackRequest)
 	if err := dec(in); err != nil {
@@ -14620,10 +14550,6 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAccountByStripeCustomerID",
 			Handler:    _CoreService_GetAccountByStripeCustomerID_Handler,
-		},
-		{
-			MethodName: "CompleteRegistration",
-			Handler:    _CoreService_CompleteRegistration_Handler,
 		},
 		{
 			MethodName: "ListUnits",
@@ -15936,10 +15862,6 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EmailRecord",
 			Handler:    _CoreService_EmailRecord_Handler,
-		},
-		{
-			MethodName: "RequestDemo",
-			Handler:    _CoreService_RequestDemo_Handler,
 		},
 		{
 			MethodName: "SubmitFeedback",

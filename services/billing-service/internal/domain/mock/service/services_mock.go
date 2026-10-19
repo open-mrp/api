@@ -58,36 +58,6 @@ func (mr *MockBillingSvcMockRecorder) CreateBillingPortalSession(ctx, accountID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBillingPortalSession", reflect.TypeOf((*MockBillingSvc)(nil).CreateBillingPortalSession), ctx, accountID)
 }
 
-// CreateRegistrationCustomer mocks base method.
-func (m *MockBillingSvc) CreateRegistrationCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*domain.EnsureBillingCustomerResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateRegistrationCustomer", ctx, email, name, idempotencyKey, metadata)
-	ret0, _ := ret[0].(*domain.EnsureBillingCustomerResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CreateRegistrationCustomer indicates an expected call of CreateRegistrationCustomer.
-func (mr *MockBillingSvcMockRecorder) CreateRegistrationCustomer(ctx, email, name, idempotencyKey, metadata any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRegistrationCustomer", reflect.TypeOf((*MockBillingSvc)(nil).CreateRegistrationCustomer), ctx, email, name, idempotencyKey, metadata)
-}
-
-// CreateSetupIntent mocks base method.
-func (m *MockBillingSvc) CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*domain.SetupIntentResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSetupIntent", ctx, customerID, idempotencyKey)
-	ret0, _ := ret[0].(*domain.SetupIntentResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CreateSetupIntent indicates an expected call of CreateSetupIntent.
-func (mr *MockBillingSvcMockRecorder) CreateSetupIntent(ctx, customerID, idempotencyKey any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSetupIntent", reflect.TypeOf((*MockBillingSvc)(nil).CreateSetupIntent), ctx, customerID, idempotencyKey)
-}
-
 // EnsureBillingCustomer mocks base method.
 func (m *MockBillingSvc) EnsureBillingCustomer(ctx context.Context, accountID string) (*domain.EnsureBillingCustomerResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -163,21 +133,6 @@ func (mr *MockBillingSvcMockRecorder) GetPlanByCode(ctx, planCode any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlanByCode", reflect.TypeOf((*MockBillingSvc)(nil).GetPlanByCode), ctx, planCode)
 }
 
-// GetSetupIntentStatus mocks base method.
-func (m *MockBillingSvc) GetSetupIntentStatus(ctx context.Context, setupIntentID string) (*domain.SetupIntentResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSetupIntentStatus", ctx, setupIntentID)
-	ret0, _ := ret[0].(*domain.SetupIntentResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSetupIntentStatus indicates an expected call of GetSetupIntentStatus.
-func (mr *MockBillingSvcMockRecorder) GetSetupIntentStatus(ctx, setupIntentID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSetupIntentStatus", reflect.TypeOf((*MockBillingSvc)(nil).GetSetupIntentStatus), ctx, setupIntentID)
-}
-
 // ListPricingPlans mocks base method.
 func (m *MockBillingSvc) ListPricingPlans(ctx context.Context, input domain.ListPricingPlansInput) (*domain.ListPricingPlansResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -223,35 +178,6 @@ func (mr *MockBillingSvcMockRecorder) RequestEnterpriseUpgrade(ctx, input any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestEnterpriseUpgrade", reflect.TypeOf((*MockBillingSvc)(nil).RequestEnterpriseUpgrade), ctx, input)
 }
 
-// SetupBillingProfile mocks base method.
-func (m *MockBillingSvc) SetupBillingProfile(ctx context.Context, accountID string) (*domain.BillingProfileResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetupBillingProfile", ctx, accountID)
-	ret0, _ := ret[0].(*domain.BillingProfileResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// SetupBillingProfile indicates an expected call of SetupBillingProfile.
-func (mr *MockBillingSvcMockRecorder) SetupBillingProfile(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupBillingProfile", reflect.TypeOf((*MockBillingSvc)(nil).SetupBillingProfile), ctx, accountID)
-}
-
-// SubscribeToPricingPlan mocks base method.
-func (m *MockBillingSvc) SubscribeToPricingPlan(ctx context.Context, stripeCustomerID, planCode string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubscribeToPricingPlan", ctx, stripeCustomerID, planCode)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// SubscribeToPricingPlan indicates an expected call of SubscribeToPricingPlan.
-func (mr *MockBillingSvcMockRecorder) SubscribeToPricingPlan(ctx, stripeCustomerID, planCode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeToPricingPlan", reflect.TypeOf((*MockBillingSvc)(nil).SubscribeToPricingPlan), ctx, stripeCustomerID, planCode)
-}
-
 // SwitchPlan mocks base method.
 func (m *MockBillingSvc) SwitchPlan(ctx context.Context, accountID, planID string) (*domain.SwitchPlanResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -265,20 +191,6 @@ func (m *MockBillingSvc) SwitchPlan(ctx context.Context, accountID, planID strin
 func (mr *MockBillingSvcMockRecorder) SwitchPlan(ctx, accountID, planID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchPlan", reflect.TypeOf((*MockBillingSvc)(nil).SwitchPlan), ctx, accountID, planID)
-}
-
-// ValidateStripePricingPlan mocks base method.
-func (m *MockBillingSvc) ValidateStripePricingPlan(ctx context.Context, planCode string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateStripePricingPlan", ctx, planCode)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// ValidateStripePricingPlan indicates an expected call of ValidateStripePricingPlan.
-func (mr *MockBillingSvcMockRecorder) ValidateStripePricingPlan(ctx, planCode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateStripePricingPlan", reflect.TypeOf((*MockBillingSvc)(nil).ValidateStripePricingPlan), ctx, planCode)
 }
 
 // MockCoreClient is a mock of CoreClient interface.

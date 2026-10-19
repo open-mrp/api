@@ -54,12 +54,6 @@ func (s *stubStripeClient) CreateBillingPortalSession(context.Context, string, s
 func (s *stubStripeClient) GetPricingPlan(context.Context, string) (*domain.StripePricingPlan, error) {
 	return nil, nil
 }
-func (s *stubStripeClient) CreateBillingProfile(context.Context, string, string) (string, error) {
-	return "", nil
-}
-func (s *stubStripeClient) CreateBillingCadence(context.Context, string, string) (string, error) {
-	return "", nil
-}
 func (s *stubStripeClient) CreateBillingIntent(context.Context, string, []domain.BillingIntentAction, string) (string, error) {
 	return "", nil
 }
@@ -73,12 +67,6 @@ func (s *stubStripeClient) CommitBillingIntent(context.Context, string, *string,
 	return nil, nil
 }
 func (s *stubStripeClient) VoidBillingIntent(context.Context, string) error { return nil }
-func (s *stubStripeClient) CreateSetupIntent(context.Context, string, string) (*domain.StripeSetupIntent, error) {
-	return nil, nil
-}
-func (s *stubStripeClient) GetSetupIntent(context.Context, string) (*domain.StripeSetupIntent, error) {
-	return nil, nil
-}
 func (s *stubStripeClient) ReportMeterEvent(context.Context, string, string, int, string) error {
 	return nil
 }

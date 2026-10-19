@@ -3,7 +3,6 @@
 # Lines only ever come off this list. A new one fails the build; see the vtparse package doc.
 services/auth-service/internal/infrastructure/sqlc/api_key.sql.go:listAPIKeysBaseForward 1
 services/auth-service/internal/infrastructure/sqlc/api_key.sql.go:listAPIKeysForward 1
-services/auth-service/internal/infrastructure/sqlc/registration_session.sql.go:listRegistrationSessionsByUserIDForward 1
 services/billing-service/internal/infrastructure/sqlc/pricing_plan.sql.go:listPricingPlansBackward 1
 services/billing-service/internal/infrastructure/sqlc/pricing_plan.sql.go:listPricingPlansForward 2
 services/core-service/internal/infrastructure/sqlc/account_group.sql.go:countAccountGroupsByName 1

@@ -149,38 +149,6 @@ resources:
           owner: '#/components/schemas/Owner'
           page_info: '#/components/schemas/PageInfo'
           role: '#/components/schemas/Role'
-      registration_sessions:
-        methods:
-          create: post /v1/auth/registration-sessions
-          retrieve: get /v1/auth/registration-sessions/{session_id}
-          users: post /v1/auth/registration-sessions/{session_id}/users
-          update: patch /v1/auth/registration-sessions/{session_id}
-          list: get /v1/auth/registration-sessions
-          accounts: post /v1/auth/registration-sessions/{session_id}/accounts
-        subresources:
-          actions:
-            methods:
-              resend_verification_email: post /v1/auth/registration-sessions/{session_id}/actions/resend-verification-email
-              verify_token: put /v1/auth/registration-sessions/{token}/actions/verify-token
-              setup_billing: post /v1/auth/registration-sessions/{session_id}/actions/setup-billing
-              confirm_payment: post /v1/auth/registration-sessions/{session_id}/actions/confirm-payment
-            models:
-              confirm_payment_request: '#/components/schemas/ConfirmPaymentRequest'
-              confirm_payment_response: '#/components/schemas/ConfirmPaymentResponse'
-              setup_billing_response: '#/components/schemas/SetupBillingResponse'
-        models:
-          complete_registration_response: '#/components/schemas/CompleteRegistrationResponse'
-          create_registration_session_request: '#/components/schemas/CreateRegistrationSessionRequest'
-          create_session_response: '#/components/schemas/CreateSessionResponse'
-          create_user_request: '#/components/schemas/CreateUserRequest'
-          create_user_response: '#/components/schemas/CreateUserResponse'
-          list_registration_session: '#/components/schemas/List_RegistrationSession'
-          registration_session: '#/components/schemas/RegistrationSession'
-          registration_session_account: '#/components/schemas/RegistrationSessionAccount'
-          registration_session_address: '#/components/schemas/RegistrationSessionAddress'
-          registration_session_user: '#/components/schemas/RegistrationSessionUser'
-          update_session_data_request: '#/components/schemas/UpdateSessionDataRequest'
-          update_session_request: '#/components/schemas/UpdateSessionRequest'
     models:
       register_request: '#/components/schemas/RegisterRequest'
       update_scanner_password_request: '#/components/schemas/UpdateScannerPasswordRequest'
@@ -209,7 +177,6 @@ resources:
               tenancy_current_account: '#/components/schemas/TenancyCurrentAccount'
               tenancy_other_account: '#/components/schemas/TenancyOtherAccount'
               tenancy_owner_account: '#/components/schemas/TenancyOwnerAccount'
-              tenancy_pending_registration: '#/components/schemas/TenancyPendingRegistration'
               tenancy_sandbox_account: '#/components/schemas/TenancySandboxAccount'
       account_users:
         methods:
@@ -585,14 +552,12 @@ resources:
         methods:
           check_duplicates: put /v1/core/actions/check-duplicates
           email_record: post /v1/core/actions/email-record
-          request_demo: post /v1/core/actions/request-demo
           submit_feedback: post /v1/core/actions/submit-feedback
         models:
           check_duplicate_request: '#/components/schemas/CheckDuplicateRequest'
           check_duplicate_result: '#/components/schemas/CheckDuplicateResult'
           email_record_request: '#/components/schemas/EmailRecordRequest'
           message_resource: '#/components/schemas/MessageResource'
-          request_demo_request: '#/components/schemas/RequestDemoRequest'
           submit_feedback_request: '#/components/schemas/SubmitFeedbackRequest'
       records:
         subresources:

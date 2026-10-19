@@ -21,8 +21,8 @@ func TestGetIdentityFromContext_Absent(t *testing.T) {
 
 // Unlike GetRequestLog and GetHTTPResponseMetadata, this accessor's bool reports only that the
 // key is present: a stored nil round-trips as (nil, true), so `ok` is not a safe guard for
-// dereferencing. Callers such as registration_session_service.go read identity.Type behind
-// `!ok || identity.Type != ...`, which panics for this input.
+// dereferencing. Reading identity.Type behind `!ok || identity.Type != ...` panics for this
+// input.
 func TestGetIdentityFromContext_NilPointerReportsPresent(t *testing.T) {
 	t.Parallel()
 	ctx := WithIdentity(context.Background(), nil)

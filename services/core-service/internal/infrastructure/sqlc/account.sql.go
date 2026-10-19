@@ -65,24 +65,6 @@ func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) err
 	return err
 }
 
-const countNonSandboxAccountsByPlanCode = `-- name: CountNonSandboxAccountsByPlanCode :one
-SELECT COUNT(*) AS cnt
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-LEFT JOIN sandbox_account sa ON a.id = sa.account_id
-WHERE ap.plan_type_code = ?
-  AND sa.id IS NULL
-  AND a.onboarding_status_code = 'active'
-`
-
-func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planTypeCode string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countNonSandboxAccountsByPlanCode, planTypeCode)
-	var cnt int64
-	err := row.Scan(&cnt)
-	return cnt, err
-}
-
 const createAccount = `-- name: CreateAccount :exec
 INSERT INTO account (
     id,
@@ -102,68 +84,6 @@ type CreateAccountParams struct {
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
 	_, err := q.db.ExecContext(ctx, createAccount, arg.ID, arg.Name, arg.AccountTypeCode)
-	return err
-}
-
-const createAccountBilling = `-- name: CreateAccountBilling :exec
-INSERT INTO account_billing (
-    id,
-    account_plan_id,
-    internal_stripe_customer_id,
-    internal_stripe_subscription_id,
-    subscription_status,
-    created_at,
-    updated_at
-) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
-`
-
-type CreateAccountBillingParams struct {
-	ID                           string
-	AccountPlanID                string
-	InternalStripeCustomerID     sql.NullString
-	InternalStripeSubscriptionID sql.NullString
-	SubscriptionStatus           sql.NullString
-}
-
-func (q *Queries) CreateAccountBilling(ctx context.Context, arg CreateAccountBillingParams) error {
-	_, err := q.db.ExecContext(ctx, createAccountBilling,
-		arg.ID,
-		arg.AccountPlanID,
-		arg.InternalStripeCustomerID,
-		arg.InternalStripeSubscriptionID,
-		arg.SubscriptionStatus,
-	)
-	return err
-}
-
-const createAccountForRegistration = `-- name: CreateAccountForRegistration :exec
-INSERT INTO account (
-    id,
-    name,
-    account_type_code,
-    onboarding_status_code,
-    account_billing_id,
-    created_at,
-    updated_at
-) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
-`
-
-type CreateAccountForRegistrationParams struct {
-	ID                   string
-	Name                 string
-	AccountTypeCode      string
-	OnboardingStatusCode string
-	AccountBillingID     sql.NullString
-}
-
-func (q *Queries) CreateAccountForRegistration(ctx context.Context, arg CreateAccountForRegistrationParams) error {
-	_, err := q.db.ExecContext(ctx, createAccountForRegistration,
-		arg.ID,
-		arg.Name,
-		arg.AccountTypeCode,
-		arg.OnboardingStatusCode,
-		arg.AccountBillingID,
-	)
 	return err
 }
 

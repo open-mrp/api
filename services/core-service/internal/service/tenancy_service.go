@@ -24,7 +24,6 @@ type tenancySvcImpl struct {
 	userRepo            domain.UserRepo
 	sandboxAccountRepo  domain.SandboxAccountRepo
 	rolePermissionRepo  domain.RolePermissionRepo
-	authClient          domain.CoreAuthClient
 	s3Client            s3client.ObjectStore
 	userPhotosBucket    string
 }
@@ -32,9 +31,6 @@ type tenancySvcImpl struct {
 type TenancySvcConfig struct {
 	// RepoFactory (required) is the repository factory.
 	RepoFactory domain.RepoFactory
-
-	// AuthClient (required) is the auth-service client.
-	AuthClient domain.CoreAuthClient
 
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
@@ -46,9 +42,6 @@ type TenancySvcConfig struct {
 func (c *TenancySvcConfig) validate() error {
 	if c.RepoFactory == nil {
 		return fmt.Errorf("tenancy service: repo factory is required")
-	}
-	if c.AuthClient == nil {
-		return fmt.Errorf("tenancy service: auth client is required")
 	}
 	if c.S3Client == nil {
 		return fmt.Errorf("tenancy service: s3 client is required")
@@ -68,7 +61,6 @@ func NewTenancySvc(config *TenancySvcConfig) domain.TenancySvc {
 		userRepo:            config.RepoFactory.NewUserRepo(),
 		sandboxAccountRepo:  config.RepoFactory.NewSandboxAccountRepo(),
 		rolePermissionRepo:  config.RepoFactory.NewRolePermissionRepo(),
-		authClient:          config.AuthClient,
 		s3Client:            config.S3Client,
 		userPhotosBucket:    config.UserPhotosBucket,
 	}
@@ -125,19 +117,11 @@ func (s *tenancySvcImpl) GetTenancy(ctx context.Context, userID string, targetAc
 		currentAccount = &sorted[0]
 	}
 
-	pendingRegistration, apiErr := s.loadPendingRegistration(ctx, userID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	if currentAccount == nil {
-		return &domain.Tenancy{
-			HasTenancy:          false,
-			PendingRegistration: pendingRegistration,
-		}, nil
+		return &domain.Tenancy{HasTenancy: false}, nil
 	}
 
-	return s.buildTenancyResponse(ctx, currentAccount, accounts, pendingRegistration)
+	return s.buildTenancyResponse(ctx, currentAccount, accounts)
 }
 
 func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID string) (*domain.Tenancy, *apierror.APIError) {
@@ -198,12 +182,7 @@ func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	pendingRegistration, apiErr := s.loadPendingRegistration(ctx, userID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return s.buildTenancyResponse(ctx, targetAccount, accounts, pendingRegistration)
+	return s.buildTenancyResponse(ctx, targetAccount, accounts)
 }
 
 func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targetAccountID *string) (*domain.UserRecord, *apierror.APIError) {
@@ -264,23 +243,7 @@ func (s *tenancySvcImpl) ListCustomerAccountsForUser(ctx context.Context, userID
 	return accounts, nil
 }
 
-func (s *tenancySvcImpl) loadPendingRegistration(ctx context.Context, userID string) (*domain.TenancyPendingRegistration, *apierror.APIError) {
-	session, apiErr := s.authClient.GetIncompleteRegistrationSession(ctx, userID)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if session == nil {
-		return nil, nil
-	}
-	return &domain.TenancyPendingRegistration{
-		SessionID: session.SessionID,
-		PlanCode:  session.PlanCode,
-		Step:      session.Step,
-		CreatedAt: session.CreatedAt,
-	}, nil
-}
-
-func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccount *domain.TenancyAccount, activeAccounts []domain.TenancyAccount, pendingRegistration *domain.TenancyPendingRegistration) (*domain.Tenancy, *apierror.APIError) {
+func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccount *domain.TenancyAccount, activeAccounts []domain.TenancyAccount) (*domain.Tenancy, *apierror.APIError) {
 	isAdmin := currentAccount.RoleType != nil && *currentAccount.RoleType == "admin"
 	isSandbox := currentAccount.AccountTypeCode == "sandbox"
 
@@ -461,10 +424,9 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 			AccountPlan:              accountPlan,
 			AccountUserID:            currentAccount.AccountUserID,
 		},
-		Sandboxes:           sandboxes,
-		OwnerAccount:        ownerAccount,
-		OtherAccounts:       otherAccounts,
-		PendingRegistration: pendingRegistration,
+		Sandboxes:     sandboxes,
+		OwnerAccount:  ownerAccount,
+		OtherAccounts: otherAccounts,
 	}, nil
 }
 

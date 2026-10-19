@@ -174,9 +174,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.CheckoutSessionsEndpointGroup{}).Materialize(&httpgroup.CheckoutSessionsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
-		*(&httpgroup.RegistrationSessionsEndpointGroup{}).Materialize(&httpgroup.RegistrationSessionsEndpointGroupConfig{
-			AuthClient: authClient,
-		}).APIEndpointGroup,
 		*(&httpgroup.RegistrationFlowsEndpointGroup{}).Materialize(&httpgroup.RegistrationFlowsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

@@ -206,7 +206,6 @@ var typeRegistry = map[string]any{
 	"PlatformMode":                    PlatformMode(""),
 	"Protocol":                        Protocol(""),
 	"PublicPlanCode":                  PublicPlanCode(""),
-	"RegistrationStep":                RegistrationStep(""),
 	"PortalRegistrationStep":          PortalRegistrationStep(""),
 	"PortalRegistrationStatus":        PortalRegistrationStatus(""),
 	"RoleType":                        RoleType(""),

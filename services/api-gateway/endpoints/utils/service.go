@@ -17,7 +17,6 @@ import (
 type UtilsSvc interface {
 	CheckDuplicate(ctx context.Context, req *CheckDuplicateRequest) (*apiresource.CheckDuplicateResult, *apierror.APIError)
 	EmailRecord(ctx context.Context, req *EmailRecordRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	RequestDemo(ctx context.Context, req *RequestDemoRequest) (*apiresource.MessageResource, *apierror.APIError)
 	SubmitFeedback(ctx context.Context, req *SubmitFeedbackRequest) (*apiresource.MessageResource, *apierror.APIError)
 }
 
@@ -116,30 +115,6 @@ func (m *utilsSvcImpl) EmailRecord(ctx context.Context, req *EmailRecordRequest)
 	}
 
 	return &apiresource.EmptyResource{}, nil
-}
-
-func (m *utilsSvcImpl) RequestDemo(ctx context.Context, req *RequestDemoRequest) (*apiresource.MessageResource, *apierror.APIError) {
-	pbReq := &pb.RequestDemoRequest{
-		Name:        req.Name,
-		Email:       req.Email,
-		Company:     req.Company,
-		PhoneNumber: req.PhoneNumber.Ptr(),
-		Message:     req.Message.Ptr(),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, utilsSvcTracer, "service.utils.request_demo", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.RequestDemoResponse, error) {
-			return m.coreClient.RequestDemo(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &apiresource.MessageResource{
-		Object:  constants.ObjectTypeMessage,
-		Message: resp.Message,
-	}, nil
 }
 
 func (m *utilsSvcImpl) SubmitFeedback(ctx context.Context, req *SubmitFeedbackRequest) (*apiresource.MessageResource, *apierror.APIError) {

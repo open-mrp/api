@@ -25,49 +25,6 @@ type AccountUserAccess struct {
 	Permissions   map[string]bool
 }
 
-// PlanInfo holds the pricing plan data returned by the billing service.
-type PlanInfo struct {
-	TypeID        string
-	Name          string
-	PlanTypeCode  string
-	PricePerSeat  float64
-	PricePerMonth *float64
-	SeatMinimum   *int
-}
-
-// AuthBillingClient is the interface for billing-service operations needed by auth-service.
-type AuthBillingClient interface {
-	GetPlanByCode(ctx context.Context, planCode string) (*PlanInfo, *apierror.APIError)
-	CreateCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*StripeCustomer, *apierror.APIError)
-	SetupBillingProfile(ctx context.Context, accountID string) (*BillingProfileResult, *apierror.APIError)
-	SubscribeToPricingPlan(ctx context.Context, stripeCustomerID, planCode string) *apierror.APIError
-	CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*SetupIntentResult, *apierror.APIError)
-	GetSetupIntentStatus(ctx context.Context, setupIntentID string) (*SetupIntentResult, *apierror.APIError)
-	ValidateStripePricingPlan(ctx context.Context, planCode string) *apierror.APIError
-	Close() error
-	WaitForReady(ctx context.Context) error
-}
-
-// SetupIntentResult holds the result of a Setup Intent operation from billing-service.
-type SetupIntentResult struct {
-	SetupIntentID   string
-	ClientSecret    string // #nosec G117 -- Stripe ephemeral client secret
-	Status          string
-	PaymentMethodID *string
-	PublishableKey  string
-}
-
-// StripeCustomer represents a Stripe customer created during registration.
-type StripeCustomer struct {
-	ID string
-}
-
-// BillingProfileResult holds the IDs of the created billing profile and cadence.
-type BillingProfileResult struct {
-	ProfileID string
-	CadenceID string
-}
-
 // AuthCoreClient is the interface for core-service operations needed by auth-service
 type AuthCoreClient interface {
 	// GetAccountContext returns whether an account is a sandbox and its mode
@@ -93,7 +50,4 @@ type AuthCoreClient interface {
 
 	// GetAdminRole returns the admin role ID
 	GetAdminRole(ctx context.Context) (string, *apierror.APIError)
-
-	// CompleteRegistration creates the production account, sandbox, roles, and permissions via core-service.
-	CompleteRegistration(ctx context.Context, input CompleteAccountRegistrationInput) (*CompleteRegistrationOutput, *apierror.APIError)
 }

@@ -111,13 +111,6 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 		}),
 		RefreshToken: refreshTokenMed,
 		Idempotency:  NewIdempotencyMed(&IdempotencyMedConfig{Repos: repoFactory}),
-		Registration: NewRegistrationMed(&RegistrationMedConfig{
-			Repos:                 repoFactory,
-			NotificationPublisher: f.notificationPublisher,
-			FrontendURL:           f.frontendURL,
-			UserMed:               userMed,
-			RefreshTokenMed:       refreshTokenMed,
-		}),
 	}
 
 	if len(f.docAPIKeyEncryptionKey) > 0 {

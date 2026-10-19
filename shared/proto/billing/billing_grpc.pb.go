@@ -23,7 +23,6 @@ const (
 	BillingService_ListPricingPlans_FullMethodName           = "/billing.BillingService/ListPricingPlans"
 	BillingService_GetPlanByCode_FullMethodName              = "/billing.BillingService/GetPlanByCode"
 	BillingService_ProcessWebhookEvent_FullMethodName        = "/billing.BillingService/ProcessWebhookEvent"
-	BillingService_CreateCustomer_FullMethodName             = "/billing.BillingService/CreateCustomer"
 	BillingService_GetAccountUsage_FullMethodName            = "/billing.BillingService/GetAccountUsage"
 	BillingService_CreateBillingPortalSession_FullMethodName = "/billing.BillingService/CreateBillingPortalSession"
 	BillingService_PreviewPlanChange_FullMethodName          = "/billing.BillingService/PreviewPlanChange"
@@ -31,11 +30,6 @@ const (
 	BillingService_EnsureBillingCustomer_FullMethodName      = "/billing.BillingService/EnsureBillingCustomer"
 	BillingService_GetAgentSpend_FullMethodName              = "/billing.BillingService/GetAgentSpend"
 	BillingService_SwitchPlan_FullMethodName                 = "/billing.BillingService/SwitchPlan"
-	BillingService_SetupBillingProfile_FullMethodName        = "/billing.BillingService/SetupBillingProfile"
-	BillingService_SubscribeToPricingPlan_FullMethodName     = "/billing.BillingService/SubscribeToPricingPlan"
-	BillingService_CreateSetupIntent_FullMethodName          = "/billing.BillingService/CreateSetupIntent"
-	BillingService_GetSetupIntentStatus_FullMethodName       = "/billing.BillingService/GetSetupIntentStatus"
-	BillingService_ValidateStripePricingPlan_FullMethodName  = "/billing.BillingService/ValidateStripePricingPlan"
 )
 
 // BillingServiceClient is the client API for BillingService service.
@@ -48,8 +42,6 @@ type BillingServiceClient interface {
 	GetPlanByCode(ctx context.Context, in *GetPlanByCodeRequest, opts ...grpc.CallOption) (*GetPlanByCodeResponse, error)
 	// ProcessWebhookEvent verifies and processes an incoming Stripe webhook event.
 	ProcessWebhookEvent(ctx context.Context, in *ProcessWebhookEventRequest, opts ...grpc.CallOption) (*ProcessWebhookEventResponse, error)
-	// CreateCustomer creates a Stripe customer for a registration session.
-	CreateCustomer(ctx context.Context, in *CreateCustomerRequest, opts ...grpc.CallOption) (*CreateCustomerResponse, error)
 	// GetAccountUsage returns current resource usage for an account with plan
 	// limits and subscription info.
 	GetAccountUsage(ctx context.Context, in *GetAccountUsageRequest, opts ...grpc.CallOption) (*GetAccountUsageResponse, error)
@@ -73,18 +65,6 @@ type BillingServiceClient interface {
 	GetAgentSpend(ctx context.Context, in *GetAgentSpendRequest, opts ...grpc.CallOption) (*GetAgentSpendResponse, error)
 	// SwitchPlan initiates a plan switch using v2 billing intents.
 	SwitchPlan(ctx context.Context, in *SwitchPlanRequest, opts ...grpc.CallOption) (*SwitchPlanResponse, error)
-	// SetupBillingProfile creates a billing profile and cadence for an account.
-	SetupBillingProfile(ctx context.Context, in *SetupBillingProfileRequest, opts ...grpc.CallOption) (*SetupBillingProfileResponse, error)
-	// SubscribeToPricingPlan creates a v2 pricing plan subscription for an account.
-	SubscribeToPricingPlan(ctx context.Context, in *SubscribeToPricingPlanRequest, opts ...grpc.CallOption) (*SubscribeToPricingPlanResponse, error)
-	// CreateSetupIntent creates a Stripe Setup Intent for collecting a payment
-	// method during registration.
-	CreateSetupIntent(ctx context.Context, in *CreateSetupIntentRequest, opts ...grpc.CallOption) (*CreateSetupIntentResponse, error)
-	// GetSetupIntentStatus returns the current status of a Stripe Setup Intent.
-	GetSetupIntentStatus(ctx context.Context, in *GetSetupIntentStatusRequest, opts ...grpc.CallOption) (*GetSetupIntentStatusResponse, error)
-	// ValidateStripePricingPlan checks whether the Stripe pricing plan for a
-	// given plan code is accessible before account creation.
-	ValidateStripePricingPlan(ctx context.Context, in *ValidateStripePricingPlanRequest, opts ...grpc.CallOption) (*ValidateStripePricingPlanResponse, error)
 }
 
 type billingServiceClient struct {
@@ -119,16 +99,6 @@ func (c *billingServiceClient) ProcessWebhookEvent(ctx context.Context, in *Proc
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ProcessWebhookEventResponse)
 	err := c.cc.Invoke(ctx, BillingService_ProcessWebhookEvent_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingServiceClient) CreateCustomer(ctx context.Context, in *CreateCustomerRequest, opts ...grpc.CallOption) (*CreateCustomerResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateCustomerResponse)
-	err := c.cc.Invoke(ctx, BillingService_CreateCustomer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -205,56 +175,6 @@ func (c *billingServiceClient) SwitchPlan(ctx context.Context, in *SwitchPlanReq
 	return out, nil
 }
 
-func (c *billingServiceClient) SetupBillingProfile(ctx context.Context, in *SetupBillingProfileRequest, opts ...grpc.CallOption) (*SetupBillingProfileResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetupBillingProfileResponse)
-	err := c.cc.Invoke(ctx, BillingService_SetupBillingProfile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingServiceClient) SubscribeToPricingPlan(ctx context.Context, in *SubscribeToPricingPlanRequest, opts ...grpc.CallOption) (*SubscribeToPricingPlanResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubscribeToPricingPlanResponse)
-	err := c.cc.Invoke(ctx, BillingService_SubscribeToPricingPlan_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingServiceClient) CreateSetupIntent(ctx context.Context, in *CreateSetupIntentRequest, opts ...grpc.CallOption) (*CreateSetupIntentResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateSetupIntentResponse)
-	err := c.cc.Invoke(ctx, BillingService_CreateSetupIntent_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingServiceClient) GetSetupIntentStatus(ctx context.Context, in *GetSetupIntentStatusRequest, opts ...grpc.CallOption) (*GetSetupIntentStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSetupIntentStatusResponse)
-	err := c.cc.Invoke(ctx, BillingService_GetSetupIntentStatus_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingServiceClient) ValidateStripePricingPlan(ctx context.Context, in *ValidateStripePricingPlanRequest, opts ...grpc.CallOption) (*ValidateStripePricingPlanResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateStripePricingPlanResponse)
-	err := c.cc.Invoke(ctx, BillingService_ValidateStripePricingPlan_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // BillingServiceServer is the server API for BillingService service.
 // All implementations must embed UnimplementedBillingServiceServer
 // for forward compatibility.
@@ -265,8 +185,6 @@ type BillingServiceServer interface {
 	GetPlanByCode(context.Context, *GetPlanByCodeRequest) (*GetPlanByCodeResponse, error)
 	// ProcessWebhookEvent verifies and processes an incoming Stripe webhook event.
 	ProcessWebhookEvent(context.Context, *ProcessWebhookEventRequest) (*ProcessWebhookEventResponse, error)
-	// CreateCustomer creates a Stripe customer for a registration session.
-	CreateCustomer(context.Context, *CreateCustomerRequest) (*CreateCustomerResponse, error)
 	// GetAccountUsage returns current resource usage for an account with plan
 	// limits and subscription info.
 	GetAccountUsage(context.Context, *GetAccountUsageRequest) (*GetAccountUsageResponse, error)
@@ -290,18 +208,6 @@ type BillingServiceServer interface {
 	GetAgentSpend(context.Context, *GetAgentSpendRequest) (*GetAgentSpendResponse, error)
 	// SwitchPlan initiates a plan switch using v2 billing intents.
 	SwitchPlan(context.Context, *SwitchPlanRequest) (*SwitchPlanResponse, error)
-	// SetupBillingProfile creates a billing profile and cadence for an account.
-	SetupBillingProfile(context.Context, *SetupBillingProfileRequest) (*SetupBillingProfileResponse, error)
-	// SubscribeToPricingPlan creates a v2 pricing plan subscription for an account.
-	SubscribeToPricingPlan(context.Context, *SubscribeToPricingPlanRequest) (*SubscribeToPricingPlanResponse, error)
-	// CreateSetupIntent creates a Stripe Setup Intent for collecting a payment
-	// method during registration.
-	CreateSetupIntent(context.Context, *CreateSetupIntentRequest) (*CreateSetupIntentResponse, error)
-	// GetSetupIntentStatus returns the current status of a Stripe Setup Intent.
-	GetSetupIntentStatus(context.Context, *GetSetupIntentStatusRequest) (*GetSetupIntentStatusResponse, error)
-	// ValidateStripePricingPlan checks whether the Stripe pricing plan for a
-	// given plan code is accessible before account creation.
-	ValidateStripePricingPlan(context.Context, *ValidateStripePricingPlanRequest) (*ValidateStripePricingPlanResponse, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
 
@@ -320,9 +226,6 @@ func (UnimplementedBillingServiceServer) GetPlanByCode(context.Context, *GetPlan
 }
 func (UnimplementedBillingServiceServer) ProcessWebhookEvent(context.Context, *ProcessWebhookEventRequest) (*ProcessWebhookEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProcessWebhookEvent not implemented")
-}
-func (UnimplementedBillingServiceServer) CreateCustomer(context.Context, *CreateCustomerRequest) (*CreateCustomerResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateCustomer not implemented")
 }
 func (UnimplementedBillingServiceServer) GetAccountUsage(context.Context, *GetAccountUsageRequest) (*GetAccountUsageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccountUsage not implemented")
@@ -344,21 +247,6 @@ func (UnimplementedBillingServiceServer) GetAgentSpend(context.Context, *GetAgen
 }
 func (UnimplementedBillingServiceServer) SwitchPlan(context.Context, *SwitchPlanRequest) (*SwitchPlanResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SwitchPlan not implemented")
-}
-func (UnimplementedBillingServiceServer) SetupBillingProfile(context.Context, *SetupBillingProfileRequest) (*SetupBillingProfileResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetupBillingProfile not implemented")
-}
-func (UnimplementedBillingServiceServer) SubscribeToPricingPlan(context.Context, *SubscribeToPricingPlanRequest) (*SubscribeToPricingPlanResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SubscribeToPricingPlan not implemented")
-}
-func (UnimplementedBillingServiceServer) CreateSetupIntent(context.Context, *CreateSetupIntentRequest) (*CreateSetupIntentResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateSetupIntent not implemented")
-}
-func (UnimplementedBillingServiceServer) GetSetupIntentStatus(context.Context, *GetSetupIntentStatusRequest) (*GetSetupIntentStatusResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetSetupIntentStatus not implemented")
-}
-func (UnimplementedBillingServiceServer) ValidateStripePricingPlan(context.Context, *ValidateStripePricingPlanRequest) (*ValidateStripePricingPlanResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ValidateStripePricingPlan not implemented")
 }
 func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
 func (UnimplementedBillingServiceServer) testEmbeddedByValue()                        {}
@@ -431,24 +319,6 @@ func _BillingService_ProcessWebhookEvent_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BillingServiceServer).ProcessWebhookEvent(ctx, req.(*ProcessWebhookEventRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BillingService_CreateCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateCustomerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).CreateCustomer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_CreateCustomer_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).CreateCustomer(ctx, req.(*CreateCustomerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -579,96 +449,6 @@ func _BillingService_SwitchPlan_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BillingService_SetupBillingProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetupBillingProfileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).SetupBillingProfile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_SetupBillingProfile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).SetupBillingProfile(ctx, req.(*SetupBillingProfileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BillingService_SubscribeToPricingPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubscribeToPricingPlanRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).SubscribeToPricingPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_SubscribeToPricingPlan_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).SubscribeToPricingPlan(ctx, req.(*SubscribeToPricingPlanRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BillingService_CreateSetupIntent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSetupIntentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).CreateSetupIntent(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_CreateSetupIntent_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).CreateSetupIntent(ctx, req.(*CreateSetupIntentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BillingService_GetSetupIntentStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSetupIntentStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).GetSetupIntentStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_GetSetupIntentStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).GetSetupIntentStatus(ctx, req.(*GetSetupIntentStatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BillingService_ValidateStripePricingPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateStripePricingPlanRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BillingServiceServer).ValidateStripePricingPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BillingService_ValidateStripePricingPlan_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).ValidateStripePricingPlan(ctx, req.(*ValidateStripePricingPlanRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -687,10 +467,6 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProcessWebhookEvent",
 			Handler:    _BillingService_ProcessWebhookEvent_Handler,
-		},
-		{
-			MethodName: "CreateCustomer",
-			Handler:    _BillingService_CreateCustomer_Handler,
 		},
 		{
 			MethodName: "GetAccountUsage",
@@ -719,26 +495,6 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SwitchPlan",
 			Handler:    _BillingService_SwitchPlan_Handler,
-		},
-		{
-			MethodName: "SetupBillingProfile",
-			Handler:    _BillingService_SetupBillingProfile_Handler,
-		},
-		{
-			MethodName: "SubscribeToPricingPlan",
-			Handler:    _BillingService_SubscribeToPricingPlan_Handler,
-		},
-		{
-			MethodName: "CreateSetupIntent",
-			Handler:    _BillingService_CreateSetupIntent_Handler,
-		},
-		{
-			MethodName: "GetSetupIntentStatus",
-			Handler:    _BillingService_GetSetupIntentStatus_Handler,
-		},
-		{
-			MethodName: "ValidateStripePricingPlan",
-			Handler:    _BillingService_ValidateStripePricingPlan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

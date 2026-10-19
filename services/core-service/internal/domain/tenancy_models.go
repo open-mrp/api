@@ -35,12 +35,11 @@ type TenancyAccountPlanSummary struct {
 
 // Tenancy is the resolved multi-tenant context for a user.
 type Tenancy struct {
-	HasTenancy          bool
-	CurrentAccount      *TenancyCurrentAccount
-	Sandboxes           []TenancySandbox
-	OwnerAccount        *TenancyOwnerAccount
-	OtherAccounts       []TenancyOtherAccount
-	PendingRegistration *TenancyPendingRegistration
+	HasTenancy     bool
+	CurrentAccount *TenancyCurrentAccount
+	Sandboxes      []TenancySandbox
+	OwnerAccount   *TenancyOwnerAccount
+	OtherAccounts  []TenancyOtherAccount
 }
 
 // TenancyCurrentAccount represents the user's active account.
@@ -80,14 +79,6 @@ type TenancyRole struct {
 	Permissions []string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-}
-
-// TenancyPendingRegistration represents an in-progress registration session for the authenticated user.
-type TenancyPendingRegistration struct {
-	SessionID string
-	PlanCode  string
-	Step      string
-	CreatedAt time.Time
 }
 
 // TenancySandbox represents a sandbox account summary.

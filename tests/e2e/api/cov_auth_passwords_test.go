@@ -36,7 +36,7 @@ const (
 
 	// covAuthPasswordsJWTSecretDefault matches JWT_SECRET in docker-compose.e2e.yml.
 	// Password reset tokens are stateless JWTs that are never persisted anywhere the
-	// e2e harness can read back (unlike registration_session's verification_token), so
+	// e2e harness can read back, so
 	// this is the only way to mint a real, valid reset token for the happy path.
 	covAuthPasswordsJWTSecretDefault = "test-token-secret" // #nosec G101 - Test-environment JWT signing secret, not a production credential
 

@@ -10,6 +10,12 @@ import (
 
 const SampleCRUDAddressID = "ad_j8cz0b79pwdb"
 const SampleGeolocationID = "gl_betrf3v346k5"
+const SampleAddressID = "ad_npqa5y43q26z"
+const SampleAddressLine1 = "123 Main Street"
+const SampleAddressCity = "San Francisco"
+const SampleAddressState = "CA"
+const SampleAddressPostalCode = "94105"
+const SampleAddressCountry = "US"
 
 // The street-level location details of an address.
 type Geolocation struct {

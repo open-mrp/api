@@ -990,13 +990,5 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 		registry.RegisterGroup(apiKeysGroup.APIEndpointGroup)
 	}
 
-	// Registration Sessions
-	registrationSessionsGroup := (&httpgroup.RegistrationSessionsEndpointGroup{}).Materialize(&httpgroup.RegistrationSessionsEndpointGroupConfig{
-		AuthClient: config.AuthClient,
-	})
-	if registrationSessionsGroup != nil {
-		registry.RegisterGroup(registrationSessionsGroup.APIEndpointGroup)
-	}
-
 	registry.RegisterEndpoints(r)
 }

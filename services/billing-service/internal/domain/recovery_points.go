@@ -4,7 +4,6 @@ type RecoveryPoint string
 
 const (
 	RecoveryPointStarted         RecoveryPoint = "billing:started"
-	RecoveryPointProfileCreated  RecoveryPoint = "billing:profile_created"
 	RecoveryPointIntentCommitted RecoveryPoint = "billing:intent_committed"
 	RecoveryPointFinished        RecoveryPoint = "billing:finished"
 )
@@ -15,7 +14,7 @@ func (r RecoveryPoint) String() string {
 
 func (r RecoveryPoint) IsValid() bool {
 	switch r {
-	case RecoveryPointStarted, RecoveryPointProfileCreated, RecoveryPointIntentCommitted, RecoveryPointFinished:
+	case RecoveryPointStarted, RecoveryPointIntentCommitted, RecoveryPointFinished:
 		return true
 	default:
 		return false

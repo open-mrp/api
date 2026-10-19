@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -23,7 +22,6 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/messaging"
@@ -70,7 +68,7 @@ type AccountSvcConfig struct {
 	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
 	AssetCDNBaseURL string
 
-	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives plan-change and new-registration alerts.
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives plan-change alerts.
 	OperatorEmail string
 }
 
@@ -570,192 +568,6 @@ func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, strip
 	defer span.End()
 
 	return s.accountRepo.GetByStripeCustomerID(ctx, stripeCustomerID)
-}
-
-// CompleteRegistration provisions a new production account with all supporting resources inside a single transaction.
-//
-//  1. Generate a new account ID.
-//  2. Enforce registration limits for the selected plan.
-//  3. Fetch the admin role ID for linking the user.
-//  4. Within a transaction:
-//     a. Create the production account record.
-//     b. Link the registering user to the account with the admin role.
-//     c. Create the business address (best-effort).
-//     d. Create the account portal, system products, and branding records.
-//     e. Create a sandbox account via the sandbox mediator.
-//     f. Enqueue a seed-data message for the sandbox.
-//     g. Enqueue an admin notification email for the new registration.
-//     h. Enqueue the registrant's follow-up for platform-service to schedule.
-//  5. Return the production account ID and sandbox account ID.
-func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.CompleteRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
-	ctx, span := accountSvcTracer.Start(ctx, "service.account.complete_registration")
-	defer span.End()
-
-	// Generate production account ID before transaction
-	accountID, genErr := id.GenID(id.AccountIDPrefix, nil)
-	if genErr != nil {
-		return nil, tracing.Trace(span, genErr)
-	}
-
-	// Enforce registration limits before creating accounts
-	planCode := constants.PlanCode(input.PlanCode)
-	limits := constants.GetRegistrationLimits(planCode)
-	if limits.PublicLimit > 0 {
-		count, countErr := s.accountRepo.CountNonSandboxByPlanCode(ctx, input.PlanCode)
-		if countErr != nil {
-			return nil, tracing.Trace(span, countErr)
-		}
-		if count >= limits.PublicLimit {
-			return nil, tracing.Trace(span, apierror.NewRegistrationClosedError(
-				fmt.Sprintf("Registration for the %s plan is currently at capacity.", input.PlanCode)))
-		}
-	}
-
-	// Fetch admin role ID before transaction (read-only reference data)
-	adminRoleID, apiErr := s.accountUserRepo.GetAdminRoleID(ctx)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	var sandboxAccountID string
-
-	// Wrap all writes in a single transaction
-	txErr := s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		txRegRepo := f.NewRegistrationRepo()
-
-		// 1. Create production account
-		if apiErr := txRegRepo.CreateAccountForRegistration(txCtx, domain.CreateAccountParams{
-			ID:                   accountID,
-			Name:                 input.AccountData.AccountName,
-			PlanCode:             input.PlanCode,
-			StripeCustomerID:     input.StripeCustomerID,
-			StripeSubscriptionID: input.StripeSubscriptionID,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		// 2. Link user to production account
-		if apiErr := txRegRepo.CreateAccountUser(txCtx, accountID, input.UserID, adminRoleID); apiErr != nil {
-			return apiErr
-		}
-
-		// 3. Create business address (log-only on error)
-		if input.BusinessAddress != nil {
-			if apiErr := txRegRepo.CreateBusinessAddress(txCtx, accountID, input.AccountData.AccountName, *input.BusinessAddress); apiErr != nil {
-				slog.WarnContext(txCtx, "Failed to create business address during registration", "account_id", accountID, "error", apiErr.PublicMessage)
-			}
-		}
-
-		// 4. Create portal for production account
-		if apiErr := txRegRepo.CreateAccountPortal(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		// 4b. Create system products (shipping + credit) for the production account
-		if apiErr := txRegRepo.CreateSystemProducts(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		// 4c. Create account branding for the production account
-		if apiErr := txRegRepo.CreateAccountBranding(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		// 4d. Seed the shipping and receiving calendars, so the account's first order is not committed to a Saturday or a federal holiday.
-		if apiErr := calendarseed.Seed(txCtx, f, accountID, time.Now()); apiErr != nil {
-			return apiErr
-		}
-
-		// 5. Create sandbox account (reuses same mediator logic as the create-sandbox endpoint)
-		sandboxName := input.AccountData.AccountName + " Sandbox"
-		meds := s.mediatorFactory.Build(f)
-		sandbox, createErr := meds.Sandbox.Create(txCtx, accountID, input.UserID, sandboxName)
-		if createErr != nil {
-			return createErr
-		}
-		sandboxAccountID = sandbox.AccountID
-
-		// 6. Enqueue seed message for the new sandbox account
-		payloadJSON, err := json.Marshal(map[string]string{"account_id": sandboxAccountID})
-		if err != nil {
-			return apierror.NewInternalError(err, "Failed to marshal seed payload.")
-		}
-
-		seedMsg := contracts.AmqpMessage{Data: payloadJSON}
-		if _, err := f.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
-			ServiceName: domain.ServiceName,
-			MessageType: string(contracts.CoreCmdSeedSandbox),
-			Destination: messaging.ApplicationExchange,
-			RoutingKey:  string(contracts.CoreCmdSeedSandbox),
-			Payload:     seedMsg,
-		}); err != nil {
-			return apierror.NewInternalError(err, "Failed to create seed outbox message.")
-		}
-
-		// 7. Enqueue admin notification for the new registration
-		emailData := messaging.EmailSendData{
-			To:         []string{s.operatorEmail},
-			Subject:    fmt.Sprintf("[New Registration] %s", input.AccountData.AccountName),
-			TemplateID: constants.EmailTemplateNewRegistrationAlert,
-			Params: map[string]any{
-				"AccountName": input.AccountData.AccountName,
-				"AccountID":   accountID,
-				"PlanCode":    input.PlanCode,
-				"UserID":      input.UserID,
-				"UserName":    input.UserName,
-				"UserEmail":   input.UserEmail,
-			},
-		}
-
-		emailJSON, err := json.Marshal(emailData)
-		if err != nil {
-			return apierror.NewInternalError(err, "Failed to marshal registration alert email data.")
-		}
-
-		emailMsg := contracts.AmqpMessage{Data: emailJSON}
-		if _, err := f.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
-			ServiceName: domain.ServiceName,
-			MessageType: string(contracts.NotificationCmdSendEmail),
-			Destination: messaging.ApplicationExchange,
-			RoutingKey:  string(contracts.NotificationCmdSendEmail),
-			Payload:     emailMsg,
-		}); err != nil {
-			return apierror.NewInternalError(err, "Failed to create registration alert outbox message.")
-		}
-
-		// 8. Have platform-service schedule the registrant's personal follow-up
-		followupJSON, err := json.Marshal(messaging.AccountFollowupScheduleData{
-			AccountID:        accountID,
-			SandboxAccountID: &sandboxAccountID,
-			UserID:           input.UserID,
-			AccountName:      input.AccountData.AccountName,
-			RegistrantName:   input.UserName,
-			RegistrantEmail:  input.UserEmail,
-			RegisteredAt:     time.Now().UTC(),
-		})
-		if err != nil {
-			return apierror.NewInternalError(err, "Failed to marshal account follow-up schedule data.")
-		}
-		if _, err := f.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
-			ServiceName: domain.ServiceName,
-			MessageType: string(contracts.PlatformCmdScheduleAccountFollowup),
-			Destination: messaging.ApplicationExchange,
-			RoutingKey:  string(contracts.PlatformCmdScheduleAccountFollowup),
-			Payload:     contracts.AmqpMessage{Data: followupJSON},
-		}); err != nil {
-			return apierror.NewInternalError(err, "Failed to create account follow-up outbox message.")
-		}
-
-		return nil
-	})
-	if txErr != nil {
-		return nil, tracing.Trace(span, txErr)
-	}
-
-	return &domain.CompleteRegistrationOutput{
-		AccountID: accountID,
-		SandboxID: sandboxAccountID,
-	}, nil
 }
 
 func (s *accountSvcImpl) mediators() domain.Mediators {

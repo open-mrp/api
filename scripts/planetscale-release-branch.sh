@@ -41,6 +41,7 @@
 #   deploy_request_url
 #   deploy_request_count
 #   deploy_requests_md  markdown list of every deploy request, one per line
+#   superseded_md     markdown links to this release's deploy requests closed here, comma-separated
 
 set -euo pipefail
 
@@ -201,7 +202,10 @@ done
 
 # --- Clear out earlier runs ---
 
-# Closing a deploy request is what tells the deploy step it was superseded.
+# Closing a deploy request is what tells the deploy step it was superseded. The ones closed for this
+# release are reported, so the release PR can say which deploy request replaced them.
+SUPERSEDED=()
+
 retire_branch() {
     local name="$1" open
 
@@ -209,12 +213,23 @@ retire_branch() {
     if [ -n "$open" ]; then
         info "Closing superseded deploy request #$open ($name)"
         pscale_cmd deploy-request close "$PS_DATABASE" "$open" >/dev/null || true
+        if [ "$(release_base_of "$name")" = "$BRANCH" ]; then
+            SUPERSEDED+=("$open")
+        fi
     fi
 
     if pscale_cmd branch show "$PS_DATABASE" "$name" >/dev/null 2>&1; then
         info "Deleting branch $name left by an earlier run"
         pscale_cmd branch delete "$PS_DATABASE" "$name" --force
     fi
+}
+
+emit_superseded() {
+    local number links=""
+    for number in "${SUPERSEDED[@]}"; do
+        links="${links:+$links, }[#${number}](https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$number)"
+    done
+    emit superseded_md "$links"
 }
 
 retire_release() {
@@ -270,6 +285,7 @@ if [ -z "$NEW_MIGRATIONS" ]; then
     retire_release "$BRANCH"
     info "No new migrations in this release. Nothing to deploy."
     emit has_migrations false
+    emit_superseded
     exit 0
 fi
 
@@ -486,3 +502,4 @@ emit deploy_request "$FIRST_NUMBER"
 emit deploy_request_url "https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$FIRST_NUMBER"
 emit deploy_request_count "${#DR_NUMBERS[@]}"
 emit_multiline deploy_requests_md "$DR_LIST"
+emit_superseded

@@ -255,6 +255,7 @@ jobs:
           DR_LIST: ${{ steps.planetscale.outputs.deploy_requests_md }}
           BRANCH: ${{ steps.planetscale.outputs.branch }}
           HAS_DR: ${{ steps.planetscale.outputs.has_migrations }}
+          SUPERSEDED_MD: ${{ steps.planetscale.outputs.superseded_md }}
         run: |
           set -euo pipefail
           {
@@ -281,7 +282,31 @@ jobs:
           fi
           echo "$marker" >> /tmp/pr-comment.md
 
-          gh pr comment "$PR" --repo "${{ github.repository }}" --body-file /tmp/pr-comment.md
+          # Recutting closes the deploy requests an earlier plan linked; say which, so nobody goes looking
+          # for them. Left out of the marker: the next run with nothing to recut reports none.
+          if [ -n "${SUPERSEDED_MD:-}" ]; then
+            if [ "${HAS_DR:-false}" = "true" ]; then
+              note="The migrations in this release changed, so the release workflow closed ${SUPERSEDED_MD} and opened the deploy request below in its place, which carries all of them."
+            else
+              note="This release no longer adds schema migrations, so the release workflow closed ${SUPERSEDED_MD}."
+            fi
+            { echo "$note"; echo; cat /tmp/pr-comment.md; } > /tmp/pr-comment-full.md
+            mv /tmp/pr-comment-full.md /tmp/pr-comment.md
+          fi
+
+          new_url="$(gh pr comment "$PR" --repo "${{ github.repository }}" --body-file /tmp/pr-comment.md)"
+          echo "$new_url"
+
+          # Earlier plans still link the deploy requests they were cut with. Point each at the one that
+          # replaced it.
+          gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- migration-plan ")) and (.body | startswith("> **Superseded**") | not)) | .id' |
+            while IFS= read -r id; do
+              if [ -z "$id" ] || [[ "$new_url" == *"-$id" ]]; then continue; fi
+              gh api "repos/${{ github.repository }}/issues/comments/${id}" --jq .body > /tmp/old-plan.md
+              { printf '> **Superseded** by [a newer migration plan](%s); its deploy request may be closed.\n\n' "$new_url"; cat /tmp/old-plan.md; } > /tmp/superseded.md
+              gh api --method PATCH "repos/${{ github.repository }}/issues/comments/${id}" -F body=@/tmp/superseded.md >/dev/null
+            done
 
       - name: Summary
         if: always()

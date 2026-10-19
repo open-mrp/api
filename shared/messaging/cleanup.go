@@ -99,7 +99,7 @@ type CleanupRepo interface {
 	// DeleteExpiredDeletedRecords deletes up to `limit` rows from deleted_record older than the retention window. Returns the number of rows actually deleted.
 	DeleteExpiredDeletedRecords(ctx context.Context, limit int) (int64, error)
 
-	// DeleteExpiredRequestLogs deletes up to `limit` rows from request_log older than 7 years. Returns the number of rows actually deleted.
+	// DeleteExpiredRequestLogs deletes up to `limit` rows from request_log older than 90 days. Returns the number of rows actually deleted.
 	DeleteExpiredRequestLogs(ctx context.Context, limit int) (int64, error)
 
 	// DeleteExpiredAuditEvents deletes up to `limit` rows from audit_event older than 7 years. Returns the number of rows actually deleted.

@@ -52,7 +52,7 @@ WHERE rl.id = sqlc.arg('id')
 
 -- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log
-WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 90 DAY)
 LIMIT ?;
 
 -- name: CreateRequestLog :exec

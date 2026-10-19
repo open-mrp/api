@@ -35,7 +35,7 @@ lists_page_with_list_request GET /v1/core/analytics/open-orders/{id}/lines
 lists_page_with_list_request GET /v1/core/audit-events/resource-types
 lists_page_with_list_request GET /v1/identity/document-settings
 
-lists_page_with_list_request GET /v1/messaging/preferences
+lists_page_with_list_request GET /v1/messaging/preview-9-preferences
 lists_page_with_list_request GET /v1/operations/batches/{id}/flow
 lists_page_with_list_request GET /v1/operations/demand-override-types
 lists_page_with_list_request GET /v1/operations/fulfillment-recommendations
@@ -73,7 +73,7 @@ public_docstrings POST /v1/ai/runs/{id}/actions/retry
 public_docstrings POST /v1/core/actions/email-record
 
 
-public_docstrings POST /v1/messaging/notifications/{id}/actions/dismiss
+
 public_docstrings POST /v1/operations/fulfillment-recommendations/actions/apply
 public_docstrings POST /v1/operations/machine-downtime-events
 public_docstrings POST /v1/operations/picks/{id}/actions/pack
@@ -116,7 +116,7 @@ search_documented GET /v1/identity/permission-groups
 
 
 
-search_documented GET /v1/messaging/notifications
+
 search_documented GET /v1/operations/deliveries
 search_documented GET /v1/operations/demand-overrides
 search_documented GET /v1/operations/inventories

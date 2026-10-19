@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -46,15 +47,16 @@ func roleFromProto(r *pb.RoleDetail) *apiresource.Role {
 		access[constants.PermissionArea(k)] = constants.AccessLevel(v)
 	}
 	role := &apiresource.Role{
-		ID:        r.Id,
-		Object:    constants.ObjectTypeRole,
-		Name:      r.Name,
-		TypeCode:  constants.RoleType(r.RoleTypeCode),
-		Access:    apiresource.RoleAccessOf(access),
-		Grants:    nonNilStrings(r.Grants),
-		Revokes:   nonNilStrings(r.Revokes),
-		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
+		ID:                   r.Id,
+		Object:               constants.ObjectTypeRole,
+		Name:                 r.Name,
+		TypeCode:             constants.RoleType(r.RoleTypeCode),
+		Access:               apiresource.RoleAccessOf(access),
+		Grants:               nonNilStrings(r.Grants),
+		Revokes:              nonNilStrings(r.Revokes),
+		NotificationDefaults: apiresource.NotificationSettingsOf(notifyprefs.Parse(r.NotificationDefaultsJson)),
+		CreatedAt:            grpcutil.TimestampToTime(r.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(r.UpdatedAt),
 	}
 	if r.TemplateCode != nil {
 		role.Template = new(constants.RoleTemplate(*r.TemplateCode))

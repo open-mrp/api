@@ -102,6 +102,8 @@ func newActivityHarness(t *testing.T, world *orderWorld) *activityHarness {
 					return jsonString(world.repAccountUserID), true, nil
 				case "sales_order_status_code":
 					return jsonString(world.status), true, nil
+				case "buyer_account_id":
+					return jsonString("ac_buyer"), true, nil
 				}
 				return nil, false, nil
 			}).AnyTimes()
@@ -119,18 +121,30 @@ func newActivityHarness(t *testing.T, world *orderWorld) *activityHarness {
 	return &activityHarness{repo: repo, outbox: outbox, svc: NewAuditEventSvc(&AuditEventSvcConfig{Repos: factory})}
 }
 
-// save persists event as actor and returns the order-activity fan-outs it enqueued.
+// save persists event as actor and returns the order-activity fan-outs it enqueued (not the subscribe-only ones).
 func (h *activityHarness) save(t *testing.T, ctx context.Context, event *domain.AuditEvent) []messaging.AlertFanoutData {
 	t.Helper()
 	require.Nil(t, h.svc.SaveAuditEvent(ctx, event))
-	fanouts := make([]messaging.AlertFanoutData, 0, len(h.outbox.inputs))
+	var fanouts []messaging.AlertFanoutData
+	for _, data := range h.payloads(t) {
+		if data.Kind != "subscribe" {
+			fanouts = append(fanouts, data)
+		}
+	}
+	return fanouts
+}
+
+// payloads is every fan-out payload enqueued so far.
+func (h *activityHarness) payloads(t *testing.T) []messaging.AlertFanoutData {
+	t.Helper()
+	out := make([]messaging.AlertFanoutData, 0, len(h.outbox.inputs))
 	for _, input := range h.outbox.inputs {
 		require.Equal(t, string(contracts.NotificationCmdFanout), input.RoutingKey)
 		var data messaging.AlertFanoutData
 		require.NoError(t, json.Unmarshal(input.Payload.Data, &data))
-		fanouts = append(fanouts, data)
+		out = append(out, data)
 	}
-	return fanouts
+	return out
 }
 
 func jsonString(s string) json.RawMessage {
@@ -351,7 +365,11 @@ func TestOrderActivity_MilestonesAlertTheOwner(t *testing.T) {
 			if world.repAccountUserID == "" {
 				wantOwner = world.creatorID
 			}
-			assert.Equal(t, []string{wantOwner}, data.RecipientUserIDs)
+			require.NotNil(t, data.Audience)
+			assert.Equal(t, []messaging.RecordRef{{Type: "sales_order", ID: "so_1"}, {Type: "customer", ID: "ac_buyer"}}, data.Audience.Records)
+			assert.Equal(t, []string{wantOwner}, data.Audience.FallbackUserIDs, "an order nobody follows yet tells its owner")
+			assert.Equal(t, []string{tc.event.ActorID}, data.Audience.ExcludeUserIDs)
+			assert.Empty(t, data.RecipientUserIDs)
 			assert.Empty(t, data.RecipientAccountUserIDs)
 			assert.Equal(t, tc.body, data.Body)
 			if tc.title != "" {
@@ -492,7 +510,13 @@ func TestOrderActivity_NoOwnerToTell(t *testing.T) {
 				tc.world(world)
 			}
 			ctx := namedActorCtx("acct_1", tc.actor, "Avery Doe")
-			assert.Empty(t, newActivityHarness(t, world).save(t, ctx, orderEvent(tc.actor, constants.AuditActionUpdate, issueChanges()...)))
+			fanouts := newActivityHarness(t, world).save(t, ctx, orderEvent(tc.actor, constants.AuditActionUpdate, issueChanges()...))
+			// Subscribers still hear about it; without any, there is no owner to fall back to but the actor.
+			require.Len(t, fanouts, 1)
+			fallback := fanouts[0].Audience.FallbackUserIDs
+			if len(fallback) > 0 {
+				assert.Equal(t, fanouts[0].Audience.ExcludeUserIDs, fallback)
+			}
 		})
 	}
 }
@@ -580,6 +604,8 @@ func TestOrderActivity_LineBodyUsesTheLineSnapshot(t *testing.T) {
 	repo.EXPECT().GetLatestResourceFieldValue(gomock.Any(), "acct_1", constants.ObjectTypeSalesOrder, "so_1", "sales_rep_id").
 		Return(jsonString(actOwnerAccountUserID), true, nil)
 	repo.EXPECT().GetAccountUserUserID(gomock.Any(), "acct_1", actOwnerAccountUserID).Return(actOwnerUserID, nil)
+	repo.EXPECT().GetLatestResourceFieldValue(gomock.Any(), "acct_1", constants.ObjectTypeSalesOrder, "so_1", "buyer_account_id").
+		Return(nil, false, nil)
 	// The line's own create snapshot supplies its display identity (number, SKU, unit).
 	repo.EXPECT().GetResourceCreateChanges(gomock.Any(), "acct_1", constants.ObjectTypeSalesOrderLine, "sol_1").
 		Return([]domain.AuditFieldChange{
@@ -593,7 +619,8 @@ func TestOrderActivity_LineBodyUsesTheLineSnapshot(t *testing.T) {
 		childEvent(actActorUserID, constants.ObjectTypeSalesOrderLine, "sol_1", constants.AuditActionUpdate, change("quantity_value", `"1"`, `"2"`)))
 
 	require.Len(t, fanouts, 1)
-	assert.Equal(t, []string{actOwnerUserID}, fanouts[0].RecipientUserIDs)
+	assert.Equal(t, []string{actOwnerUserID}, fanouts[0].Audience.FallbackUserIDs)
+	assert.Equal(t, []messaging.RecordRef{{Type: "sales_order", ID: "so_1"}}, fanouts[0].Audience.Records, "no customer on record")
 	assert.Equal(t, "Sales order updated", fanouts[0].Title)
 	assert.Equal(t, "Casey Doe updated line 1 (WIDGET-BLUE) to 2 pairs.", fanouts[0].Body)
 }

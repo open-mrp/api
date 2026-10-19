@@ -17,6 +17,7 @@ import (
 
 	domain "github.com/open-mrp/api/services/notification-service/internal/domain"
 	constants "github.com/open-mrp/api/shared/constants"
+	notifyprefs "github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -2628,6 +2629,20 @@ func (m *MockNotificationPreferenceRepo) EXPECT() *MockNotificationPreferenceRep
 	return m.recorder
 }
 
+// Delete mocks base method.
+func (m *MockNotificationPreferenceRepo) Delete(ctx context.Context, accountUserID, category string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountUserID, category)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockNotificationPreferenceRepoMockRecorder) Delete(ctx, accountUserID, category any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).Delete), ctx, accountUserID, category)
+}
+
 // GetByUserCategory mocks base method.
 func (m *MockNotificationPreferenceRepo) GetByUserCategory(ctx context.Context, accountUserID, category string) (*domain.NotificationPreference, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2685,6 +2700,202 @@ func (m *MockNotificationPreferenceRepo) Upsert(ctx context.Context, id, account
 func (mr *MockNotificationPreferenceRepoMockRecorder) Upsert(ctx, id, accountID, accountUserID, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).Upsert), ctx, id, accountID, accountUserID, input)
+}
+
+// MockNotificationSettingRepo is a mock of NotificationSettingRepo interface.
+type MockNotificationSettingRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockNotificationSettingRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockNotificationSettingRepoMockRecorder is the mock recorder for MockNotificationSettingRepo.
+type MockNotificationSettingRepoMockRecorder struct {
+	mock *MockNotificationSettingRepo
+}
+
+// NewMockNotificationSettingRepo creates a new mock instance.
+func NewMockNotificationSettingRepo(ctrl *gomock.Controller) *MockNotificationSettingRepo {
+	mock := &MockNotificationSettingRepo{ctrl: ctrl}
+	mock.recorder = &MockNotificationSettingRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNotificationSettingRepo) EXPECT() *MockNotificationSettingRepoMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockNotificationSettingRepo) Get(ctx context.Context, accountID, accountUserID string) (*domain.NotificationSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, accountUserID)
+	ret0, _ := ret[0].(*domain.NotificationSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockNotificationSettingRepoMockRecorder) Get(ctx, accountID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNotificationSettingRepo)(nil).Get), ctx, accountID, accountUserID)
+}
+
+// RoleDefaults mocks base method.
+func (m *MockNotificationSettingRepo) RoleDefaults(ctx context.Context, accountUserID string) (notifyprefs.Defaults, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RoleDefaults", ctx, accountUserID)
+	ret0, _ := ret[0].(notifyprefs.Defaults)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RoleDefaults indicates an expected call of RoleDefaults.
+func (mr *MockNotificationSettingRepoMockRecorder) RoleDefaults(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RoleDefaults", reflect.TypeOf((*MockNotificationSettingRepo)(nil).RoleDefaults), ctx, accountUserID)
+}
+
+// Upsert mocks base method.
+func (m *MockNotificationSettingRepo) Upsert(ctx context.Context, setting *domain.NotificationSetting) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, setting)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockNotificationSettingRepoMockRecorder) Upsert(ctx, setting any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockNotificationSettingRepo)(nil).Upsert), ctx, setting)
+}
+
+// MockSubscriptionRepo is a mock of SubscriptionRepo interface.
+type MockSubscriptionRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockSubscriptionRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockSubscriptionRepoMockRecorder is the mock recorder for MockSubscriptionRepo.
+type MockSubscriptionRepoMockRecorder struct {
+	mock *MockSubscriptionRepo
+}
+
+// NewMockSubscriptionRepo creates a new mock instance.
+func NewMockSubscriptionRepo(ctrl *gomock.Controller) *MockSubscriptionRepo {
+	mock := &MockSubscriptionRepo{ctrl: ctrl}
+	mock.recorder = &MockSubscriptionRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSubscriptionRepo) EXPECT() *MockSubscriptionRepoMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockSubscriptionRepo) Get(ctx context.Context, id, accountUserID string) (*domain.Subscription, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id, accountUserID)
+	ret0, _ := ret[0].(*domain.Subscription)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockSubscriptionRepoMockRecorder) Get(ctx, id, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubscriptionRepo)(nil).Get), ctx, id, accountUserID)
+}
+
+// GetByRecord mocks base method.
+func (m *MockSubscriptionRepo) GetByRecord(ctx context.Context, accountUserID, recordID string) (*domain.Subscription, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByRecord", ctx, accountUserID, recordID)
+	ret0, _ := ret[0].(*domain.Subscription)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByRecord indicates an expected call of GetByRecord.
+func (mr *MockSubscriptionRepoMockRecorder) GetByRecord(ctx, accountUserID, recordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByRecord", reflect.TypeOf((*MockSubscriptionRepo)(nil).GetByRecord), ctx, accountUserID, recordID)
+}
+
+// HasAny mocks base method.
+func (m *MockSubscriptionRepo) HasAny(ctx context.Context, accountID, recordType, recordID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasAny", ctx, accountID, recordType, recordID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasAny indicates an expected call of HasAny.
+func (mr *MockSubscriptionRepoMockRecorder) HasAny(ctx, accountID, recordType, recordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasAny", reflect.TypeOf((*MockSubscriptionRepo)(nil).HasAny), ctx, accountID, recordType, recordID)
+}
+
+// Insert mocks base method.
+func (m *MockSubscriptionRepo) Insert(ctx context.Context, sub *domain.Subscription) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Insert", ctx, sub)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Insert indicates an expected call of Insert.
+func (mr *MockSubscriptionRepoMockRecorder) Insert(ctx, sub any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockSubscriptionRepo)(nil).Insert), ctx, sub)
+}
+
+// List mocks base method.
+func (m *MockSubscriptionRepo) List(ctx context.Context, filter domain.SubscriptionListFilter) ([]*domain.Subscription, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Subscription)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockSubscriptionRepoMockRecorder) List(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSubscriptionRepo)(nil).List), ctx, filter)
+}
+
+// SetStatus mocks base method.
+func (m *MockSubscriptionRepo) SetStatus(ctx context.Context, id, accountUserID, status, reason string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetStatus", ctx, id, accountUserID, status, reason)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetStatus indicates an expected call of SetStatus.
+func (mr *MockSubscriptionRepoMockRecorder) SetStatus(ctx, id, accountUserID, status, reason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStatus", reflect.TypeOf((*MockSubscriptionRepo)(nil).SetStatus), ctx, id, accountUserID, status, reason)
+}
+
+// Subscribers mocks base method.
+func (m *MockSubscriptionRepo) Subscribers(ctx context.Context, accountID, recordType, recordID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Subscribers", ctx, accountID, recordType, recordID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Subscribers indicates an expected call of Subscribers.
+func (mr *MockSubscriptionRepoMockRecorder) Subscribers(ctx, accountID, recordType, recordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribers", reflect.TypeOf((*MockSubscriptionRepo)(nil).Subscribers), ctx, accountID, recordType, recordID)
 }
 
 // MockDeletedRecordRepo is a mock of DeletedRecordRepo interface.

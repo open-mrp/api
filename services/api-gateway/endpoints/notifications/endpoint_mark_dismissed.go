@@ -12,9 +12,9 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// Dismisses a notification, removing it from the active feed.
+// Marks a notification dismissed, clearing it from your active feed.
 //
-// The notification is not deleted: it can still be retrieved by ID and listed with the `dismissed` status filter. Dismissing an already-dismissed notification keeps the original dismissal time.
+// The notification isn't deleted: you can still retrieve it, and list it with `statuses[]=dismissed`. Dismissing it again keeps the first dismissal time.
 type MarkDismissedEndpoint struct{}
 
 func (e *MarkDismissedEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkNotificationRequest, *apiresource.Notification] {
@@ -26,7 +26,6 @@ func (e *MarkDismissedEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkNoti
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeNotification,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MarkNotificationRequest) (*apiresource.Notification, *apierror.APIError) {

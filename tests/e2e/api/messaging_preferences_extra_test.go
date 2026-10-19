@@ -48,7 +48,7 @@ func TestNotificationPreferences_GlobalDefaultAndCategoryCoexist(t *testing.T) {
 	assert.Equal(t, "instant", jsonField(reupsert, "digest"))
 
 	// Both surface in the list.
-	list, _, err := user.GetList(preferencesPath, nil)
+	list, _, err := asPreview9(user).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	var sawGlobal, sawScoped bool
 	for _, raw := range list.Data {

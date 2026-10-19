@@ -498,6 +498,38 @@ type AlertFanoutData struct {
 	// unread, so the recipient is told once per window and a row they've read stays read.
 	CoalesceQuietly bool            `json:"coalesce_quietly,omitempty"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
+	// Record is the record the event is about; Subscribe intents subscribe people to it.
+	Record *RecordRef `json:"record,omitempty"`
+	// Subscribe subscribes people to Record before delivery, each only when their auto-subscribe setting includes the
+	// reason. A payload with only Record and Subscribe delivers nothing.
+	Subscribe []SubscriptionIntent `json:"subscribe,omitempty"`
+	// Audience, when set, replaces the explicit recipients with the subscribers of its records.
+	Audience *SubscriberAudience `json:"audience,omitempty"`
+}
+
+// RecordRef names a record by type and ID.
+type RecordRef struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+}
+
+// SubscriptionIntent asks to subscribe one person (by account user or user ID) for a reason (creator, assignee, editor,
+// mentioned).
+type SubscriptionIntent struct {
+	AccountUserID string `json:"account_user_id,omitempty"`
+	UserID        string `json:"user_id,omitempty"`
+	Reason        string `json:"reason"`
+}
+
+// SubscriberAudience delivers to everyone subscribed to any of Records (a document, then the customer or supplier it
+// belongs to), minus the excluded people (the one who made the change). The fallback recipients are used when nobody
+// has ever subscribed to the first record, which is true of records made before subscriptions existed.
+type SubscriberAudience struct {
+	Records                []RecordRef `json:"records"`
+	FallbackAccountUserIDs []string    `json:"fallback_account_user_ids,omitempty"`
+	FallbackUserIDs        []string    `json:"fallback_user_ids,omitempty"`
+	ExcludeAccountUserIDs  []string    `json:"exclude_account_user_ids,omitempty"`
+	ExcludeUserIDs         []string    `json:"exclude_user_ids,omitempty"`
 }
 
 // RealtimeDeliveryData is the payload for NotificationEventDeliveredQueue messages. notification-service emits it; every api-gateway instance consumes it and fans it out to the matching Hub topic (user:<account_user_id> for the bell, conv:<conversation_id> for live chat). Best-effort: the persisted rows remain the source of truth.

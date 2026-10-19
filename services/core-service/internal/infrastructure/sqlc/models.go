@@ -1594,6 +1594,17 @@ type NotificationPreference struct {
 	UpdatedAt     time.Time
 }
 
+type NotificationSetting struct {
+	ID            string
+	AccountID     string
+	AccountUserID string
+	Defaults      json.RawMessage
+	AutoSubscribe json.RawMessage
+	PausedUntil   sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
 type OnboardingStatus struct {
 	ID        string
 	Name      string
@@ -2376,14 +2387,15 @@ type RequestLog struct {
 }
 
 type Role struct {
-	ID           string
-	Name         string
-	RoleTypeCode string
-	AccountID    sql.NullString
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Access       db.NullableRawMessage
-	TemplateCode sql.NullString
+	ID                   string
+	Name                 string
+	RoleTypeCode         string
+	AccountID            sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	Access               db.NullableRawMessage
+	TemplateCode         sql.NullString
+	NotificationDefaults db.NullableRawMessage
 }
 
 type RolePermission struct {
@@ -2759,6 +2771,18 @@ type StripeEventLog struct {
 	ObjectID  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type Subscription struct {
+	ID            string
+	AccountID     string
+	AccountUserID string
+	RecordType    string
+	RecordID      string
+	Reason        string
+	Status        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type SupplierMaterial struct {

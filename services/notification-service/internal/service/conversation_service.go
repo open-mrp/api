@@ -1203,7 +1203,7 @@ func (s *conversationSvcImpl) fanoutMessageRealtime(ctx context.Context, f domai
 	return nil
 }
 
-// fanoutMessageNotifications writes a bell-feed notification row per eligible recipient and, when the recipient's email channel is enabled with an instant digest, enqueues a chat-notification email. Recipients who muted the conversation are skipped entirely; the in-app channel is gated by the recipient's notification_preference for the chat.message category (default: on).
+// fanoutMessageNotifications writes a bell-feed notification row per eligible recipient and, when the recipient's email channel is enabled with an instant digest, enqueues a chat-notification email. Recipients who muted the conversation are skipped entirely; the in-app channel follows the recipient's resolved notification settings for the message's type (default: on).
 func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f domain.RepoFactory, msg *domain.Message, accountID, senderAcus string) *apierror.APIError {
 	participants, apiErr := f.NewParticipantRepo().List(ctx, msg.ConversationID)
 	if apiErr != nil {
@@ -1211,13 +1211,16 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	}
 
 	notifRepo := f.NewNotificationRepo()
-	prefRepo := f.NewNotificationPreferenceRepo()
+	settings := newSettingsCache(f, accountID)
+	now := time.Now()
 	outbox := f.NewOutboxRepo()
 
 	senderType, senderID, senderName := s.messageSenderAttribution(ctx, f, msg, senderAcus)
 	var conversationTitle string
 	var isCustomerCase bool
+	var topic *domain.Conversation
 	if conv, apiErr := f.NewConversationRepo().GetByID(ctx, msg.ConversationID, accountID); apiErr == nil {
+		topic = conv
 		if conv.Title != nil {
 			conversationTitle = *conv.Title
 		}
@@ -1234,6 +1237,16 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	mentioned := make(map[string]bool, len(msg.MentionAccountUserIDs))
 	for _, m := range msg.MentionAccountUserIDs {
 		mentioned[m] = true
+	}
+	// Only mentioned participants are subscribed: a mention can't reach anyone outside the conversation.
+	var mentionedParticipants []string
+	for _, p := range participants {
+		if p.AccountUserID != nil && mentioned[*p.AccountUserID] && p.Membership == string(constants.ParticipantMembershipActive) {
+			mentionedParticipants = append(mentionedParticipants, *p.AccountUserID)
+		}
+	}
+	if apiErr := subscribeMentionedToTopic(ctx, f, settings, topic, accountID, mentionedParticipants, senderAcus); apiErr != nil {
+		return apiErr
 	}
 
 	for _, p := range participants {
@@ -1253,7 +1266,7 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 		if isMention {
 			category = string(constants.NotificationCategoryChatMention)
 		}
-		eff := s.effectivePreference(ctx, prefRepo, *p.AccountUserID, category)
+		eff := settings.get(ctx, *p.AccountUserID).effective(constants.NotificationCategory(category), now)
 
 		// A mention pierces both mute and the in-app preference so the recipient is always alerted.
 		if eff.InAppEnabled || isMention {
@@ -1319,6 +1332,34 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 	return nil
 }
 
+// subscribeMentionedToTopic subscribes the people a message @mentions to the record its conversation is about, each
+// only when they subscribe on mentions. The sender is never subscribed by mentioning themselves.
+func subscribeMentionedToTopic(ctx context.Context, f domain.RepoFactory, settings *settingsCache, conv *domain.Conversation, accountID string, mentions []string, senderAcus string) *apierror.APIError {
+	if conv == nil || conv.TopicResourceType == nil || conv.TopicResourceID == nil || len(mentions) == 0 {
+		return nil
+	}
+	if !constants.RecordType(*conv.TopicResourceType).Followable() {
+		return nil
+	}
+	repo := f.NewSubscriptionRepo()
+	for _, m := range mentions {
+		if m == "" || m == senderAcus || !settings.get(ctx, m).layers.AutoSubscribes(constants.SubscriptionReasonMentioned) {
+			continue
+		}
+		subID, apiErr := id.GenID(id.SubscriptionIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if _, apiErr := repo.Insert(ctx, &domain.Subscription{
+			ID: subID, AccountID: accountID, AccountUserID: m, RecordType: *conv.TopicResourceType, RecordID: *conv.TopicResourceID,
+			Reason: string(constants.SubscriptionReasonMentioned), Status: string(constants.RecordSubscriptionStatusSubscribed),
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
 // messageSenderAttribution resolves the (type, id, name) shown as the sender of a notification: an agent author, else the authoring account user. (In-app notifications go only to internal recipients, so no customer-facing anonymization applies here.)
 func (s *conversationSvcImpl) messageSenderAttribution(ctx context.Context, f domain.RepoFactory, msg *domain.Message, senderAcus string) (senderType, senderID, senderName string) {
 	if msg.SenderAgentConfigID != nil && *msg.SenderAgentConfigID != "" {
@@ -1333,15 +1374,6 @@ func (s *conversationSvcImpl) messageSenderAttribution(ctx context.Context, f do
 		name = contact.Name
 	}
 	return string(constants.NotificationSenderTypeUser), senderAcus, name
-}
-
-// effectivePreference resolves a recipient's channel preference for a category, defaulting to in-app on; email/push off; digest off when no preference row exists.
-func (s *conversationSvcImpl) effectivePreference(ctx context.Context, prefRepo domain.NotificationPreferenceRepo, accountUserID, category string) domain.EffectiveNotificationPreference {
-	eff, apiErr := prefRepo.GetEffective(ctx, accountUserID, category)
-	if apiErr != nil || eff == nil {
-		return domain.DefaultEffectiveNotificationPreference()
-	}
-	return *eff
 }
 
 // enqueueChatEmail writes a chat-notification email command to the (transaction-bound) outbox for a recipient whose email channel is enabled. A recipient without a resolvable email is skipped.

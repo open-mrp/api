@@ -69,10 +69,9 @@ func (e *UpsertNotificationPreferenceEndpoint) Materialize() *apiendpoint.APIEnd
 		Title:             "Upsert Notification Preference",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
-		Route:             "/v1/messaging/preferences",
+		Route:             Preview9PreferencesRoute,
 		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeNotificationPreference,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpsertNotificationPreferenceRequest) (*apiresource.NotificationPreference, *apierror.APIError) {

@@ -90,15 +90,16 @@ func TestCovMessagingPreferences_InvalidCategoryRejected(t *testing.T) {
 	t.Parallel()
 	user := chatUser2Client(t)
 
-	resp, err := user.PutFull(preferencesPath, map[string]any{
+	resp, err := asPreview9(user).PutFull(preferencesPath, map[string]any{
 		"category":       "not.a.real.category",
 		"in_app_enabled": true,
 		"digest":         "instant",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 422, resp.StatusCode, resp.Body)
-
-	errObj := requireErrorResponse(t, resp.Body, "invalid_format", "invalid_request_error")
+	// preview.9 reads body validation failures as 400.
+	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	errObj := jsonObject(parseJSON(resp.Body), "error")
+	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
 	assertErrorParam(t, errObj, "category")
 }
 
@@ -174,7 +175,7 @@ func TestCovMessagingPreferences_PutIdempotentOnIdenticalPayload(t *testing.T) {
 func TestCovMessagingPreferences_APIKeyActorForbiddenOnPut(t *testing.T) {
 	t.Parallel()
 
-	resp, err := apiClient.PutFull(preferencesPath, map[string]any{
+	resp, err := asPreview9(apiClient).PutFull(preferencesPath, map[string]any{
 		"category":       "chat.mention",
 		"in_app_enabled": true,
 		"digest":         "instant",
@@ -182,14 +183,16 @@ func TestCovMessagingPreferences_APIKeyActorForbiddenOnPut(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 403, resp.StatusCode, resp.Body)
 
-	errObj := requireErrorResponse(t, resp.Body, "insufficient_permissions", "invalid_request_error")
+	// preview.9's error shape.
+	errObj := jsonObject(parseJSON(resp.Body), "error")
+	assert.Equal(t, "insufficient_permissions", jsonField(errObj, "code"))
 	assert.Equal(t, "Notification preferences are only available to users with an account membership.", errObj["message"])
 }
 
 func TestCovMessagingPreferences_APIKeyActorEmptyListOnGet(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(preferencesPath, nil)
+	list, status, err := asPreview9(apiClient).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status)
 	assert.Equal(t, "list", list.Object)
@@ -207,7 +210,7 @@ func TestCovMessagingPreferences_ListObjectIsList(t *testing.T) {
 		"digest":         "instant",
 	})
 
-	list, status, err := user.GetList(preferencesPath, nil)
+	list, status, err := asPreview9(user).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 200, status)
 	assert.Equal(t, "list", list.Object)

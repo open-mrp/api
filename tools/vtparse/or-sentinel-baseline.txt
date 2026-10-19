@@ -187,4 +187,3 @@ services/notification-service/internal/infrastructure/sqlc/conversation.sql.go:l
 services/notification-service/internal/infrastructure/sqlc/message.sql.go:listDraftMessagesByConversation 1
 services/notification-service/internal/infrastructure/sqlc/message.sql.go:listMessages 2
 services/notification-service/internal/infrastructure/sqlc/message.sql.go:listMessagesVisible 2
-services/notification-service/internal/infrastructure/sqlc/notification.sql.go:listNotifications 5

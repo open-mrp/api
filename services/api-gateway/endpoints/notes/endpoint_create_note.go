@@ -32,6 +32,9 @@ type CreateNoteRequest struct {
 	Importance field.Optional[constants.NoteImportance] `json:"importance,omitzero"`
 	// When the note stops being used. Omit it for a note that never expires.
 	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
+	// Account users the note @mentions, up to 25. Each is notified, and subscribed to the note's record when they
+	// subscribe on mentions.
+	Mentions []string `json:"mentions,omitzero" validate:"omitempty,max=25"`
 }
 
 var sampleCreateNoteRequest = &CreateNoteRequest{

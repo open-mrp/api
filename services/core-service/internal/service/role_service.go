@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idemresponse"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
@@ -204,6 +205,14 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 		params.Access = access
+		if params.NotificationDefaults == nil {
+			var template constants.RoleTemplate
+			if params.Template != nil {
+				template = *params.Template
+			}
+			defaults := notifyprefs.TemplateDefaults(template)
+			params.NotificationDefaults = &defaults
+		}
 		if apiErr := checkPermissionsGrantable(identity, codeSet(effective)); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
@@ -353,6 +362,15 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 				}
 
 				if apiErr := txRoleRepo.UpdateName(txCtx, params.RoleID, params.AccountID, *params.Name); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			if params.NotificationDefaults != nil {
+				if apiErr := params.NotificationDefaults.Validate("notification_defaults"); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txRoleRepo.UpdateNotificationDefaults(txCtx, params.RoleID, params.AccountID, old.NotificationDefaults.Apply(*params.NotificationDefaults)); apiErr != nil {
 					return apiErr
 				}
 			}

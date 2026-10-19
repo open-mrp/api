@@ -26,6 +26,8 @@ type UpdateRoleRequest struct {
 	Grants field.Optional[[]string] `json:"grants,omitzero"`
 	// Permission codes the access levels include that the role shouldn't hold. Replaces the role's revokes.
 	Revokes field.Optional[[]string] `json:"revokes,omitzero"`
+	// Notification settings to change. Fields you leave out, and types you leave out of `types`, keep their setting; send a type as `null` to remove it.
+	NotificationDefaults *apiresource.NotificationSettingsPatch `json:"notification_defaults,omitzero"`
 	// The role's whole permission list, replacing its access, grants and revokes. Kept for older clients.
 	Permissions field.Optional[[]string] `json:"permissions,omitzero" visibility:"internal"`
 }

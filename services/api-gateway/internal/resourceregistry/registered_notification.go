@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/open-mrp/apikit/include"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,6 +18,9 @@ func init() {
 			// sender and resource are built by the notification service and stashed in LoadMeta; Populate gates each on ?include=sender / ?include=resource.
 			{Key: "sender", Cardinality: include.CardinalityOnePtr, Populate: populateSenderOnNotification},
 			{Key: "resource", Cardinality: include.CardinalityOnePtr, Populate: populateResourceOnNotification},
+			messagingRecordSub("related.record", constants.ObjectTypeNotification,
+				func(p any) string { return p.(*apiresource.Notification).ID }, chatmap.MetaRelatedRecord,
+				func(p any, r *apiresource.Record) { p.(*apiresource.Notification).Related.Record = r }),
 		},
 	})
 }

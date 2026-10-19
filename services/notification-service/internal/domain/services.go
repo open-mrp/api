@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
@@ -258,6 +259,22 @@ type MessagingSvc interface {
 	ListNotificationPreferences(ctx context.Context) ([]*NotificationPreference, *apierror.APIError)
 	// UpsertNotificationPreference creates or replaces the caller's preference for a category.
 	UpsertNotificationPreference(ctx context.Context, input UpsertNotificationPreferenceInput) (*NotificationPreference, *apierror.APIError)
+	// GetNotificationPreferences returns the caller's effective notification settings.
+	GetNotificationPreferences(ctx context.Context) (*NotificationPreferences, *apierror.APIError)
+	// UpdateNotificationPreferences merges a patch into the caller's settings.
+	UpdateNotificationPreferences(ctx context.Context, input UpdateNotificationPreferencesInput) (*NotificationPreferences, *apierror.APIError)
+	// GetNotificationDefaults returns the account's notification defaults.
+	GetNotificationDefaults(ctx context.Context) (notifyprefs.Defaults, *apierror.APIError)
+	// UpdateNotificationDefaults merges a patch into the account's notification defaults.
+	UpdateNotificationDefaults(ctx context.Context, patch notifyprefs.Patch) (notifyprefs.Defaults, *apierror.APIError)
+	// ListSubscriptions returns the caller's record subscriptions, newest first.
+	ListSubscriptions(ctx context.Context, input ListSubscriptionsInput) (*SubscriptionPage, *apierror.APIError)
+	// GetSubscription returns one of the caller's subscriptions.
+	GetSubscription(ctx context.Context, id string) (*Subscription, *apierror.APIError)
+	// FollowRecord subscribes the caller to a record; created reports whether they had no row for it before.
+	FollowRecord(ctx context.Context, recordType, recordID string) (sub *Subscription, created bool, apiErr *apierror.APIError)
+	// SetSubscriptionStatus subscribes or unsubscribes one of the caller's subscriptions.
+	SetSubscriptionStatus(ctx context.Context, id, status string) (*Subscription, *apierror.APIError)
 }
 
 // SendNotificationInput is the validated input for an admin/system notification send. The target is polymorphic: TargetType ("account_user" | "account") + TargetID determine whether the send is a per-user notification or an account-wide broadcast announcement.
@@ -276,11 +293,11 @@ type SendNotificationInput struct {
 
 // ListNotificationsInput parameterizes the caller's feed query (cursor opaque to callers).
 type ListNotificationsInput struct {
-	Cursor   *string
-	Limit    int32
-	Category *string
-	// Status filters by lifecycle state ("unseen"/"seen"/"read"/"dismissed"); nil = the default active feed (all non-dismissed).
-	Status *string
+	Cursor *string
+	Limit  int32
+	// Types and Statuses keep notifications of any of the given types and lifecycle states; empty = all.
+	Types    []string
+	Statuses []string
 	// Search is a free-text term matched against title/body. nil = no search.
 	Search *string
 	// SenderIDs / SenderTypes filter by sender attribution (multi-value). Empty = no filter.

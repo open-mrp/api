@@ -1729,8 +1729,10 @@ type RoleDetail struct {
 	Revokes              []string          `protobuf:"bytes,10,rep,name=revokes,proto3" json:"revokes,omitempty"`
 	EffectivePermissions []string          `protobuf:"bytes,11,rep,name=effective_permissions,json=effectivePermissions,proto3" json:"effective_permissions,omitempty"`
 	TemplateCode         *string           `protobuf:"bytes,12,opt,name=template_code,json=templateCode,proto3,oneof" json:"template_code,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// The role's notification defaults as shared/notifyprefs Defaults JSON.
+	NotificationDefaultsJson []byte `protobuf:"bytes,13,opt,name=notification_defaults_json,json=notificationDefaultsJson,proto3" json:"notification_defaults_json,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *RoleDetail) Reset() {
@@ -1845,6 +1847,13 @@ func (x *RoleDetail) GetTemplateCode() string {
 		return *x.TemplateCode
 	}
 	return ""
+}
+
+func (x *RoleDetail) GetNotificationDefaultsJson() []byte {
+	if x != nil {
+		return x.NotificationDefaultsJson
+	}
+	return nil
 }
 
 type ListRolesRequest struct {
@@ -2155,11 +2164,13 @@ type CreateRoleRequest struct {
 	// Areas left out start from the template's level, or none without a template.
 	Access map[string]string `protobuf:"bytes,5,rep,name=access,proto3" json:"access,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// When has_grants is false the template's grants apply.
-	HasGrants     bool     `protobuf:"varint,6,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
-	Grants        []string `protobuf:"bytes,7,rep,name=grants,proto3" json:"grants,omitempty"`
-	Revokes       []string `protobuf:"bytes,8,rep,name=revokes,proto3" json:"revokes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	HasGrants bool     `protobuf:"varint,6,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
+	Grants    []string `protobuf:"bytes,7,rep,name=grants,proto3" json:"grants,omitempty"`
+	Revokes   []string `protobuf:"bytes,8,rep,name=revokes,proto3" json:"revokes,omitempty"`
+	// shared/notifyprefs Defaults JSON; absent starts from the template's.
+	NotificationDefaultsJson []byte `protobuf:"bytes,9,opt,name=notification_defaults_json,json=notificationDefaultsJson,proto3,oneof" json:"notification_defaults_json,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *CreateRoleRequest) Reset() {
@@ -2241,6 +2252,13 @@ func (x *CreateRoleRequest) GetRevokes() []string {
 	return nil
 }
 
+func (x *CreateRoleRequest) GetNotificationDefaultsJson() []byte {
+	if x != nil {
+		return x.NotificationDefaultsJson
+	}
+	return nil
+}
+
 type CreateRoleResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Role          *RoleDetail            `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
@@ -2293,12 +2311,14 @@ type UpdateRoleRequest struct {
 	// Areas to change; the rest keep their level.
 	Access map[string]string `protobuf:"bytes,6,rep,name=access,proto3" json:"access,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// When has_grants (has_revokes) is false the role keeps its grants (revokes).
-	HasGrants     bool     `protobuf:"varint,7,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
-	Grants        []string `protobuf:"bytes,8,rep,name=grants,proto3" json:"grants,omitempty"`
-	HasRevokes    bool     `protobuf:"varint,9,opt,name=has_revokes,json=hasRevokes,proto3" json:"has_revokes,omitempty"`
-	Revokes       []string `protobuf:"bytes,10,rep,name=revokes,proto3" json:"revokes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	HasGrants  bool     `protobuf:"varint,7,opt,name=has_grants,json=hasGrants,proto3" json:"has_grants,omitempty"`
+	Grants     []string `protobuf:"bytes,8,rep,name=grants,proto3" json:"grants,omitempty"`
+	HasRevokes bool     `protobuf:"varint,9,opt,name=has_revokes,json=hasRevokes,proto3" json:"has_revokes,omitempty"`
+	Revokes    []string `protobuf:"bytes,10,rep,name=revokes,proto3" json:"revokes,omitempty"`
+	// shared/notifyprefs Patch JSON merged into the role's notification defaults; absent leaves them.
+	NotificationDefaultsPatchJson []byte `protobuf:"bytes,11,opt,name=notification_defaults_patch_json,json=notificationDefaultsPatchJson,proto3,oneof" json:"notification_defaults_patch_json,omitempty"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *UpdateRoleRequest) Reset() {
@@ -2383,6 +2403,13 @@ func (x *UpdateRoleRequest) GetHasRevokes() bool {
 func (x *UpdateRoleRequest) GetRevokes() []string {
 	if x != nil {
 		return x.Revokes
+	}
+	return nil
+}
+
+func (x *UpdateRoleRequest) GetNotificationDefaultsPatchJson() []byte {
+	if x != nil {
+		return x.NotificationDefaultsPatchJson
 	}
 	return nil
 }
@@ -11913,7 +11940,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xbd\x04\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xfb\x04\n" +
 	"\n" +
 	"RoleDetail\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -11931,7 +11958,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\arevokes\x18\n" +
 	" \x03(\tR\arevokes\x123\n" +
 	"\x15effective_permissions\x18\v \x03(\tR\x14effectivePermissions\x12(\n" +
-	"\rtemplate_code\x18\f \x01(\tH\x00R\ftemplateCode\x88\x01\x01\x1a9\n" +
+	"\rtemplate_code\x18\f \x01(\tH\x00R\ftemplateCode\x88\x01\x01\x12<\n" +
+	"\x1anotification_defaults_json\x18\r \x01(\fR\x18notificationDefaultsJson\x1a9\n" +
 	"\vAccessEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x10\n" +
@@ -11955,7 +11983,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x06create\x18\x02 \x01(\bR\x06create\x12\x12\n" +
 	"\x04read\x18\x03 \x01(\bR\x04read\x12\x16\n" +
 	"\x06update\x18\x04 \x01(\bR\x06update\x12\x16\n" +
-	"\x06delete\x18\x05 \x01(\bR\x06delete\"\xdb\x02\n" +
+	"\x06delete\x18\x05 \x01(\bR\x06delete\"\xbd\x03\n" +
 	"\x11CreateRoleRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bincludes\x18\x03 \x03(\tR\bincludes\x12(\n" +
@@ -11964,13 +11992,15 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"has_grants\x18\x06 \x01(\bR\thasGrants\x12\x16\n" +
 	"\x06grants\x18\a \x03(\tR\x06grants\x12\x18\n" +
-	"\arevokes\x18\b \x03(\tR\arevokes\x1a9\n" +
+	"\arevokes\x18\b \x03(\tR\arevokes\x12A\n" +
+	"\x1anotification_defaults_json\x18\t \x01(\fH\x01R\x18notificationDefaultsJson\x88\x01\x01\x1a9\n" +
 	"\vAccessEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x10\n" +
-	"\x0e_template_codeJ\x04\b\x02\x10\x03R\vpermissions\":\n" +
+	"\x0e_template_codeB\x1d\n" +
+	"\x1b_notification_defaults_jsonJ\x04\b\x02\x10\x03R\vpermissions\":\n" +
 	"\x12CreateRoleResponse\x12$\n" +
-	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"\xe7\x02\n" +
+	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"\xda\x03\n" +
 	"\x11UpdateRoleRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
@@ -11982,10 +12012,12 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\vhas_revokes\x18\t \x01(\bR\n" +
 	"hasRevokes\x12\x18\n" +
 	"\arevokes\x18\n" +
-	" \x03(\tR\arevokes\x1a9\n" +
+	" \x03(\tR\arevokes\x12L\n" +
+	" notification_defaults_patch_json\x18\v \x01(\fH\x00R\x1dnotificationDefaultsPatchJson\x88\x01\x01\x1a9\n" +
 	"\vAccessEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fhas_permissionsR\vpermissions\":\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B#\n" +
+	"!_notification_defaults_patch_jsonJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fhas_permissionsR\vpermissions\":\n" +
 	"\x12UpdateRoleResponse\x12$\n" +
 	"\x04role\x18\x01 \x01(\v2\x10.core.RoleDetailR\x04role\"#\n" +
 	"\x11DeleteRoleRequest\x12\x0e\n" +
@@ -13466,6 +13498,7 @@ func file_core_core_identity_context_proto_init() {
 	file_core_core_identity_context_proto_msgTypes[20].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[26].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[32].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[34].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[39].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[40].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[49].OneofWrappers = []any{}

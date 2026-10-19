@@ -35,6 +35,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleMachineDowntimeReasonID:             {},
 		apiresource.SampleDemandOverrideID:                    {},
 		apiresource.SampleNoteID:                              {},
+		apiresource.SampleSubscriptionID:                      {},
 		apiresource.SamplePriceListID:                         {},
 		apiresource.SamplePriceListRuleID:                     {},
 		apiresource.SampleManufacturingMethodID:               {},

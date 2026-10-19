@@ -5,11 +5,11 @@ import (
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
-// notificationIncludeFields is the whitelist of ?include= keys exposed by the notification endpoints.
-// sender and resource are built inline by the service and stashed into LoadMeta; the include resolver
-// surfaces each only when the caller requests it.
+// notificationIncludeFields is the whitelist of ?include= keys exposed by the notification endpoints. resource is
+// preview.9's (internal).
 var notificationIncludeFields = []string{
 	"sender",
+	"related.record",
 	"resource",
 }
 

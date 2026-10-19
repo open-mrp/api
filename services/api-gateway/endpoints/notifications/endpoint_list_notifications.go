@@ -17,29 +17,21 @@ import (
 // Request to list the caller's notifications.
 type ListNotificationsRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `title` or `body`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Return only notifications of this category, such as `chat.mention` or `order.updated`.
-	Category *constants.NotificationCategory `query:"category"`
-	// Return only notifications in this lifecycle state.
-	//
-	// When omitted, the response is the active feed: every notification that has not been dismissed, whatever its seen or read state. Pass `dismissed` to review notifications that were cleared out of the feed.
-	Status *constants.NotificationStatus `query:"status"`
-	// Return only notifications sent by these actors.
-	//
-	// A notification sent by a person is attributed to their account user id, not their user id.
+	// Returns only notifications of these types.
+	Types []constants.NotificationCategory `query:"types"`
+	// Returns only notifications in these states. Omit it for every state; your active feed is `unseen`, `seen` and `read`.
+	Statuses []constants.NotificationStatus `query:"statuses"`
+	// Returns only notifications sent by these actors. A person is identified by their account user ID.
 	SenderIDs []string `query:"sender_ids"`
-	// Return only notifications sent by these kinds of actor.
-	//
-	// Notifications raised by the platform itself are attributed to the `system` sender type but are returned without a sender.
+	// Returns only notifications sent by these kinds of actor. Notifications OpenMRP raises itself are `system` and have no `sender`.
 	SenderTypes []constants.NotificationSenderType `query:"sender_types"`
 }
 
-// Lists the notifications addressed to the current user, newest first.
+// Returns a list of your notifications, newest first.
 //
-// The feed is personal and scoped to the account being acted in, so it never includes another user's notifications. Callers with no user membership in that account, such as an API key, get an empty list rather than an error.
+// Only your own notifications in the account you're acting in are listed. Callers who aren't a person in the account, such as an API key, get an empty list.
 type ListNotificationsEndpoint struct{}
 
 func (e *ListNotificationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationsRequest, *apiresource.List[apiresource.Notification]] {
@@ -51,7 +43,6 @@ func (e *ListNotificationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeNotification,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

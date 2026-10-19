@@ -9,6 +9,21 @@ import (
 	"context"
 )
 
+const deleteNotificationPreference = `-- name: DeleteNotificationPreference :exec
+DELETE FROM notification_preference
+WHERE account_user_id = ? AND category = ?
+`
+
+type DeleteNotificationPreferenceParams struct {
+	AccountUserID string
+	Category      string
+}
+
+func (q *Queries) DeleteNotificationPreference(ctx context.Context, arg DeleteNotificationPreferenceParams) error {
+	_, err := q.db.ExecContext(ctx, deleteNotificationPreference, arg.AccountUserID, arg.Category)
+	return err
+}
+
 const getEffectiveNotificationPreference = `-- name: GetEffectiveNotificationPreference :one
 SELECT id, account_id, account_user_id, category, in_app_enabled, email_enabled, push_enabled, digest, created_at, updated_at FROM notification_preference
 WHERE account_user_id = ?

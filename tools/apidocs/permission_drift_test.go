@@ -327,6 +327,14 @@ var unverifiableEndpoints = map[string]string{
 	"unread_count":          "gateway-gated recipient auth: GetUnreadCount scopes to recipient(); gateway declares messaging:read",
 	"unread_summary":        "gateway-gated recipient auth: GetUnreadSummary scopes to actor(); gateway declares messaging:read",
 
+	"retrieve_notification_preferences": "gateway-gated recipient auth: GetNotificationPreferences scopes to recipient(); gateway declares messaging:read",
+	"update_notification_preferences":   "gateway-gated recipient auth: UpdateNotificationPreferences scopes to recipient(); gateway declares messaging:update",
+	"list_subscriptions":                "gateway-gated recipient auth: ListSubscriptions scopes to recipient(); gateway declares messaging:read",
+	"retrieve_subscription":             "gateway-gated recipient auth: GetSubscription scopes to recipient(); gateway declares messaging:read",
+	"create_subscription":               "gateway-gated recipient auth: FollowRecord subscribes the caller's own account user; gateway declares messaging:update",
+	"subscribe":                         "gateway-gated recipient auth: SetSubscriptionStatus scopes to the caller's own subscription; gateway declares messaging:update",
+	"unsubscribe":                       "gateway-gated recipient auth: SetSubscriptionStatus scopes to the caller's own subscription; gateway declares messaging:update",
+
 	"retrieve_work_center": "gateway loader indirection: GetWorkCenter -> resourceloaders.LoadWorkCenters (BatchGetDepartmentsByIDs), not GetDepartment RPC; endpoint declares departments:read",
 	"retrieve_memory":      "gateway loader indirection: GetMemory -> resourceloaders.LoadAgentMemories (BatchGetAgentMemoriesByIDs), not GetAgentMemory RPC; endpoint declares agent_memories:read",
 

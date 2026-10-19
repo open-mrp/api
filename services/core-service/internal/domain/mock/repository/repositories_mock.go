@@ -20,6 +20,7 @@ import (
 	ledgerlock "github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	scheduling "github.com/open-mrp/api/services/core-service/internal/scheduling"
 	constants "github.com/open-mrp/api/shared/constants"
+	notifyprefs "github.com/open-mrp/api/shared/notifyprefs"
 	pricing "github.com/open-mrp/api/shared/pricing"
 	apierror "github.com/open-mrp/apikit/apierror"
 	decimal "github.com/shopspring/decimal"
@@ -2761,6 +2762,20 @@ func (m *MockRoleRepo) UpdateName(ctx context.Context, roleID, accountID, name s
 func (mr *MockRoleRepoMockRecorder) UpdateName(ctx, roleID, accountID, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateName", reflect.TypeOf((*MockRoleRepo)(nil).UpdateName), ctx, roleID, accountID, name)
+}
+
+// UpdateNotificationDefaults mocks base method.
+func (m *MockRoleRepo) UpdateNotificationDefaults(ctx context.Context, roleID, accountID string, defaults notifyprefs.Defaults) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateNotificationDefaults", ctx, roleID, accountID, defaults)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateNotificationDefaults indicates an expected call of UpdateNotificationDefaults.
+func (mr *MockRoleRepoMockRecorder) UpdateNotificationDefaults(ctx, roleID, accountID, defaults any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotificationDefaults", reflect.TypeOf((*MockRoleRepo)(nil).UpdateNotificationDefaults), ctx, roleID, accountID, defaults)
 }
 
 // MockRegistrationRepo is a mock of RegistrationRepo interface.

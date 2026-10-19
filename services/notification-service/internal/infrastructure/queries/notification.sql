@@ -59,41 +59,6 @@ ON DUPLICATE KEY UPDATE
 SELECT * FROM notification
 WHERE id = ? AND recipient_account_user_id = ?;
 
--- name: ListNotifications :many
--- Keyset-paginated notification feed (created_at DESC, id DESC), driven by
--- nf_recipient_feed_idx for the default (non-dismissed) feed,
--- nf_recipient_category_created_idx for the category filter, and the
--- (created_at DESC, id DESC) tail of nf_recipient_sender_idx for the
--- sender_type/sender_id filters — each carries the sort key inline, so the
--- common paths are sort-free.
--- ACCEPTED RESIDUAL (performant-list-endpoint-patterns.md, residual-documentation):
--- the status filter (unseen/seen/read/dismissed) resolves to nullable-timestamp
--- predicates (seen_at/read_at/dismissed_at IS [NOT] NULL) that no covering index
--- carries as a leading sort-free key, so a sparse-state status page can still
--- filesort. This is bounded by the per-recipient row count and the LIMIT, and is
--- accepted rather than carrying a derived low-cardinality status_code column +
--- index. Revisit if status-filtered pages become hot. See notes for the rewrite.
-SELECT * FROM notification
-WHERE recipient_account_user_id = sqlc.arg('recipient_account_user_id')
-  AND (sqlc.narg('category') IS NULL OR category = sqlc.narg('category'))
-  AND (
-    (sqlc.narg('status') IS NULL AND dismissed_at IS NULL)
-    OR (sqlc.narg('status') = 'unseen' AND seen_at IS NULL AND dismissed_at IS NULL)
-    OR (sqlc.narg('status') = 'seen' AND seen_at IS NOT NULL AND read_at IS NULL AND dismissed_at IS NULL)
-    OR (sqlc.narg('status') = 'read' AND read_at IS NOT NULL AND dismissed_at IS NULL)
-    OR (sqlc.narg('status') = 'dismissed' AND dismissed_at IS NOT NULL)
-  )
-  AND (sqlc.narg('search') IS NULL OR title LIKE sqlc.narg('search') OR body LIKE sqlc.narg('search'))
-  AND (sqlc.arg('include_sender_filter') = 0 OR sender_id IN (sqlc.slice('sender_ids')))
-  AND (sqlc.arg('include_sender_type_filter') = 0 OR sender_type IN (sqlc.slice('sender_types')))
-  AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR created_at < sqlc.narg('cursor_created_at')
-    OR (created_at = sqlc.narg('cursor_created_at') AND id < sqlc.narg('cursor_id'))
-  )
-ORDER BY created_at DESC, id DESC
-LIMIT ?;
-
 -- name: CountUnseenNotifications :one
 SELECT COUNT(*) FROM notification
 WHERE recipient_account_user_id = ? AND seen_at IS NULL AND dismissed_at IS NULL;

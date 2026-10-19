@@ -13,13 +13,14 @@ import (
 )
 
 // Phase-4 slice-2 coverage: notification-preference CRUD plus the chat→bell fan-out honoring the
-// in-app channel preference and per-conversation mute.
+// in-app channel preference and per-conversation mute. The per-category list and PUT are preview.9's; forge's
+// single preferences object is covered by forge_notification_preferences_test.go.
 
 const preferencesPath = "/v1/messaging/preferences"
 
 func upsertPreference(t *testing.T, c *Client, body map[string]any) map[string]any {
 	t.Helper()
-	resp, err := c.PutFull(preferencesPath, body)
+	resp, err := asPreview9(c).PutFull(preferencesPath, body)
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 	return parseJSON(resp.Body)
@@ -29,7 +30,7 @@ func upsertPreference(t *testing.T, c *Client, body map[string]any) map[string]a
 // whose body matches the given text.
 func chatFeedHasBody(t *testing.T, reader *Client, body string) bool {
 	t.Helper()
-	list, _, err := reader.GetList(notificationsPath, url.Values{"limit": {"100"}, "category": {"chat.message"}})
+	list, _, err := reader.GetList(notificationsPath, url.Values{"limit": {"100"}, "types[]": {"chat.message"}})
 	require.NoError(t, err)
 	for _, raw := range list.Data {
 		var m map[string]any
@@ -82,7 +83,7 @@ func TestNotificationPreferences_UpsertAndList(t *testing.T) {
 	assert.Equal(t, "off", jsonField(cat2, "digest"))
 
 	// List reflects both (global + the chat.message override).
-	list, _, err := user.GetList(preferencesPath, nil)
+	list, _, err := asPreview9(user).GetList(preferencesPath, nil)
 	require.NoError(t, err)
 	categories := map[string]bool{}
 	for _, raw := range list.Data {
@@ -95,12 +96,13 @@ func TestNotificationPreferences_UpsertAndList(t *testing.T) {
 func TestNotificationPreferences_InvalidDigestRejected(t *testing.T) {
 	t.Parallel()
 	user := chatUser2Client(t)
-	resp, err := user.PutFull(preferencesPath, map[string]any{
+	resp, err := asPreview9(user).PutFull(preferencesPath, map[string]any{
 		"in_app_enabled": true,
 		"digest":         "fortnightly",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 422, resp.StatusCode, resp.Body)
+	// preview.9 reads body validation failures as 400.
+	requireStatus(t, 400, resp.StatusCode, resp.Body)
 }
 
 func TestChatBell_MessageCreatesBellNotification(t *testing.T) {

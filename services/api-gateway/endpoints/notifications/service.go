@@ -6,8 +6,10 @@ import (
 	"github.com/open-mrp/apikit/include"
 	"time"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/recordstub"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
@@ -99,15 +101,9 @@ func (s *notificationSvcImpl) ListNotifications(ctx context.Context, req *ListNo
 		Cursor:      req.Cursor,
 		Search:      req.Query,
 		SenderIds:   req.SenderIDs,
-		SenderTypes: senderTypesToStrings(req.SenderTypes),
-	}
-	if req.Category != nil {
-		c := string(*req.Category)
-		pbReq.Category = &c
-	}
-	if req.Status != nil {
-		s := string(*req.Status)
-		pbReq.Status = &s
+		SenderTypes: enumStrings(req.SenderTypes),
+		Types:       enumStrings(req.Types),
+		Statuses:    enumStrings(req.Statuses),
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, notificationSvcTracer, "service.notifications.list", domain.ServiceName,
@@ -226,44 +222,50 @@ func notificationFromProto(ctx context.Context, n *pb.NotificationInfo) apiresou
 	result := apiresource.Notification{
 		ID:          n.Id,
 		Object:      constants.ObjectTypeNotification,
-		Category:    constants.NotificationCategory(n.Category),
+		Type:        constants.NotificationCategory(n.Category),
 		Status:      notificationStatus(n),
 		Title:       n.Title,
 		Body:        n.Body,
 		Priority:    constants.NotificationPriority(n.Priority),
+		Related:     &apiresource.NotificationRelated{Object: constants.ObjectTypeNotificationRelated},
+		Occurrences: 1,
 		SeenAt:      tsToPtr(n.SeenAt),
 		ReadAt:      tsToPtr(n.ReadAt),
 		DismissedAt: tsToPtr(n.DismissedAt),
 		CreatedAt:   tsToTime(n.CreatedAt),
 		UpdatedAt:   tsToTime(n.UpdatedAt),
 	}
-	if n.ChangeCount != nil {
-		cc := int64(*n.ChangeCount)
-		result.ChangeCount = &cc
+	if n.ChangeCount != nil && *n.ChangeCount > 1 {
+		result.Occurrences = int64(*n.ChangeCount)
 	}
 	stashNotificationMeta(ctx, &result, n)
 	return result
 }
 
-// stashNotificationMeta stashes the notification's expandable sub-objects (the `sender` actor and the
-// `resource` link) into the request LoadMeta so the include resolver can surface each on
-// ?include=sender / ?include=resource. The fields are left nil on the base resource.
+// stashNotificationMeta stashes the notification's expandable sub-objects (the `sender` actor, the record for
+// `related.record`, and preview.9's `resource` link) into the request LoadMeta for the include resolver. A customer
+// case's notification points at its conversation.
 func stashNotificationMeta(ctx context.Context, d *apiresource.Notification, n *pb.NotificationInfo) {
+	meta := include.GetLoadMeta(ctx)
 	if sender := senderFromProto(n.SenderType, n.SenderId, n.SenderName); sender != nil {
-		include.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "sender", sender)
+		meta.Set(constants.ObjectTypeNotification, d.ID, "sender", sender)
 	}
 
 	var resource *apiresource.Entity
 	if n.LinkResourceType != nil && n.LinkResourceId != nil {
 		resource = apiresource.NewEntity(*n.LinkResourceId, constants.ObjectType(*n.LinkResourceType), nil, nil)
 	} else if n.ConversationId != nil && *n.ConversationId != "" {
-		// Chat notifications carry no explicit link resource; surface the conversation so
-		// the client can open the thread on click.
 		resource = apiresource.NewEntity(*n.ConversationId, constants.ObjectTypeConversation, nil, nil)
 	}
-	if resource != nil {
-		include.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "resource", resource)
+	if resource == nil {
+		return
 	}
+	meta.Set(constants.ObjectTypeNotification, d.ID, "resource", resource)
+	recordType := constants.RecordType(resource.Type)
+	if resource.Type == constants.ObjectTypeSupportCase {
+		recordType = constants.RecordTypeConversation
+	}
+	meta.Set(constants.ObjectTypeNotification, d.ID, chatmap.MetaRelatedRecord, recordstub.Ref{Type: recordType, ID: resource.ID})
 }
 
 // senderFromProto builds the unified Actor for a notification's sender. System and unattributed
@@ -283,14 +285,13 @@ func senderFromProto(senderType, senderID, senderName *string) *apiresource.Acto
 	return apiresource.NewActor(*senderID, actorType, senderName, nil)
 }
 
-// senderTypesToStrings flattens the typed sender-type filter into wire strings.
-func senderTypesToStrings(types []constants.NotificationSenderType) []string {
-	if len(types) == 0 {
+func enumStrings[T ~string](values []T) []string {
+	if len(values) == 0 {
 		return nil
 	}
-	out := make([]string, 0, len(types))
-	for _, t := range types {
-		out = append(out, string(t))
+	out := make([]string, len(values))
+	for i, v := range values {
+		out[i] = string(v)
 	}
 	return out
 }

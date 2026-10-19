@@ -71,9 +71,7 @@ func (e *SendNotificationEndpoint) Materialize() *apiendpoint.APIEndpoint[*SendN
 		ContentType:       "application/json",
 		Route:             "/v1/messaging/notifications",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
+		Public:            false,
 		ObjectType:        constants.ObjectTypeNotificationSendResult,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAlerts, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SendNotificationRequest) (*apiresource.NotificationSendResult, *apierror.APIError) {

@@ -10,8 +10,10 @@ const (
 	ObjectTypeChatMessageRelated ObjectType = "chat_message_related"
 	// ObjectTypeAnnouncementRelated indicates that the object is the record an announcement is about.
 	ObjectTypeAnnouncementRelated ObjectType = "announcement_related"
+	// ObjectTypeNotificationRelated indicates that the object is the record a notification is about.
+	ObjectTypeNotificationRelated ObjectType = "notification_related"
 )
 
 func init() {
-	object.Register(ObjectTypeConversationRelated, ObjectTypeChatMessageRelated, ObjectTypeAnnouncementRelated)
+	object.Register(ObjectTypeConversationRelated, ObjectTypeChatMessageRelated, ObjectTypeAnnouncementRelated, ObjectTypeNotificationRelated)
 }

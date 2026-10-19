@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
@@ -35,14 +36,15 @@ func mapRoleRow(row sqlc.Role) *domain.Role {
 		acctID = &row.AccountID.String
 	}
 	return &domain.Role{
-		ID:        row.ID,
-		Name:      row.Name,
-		RoleType:  row.RoleTypeCode,
-		AccountID: acctID,
-		Access:    roleAccessFromJSON(row.Access),
-		Template:  db.StringFromNullString(row.TemplateCode),
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
+		ID:                   row.ID,
+		Name:                 row.Name,
+		RoleType:             row.RoleTypeCode,
+		AccountID:            acctID,
+		Access:               roleAccessFromJSON(row.Access),
+		Template:             db.StringFromNullString(row.TemplateCode),
+		NotificationDefaults: notifyprefs.Parse(row.NotificationDefaults),
+		CreatedAt:            row.CreatedAt,
+		UpdatedAt:            row.UpdatedAt,
 	}
 }
 
@@ -260,12 +262,13 @@ func (r *roleRepoImpl) Create(ctx context.Context, roleID string, params domain.
 	defer span.End()
 
 	err := r.queries.InsertRole(ctx, sqlc.InsertRoleParams{
-		ID:           roleID,
-		Name:         params.Name,
-		RoleTypeCode: string(constants.RoleTypeCustom),
-		AccountID:    db.NullString(params.AccountID),
-		Access:       roleAccessJSON(params.Access),
-		TemplateCode: db.NullStringPtr((*string)(params.Template)),
+		ID:                   roleID,
+		Name:                 params.Name,
+		RoleTypeCode:         string(constants.RoleTypeCustom),
+		AccountID:            db.NullString(params.AccountID),
+		Access:               roleAccessJSON(params.Access),
+		TemplateCode:         db.NullStringPtr((*string)(params.Template)),
+		NotificationDefaults: roleNotificationDefaultsJSON(params.NotificationDefaults),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -284,6 +287,29 @@ func (r *roleRepoImpl) UpdateAccess(ctx context.Context, roleID, accountID strin
 		AccountID: db.NullString(accountID),
 	})
 	return tracing.Trace(span, db.MapSQLError(err))
+}
+
+// roleNotificationDefaultsJSON is the stored form of a new role's notification defaults; none sets nothing.
+func roleNotificationDefaultsJSON(d *notifyprefs.Defaults) db.NullableRawMessage {
+	if d == nil {
+		return db.NullableRawMessage(notifyprefs.Empty().Marshal())
+	}
+	return db.NullableRawMessage(d.Marshal())
+}
+
+func (r *roleRepoImpl) UpdateNotificationDefaults(ctx context.Context, roleID, accountID string, defaults notifyprefs.Defaults) *apierror.APIError {
+	ctx, span := roleRepoTracer.Start(ctx, "repository.role.update_notification_defaults")
+	defer span.End()
+
+	err := r.queries.UpdateRoleNotificationDefaults(ctx, sqlc.UpdateRoleNotificationDefaultsParams{
+		NotificationDefaults: db.NullableRawMessage(defaults.Marshal()),
+		ID:                   roleID,
+		AccountID:            gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *roleRepoImpl) UpdateName(ctx context.Context, roleID, accountID, name string) *apierror.APIError {

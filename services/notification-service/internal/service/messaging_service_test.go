@@ -72,6 +72,7 @@ func newSvc(t *testing.T, notifRepo domain.NotificationRepo, outboxRepo messagin
 	if outboxRepo != nil {
 		factory.EXPECT().NewOutboxRepo().Return(outboxRepo).AnyTimes()
 	}
+	stubDefaultNotificationSettings(ctrl, factory)
 	return NewMessagingSvc(factory, passthroughTx{f: factory})
 }
 
@@ -489,6 +490,7 @@ func TestNotifyCustomerRegistered_FansOutToSupportGroup(t *testing.T) {
 	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 	factory.EXPECT().NewSupportRouteRepo().Return(supportRepo).AnyTimes()
 	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
+	stubDefaultNotificationSettings(ctrl, factory)
 	svc := NewMessagingSvc(factory, passthroughTx{f: factory})
 
 	// The account's support route points at a group conversation; its active human participants are the recipients.

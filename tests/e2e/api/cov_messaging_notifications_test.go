@@ -63,10 +63,11 @@ func TestCovMessagingNotifications_AllFieldsPopulatedAndTimestampsBump(t *testin
 	require.NoError(t, err)
 	requireStatus(t, 202, resp.StatusCode, resp.Body)
 
-	n := findNotif(t, user, title, url.Values{"include": {"sender", "resource"}})
+	n := findNotif(t, user, title, url.Values{"include": {"sender", "related.record"}})
 	id := notifID(t, n)
 	assertObjectField(t, n, "notification")
-	assert.Equal(t, "order.updated", jsonField(n, "category"))
+	assert.Equal(t, "order.updated", jsonField(n, "type"))
+	assert.Equal(t, float64(1), n["occurrences"])
 	assert.Equal(t, title, jsonField(n, "title"))
 	assert.Equal(t, "full body", jsonField(n, "body"))
 	assert.Equal(t, "unseen", jsonField(n, "status"))
@@ -78,11 +79,14 @@ func TestCovMessagingNotifications_AllFieldsPopulatedAndTimestampsBump(t *testin
 	assert.Equal(t, "user", jsonField(sender, "type"))
 	assert.Equal(t, SeedAccountUserID, jsonField(sender, "id"))
 
-	resourceObj := jsonObject(n, "resource")
-	require.NotNil(t, resourceObj, "resource should populate with ?include=resource")
-	assert.Equal(t, "entity", jsonField(resourceObj, "object"))
-	assert.Equal(t, "sales_order", jsonField(resourceObj, "type"))
-	assert.Equal(t, SeedSalesOrderID, jsonField(resourceObj, "id"))
+	related := jsonObject(n, "related")
+	require.NotNil(t, related)
+	assert.Equal(t, "notification_related", jsonField(related, "object"))
+	rec := jsonObject(related, "record")
+	require.NotNil(t, rec, "related.record should populate with ?include=related.record")
+	assert.Equal(t, "record", jsonField(rec, "object"))
+	assert.Equal(t, "sales_order", jsonField(rec, "type"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(rec, "id"))
 
 	assertNilField(t, n, "seen_at")
 	assertNilField(t, n, "read_at")
@@ -137,19 +141,18 @@ func TestCovMessagingNotifications_OmittedFieldsDefaults(t *testing.T) {
 	assertNilField(t, n, "body")
 	assert.Equal(t, "normal", jsonField(n, "priority"), "priority should default to normal when omitted")
 	assertNilField(t, n, "sender")
-	assertNilField(t, n, "resource")
+	assertNilField(t, jsonObject(n, "related"), "record")
+	assert.Equal(t, float64(1), n["occurrences"])
 	assertNilField(t, n, "seen_at")
 	assertNilField(t, n, "read_at")
 	assertNilField(t, n, "dismissed_at")
 
-	// Even requesting ?include=resource, resource stays null: nothing was
-	// stashed for resourceloaders to populate when link_resource_type/id
-	// were never sent.
+	// Even requesting ?include=related.record, the record stays null: the notification has no link.
 	id := notifID(t, n)
-	getResp, err := user.GetFull(notificationsPath+"/"+id+"?include=resource", nil)
+	getResp, err := user.GetFull(notificationsPath+"/"+id+"?include=related.record", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getResp.StatusCode, getResp.Body)
-	assertNilField(t, parseJSON(getResp.Body), "resource")
+	assertNilField(t, jsonObject(parseJSON(getResp.Body), "related"), "record")
 }
 
 // ── Expandable fields default to null without ?include ─────────────
@@ -172,7 +175,7 @@ func TestCovMessagingNotifications_ExpandableFieldsNilWithoutInclude(t *testing.
 	// List row: no ?include at all.
 	n := findNotif(t, user, title, nil)
 	assertNilField(t, n, "sender")
-	assertNilField(t, n, "resource")
+	assertNilField(t, jsonObject(n, "related"), "record")
 	id := notifID(t, n)
 
 	// Direct GET without ?include also nils both, even though the row has a
@@ -182,7 +185,7 @@ func TestCovMessagingNotifications_ExpandableFieldsNilWithoutInclude(t *testing.
 	requireStatus(t, 200, getResp.StatusCode, getResp.Body)
 	getM := parseJSON(getResp.Body)
 	assertNilField(t, getM, "sender")
-	assertNilField(t, getM, "resource")
+	assertNilField(t, jsonObject(getM, "related"), "record")
 }
 
 // ── NotificationUnreadCount.conversations ───────────────────────────
@@ -329,22 +332,22 @@ func TestCovMessagingNotifications_ListInvalidCategoryRejected(t *testing.T) {
 	t.Parallel()
 	user := notifUserClient(t)
 
-	status, body, err := user.GetListRaw(notificationsPath, url.Values{"category": {"bogus.category"}})
+	status, body, err := user.GetListRaw(notificationsPath, url.Values{"types[]": {"bogus.category"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "category")
+	assertErrorParam(t, errObj, "types")
 }
 
 func TestCovMessagingNotifications_ListInvalidStatusRejected(t *testing.T) {
 	t.Parallel()
 	user := notifUserClient(t)
 
-	status, body, err := user.GetListRaw(notificationsPath, url.Values{"status": {"bogus"}})
+	status, body, err := user.GetListRaw(notificationsPath, url.Values{"statuses[]": {"bogus"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "status")
+	assertErrorParam(t, errObj, "statuses")
 }
 
 // TestCovMessagingNotifications_ListInvalidSenderTypeIsSilentNoMatch documents

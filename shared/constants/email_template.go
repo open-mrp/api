@@ -53,6 +53,8 @@ const (
 	EmailTemplateAccountFollowupReview EmailTemplate = "account_followup_review"
 	// EmailTemplateAccountFollowupContext is the internal note threaded under a sent account follow-up, so the reviewer's inbox holds the activity summary next to the registrant's reply.
 	EmailTemplateAccountFollowupContext EmailTemplate = "account_followup_context"
+	// EmailTemplateNotification emails a person one of their notifications, such as a milestone on an order they follow.
+	EmailTemplateNotification EmailTemplate = "notification"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -80,14 +82,15 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateDashboardFeedback,
 		EmailTemplateAccountFollowup,
 		EmailTemplateAccountFollowupReview,
-		EmailTemplateAccountFollowupContext:
+		EmailTemplateAccountFollowupContext,
+		EmailTemplateNotification:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback), string(EmailTemplateAccountFollowup), string(EmailTemplateAccountFollowupReview), string(EmailTemplateAccountFollowupContext)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback), string(EmailTemplateAccountFollowup), string(EmailTemplateAccountFollowupReview), string(EmailTemplateAccountFollowupContext), string(EmailTemplateNotification)}
 }
 
 // SendsAsMerchant reports whether the template carries a merchant's own correspondence with their counterparty — an order, an invoice, a statement — rather than Augno's relationship with a user. Only these may leave from an account's configured sender: a password reset arriving from a tenant's domain reads as a spoof of exactly the mail it is meant to authenticate, and puts that tenant's sending reputation behind our credential flow.

@@ -1,7 +1,7 @@
 package constants
 
-// NotificationCategory classifies an in-app notification. The set is intentionally open-ended (producers may introduce new categories), so notification fields use
-// `validate:"required"` rather than a strict enum tag; the named constants below cover the common, first-party categories.
+// NotificationCategory is a notification's type (`type` in the API; stored as `category`). The set is fixed: a new
+// producer adds its value here.
 type NotificationCategory string
 
 const (
@@ -25,7 +25,24 @@ const (
 	NotificationCategoryProductionRunUpdated NotificationCategory = "production_run.updated"
 	// NotificationCategoryInvoicePaymentStatusChanged tells the person who set an invoice's paid-in-full flag by hand that recalculating its payments overturned it.
 	NotificationCategoryInvoicePaymentStatusChanged NotificationCategory = "invoice.payment_status_changed"
+	// NotificationCategoryNoteMention tells a person they were @mentioned in a note.
+	NotificationCategoryNoteMention NotificationCategory = "note.mention"
+	// NotificationCategorySecuritySignIn reports a new sign-in to the person's account. Required.
+	NotificationCategorySecuritySignIn NotificationCategory = "security.sign_in"
+	// NotificationCategorySecurityCredentialsChanged reports a passkey or two-factor change. Required.
+	NotificationCategorySecurityCredentialsChanged NotificationCategory = "security.credentials_changed"
+	// NotificationCategorySecurityDevicePaired reports a device paired to the person. Required.
+	NotificationCategorySecurityDevicePaired NotificationCategory = "security.device_paired"
 )
+
+// Required reports whether the type always emails and can't be turned off.
+func (c NotificationCategory) Required() bool {
+	switch c {
+	case NotificationCategorySecuritySignIn, NotificationCategorySecurityCredentialsChanged, NotificationCategorySecurityDevicePaired:
+		return true
+	}
+	return false
+}
 
 func (c NotificationCategory) IsValid() bool {
 	switch c {
@@ -38,7 +55,11 @@ func (c NotificationCategory) IsValid() bool {
 		NotificationCategorySystemBroadcast,
 		NotificationCategoryCustomerRegistered,
 		NotificationCategoryProductionRunUpdated,
-		NotificationCategoryInvoicePaymentStatusChanged:
+		NotificationCategoryInvoicePaymentStatusChanged,
+		NotificationCategoryNoteMention,
+		NotificationCategorySecuritySignIn,
+		NotificationCategorySecurityCredentialsChanged,
+		NotificationCategorySecurityDevicePaired:
 		return true
 	default:
 		return false
@@ -57,6 +78,10 @@ func (c NotificationCategory) EnumValues() []string {
 		string(NotificationCategoryCustomerRegistered),
 		string(NotificationCategoryProductionRunUpdated),
 		string(NotificationCategoryInvoicePaymentStatusChanged),
+		string(NotificationCategoryNoteMention),
+		string(NotificationCategorySecuritySignIn),
+		string(NotificationCategorySecurityCredentialsChanged),
+		string(NotificationCategorySecurityDevicePaired),
 	}
 }
 

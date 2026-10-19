@@ -193,9 +193,44 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 	}
 
 	notifRepo := s.repoFactory.NewNotificationRepo()
+	cache := newSettingsCache(s.repoFactory, data.AccountID)
 
-	// Resolve the recipient set to (account_user_id, user_id) pairs. The notification row is keyed by account_user id; the realtime push targets the WS user-topic (user id). Producers may supply either form: RecipientAccountUserIDs (admin sends) or RecipientUserIDs (e.g. agent-service, which holds the triggering user id, not the per-account account_user id).
-	recipients := s.resolveRecipients(ctx, data.AccountID, data.RecipientAccountUserIDs, data.RecipientUserIDs)
+	if apiErr := s.applySubscriptionIntents(ctx, s.repoFactory, cache, data); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Resolve the recipient set to (account_user_id, user_id) pairs. The notification row is keyed by account_user id; the realtime push targets the WS user-topic (user id). Producers may supply either form: RecipientAccountUserIDs (admin sends) or RecipientUserIDs (e.g. agent-service, which holds the triggering user id, not the per-account account_user id), or name an audience of record subscribers.
+	var recipients []recipientRef
+	if data.Audience != nil {
+		var apiErr *apierror.APIError
+		recipients, apiErr = s.audienceRecipients(ctx, s.repoFactory, data.AccountID, data.Audience)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	} else {
+		recipients = s.resolveRecipients(ctx, data.AccountID, data.RecipientAccountUserIDs, data.RecipientUserIDs)
+	}
+	if len(recipients) == 0 {
+		return nil
+	}
+
+	// Each recipient's settings decide the channels: the bell row needs in_app; email goes out at once for an instant
+	// digest (other cadences aren't sent yet).
+	now := time.Now()
+	notificationType := constants.NotificationCategory(data.Category)
+	inApp := recipients[:0:0]
+	for _, rc := range recipients {
+		eff := cache.get(ctx, rc.accountUserID).effective(notificationType, now)
+		if eff.EmailEnabled && eff.Digest == string(constants.NotificationDigestInstant) {
+			if apiErr := s.enqueueNotificationEmail(ctx, rc.accountUserID, data); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+		if eff.InAppEnabled {
+			inApp = append(inApp, rc)
+		}
+	}
+	recipients = inApp
 	if len(recipients) == 0 {
 		return nil
 	}
@@ -263,6 +298,28 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 		}
 	}
 	return nil
+}
+
+// enqueueNotificationEmail emails one recipient a notification. A recipient without an email address is skipped.
+func (s *messagingSvcImpl) enqueueNotificationEmail(ctx context.Context, accountUserID string, data messaging.AlertFanoutData) *apierror.APIError {
+	contact, apiErr := s.repoFactory.NewNotificationRepo().ResolveRecipientContact(ctx, accountUserID)
+	if apiErr != nil {
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil
+		}
+		return apiErr
+	}
+	if contact.Email == "" {
+		return nil
+	}
+	accountID := data.AccountID
+	return enqueueEmailVia(ctx, s.repoFactory.NewOutboxRepo(), messaging.EmailSendData{
+		To:         []string{contact.Email},
+		Subject:    data.Title,
+		TemplateID: constants.EmailTemplateNotification,
+		Params:     map[string]any{"Title": data.Title, "Body": data.Body},
+		AccountID:  &accountID,
+	})
 }
 
 // NotifyCustomerRegistered fans a "new customer registered on the portal" bell notification out to the seller's customer-service group — the active human participants of the account's support-route group (the same group that receives inbound portal queries). The notification links to the new customer so the team can follow up. Best-effort: if the account has no support route configured, there are no recipients and this no-ops. seed makes the per-recipient rows idempotent across redelivery.
@@ -455,8 +512,8 @@ func (s *messagingSvcImpl) ListNotifications(ctx context.Context, input domain.L
 	// Fetch one extra row to determine whether a next page exists.
 	rows, apiErr := s.repoFactory.NewNotificationRepo().List(ctx, domain.NotificationListFilter{
 		RecipientAccountUserID: recipient,
-		Category:               input.Category,
-		Status:                 input.Status,
+		Types:                  input.Types,
+		Statuses:               input.Statuses,
 		Search:                 input.Search,
 		SenderIDs:              input.SenderIDs,
 		SenderTypes:            input.SenderTypes,

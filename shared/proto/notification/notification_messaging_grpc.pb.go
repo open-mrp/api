@@ -30,22 +30,30 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MessagingService_SendNotification_FullMethodName             = "/notification.MessagingService/SendNotification"
-	MessagingService_ListNotifications_FullMethodName            = "/notification.MessagingService/ListNotifications"
-	MessagingService_GetNotification_FullMethodName              = "/notification.MessagingService/GetNotification"
-	MessagingService_GetUnreadCount_FullMethodName               = "/notification.MessagingService/GetUnreadCount"
-	MessagingService_GetUnreadSummary_FullMethodName             = "/notification.MessagingService/GetUnreadSummary"
-	MessagingService_MarkNotificationSeen_FullMethodName         = "/notification.MessagingService/MarkNotificationSeen"
-	MessagingService_MarkNotificationRead_FullMethodName         = "/notification.MessagingService/MarkNotificationRead"
-	MessagingService_MarkNotificationDismissed_FullMethodName    = "/notification.MessagingService/MarkNotificationDismissed"
-	MessagingService_MarkAllNotificationsSeen_FullMethodName     = "/notification.MessagingService/MarkAllNotificationsSeen"
-	MessagingService_ListAnnouncements_FullMethodName            = "/notification.MessagingService/ListAnnouncements"
-	MessagingService_GetAnnouncement_FullMethodName              = "/notification.MessagingService/GetAnnouncement"
-	MessagingService_MarkAnnouncementSeen_FullMethodName         = "/notification.MessagingService/MarkAnnouncementSeen"
-	MessagingService_MarkAnnouncementRead_FullMethodName         = "/notification.MessagingService/MarkAnnouncementRead"
-	MessagingService_MarkAnnouncementDismissed_FullMethodName    = "/notification.MessagingService/MarkAnnouncementDismissed"
-	MessagingService_ListNotificationPreferences_FullMethodName  = "/notification.MessagingService/ListNotificationPreferences"
-	MessagingService_UpsertNotificationPreference_FullMethodName = "/notification.MessagingService/UpsertNotificationPreference"
+	MessagingService_SendNotification_FullMethodName              = "/notification.MessagingService/SendNotification"
+	MessagingService_ListNotifications_FullMethodName             = "/notification.MessagingService/ListNotifications"
+	MessagingService_GetNotification_FullMethodName               = "/notification.MessagingService/GetNotification"
+	MessagingService_GetUnreadCount_FullMethodName                = "/notification.MessagingService/GetUnreadCount"
+	MessagingService_GetUnreadSummary_FullMethodName              = "/notification.MessagingService/GetUnreadSummary"
+	MessagingService_MarkNotificationSeen_FullMethodName          = "/notification.MessagingService/MarkNotificationSeen"
+	MessagingService_MarkNotificationRead_FullMethodName          = "/notification.MessagingService/MarkNotificationRead"
+	MessagingService_MarkNotificationDismissed_FullMethodName     = "/notification.MessagingService/MarkNotificationDismissed"
+	MessagingService_MarkAllNotificationsSeen_FullMethodName      = "/notification.MessagingService/MarkAllNotificationsSeen"
+	MessagingService_ListAnnouncements_FullMethodName             = "/notification.MessagingService/ListAnnouncements"
+	MessagingService_GetAnnouncement_FullMethodName               = "/notification.MessagingService/GetAnnouncement"
+	MessagingService_MarkAnnouncementSeen_FullMethodName          = "/notification.MessagingService/MarkAnnouncementSeen"
+	MessagingService_MarkAnnouncementRead_FullMethodName          = "/notification.MessagingService/MarkAnnouncementRead"
+	MessagingService_MarkAnnouncementDismissed_FullMethodName     = "/notification.MessagingService/MarkAnnouncementDismissed"
+	MessagingService_ListNotificationPreferences_FullMethodName   = "/notification.MessagingService/ListNotificationPreferences"
+	MessagingService_UpsertNotificationPreference_FullMethodName  = "/notification.MessagingService/UpsertNotificationPreference"
+	MessagingService_GetNotificationPreferences_FullMethodName    = "/notification.MessagingService/GetNotificationPreferences"
+	MessagingService_UpdateNotificationPreferences_FullMethodName = "/notification.MessagingService/UpdateNotificationPreferences"
+	MessagingService_GetNotificationDefaults_FullMethodName       = "/notification.MessagingService/GetNotificationDefaults"
+	MessagingService_UpdateNotificationDefaults_FullMethodName    = "/notification.MessagingService/UpdateNotificationDefaults"
+	MessagingService_ListSubscriptions_FullMethodName             = "/notification.MessagingService/ListSubscriptions"
+	MessagingService_GetSubscription_FullMethodName               = "/notification.MessagingService/GetSubscription"
+	MessagingService_FollowRecord_FullMethodName                  = "/notification.MessagingService/FollowRecord"
+	MessagingService_SetSubscriptionStatus_FullMethodName         = "/notification.MessagingService/SetSubscriptionStatus"
 )
 
 // MessagingServiceClient is the client API for MessagingService service.
@@ -84,6 +92,22 @@ type MessagingServiceClient interface {
 	ListNotificationPreferences(ctx context.Context, in *ListNotificationPreferencesRequest, opts ...grpc.CallOption) (*ListNotificationPreferencesResponse, error)
 	// UpsertNotificationPreference creates or replaces the caller's preference for a category.
 	UpsertNotificationPreference(ctx context.Context, in *UpsertNotificationPreferenceRequest, opts ...grpc.CallOption) (*NotificationPreferenceInfo, error)
+	// GetNotificationPreferences returns the caller's effective notification settings.
+	GetNotificationPreferences(ctx context.Context, in *GetNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferencesInfo, error)
+	// UpdateNotificationPreferences merges a patch into the caller's settings.
+	UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferencesInfo, error)
+	// GetNotificationDefaults returns the account's notification defaults.
+	GetNotificationDefaults(ctx context.Context, in *GetNotificationDefaultsRequest, opts ...grpc.CallOption) (*NotificationDefaultsInfo, error)
+	// UpdateNotificationDefaults merges a patch into the account's notification defaults.
+	UpdateNotificationDefaults(ctx context.Context, in *UpdateNotificationDefaultsRequest, opts ...grpc.CallOption) (*NotificationDefaultsInfo, error)
+	// ListSubscriptions returns the caller's record subscriptions (cursor-paginated).
+	ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*ListSubscriptionsResponse, error)
+	// GetSubscription returns one of the caller's subscriptions.
+	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*SubscriptionInfo, error)
+	// FollowRecord subscribes the caller to a record (idempotent).
+	FollowRecord(ctx context.Context, in *FollowRecordRequest, opts ...grpc.CallOption) (*FollowRecordResponse, error)
+	// SetSubscriptionStatus subscribes or unsubscribes the caller's subscription.
+	SetSubscriptionStatus(ctx context.Context, in *SetSubscriptionStatusRequest, opts ...grpc.CallOption) (*SubscriptionInfo, error)
 }
 
 type messagingServiceClient struct {
@@ -254,6 +278,86 @@ func (c *messagingServiceClient) UpsertNotificationPreference(ctx context.Contex
 	return out, nil
 }
 
+func (c *messagingServiceClient) GetNotificationPreferences(ctx context.Context, in *GetNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferencesInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationPreferencesInfo)
+	err := c.cc.Invoke(ctx, MessagingService_GetNotificationPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferencesInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationPreferencesInfo)
+	err := c.cc.Invoke(ctx, MessagingService_UpdateNotificationPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) GetNotificationDefaults(ctx context.Context, in *GetNotificationDefaultsRequest, opts ...grpc.CallOption) (*NotificationDefaultsInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationDefaultsInfo)
+	err := c.cc.Invoke(ctx, MessagingService_GetNotificationDefaults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) UpdateNotificationDefaults(ctx context.Context, in *UpdateNotificationDefaultsRequest, opts ...grpc.CallOption) (*NotificationDefaultsInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationDefaultsInfo)
+	err := c.cc.Invoke(ctx, MessagingService_UpdateNotificationDefaults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*ListSubscriptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSubscriptionsResponse)
+	err := c.cc.Invoke(ctx, MessagingService_ListSubscriptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*SubscriptionInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubscriptionInfo)
+	err := c.cc.Invoke(ctx, MessagingService_GetSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) FollowRecord(ctx context.Context, in *FollowRecordRequest, opts ...grpc.CallOption) (*FollowRecordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FollowRecordResponse)
+	err := c.cc.Invoke(ctx, MessagingService_FollowRecord_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) SetSubscriptionStatus(ctx context.Context, in *SetSubscriptionStatusRequest, opts ...grpc.CallOption) (*SubscriptionInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubscriptionInfo)
+	err := c.cc.Invoke(ctx, MessagingService_SetSubscriptionStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessagingServiceServer is the server API for MessagingService service.
 // All implementations must embed UnimplementedMessagingServiceServer
 // for forward compatibility.
@@ -290,6 +394,22 @@ type MessagingServiceServer interface {
 	ListNotificationPreferences(context.Context, *ListNotificationPreferencesRequest) (*ListNotificationPreferencesResponse, error)
 	// UpsertNotificationPreference creates or replaces the caller's preference for a category.
 	UpsertNotificationPreference(context.Context, *UpsertNotificationPreferenceRequest) (*NotificationPreferenceInfo, error)
+	// GetNotificationPreferences returns the caller's effective notification settings.
+	GetNotificationPreferences(context.Context, *GetNotificationPreferencesRequest) (*NotificationPreferencesInfo, error)
+	// UpdateNotificationPreferences merges a patch into the caller's settings.
+	UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*NotificationPreferencesInfo, error)
+	// GetNotificationDefaults returns the account's notification defaults.
+	GetNotificationDefaults(context.Context, *GetNotificationDefaultsRequest) (*NotificationDefaultsInfo, error)
+	// UpdateNotificationDefaults merges a patch into the account's notification defaults.
+	UpdateNotificationDefaults(context.Context, *UpdateNotificationDefaultsRequest) (*NotificationDefaultsInfo, error)
+	// ListSubscriptions returns the caller's record subscriptions (cursor-paginated).
+	ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*ListSubscriptionsResponse, error)
+	// GetSubscription returns one of the caller's subscriptions.
+	GetSubscription(context.Context, *GetSubscriptionRequest) (*SubscriptionInfo, error)
+	// FollowRecord subscribes the caller to a record (idempotent).
+	FollowRecord(context.Context, *FollowRecordRequest) (*FollowRecordResponse, error)
+	// SetSubscriptionStatus subscribes or unsubscribes the caller's subscription.
+	SetSubscriptionStatus(context.Context, *SetSubscriptionStatusRequest) (*SubscriptionInfo, error)
 	mustEmbedUnimplementedMessagingServiceServer()
 }
 
@@ -347,6 +467,30 @@ func (UnimplementedMessagingServiceServer) ListNotificationPreferences(context.C
 }
 func (UnimplementedMessagingServiceServer) UpsertNotificationPreference(context.Context, *UpsertNotificationPreferenceRequest) (*NotificationPreferenceInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpsertNotificationPreference not implemented")
+}
+func (UnimplementedMessagingServiceServer) GetNotificationPreferences(context.Context, *GetNotificationPreferencesRequest) (*NotificationPreferencesInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNotificationPreferences not implemented")
+}
+func (UnimplementedMessagingServiceServer) UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*NotificationPreferencesInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateNotificationPreferences not implemented")
+}
+func (UnimplementedMessagingServiceServer) GetNotificationDefaults(context.Context, *GetNotificationDefaultsRequest) (*NotificationDefaultsInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNotificationDefaults not implemented")
+}
+func (UnimplementedMessagingServiceServer) UpdateNotificationDefaults(context.Context, *UpdateNotificationDefaultsRequest) (*NotificationDefaultsInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateNotificationDefaults not implemented")
+}
+func (UnimplementedMessagingServiceServer) ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*ListSubscriptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSubscriptions not implemented")
+}
+func (UnimplementedMessagingServiceServer) GetSubscription(context.Context, *GetSubscriptionRequest) (*SubscriptionInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSubscription not implemented")
+}
+func (UnimplementedMessagingServiceServer) FollowRecord(context.Context, *FollowRecordRequest) (*FollowRecordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FollowRecord not implemented")
+}
+func (UnimplementedMessagingServiceServer) SetSubscriptionStatus(context.Context, *SetSubscriptionStatusRequest) (*SubscriptionInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetSubscriptionStatus not implemented")
 }
 func (UnimplementedMessagingServiceServer) mustEmbedUnimplementedMessagingServiceServer() {}
 func (UnimplementedMessagingServiceServer) testEmbeddedByValue()                          {}
@@ -657,6 +801,150 @@ func _MessagingService_UpsertNotificationPreference_Handler(srv interface{}, ctx
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessagingService_GetNotificationPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNotificationPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).GetNotificationPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_GetNotificationPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).GetNotificationPreferences(ctx, req.(*GetNotificationPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_UpdateNotificationPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateNotificationPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).UpdateNotificationPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_UpdateNotificationPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).UpdateNotificationPreferences(ctx, req.(*UpdateNotificationPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_GetNotificationDefaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNotificationDefaultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).GetNotificationDefaults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_GetNotificationDefaults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).GetNotificationDefaults(ctx, req.(*GetNotificationDefaultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_UpdateNotificationDefaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateNotificationDefaultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).UpdateNotificationDefaults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_UpdateNotificationDefaults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).UpdateNotificationDefaults(ctx, req.(*UpdateNotificationDefaultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_ListSubscriptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSubscriptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).ListSubscriptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_ListSubscriptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).ListSubscriptions(ctx, req.(*ListSubscriptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).GetSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_GetSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).GetSubscription(ctx, req.(*GetSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_FollowRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FollowRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).FollowRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_FollowRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).FollowRecord(ctx, req.(*FollowRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_SetSubscriptionStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSubscriptionStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).SetSubscriptionStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_SetSubscriptionStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).SetSubscriptionStatus(ctx, req.(*SetSubscriptionStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MessagingService_ServiceDesc is the grpc.ServiceDesc for MessagingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -727,6 +1015,38 @@ var MessagingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpsertNotificationPreference",
 			Handler:    _MessagingService_UpsertNotificationPreference_Handler,
+		},
+		{
+			MethodName: "GetNotificationPreferences",
+			Handler:    _MessagingService_GetNotificationPreferences_Handler,
+		},
+		{
+			MethodName: "UpdateNotificationPreferences",
+			Handler:    _MessagingService_UpdateNotificationPreferences_Handler,
+		},
+		{
+			MethodName: "GetNotificationDefaults",
+			Handler:    _MessagingService_GetNotificationDefaults_Handler,
+		},
+		{
+			MethodName: "UpdateNotificationDefaults",
+			Handler:    _MessagingService_UpdateNotificationDefaults_Handler,
+		},
+		{
+			MethodName: "ListSubscriptions",
+			Handler:    _MessagingService_ListSubscriptions_Handler,
+		},
+		{
+			MethodName: "GetSubscription",
+			Handler:    _MessagingService_GetSubscription_Handler,
+		},
+		{
+			MethodName: "FollowRecord",
+			Handler:    _MessagingService_FollowRecord_Handler,
+		},
+		{
+			MethodName: "SetSubscriptionStatus",
+			Handler:    _MessagingService_SetSubscriptionStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

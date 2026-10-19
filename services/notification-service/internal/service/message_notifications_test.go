@@ -8,6 +8,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/notifyprefs"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -50,14 +51,15 @@ func TestFanoutMessageNotifications_MuteAndPreferenceGating(t *testing.T) {
 
 	prefRepo := repositorymock.NewMockNotificationPreferenceRepo(ctrl)
 	// Active recipient: in-app on, email off → bell row, no email.
-	prefRepo.EXPECT().GetEffective(gomock.Any(), activeAc, string(constants.NotificationCategoryChatMessage)).
-		Return(&domain.EffectiveNotificationPreference{InAppEnabled: true, EmailEnabled: false, Digest: "instant"}, nil)
+	prefRepo.EXPECT().List(gomock.Any(), activeAc).
+		Return([]*domain.NotificationPreference{{Category: string(constants.NotificationCategoryChatMessage), InAppEnabled: true, EmailEnabled: false, Digest: "instant"}}, nil)
 
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
 	factory.EXPECT().NewConversationRepo().Return(convRepo).AnyTimes()
 	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 	factory.EXPECT().NewNotificationPreferenceRepo().Return(prefRepo).AnyTimes()
+	stubNotificationSettings(ctrl, factory, notifyprefs.Empty(), notifyprefs.Empty())
 	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
 
 	svc := &conversationSvcImpl{repoFactory: factory}
@@ -99,8 +101,8 @@ func TestFanoutMessageNotifications_DefaultsAndEmailBridge(t *testing.T) {
 
 	prefRepo := repositorymock.NewMockNotificationPreferenceRepo(ctrl)
 	// Explicit opt-in: in-app on, email on, instant digest → bell row + email command.
-	prefRepo.EXPECT().GetEffective(gomock.Any(), activeAc, string(constants.NotificationCategoryChatMessage)).
-		Return(&domain.EffectiveNotificationPreference{InAppEnabled: true, EmailEnabled: true, Digest: "instant"}, nil)
+	prefRepo.EXPECT().List(gomock.Any(), activeAc).
+		Return([]*domain.NotificationPreference{{Category: string(constants.NotificationCategoryChatMessage), InAppEnabled: true, EmailEnabled: true, Digest: "instant"}}, nil)
 
 	outbox := &fakeOutboxRepo{}
 
@@ -109,6 +111,7 @@ func TestFanoutMessageNotifications_DefaultsAndEmailBridge(t *testing.T) {
 	factory.EXPECT().NewConversationRepo().Return(convRepo).AnyTimes()
 	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 	factory.EXPECT().NewNotificationPreferenceRepo().Return(prefRepo).AnyTimes()
+	stubNotificationSettings(ctrl, factory, notifyprefs.Empty(), notifyprefs.Empty())
 	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 
 	svc := &conversationSvcImpl{repoFactory: factory}
@@ -148,14 +151,15 @@ func TestFanoutMessageNotifications_AgentSenderTitle(t *testing.T) {
 	})).Return(nil)
 
 	prefRepo := repositorymock.NewMockNotificationPreferenceRepo(ctrl)
-	prefRepo.EXPECT().GetEffective(gomock.Any(), activeAc, string(constants.NotificationCategoryChatMessage)).
-		Return(&domain.EffectiveNotificationPreference{InAppEnabled: true, EmailEnabled: false, Digest: "instant"}, nil)
+	prefRepo.EXPECT().List(gomock.Any(), activeAc).
+		Return([]*domain.NotificationPreference{{Category: string(constants.NotificationCategoryChatMessage), InAppEnabled: true, EmailEnabled: false, Digest: "instant"}}, nil)
 
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
 	factory.EXPECT().NewConversationRepo().Return(convRepo).AnyTimes()
 	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 	factory.EXPECT().NewNotificationPreferenceRepo().Return(prefRepo).AnyTimes()
+	stubNotificationSettings(ctrl, factory, notifyprefs.Empty(), notifyprefs.Empty())
 	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
 
 	svc := &conversationSvcImpl{repoFactory: factory}

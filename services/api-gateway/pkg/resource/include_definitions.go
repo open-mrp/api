@@ -71,6 +71,13 @@ func init() {
 		ObjectType: constants.ObjectTypeNotification,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sender", ObjectType: constants.ObjectTypeActor},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeNotificationRelated,
+				Children: []apiendpoint.IncludeFieldDef{
+					{Key: "record", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
 			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
 		},
 	})

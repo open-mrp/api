@@ -2,12 +2,15 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/notifyprefs"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -88,6 +91,10 @@ func (h *gRPCHandler) CreateRole(ctx context.Context, req *pb.CreateRoleRequest)
 		grants := req.Grants
 		params.Grants = &grants
 	}
+	if req.NotificationDefaultsJson != nil {
+		defaults := notifyprefs.Parse(req.NotificationDefaultsJson)
+		params.NotificationDefaults = &defaults
+	}
 	result, apiErr := h.roleSvc.CreateRole(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -120,6 +127,13 @@ func (h *gRPCHandler) UpdateRole(ctx context.Context, req *pb.UpdateRoleRequest)
 	if req.HasRevokes {
 		revokes := req.Revokes
 		params.Revokes = &revokes
+	}
+	if req.NotificationDefaultsPatchJson != nil {
+		var patch notifyprefs.Patch
+		if err := json.Unmarshal(req.NotificationDefaultsPatchJson, &patch); err != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInternalError(err, "Failed to read the notification defaults patch."))
+		}
+		params.NotificationDefaults = &patch
 	}
 
 	result, apiErr := h.roleSvc.UpdateRole(ctx, params)
@@ -180,6 +194,7 @@ func roleWithPermissionsToProto(rwp *domain.RoleWithPermissions) *pb.RoleDetail 
 	detail.Revokes = def.Revokes
 	detail.EffectivePermissions = types.EffectivePermissions(def.Access, def.Grants, def.Revokes)
 	detail.TemplateCode = rwp.Template
+	detail.NotificationDefaultsJson = rwp.NotificationDefaults.Marshal()
 
 	if rwp.Permissions != nil {
 		perms := make([]*pb.RolePermissionDetail, len(rwp.Permissions))

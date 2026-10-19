@@ -21,6 +21,8 @@ func init() {
 	conformance.DocVerbs = append(conformance.DocVerbs, "Connects")
 	// Status actions name the status they produce: "Activates a draft manufacturing method", "Disables an account user".
 	conformance.DocVerbs = append(conformance.DocVerbs, "Activates", "Disables")
+	// Following and unfollowing a record.
+	conformance.DocVerbs = append(conformance.DocVerbs, "Subscribes", "Unsubscribes")
 }
 
 // TestConformance holds every endpoint to every forge.1 rule. Endpoints that broke a rule before the forge.1 sweep are

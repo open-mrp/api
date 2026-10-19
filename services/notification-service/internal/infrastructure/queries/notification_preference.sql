@@ -27,3 +27,7 @@ ON DUPLICATE KEY UPDATE
 -- name: GetNotificationPreferenceByUserCategory :one
 SELECT * FROM notification_preference
 WHERE account_user_id = ? AND category = ?;
+
+-- name: DeleteNotificationPreference :exec
+DELETE FROM notification_preference
+WHERE account_user_id = ? AND category = ?;

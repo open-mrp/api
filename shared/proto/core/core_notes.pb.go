@@ -9,13 +9,14 @@
 package core
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -529,11 +530,13 @@ func (x *BatchGetNotesByIDsResponse) GetNotes() []*NoteInfo {
 type CreateNoteRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Unset for an account-wide note.
-	Record        *NoteRecordRef         `protobuf:"bytes,1,opt,name=record,proto3,oneof" json:"record,omitempty"`
-	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
-	Type          *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
-	Importance    *string                `protobuf:"bytes,4,opt,name=importance,proto3,oneof" json:"importance,omitempty"`
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
+	Record     *NoteRecordRef         `protobuf:"bytes,1,opt,name=record,proto3,oneof" json:"record,omitempty"`
+	Body       string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Type       *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	Importance *string                `protobuf:"bytes,4,opt,name=importance,proto3,oneof" json:"importance,omitempty"`
+	ExpiresAt  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
+	// Account users the note @mentions.
+	Mentions      []string `protobuf:"bytes,6,rep,name=mentions,proto3" json:"mentions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -603,6 +606,13 @@ func (x *CreateNoteRequest) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CreateNoteRequest) GetMentions() []string {
+	if x != nil {
+		return x.Mentions
+	}
+	return nil
+}
+
 type CreateNoteResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Note          *NoteInfo              `protobuf:"bytes,1,opt,name=note,proto3" json:"note,omitempty"`
@@ -655,8 +665,10 @@ type UpdateNoteRequest struct {
 	Importance *string                `protobuf:"bytes,4,opt,name=importance,proto3,oneof" json:"importance,omitempty"`
 	ExpiresAt  *TimestampPatch        `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	// Moves the note to another record; clear_record makes it account-wide. The preview.9 memory routes use these.
-	Record        *NoteRecordRef `protobuf:"bytes,6,opt,name=record,proto3,oneof" json:"record,omitempty"`
-	ClearRecord   bool           `protobuf:"varint,7,opt,name=clear_record,json=clearRecord,proto3" json:"clear_record,omitempty"`
+	Record      *NoteRecordRef `protobuf:"bytes,6,opt,name=record,proto3,oneof" json:"record,omitempty"`
+	ClearRecord bool           `protobuf:"varint,7,opt,name=clear_record,json=clearRecord,proto3" json:"clear_record,omitempty"`
+	// Account users this edit @mentions.
+	Mentions      []string `protobuf:"bytes,8,rep,name=mentions,proto3" json:"mentions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -738,6 +750,13 @@ func (x *UpdateNoteRequest) GetClearRecord() bool {
 		return x.ClearRecord
 	}
 	return false
+}
+
+func (x *UpdateNoteRequest) GetMentions() []string {
+	if x != nil {
+		return x.Mentions
+	}
+	return nil
 }
 
 type UpdateNoteResponse struct {
@@ -1189,7 +1208,7 @@ const file_core_core_notes_proto_rawDesc = "" +
 	"\x19BatchGetNotesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"B\n" +
 	"\x1aBatchGetNotesByIDsResponse\x12$\n" +
-	"\x05notes\x18\x01 \x03(\v2\x0e.core.NoteInfoR\x05notes\"\x89\x02\n" +
+	"\x05notes\x18\x01 \x03(\v2\x0e.core.NoteInfoR\x05notes\"\xa5\x02\n" +
 	"\x11CreateNoteRequest\x120\n" +
 	"\x06record\x18\x01 \x01(\v2\x13.core.NoteRecordRefH\x00R\x06record\x88\x01\x01\x12\x12\n" +
 	"\x04body\x18\x02 \x01(\tR\x04body\x12\x17\n" +
@@ -1198,13 +1217,14 @@ const file_core_core_notes_proto_rawDesc = "" +
 	"importance\x18\x04 \x01(\tH\x02R\n" +
 	"importance\x88\x01\x01\x12>\n" +
 	"\n" +
-	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\texpiresAt\x88\x01\x01B\t\n" +
+	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\texpiresAt\x88\x01\x01\x12\x1a\n" +
+	"\bmentions\x18\x06 \x03(\tR\bmentionsB\t\n" +
 	"\a_recordB\a\n" +
 	"\x05_typeB\r\n" +
 	"\v_importanceB\r\n" +
 	"\v_expires_at\"8\n" +
 	"\x12CreateNoteResponse\x12\"\n" +
-	"\x04note\x18\x01 \x01(\v2\x0e.core.NoteInfoR\x04note\"\xb0\x02\n" +
+	"\x04note\x18\x01 \x01(\v2\x0e.core.NoteInfoR\x04note\"\xcc\x02\n" +
 	"\x11UpdateNoteRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04body\x18\x02 \x01(\tH\x00R\x04body\x88\x01\x01\x12\x17\n" +
@@ -1215,7 +1235,8 @@ const file_core_core_notes_proto_rawDesc = "" +
 	"\n" +
 	"expires_at\x18\x05 \x01(\v2\x14.core.TimestampPatchR\texpiresAt\x120\n" +
 	"\x06record\x18\x06 \x01(\v2\x13.core.NoteRecordRefH\x03R\x06record\x88\x01\x01\x12!\n" +
-	"\fclear_record\x18\a \x01(\bR\vclearRecordB\a\n" +
+	"\fclear_record\x18\a \x01(\bR\vclearRecord\x12\x1a\n" +
+	"\bmentions\x18\b \x03(\tR\bmentionsB\a\n" +
 	"\x05_bodyB\a\n" +
 	"\x05_typeB\r\n" +
 	"\v_importanceB\t\n" +

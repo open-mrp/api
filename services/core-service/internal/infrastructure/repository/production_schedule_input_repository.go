@@ -462,29 +462,82 @@ func (r *productionScheduleInputRepoImpl) GetPooledOrderDemandByProduct(
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_pooled_order_demand")
 	defer span.End()
 
-	rows, err := r.queries.GetPooledOrderDemandByProduct(ctx, sqlc.GetPooledOrderDemandByProductParams{
-		AccountID:   params.AccountID,
-		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
-		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
-		ProductIds:  scheduleNullStrings(params.ProductIDs),
-	})
+	if len(params.ProductIDs) == 0 {
+		return nil, nil
+	}
+	excluded, err := selectStrings(ctx, r.queries.DB(), makeToOrderCustomersQuery, params.AccountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	copies, err := lineCopiesComplete(ctx, r.queries.DB())
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	query, args := pooledOrderDemandQuery(params, excluded, copies)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
 
 	var out []domain.PooledMonthlyDemandRow
-	for _, row := range rows {
-		if !row.ProductID.Valid {
-			continue
+	for rows.Next() {
+		var (
+			row      domain.PooledMonthlyDemandRow
+			quantity string
+		)
+		if err := rows.Scan(&row.ProductID, &row.Year, &row.Month, &quantity); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
 		}
-		out = append(out, domain.PooledMonthlyDemandRow{
-			ProductID: row.ProductID.String,
-			Year:      int(row.DemandYear),
-			Month:     int(row.DemandMonth),
-			Quantity:  decimalToFloat64(row.Quantity),
-		})
+		row.Quantity = decimalToFloat64(quantity)
+		out = append(out, row)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 	return out, nil
+}
+
+// makeToOrderCustomersQuery is the account's make-to-order customers, resolved as the fulfillment
+// recommendation resolves them: the customer's own setting, then its account group's.
+const makeToOrderCustomersQuery = `SELECT ar.counterparty_account_id FROM account_relation ar
+LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+WHERE ar.owner_account_id = ? AND ar.account_relation_role_code = 'customer'
+  AND COALESCE(NULLIF(ar.fulfillment_policy_code, ''), ag.fulfillment_policy_code) = 'make_to_order'`
+
+// pooledOrderDemandQuery totals the window's sold quantity per product and issue month.
+//
+// Estimates are excluded: an unissued quote is not demand. So are make-to-order customers' orders (excluded):
+// their history is not a forecast to build against, only an order book to fill when they order. An order
+// still built for such a customer is scheduled on its own ship-by through GetOpenOrderRequirements.
+//
+// The orders are the issued-at range of the account's key, and each order's lines one range of a key
+// holding the product. Joining every order of the account and filtering on the products and the window
+// afterwards read 190k rows a run (p99 9.7s). With copies, the line key also holds the quantity, so no
+// line or quantity row is visited; until the copies are complete, the quantity rows are read instead.
+func pooledOrderDemandQuery(params domain.GetPooledOrderDemandParams, excluded []string, copies bool) (string, []any) {
+	lineKey, value, unit, quantity := "sales_order_line_order_product_idx", "q.value", "q.unit_id", "\nJOIN quantity q ON q.id = sol.quantity_id"
+	if copies {
+		lineKey, value, unit, quantity = "sales_order_line_order_copies_idx", "sol.quantity_value", "sol.quantity_unit_id", ""
+	}
+	args := []any{params.AccountID, params.WindowStart, params.WindowEnd}
+	var buyers string
+	if len(excluded) > 0 {
+		buyers = "\n  AND so.buyer_account_id NOT IN (" + placeholders(len(excluded)) + ")"
+		args = append(args, stringsToAny(excluded)...)
+	}
+	args = append(args, stringsToAny(params.ProductIDs)...)
+	return `SELECT STRAIGHT_JOIN sol.product_id, YEAR(so.issued_at), MONTH(so.issued_at),
+    CAST(COALESCE(SUM(` + value + ` * (u.ratio_numerator / u.ratio_denominator)), 0) AS DECIMAL(65,30))
+FROM sales_order so FORCE INDEX (sales_order_owner_type_issued_idx)
+JOIN sales_order_line sol FORCE INDEX (` + lineKey + `) ON sol.sales_order_id = so.id` + quantity + `
+JOIN unit u ON u.id = ` + unit + `
+WHERE so.owner_account_id = ? AND so.sales_order_type_code = 'sales_order'
+  AND so.issued_at >= ? AND so.issued_at <= ?
+  AND so.sales_order_status_code <> 'estimate'` + buyers + `
+  AND sol.product_id IN (` + placeholders(len(params.ProductIDs)) + `)
+GROUP BY sol.product_id, YEAR(so.issued_at), MONTH(so.issued_at)
+ORDER BY sol.product_id, YEAR(so.issued_at), MONTH(so.issued_at)`, args
 }
 
 // GetActiveDemandOverrides returns the demand overrides in force at the planning date.

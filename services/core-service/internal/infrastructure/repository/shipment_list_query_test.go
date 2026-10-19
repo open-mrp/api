@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -191,6 +192,72 @@ func TestShipmentListIndexes_AreDeclaredInMigrations(t *testing.T) {
 		if !strings.Contains(schema, index) {
 			t.Errorf("%s is FORCE INDEX'd by the shipment list but no migration creates it", index)
 		}
+	}
+	// MATCH fails with 1191 when no FULLTEXT key covers exactly its column.
+	for _, index := range []string{"shipment_number_ngram_idx", "shipment_note_ngram_idx", "shipment_bill_of_lading_ngram_idx",
+		"shipment_master_tracking_number_ngram_idx", "sales_order_number_ngram_idx", "sales_order_customer_po_number_ngram_idx", "account_name_ngram_idx"} {
+		if !strings.Contains(schema, index) {
+			t.Errorf("%s is MATCHed by the shipment search but no migration creates it", index)
+		}
+	}
+}
+
+// A search whose few matches were read up front pages them by primary key and never tests the terms
+// again; beside a narrower filter's drive, the matches are a filter on its rows.
+func TestBuildShipmentListQuery_SearchMatchesReplaceTheTerms(t *testing.T) {
+	t.Parallel()
+
+	q := shipmentListQuery{
+		AccountID: "ac_1", Search: gosql.NullString{String: "%x%", Valid: true}, SearchIDs: []string{"sh_1", "sh_2"},
+		Drive: shipmentDriveSearch, Limit: 26,
+	}
+	query, args := buildShipmentListQuery(q)
+	if !strings.Contains(query, "FROM shipment s FORCE INDEX (PRIMARY)") || !strings.Contains(query, "s.id IN (?,?)") {
+		t.Errorf("matches do not drive the read:\n%s", query)
+	}
+	if strings.Contains(query, "LIKE") || strings.Contains(query, "JOIN sales_order so") {
+		t.Errorf("the page tests the terms again:\n%s", query)
+	}
+	if want := []any{"ac_1", "sh_1", "sh_2", int32(26)}; !reflect.DeepEqual(args, want) {
+		t.Errorf("args = %v, want %v", args, want)
+	}
+
+	q.Drive, q.ItemIDs = shipmentDriveItems, []string{"it_1"}
+	query, args = buildShipmentListQuery(q)
+	if !strings.Contains(query, ") matched JOIN shipment s ON s.id = matched.id") || !strings.Contains(query, "s.id IN (?,?)") {
+		t.Errorf("matches are not a filter beside the items' drive:\n%s", query)
+	}
+	if got := strings.Count(query, "?"); got != len(args) {
+		t.Errorf("%d placeholders but %d args", got, len(args))
+	}
+
+	// Too many matches to read up front: the terms are tested on each shipment walked, as before.
+	q.SearchIDs, q.Drive, q.ItemIDs = nil, shipmentDriveListOrder, nil
+	query, _ = buildShipmentListQuery(q)
+	if !strings.Contains(query, "s.number LIKE ?") || strings.Contains(query, "s.id IN") {
+		t.Errorf("a common search is not tested per shipment:\n%s", query)
+	}
+}
+
+// Every searched column is its own arm on its own FULLTEXT key, and the read stops one past the cap.
+func TestBuildShipmentSearchIDsQuery_OneArmPerColumn(t *testing.T) {
+	t.Parallel()
+
+	phrase := db.NewNgramSubstring("1234")
+	query, args := buildShipmentSearchIDsQuery("ac_1", phrase)
+	for _, col := range []string{"s.number", "s.note", "s.bill_of_lading", "s.master_tracking_number", "so.number", "so.customer_po_number", "ba.name"} {
+		if !strings.Contains(query, "MATCH("+col+") AGAINST(? IN BOOLEAN MODE) AND "+col+" LIKE ?") {
+			t.Errorf("no arm matches %s:\n%s", col, query)
+		}
+	}
+	if got := strings.Count(query, " UNION ALL "); got != 6 {
+		t.Errorf("%d unions, want 6 (seven arms):\n%s", got, query)
+	}
+	if got := strings.Count(query, "?"); got != len(args) {
+		t.Errorf("%d placeholders but %d args", got, len(args))
+	}
+	if !strings.HasSuffix(query, " LIMIT ?") || args[len(args)-1] != shipmentMatchCap+1 {
+		t.Errorf("the read does not stop past the cap: %v", args[len(args)-1])
 	}
 }
 

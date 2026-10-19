@@ -4,6 +4,7 @@ import (
 	gosql "database/sql"
 	"strings"
 
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -18,8 +19,8 @@ const (
 )
 
 // shipmentMatchCap is the most shipments an unordered filter may match and still drive the read: a
-// set of customers (ranges of the buyer key), items or product lines (child tables), or sales reps
-// (their orders). Reading every match and sorting is cheap for a few; with more, the filter matches
+// set of customers (ranges of the buyer key), items or product lines (child tables), sales reps
+// (their orders), or a search (its columns' FULLTEXT keys). Reading every match and sorting is cheap for a few; with more, the filter matches
 // often enough that walking a list-order key with it as a residual fills a page first.
 const shipmentMatchCap = 2000
 
@@ -36,6 +37,8 @@ const (
 	shipmentDriveProductLines
 	// shipmentDriveSalesReps reads the reps' orders and looks up their shipments.
 	shipmentDriveSalesReps
+	// shipmentDriveSearch reads the shipments a search matched by primary key and sorts them.
+	shipmentDriveSearch
 )
 
 type shipmentListQuery struct {
@@ -44,6 +47,9 @@ type shipmentListQuery struct {
 	// Search is a LIKE pattern matched anywhere in the shipment's numbers and note, its order's number
 	// and PO number, and its customer's name.
 	Search gosql.NullString
+	// SearchIDs, when non-nil, are the shipments the search matches, read up front because there are few
+	// (see shipmentMatchCap). They replace Search: a search with too many is tested on each shipment walked.
+	SearchIDs []string
 	// BuyerIDs, when non-nil, limits the list to these customers: the customer filter intersected with
 	// the group filter's customers.
 	BuyerIDs       []string
@@ -93,7 +99,7 @@ const shipmentListable = " AND EXISTS (SELECT 1 FROM sales_order so0" +
 // buildShipmentListQuery returns the query for one page of shipment ids (Limit rows, newest first
 // going forward) and its bind args. Only the predicates the caller set are emitted.
 func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
-	args := make([]any, 0, 16+len(q.BuyerIDs)+len(q.ItemIDs)+len(q.ProductLineIDs)+len(q.SalesRepIDs))
+	args := make([]any, 0, 16+len(q.SearchIDs)+len(q.BuyerIDs)+len(q.ItemIDs)+len(q.ProductLineIDs)+len(q.SalesRepIDs))
 	var b strings.Builder
 	b.WriteString("SELECT STRAIGHT_JOIN s.id FROM ")
 	switch q.Drive {
@@ -107,10 +113,13 @@ func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
 		b.WriteString("(SELECT rso.id FROM " + shipmentRepOrders(len(q.SalesRepIDs)) + ") matched JOIN shipment s ON s.sales_order_id = matched.id")
 		args = append(args, q.AccountID)
 		args = append(args, stringArgs(q.SalesRepIDs)...)
+	case shipmentDriveSearch:
+		b.WriteString("shipment s FORCE INDEX (PRIMARY)")
 	default:
 		b.WriteString("shipment s FORCE INDEX (" + strings.Join(q.indexHint(), ", ") + ")")
 	}
-	if q.Search.Valid {
+	searchResidual := q.Search.Valid && q.SearchIDs == nil
+	if searchResidual {
 		b.WriteString(" JOIN sales_order so ON so.id = s.sales_order_id JOIN account ba ON ba.id = so.buyer_account_id")
 	}
 	b.WriteString(" WHERE s.account_id = ?")
@@ -124,7 +133,11 @@ func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
 		b.WriteString(" AND s.buyer_account_id IN (" + placeholders(len(q.BuyerIDs)) + ")")
 		args = append(args, stringArgs(q.BuyerIDs)...)
 	}
-	if q.Search.Valid {
+	if q.SearchIDs != nil {
+		b.WriteString(" AND s.id IN (" + placeholders(len(q.SearchIDs)) + ")")
+		args = append(args, stringArgs(q.SearchIDs)...)
+	}
+	if searchResidual {
 		b.WriteString(" AND (s.number LIKE ? OR s.note LIKE ? OR s.bill_of_lading LIKE ? OR s.master_tracking_number LIKE ?" +
 			" OR so.number LIKE ? OR ba.name LIKE ? OR so.customer_po_number LIKE ?)")
 		for range 7 {
@@ -219,4 +232,40 @@ func buildShipmentMatchCountQuery(accountID string, drive shipmentDrive, ids []s
 	args = append(args, stringArgs(ids)...)
 	args = append(args, shipmentMatchCap)
 	return "SELECT COUNT(*) FROM (SELECT 1 FROM " + inner + " LIMIT ?) capped", args
+}
+
+// shipmentSearchArms each select the account's shipments one searched column holds the phrase in: the
+// shipment's number, note, bill of lading and master tracking number, its order's number and PO number,
+// and its customer's name. Each is its own read because an OR across columns, or across joined tables,
+// cannot use any of their FULLTEXT keys; each MATCH reads only the rows holding every 2-gram of the term.
+func shipmentSearchArms(accountID string, phrase db.NgramSubstring) []pickArm {
+	own := func(col string) pickArm {
+		return pickArm{"SELECT s.id FROM shipment s WHERE s.account_id = ? AND " + phrase.Where("s."+col),
+			append([]any{accountID}, phrase.Args()...)}
+	}
+	order := func(col string) pickArm {
+		return pickArm{"SELECT s.id FROM sales_order so JOIN shipment s ON s.sales_order_id = so.id" +
+			" WHERE so.owner_account_id = ? AND " + phrase.Where("so."+col) + " AND s.account_id = ?",
+			append(append([]any{accountID}, phrase.Args()...), accountID)}
+	}
+	return []pickArm{
+		own("number"),
+		own("note"),
+		own("bill_of_lading"),
+		own("master_tracking_number"),
+		order("number"),
+		order("customer_po_number"),
+		{"SELECT s.id FROM account ba JOIN shipment s FORCE INDEX (" + shipmentBuyerIndex + ")" +
+			" ON s.account_id = ? AND s.buyer_account_id = ba.id WHERE " + phrase.Where("ba.name"),
+			append([]any{accountID}, phrase.Args()...)},
+	}
+}
+
+// buildShipmentSearchIDsQuery reads the phrase's matches, stopping one past shipmentMatchCap to tell a
+// set that fits from one that does not. UNION ALL streams and stops at the limit, where UNION would
+// collect every match to deduplicate first; a shipment matching several arms is deduplicated by the
+// caller.
+func buildShipmentSearchIDsQuery(accountID string, phrase db.NgramSubstring) (string, []any) {
+	query, args := joinPickArms(shipmentSearchArms(accountID, phrase), " UNION ALL ")
+	return query + " LIMIT ?", append(args, shipmentMatchCap+1)
 }

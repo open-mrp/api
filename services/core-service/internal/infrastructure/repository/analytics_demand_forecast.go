@@ -27,7 +27,9 @@ func demandForecastFilters(params domain.GetDemandForecastWindowParams) ([]strin
 }
 
 // demandForecastDemandQuery totals each item's ordered quantity (in its base unit) and value per month of order creation. Every sales order counts, estimates included, as the dashboard counted them. The orders drive, ranged by creation date: left to choose, the planner starts from the lines and reads each order once per line.
-func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams) (string, []any) {
+//
+// With copies, each order's lines are one range of a key holding their quantity and price, so no line, quantity or rate row is visited: from those rows, two years of a large account's orders took 3 s warm and 28 s cold.
+func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams, copies bool) (string, []any) {
 	preds := []string{
 		"so.owner_account_id = ?",
 		"fg.product_type_code = 'sale'",
@@ -52,7 +54,34 @@ func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams) (str
     ` + obDecimal("SUM("+obQtyOrdered+")") + `,
     ` + obDecimal("SUM("+obTotalOrdered+")") + `
 FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx)
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
+` + orderedLineValues(copies) + `
+WHERE ` + strings.Join(preds, " AND ") + `
+GROUP BY pb.id, pb.sku, pb.description, fg.product_line_id, bu_unit.abbreviation, u_price_num.abbreviation, demand_year, demand_month
+ORDER BY pb.id, demand_year, demand_month`
+	if copies {
+		query = fromCopies.Replace(query)
+	}
+	return query, args
+}
+
+// orderedLineValues joins an order's lines (sol), their product (fg) and item's base unit (bu_unit), and the
+// quantity (u_ord) and price (u_price_num, u_price_den) units obTotalOrdered prices them with. A line without
+// its quantity row is left out; one without its price row is not. With copies, the lines are read from
+// sales_order_line_order_copies_idx and their values from the copies, so the expressions read through
+// fromCopies.
+func orderedLineValues(copies bool) string {
+	if copies {
+		return `JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = so.id
+JOIN product fg ON fg.id = sol.product_id
+JOIN item pb ON pb.id = fg.item_id
+JOIN item_category ic ON ic.id = pb.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
+JOIN unit u_ord ON u_ord.id = sol.quantity_unit_id
+LEFT JOIN unit u_price_num ON u_price_num.id = sol.unit_price_numerator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = sol.unit_price_denominator_unit_id`
+	}
+	return `JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN product fg ON fg.id = sol.product_id
 JOIN item pb ON pb.id = fg.item_id
 JOIN item_category ic ON ic.id = pb.item_category_id
@@ -62,11 +91,7 @@ JOIN quantity q_ord ON q_ord.id = sol.quantity_id
 JOIN unit u_ord ON u_ord.id = q_ord.unit_id
 LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
 LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
-WHERE ` + strings.Join(preds, " AND ") + `
-GROUP BY pb.id, pb.sku, pb.description, fg.product_line_id, bu_unit.abbreviation, u_price_num.abbreviation, demand_year, demand_month
-ORDER BY pb.id, demand_year, demand_month`
-	return query, args
+LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id`
 }
 
 // GetDemandForecastMonthlyDemand returns order-based monthly demand and revenue rows per item within the given window.
@@ -74,7 +99,11 @@ func (r *analyticsRepoImpl) GetDemandForecastMonthlyDemand(ctx context.Context, 
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_demand_forecast_monthly_demand")
 	defer span.End()
 
-	query, args := demandForecastDemandQuery(params)
+	copies, apiErr := r.lineCopies(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	query, args := demandForecastDemandQuery(params, copies)
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -103,7 +132,11 @@ func (r *analyticsRepoImpl) GetDemandForecastMonthlyDemand(ctx context.Context, 
 }
 
 // demandForecastRevenueQuery totals each item's invoiced value per month of invoice. It reads the account's invoices in the window first: left to choose, the planner starts from a product-line or item filter's every invoiced line.
-func demandForecastRevenueQuery(params domain.GetDemandForecastWindowParams) (string, []any) {
+//
+// With copies, an invoice's lines are one range of invoice_line_invoice_copies_idx and the lines of the order
+// they invoice one range of sales_order_line_order_copies_idx, so no line, quantity or rate row is visited.
+// The order line is found within the invoice's order: an invoice only invoices its own order's lines.
+func demandForecastRevenueQuery(params domain.GetDemandForecastWindowParams, copies bool) (string, []any) {
 	preds := []string{
 		"inv.account_id = ?",
 		"inv.created_at >= ?",
@@ -117,12 +150,7 @@ func demandForecastRevenueQuery(params domain.GetDemandForecastWindowParams) (st
 	args = append(args, filterArgs...)
 
 	const invoicedNorm = "((q_in.value * (u_in.ratio_numerator / u_in.ratio_denominator)) + (u_in.offset_numerator / u_in.offset_denominator))"
-	query := `SELECT STRAIGHT_JOIN
-    pb.id,
-    YEAR(inv.created_at) AS revenue_year,
-    MONTH(inv.created_at) AS revenue_month,
-    ` + obDecimal("SUM("+invoicedNorm+" * "+obPricePerBase+")") + `
-FROM invoice inv FORCE INDEX (invoice_account_created_idx)
+	from := `FROM invoice inv FORCE INDEX (invoice_account_created_idx)
 JOIN invoice_line il ON il.invoice_id = inv.id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN sales_order so ON so.id = sol.sales_order_id
@@ -135,10 +163,33 @@ JOIN quantity q_in ON q_in.id = il.quantity_id
 JOIN unit u_in ON u_in.id = q_in.unit_id
 LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
 LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id`
+	if copies {
+		from = `FROM invoice inv FORCE INDEX (invoice_account_created_idx)
+JOIN invoice_line il FORCE INDEX (invoice_line_invoice_copies_idx) ON il.invoice_id = inv.id
+JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = inv.sales_order_id AND sol.id = il.sales_order_line_id
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN product fg ON fg.id = sol.product_id
+JOIN item pb ON pb.id = fg.item_id
+JOIN item_category ic ON ic.id = pb.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
+JOIN unit u_in ON u_in.id = il.quantity_unit_id
+LEFT JOIN unit u_price_num ON u_price_num.id = sol.unit_price_numerator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = sol.unit_price_denominator_unit_id`
+	}
+	query := `SELECT STRAIGHT_JOIN
+    pb.id,
+    YEAR(inv.created_at) AS revenue_year,
+    MONTH(inv.created_at) AS revenue_month,
+    ` + obDecimal("SUM("+invoicedNorm+" * "+obPricePerBase+")") + `
+` + from + `
 WHERE ` + strings.Join(preds, " AND ") + `
 GROUP BY pb.id, revenue_year, revenue_month
 ORDER BY pb.id, revenue_year, revenue_month`
+	if copies {
+		query = fromCopies.Replace(query)
+	}
 	return query, args
 }
 
@@ -147,7 +198,11 @@ func (r *analyticsRepoImpl) GetDemandForecastMonthlyRevenue(ctx context.Context,
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_demand_forecast_monthly_revenue")
 	defer span.End()
 
-	query, args := demandForecastRevenueQuery(params)
+	copies, apiErr := r.lineCopies(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	query, args := demandForecastRevenueQuery(params, copies)
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))

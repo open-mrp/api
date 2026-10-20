@@ -43,9 +43,9 @@ func fillCorpusLineCopies(t *testing.T, db *sql.DB, accountID string) {
 // pick line that is not covering (pl is also product_line's alias, hence the pick_line key name).
 var copyReadRe = regexp.MustCompile(`on (q_ord|q_in|r_price|r_cost|q|plq) using|-> (Single-row index lookup|Index lookup|Index range scan) on (sol|il) using|-> (Single-row index lookup|Index lookup|Index range scan) on pl using pick_line`)
 
-// TestLineCopies_ReportsAnswerAsFromTheRows requires every plan-tested order-book and delivery request to
-// answer exactly the same from the copies lines carry as from their quantity and rate rows, and the copy
-// reads never to visit a line, quantity or rate row.
+// TestLineCopies_ReportsAnswerAsFromTheRows requires every plan-tested order-book, delivery, quarterly-orders and
+// demand-forecast request to answer exactly the same from the copies lines carry as from their quantity and
+// rate rows, and the copy reads never to visit a line, quantity or rate row.
 func TestLineCopies_ReportsAnswerAsFromTheRows(t *testing.T) {
 	ensureLegacyAnalyticsCorpus(t)
 	ensureDeliveryPerformanceCorpus(t)
@@ -79,6 +79,18 @@ func TestLineCopies_ReportsAnswerAsFromTheRows(t *testing.T) {
 		for _, c := range deliveryPerfPlanCases() {
 			outcomes, apiErr := delivery.ListDeliveryOutcomes(ctx, planAnaAccount, c.params.start, c.params.end, c.params.filters)
 			digest("delivery/"+c.name, outcomes, nilIfNoErr(apiErr))
+		}
+		for _, c := range quarterlyPlanCases() {
+			p := c.params
+			quarters, apiErr := analytics.GetQuarterlyOrders(ctx, domain.AnalyzeQuarterlyOrdersParams{AccountID: planAnaAccount, IssuedFrom: p.start,
+				ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
+			digest("quarterly/"+c.name, quarters, nilIfNoErr(apiErr))
+		}
+		for _, c := range demandForecastPlanCases() {
+			demand, apiErr := analytics.GetDemandForecastMonthlyDemand(ctx, c.params)
+			digest("forecast_demand/"+c.name, demand, nilIfNoErr(apiErr))
+			revenue, apiErr := analytics.GetDemandForecastMonthlyRevenue(ctx, c.params)
+			digest("forecast_revenue/"+c.name, revenue, nilIfNoErr(apiErr))
 		}
 		return got
 	}

@@ -638,7 +638,9 @@ func (r *analyticsRepoImpl) getManufacturingMetricsForPeriod(ctx context.Context
 }
 
 // quarterlyOrdersQuery totals the ordered value of sale lines on sales orders issued since issuedFrom, per year and quarter of issue. Every order counts whatever its status now; an estimate has not been issued.
-func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, buyers []string, buyersFiltered bool, salesRepIDs, productLineIDs, itemIDs []string) (string, []any) {
+//
+// With copies, each order's lines are one range of a key holding their quantity and price, so no line, quantity or rate row is visited: from those rows, a large account's default three years took 29 s cold.
+func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, buyers []string, buyersFiltered bool, salesRepIDs, productLineIDs, itemIDs []string, copies bool) (string, []any) {
 	preds := []string{
 		"so.owner_account_id = ?",
 		"so.sales_order_type_code = 'sales_order'",
@@ -668,16 +670,13 @@ func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, bu
     QUARTER(so.issued_at) AS order_quarter,
     ` + obDecimal("SUM("+obTotalOrdered+")") + ` AS total
 FROM sales_order so FORCE INDEX (` + orderIndex + `)
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product fg ON fg.id = sol.product_id
-JOIN quantity q_ord ON q_ord.id = sol.quantity_id
-JOIN unit u_ord ON u_ord.id = q_ord.unit_id
-LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
-LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
+` + orderedLineValues(copies) + `
 WHERE ` + strings.Join(preds, " AND ") + `
 GROUP BY order_year, order_quarter
 ORDER BY order_year ASC, order_quarter ASC`
+	if copies {
+		query = fromCopies.Replace(query)
+	}
 	return query, args
 }
 
@@ -702,7 +701,11 @@ func (r *analyticsRepoImpl) GetQuarterlyOrders(ctx context.Context, params domai
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	query, args := quarterlyOrdersQuery(orderIndex, params.AccountID, params.IssuedFrom, buyers, filtered, params.SalesRepIDs, params.ProductLineIDs, params.ItemIDs)
+	copies, apiErr := r.lineCopies(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	query, args := quarterlyOrdersQuery(orderIndex, params.AccountID, params.IssuedFrom, buyers, filtered, params.SalesRepIDs, params.ProductLineIDs, params.ItemIDs, copies)
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))

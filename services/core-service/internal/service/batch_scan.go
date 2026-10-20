@@ -637,12 +637,11 @@ func (s *batchSvcImpl) planSplit(ctx context.Context, accountID string, params d
 	}
 
 	out := &scanOutput{
-		productionStepID:     params.ProductionStepID,
-		scanningStationID:    params.ScanningStationID,
-		itemID:               itemID,
-		quantity:             domain.CreateQuantityParams{Measure: params.Firsts.Measure, UnitID: firstsUnit.ID},
-		closeSources:         params.CloseBatch,
-		recountClosedSources: true,
+		productionStepID:  params.ProductionStepID,
+		scanningStationID: params.ScanningStationID,
+		itemID:            itemID,
+		quantity:          domain.CreateQuantityParams{Measure: params.Firsts.Measure, UnitID: firstsUnit.ID},
+		closeSources:      params.CloseBatch,
 	}
 	if params.Seconds != nil {
 		unit, apiErr := s.findScanUnit(ctx, accountID, params.Seconds.Unit.ID)
@@ -1196,8 +1195,6 @@ type scanOutput struct {
 	// the step, measured in closeWhenFullyUsedUnit.
 	closeWhenFullyUsed     *domain.BaseBatch
 	closeWhenFullyUsedUnit domain.LightUnit
-	// recountClosedSources takes what has been split off a source this scan closes as its true count.
-	recountClosedSources bool
 }
 
 // writeScanOutput creates the batch a scan makes, already scanned, and in the same transaction connects
@@ -1281,21 +1278,8 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 			}
 		}
 
-		var closedSourceIDs []string
-		if out.closeSources {
-			closedSourceIDs = out.sourceIDs
-		}
 		if out.closeWhenFullyUsed != nil {
-			closed, apiErr := txBatchRepo.CloseIfFullyUsed(txCtx, accountID, *out.closeWhenFullyUsed, out.closeWhenFullyUsedUnit, out.productionStepID)
-			if apiErr != nil {
-				return apiErr
-			}
-			if closed {
-				closedSourceIDs = []string{out.closeWhenFullyUsed.ID}
-			}
-		}
-		if out.recountClosedSources {
-			if apiErr := txSvc.recountSplitSources(txCtx, accountID, newBatchID, out.productionStepID, closedSourceIDs); apiErr != nil {
+			if apiErr := txBatchRepo.CloseIfFullyUsed(txCtx, accountID, *out.closeWhenFullyUsed, out.closeWhenFullyUsedUnit, out.productionStepID); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -1331,138 +1315,6 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 	}
 
 	return result, nil
-}
-
-// recountTolerance is the smallest difference between a source's recorded quantity and what was split
-// off it that counts as a miscount rather than unit-conversion residue.
-var recountTolerance = decimal.New(1, -4)
-
-// quantityScale is the scale of quantity.value, DECIMAL(65,30).
-const quantityScale = 30
-
-// recountSplitSources takes what has been split off each source the split closed as its true count.
-// Operators hand count when they split, so a source recorded as 60 that splits into 30, 25 and 10 made
-// 65, and one closed after 55 made 55. The source's quantity moves to the count, and so does that of
-// every batch it was moved from whole, since a move carries a batch's count unchanged; the
-// batch_scanned consumer trues up each one's step inventory for the difference under the split's tag.
-func (s *batchSvcImpl) recountSplitSources(ctx context.Context, accountID, closingBatchID, productionStepID string, sourceIDs []string) *apierror.APIError {
-	if len(sourceIDs) == 0 {
-		return nil
-	}
-
-	producedUnit, apiErr := s.repos.NewProductionStepQueryRepo().FindProducedUnit(ctx, accountID, productionStepID)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	batchRepo := s.repos.NewBatchRepo()
-	for _, sourceID := range sourceIDs {
-		source, apiErr := batchRepo.Find(ctx, accountID, sourceID)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		expected, used, apiErr := batchRepo.SplitTally(ctx, accountID, *baseBatchOf(source), *producedUnit, productionStepID)
-		if apiErr != nil {
-			return apiErr
-		}
-		if expected.LessThanOrEqual(decimal.Zero) || used.Sub(expected).Abs().LessThan(recountTolerance) {
-			continue
-		}
-
-		// Read before anything is rewritten: whether a batch was moved whole is judged against the
-		// quantities as they were recorded.
-		chain, apiErr := s.movedFromWhole(ctx, accountID, source)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		// Every step's yield is linear, so one ratio carries the count up the chain.
-		for _, batch := range append([]*domain.Batch{source}, chain...) {
-			counted := batch.Quantity.Measure.Mul(used).DivRound(expected, quantityScale)
-			if _, apiErr := batchRepo.CreateCountAdjustment(ctx, domain.CreateBatchCountAdjustmentParams{
-				AccountID:      accountID,
-				Batch:          *baseBatchOf(batch),
-				ClosingBatchID: closingBatchID,
-				CountedMeasure: counted,
-			}); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := publishBatchQuantityChange(ctx, s.repos, accountID, batch); apiErr != nil {
-				return apiErr
-			}
-		}
-	}
-	return nil
-}
-
-// movedFromWhole walks up from a batch through the batches it was moved from whole, nearest first: each
-// fed nothing else, the batch made from it had no other input, and it carried all of it. A merge, an
-// earlier split, or the start of the flow ends the walk; a split already settled its own count.
-func (s *batchSvcImpl) movedFromWhole(ctx context.Context, accountID string, batch *domain.Batch) ([]*domain.Batch, *apierror.APIError) {
-	batchRepo := s.repos.NewBatchRepo()
-	stepRepo := s.repos.NewProductionStepQueryRepo()
-
-	var chain []*domain.Batch
-	current := batch
-	for current.ProductionStep != nil {
-		inputIDs, apiErr := batchRepo.FindInputBatchIDs(ctx, current.ID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		if len(inputIDs) != 1 {
-			break
-		}
-		parent, apiErr := batchRepo.Find(ctx, accountID, inputIDs[0])
-		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				break
-			}
-			return nil, apiErr
-		}
-		outputs, apiErr := batchRepo.FindOutputBatches(ctx, accountID, parent.ID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		if len(outputs) != 1 {
-			break
-		}
-
-		producedUnit, apiErr := stepRepo.FindProducedUnit(ctx, accountID, current.ProductionStep.ID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		expected, used, apiErr := batchRepo.SplitTally(ctx, accountID, *baseBatchOf(parent), *producedUnit, current.ProductionStep.ID)
-		if apiErr != nil {
-			// A step that no longer takes the parent cannot say how much of it was carried.
-			if !apierror.Is5XXErrorCode(apiErr.Code) {
-				break
-			}
-			return nil, apiErr
-		}
-		if used.Sub(expected).Abs().GreaterThanOrEqual(recountTolerance) {
-			break
-		}
-
-		chain = append(chain, parent)
-		current = parent
-	}
-	return chain, nil
-}
-
-// publishBatchQuantityChange audits a batch whose quantity was just rewritten, from its state before.
-func publishBatchQuantityChange(ctx context.Context, repos domain.RepoFactory, accountID string, before *domain.Batch) *apierror.APIError {
-	after, apiErr := repos.NewBatchRepo().Find(ctx, accountID, before.ID)
-	if apiErr != nil {
-		return apiErr
-	}
-	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
-		ServiceName:  domain.ServiceName,
-		Action:       constants.AuditActionUpdate,
-		ResourceType: constants.ObjectTypeBatch,
-		ResourceID:   before.ID,
-		Changes:      audit.ComputeChanges(before, after),
-	})
 }
 
 // publishBatchScanned writes the event that a batch was scanned at a station, which is what the

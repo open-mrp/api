@@ -55,21 +55,6 @@ func (q *Queries) DeleteBatch(ctx context.Context, arg DeleteBatchParams) error 
 	return err
 }
 
-const deleteBatchCountAdjustmentsByClosingBatch = `-- name: DeleteBatchCountAdjustmentsByClosingBatch :exec
-DELETE FROM batch_count_adjustment
-WHERE account_id = ? AND closing_batch_id = ?
-`
-
-type DeleteBatchCountAdjustmentsByClosingBatchParams struct {
-	AccountID      string
-	ClosingBatchID string
-}
-
-func (q *Queries) DeleteBatchCountAdjustmentsByClosingBatch(ctx context.Context, arg DeleteBatchCountAdjustmentsByClosingBatchParams) error {
-	_, err := q.db.ExecContext(ctx, deleteBatchCountAdjustmentsByClosingBatch, arg.AccountID, arg.ClosingBatchID)
-	return err
-}
-
 const deleteBatchFlowByBatchID = `-- name: DeleteBatchFlowByBatchID :exec
 DELETE FROM _batch_flow WHERE A = ? OR B = ?
 `
@@ -755,38 +740,6 @@ func (q *Queries) InsertBatch(ctx context.Context, arg InsertBatchParams) error 
 	return err
 }
 
-const insertBatchCountAdjustment = `-- name: InsertBatchCountAdjustment :exec
-INSERT INTO batch_count_adjustment (
-    id, account_id, batch_id, closing_batch_id, previous_value, counted_value, unit_id, created_at
-) VALUES (
-    ?, ?, ?, ?,
-    ?, ?, ?, NOW(3)
-)
-`
-
-type InsertBatchCountAdjustmentParams struct {
-	ID             string
-	AccountID      string
-	BatchID        string
-	ClosingBatchID string
-	PreviousValue  string
-	CountedValue   string
-	UnitID         string
-}
-
-func (q *Queries) InsertBatchCountAdjustment(ctx context.Context, arg InsertBatchCountAdjustmentParams) error {
-	_, err := q.db.ExecContext(ctx, insertBatchCountAdjustment,
-		arg.ID,
-		arg.AccountID,
-		arg.BatchID,
-		arg.ClosingBatchID,
-		arg.PreviousValue,
-		arg.CountedValue,
-		arg.UnitID,
-	)
-	return err
-}
-
 const insertBatchFlow = `-- name: InsertBatchFlow :exec
 INSERT INTO _batch_flow (A, B) VALUES (?, ?)
 `
@@ -995,57 +948,6 @@ func (q *Queries) ListBatchBasesByIDs(ctx context.Context, arg ListBatchBasesByI
 			&i.ProductionStepName,
 			&i.ProductionRunID2,
 			&i.ProductionRunNumber,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listBatchCountAdjustmentsByClosingBatch = `-- name: ListBatchCountAdjustmentsByClosingBatch :many
-SELECT id, batch_id, closing_batch_id, previous_value, counted_value, unit_id
-FROM batch_count_adjustment
-WHERE account_id = ? AND closing_batch_id = ?
-ORDER BY id
-`
-
-type ListBatchCountAdjustmentsByClosingBatchParams struct {
-	AccountID      string
-	ClosingBatchID string
-}
-
-type ListBatchCountAdjustmentsByClosingBatchRow struct {
-	ID             string
-	BatchID        string
-	ClosingBatchID string
-	PreviousValue  string
-	CountedValue   string
-	UnitID         string
-}
-
-func (q *Queries) ListBatchCountAdjustmentsByClosingBatch(ctx context.Context, arg ListBatchCountAdjustmentsByClosingBatchParams) ([]ListBatchCountAdjustmentsByClosingBatchRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBatchCountAdjustmentsByClosingBatch, arg.AccountID, arg.ClosingBatchID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListBatchCountAdjustmentsByClosingBatchRow
-	for rows.Next() {
-		var i ListBatchCountAdjustmentsByClosingBatchRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.BatchID,
-			&i.ClosingBatchID,
-			&i.PreviousValue,
-			&i.CountedValue,
-			&i.UnitID,
 		); err != nil {
 			return nil, err
 		}
@@ -1460,21 +1362,6 @@ type UpdateBatchProductionStepIDParams struct {
 
 func (q *Queries) UpdateBatchProductionStepID(ctx context.Context, arg UpdateBatchProductionStepIDParams) error {
 	_, err := q.db.ExecContext(ctx, updateBatchProductionStepID, arg.ProductionStepID, arg.ID, arg.AccountID)
-	return err
-}
-
-const updateBatchQuantityValue = `-- name: UpdateBatchQuantityValue :exec
-UPDATE quantity SET value = ?, updated_at = NOW(3)
-WHERE id = ?
-`
-
-type UpdateBatchQuantityValueParams struct {
-	Value string
-	ID    string
-}
-
-func (q *Queries) UpdateBatchQuantityValue(ctx context.Context, arg UpdateBatchQuantityValueParams) error {
-	_, err := q.db.ExecContext(ctx, updateBatchQuantityValue, arg.Value, arg.ID)
 	return err
 }
 

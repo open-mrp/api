@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"sort"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -121,15 +120,6 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		return apiErr
 	}
 	itemIDs := append([]string{step.Production.ProducedItem.ID}, consumedItemIDs(step)...)
-	recounts, apiErr := loadRecounts(ctx, c.repos, accountID, evt.BatchID)
-	if apiErr != nil {
-		span.RecordError(apiErr)
-		return apiErr
-	}
-	for _, rc := range recounts {
-		itemIDs = append(itemIDs, rc.step.Production.ProducedItem.ID)
-		itemIDs = append(itemIDs, consumedItemIDs(rc.step)...)
-	}
 
 	apiErr = c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		txConsumer := &BatchScannedConsumer{
@@ -235,19 +225,6 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 			"Production step " + evt.ProductionStepID + " has a zero production quantity.")
 	}
 
-	// Before the scan's own movements, so a split that consumed more of its source than the source was
-	// recorded as finds the difference on the shelf rather than going short.
-	recounts, apiErr := loadRecounts(ctx, c.repos, accountID, evt.BatchID)
-	if apiErr != nil {
-		return apiErr
-	}
-	audit := &inventoryAuditCollector{}
-	for _, rc := range recounts {
-		if apiErr := c.applyRecount(ctx, scope, accountID, evt, rc, audit); apiErr != nil {
-			return apiErr
-		}
-	}
-
 	scanned, parseErr := decimal.NewFromString(evt.Measure)
 	if parseErr != nil {
 		return apierror.NewInternalError(parseErr, "Invalid scanned measure.")
@@ -284,10 +261,10 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 		ranMeasure = convertedMeasure.Add(convertedScrap)
 	}
 
-	// One collector for the whole scan, recounts included. Every movement is applied immediately but
-	// logged only once all of them are written, so the level each records is the item's final physical
-	// inventory for the scan and comes from a single batched read rather than one aggregation per
-	// movement.
+	// One collector for the whole scan. Every movement below is applied immediately but logged only
+	// once all of them are written, so the level each records is the item's final physical inventory
+	// for the scan and comes from a single batched read rather than one aggregation per movement.
+	audit := &inventoryAuditCollector{}
 
 	if apiErr := audit.mutate(ctx, c.repos, accountID, domain.InventoryUpdateParams{
 		AccountID:         accountID,
@@ -329,136 +306,10 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 	if apiErr := c.enqueueOpenIssueAllocation(ctx, accountID, step); apiErr != nil {
 		return apiErr
 	}
-	for _, rc := range recounts {
-		if apiErr := c.enqueueOpenIssueAllocation(ctx, accountID, rc.step); apiErr != nil {
-			return apiErr
-		}
-	}
 
 	// Levels are stamped last, once every mutation this scan makes is written, so each is the item's
 	// final physical inventory for the scan.
 	return audit.finalize(ctx, c.repos, accountID)
-}
-
-// recount is a source a split closed and recounted, with the step that made the source.
-type recount struct {
-	adjustment domain.BatchCountAdjustment
-	source     *domain.Batch
-	step       *domain.ProductionStepDetail
-}
-
-// loadRecounts reads the sources the scanned batch recounted. A source with no step never moved
-// inventory of its own, so there is nothing of it to true up.
-func loadRecounts(ctx context.Context, repos domain.RepoFactory, accountID, batchID string) ([]recount, *apierror.APIError) {
-	batchRepo := repos.NewBatchRepo()
-	adjustments, apiErr := batchRepo.FindCountAdjustmentsByClosingBatch(ctx, accountID, batchID)
-	if apiErr != nil || len(adjustments) == 0 {
-		return nil, apiErr
-	}
-
-	recounts := make([]recount, 0, len(adjustments))
-	for _, adjustment := range adjustments {
-		source, apiErr := batchRepo.Find(ctx, accountID, adjustment.BatchID)
-		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				continue
-			}
-			return nil, apiErr
-		}
-		if source.ProductionStep == nil {
-			continue
-		}
-		step, apiErr := repos.NewProductionStepQueryRepo().Find(ctx, accountID, source.ProductionStep.ID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		recounts = append(recounts, recount{adjustment: adjustment, source: source, step: step})
-	}
-	// Upstream first, so each step's true-up finds the part it takes already corrected on the shelf. A
-	// batch is always created after the one it was made from.
-	sort.SliceStable(recounts, func(i, j int) bool {
-		return recounts[i].source.CreatedAt.Before(recounts[j].source.CreatedAt)
-	})
-	return recounts, nil
-}
-
-// applyRecount trues up the inventory of a source a split recounted, as if the source's own scan had
-// recorded the count: the difference of what it makes is received or taken back, and the materials its
-// step burns for that difference are consumed or returned. Every row carries the split's tag, so
-// undoing the split reverses the true-up with it.
-//
-// Materials returned for a short count go back to open stock rather than to the order's reservation:
-// the order still wants what was not made, and reserving for it again is the planner's call.
-func (c *BatchScannedConsumer) applyRecount(
-	ctx context.Context,
-	scope *ledgerlock.Scope,
-	accountID string,
-	evt domain.BatchScannedEvent,
-	rc recount,
-	audit *inventoryAuditCollector,
-) *apierror.APIError {
-	step := rc.step
-	if step.Production.ProducedItem.ID != rc.source.Item.ID || step.Production.Quantity.Measure.IsZero() {
-		slog.WarnContext(ctx, "batch_scanned: recounted source no longer matches its step, so its inventory stays as recorded",
-			"batch_id", evt.BatchID, "source_batch_id", rc.source.ID, "production_step_id", step.ID)
-		return nil
-	}
-
-	// A source scanned without its materials put nothing into inventory, so there is nothing to correct.
-	scanned, apiErr := c.repos.NewBatchRepo().HasScanReceipt(ctx, accountID, rc.source.ID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !scanned {
-		return nil
-	}
-
-	delta := rc.adjustment.Delta()
-	if delta.IsZero() {
-		return nil
-	}
-
-	producedUnitID := step.Production.Quantity.Unit.ID
-	// Converted as a magnitude so a unit with an offset cannot flip or shift the sign.
-	magnitude, apiErr := c.repos.NewUnitConversionRepo().ConvertValue(ctx, delta.Abs(), rc.adjustment.UnitID, producedUnitID)
-	if apiErr != nil {
-		return apiErr
-	}
-	producedDelta := magnitude
-	if delta.IsNegative() {
-		producedDelta = magnitude.Neg()
-	}
-
-	if apiErr := audit.mutate(ctx, c.repos, accountID, domain.InventoryUpdateParams{
-		AccountID:         accountID,
-		ItemID:            step.Production.ProducedItem.ID,
-		Measure:           producedDelta,
-		UnitID:            producedUnitID,
-		ActionType:        "scan",
-		ScanningStationID: evt.ScanningStationID,
-		ResponsibleUserID: evt.ResponsibleUserID,
-		BatchID:           &evt.BatchID,
-	}); apiErr != nil {
-		return apiErr
-	}
-
-	var orderID *string
-	if producedDelta.IsPositive() {
-		lineage, apiErr := c.repos.NewBatchRepo().FindLineageShortfall(ctx, rc.source.ID)
-		if apiErr != nil {
-			return apiErr
-		}
-		if lineage != nil && lineage.ProductionRunID != "" {
-			orderID, apiErr = c.repos.NewOrderQueryRepo().FindIDByProductionRun(ctx, accountID, lineage.ProductionRunID)
-			if apiErr != nil {
-				return apiErr
-			}
-		}
-	}
-
-	// A negative run scales every consumption negative, which with no order behind it returns the
-	// material to the shelf.
-	return c.applyConsumptions(ctx, scope, accountID, evt, step, producedDelta, orderID, audit)
 }
 
 func (c *BatchScannedConsumer) enqueueOpenIssueAllocation(ctx context.Context, accountID string, step *domain.ProductionStepDetail) *apierror.APIError {

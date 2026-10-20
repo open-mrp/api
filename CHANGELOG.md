@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.0.0](https://github.com/open-mrp/api/compare/v4.10.3...v5.0.0) (2026-10-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove SaaS plans, subscriptions and billing-service ([#349](https://github.com/open-mrp/api/issues/349))
+* remove merchant self-registration and signup emails ([#346](https://github.com/open-mrp/api/issues/346))
+
+### Features
+
+* call LLMs through OpenRouter instead of the Stripe AI Gateway ([#348](https://github.com/open-mrp/api/issues/348)) ([a8af796](https://github.com/open-mrp/api/commit/a8af79633813b10163103539f36ca5e5070bfd95))
+* remove merchant self-registration and signup emails ([#346](https://github.com/open-mrp/api/issues/346)) ([39edb9a](https://github.com/open-mrp/api/commit/39edb9a70c6cc7206ce2e91636124eb292cbb672))
+* remove SaaS plans, subscriptions and billing-service ([#349](https://github.com/open-mrp/api/issues/349)) ([3fdffde](https://github.com/open-mrp/api/commit/3fdffde90d7b5156c971c1be11ee2b949cd6254e))
+
 ## [4.10.3](https://github.com/open-mrp/api/compare/v4.10.2...v4.10.3) (2026-10-19)
 
 

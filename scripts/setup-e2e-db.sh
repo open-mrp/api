@@ -100,9 +100,6 @@ info "MySQL migration complete."
 
 info "Seeding core-service data..."
 
-PLAN_CODE="enterprise"
-PLAN_ID="acpl_01seed000enterprise00002"
-
 for seed_file in shared/db/seed/*.sql shared/db/seed/e2e/*.sql; do
     if [ ! -f "$seed_file" ]; then
         continue
@@ -110,10 +107,7 @@ for seed_file in shared/db/seed/*.sql shared/db/seed/e2e/*.sql; do
 
     filename="$(basename "$seed_file")"
 
-    sed -e "s/@plan_code/'$PLAN_CODE'/g" \
-        -e "s/@plan_id/'$PLAN_ID'/g" \
-        "$seed_file" \
-        | run_mysql_sql "MySQL seed $filename"
+    run_mysql_sql "MySQL seed $filename" < "$seed_file"
 done
 
 info "Core-service seed complete."

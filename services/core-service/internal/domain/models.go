@@ -34,13 +34,10 @@ type ListSandboxAccountsResult struct {
 }
 
 type AccountContext struct {
-	AccountID                    string
-	IsSandbox                    bool
-	OwnerAccountID               *string
-	AccountMode                  constants.AccountMode
-	SubscriptionStatus           *string
-	PlanCode                     string
-	AgentMonthlySpendingCapCents *int64
+	AccountID      string
+	IsSandbox      bool
+	OwnerAccountID *string
+	AccountMode    constants.AccountMode
 }
 
 type AccountUser struct {

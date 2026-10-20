@@ -27,7 +27,6 @@ type batchSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
-	billingPub      domain.BillingPublisher
 }
 
 type BatchSvcConfig struct {
@@ -39,9 +38,6 @@ type BatchSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
-
-	// BillingPub (optional) meters the batches scans create for usage billing. Nil skips metering.
-	BillingPub domain.BillingPublisher
 }
 
 func (c *BatchSvcConfig) validate() error {
@@ -66,7 +62,6 @@ func NewBatchSvc(config *BatchSvcConfig) domain.BatchSvc {
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		billingPub:      config.BillingPub,
 	}
 }
 
@@ -84,7 +79,6 @@ func (s *batchSvcImpl) withTx(ctx context.Context, fn func(context.Context, *bat
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
-			billingPub:      s.billingPub,
 		}
 		return fn(txCtx, txSvc)
 	})

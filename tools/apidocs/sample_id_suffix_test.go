@@ -38,7 +38,7 @@ func TestSampleIDNanoSuffixesUnique(t *testing.T) {
 					if !strings.HasPrefix(name, "Sample") {
 						continue
 					}
-					if !strings.HasSuffix(name, "ID") && !strings.HasPrefix(name, "SamplePlanTypeID") {
+					if !strings.HasSuffix(name, "ID") {
 						continue
 					}
 					bl, ok := vs.Values[0].(*ast.BasicLit)

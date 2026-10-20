@@ -31,10 +31,6 @@ import (
 // augnoID matches a type id literal: lowercase type prefix, underscore, nano segment. The nano segment must be at least 10 characters and carry a digit so snake_case enum codes ("prepaid_billed") are never mistaken for ids.
 var augnoID = regexp.MustCompile(`^([a-z]{2,10})_([0-9a-z]{10,})$`)
 
-var skipNames = map[string]struct{}{
-	"SampleStripeCustomerID": {},
-}
-
 func main() {
 	ctx := context.Background()
 	if err := Run(ctx, os.Args, os.Getenv, os.Stdin, os.Stdout, os.Stderr); err != nil {
@@ -107,10 +103,6 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 				if err != nil {
 					continue
 				}
-				if _, skip := skipNames[name]; skip {
-					fmt.Fprintf(stderr, "skip (non-openmrp): %s %q\n", name, s)
-					continue
-				}
 				if _, ok := splitPrefixNano(s); !ok {
 					fmt.Fprintf(stderr, "skip (unparsed id): %s %q\n", name, s)
 					continue
@@ -154,7 +146,7 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 	return pairs, nil
 }
 
-// includeConstName reports whether a const is a docs sample id. "ID" may be followed by a qualifier or an ordinal (SamplePlanTypeIDPro, SampleSalesOrderLineID2); the literal's own shape is what ultimately decides, so this only has to reject names that are clearly not ids.
+// includeConstName reports whether a const is a docs sample id. "ID" may be followed by a qualifier or an ordinal (SampleSalesOrderLineID2); the literal's own shape is what ultimately decides, so this only has to reject names that are clearly not ids.
 func includeConstName(name string) bool {
 	return strings.HasPrefix(name, "Sample") && strings.Contains(name, "ID")
 }

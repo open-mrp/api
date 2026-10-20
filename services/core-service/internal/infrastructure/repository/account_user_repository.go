@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"slices"
-	"strconv"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -141,66 +140,6 @@ func (r *accountUserRepoImpl) GetAdminRoleID(ctx context.Context) (string, *apie
 	return roleID, nil
 }
 
-func (r *accountUserRepoImpl) DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.deactivate_except")
-	defer span.End()
-
-	result, err := r.queries.DeactivateAccountUsersExcept(ctx, sqlc.DeactivateAccountUsersExceptParams{
-		AccountID: accountID,
-		UserID:    keepUserID,
-		Limit:     limit,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-
-	rows, _ := result.RowsAffected()
-	return rows, nil
-}
-
-func (r *accountUserRepoImpl) EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.ensure_active")
-	defer span.End()
-
-	_, err := r.queries.EnsureAccountUserActive(ctx, sqlc.EnsureAccountUserActiveParams{
-		AccountID: accountID,
-		UserID:    userID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *accountUserRepoImpl) LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.lock_seat_statuses")
-	defer span.End()
-
-	rows, err := r.queries.ListAccountUserSeatStatusesForUpdate(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	statuses := make(map[string]constants.AccountUserStatus, len(rows))
-	for _, row := range rows {
-		statuses[row.ID] = constants.AccountUserStatus(row.StatusCode)
-	}
-	return statuses, nil
-}
-
-func (r *accountUserRepoImpl) CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.count_active")
-	defer span.End()
-
-	count, err := r.queries.CountActiveAccountUsers(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-
-	return count, nil
-}
-
 func (r *accountUserRepoImpl) CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.count_by_role_id")
 	defer span.End()
@@ -214,22 +153,6 @@ func (r *accountUserRepoImpl) CountByRoleID(ctx context.Context, accountID, role
 	}
 
 	return count, nil
-}
-
-func (r *accountUserRepoImpl) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.reactivate_users")
-	defer span.End()
-
-	result, err := r.queries.ReactivateAccountUsers(ctx, sqlc.ReactivateAccountUsersParams{
-		AccountID: accountID,
-		Limit:     limit,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-
-	rows, _ := result.RowsAffected()
-	return rows, nil
 }
 
 func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccountUsersParams) (*domain.ListAccountUsersResult, *apierror.APIError) {
@@ -672,58 +595,23 @@ func (r *accountUserRepoImpl) FindTenancyAccountsByUserID(ctx context.Context, u
 	accounts := make([]domain.TenancyAccount, len(rows))
 	for i, row := range rows {
 		accounts[i] = domain.TenancyAccount{
-			AccountID:                row.AccountID,
-			AccountName:              row.AccountName,
-			AccountTypeCode:          row.AccountTypeCode,
-			OnboardingStatusCode:     row.OnboardingStatusCode,
-			PlanCode:                 row.PlanCode,
-			AccountUserID:            row.AccountUserID,
-			AccountUserStatusCode:    row.AccountUserStatusCode,
-			LastUsedAt:               db.TimeFromNullTime(row.LastUsedAt),
-			RoleID:                   db.StringFromNullString(row.RoleID),
-			RoleName:                 db.StringFromNullString(row.RoleName),
-			RoleType:                 db.StringFromNullString(row.RoleTypeCode),
-			RoleCreatedAt:            db.TimeFromNullTime(row.RoleCreatedAt),
-			RoleUpdatedAt:            db.TimeFromNullTime(row.RoleUpdatedAt),
-			OwnerAccountID:           db.StringFromNullString(row.OwnerAccountID),
-			InternalStripeCustomerID: db.StringFromNullString(row.InternalStripeCustomerID),
-			Plan:                     buildTenancyAccountPlanSummary(row),
+			AccountID:             row.AccountID,
+			AccountName:           row.AccountName,
+			AccountTypeCode:       row.AccountTypeCode,
+			OnboardingStatusCode:  row.OnboardingStatusCode,
+			AccountUserID:         row.AccountUserID,
+			AccountUserStatusCode: row.AccountUserStatusCode,
+			LastUsedAt:            db.TimeFromNullTime(row.LastUsedAt),
+			RoleID:                db.StringFromNullString(row.RoleID),
+			RoleName:              db.StringFromNullString(row.RoleName),
+			RoleType:              db.StringFromNullString(row.RoleTypeCode),
+			RoleCreatedAt:         db.TimeFromNullTime(row.RoleCreatedAt),
+			RoleUpdatedAt:         db.TimeFromNullTime(row.RoleUpdatedAt),
+			OwnerAccountID:        db.StringFromNullString(row.OwnerAccountID),
 		}
 	}
 
 	return accounts, nil
-}
-
-func buildTenancyAccountPlanSummary(row sqlc.FindTenancyAccountsByUserIDRow) *domain.TenancyAccountPlanSummary {
-	if !row.PlanTypeID.Valid {
-		return nil
-	}
-
-	plan := &domain.TenancyAccountPlanSummary{
-		TypeID:       row.PlanTypeID.String,
-		Name:         row.PlanName.String,
-		PlanTypeCode: row.PlanPlanTypeCode.String,
-		Version:      row.PlanVersion.Int32,
-	}
-
-	if row.PlanPricePerSeat.Valid {
-		if v, err := strconv.ParseFloat(row.PlanPricePerSeat.String, 64); err == nil {
-			plan.PricePerSeat = v
-		}
-	}
-
-	if row.PlanPricePerMonth.Valid {
-		if v, err := strconv.ParseFloat(row.PlanPricePerMonth.String, 64); err == nil {
-			plan.PricePerMonth = &v
-		}
-	}
-
-	if row.PlanSeatMinimum.Valid {
-		min := row.PlanSeatMinimum.Int32
-		plan.SeatMinimum = &min
-	}
-
-	return plan
 }
 
 func (r *accountUserRepoImpl) MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError {

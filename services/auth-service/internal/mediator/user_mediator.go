@@ -361,9 +361,8 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		finalTargetAccountID = *targetAccountID
 	}
 
-	// Fetch account context for subscription status
-	accountCtx, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID)
-	if err != nil {
+	// An API key may only target an account that exists.
+	if _, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID); err != nil {
 		if err.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
@@ -392,7 +391,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 			permissions = access.Permissions
 		}
 
-		return buildOwnedAPIKeyIdentity(apiKeyModel, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus), nil
+		return buildOwnedAPIKeyIdentity(apiKeyModel, finalTargetAccountID, permissions, accountMode), nil
 	}
 
 	// The request targets a different account, so we need to find the account relation
@@ -427,7 +426,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		}
 
 		relationType := accountRelation.AccountRelationRoleCode
-		return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus, &relationType), nil
+		return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, finalTargetAccountID, permissions, accountMode, &relationType), nil
 	}
 
 	// Counterparty-side: the API key's account is the counterparty (e.g. customer targeting merchant).
@@ -462,7 +461,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		permissions = access.Permissions
 	}
 
-	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus), nil
+	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, permissions, accountMode), nil
 }
 
 func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string, requireAccountUser bool) (*types.Identity, *apierror.APIError) {
@@ -530,7 +529,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 
-		return buildRelatedUserIdentity(userModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
+		return buildRelatedUserIdentity(userModel, accountRelation, actorType, finalTargetAccountID, accountMode), nil
 	}
 
 	// The user is associated with the target account, so mark it used — but only if this process
@@ -544,7 +543,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		}()
 	}
 
-	return buildAccountUserIdentity(userModel, access, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
+	return buildAccountUserIdentity(userModel, access, finalTargetAccountID, accountMode), nil
 }
 
 func (s *userMedImpl) findUserByToken(ctx context.Context, accessToken string) (*types.User, *apierror.APIError) {

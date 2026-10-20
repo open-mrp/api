@@ -11,20 +11,9 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
-	"time"
 
 	"github.com/open-mrp/api/shared/version"
 )
-
-// QuotaInfo provides machine-readable details about a plan-imposed resource limit. Included in limit_exceeded errors so clients can display upgrade prompts, usage bars, or implement programmatic retry/backoff logic.
-type QuotaInfo struct {
-	// Limit is the maximum number of resources allowed by the current plan.
-	Limit int32 `json:"limit"`
-	// Used is the number of resources currently consumed.
-	Used int32 `json:"used"`
-	// ResetAt is the time when the quota resets, if applicable. Nil for static (non-metered) limits.
-	ResetAt *time.Time `json:"reset_at"`
-}
 
 // ErrorCode is a machine-readable identifier for a specific error condition. These codes are returned in API responses and used by clients to programmatically handle errors without parsing human-readable messages.
 type ErrorCode string
@@ -42,11 +31,6 @@ const (
 	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeInsufficientPerms indicates the caller is authenticated but lacks the required role or permission.
 	ErrorCodeInsufficientPerms ErrorCode = "insufficient_permissions"
-	// ErrorCodePaymentRequired indicates the account's subscription is in a non-active state (past_due, canceled, unpaid) and must be resolved before the account can continue using the platform.
-	ErrorCodePaymentRequired ErrorCode = "payment_required"
-
-	// ErrorCodeAgentSpendingCapReached indicates the account has reached its configured monthly agent (LLM) spending cap, so the run was refused. The caller must raise or remove the cap to continue running agents.
-	ErrorCodeAgentSpendingCapReached ErrorCode = "agent_spending_cap_reached"
 
 	// --- Validation errors (400) ---
 
@@ -79,9 +63,7 @@ const (
 
 	// --- Limit errors (403) ---
 
-	// ErrorCodeLimitExceeded indicates the account has reached a plan-imposed resource limit (e.g. maximum sandbox accounts). The caller must upgrade their plan to increase the limit.
-	ErrorCodeLimitExceeded ErrorCode = "limit_exceeded"
-	// ErrorCodeRegistrationClosed indicates that public registration for the requested plan code has reached its capacity. Distinct from limit_exceeded, which applies to per-account resource quotas (e.g. sandbox count).
+	// ErrorCodeRegistrationClosed indicates that public registration for the requested plan code has reached its capacity.
 	ErrorCodeRegistrationClosed ErrorCode = "registration_closed"
 
 	// --- Rate limiting (429) ---
@@ -131,12 +113,11 @@ const (
 func (c ErrorCode) IsValid() bool {
 	switch c {
 	case ErrorCodeExpiredToken, ErrorCodeExpiredAPIKey, ErrorCodeRevokedAPIKey,
-		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms, ErrorCodePaymentRequired,
-		ErrorCodeAgentSpendingCapReached,
+		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms,
 		ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeMethodNotAllowed, ErrorCodeRequestTooLarge, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
 		ErrorCodeResourceConflict, ErrorCodeResourceGone, ErrorCodeIdempotencyInProgress,
-		ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed, ErrorCodeRateLimitExceeded,
+		ErrorCodeRegistrationClosed, ErrorCodeRateLimitExceeded,
 		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,
 		ErrorCodeParametersExclusive, ErrorCodeInternalError, ErrorCodeSvcUnavailable,
 		ErrorCodeExternalSvcError, ErrorCodeTimeout, ErrorCodeConnectionError,
@@ -156,8 +137,6 @@ func (c ErrorCode) EnumValues() []string {
 		string(ErrorCodeRevokedAPIKey),
 		string(ErrorCodeInvalidCredentials),
 		string(ErrorCodeInsufficientPerms),
-		string(ErrorCodePaymentRequired),
-		string(ErrorCodeAgentSpendingCapReached),
 		string(ErrorCodeValidationFailed),
 		string(ErrorCodeMissingField),
 		string(ErrorCodeInvalidFormat),
@@ -168,7 +147,6 @@ func (c ErrorCode) EnumValues() []string {
 		string(ErrorCodeResourceConflict),
 		string(ErrorCodeResourceGone),
 		string(ErrorCodeIdempotencyInProgress),
-		string(ErrorCodeLimitExceeded),
 		string(ErrorCodeRegistrationClosed),
 		string(ErrorCodeRateLimitExceeded),
 		string(ErrorCodeParameterMissing),
@@ -264,8 +242,6 @@ type APIError struct {
 	DocURL string `json:"doc_url,omitempty"`
 	// IsTransient indicates whether the client should retry the request. Automatically set by NewAPIError based on the error code and type.
 	IsTransient bool `json:"is_transient"`
-	// Quota provides machine-readable details about a plan-imposed resource limit. Only populated for limit_exceeded errors. Included in API responses when non-nil.
-	Quota *QuotaInfo `json:"quota,omitempty"`
 	// InternalMessage is a developer-facing message for logs and traces. Never sent to clients.
 	InternalMessage string `json:"-"`
 	// Internal is the underlying error, if any. Never sent to clients. Accessible via Unwrap().
@@ -342,12 +318,6 @@ func (e *APIError) WithDocURL(url string) *APIError {
 // WithInternal wraps an underlying error and returns the same pointer for chaining.
 func (e *APIError) WithInternal(err error) *APIError {
 	e.Internal = err
-	return e
-}
-
-// WithQuota attaches quota details to the error and returns the same pointer for chaining. Intended for limit_exceeded errors so clients receive the plan limit, current usage, and optional reset time in the response envelope.
-func (e *APIError) WithQuota(limit, used int32, resetAt *time.Time) *APIError {
-	e.Quota = &QuotaInfo{Limit: limit, Used: used, ResetAt: resetAt}
 	return e
 }
 
@@ -487,21 +457,6 @@ func NewAuthorizationError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeInsufficientPerms, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLInsufficientPerms))
 }
 
-// NewPaymentRequiredError creates a 402 Payment Required error when the account's subscription is in a non-active state and must be resolved before continuing.
-func NewPaymentRequiredError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodePaymentRequired, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLPaymentRequired))
-}
-
-// NewLimitExceededError creates a 403 Forbidden error when an account has reached a plan-imposed resource limit (e.g. maximum sandbox accounts).
-func NewLimitExceededError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeLimitExceeded, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLLimitExceeded))
-}
-
-// NewAgentSpendingCapReachedError creates a 402 Payment Required error when an agent run is refused because the account has reached its monthly agent spending cap. Clients should prompt the user to raise or remove the cap.
-func NewAgentSpendingCapReachedError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeAgentSpendingCapReached, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLAgentSpendingCap))
-}
-
 // NewRegistrationClosedError creates a 403 Forbidden error when public registration for a plan code has reached its capacity.
 func NewRegistrationClosedError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeRegistrationClosed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRegistrationClosed))
@@ -608,8 +563,6 @@ type ResponseError struct {
 	DocURL *string `json:"doc_url"`
 	// Whether this error is transient and the request can be retried.
 	IsTransient bool `json:"is_transient"`
-	// Quota provides plan limit details when the error is limit_exceeded. Nil otherwise.
-	Quota *QuotaInfo `json:"quota"`
 	// RequestLogURL is a link to the dashboard page for this request's log entry. Nil when no request log is available.
 	RequestLogURL *string `json:"request_log_url"`
 }
@@ -665,9 +618,6 @@ func (e *APIError) ToResponseError() ResponseError {
 	if e.DocURL != "" {
 		resp.DocURL = new(e.DocURL)
 	}
-	if e.Quota != nil {
-		resp.Quota = e.Quota
-	}
 	return resp
 }
 
@@ -688,10 +638,8 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		ErrorCodeRevokedAPIKey,
 		ErrorCodeInvalidCredentials:
 		return http.StatusUnauthorized
-	case ErrorCodeInsufficientPerms, ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed:
+	case ErrorCodeInsufficientPerms, ErrorCodeRegistrationClosed:
 		return http.StatusForbidden
-	case ErrorCodePaymentRequired, ErrorCodeAgentSpendingCapReached:
-		return http.StatusPaymentRequired
 	case ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,
 		ErrorCodeParametersExclusive, ErrorCodeAPIVersionRequired, ErrorCodeAPIVersionInvalid,
@@ -736,16 +684,15 @@ func IsNotFound(err *APIError) bool {
 
 // apiErrorSerializable is a wire format for encoding APIErrors as JSON when passing them across gRPC service boundaries. Unlike the public ResponseError, this includes internal diagnostic fields so they survive the hop between services.
 type apiErrorSerializable struct {
-	Code            ErrorCode  `json:"code"`
-	Type            ErrorType  `json:"type"`
-	PublicMessage   string     `json:"message"`
-	Param           string     `json:"param,omitempty"`
-	DocURL          string     `json:"doc_url,omitempty"`
-	IsTransient     bool       `json:"is_transient"`
-	Quota           *QuotaInfo `json:"quota,omitempty"`
-	InternalMessage string     `json:"internal_message,omitempty"`
-	InternalError   string     `json:"internal_error,omitempty"`
-	Stack           string     `json:"stack,omitempty"`
+	Code            ErrorCode `json:"code"`
+	Type            ErrorType `json:"type"`
+	PublicMessage   string    `json:"message"`
+	Param           string    `json:"param,omitempty"`
+	DocURL          string    `json:"doc_url,omitempty"`
+	IsTransient     bool      `json:"is_transient"`
+	InternalMessage string    `json:"internal_message,omitempty"`
+	InternalError   string    `json:"internal_error,omitempty"`
+	Stack           string    `json:"stack,omitempty"`
 }
 
 // ToJSON serializes the full APIError (including internal fields) to JSON for transport over gRPC. Use APIErrorFromJSON on the receiving side to reconstruct it.
@@ -761,7 +708,6 @@ func (e *APIError) ToJSON() ([]byte, error) {
 		Param:           e.Param,
 		DocURL:          e.DocURL,
 		IsTransient:     e.IsTransient,
-		Quota:           e.Quota,
 		InternalMessage: e.InternalMessage,
 		Stack:           e.Stack,
 	}
@@ -787,7 +733,6 @@ func APIErrorFromJSON(jsonData []byte) (*APIError, error) {
 		Param:           serializable.Param,
 		DocURL:          serializable.DocURL,
 		IsTransient:     serializable.IsTransient,
-		Quota:           serializable.Quota,
 		InternalMessage: serializable.InternalMessage,
 		Stack:           serializable.Stack,
 	}

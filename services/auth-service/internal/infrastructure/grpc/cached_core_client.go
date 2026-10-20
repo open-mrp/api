@@ -31,7 +31,7 @@ type CachedCoreClientConfig struct {
 	// AccessTTL (optional; default: 5m) bounds staleness of roles, permissions, memberships and relations for the changes no audit event reports (global role migrations, purges).
 	AccessTTL time.Duration
 
-	// AccountContextTTL (optional; default: 1m) bounds staleness of an account's mode and subscription status; billing webhooks change the latter without an audit event.
+	// AccountContextTTL (optional; default: 1m) bounds staleness of an account's mode.
 	AccountContextTTL time.Duration
 
 	// NegativeTTL (optional; default: 15s) bounds how long a "no access" or "no relation" answer is trusted; customer portal registration grants access without an audit event.

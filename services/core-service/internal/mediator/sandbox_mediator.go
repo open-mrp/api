@@ -3,7 +3,6 @@ package mediator
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
@@ -44,13 +43,11 @@ func NewSandboxMed(config *SandboxMedConfig) domain.SandboxMed {
 // Create provisions a new sandbox account under the given owner account.
 //
 // 1. Verify the owner is a production account (not already a sandbox).
-// 2. Fetch the owner's plan code and sandbox limit.
-// 3. Check the current sandbox count against the plan limit; reject if at capacity.
-// 4. Generate unique IDs for the new account and sandbox type.
-// 5. Create the account record with sandbox type and the owner's plan code.
-// 6. Create supporting records: business address, account-user link, portal, system products, and branding.
-// 7. Insert the sandbox account record linking it to the owner.
-// 8. Re-fetch and return the created sandbox with populated owner metadata.
+// 2. Generate unique IDs for the new account and sandbox type.
+// 3. Create the account record with sandbox type.
+// 4. Create supporting records: business address, account-user link, portal, system products, and branding.
+// 5. Insert the sandbox account record linking it to the owner.
+// 6. Re-fetch and return the created sandbox with populated owner metadata.
 func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, name string) (*domain.SandboxAccount, *apierror.APIError) {
 	ctx, span := sandboxMedTracer.Start(ctx, "mediator.sandbox.create")
 	defer span.End()
@@ -65,31 +62,6 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 		return nil, tracing.Trace(span, err)
 	}
 
-	planCode, planErr := accountRepo.GetPlanCode(ctx, ownerAccountID)
-	if planErr != nil {
-		return nil, tracing.Trace(span, planErr)
-	}
-
-	limit, limitErr := accountRepo.GetSandboxLimit(ctx, ownerAccountID)
-	if limitErr != nil {
-		if apierror.IsNotFound(limitErr) {
-			return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Sandbox limit not configured for account plan."))
-		}
-		return nil, tracing.Trace(span, limitErr)
-	}
-
-	if limit != nil {
-		count, countErr := m.repos.NewSandboxAccountRepo().CountByOwnerAccountID(ctx, ownerAccountID)
-		if countErr != nil {
-			return nil, tracing.Trace(span, countErr)
-		}
-		if count >= int64(*limit) {
-			return nil, tracing.Trace(span, apierror.NewLimitExceededError(
-				fmt.Sprintf("Maximum of %d sandbox accounts per account reached.", *limit),
-			).WithQuota(*limit, int32(min(count, math.MaxInt32)), nil)) // #nosec G115 -- capped at MaxInt32
-		}
-	}
-
 	accountID, genErr := id.GenID(id.AccountIDPrefix, nil)
 	if genErr != nil {
 		return nil, tracing.Trace(span, genErr)
@@ -99,7 +71,7 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 		return nil, tracing.Trace(span, genErr)
 	}
 
-	if createErr := accountRepo.Create(ctx, accountID, name, domain.AccountTypeSandbox, planCode); createErr != nil {
+	if createErr := accountRepo.Create(ctx, accountID, name, domain.AccountTypeSandbox); createErr != nil {
 		return nil, tracing.Trace(span, createErr)
 	}
 

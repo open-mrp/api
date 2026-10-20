@@ -1084,19 +1084,6 @@ func (h *salesGRPCHandler) CreateCustomerCheckoutSession(ctx context.Context, re
 	}, nil
 }
 
-func (h *salesGRPCHandler) RecordOrderPayment(ctx context.Context, req *pb.RecordOrderPaymentRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	apiErr := h.salesOrderSvc.RecordOrderPayment(ctx, req.SalesOrderId, req.PaymentIntentId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
 func (h *salesGRPCHandler) ProcessAccountStripeWebhook(ctx context.Context, req *pb.ProcessAccountStripeWebhookRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

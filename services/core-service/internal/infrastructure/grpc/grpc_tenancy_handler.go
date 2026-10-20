@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"maps"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
@@ -24,56 +23,17 @@ func tenancyRoleToProto(r *domain.TenancyRole) *pb.TenancyRoleProto {
 	}
 }
 
-func tenancyAccountPlanToProto(p *domain.TenancyAccountPlan) *pb.TenancyAccountPlanProto {
-	if p == nil {
-		return nil
-	}
-
-	limits := make([]*pb.TenancyAccountPlanLimitProto, 0, len(p.Limits))
-	for key, value := range p.Limits {
-		entry := &pb.TenancyAccountPlanLimitProto{Key: key}
-		if value != nil {
-			v := *value
-			entry.Value = &v
-		}
-		limits = append(limits, entry)
-	}
-
-	features := make(map[string]bool, len(p.Features))
-	maps.Copy(features, p.Features)
-
-	proto := &pb.TenancyAccountPlanProto{
-		TypeId:       p.TypeID,
-		Name:         p.Name,
-		PlanTypeCode: p.PlanTypeCode,
-		Version:      p.Version,
-		PricePerSeat: p.PricePerSeat,
-		Limits:       limits,
-		Features:     features,
-	}
-	if p.PricePerMonth != nil {
-		proto.PricePerMonth = p.PricePerMonth
-	}
-	if p.SeatMinimum != nil {
-		proto.SeatMinimum = p.SeatMinimum
-	}
-	return proto
-}
-
 func tenancyCurrentAccountToProto(ca *domain.TenancyCurrentAccount) *pb.TenancyCurrentAccountProto {
 	if ca == nil {
 		return nil
 	}
 	proto := &pb.TenancyCurrentAccountProto{
-		Id:                       ca.ID,
-		Name:                     ca.Name,
-		Type:                     ca.Type,
-		OnboardingStatus:         ca.OnboardingStatus,
-		PlanCode:                 ca.PlanCode,
-		Role:                     tenancyRoleToProto(ca.Role),
-		InternalStripeCustomerId: ca.InternalStripeCustomerID,
-		AccountPlan:              tenancyAccountPlanToProto(ca.AccountPlan),
-		AccountUserId:            ca.AccountUserID,
+		Id:               ca.ID,
+		Name:             ca.Name,
+		Type:             ca.Type,
+		OnboardingStatus: ca.OnboardingStatus,
+		Role:             tenancyRoleToProto(ca.Role),
+		AccountUserId:    ca.AccountUserID,
 	}
 	if ca.Slug != nil {
 		proto.Slug = ca.Slug

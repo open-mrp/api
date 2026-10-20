@@ -361,9 +361,6 @@ var unverifiableEndpoints = map[string]string{
 
 	"retrieve_details":  "public-by-design: GetPlaceDetails calls Google Places with no tenant identity (pre-auth utility, pairs with autocomplete)",
 	"get_stripe_status": "auth-only counterparty lookup: HasStripeIntegration checks CheckIsAssignedActor + CheckCounterpartyReadAccess for external targets, no domain permission; customer checkout calls it, so declaring integrations:read would false-reject relation actors at the gate",
-	"get_pricing_plans": "public reference data: billing-service ListPricingPlans returns the plan catalog with no tenant data and no permission check",
-	"get_account_usage": "unscanned service: billing-service GetAccountUsage (not in the guard's service set) rejects portal actors and withholds agent_spend unless the caller holds billing:read; endpoint declares account:read",
-	"get_spending_cap":  "gateway-enforced gate: GetSpendingCap reads the cap through the unguarded GetAccountContext RPC, so the declared billing:read at the gateway is the check",
 
 	"gen_pack_list": "multi-record utility: GenPackList reads the shipment (checkShipmentReadPermission) and its sales order (checkSalesOrderReadPermission), each routing to customers:read / suppliers:read in a counterparty account; the endpoint keeps the shipments:read / sales_orders:read any-of gate multi-record utilities use, and counterparty routing cannot pair with two own permissions",
 

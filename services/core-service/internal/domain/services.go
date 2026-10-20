@@ -603,18 +603,6 @@ type AccountSvc interface {
 	// GetAdminRole returns the role ID used for administrative access.
 	GetAdminRole(ctx context.Context) (string, *apierror.APIError)
 
-	// UpdateAccountSubscription updates subscription fields on an account, resolving the account_plan_id from the plan_code.
-	UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
-
-	// ClearAccountStripeCustomer removes all Stripe-related fields from an account.
-	ClearAccountStripeCustomer(ctx context.Context, accountID string) *apierror.APIError
-
-	// GetAccountByStripeCustomerID resolves an account from a Stripe customer ID.
-	GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (accountID string, planCode string, err *apierror.APIError)
-
-	// UpdateAgentSpendingCap sets or removes the monthly agent LLM spending cap for the caller's account. Pass nil to remove the cap.
-	UpdateAgentSpendingCap(ctx context.Context, capCents *int64) (*int64, *apierror.APIError)
-
 	// GetAccount returns the full account with optional branding and portal sub-resources.
 	GetAccount(ctx context.Context, accountID string) (*Account, *apierror.APIError)
 
@@ -1326,10 +1314,7 @@ type SalesOrderSvc interface {
 	// CreateCustomerCheckoutSession creates an embedded Stripe checkout session for a customer actor.
 	CreateCustomerCheckoutSession(ctx context.Context, params CreateCustomerCheckoutSessionParams) (*CreateCustomerCheckoutSessionResult, *apierror.APIError)
 
-	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order (called from ProcessAccountStripeWebhook and from the billing-service's platform webhook consumer). Idempotent: a payment intent already linked is a no-op.
-	RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError
-
-	// ProcessAccountStripeWebhook verifies a webhook event from an account's connected Stripe account against the account's stored webhook secret, then links succeeded payment intents to their sales orders via RecordOrderPayment. Events that are not order payments are acknowledged and ignored so Stripe does not retry them.
+	// ProcessAccountStripeWebhook verifies a webhook event from an account's connected Stripe account against the account's stored webhook secret, then links paid checkouts and succeeded payment intents to the account's sales orders. Events that are not order payments are acknowledged and ignored so Stripe does not retry them.
 	ProcessAccountStripeWebhook(ctx context.Context, accountID string, rawPayload []byte, signature string) *apierror.APIError
 }
 

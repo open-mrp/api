@@ -101,14 +101,6 @@ func (s *tenancySvcImpl) GetTenancy(ctx context.Context, userID string, targetAc
 		sorted := make([]domain.TenancyAccount, len(accounts))
 		copy(sorted, accounts)
 		sort.Slice(sorted, func(i, j int) bool {
-			aIsPaid := sorted[i].PlanCode != "free"
-			bIsPaid := sorted[j].PlanCode != "free"
-			if aIsPaid && !bIsPaid {
-				return true
-			}
-			if !aIsPaid && bIsPaid {
-				return false
-			}
 			if sorted[i].LastUsedAt != nil && sorted[j].LastUsedAt != nil {
 				return sorted[i].LastUsedAt.After(*sorted[j].LastUsedAt)
 			}
@@ -254,11 +246,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 		permMap map[string]bool
 		permErr *apierror.APIError
 
-		limits      map[string]*int32
-		limitsErr   *apierror.APIError
-		features    map[string]bool
-		featuresErr *apierror.APIError
-
 		ownerName   string
 		sandboxList *domain.ListSandboxAccountsResult
 		slug        *string
@@ -269,17 +256,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 		go func() {
 			defer wg.Done()
 			permMap, permErr = s.rolePermissionRepo.FindByRoleID(ctx, *currentAccount.RoleID)
-		}()
-	}
-	if currentAccount.Plan != nil {
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			limits, limitsErr = s.accountRepo.ListPlanLimits(ctx, currentAccount.Plan.TypeID)
-		}()
-		go func() {
-			defer wg.Done()
-			features, featuresErr = s.accountRepo.ListPlanFeatures(ctx, currentAccount.Plan.TypeID)
 		}()
 	}
 	if isSandbox {
@@ -305,10 +281,8 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 
 	wg.Wait()
 
-	for _, apiErr := range []*apierror.APIError{permErr, limitsErr, featuresErr} {
-		if apiErr != nil {
-			return nil, apiErr
-		}
+	if permErr != nil {
+		return nil, permErr
 	}
 
 	var role *domain.TenancyRole
@@ -331,21 +305,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 		}
 		sort.Strings(permissions)
 		role.Permissions = permissions
-	}
-
-	var accountPlan *domain.TenancyAccountPlan
-	if currentAccount.Plan != nil {
-		accountPlan = &domain.TenancyAccountPlan{
-			TypeID:        currentAccount.Plan.TypeID,
-			Name:          currentAccount.Plan.Name,
-			PlanTypeCode:  currentAccount.Plan.PlanTypeCode,
-			Version:       currentAccount.Plan.Version,
-			PricePerSeat:  currentAccount.Plan.PricePerSeat,
-			PricePerMonth: currentAccount.Plan.PricePerMonth,
-			SeatMinimum:   currentAccount.Plan.SeatMinimum,
-			Limits:        limits,
-			Features:      features,
-		}
 	}
 
 	var sandboxes []domain.TenancySandbox
@@ -413,16 +372,13 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 	return &domain.Tenancy{
 		HasTenancy: true,
 		CurrentAccount: &domain.TenancyCurrentAccount{
-			ID:                       currentAccount.AccountID,
-			Name:                     currentAccount.AccountName,
-			Type:                     currentAccount.AccountTypeCode,
-			OnboardingStatus:         currentAccount.OnboardingStatusCode,
-			PlanCode:                 currentAccount.PlanCode,
-			Slug:                     slug,
-			Role:                     role,
-			InternalStripeCustomerID: currentAccount.InternalStripeCustomerID,
-			AccountPlan:              accountPlan,
-			AccountUserID:            currentAccount.AccountUserID,
+			ID:               currentAccount.AccountID,
+			Name:             currentAccount.AccountName,
+			Type:             currentAccount.AccountTypeCode,
+			OnboardingStatus: currentAccount.OnboardingStatusCode,
+			Slug:             slug,
+			Role:             role,
+			AccountUserID:    currentAccount.AccountUserID,
 		},
 		Sandboxes:     sandboxes,
 		OwnerAccount:  ownerAccount,

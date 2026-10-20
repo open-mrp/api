@@ -215,7 +215,7 @@ func TestIncludeReads_AccountUserBatchAdmitsAPortalUserAlongTheRelation(t *testi
 	h := newInclHarness(t)
 	repo := repositorymock.NewMockAccountUserRepo(h.ctrl)
 	h.repos.EXPECT().NewAccountUserRepo().Return(repo).AnyTimes()
-	svc := newCounterpartyAccountUserSvc(h.ctrl, h.repos, domain.Mediators{ReadAccess: h.readAccess}, nil)
+	svc := newCounterpartyAccountUserSvc(h.ctrl, h.repos, domain.Mediators{ReadAccess: h.readAccess})
 
 	h.readAccess.EXPECT().CheckReadAccess(gomock.Any(), inclBuyerID, inclSellerID).Return(apierror.NewAuthorizationError("You cannot access this account."))
 	_, apiErr := svc.BatchGetAccountUsersByIDs(inclPortal(false), []string{"acus_rep"})

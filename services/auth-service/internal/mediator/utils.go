@@ -7,11 +7,11 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 )
 
-func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
-	return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, targetAccountID, permissions, accountMode, subscriptionStatus, nil)
+func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode) *types.Identity {
+	return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, targetAccountID, permissions, accountMode, nil)
 }
 
-func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string, targetRelationType *types.IdentityRelationType) *types.Identity {
+func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, targetRelationType *types.IdentityRelationType) *types.Identity {
 	roleTypeCode := apiKeyModel.RoleType
 
 	return &types.Identity{
@@ -29,12 +29,11 @@ func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAcco
 			RoleType:     &roleTypeCode,
 			Permissions:  permissions,
 		},
-		AccountMode:        accountMode,
-		SubscriptionStatus: subscriptionStatus,
+		AccountMode: accountMode,
 	}
 }
 
-func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode) *types.Identity {
 	relationType := accountRelation.AccountRelationRoleCode
 	if permissions == nil {
 		permissions = map[string]bool{}
@@ -56,8 +55,7 @@ func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *dom
 			RoleType:    nil,
 			Permissions: permissions,
 		},
-		AccountMode:        accountMode,
-		SubscriptionStatus: subscriptionStatus,
+		AccountMode: accountMode,
 	}
 }
 
@@ -77,7 +75,7 @@ func buildUnassignedUserIdentity(userModel *types.User) *types.Identity {
 	}
 }
 
-func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, accountMode constants.AccountMode) *types.Identity {
 	return &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -90,12 +88,11 @@ func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.Aut
 			RoleType:     nil,
 			Permissions:  map[string]bool{},
 		},
-		AccountMode:        accountMode,
-		SubscriptionStatus: subscriptionStatus,
+		AccountMode: accountMode,
 	}
 }
 
-func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserAccess, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserAccess, targetAccountID string, accountMode constants.AccountMode) *types.Identity {
 	return &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -109,7 +106,6 @@ func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserA
 			RoleName:     access.RoleName,
 			Permissions:  access.Permissions,
 		},
-		AccountMode:        accountMode,
-		SubscriptionStatus: subscriptionStatus,
+		AccountMode: accountMode,
 	}
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math"
 	"math/big"
@@ -32,7 +31,7 @@ import (
 // Each is a port of the dashboard's scanning service, which the floor has run on: the checks, the
 // order they run in, their messages, and the quantity math are its. What is Go's own sits around them —
 // idempotency, the audit trail, and every write a scan owes (the batch, the batch_scanned event that
-// moves its inventory, the usage meter) committing in one transaction.
+// moves its inventory) committing in one transaction.
 
 // baseUnitIDByType is the unit a quantity of each type is totalled in when its terms share no unit.
 var baseUnitIDByType = map[string]string{
@@ -196,10 +195,6 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 		return nil, apiErr
 	}
 
-	if apiErr := enforceBatchScansPerPeriodLimit(ctx, s.repos, accountID); apiErr != nil {
-		return nil, apiErr
-	}
-
 	// Materials are what the step's execution is for, so declining to consume them means there is no
 	// scan to hand off — only a batch stamped as scanned.
 	consume := params.ConsumeMaterials == nil || *params.ConsumeMaterials
@@ -329,28 +324,6 @@ func (s *batchSvcImpl) resolveInitStep(ctx context.Context, accountID string, pa
 		return "", apiErr
 	}
 	return stepID, nil
-}
-
-// enforceBatchScansPerPeriodLimit rejects a scan that would exceed the account plan's per-billing-period
-// batch cap. Sandboxes, accounts on no plan, and plans with no cap are exempt.
-func enforceBatchScansPerPeriodLimit(ctx context.Context, repos domain.RepoFactory, accountID string) *apierror.APIError {
-	max, start, apiErr := resolveAccountPlanLimit(ctx, repos, accountID, constants.AccountPlanLimitBatchesMaximum)
-	if apiErr != nil || max == nil {
-		return apiErr
-	}
-
-	count, apiErr := repos.NewBatchRepo().CountScannedSince(ctx, accountID, start)
-	if apiErr != nil {
-		return apiErr
-	}
-	if count >= int64(*max) {
-		plural := "s"
-		if *max == 1 {
-			plural = ""
-		}
-		return apierror.NewValidationError(fmt.Sprintf("Your plan allows a maximum of %d batch scan%s per billing period", *max, plural))
-	}
-	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -1229,7 +1202,7 @@ type scanOutput struct {
 
 // writeScanOutput creates the batch a scan makes, already scanned, and in the same transaction connects
 // it to its sources, closes what the scan used up, and writes the batch_scanned event that moves its
-// inventory, the usage meter, and the audit record. A scan is all of these or none of them.
+// inventory, and the audit record. A scan is all of these or none of them.
 // scanPlan works out what a scan makes and which batches it takes from, reading through svc.
 type scanPlan func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierror.APIError)
 
@@ -1260,11 +1233,6 @@ func (s *batchSvcImpl) planAndWriteScan(ctx context.Context, identity *types.Ide
 // used them up or closed them, and this one must then go as it would have gone after it.
 func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Identity, accountID string, key *domain.IdempotencyKey, scannedIDs []string, out *scanOutput, plan scanPlan) (*domain.BaseBatch, *apierror.APIError) {
 	newBatchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	meter, apiErr := s.meterBatches(ctx, accountID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -1344,14 +1312,6 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 
 		if apiErr := publishBatchScanned(txCtx, txSvc.repos, identity, accountID, out.productionStepID, out.scanningStationID, result); apiErr != nil {
 			return apiErr
-		}
-
-		if meter {
-			// Metering must never fail a scan; the command rides the outbox, so a rolled-back scan never meters.
-			if apiErr := txSvc.billingPub.PublishReportBatchCreated(txCtx, accountID, newBatchID); apiErr != nil {
-				slog.WarnContext(txCtx, "batch usage metering failed; scanning anyway",
-					"account_id", accountID, "batch_id", newBatchID, "error", apiErr.Error())
-			}
 		}
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -1503,19 +1463,6 @@ func publishBatchQuantityChange(ctx context.Context, repos domain.RepoFactory, a
 		ResourceID:   before.ID,
 		Changes:      audit.ComputeChanges(before, after),
 	})
-}
-
-// meterBatches reports whether the batches this account's scans create are metered for billing.
-// Sandboxes are not billed.
-func (s *batchSvcImpl) meterBatches(ctx context.Context, accountID string) (bool, *apierror.APIError) {
-	if s.billingPub == nil {
-		return false, nil
-	}
-	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, accountID)
-	if apiErr != nil {
-		return false, apiErr
-	}
-	return accountCtx == nil || !accountCtx.IsSandbox, nil
 }
 
 // publishBatchScanned writes the event that a batch was scanned at a station, which is what the

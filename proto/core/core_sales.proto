@@ -114,20 +114,10 @@ service CoreSalesService {
   // CreateCustomerCheckoutSession creates a checkout session for a customer order.
   rpc CreateCustomerCheckoutSession(CreateCustomerCheckoutSessionRequest) returns (CreateCustomerCheckoutSessionResponse);
 
-  // RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
-  // Called by the billing-service when a checkout session completes. Idempotent.
-  rpc RecordOrderPayment(RecordOrderPaymentRequest) returns (google.protobuf.Empty);
-
   // ProcessAccountStripeWebhook verifies a Stripe webhook event signed with an
-  // account's own webhook secret and links succeeded payment intents to their
-  // sales orders. Idempotent.
+  // account's own webhook secret and links paid checkouts and succeeded payment
+  // intents to their sales orders. Idempotent.
   rpc ProcessAccountStripeWebhook(ProcessAccountStripeWebhookRequest) returns (google.protobuf.Empty);
-}
-
-// RecordOrderPaymentRequest links a Stripe payment intent to a sales order.
-message RecordOrderPaymentRequest {
-  string sales_order_id = 1;
-  string payment_intent_id = 2;
 }
 
 // ProcessAccountStripeWebhookRequest carries a raw Stripe webhook payload from

@@ -76,18 +76,6 @@ service CoreService {
   // Returns sandboxes by ID for the api-gateway include resolver.
   rpc BatchGetSandboxesByIDs(BatchGetSandboxesByIDsRequest) returns (BatchGetSandboxesByIDsResponse);
 
-  // Updates subscription fields (plan, status, Stripe ID, period end) from billing webhooks.
-  rpc UpdateAccountSubscription(UpdateAccountSubscriptionRequest) returns (google.protobuf.Empty);
-
-  // Removes all Stripe-related fields from an account.
-  rpc ClearAccountStripeCustomer(ClearAccountStripeCustomerRequest) returns (google.protobuf.Empty);
-
-  // Sets or removes the monthly agent LLM spending cap.
-  rpc UpdateAgentSpendingCap(UpdateAgentSpendingCapRequest) returns (UpdateAgentSpendingCapResponse);
-
-  // Resolves an account from a Stripe customer ID.
-  rpc GetAccountByStripeCustomerID(GetAccountByStripeCustomerIDRequest) returns (GetAccountByStripeCustomerIDResponse);
-
   // Returns a paginated list of units (account-specific and system) with filtering support.
   rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
 

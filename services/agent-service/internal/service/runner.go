@@ -131,8 +131,8 @@ func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
 	}
 }
 
-// billingAccountID returns the account an agent run's token usage is recorded against: a sandbox's usage belongs to the account that owns it.
-func (s *runnerSvc) billingAccountID(ctx context.Context, accountID string) (string, error) {
+// usageAccountID returns the account an agent run's token usage is recorded against: a sandbox's usage belongs to the account that owns it.
+func (s *runnerSvc) usageAccountID(ctx context.Context, accountID string) (string, error) {
 	acctCtx, err := s.coreClient.GetAccountContext(ctx, accountID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get account context: %w", err)
@@ -305,9 +305,9 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	ctx = appctx.WithIdentity(ctx, agentIdentity)
 
 	// Resolved after the identity is in context so the core-service call carries identity metadata.
-	billingAccountID, billingErr := s.billingAccountID(ctx, accountID)
-	if billingErr != nil {
-		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
+	usageAccountID, usageErr := s.usageAccountID(ctx, accountID)
+	if usageErr != nil {
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, usageErr)
 	}
 
 	// Load linked tools from DB
@@ -339,7 +339,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Persist outputs
-	if err := s.persistOutputs(ctx, runID, accountID, billingAccountID, result); err != nil {
+	if err := s.persistOutputs(ctx, runID, accountID, usageAccountID, result); err != nil {
 		return s.failRun(ctx, runRepo, runID, startTime, fmt.Sprintf("failed to persist outputs: %s", err.Error()))
 	}
 
@@ -378,7 +378,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Write outbox message for run completion
-	s.writeRunCompletedEvent(ctx, runID, accountID, billingAccountID, result)
+	s.writeRunCompletedEvent(ctx, runID, accountID, result)
 
 	// Notify the triggering user that their run finished (only for fully completed runs).
 	if statusCode == domain.RunStatusCompleted {
@@ -1807,9 +1807,9 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	ctx = appctx.WithIdentity(ctx, agentIdentity)
 
 	// Resolved after the identity is in context so the core-service call carries identity metadata.
-	billingAccountID, billingErr := s.billingAccountID(ctx, accountID)
-	if billingErr != nil {
-		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
+	usageAccountID, usageErr := s.usageAccountID(ctx, accountID)
+	if usageErr != nil {
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, usageErr)
 	}
 
 	// Load linked tools
@@ -1958,7 +1958,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Persist outputs
-	if err := s.persistOutputs(ctx, runID, accountID, billingAccountID, result); err != nil {
+	if err := s.persistOutputs(ctx, runID, accountID, usageAccountID, result); err != nil {
 		return s.failRun(ctx, runRepo, runID, startTime, fmt.Sprintf("failed to persist outputs: %s", err.Error()))
 	}
 
@@ -1998,7 +1998,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Write outbox message for run completion
-	s.writeRunCompletedEvent(ctx, runID, accountID, billingAccountID, result)
+	s.writeRunCompletedEvent(ctx, runID, accountID, result)
 
 	// Finalize this turn's streaming reply (no-op for non-chat runs, which have no conversation_id). It threads under the message that triggered this turn (the user's reply) so the chat thread keeps growing as one. A re-pause on a later turn finalizes with the approval-request body so the chat UI can surface the new pending tools.
 	s.writeChatComplete(ctx, run, runID, accountID, result, replyToMessageID)
@@ -2283,7 +2283,7 @@ func (s *runnerSvc) handleToolCall(ctx context.Context, tc llm.ToolCall, runCtx 
 	return handler(ctx, tc.Input, runCtx)
 }
 
-func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, billingAccountID string, result *domain.RunResult) error {
+func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, usageAccountID string, result *domain.RunResult) error {
 	ctx, span := tracing.StartSpan(ctx, runnerTracer, "service.runner.persist_outputs")
 	defer span.End()
 
@@ -2335,7 +2335,7 @@ func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, billin
 
 	if upsertErr := tokenRepo.Upsert(ctx, sqlc.UpsertAgentTokenUsageParams{
 		ID:           tokenID,
-		AccountID:    billingAccountID,
+		AccountID:    usageAccountID,
 		Date:         agentdb.PgDate(time.Now().Truncate(24 * time.Hour)),
 		InputTokens:  int64(result.InputTokens),
 		OutputTokens: int64(result.OutputTokens),
@@ -2348,7 +2348,7 @@ func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, billin
 	return nil
 }
 
-func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID, billingAccountID string, result *domain.RunResult) {
+func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID string, result *domain.RunResult) {
 	length := id.IDLength22
 	msgID, err := id.GenID(id.MessageIDPrefix, &length)
 	if err != nil {
@@ -2357,14 +2357,13 @@ func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID
 	}
 
 	data := messaging.AgentRunCompletedData{
-		AgentRunID:       runID,
-		AccountID:        accountID,
-		BillingAccountID: billingAccountID,
-		InputTokens:      result.InputTokens,
-		OutputTokens:     result.OutputTokens,
-		TotalTokens:      result.InputTokens + result.OutputTokens,
-		LLMProvider:      result.LLMProvider,
-		LLMModel:         result.LLMModel,
+		AgentRunID:   runID,
+		AccountID:    accountID,
+		InputTokens:  result.InputTokens,
+		OutputTokens: result.OutputTokens,
+		TotalTokens:  result.InputTokens + result.OutputTokens,
+		LLMProvider:  result.LLMProvider,
+		LLMModel:     result.LLMModel,
 	}
 	dataBytes, _ := json.Marshal(data)
 
@@ -2374,7 +2373,7 @@ func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID
 			string(contracts.AgentEventRunCompleted), contracts.AmqpMessage{Data: dataBytes})
 	}
 
-	// Also write to outbox for reliable downstream consumers (e.g. billing/token usage).
+	// Also write to the outbox so the event still goes out if the direct publish fails.
 	if _, outboxErr := s.outboxRepo.Create(ctx, messaging.OutboxMessageInput{
 		MessageID:   msgID,
 		ServiceName: domain.ServiceName,
@@ -2803,7 +2802,7 @@ func (s *runnerSvc) failRunFromErr(ctx context.Context, runRepo domain.AgentRunR
 	return s.failRunWithCode(ctx, runRepo, runID, startTime, err.Error(), "")
 }
 
-// failRunWithCode marks a run failed and surfaces the failure to users. errorCode, when set, is a machine-readable ErrorCode carried on the terminal failure event (and reflected in the returned APIError) so clients can distinguish e.g. a spending-cap stop from a generic failure.
+// failRunWithCode marks a run failed and surfaces the failure to users. errorCode, when set, is a machine-readable ErrorCode carried on the terminal failure event (and reflected in the returned APIError) so clients can distinguish e.g. a permission denial from a generic failure.
 func (s *runnerSvc) failRunWithCode(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, errMsg, errorCode string) *apierror.APIError {
 	durationMs := safeconv.Int64ToInt32(time.Since(startTime).Milliseconds())
 	if failErr := runRepo.UpdateFailed(ctx, sqlc.UpdateAgentRunFailedParams{

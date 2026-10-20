@@ -22,9 +22,9 @@ import (
 // Tests for ProcessAccountStripeWebhook and its per-event handlers. These are methods on
 // SalesOrderSvcTestSuite (sales_order_service_test.go) so they share its mock wiring; the
 // webhook path is unauthenticated, so plain context.Background() stands in for the request
-// context. Event coverage mirrors the retired legacy Express webhook: succeeded links the
-// payment and records the receivables transaction, failed/canceled unwind it, payout.paid
-// stamps funds arrival.
+// context. A paid order checkout links its payment. The rest mirrors the retired legacy Express
+// webhook: succeeded links the payment and records the receivables transaction, failed/canceled
+// unwind it, payout.paid stamps funds arrival.
 
 // expectStripeWebhookCreds stubs the integration-credential fetch with a sealed blob the
 // service can round-trip decrypt, and routes the checkout-client factory to the suite's
@@ -503,36 +503,107 @@ func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_NoRecorded
 	suite.requireStripeAudits()
 }
 
-// --- RecordOrderPayment (platform checkout webhook, via billing-service) ---
+// --- checkout.session.completed ---
 
-// The platform webhook names only the order, so the order's own account is the one the link is audited on.
-func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_LinksAndAuditsOnTheOrdersAccount() {
-	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_1").Return("ac_test", nil).Times(1)
+// checkoutSessionJSON is a completed order checkout as Stripe reports it, with the overrides applied on top.
+func checkoutSessionJSON(overrides map[string]any) []byte {
+	sess := map[string]any{
+		"id":             "cs_test",
+		"payment_intent": "pi_test",
+		"payment_status": "paid",
+		"amount_total":   2000,
+		"currency":       "usd",
+		"customer":       "cus_buyer",
+		"metadata": map[string]string{
+			"orderID":             "or_1",
+			"customerID":          "ac_buyer",
+			"stripeCustomerID":    "cus_buyer",
+			"expectedAmountCents": "2000",
+			"expectedCurrency":    "usd",
+		},
+	}
+	for k, v := range overrides {
+		sess[k] = v
+	}
+	raw, _ := json.Marshal(sess)
+	return raw
+}
+
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_CheckoutCompleted_LinksPayment() {
+	suite.expectStripeWebhookCreds("ac_test")
+	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "checkout.session.completed", RawJSON: checkoutSessionJSON(nil)}, nil)
+
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
 	suite.expectOrderPaymentIntents("or_1", nil, []string{"pi_test"})
 
-	suite.Nil(suite.svc.RecordOrderPayment(context.Background(), "or_1", "pi_test"))
+	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 	suite.requireStripeAudits("sales_order update or_1")
 }
 
-func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_AlreadyLinkedWritesNothing() {
-	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_1").Return("ac_test", nil).Times(1)
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_CheckoutCompleted_AlreadyLinkedWritesNothing() {
+	suite.expectStripeWebhookCreds("ac_test")
+	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "checkout.session.completed", RawJSON: checkoutSessionJSON(nil)}, nil)
+
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
 		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
 
-	suite.Nil(suite.svc.RecordOrderPayment(context.Background(), "or_1", "pi_test"))
+	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 	suite.requireStripeAudits()
 }
 
-func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_UnknownOrderIsNotFound() {
-	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_missing").
-		Return("", apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+// The metadata is vendor-controlled, so an order outside this account is acknowledged and not linked.
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_CheckoutCompleted_UnknownOrderAcked() {
+	suite.expectStripeWebhookCreds("ac_test")
+	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "checkout.session.completed", RawJSON: checkoutSessionJSON(nil)}, nil)
 
-	apiErr := suite.svc.RecordOrderPayment(context.Background(), "or_missing", "pi_test")
-	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(nil, apierror.NewResourceNotFoundError("Resource not found.")).Times(1)
+
+	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 	suite.requireStripeAudits()
+}
+
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_CheckoutCompleted_GuardsSkipWithoutLinking() {
+	metadata := func(drop string, set map[string]string) map[string]string {
+		m := map[string]string{
+			"orderID":             "or_1",
+			"stripeCustomerID":    "cus_buyer",
+			"expectedAmountCents": "2000",
+			"expectedCurrency":    "usd",
+		}
+		delete(m, drop)
+		for k, v := range set {
+			m[k] = v
+		}
+		return m
+	}
+	cases := map[string]map[string]any{
+		"no order metadata":       {"metadata": metadata("orderID", nil)},
+		"not paid":                {"payment_status": "unpaid"},
+		"no payment intent":       {"payment_intent": ""},
+		"invalid expected amount": {"metadata": metadata("", map[string]string{"expectedAmountCents": "abc"})},
+		"amount mismatch":         {"amount_total": 1999},
+		"currency mismatch":       {"currency": "eur"},
+		"no expected currency":    {"metadata": metadata("expectedCurrency", nil)},
+		"customer mismatch":       {"customer": "cus_other"},
+		"no expected customer":    {"metadata": metadata("stripeCustomerID", nil)},
+	}
+	for name, overrides := range cases {
+		suite.Run(name, func() {
+			suite.SetupTest()
+			suite.expectStripeWebhookCreds("ac_test")
+			// No order, link or transaction expectations: gomock fails the case if a skipped session touches them.
+			suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "checkout.session.completed", RawJSON: checkoutSessionJSON(overrides)}, nil)
+
+			suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+			suite.requireStripeAudits()
+		})
+	}
 }
 
 func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_NoFundedPaymentsIsNoop() {

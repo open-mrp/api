@@ -29,7 +29,6 @@ type accountUserSvcImpl struct {
 	mediatorFactory       domain.MediatorFactory
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
-	billingPublisher      domain.BillingPublisher
 	s3Client              s3client.ObjectStore
 	userPhotosBucket      string
 	branding              BrandingAssets
@@ -49,9 +48,6 @@ type AccountUserSvcConfig struct {
 
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-
-	// BillingPublisher (required) publishes billing messages to the outbox.
-	BillingPublisher domain.BillingPublisher
 
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
@@ -85,9 +81,6 @@ func (c *AccountUserSvcConfig) validate() error {
 	if c.NotificationPublisher == nil {
 		return fmt.Errorf("account user service: notification publisher is required")
 	}
-	if c.BillingPublisher == nil {
-		return fmt.Errorf("account user service: billing publisher is required")
-	}
 	if c.S3Client == nil {
 		return fmt.Errorf("account user service: s3 client is required")
 	}
@@ -107,7 +100,6 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		mediatorFactory:       config.MediatorFactory,
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
-		billingPublisher:      config.BillingPublisher,
 		s3Client:              config.S3Client,
 		userPhotosBucket:      config.UserPhotosBucket,
 		branding:              config.Branding,
@@ -127,7 +119,6 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			mediatorFactory:       s.mediatorFactory,
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
-			billingPublisher:      s.billingPublisher,
 			s3Client:              s.s3Client,
 			branding:              s.branding,
 			userPhotosBucket:      s.userPhotosBucket,
@@ -280,14 +271,6 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 
 	if !isScanningStation && params.Password != nil {
 		return nil, tracing.Trace(span, apierror.NewValidationError("Password cannot be set directly for non-scanning station users."))
-	}
-
-	// Check seat limits only for own account (not external customer accounts)
-	isOwnAccount := identity.Actor != nil && identity.Actor.AccountID != nil && *identity.Actor.AccountID == params.AccountID
-	if isOwnAccount {
-		if apiErr := s.checkSeatLimit(ctx, params.AccountID); apiErr != nil {
-			return nil, apiErr
-		}
 	}
 
 	accountUserID, apiErr := id.GenID(id.AccountUserIDPrefix, nil)
@@ -482,11 +465,6 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				if apiErr := applyNotificationPreferences(txCtx, txRelationRepo, relationID, accountUserID, params.NotificationPreferences); apiErr != nil {
 					return apiErr
 				}
-			}
-
-			// Publish seat change report via outbox.
-			if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, params.AccountID); apiErr != nil {
-				return apiErr
 			}
 
 			// Send welcome email if user has an email and we generated a password for them. Suppliers are skipped: there is no supplier portal yet, so a supplier-relation user has nowhere to log in and does not need their generated password.
@@ -868,15 +846,6 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		if accountUser.RoleType != nil && *accountUser.RoleType == string(constants.RoleTypeAdmin) {
 			return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
 		}
-	case constants.AccountUserStatusActive:
-		// Reactivating (from disabled or removed) consumes a seat. Seats are the acting account's plan, so a customer or supplier account's users do not count against it.
-		if !identity.IsExternalTarget() {
-			if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
-				return apiErr
-			}
-		}
-	case constants.AccountUserStatusRemoved:
-		// Nothing extra: any non-removed user may be removed.
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
@@ -917,17 +886,13 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		}
 
 		changes := audit.ComputeChanges(accountUser, updated)
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       auditAction,
 			ResourceType: constants.ObjectTypeAccountUser,
 			ResourceID:   accountUser.ID,
 			Changes:      changes,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		return txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID)
+		})
 	})
 
 	if apiErr != nil {
@@ -1042,38 +1007,6 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	default:
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
-}
-
-// checkSeatLimit checks whether the account has room for another active user.
-func (s *accountUserSvcImpl) checkSeatLimit(ctx context.Context, accountID string) *apierror.APIError {
-	accountRepo := s.repos.NewAccountRepo()
-	accountUserRepo := s.repos.NewAccountUserRepo()
-
-	planCode, apiErr := accountRepo.GetPlanCode(ctx, accountID)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	seatLimit, apiErr := accountRepo.GetSeatLimitByPlanCode(ctx, string(planCode))
-	if apiErr != nil {
-		return apiErr
-	}
-
-	// nil means unlimited seats.
-	if seatLimit == nil {
-		return nil
-	}
-
-	activeCount, apiErr := accountUserRepo.CountActive(ctx, accountID)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	if activeCount >= int64(*seatLimit) {
-		return apierror.NewValidationError("You have reached the maximum number of users for your plan.")
-	}
-
-	return nil
 }
 
 func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids []string) ([]*domain.AccountUserDetail, *apierror.APIError) {

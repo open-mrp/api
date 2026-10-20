@@ -67,17 +67,3 @@ func (r *orderPaymentIntentRepoImpl) Delete(ctx context.Context, id string) *api
 	}
 	return nil
 }
-
-func (r *orderPaymentIntentRepoImpl) GetOrderAccountID(ctx context.Context, salesOrderID string) (string, *apierror.APIError) {
-	ctx, span := orderPaymentIntentRepoTracer.Start(ctx, "repository.order_payment_intent.get_order_account_id")
-	defer span.End()
-
-	accountID, err := r.queries.GetSalesOrderOwnerAccountID(ctx, salesOrderID)
-	if errors.Is(err, gosql.ErrNoRows) {
-		return "", tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order not found."))
-	}
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-	return accountID, nil
-}

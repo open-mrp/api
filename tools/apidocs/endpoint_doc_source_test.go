@@ -10,7 +10,6 @@ import (
 	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
 	authpb "github.com/open-mrp/api/shared/proto/auth"
-	billingpb "github.com/open-mrp/api/shared/proto/billing"
 	pbgrpc "github.com/open-mrp/api/shared/proto/core"
 	platformpb "github.com/open-mrp/api/shared/proto/platform"
 )
@@ -134,9 +133,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 			pbgrpc.CoreShippingCaseServiceClient
 		}{},
 	}
-	billingClient := &grpcclient.BillingServiceClient{
-		Client: struct{ billingpb.BillingServiceClient }{},
-	}
 	platformClient := &grpcclient.PlatformServiceClient{
 		Client: struct {
 			platformpb.IdempotencyServiceClient
@@ -166,10 +162,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.SandboxesEndpointGroup{}).Materialize(&httpgroup.SandboxesEndpointGroupConfig{
 			CoreClient: coreClient,
-		}).APIEndpointGroup,
-		*(&httpgroup.BillingEndpointGroup{}).Materialize(&httpgroup.BillingEndpointGroupConfig{
-			BillingClient: billingClient,
-			CoreClient:    coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.CheckoutSessionsEndpointGroup{}).Materialize(&httpgroup.CheckoutSessionsEndpointGroupConfig{
 			CoreClient: coreClient,
@@ -205,8 +197,7 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 			AgentClient: agentClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
-			BillingClient: billingClient,
-			CoreClient:    coreClient,
+			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountGroupsEndpointGroup{}).Materialize(&httpgroup.AccountGroupsEndpointGroupConfig{
 			CoreClient: coreClient,

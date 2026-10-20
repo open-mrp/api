@@ -60,7 +60,6 @@ func (c *AgentCoreClient) GetAccountContext(ctx context.Context, accountID strin
 
 	result := &domain.AccountContext{
 		IsSandbox: resp.IsSandbox,
-		PlanCode:  resp.PlanCode,
 	}
 	if resp.OwnerAccountId != nil {
 		result.OwnerAccountID = *resp.OwnerAccountId

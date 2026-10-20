@@ -49,46 +49,18 @@ func (m *MockAccountRepo) EXPECT() *MockAccountRepoMockRecorder {
 	return m.recorder
 }
 
-// ClearPricingPlanSubscription mocks base method.
-func (m *MockAccountRepo) ClearPricingPlanSubscription(ctx context.Context, accountID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearPricingPlanSubscription", ctx, accountID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// ClearPricingPlanSubscription indicates an expected call of ClearPricingPlanSubscription.
-func (mr *MockAccountRepoMockRecorder) ClearPricingPlanSubscription(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearPricingPlanSubscription", reflect.TypeOf((*MockAccountRepo)(nil).ClearPricingPlanSubscription), ctx, accountID)
-}
-
-// ClearStripeCustomer mocks base method.
-func (m *MockAccountRepo) ClearStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearStripeCustomer", ctx, accountID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// ClearStripeCustomer indicates an expected call of ClearStripeCustomer.
-func (mr *MockAccountRepoMockRecorder) ClearStripeCustomer(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearStripeCustomer", reflect.TypeOf((*MockAccountRepo)(nil).ClearStripeCustomer), ctx, accountID)
-}
-
 // Create mocks base method.
-func (m *MockAccountRepo) Create(ctx context.Context, id, name string, accountTypeCode domain.AccountType, planCode constants.PlanCode) *apierror.APIError {
+func (m *MockAccountRepo) Create(ctx context.Context, id, name string, accountTypeCode domain.AccountType) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, id, name, accountTypeCode, planCode)
+	ret := m.ctrl.Call(m, "Create", ctx, id, name, accountTypeCode)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockAccountRepoMockRecorder) Create(ctx, id, name, accountTypeCode, planCode any) *gomock.Call {
+func (mr *MockAccountRepoMockRecorder) Create(ctx, id, name, accountTypeCode any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountRepo)(nil).Create), ctx, id, name, accountTypeCode, planCode)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountRepo)(nil).Create), ctx, id, name, accountTypeCode)
 }
 
 // Delete mocks base method.
@@ -148,21 +120,6 @@ func (m *MockAccountRepo) GetAccountNames(ctx context.Context, ids []string) (ma
 func (mr *MockAccountRepoMockRecorder) GetAccountNames(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountNames", reflect.TypeOf((*MockAccountRepo)(nil).GetAccountNames), ctx, ids)
-}
-
-// GetAgentSpendingCap mocks base method.
-func (m *MockAccountRepo) GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAgentSpendingCap", ctx, accountID)
-	ret0, _ := ret[0].(*int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetAgentSpendingCap indicates an expected call of GetAgentSpendingCap.
-func (mr *MockAccountRepoMockRecorder) GetAgentSpendingCap(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentSpendingCap", reflect.TypeOf((*MockAccountRepo)(nil).GetAgentSpendingCap), ctx, accountID)
 }
 
 // GetBrandingFaviconKey mocks base method.
@@ -240,22 +197,6 @@ func (mr *MockAccountRepoMockRecorder) GetBySlug(ctx, slug any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySlug", reflect.TypeOf((*MockAccountRepo)(nil).GetBySlug), ctx, slug)
 }
 
-// GetByStripeCustomerID mocks base method.
-func (m *MockAccountRepo) GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByStripeCustomerID", ctx, stripeCustomerID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(*apierror.APIError)
-	return ret0, ret1, ret2
-}
-
-// GetByStripeCustomerID indicates an expected call of GetByStripeCustomerID.
-func (mr *MockAccountRepoMockRecorder) GetByStripeCustomerID(ctx, stripeCustomerID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByStripeCustomerID", reflect.TypeOf((*MockAccountRepo)(nil).GetByStripeCustomerID), ctx, stripeCustomerID)
-}
-
 // GetName mocks base method.
 func (m *MockAccountRepo) GetName(ctx context.Context, accountID string) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -269,52 +210,6 @@ func (m *MockAccountRepo) GetName(ctx context.Context, accountID string) (string
 func (mr *MockAccountRepoMockRecorder) GetName(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockAccountRepo)(nil).GetName), ctx, accountID)
-}
-
-// GetPlanCode mocks base method.
-func (m *MockAccountRepo) GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlanCode", ctx, id)
-	ret0, _ := ret[0].(constants.PlanCode)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetPlanCode indicates an expected call of GetPlanCode.
-func (mr *MockAccountRepoMockRecorder) GetPlanCode(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlanCode", reflect.TypeOf((*MockAccountRepo)(nil).GetPlanCode), ctx, id)
-}
-
-// GetPlanIDAndPeriodEnd mocks base method.
-func (m *MockAccountRepo) GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (*string, *time.Time, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlanIDAndPeriodEnd", ctx, accountID)
-	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(*time.Time)
-	ret2, _ := ret[2].(*apierror.APIError)
-	return ret0, ret1, ret2
-}
-
-// GetPlanIDAndPeriodEnd indicates an expected call of GetPlanIDAndPeriodEnd.
-func (mr *MockAccountRepoMockRecorder) GetPlanIDAndPeriodEnd(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlanIDAndPeriodEnd", reflect.TypeOf((*MockAccountRepo)(nil).GetPlanIDAndPeriodEnd), ctx, accountID)
-}
-
-// GetPlanTypeIDByCode mocks base method.
-func (m *MockAccountRepo) GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlanTypeIDByCode", ctx, planCode)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetPlanTypeIDByCode indicates an expected call of GetPlanTypeIDByCode.
-func (mr *MockAccountRepoMockRecorder) GetPlanTypeIDByCode(ctx, planCode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlanTypeIDByCode", reflect.TypeOf((*MockAccountRepo)(nil).GetPlanTypeIDByCode), ctx, planCode)
 }
 
 // GetPortalSlug mocks base method.
@@ -332,51 +227,6 @@ func (mr *MockAccountRepoMockRecorder) GetPortalSlug(ctx, accountID any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPortalSlug", reflect.TypeOf((*MockAccountRepo)(nil).GetPortalSlug), ctx, accountID)
 }
 
-// GetSandboxLimit mocks base method.
-func (m *MockAccountRepo) GetSandboxLimit(ctx context.Context, accountID string) (*int32, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSandboxLimit", ctx, accountID)
-	ret0, _ := ret[0].(*int32)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSandboxLimit indicates an expected call of GetSandboxLimit.
-func (mr *MockAccountRepoMockRecorder) GetSandboxLimit(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxLimit", reflect.TypeOf((*MockAccountRepo)(nil).GetSandboxLimit), ctx, accountID)
-}
-
-// GetSeatLimitByPlanCode mocks base method.
-func (m *MockAccountRepo) GetSeatLimitByPlanCode(ctx context.Context, planCode string) (*int32, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSeatLimitByPlanCode", ctx, planCode)
-	ret0, _ := ret[0].(*int32)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSeatLimitByPlanCode indicates an expected call of GetSeatLimitByPlanCode.
-func (mr *MockAccountRepoMockRecorder) GetSeatLimitByPlanCode(ctx, planCode any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeatLimitByPlanCode", reflect.TypeOf((*MockAccountRepo)(nil).GetSeatLimitByPlanCode), ctx, planCode)
-}
-
-// HasActiveBillingPlan mocks base method.
-func (m *MockAccountRepo) HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasActiveBillingPlan", ctx, accountID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// HasActiveBillingPlan indicates an expected call of HasActiveBillingPlan.
-func (mr *MockAccountRepoMockRecorder) HasActiveBillingPlan(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasActiveBillingPlan", reflect.TypeOf((*MockAccountRepo)(nil).HasActiveBillingPlan), ctx, accountID)
-}
-
 // HasAddress mocks base method.
 func (m *MockAccountRepo) HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -392,34 +242,19 @@ func (mr *MockAccountRepoMockRecorder) HasAddress(ctx, accountID, addressID any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasAddress", reflect.TypeOf((*MockAccountRepo)(nil).HasAddress), ctx, accountID, addressID)
 }
 
-// ListPlanFeatures mocks base method.
-func (m *MockAccountRepo) ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError) {
+// IsSelfManaged mocks base method.
+func (m *MockAccountRepo) IsSelfManaged(ctx context.Context, accountID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPlanFeatures", ctx, accountPlanID)
-	ret0, _ := ret[0].(map[string]bool)
+	ret := m.ctrl.Call(m, "IsSelfManaged", ctx, accountID)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// ListPlanFeatures indicates an expected call of ListPlanFeatures.
-func (mr *MockAccountRepoMockRecorder) ListPlanFeatures(ctx, accountPlanID any) *gomock.Call {
+// IsSelfManaged indicates an expected call of IsSelfManaged.
+func (mr *MockAccountRepoMockRecorder) IsSelfManaged(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanFeatures", reflect.TypeOf((*MockAccountRepo)(nil).ListPlanFeatures), ctx, accountPlanID)
-}
-
-// ListPlanLimits mocks base method.
-func (m *MockAccountRepo) ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPlanLimits", ctx, accountPlanID)
-	ret0, _ := ret[0].(map[string]*int32)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListPlanLimits indicates an expected call of ListPlanLimits.
-func (mr *MockAccountRepoMockRecorder) ListPlanLimits(ctx, accountPlanID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanLimits", reflect.TypeOf((*MockAccountRepo)(nil).ListPlanLimits), ctx, accountPlanID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSelfManaged", reflect.TypeOf((*MockAccountRepo)(nil).IsSelfManaged), ctx, accountID)
 }
 
 // SetDefaultAddresses mocks base method.
@@ -434,20 +269,6 @@ func (m *MockAccountRepo) SetDefaultAddresses(ctx context.Context, accountID str
 func (mr *MockAccountRepoMockRecorder) SetDefaultAddresses(ctx, accountID, billingAddressID, shippingAddressID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultAddresses", reflect.TypeOf((*MockAccountRepo)(nil).SetDefaultAddresses), ctx, accountID, billingAddressID, shippingAddressID)
-}
-
-// UpdateAgentSpendingCap mocks base method.
-func (m *MockAccountRepo) UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAgentSpendingCap", ctx, accountID, capCents)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// UpdateAgentSpendingCap indicates an expected call of UpdateAgentSpendingCap.
-func (mr *MockAccountRepoMockRecorder) UpdateAgentSpendingCap(ctx, accountID, capCents any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentSpendingCap", reflect.TypeOf((*MockAccountRepo)(nil).UpdateAgentSpendingCap), ctx, accountID, capCents)
 }
 
 // UpdateBranding mocks base method.
@@ -520,20 +341,6 @@ func (mr *MockAccountRepoMockRecorder) UpdatePortalSlug(ctx, accountID, slug any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePortalSlug", reflect.TypeOf((*MockAccountRepo)(nil).UpdatePortalSlug), ctx, accountID, slug)
 }
 
-// UpdateSubscription mocks base method.
-func (m *MockAccountRepo) UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID, stripeSubID *string, periodEnd *time.Time, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus *string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateSubscription", ctx, accountID, status, planCode, accountPlanID, stripeSubID, periodEnd, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// UpdateSubscription indicates an expected call of UpdateSubscription.
-func (mr *MockAccountRepoMockRecorder) UpdateSubscription(ctx, accountID, status, planCode, accountPlanID, stripeSubID, periodEnd, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSubscription", reflect.TypeOf((*MockAccountRepo)(nil).UpdateSubscription), ctx, accountID, status, planCode, accountPlanID, stripeSubID, periodEnd, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus)
-}
-
 // MockAccountUserRepo is a mock of AccountUserRepo interface.
 type MockAccountUserRepo struct {
 	ctrl     *gomock.Controller
@@ -556,21 +363,6 @@ func NewMockAccountUserRepo(ctrl *gomock.Controller) *MockAccountUserRepo {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAccountUserRepo) EXPECT() *MockAccountUserRepoMockRecorder {
 	return m.recorder
-}
-
-// CountActive mocks base method.
-func (m *MockAccountUserRepo) CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountActive", ctx, accountID)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountActive indicates an expected call of CountActive.
-func (mr *MockAccountUserRepoMockRecorder) CountActive(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountActive", reflect.TypeOf((*MockAccountUserRepo)(nil).CountActive), ctx, accountID)
 }
 
 // CountByRoleID mocks base method.
@@ -600,35 +392,6 @@ func (m *MockAccountUserRepo) Create(ctx context.Context, id, accountID, userID 
 func (mr *MockAccountUserRepoMockRecorder) Create(ctx, id, accountID, userID, roleID, departmentID, isCommissionEligible any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountUserRepo)(nil).Create), ctx, id, accountID, userID, roleID, departmentID, isCommissionEligible)
-}
-
-// DeactivateExcept mocks base method.
-func (m *MockAccountUserRepo) DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeactivateExcept", ctx, accountID, keepUserID, limit)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// DeactivateExcept indicates an expected call of DeactivateExcept.
-func (mr *MockAccountUserRepoMockRecorder) DeactivateExcept(ctx, accountID, keepUserID, limit any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateExcept", reflect.TypeOf((*MockAccountUserRepo)(nil).DeactivateExcept), ctx, accountID, keepUserID, limit)
-}
-
-// EnsureActive mocks base method.
-func (m *MockAccountUserRepo) EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureActive", ctx, accountID, userID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// EnsureActive indicates an expected call of EnsureActive.
-func (mr *MockAccountUserRepoMockRecorder) EnsureActive(ctx, accountID, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureActive", reflect.TypeOf((*MockAccountUserRepo)(nil).EnsureActive), ctx, accountID, userID)
 }
 
 // FindAffiliationsByUserID mocks base method.
@@ -766,21 +529,6 @@ func (mr *MockAccountUserRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAccountUserRepo)(nil).List), ctx, params)
 }
 
-// LockSeatStatuses mocks base method.
-func (m *MockAccountUserRepo) LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LockSeatStatuses", ctx, accountID)
-	ret0, _ := ret[0].(map[string]constants.AccountUserStatus)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// LockSeatStatuses indicates an expected call of LockSeatStatuses.
-func (mr *MockAccountUserRepoMockRecorder) LockSeatStatuses(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSeatStatuses", reflect.TypeOf((*MockAccountUserRepo)(nil).LockSeatStatuses), ctx, accountID)
-}
-
 // MarkUsedByAccountAndUser mocks base method.
 func (m *MockAccountUserRepo) MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -808,21 +556,6 @@ func (m *MockAccountUserRepo) ReactivateRemovedAccountUser(ctx context.Context, 
 func (mr *MockAccountUserRepoMockRecorder) ReactivateRemovedAccountUser(ctx, accountID, userID, roleID, departmentID, isCommissionEligible any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateRemovedAccountUser", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateRemovedAccountUser), ctx, accountID, userID, roleID, departmentID, isCommissionEligible)
-}
-
-// ReactivateUsers mocks base method.
-func (m *MockAccountUserRepo) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReactivateUsers", ctx, accountID, limit)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ReactivateUsers indicates an expected call of ReactivateUsers.
-func (mr *MockAccountUserRepoMockRecorder) ReactivateUsers(ctx, accountID, limit any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateUsers", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateUsers), ctx, accountID, limit)
 }
 
 // ResolveAccountUserID mocks base method.
@@ -1087,21 +820,6 @@ func NewMockSandboxAccountRepo(ctrl *gomock.Controller) *MockSandboxAccountRepo 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSandboxAccountRepo) EXPECT() *MockSandboxAccountRepoMockRecorder {
 	return m.recorder
-}
-
-// CountByOwnerAccountID mocks base method.
-func (m *MockSandboxAccountRepo) CountByOwnerAccountID(ctx context.Context, ownerAccountID string) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountByOwnerAccountID", ctx, ownerAccountID)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountByOwnerAccountID indicates an expected call of CountByOwnerAccountID.
-func (mr *MockSandboxAccountRepoMockRecorder) CountByOwnerAccountID(ctx, ownerAccountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountByOwnerAccountID", reflect.TypeOf((*MockSandboxAccountRepo)(nil).CountByOwnerAccountID), ctx, ownerAccountID)
 }
 
 // Create mocks base method.
@@ -6303,21 +6021,6 @@ func (m *MockBatchRepo) CountDownstreamBatches(ctx context.Context, batchID stri
 func (mr *MockBatchRepoMockRecorder) CountDownstreamBatches(ctx, batchID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDownstreamBatches", reflect.TypeOf((*MockBatchRepo)(nil).CountDownstreamBatches), ctx, batchID)
-}
-
-// CountScannedSince mocks base method.
-func (m *MockBatchRepo) CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountScannedSince", ctx, accountID, since)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountScannedSince indicates an expected call of CountScannedSince.
-func (mr *MockBatchRepoMockRecorder) CountScannedSince(ctx, accountID, since any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountScannedSince", reflect.TypeOf((*MockBatchRepo)(nil).CountScannedSince), ctx, accountID, since)
 }
 
 // Create mocks base method.
@@ -16863,21 +16566,6 @@ func (m *MockInvoiceRepo) EXPECT() *MockInvoiceRepoMockRecorder {
 	return m.recorder
 }
 
-// CountSince mocks base method.
-func (m *MockInvoiceRepo) CountSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountSince", ctx, accountID, since)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CountSince indicates an expected call of CountSince.
-func (mr *MockInvoiceRepoMockRecorder) CountSince(ctx, accountID, since any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountSince", reflect.TypeOf((*MockInvoiceRepo)(nil).CountSince), ctx, accountID, since)
-}
-
 // CreateFromShipment mocks base method.
 func (m *MockInvoiceRepo) CreateFromShipment(ctx context.Context, params domain.CreateInvoiceFromShipmentParams) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -19309,21 +18997,6 @@ func (m *MockOrderPaymentIntentRepo) FindByPaymentIntentID(ctx context.Context, 
 func (mr *MockOrderPaymentIntentRepoMockRecorder) FindByPaymentIntentID(ctx, paymentIntentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByPaymentIntentID", reflect.TypeOf((*MockOrderPaymentIntentRepo)(nil).FindByPaymentIntentID), ctx, paymentIntentID)
-}
-
-// GetOrderAccountID mocks base method.
-func (m *MockOrderPaymentIntentRepo) GetOrderAccountID(ctx context.Context, salesOrderID string) (string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOrderAccountID", ctx, salesOrderID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOrderAccountID indicates an expected call of GetOrderAccountID.
-func (mr *MockOrderPaymentIntentRepoMockRecorder) GetOrderAccountID(ctx, salesOrderID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderAccountID", reflect.TypeOf((*MockOrderPaymentIntentRepo)(nil).GetOrderAccountID), ctx, salesOrderID)
 }
 
 // MockShipmentRepo is a mock of ShipmentRepo interface.

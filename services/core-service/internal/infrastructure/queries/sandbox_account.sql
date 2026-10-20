@@ -117,15 +117,6 @@ AND (
 ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?;
 
--- name: CountSandboxAccounts :one
-SELECT COUNT(*) FROM sandbox_account
-JOIN account ON sandbox_account.account_id = account.id
-WHERE sandbox_account.owner_account_id = sqlc.arg('owner_account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR account.name LIKE sqlc.narg('search_query')
-);
-
 -- name: GetSandboxAccountsByTypeIDs :many
 -- Returns sandbox accounts matching the given type IDs that belong to the
 -- caller's owner account. Used by the api-gateway resourcekit resolver.

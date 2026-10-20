@@ -72,10 +72,9 @@ func TestSetIdentityInMetadata_RoundTrip(t *testing.T) {
 	t.Parallel()
 	relation := types.IdentityRelationTypeCustomer
 	identity := &types.Identity{
-		Type:               types.IdentityActorTypeUser,
-		Target:             &types.IdentityTarget{AccountID: "acc_target", RelationType: &relation},
-		AccountMode:        constants.AccountModeSandbox,
-		SubscriptionStatus: strPtr("active"),
+		Type:        types.IdentityActorTypeUser,
+		Target:      &types.IdentityTarget{AccountID: "acc_target", RelationType: &relation},
+		AccountMode: constants.AccountModeSandbox,
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_123",

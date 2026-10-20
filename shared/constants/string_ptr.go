@@ -51,10 +51,7 @@ func (m *ItemCategoryType) StringPtr() *string { return stringPtrEnum(m) }
 func (s *AgentAlertSeverity) StringPtr() *string {
 	return stringPtrEnum(s)
 }
-func (m *AccountUserStatus) StringPtr() *string { return stringPtrEnum(m) }
-func (s *SubscriptionStatus) StringPtr() *string {
-	return stringPtrEnum(s)
-}
+func (m *AccountUserStatus) StringPtr() *string      { return stringPtrEnum(m) }
 func (m *StripeConnectionStatus) StringPtr() *string { return stringPtrEnum(m) }
 func (m *FreightPolicy) StringPtr() *string          { return stringPtrEnum(m) }
 func (m *RoleType) StringPtr() *string               { return stringPtrEnum(m) }
@@ -66,11 +63,7 @@ func (m *TransactionMethod) StringPtr() *string {
 }
 func (t *EmailTemplate) StringPtr() *string { return stringPtrEnum(t) }
 func (m *PlatformMode) StringPtr() *string  { return stringPtrEnum(m) }
-func (p *PlanCode) StringPtr() *string      { return stringPtrEnum(p) }
-func (p *PublicPlanCode) StringPtr() *string {
-	return stringPtrEnum(p)
-}
-func (m *Color) StringPtr() *string { return stringPtrEnum(m) }
+func (m *Color) StringPtr() *string         { return stringPtrEnum(m) }
 func (p *Protocol) StringPtr() *string {
 	return stringPtrEnum(p)
 }

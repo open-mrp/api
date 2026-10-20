@@ -56,58 +56,6 @@ func (suite *NotificationServiceTestSuite) TearDownTest() {
 	suite.ctrl.Finish()
 }
 
-func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_Success() {
-	ctx := context.Background()
-	req := &domain.EnterpriseRequestData{
-		AccountID:       "acc_123",
-		AccountName:     "Test Account",
-		CurrentPlanName: "Professional",
-		RequesterName:   "John Doe",
-		RequesterEmail:  "john@example.com",
-	}
-
-	// Expect email to be sent to sales
-	suite.emailSender.EXPECT().
-		Send(
-			gomock.Any(),
-			gomock.Any(),
-		).
-		DoAndReturn(func(ctx context.Context, data domain.EmailData) (*string, *apierror.APIError) {
-			suite.Equal([]string{"support@openmrp.ai"}, data.To)
-			suite.Equal("Enterprise Upgrade Request: Test Account", data.Subject)
-			suite.Nil(data.SendAs)
-			return nil, nil
-		}).
-		Times(1)
-
-	err := suite.notificationSvc.SendEnterpriseRequest(ctx, req)
-	suite.Nil(err)
-}
-
-func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_EmailFailure() {
-	ctx := context.Background()
-	req := &domain.EnterpriseRequestData{
-		AccountID:       "acc_123",
-		AccountName:     "Test Account",
-		CurrentPlanName: "Professional",
-		RequesterName:   "John Doe",
-		RequesterEmail:  "john@example.com",
-	}
-
-	// Expect email to fail
-	suite.emailSender.EXPECT().
-		Send(
-			gomock.Any(),
-			gomock.Any(),
-		).
-		Return(nil, apierror.NewInternalError(nil, "Email sending failed")).
-		Times(1)
-
-	err := suite.notificationSvc.SendEnterpriseRequest(ctx, req)
-	suite.NotNil(err)
-	suite.Equal("internal_error", string(err.Code))
-}
-
 func (suite *NotificationServiceTestSuite) TestSendEmail_SandboxAccount_SkipsSendAndLogsWithHasSentFalse() {
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		AccountMode: constants.AccountModeSandbox,
@@ -165,26 +113,6 @@ func (suite *NotificationServiceTestSuite) TestSendEmail_ProductionAccount_Sends
 	messageID, apiErr := suite.notificationSvc.SendEmail(ctx, data)
 	suite.Nil(apiErr)
 	suite.Equal(&expectedID, messageID)
-}
-
-func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_SandboxAccount_SkipsSend() {
-	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
-		AccountMode: constants.AccountModeSandbox,
-	})
-
-	req := &domain.EnterpriseRequestData{
-		AccountID:       "acc_123",
-		AccountName:     "Test Account",
-		CurrentPlanName: "Professional",
-		RequesterName:   "John Doe",
-		RequesterEmail:  "john@example.com",
-	}
-
-	// Neither email sender nor template renderer should be called
-	suite.emailSender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(0)
-
-	err := suite.notificationSvc.SendEnterpriseRequest(ctx, req)
-	suite.Nil(err)
 }
 
 // A failed send used to write nothing at all, so a dead email was indistinguishable from one that was never triggered.

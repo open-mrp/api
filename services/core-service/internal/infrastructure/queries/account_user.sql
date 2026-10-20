@@ -57,38 +57,6 @@ FROM role r
 WHERE r.role_type_code = 'admin' AND r.account_id IS NULL
 LIMIT 1;
 
--- name: DeactivateAccountUsersExcept :execresult
-UPDATE account_user
-SET status_code = 'disabled', updated_at = NOW(3)
-WHERE account_id = ? AND user_id != ?
-    AND (status_code = 'active' OR status_code IS NULL)
-ORDER BY last_used_at ASC
-LIMIT ?;
-
--- name: CountActiveAccountUsers :one
-SELECT COUNT(*) AS cnt
-FROM account_user
-WHERE account_id = ?
-    AND (status_code = 'active' OR status_code IS NULL);
-
--- name: ReactivateAccountUsers :execresult
-UPDATE account_user
-SET status_code = 'active', updated_at = NOW(3)
-WHERE account_id = ? AND status_code = 'disabled'
-ORDER BY updated_at DESC
-LIMIT ?;
-
--- name: EnsureAccountUserActive :execresult
-UPDATE account_user
-SET status_code = 'active', updated_at = NOW(3)
-WHERE account_id = ? AND user_id = ? AND status_code = 'disabled';
-
--- name: ListAccountUserSeatStatusesForUpdate :many
-SELECT id, status_code
-FROM account_user
-WHERE account_id = ? AND status_code IN ('active', 'disabled')
-FOR UPDATE;
-
 -- name: ListAccountUsersForwardBase :many
 SELECT
     au.id,
@@ -532,7 +500,6 @@ SELECT
     a.name AS account_name,
     a.account_type_code,
     a.onboarding_status_code,
-    COALESCE(ap.plan_type_code, 'free') AS plan_code,
     au.id AS account_user_id,
     au.status_code AS account_user_status_code,
     au.last_used_at,
@@ -541,20 +508,10 @@ SELECT
     r.role_type_code,
     r.created_at AS role_created_at,
     r.updated_at AS role_updated_at,
-    sa.owner_account_id,
-    ab.internal_stripe_customer_id,
-    ap.type_id AS plan_type_id,
-    ap.name AS plan_name,
-    ap.plan_type_code AS plan_plan_type_code,
-    ap.version AS plan_version,
-    ap.price_per_seat AS plan_price_per_seat,
-    ap.price_per_month AS plan_price_per_month,
-    ap.seat_minimum AS plan_seat_minimum
+    sa.owner_account_id
 FROM account_user au
 JOIN account a ON au.account_id = a.id
 LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
-LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON sa.account_id = a.id
 WHERE au.user_id = ?;
 

@@ -1118,42 +1118,6 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Billing stripe webhook event queue (handled by billing-service)
-	if err := r.declareAndBindQueue(
-		BillingEventStripeWebhookQueue,
-		[]string{string(contracts.BillingEventStripeWebhook)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// Billing report seat change command queue (handled by billing-service)
-	if err := r.declareAndBindQueue(
-		BillingCmdReportSeatChangeQueue,
-		[]string{string(contracts.BillingCmdReportSeatChange)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// Billing report invoice created command queue (handled by billing-service)
-	if err := r.declareAndBindQueue(
-		BillingCmdReportInvoiceCreatedQueue,
-		[]string{string(contracts.BillingCmdReportInvoiceCreated)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// Billing report batch created command queue (handled by billing-service)
-	if err := r.declareAndBindQueue(
-		BillingCmdReportBatchCreatedQueue,
-		[]string{string(contracts.BillingCmdReportBatchCreated)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
 	// Agent command queue: execute run (handled by agent-service)
 	if err := r.declareAndBindQueue(
 		AgentCmdExecuteRunQueue,
@@ -1191,16 +1155,7 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Agent event queue: run completed. This durable, shared queue is the billing-service work queue for token/usage aggregation (exactly-once across billing replicas). The api-gateway also needs run-completed events, but for WebSocket fan-out to every replica — it consumes them via its own per-instance queue (see ws.StartRunCompletedConsumer / ConsumeFanout), not this one.
-	if err := r.declareAndBindQueue(
-		AgentEventRunCompletedQueue,
-		[]string{string(contracts.AgentEventRunCompleted)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// AgentEventRunStepQueue and NotificationEventDeliveredQueue are intentionally NOT declared here. They are realtime WebSocket fan-out streams consumed by every api-gateway replica, each via its own ephemeral per-instance queue (see the ws consumers using ConsumeFanout). A single shared durable queue here would make the replicas competing consumers, so only one would receive each event and clients pinned to the other replicas would silently miss it.
+	// AgentEventRunCompletedQueue, AgentEventRunStepQueue and NotificationEventDeliveredQueue are intentionally NOT declared here. They are realtime WebSocket fan-out streams consumed by every api-gateway replica, each via its own ephemeral per-instance queue (see the ws consumers using ConsumeFanout). A single shared durable queue here would make the replicas competing consumers, so only one would receive each event and clients pinned to the other replicas would silently miss it.
 
 	return nil
 }

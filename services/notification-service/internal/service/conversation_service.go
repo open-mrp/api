@@ -1713,7 +1713,7 @@ func (s *conversationSvcImpl) PostAgentReplyComplete(ctx context.Context, in dom
 		if getErr != nil {
 			return getErr
 		}
-		// A failed run resolves its streaming bubble to the error text; record the failure marker + code so the client can flag the message and react (e.g. prompt to raise the spending cap).
+		// A failed run resolves its streaming bubble to the error text; record the failure marker + code so the client can flag the message and react to the code.
 		if in.Failed {
 			if metaErr := f.NewMessageRepo().SetMessageMetadata(txCtx, in.MessageID, in.AccountID, agentFailureMetadata(in.ErrorCode)); metaErr != nil {
 				return metaErr
@@ -1770,7 +1770,7 @@ func (s *conversationSvcImpl) resolveAgentReplyParticipant(ctx context.Context, 
 
 // createAgentReplyTx inserts a kind=agent reply (streaming or complete) within a tx for the already- resolved participant: it locks the conversation sequence, creates the row, advances the cursor, and pushes message.created. The bell is fired by the caller (deferred to completion for a streamed reply).
 // Returns nil (no message) when the row already exists (idempotent redelivery).
-// agentFailureMetadata builds the message metadata recorded on an agent reply that resolves a failed run: a flag the client uses to mark the message as a failure, plus the machine-readable error code (when present) it can react to (e.g. prompt to raise the spending limit on agent_spending_cap_reached).
+// agentFailureMetadata builds the message metadata recorded on an agent reply that resolves a failed run: a flag the client uses to mark the message as a failure, plus the machine-readable error code (when present) it can react to.
 func agentFailureMetadata(errorCode string) json.RawMessage {
 	m := map[string]any{"agent_run_failed": true}
 	if errorCode != "" {

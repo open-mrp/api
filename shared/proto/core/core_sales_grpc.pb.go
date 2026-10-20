@@ -56,7 +56,6 @@ const (
 	CoreSalesService_DeleteSalesOrderLine_FullMethodName            = "/core.CoreSalesService/DeleteSalesOrderLine"
 	CoreSalesService_ReorderSalesOrderLines_FullMethodName          = "/core.CoreSalesService/ReorderSalesOrderLines"
 	CoreSalesService_CreateCustomerCheckoutSession_FullMethodName   = "/core.CoreSalesService/CreateCustomerCheckoutSession"
-	CoreSalesService_RecordOrderPayment_FullMethodName              = "/core.CoreSalesService/RecordOrderPayment"
 	CoreSalesService_ProcessAccountStripeWebhook_FullMethodName     = "/core.CoreSalesService/ProcessAccountStripeWebhook"
 )
 
@@ -133,12 +132,9 @@ type CoreSalesServiceClient interface {
 	ReorderSalesOrderLines(ctx context.Context, in *ReorderSalesOrderLinesRequest, opts ...grpc.CallOption) (*ReorderSalesOrderLinesResponse, error)
 	// CreateCustomerCheckoutSession creates a checkout session for a customer order.
 	CreateCustomerCheckoutSession(ctx context.Context, in *CreateCustomerCheckoutSessionRequest, opts ...grpc.CallOption) (*CreateCustomerCheckoutSessionResponse, error)
-	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
-	// Called by the billing-service when a checkout session completes. Idempotent.
-	RecordOrderPayment(ctx context.Context, in *RecordOrderPaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ProcessAccountStripeWebhook verifies a Stripe webhook event signed with an
-	// account's own webhook secret and links succeeded payment intents to their
-	// sales orders. Idempotent.
+	// account's own webhook secret and links paid checkouts and succeeded payment
+	// intents to their sales orders. Idempotent.
 	ProcessAccountStripeWebhook(ctx context.Context, in *ProcessAccountStripeWebhookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -470,16 +466,6 @@ func (c *coreSalesServiceClient) CreateCustomerCheckoutSession(ctx context.Conte
 	return out, nil
 }
 
-func (c *coreSalesServiceClient) RecordOrderPayment(ctx context.Context, in *RecordOrderPaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreSalesService_RecordOrderPayment_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *coreSalesServiceClient) ProcessAccountStripeWebhook(ctx context.Context, in *ProcessAccountStripeWebhookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -563,12 +549,9 @@ type CoreSalesServiceServer interface {
 	ReorderSalesOrderLines(context.Context, *ReorderSalesOrderLinesRequest) (*ReorderSalesOrderLinesResponse, error)
 	// CreateCustomerCheckoutSession creates a checkout session for a customer order.
 	CreateCustomerCheckoutSession(context.Context, *CreateCustomerCheckoutSessionRequest) (*CreateCustomerCheckoutSessionResponse, error)
-	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
-	// Called by the billing-service when a checkout session completes. Idempotent.
-	RecordOrderPayment(context.Context, *RecordOrderPaymentRequest) (*emptypb.Empty, error)
 	// ProcessAccountStripeWebhook verifies a Stripe webhook event signed with an
-	// account's own webhook secret and links succeeded payment intents to their
-	// sales orders. Idempotent.
+	// account's own webhook secret and links paid checkouts and succeeded payment
+	// intents to their sales orders. Idempotent.
 	ProcessAccountStripeWebhook(context.Context, *ProcessAccountStripeWebhookRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedCoreSalesServiceServer()
 }
@@ -675,9 +658,6 @@ func (UnimplementedCoreSalesServiceServer) ReorderSalesOrderLines(context.Contex
 }
 func (UnimplementedCoreSalesServiceServer) CreateCustomerCheckoutSession(context.Context, *CreateCustomerCheckoutSessionRequest) (*CreateCustomerCheckoutSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCustomerCheckoutSession not implemented")
-}
-func (UnimplementedCoreSalesServiceServer) RecordOrderPayment(context.Context, *RecordOrderPaymentRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method RecordOrderPayment not implemented")
 }
 func (UnimplementedCoreSalesServiceServer) ProcessAccountStripeWebhook(context.Context, *ProcessAccountStripeWebhookRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProcessAccountStripeWebhook not implemented")
@@ -1279,24 +1259,6 @@ func _CoreSalesService_CreateCustomerCheckoutSession_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreSalesService_RecordOrderPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RecordOrderPaymentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreSalesServiceServer).RecordOrderPayment(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreSalesService_RecordOrderPayment_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreSalesServiceServer).RecordOrderPayment(ctx, req.(*RecordOrderPaymentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CoreSalesService_ProcessAccountStripeWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProcessAccountStripeWebhookRequest)
 	if err := dec(in); err != nil {
@@ -1449,10 +1411,6 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCustomerCheckoutSession",
 			Handler:    _CoreSalesService_CreateCustomerCheckoutSession_Handler,
-		},
-		{
-			MethodName: "RecordOrderPayment",
-			Handler:    _CoreSalesService_RecordOrderPayment_Handler,
 		},
 		{
 			MethodName: "ProcessAccountStripeWebhook",

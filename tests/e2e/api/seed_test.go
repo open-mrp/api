@@ -8,8 +8,7 @@ import "strings"
 // These are IDs and values known to exist after seeding.
 const (
 	SeedAPIKey = "mrp_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
-	// The signature the e2e Stripe stub accepts; anything else is refused, so both webhook
-	// branches are reachable. Mirrors stub.StubWebhookSignature in billing-service.
+	// A Stripe-Signature header value for the e2e stack, whose core-service Stripe stub does not verify it.
 	StubStripeSignature = "t=0,v1=e2e-stub-signature"
 	SeedAccountID       = "ac_01k0a5smf9ekb8rqg12555zjqa"
 	SeedAccountSlug     = "acme-inc" // account_portal.slug owned by SeedAccountID (registration account_slug tests)

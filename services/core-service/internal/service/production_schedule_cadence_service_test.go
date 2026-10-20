@@ -21,7 +21,7 @@ import (
 type cadenceFixture struct {
 	svc          *productionScheduleSvcImpl
 	scheduleRepo *repositorymock.MockProductionScheduleRepo
-	outbox       *subscriptionOutboxRepo
+	outbox       *auditOutboxRepo
 }
 
 func newCadenceFixture(t *testing.T) *cadenceFixture {
@@ -30,7 +30,7 @@ func newCadenceFixture(t *testing.T) *cadenceFixture {
 	scheduleRepo := repositorymock.NewMockProductionScheduleRepo(ctrl)
 	inputRepo := repositorymock.NewMockProductionScheduleInputRepo(ctrl)
 	enqueuer := publishermock.NewMockProductionScheduleEnqueuer(ctrl)
-	outbox := &subscriptionOutboxRepo{}
+	outbox := &auditOutboxRepo{}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewProductionScheduleRepo().Return(scheduleRepo).AnyTimes()
 	repos.EXPECT().NewProductionScheduleInputRepo().Return(inputRepo).AnyTimes()

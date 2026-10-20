@@ -472,14 +472,13 @@ func (x *Credential) GetActorAccountId() string {
 // Resolved authentication context returned by ValidateCredential. Serialized
 // into gRPC metadata by the api-gateway for downstream services.
 type Identity struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Type               IdentityActorType      `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityActorType" json:"type,omitempty"`
-	Actor              *IdentityActor         `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
-	AccountMode        AccountMode            `protobuf:"varint,4,opt,name=account_mode,json=accountMode,proto3,enum=auth.AccountMode" json:"account_mode,omitempty"`
-	SubscriptionStatus *string                `protobuf:"bytes,5,opt,name=subscription_status,json=subscriptionStatus,proto3,oneof" json:"subscription_status,omitempty"`
-	Target             *IdentityTarget        `protobuf:"bytes,7,opt,name=target,proto3" json:"target,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          IdentityActorType      `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityActorType" json:"type,omitempty"`
+	Actor         *IdentityActor         `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
+	AccountMode   AccountMode            `protobuf:"varint,4,opt,name=account_mode,json=accountMode,proto3,enum=auth.AccountMode" json:"account_mode,omitempty"`
+	Target        *IdentityTarget        `protobuf:"bytes,7,opt,name=target,proto3" json:"target,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Identity) Reset() {
@@ -531,13 +530,6 @@ func (x *Identity) GetAccountMode() AccountMode {
 		return x.AccountMode
 	}
 	return AccountMode_ACCOUNT_MODE_UNSPECIFIED
-}
-
-func (x *Identity) GetSubscriptionStatus() string {
-	if x != nil && x.SubscriptionStatus != nil {
-		return *x.SubscriptionStatus
-	}
-	return ""
 }
 
 func (x *Identity) GetTarget() *IdentityTarget {
@@ -2037,14 +2029,12 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\x11target_account_id\x18\x02 \x01(\tH\x00R\x0ftargetAccountId\x88\x01\x01\x12-\n" +
 	"\x10actor_account_id\x18\x03 \x01(\tH\x01R\x0eactorAccountId\x88\x01\x01B\x14\n" +
 	"\x12_target_account_idB\x13\n" +
-	"\x11_actor_account_id\"\xa0\x02\n" +
+	"\x11_actor_account_id\"\xed\x01\n" +
 	"\bIdentity\x12+\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x17.auth.IdentityActorTypeR\x04type\x12)\n" +
 	"\x05actor\x18\x03 \x01(\v2\x13.auth.IdentityActorR\x05actor\x124\n" +
-	"\faccount_mode\x18\x04 \x01(\x0e2\x11.auth.AccountModeR\vaccountMode\x124\n" +
-	"\x13subscription_status\x18\x05 \x01(\tH\x00R\x12subscriptionStatus\x88\x01\x01\x12,\n" +
-	"\x06target\x18\a \x01(\v2\x14.auth.IdentityTargetR\x06targetB\x16\n" +
-	"\x14_subscription_statusJ\x04\b\x02\x10\x03J\x04\b\x06\x10\a\"k\n" +
+	"\faccount_mode\x18\x04 \x01(\x0e2\x11.auth.AccountModeR\vaccountMode\x12,\n" +
+	"\x06target\x18\a \x01(\v2\x14.auth.IdentityTargetR\x06targetJ\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x13subscription_status\"k\n" +
 	"\x0eIdentityTarget\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12(\n" +
@@ -2343,7 +2333,6 @@ func file_auth_auth_proto_init() {
 	}
 	file_auth_auth_proto_msgTypes[2].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[3].OneofWrappers = []any{}
-	file_auth_auth_proto_msgTypes[4].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[5].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[6].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[7].OneofWrappers = []any{}

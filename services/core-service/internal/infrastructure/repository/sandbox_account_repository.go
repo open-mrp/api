@@ -263,20 +263,6 @@ func (r *sandboxAccountRepoImpl) Create(ctx context.Context, typeID, ownerAccoun
 	return nil
 }
 
-func (r *sandboxAccountRepoImpl) CountByOwnerAccountID(ctx context.Context, ownerAccountID string) (int64, *apierror.APIError) {
-	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.count_by_owner_account_id")
-	defer span.End()
-
-	count, err := r.queries.CountSandboxAccounts(ctx, sqlc.CountSandboxAccountsParams{
-		OwnerAccountID: ownerAccountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-
-	return count, nil
-}
-
 func (r *sandboxAccountRepoImpl) FindByTypeID(ctx context.Context, typeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
 	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.find_by_type_id")
 	defer span.End()

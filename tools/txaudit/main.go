@@ -36,7 +36,7 @@ import (
 var externalReceivers = []string{
 	"stripeClient", "shippoClient", "hubspotClient", "vercelClient", "mapsClient",
 	"s3Client", "s3Store", "objectStore", "emailClient", "notificationClient",
-	"billingClient", "coreClient", "authClient", "platformClient", "agentClient",
+	"coreClient", "authClient", "platformClient", "agentClient",
 	"addressValidator", "portalDomainProvider", "httpClient", "checkoutClient",
 	"rabbitmq", "broker", "publisherClient",
 }

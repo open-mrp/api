@@ -149,18 +149,14 @@ func TestApplyNotificationPreferences_WritesOnlyTheDifference(t *testing.T) {
 	require.Nil(t, apiErr)
 }
 
-func newCounterpartyAccountUserSvc(ctrl *gomock.Controller, repos domain.RepoFactory, meds domain.Mediators, billing domain.BillingPublisher) domain.AccountUserSvc {
+func newCounterpartyAccountUserSvc(ctrl *gomock.Controller, repos domain.RepoFactory, meds domain.Mediators) domain.AccountUserSvc {
 	mediatorFactory := factorymock.NewMockMediatorFactory(ctrl)
 	mediatorFactory.EXPECT().Build(gomock.Any()).Return(meds).AnyTimes()
-	if billing == nil {
-		billing = publishermock.NewMockBillingPublisher(ctrl)
-	}
 	return NewAccountUserSvc(&AccountUserSvcConfig{
 		Repos:                 repos,
 		MediatorFactory:       mediatorFactory,
 		TxManager:             &stubTxManager{factory: repos},
 		NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
-		BillingPublisher:      billing,
 		S3Client:              &capturingObjectStore{},
 		PlatformMode:          constants.PlatformModeTest,
 	})
@@ -189,7 +185,7 @@ func TestBatchGetAccountUsersByIDs_NotificationTypes(t *testing.T) {
 		relationRepo.EXPECT().ListNotificationTypesForRecipients(gomock.Any(), counterpartySellerID, counterpartyCustomerID, ids).
 			Return(map[string][]string{counterpartyAccountUser: {"invoice", "order_acknowledgement"}}, nil).Times(1)
 
-		svc := newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{ReadAccess: readAccess}, nil)
+		svc := newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{ReadAccess: readAccess})
 		users, apiErr := svc.BatchGetAccountUsersByIDs(sellerCtx(types.IdentityRelationTypeCustomer, "customers:read"), ids)
 		require.Nil(t, apiErr)
 		require.Len(t, users, 2)
@@ -207,7 +203,7 @@ func TestBatchGetAccountUsersByIDs_NotificationTypes(t *testing.T) {
 		accountUserRepo.EXPECT().GetByIDs(gomock.Any(), counterpartySellerID, []string{counterpartyAccountUser}).
 			Return([]*domain.AccountUserDetail{{ID: counterpartyAccountUser}}, nil)
 
-		svc := newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{}, nil)
+		svc := newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{})
 		users, apiErr := svc.BatchGetAccountUsersByIDs(sellerCtx("", "team:read"), []string{counterpartyAccountUser})
 		require.Nil(t, apiErr)
 		require.Len(t, users, 1)
@@ -216,7 +212,7 @@ func TestBatchGetAccountUsersByIDs_NotificationTypes(t *testing.T) {
 }
 
 // Removing and restoring a customer's contact checks the caller's own membership in the seller's account (they have
-// none in the customer's), and restoring does not count the contact against the seller's seats.
+// none in the customer's).
 func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 	t.Parallel()
 
@@ -224,15 +220,12 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		accountUserRepo := repositorymock.NewMockAccountUserRepo(ctrl)
 		deletedRepo := repositorymock.NewMockDeletedRecordRepo(ctrl)
-		// No account repo: a seat-limit lookup would fail the test as an unexpected call.
 		repos := factorymock.NewMockRepoFactory(ctrl)
 		repos.EXPECT().NewAccountUserRepo().Return(accountUserRepo).AnyTimes()
 		repos.EXPECT().NewDeletedRecordRepo().Return(deletedRepo).AnyTimes()
 		repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 		editAccess := mediatormock.NewMockEditAccessMed(ctrl)
 		editAccess.EXPECT().CheckEditAccess(gomock.Any(), counterpartySellerID, counterpartyCustomerID).Return(nil)
-		billing := publishermock.NewMockBillingPublisher(ctrl)
-		billing.EXPECT().PublishReportSeatChange(gomock.Any(), counterpartyCustomerID).Return(nil)
 
 		accountUserRepo.EXPECT().GetDetail(gomock.Any(), counterpartySellerID, counterpartyActorID, gomock.Any()).
 			Return(&domain.AccountUserDetail{ID: "acus_actor", UserID: counterpartyActorID, StatusCode: constants.AccountUserStatusActive}, nil)
@@ -240,7 +233,7 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 			Return(&domain.AccountUserDetail{ID: counterpartyAccountUser, UserID: counterpartyContactUser, StatusCode: current}, nil).AnyTimes()
 		deletedRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), counterpartyAccountUser, counterpartyCustomerID, gomock.Any()).Return(nil).AnyTimes()
 
-		return accountUserRepo, newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{EditAccess: editAccess}, billing)
+		return accountUserRepo, newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{EditAccess: editAccess})
 	}
 
 	t.Run("remove", func(t *testing.T) {
@@ -266,7 +259,7 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 func TestUpdateAccountUserStatus_RemoveNeedsDelete(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
-	svc := newCounterpartyAccountUserSvc(ctrl, factorymock.NewMockRepoFactory(ctrl), domain.Mediators{}, nil)
+	svc := newCounterpartyAccountUserSvc(ctrl, factorymock.NewMockRepoFactory(ctrl), domain.Mediators{})
 
 	apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
 	require.NotNil(t, apiErr)

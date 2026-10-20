@@ -173,7 +173,6 @@ resources:
               list_tenancy_sandbox_account: '#/components/schemas/List_TenancySandboxAccount'
               switch_account_request: '#/components/schemas/SwitchAccountRequest'
               tenancy: '#/components/schemas/Tenancy'
-              tenancy_account_plan: '#/components/schemas/TenancyAccountPlan'
               tenancy_current_account: '#/components/schemas/TenancyCurrentAccount'
               tenancy_other_account: '#/components/schemas/TenancyOtherAccount'
               tenancy_owner_account: '#/components/schemas/TenancyOwnerAccount'
@@ -353,7 +352,6 @@ resources:
           job_export: '#/components/schemas/JobExport'
           job_result: '#/components/schemas/JobResult'
           list_job_result: '#/components/schemas/List_JobResult'
-          quota_info: '#/components/schemas/QuotaInfo'
           response_error: '#/components/schemas/ResponseError'
       analytics:
         methods:
@@ -577,48 +575,6 @@ resources:
     models:
       entity: '#/components/schemas/Entity'
       list_entity: '#/components/schemas/List_Entity'
-  billing:
-    methods:
-      portal_sessions: post /v1/billing/portal-sessions
-    subresources:
-      plans:
-        methods:
-          list: get /v1/billing/plans
-          retrieve_proration: get /v1/billing/plans/{id}/proration
-          switch: post /v1/billing/plans/{id}/switch
-        models:
-          list_plan_change_line_item: '#/components/schemas/List_PlanChangeLineItem'
-          list_plan_limit: '#/components/schemas/List_PlanLimit'
-          list_pricing_plan: '#/components/schemas/List_PricingPlan'
-          plan_change_line_item: '#/components/schemas/PlanChangeLineItem'
-          plan_change_proration: '#/components/schemas/PlanChangeProration'
-          plan_limit: '#/components/schemas/PlanLimit'
-          pricing_plan: '#/components/schemas/PricingPlan'
-          switch_plan_response: '#/components/schemas/SwitchPlanResponse'
-      accounts:
-        methods:
-          retrieve_usage: get /v1/billing/accounts/usage
-          update: put /v1/billing/accounts
-        models:
-          account_usage_response: '#/components/schemas/AccountUsageResponse'
-          agent_spend_info: '#/components/schemas/AgentSpendInfo'
-          ensure_billing_customer_response: '#/components/schemas/EnsureBillingCustomerResponse'
-          subscription_info: '#/components/schemas/SubscriptionInfo'
-          usage_item: '#/components/schemas/UsageItem'
-      actions:
-        methods:
-          request_enterprise: post /v1/billing/actions/request-enterprise
-        models:
-          enterprise_inquiry: '#/components/schemas/EnterpriseInquiry'
-      spending_cap:
-        methods:
-          list: get /v1/billing/spending-cap
-          update: put /v1/billing/spending-cap
-        models:
-          set_spending_cap_request: '#/components/schemas/SetSpendingCapRequest'
-          spending_cap_response: '#/components/schemas/SpendingCapResponse'
-    models:
-      billing_portal_session_response: '#/components/schemas/BillingPortalSessionResponse'
   sales:
     methods:
       checkout_sessions: post /v1/sales/checkout-sessions
@@ -1595,7 +1551,6 @@ resources:
     subresources:
       stripe:
         methods:
-          create: post /v1/webhooks/stripe
           accounts: post /v1/webhooks/stripe/accounts/{account_id}
         models:
           webhook_response: '#/components/schemas/WebhookResponse'

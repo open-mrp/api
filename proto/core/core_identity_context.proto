@@ -16,13 +16,8 @@ message GetAccountContextResponse {
   // Parent production account ID for sandbox accounts; absent for production.
   optional string owner_account_id = 2;
   AccountMode account_mode = 3;
-  // Stripe subscription status; absent for free-tier accounts.
-  optional string subscription_status = 4;
-  // For sandbox accounts, this is the owner account's plan code.
-  string plan_code = 5;
-  // Monthly spending cap for agent LLM usage in cents. Absent means unlimited.
-  // For sandbox accounts, this is the owner account's cap.
-  optional int64 agent_monthly_spending_cap_cents = 6;
+  reserved 4, 5, 6;
+  reserved "subscription_status", "plan_code", "agent_monthly_spending_cap_cents";
 }
 message GetAccountNamesRequest {
   repeated string account_ids = 1;
@@ -259,31 +254,6 @@ message SandboxInfo {
   optional google.protobuf.Timestamp owner_account_created_at = 7;
   optional google.protobuf.Timestamp owner_account_updated_at = 8;
 }
-message UpdateAccountSubscriptionRequest {
-  string account_id = 1;
-  optional string subscription_status = 2;
-  string plan_code = 3;
-  optional string stripe_subscription_id = 4;
-  optional google.protobuf.Timestamp current_period_end = 5;
-  // Optional Stripe customer ID to persist when upgrading a free account.
-  optional string stripe_customer_id = 6;
-  // V2 billing fields
-  optional string billing_profile_id = 7;
-  optional string billing_cadence_id = 8;
-  optional string pricing_plan_subscription_id = 9;
-  optional string servicing_status = 10;
-  optional string collection_status = 11;
-}
-message ClearAccountStripeCustomerRequest {
-  string account_id = 1;
-}
-message GetAccountByStripeCustomerIDRequest {
-  string stripe_customer_id = 1;
-}
-message GetAccountByStripeCustomerIDResponse {
-  string account_id = 1;
-  string plan_code = 2;
-}
 message ListUnitsRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -378,12 +348,6 @@ message BatchGetUnitsByIDsRequest {
 }
 message BatchGetUnitsByIDsResponse {
   repeated UnitInfo units = 1;
-}
-message UpdateAgentSpendingCapRequest {
-  optional int64 cap_cents = 1;
-}
-message UpdateAgentSpendingCapResponse {
-  optional int64 cap_cents = 1;
 }
 message ProductInfo {
   string product_id = 1;

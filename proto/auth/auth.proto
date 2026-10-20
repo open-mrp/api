@@ -103,10 +103,10 @@ message Credential {
 // into gRPC metadata by the api-gateway for downstream services.
 message Identity {
   IdentityActorType type = 1;
-  reserved 2, 6;
+  reserved 2, 5, 6;
+  reserved "subscription_status";
   IdentityActor actor = 3;
   AccountMode account_mode = 4;
-  optional string subscription_status = 5;
   IdentityTarget target = 7;
 }
 

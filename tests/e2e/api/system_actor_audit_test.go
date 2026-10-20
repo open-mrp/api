@@ -16,10 +16,10 @@ import (
 // Changes OpenMRP makes outside any request — here, linking a payment Stripe reported to the
 // order it paid — are audited with no public actor.
 
-// postCheckoutCompleted delivers a signed checkout.session.completed for orderID to the platform
-// Stripe webhook, as Stripe does when a portal customer pays an order.
+// postCheckoutCompleted delivers a checkout.session.completed for orderID to the seed account's Stripe webhook, as Stripe does when a portal customer pays an order.
 func postCheckoutCompleted(t *testing.T, orderID, paymentIntentID string) {
 	t.Helper()
+	connectSeedAccountStripe(t)
 	event := map[string]any{
 		"id":   "evt_e2e_" + paymentIntentID,
 		"type": "checkout.session.completed",
@@ -41,7 +41,7 @@ func postCheckoutCompleted(t *testing.T, orderID, paymentIntentID string) {
 	payload, err := json.Marshal(event)
 	require.NoError(t, err)
 
-	status, body, err := apiClient.PostSigned(stripeWebhookPath, StubStripeSignature, payload)
+	status, body, err := apiClient.PostSigned(stripeWebhookPath+"/accounts/"+SeedAccountID, StubStripeSignature, payload)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)

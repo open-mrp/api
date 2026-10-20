@@ -142,7 +142,7 @@ func TestAccountSvc_BrandingUploadsStoreOnlyImages(t *testing.T) {
 			accountRepo.EXPECT().UpdateBrandingLogoURL(gomock.Any(), accountID, tc.key).Return(nil).AnyTimes()
 			accountRepo.EXPECT().UpdateBrandingFaviconURL(gomock.Any(), accountID, tc.key).Return(nil).AnyTimes()
 			accountRepo.EXPECT().GetByID(gomock.Any(), accountID).Return(&domain.Account{ID: accountID}, nil).AnyTimes()
-			outbox := &subscriptionOutboxRepo{}
+			outbox := &auditOutboxRepo{}
 			repos := factorymock.NewMockRepoFactory(ctrl)
 			repos.EXPECT().NewAccountRepo().Return(accountRepo).AnyTimes()
 			repos.EXPECT().NewAccountUserRepo().Return(repositorymock.NewMockAccountUserRepo(ctrl)).AnyTimes()

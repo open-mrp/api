@@ -99,7 +99,6 @@ Go microservices platform with gRPC inter-service communication and RabbitMQ for
 - **notification-service**: Email notifications
 - **platform-service**: Platform utilities and idempotency
 - **agent-service**: Agent management and execution
-- **billing-service**: Billing and subscription management
 
 ### Service Internal Structure
 
@@ -129,7 +128,7 @@ services/[name]/
 - **id/**: Custom ID generation with entity prefixes (usr*, acct*, org\_, etc.)
 - **messaging/**: RabbitMQ integration with outbox/inbox patterns
 - **db/**: Database pool management and migrations
-- **constants/**: Domain enums (AccountMode, RoleType, PlanCode, etc.)
+- **constants/**: Domain enums (AccountMode, RoleType, etc.)
 
 ### Key Patterns
 

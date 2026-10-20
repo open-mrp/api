@@ -96,20 +96,6 @@ func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccoun
 	return cnt, err
 }
 
-const countActiveAccountUsers = `-- name: CountActiveAccountUsers :one
-SELECT COUNT(*) AS cnt
-FROM account_user
-WHERE account_id = ?
-    AND (status_code = 'active' OR status_code IS NULL)
-`
-
-func (q *Queries) CountActiveAccountUsers(ctx context.Context, accountID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countActiveAccountUsers, accountID)
-	var cnt int64
-	err := row.Scan(&cnt)
-	return cnt, err
-}
-
 const createAccountUserForRegistration = `-- name: CreateAccountUserForRegistration :exec
 INSERT INTO account_user (
     id,
@@ -137,40 +123,6 @@ func (q *Queries) CreateAccountUserForRegistration(ctx context.Context, arg Crea
 		arg.RoleID,
 	)
 	return err
-}
-
-const deactivateAccountUsersExcept = `-- name: DeactivateAccountUsersExcept :execresult
-UPDATE account_user
-SET status_code = 'disabled', updated_at = NOW(3)
-WHERE account_id = ? AND user_id != ?
-    AND (status_code = 'active' OR status_code IS NULL)
-ORDER BY last_used_at ASC
-LIMIT ?
-`
-
-type DeactivateAccountUsersExceptParams struct {
-	AccountID string
-	UserID    string
-	Limit     int32
-}
-
-func (q *Queries) DeactivateAccountUsersExcept(ctx context.Context, arg DeactivateAccountUsersExceptParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, deactivateAccountUsersExcept, arg.AccountID, arg.UserID, arg.Limit)
-}
-
-const ensureAccountUserActive = `-- name: EnsureAccountUserActive :execresult
-UPDATE account_user
-SET status_code = 'active', updated_at = NOW(3)
-WHERE account_id = ? AND user_id = ? AND status_code = 'disabled'
-`
-
-type EnsureAccountUserActiveParams struct {
-	AccountID string
-	UserID    string
-}
-
-func (q *Queries) EnsureAccountUserActive(ctx context.Context, arg EnsureAccountUserActiveParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, ensureAccountUserActive, arg.AccountID, arg.UserID)
 }
 
 const findAccountAffiliationsByUserID = `-- name: FindAccountAffiliationsByUserID :many
@@ -322,7 +274,6 @@ SELECT
     a.name AS account_name,
     a.account_type_code,
     a.onboarding_status_code,
-    COALESCE(ap.plan_type_code, 'free') AS plan_code,
     au.id AS account_user_id,
     au.status_code AS account_user_status_code,
     au.last_used_at,
@@ -331,47 +282,28 @@ SELECT
     r.role_type_code,
     r.created_at AS role_created_at,
     r.updated_at AS role_updated_at,
-    sa.owner_account_id,
-    ab.internal_stripe_customer_id,
-    ap.type_id AS plan_type_id,
-    ap.name AS plan_name,
-    ap.plan_type_code AS plan_plan_type_code,
-    ap.version AS plan_version,
-    ap.price_per_seat AS plan_price_per_seat,
-    ap.price_per_month AS plan_price_per_month,
-    ap.seat_minimum AS plan_seat_minimum
+    sa.owner_account_id
 FROM account_user au
 JOIN account a ON au.account_id = a.id
 LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
-LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON sa.account_id = a.id
 WHERE au.user_id = ?
 `
 
 type FindTenancyAccountsByUserIDRow struct {
-	AccountID                string
-	AccountName              string
-	AccountTypeCode          string
-	OnboardingStatusCode     string
-	PlanCode                 string
-	AccountUserID            string
-	AccountUserStatusCode    string
-	LastUsedAt               sql.NullTime
-	RoleID                   sql.NullString
-	RoleName                 sql.NullString
-	RoleTypeCode             sql.NullString
-	RoleCreatedAt            sql.NullTime
-	RoleUpdatedAt            sql.NullTime
-	OwnerAccountID           sql.NullString
-	InternalStripeCustomerID sql.NullString
-	PlanTypeID               sql.NullString
-	PlanName                 sql.NullString
-	PlanPlanTypeCode         sql.NullString
-	PlanVersion              sql.NullInt32
-	PlanPricePerSeat         sql.NullString
-	PlanPricePerMonth        sql.NullString
-	PlanSeatMinimum          sql.NullInt32
+	AccountID             string
+	AccountName           string
+	AccountTypeCode       string
+	OnboardingStatusCode  string
+	AccountUserID         string
+	AccountUserStatusCode string
+	LastUsedAt            sql.NullTime
+	RoleID                sql.NullString
+	RoleName              sql.NullString
+	RoleTypeCode          sql.NullString
+	RoleCreatedAt         sql.NullTime
+	RoleUpdatedAt         sql.NullTime
+	OwnerAccountID        sql.NullString
 }
 
 func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]FindTenancyAccountsByUserIDRow, error) {
@@ -388,7 +320,6 @@ func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string
 			&i.AccountName,
 			&i.AccountTypeCode,
 			&i.OnboardingStatusCode,
-			&i.PlanCode,
 			&i.AccountUserID,
 			&i.AccountUserStatusCode,
 			&i.LastUsedAt,
@@ -398,14 +329,6 @@ func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string
 			&i.RoleCreatedAt,
 			&i.RoleUpdatedAt,
 			&i.OwnerAccountID,
-			&i.InternalStripeCustomerID,
-			&i.PlanTypeID,
-			&i.PlanName,
-			&i.PlanPlanTypeCode,
-			&i.PlanVersion,
-			&i.PlanPricePerSeat,
-			&i.PlanPricePerMonth,
-			&i.PlanSeatMinimum,
 		); err != nil {
 			return nil, err
 		}
@@ -864,41 +787,6 @@ func (q *Queries) InsertAccountUser(ctx context.Context, arg InsertAccountUserPa
 		arg.StatusCode,
 	)
 	return err
-}
-
-const listAccountUserSeatStatusesForUpdate = `-- name: ListAccountUserSeatStatusesForUpdate :many
-SELECT id, status_code
-FROM account_user
-WHERE account_id = ? AND status_code IN ('active', 'disabled')
-FOR UPDATE
-`
-
-type ListAccountUserSeatStatusesForUpdateRow struct {
-	ID         string
-	StatusCode string
-}
-
-func (q *Queries) ListAccountUserSeatStatusesForUpdate(ctx context.Context, accountID string) ([]ListAccountUserSeatStatusesForUpdateRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountUserSeatStatusesForUpdate, accountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountUserSeatStatusesForUpdateRow
-	for rows.Next() {
-		var i ListAccountUserSeatStatusesForUpdateRow
-		if err := rows.Scan(&i.ID, &i.StatusCode); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listAccountUsersBackward = `-- name: ListAccountUsersBackward :many
@@ -1501,23 +1389,6 @@ type MarkUsedByAccountAndUserParams struct {
 func (q *Queries) MarkUsedByAccountAndUser(ctx context.Context, arg MarkUsedByAccountAndUserParams) error {
 	_, err := q.db.ExecContext(ctx, markUsedByAccountAndUser, arg.AccountID, arg.UserID)
 	return err
-}
-
-const reactivateAccountUsers = `-- name: ReactivateAccountUsers :execresult
-UPDATE account_user
-SET status_code = 'active', updated_at = NOW(3)
-WHERE account_id = ? AND status_code = 'disabled'
-ORDER BY updated_at DESC
-LIMIT ?
-`
-
-type ReactivateAccountUsersParams struct {
-	AccountID string
-	Limit     int32
-}
-
-func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAccountUsersParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, reactivateAccountUsers, arg.AccountID, arg.Limit)
 }
 
 const reactivateRemovedAccountUser = `-- name: ReactivateRemovedAccountUser :exec

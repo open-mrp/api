@@ -62,8 +62,8 @@ Add when the service has enum-like values **not shared** via `shared/constants`.
 |------|-------------|
 | `clients.go` | Service makes gRPC calls to other services |
 | `publishers.go` | Service publishes messages to RabbitMQ |
-| `mediators.go` | Service composes mediator steps (**`auth-service`**, **`billing-service`**, **`core-service`**, **`agent-service`**). Omit when unused (**`platform-service`**, **`notification-service`** until needed). |
-| `recovery_points.go` | Service uses **`RecoveryPoint`** idempotency checkpoints in multi-phase flows (**`auth-service`**, **`billing-service`**, **`core-service`**, **`notification-service`** when wired). Related constants may live in a domain-specific **`*_recovery_points.go`** (for example **`supplier_recovery_points.go`** in **`core-service`**) when clearer than one global file. |
+| `mediators.go` | Service composes mediator steps (**`auth-service`**, **`core-service`**, **`agent-service`**). Omit when unused (**`platform-service`**, **`notification-service`** until needed). |
+| `recovery_points.go` | Service uses **`RecoveryPoint`** idempotency checkpoints in multi-phase flows (**`auth-service`**, **`core-service`**, **`notification-service`** when wired). Related constants may live in a domain-specific **`*_recovery_points.go`** (for example **`supplier_recovery_points.go`** in **`core-service`**) when clearer than one global file. |
 
 ## Mock generation
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service" "billing-service" "agent-service")
+DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service" "agent-service")
 COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils" "clients")
 MAX_JOBS="${MOCK_JOBS:-8}"
 declare -a services=()

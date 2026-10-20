@@ -39,19 +39,6 @@ func (q *Queries) FindOrderPaymentIntentByPaymentIntentID(ctx context.Context, p
 	return i, err
 }
 
-const getSalesOrderOwnerAccountID = `-- name: GetSalesOrderOwnerAccountID :one
-SELECT owner_account_id
-FROM sales_order
-WHERE id = ?
-`
-
-func (q *Queries) GetSalesOrderOwnerAccountID(ctx context.Context, salesOrderID string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getSalesOrderOwnerAccountID, salesOrderID)
-	var owner_account_id string
-	err := row.Scan(&owner_account_id)
-	return owner_account_id, err
-}
-
 const insertOrderPaymentIntent = `-- name: InsertOrderPaymentIntent :exec
 INSERT INTO order_payment_intent (id, payment_intent_id, sales_order_id, created_at, updated_at)
 VALUES (?, ?, ?, NOW(3), NOW(3))

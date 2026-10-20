@@ -1681,20 +1681,6 @@ func (r *batchRepoImpl) CreateMany(ctx context.Context, batches []domain.NewBatc
 	return created, nil
 }
 
-func (r *batchRepoImpl) CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
-	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.count_scanned_since")
-	defer span.End()
-
-	count, err := r.queries.CountBatchesScannedSince(ctx, sqlc.CountBatchesScannedSinceParams{
-		AccountID: accountID,
-		Since:     gosql.NullTime{Time: since, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
-	}
-	return count, nil
-}
-
 // attachMachinesAndLots loads the machines and lots of a set of batches in two queries, however many
 // batches there are. A batch's lots are the material lots it consumed, then its production run's
 // number, each lot number once.

@@ -57,10 +57,7 @@ Switch `shared/errors` to `apierror` everywhere, together with the packages whos
 
 | Code | Type | Status | Notes |
 |---|---|---|---|
-| `limit_exceeded` | `invalid_request_error` | 403 | `DetailsField: "quota"`, `DetailsExample: QuotaInfo{...}`; `WithQuota` becomes `WithDetails(QuotaInfo{...})` |
 | `registration_closed` | `invalid_request_error` | 403 | |
-| `payment_required` | `invalid_request_error` | 402 | |
-| `agent_spending_cap_reached` | `invalid_request_error` | 402 | |
 | `api_key_expired` | `invalid_request_error` | 401 | |
 | `api_key_revoked` | `invalid_request_error` | 401 | |
 | `verification_required` | `invalid_request_error` | 403 | New in forge.1 (G1) |
@@ -87,7 +84,7 @@ Set the doc URL builder: `apierror.SetDocURL(func(c apierror.Code) string { retu
 | `NewRateLimitExceededError` | `NewRateLimitedError` |
 | `NewClientClosedRequestError(msg)` | `NewClientClosedRequestError()` |
 | `NewAPIVersion{Required,Invalid}Error(...)` | gain the header name: `version.Header()` |
-| `NewExpiredAPIKeyError`, `NewRevokedAPIKeyError`, `NewPaymentRequiredError`, `NewLimitExceededError`, `NewAgentSpendingCapReachedError`, `NewRegistrationClosedError` | OpenMRP constructors over the registered codes above |
+| `NewExpiredAPIKeyError`, `NewRevokedAPIKeyError`, `NewRegistrationClosedError` | OpenMRP constructors over the registered codes above |
 | `ResponseError` / `APIErrorResponse` | `ErrorObject` / `Response` |
 | `ToResponseError()` / `ToResponseMap()` | `Object()` / `Response()` |
 | `WithDocURL` / the `DocURL` field | gone: built from the code |
@@ -178,7 +175,7 @@ Remove every package and file named in Steps 1–5 that now lives in the kit, so
 
 These ship as part of forge.1. The dashboard, the SDKs and the e2e suite must expect them; the dashboard checklist in the review lists most of them, and these are the ones the kit itself causes:
 
-- **Error object.** `errors[]` lists each failing field and is present on every error. `request_log_url` is gone. `quota` appears only on `limit_exceeded`. `doc_url` is built from the code.
+- **Error object.** `errors[]` lists each failing field and is present on every error. `request_log_url` is gone. `doc_url` is built from the code.
 - **Status codes.**
   - Validation failures are **422**, not 400.
   - A malformed body (bad JSON, unreadable) is a 400 `parameter_invalid`, not `validation_failed`.

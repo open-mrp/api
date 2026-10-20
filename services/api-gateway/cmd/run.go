@@ -144,18 +144,6 @@ func Run(
 	resourceloaders.SetCoreProductionRunClient(coreClient.ProductionRun)
 	resourceloaders.SetAuthClient(authClient.Client)
 
-	// Billing Service
-	billingClient, err := grpcclient.NewBillingServiceClientWithURL(cfg.BillingServiceURI)
-	if err != nil {
-		return err
-	}
-	defer billingClient.Close()
-
-	logger.Info("Waiting for Billing Service to be ready...")
-	if err := billingClient.WaitForReady(ctx); err != nil {
-		return err
-	}
-
 	// Platform Service
 	platformClient, err := grpcclient.NewPlatformServiceClientWithURL(cfg.PlatformServiceURI)
 	if err != nil {
@@ -215,15 +203,15 @@ func Run(
 	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), coreClient.Client, payloads, cfg.FrontendURL, cfg.OperatorEmail, cfg.PlatformMode)
 
 	// Initialize the main router.
-	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	mainRouter := router.NewMainRouter(mainBaseCfg)
 
 	// Initialize the auth router.
-	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	authRouter := router.NewAuthRouter(authBaseCfg)
 
 	// Initialize the webhook router (no auth, minimal middleware).
-	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	webhookRouter := router.NewWebhookRouter(webhookBaseCfg)
 
 	// Initialize WebSocket hub and event consumer.
@@ -258,7 +246,7 @@ func Run(
 	// Initialize the trusted internal listener (agent traffic). Only started when a service token is configured. It must never be exposed behind the public ALB.
 	var internalServer *http.Server
 	if cfg.InternalServiceToken != "" {
-		internalBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "internal ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+		internalBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "internal ", authClient, coreClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 		internalRouter := router.NewInternalRouter(internalBaseCfg, cfg.InternalServiceToken)
 		internalMux := http.NewServeMux()
 		internalMux.Handle("/", internalRouter)

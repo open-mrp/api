@@ -46,8 +46,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	} else {
 		r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
 	}
-	r.AddMiddleware(middleware.SubscriptionMiddleware())
-	r.AddMiddleware(middleware.SandboxBillingMiddleware())
 	r.AddMiddleware(middleware.VersionMiddleware())
 	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
 	r.AddMiddleware(middleware.RecoverMiddleware())
@@ -64,15 +62,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	})
 	if sandboxesGroup != nil {
 		registry.RegisterGroup(sandboxesGroup.APIEndpointGroup)
-	}
-
-	// Billing
-	billingGroup := (&httpgroup.BillingEndpointGroup{}).Materialize(&httpgroup.BillingEndpointGroupConfig{
-		BillingClient: config.BillingClient,
-		CoreClient:    config.CoreClient,
-	})
-	if billingGroup != nil {
-		registry.RegisterGroup(billingGroup.APIEndpointGroup)
 	}
 
 	// Units
@@ -933,8 +922,7 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 
 	// Webhooks
 	webhooksGroup := (&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
-		BillingClient: config.BillingClient,
-		CoreClient:    config.CoreClient,
+		CoreClient: config.CoreClient,
 	})
 	if webhooksGroup != nil {
 		registry.RegisterGroup(webhooksGroup.APIEndpointGroup)

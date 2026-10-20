@@ -40,9 +40,6 @@ type SchedulerConfig struct {
 	// PollInterval (optional; default: 60s) controls how frequently the scheduler polls for due agent schedules.
 	PollInterval time.Duration
 
-	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
-	PlanGate PlanGate
-
 	// Lease (required) is the distributed lease ensuring only one pod schedules runs per tick.
 	Lease *lease.Lease
 }
@@ -79,7 +76,6 @@ type schedulerSvc struct {
 	repos        domain.RepoFactory
 	outboxRepo   messaging.OutboxRepo
 	pollInterval time.Duration
-	planGate     PlanGate
 	lease        *lease.Lease
 	stopCh       chan struct{}
 	wg           sync.WaitGroup
@@ -95,7 +91,6 @@ func NewSchedulerSvc(config *SchedulerConfig) domain.SchedulerSvc {
 		repos:        config.Repos,
 		outboxRepo:   config.OutboxRepo,
 		pollInterval: config.PollInterval,
-		planGate:     config.PlanGate,
 		lease:        config.Lease,
 		stopCh:       make(chan struct{}),
 	}
@@ -183,26 +178,6 @@ func (s *schedulerSvc) checkSchedules(ctx context.Context) {
 		nextRun := schedule.Next(lastRunTime)
 		if !nextRun.Before(now) {
 			continue
-		}
-
-		// Check plan eligibility before scheduling
-		if s.planGate != nil {
-			allowed, gateErr := s.planGate.CanUseAgents(ctx, cfg.AccountID)
-			if gateErr != nil {
-				slog.Warn("Scheduler: plan check failed, skipping run",
-					"config_id", cfg.ID,
-					"account_id", cfg.AccountID,
-					"error", gateErr,
-				)
-				continue
-			}
-			if !allowed {
-				slog.Warn("Scheduler: account not allowed to run agents, skipping",
-					"config_id", cfg.ID,
-					"account_id", cfg.AccountID,
-				)
-				continue
-			}
 		}
 
 		// Schedule is due — create a new run

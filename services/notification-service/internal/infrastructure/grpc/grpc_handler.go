@@ -49,25 +49,3 @@ func (h *gRPCHandler) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.
 		Success: true,
 	}, nil
 }
-
-// SendEnterpriseRequest emails an enterprise-plan upgrade request (sales notification) through the notification service.
-func (h *gRPCHandler) SendEnterpriseRequest(ctx context.Context, req *pb.EnterpriseRequestEmailRequest) (*pb.EmailResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	apiErr := h.notificationSvc.SendEnterpriseRequest(ctx, &domain.EnterpriseRequestData{
-		AccountID:       req.AccountId,
-		AccountName:     req.AccountName,
-		CurrentPlanName: req.CurrentPlanName,
-		RequesterName:   req.RequesterName,
-		RequesterEmail:  req.RequesterEmail,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.EmailResponse{
-		Success: true,
-	}, nil
-}

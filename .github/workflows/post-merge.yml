@@ -187,7 +187,7 @@ jobs:
       - name: Build E2E images with cache
         run: |
           pids=()
-          for svc in platform-service core-service notification-service auth-service billing-service agent-service api-gateway; do
+          for svc in platform-service core-service notification-service auth-service agent-service api-gateway; do
             (
               echo "Building $svc..."
               docker buildx build \

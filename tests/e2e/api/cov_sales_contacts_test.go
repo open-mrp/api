@@ -95,9 +95,7 @@ func TestCovSalesContacts_CustomerRelationshipMatch(t *testing.T) {
 // that member: the create path finds the existing user, sees no ACTIVE link
 // (FindAccountUserWithRoleByAccountIDAndUserID filters to active/NULL), and
 // fails the INSERT on the retained unique key — MapSQLError turns the duplicate
-// into resource_exists. The create endpoint already reactivates *disabled*
-// members (EnsureAccountUserActive / ReactivateAccountUsers in
-// account_user.sql); the same should apply to a *removed* link so a
+// into resource_exists. A *removed* link should be reactivated so a
 // previously-removed member can be re-added (201) instead of a misleading 409
 // "already exists" for a resource that is invisible through the API. The 201
 // expectation below is therefore the correct contract; see the backend patch

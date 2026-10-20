@@ -12,6 +12,14 @@ Self-service sign-up is gone, so these routes are removed from every version, wi
 - `POST /v1/core/actions/request-demo`.
 - `pending_registration` on `Tenancy` (`GET` and `PUT /v1/identity/me/tenancy`).
 
+OpenMRP no longer sells plans or subscriptions, so these routes and fields are removed from every version, with no transformer for older ones. Requests to the routes return `404`.
+
+- `/v1/billing` and every route under it.
+- `POST /v1/webhooks/stripe`. Order checkout payments arrive at `POST /v1/webhooks/stripe/accounts/{account_id}`, which now also handles `checkout.session.completed`.
+- `plan`, `internal_stripe_customer_id` and `account_plan` on `current_account` in `Tenancy` (`GET` and `PUT /v1/identity/me/tenancy`).
+- The `billing` permission. A role that sends `billing:read` or `billing:update` is refused with `400`.
+- The error codes `payment_required` and `agent_spending_cap_reached` (`402`) and `limit_exceeded` (`403`), and `quota` on the error object. No account has a seat, sandbox, invoice or batch limit any more.
+
 ## 1.0.forge-preview.9
 
 ### Breaking changes

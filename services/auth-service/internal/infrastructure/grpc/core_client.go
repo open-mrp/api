@@ -63,10 +63,9 @@ func (c *AuthCoreClient) GetAccountContext(ctx context.Context, accountID string
 	}
 
 	return &domain.AccountContext{
-		AccountID:          accountID,
-		OwnerAccountID:     resp.OwnerAccountId,
-		AccountMode:        convertAccountModeFromProto(resp.AccountMode),
-		SubscriptionStatus: resp.SubscriptionStatus,
+		AccountID:      accountID,
+		OwnerAccountID: resp.OwnerAccountId,
+		AccountMode:    convertAccountModeFromProto(resp.AccountMode),
 	}, nil
 }
 

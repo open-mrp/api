@@ -31,40 +31,6 @@ func (q *Queries) AccountHasAddress(ctx context.Context, arg AccountHasAddressPa
 	return linked, err
 }
 
-const clearAccountPricingPlanSubscription = `-- name: ClearAccountPricingPlanSubscription :exec
-UPDATE account_billing SET
-    stripe_pricing_plan_subscription_id = NULL,
-    servicing_status = NULL,
-    collection_status = NULL,
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
-`
-
-func (q *Queries) ClearAccountPricingPlanSubscription(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, clearAccountPricingPlanSubscription, id)
-	return err
-}
-
-const clearAccountStripeCustomer = `-- name: ClearAccountStripeCustomer :exec
-UPDATE account_billing SET
-    internal_stripe_customer_id = NULL,
-    internal_stripe_subscription_id = NULL,
-    subscription_status = NULL,
-    subscription_current_period_end = NULL,
-    stripe_billing_profile_id = NULL,
-    stripe_billing_cadence_id = NULL,
-    stripe_pricing_plan_subscription_id = NULL,
-    servicing_status = NULL,
-    collection_status = NULL,
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
-`
-
-func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, clearAccountStripeCustomer, id)
-	return err
-}
-
 const createAccount = `-- name: CreateAccount :exec
 INSERT INTO account (
     id,
@@ -231,74 +197,26 @@ func (q *Queries) GetAccountByID(ctx context.Context, accountID string) (GetAcco
 	return i, err
 }
 
-const getAccountByStripeCustomerID = `-- name: GetAccountByStripeCustomerID :one
-SELECT a.id, a.name, ap.plan_type_code AS plan_code
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-WHERE ab.internal_stripe_customer_id = ?
-`
-
-type GetAccountByStripeCustomerIDRow struct {
-	ID       string
-	Name     string
-	PlanCode string
-}
-
-func (q *Queries) GetAccountByStripeCustomerID(ctx context.Context, internalStripeCustomerID sql.NullString) (GetAccountByStripeCustomerIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getAccountByStripeCustomerID, internalStripeCustomerID)
-	var i GetAccountByStripeCustomerIDRow
-	err := row.Scan(&i.ID, &i.Name, &i.PlanCode)
-	return i, err
-}
-
 const getAccountContext = `-- name: GetAccountContext :one
 SELECT
     a.id,
     a.account_type_code,
-    sa.owner_account_id,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.subscription_status
-        ELSE ab.subscription_status
-    END AS subscription_status,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ap.plan_type_code
-        ELSE ap.plan_type_code
-    END AS plan_code,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.agent_monthly_spending_cap_cents
-        ELSE ab.agent_monthly_spending_cap_cents
-    END AS agent_monthly_spending_cap_cents
+    sa.owner_account_id
 FROM account a
-LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
-LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON a.id = sa.account_id
-LEFT JOIN account owner ON sa.owner_account_id = owner.id
-LEFT JOIN account_billing owner_ab ON owner.account_billing_id = owner_ab.id
-LEFT JOIN account_plan owner_ap ON owner_ab.account_plan_id = owner_ap.type_id
 WHERE a.id = ?
 `
 
 type GetAccountContextRow struct {
-	ID                           string
-	AccountTypeCode              string
-	OwnerAccountID               sql.NullString
-	SubscriptionStatus           interface{}
-	PlanCode                     interface{}
-	AgentMonthlySpendingCapCents interface{}
+	ID              string
+	AccountTypeCode string
+	OwnerAccountID  sql.NullString
 }
 
 func (q *Queries) GetAccountContext(ctx context.Context, id string) (GetAccountContextRow, error) {
 	row := q.db.QueryRowContext(ctx, getAccountContext, id)
 	var i GetAccountContextRow
-	err := row.Scan(
-		&i.ID,
-		&i.AccountTypeCode,
-		&i.OwnerAccountID,
-		&i.SubscriptionStatus,
-		&i.PlanCode,
-		&i.AgentMonthlySpendingCapCents,
-	)
+	err := row.Scan(&i.ID, &i.AccountTypeCode, &i.OwnerAccountID)
 	return i, err
 }
 
@@ -353,58 +271,6 @@ func (q *Queries) GetAccountNames(ctx context.Context, ids []string) ([]GetAccou
 		return nil, err
 	}
 	return items, nil
-}
-
-const getAccountPlanCode = `-- name: GetAccountPlanCode :one
-SELECT ap.plan_type_code AS plan_code
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-WHERE a.id = ?
-`
-
-func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getAccountPlanCode, id)
-	var plan_code string
-	err := row.Scan(&plan_code)
-	return plan_code, err
-}
-
-const getAccountPlanIDAndPeriodEnd = `-- name: GetAccountPlanIDAndPeriodEnd :one
-SELECT ab.account_plan_id, ab.subscription_current_period_end
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-WHERE a.id = ?
-`
-
-type GetAccountPlanIDAndPeriodEndRow struct {
-	AccountPlanID                string
-	SubscriptionCurrentPeriodEnd sql.NullTime
-}
-
-// Returns the account's current plan id (used with ListAccountPlanLimits) and
-// subscription period end (used to derive the billing period start for usage limits).
-func (q *Queries) GetAccountPlanIDAndPeriodEnd(ctx context.Context, id string) (GetAccountPlanIDAndPeriodEndRow, error) {
-	row := q.db.QueryRowContext(ctx, getAccountPlanIDAndPeriodEnd, id)
-	var i GetAccountPlanIDAndPeriodEndRow
-	err := row.Scan(&i.AccountPlanID, &i.SubscriptionCurrentPeriodEnd)
-	return i, err
-}
-
-const getAccountPlanTypeIDByCode = `-- name: GetAccountPlanTypeIDByCode :one
-SELECT type_id FROM account_plan
-WHERE plan_type_code = ?
-AND effective_at <= NOW(3)
-AND (expires_at IS NULL OR expires_at > NOW(3))
-ORDER BY effective_at DESC, version DESC
-LIMIT 1
-`
-
-func (q *Queries) GetAccountPlanTypeIDByCode(ctx context.Context, planTypeCode string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getAccountPlanTypeIDByCode, planTypeCode)
-	var type_id string
-	err := row.Scan(&type_id)
-	return type_id, err
 }
 
 const getAccountPortalSlugByAccountID = `-- name: GetAccountPortalSlugByAccountID :one
@@ -532,20 +398,6 @@ func (q *Queries) GetAccountsByIDs(ctx context.Context, ids []string) ([]GetAcco
 	return items, nil
 }
 
-const getAgentSpendingCap = `-- name: GetAgentSpendingCap :one
-SELECT ab.agent_monthly_spending_cap_cents
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-WHERE a.id = ?
-`
-
-func (q *Queries) GetAgentSpendingCap(ctx context.Context, id string) (sql.NullInt64, error) {
-	row := q.db.QueryRowContext(ctx, getAgentSpendingCap, id)
-	var agent_monthly_spending_cap_cents sql.NullInt64
-	err := row.Scan(&agent_monthly_spending_cap_cents)
-	return agent_monthly_spending_cap_cents, err
-}
-
 const getPublicAccountBySlug = `-- name: GetPublicAccountBySlug :one
 SELECT
     a.id,
@@ -586,122 +438,19 @@ func (q *Queries) GetPublicAccountBySlug(ctx context.Context, slug string) (GetP
 	return i, err
 }
 
-const getSandboxLimitByAccountID = `-- name: GetSandboxLimitByAccountID :one
-SELECT apl.value
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan_limit apl ON apl.account_plan_id = ab.account_plan_id
-    AND apl.key = 'sandboxes_maximum'
-WHERE a.id = ?
-`
-
-func (q *Queries) GetSandboxLimitByAccountID(ctx context.Context, id string) (sql.NullInt32, error) {
-	row := q.db.QueryRowContext(ctx, getSandboxLimitByAccountID, id)
-	var value sql.NullInt32
-	err := row.Scan(&value)
-	return value, err
-}
-
-const getSeatLimitByPlanCode = `-- name: GetSeatLimitByPlanCode :one
-SELECT apl.value
-FROM account_plan ap
-JOIN account_plan_limit apl ON apl.account_plan_id = ap.type_id
-    AND apl.key = 'seats_maximum'
-WHERE ap.plan_type_code = ?
-    AND ap.effective_at <= NOW(3)
-    AND (ap.expires_at IS NULL OR ap.expires_at > NOW(3))
-ORDER BY ap.effective_at DESC, ap.version DESC
-LIMIT 1
-`
-
-func (q *Queries) GetSeatLimitByPlanCode(ctx context.Context, planTypeCode string) (sql.NullInt32, error) {
-	row := q.db.QueryRowContext(ctx, getSeatLimitByPlanCode, planTypeCode)
-	var value sql.NullInt32
-	err := row.Scan(&value)
-	return value, err
-}
-
-const hasActiveBillingPlan = `-- name: HasActiveBillingPlan :one
+const isAccountSelfManaged = `-- name: IsAccountSelfManaged :one
 SELECT EXISTS(
     SELECT 1 FROM account a
     JOIN account_billing ab ON a.account_billing_id = ab.id
     WHERE a.id = ? AND ab.account_plan_id IS NOT NULL
-) AS has_plan
+) AS self_managed
 `
 
-func (q *Queries) HasActiveBillingPlan(ctx context.Context, id string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, hasActiveBillingPlan, id)
-	var has_plan bool
-	err := row.Scan(&has_plan)
-	return has_plan, err
-}
-
-const listAccountPlanFeatures = `-- name: ListAccountPlanFeatures :many
-SELECT ` + "`" + `key` + "`" + `, enabled
-FROM account_plan_feature
-WHERE account_plan_id = ?
-`
-
-type ListAccountPlanFeaturesRow struct {
-	Key     string
-	Enabled bool
-}
-
-func (q *Queries) ListAccountPlanFeatures(ctx context.Context, accountPlanID string) ([]ListAccountPlanFeaturesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountPlanFeatures, accountPlanID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountPlanFeaturesRow
-	for rows.Next() {
-		var i ListAccountPlanFeaturesRow
-		if err := rows.Scan(&i.Key, &i.Enabled); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAccountPlanLimits = `-- name: ListAccountPlanLimits :many
-SELECT ` + "`" + `key` + "`" + `, value
-FROM account_plan_limit
-WHERE account_plan_id = ?
-`
-
-type ListAccountPlanLimitsRow struct {
-	Key   string
-	Value sql.NullInt32
-}
-
-func (q *Queries) ListAccountPlanLimits(ctx context.Context, accountPlanID string) ([]ListAccountPlanLimitsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountPlanLimits, accountPlanID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAccountPlanLimitsRow
-	for rows.Next() {
-		var i ListAccountPlanLimitsRow
-		if err := rows.Scan(&i.Key, &i.Value); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) IsAccountSelfManaged(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isAccountSelfManaged, id)
+	var self_managed bool
+	err := row.Scan(&self_managed)
+	return self_managed, err
 }
 
 const setAccountDefaultAddresses = `-- name: SetAccountDefaultAddresses :exec
@@ -747,68 +496,6 @@ type UpdateAccountPortalSlugParams struct {
 
 func (q *Queries) UpdateAccountPortalSlug(ctx context.Context, arg UpdateAccountPortalSlugParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountPortalSlug, arg.Slug, arg.AccountID)
-}
-
-const updateAccountSubscription = `-- name: UpdateAccountSubscription :exec
-UPDATE account_billing SET
-    subscription_status = COALESCE(?, subscription_status),
-    account_plan_id = COALESCE(?, account_plan_id),
-    internal_stripe_subscription_id = COALESCE(?, internal_stripe_subscription_id),
-    subscription_current_period_end = COALESCE(?, subscription_current_period_end),
-    internal_stripe_customer_id = COALESCE(?, internal_stripe_customer_id),
-    stripe_billing_profile_id = COALESCE(?, stripe_billing_profile_id),
-    stripe_billing_cadence_id = COALESCE(?, stripe_billing_cadence_id),
-    stripe_pricing_plan_subscription_id = COALESCE(?, stripe_pricing_plan_subscription_id),
-    servicing_status = COALESCE(?, servicing_status),
-    collection_status = COALESCE(?, collection_status),
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
-`
-
-type UpdateAccountSubscriptionParams struct {
-	SubscriptionStatus              sql.NullString
-	AccountPlanID                   sql.NullString
-	InternalStripeSubscriptionID    sql.NullString
-	SubscriptionCurrentPeriodEnd    sql.NullTime
-	InternalStripeCustomerID        sql.NullString
-	StripeBillingProfileID          sql.NullString
-	StripeBillingCadenceID          sql.NullString
-	StripePricingPlanSubscriptionID sql.NullString
-	ServicingStatus                 sql.NullString
-	CollectionStatus                sql.NullString
-	AccountID                       string
-}
-
-func (q *Queries) UpdateAccountSubscription(ctx context.Context, arg UpdateAccountSubscriptionParams) error {
-	_, err := q.db.ExecContext(ctx, updateAccountSubscription,
-		arg.SubscriptionStatus,
-		arg.AccountPlanID,
-		arg.InternalStripeSubscriptionID,
-		arg.SubscriptionCurrentPeriodEnd,
-		arg.InternalStripeCustomerID,
-		arg.StripeBillingProfileID,
-		arg.StripeBillingCadenceID,
-		arg.StripePricingPlanSubscriptionID,
-		arg.ServicingStatus,
-		arg.CollectionStatus,
-		arg.AccountID,
-	)
-	return err
-}
-
-const updateAgentSpendingCap = `-- name: UpdateAgentSpendingCap :exec
-UPDATE account_billing SET agent_monthly_spending_cap_cents = ?, updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
-`
-
-type UpdateAgentSpendingCapParams struct {
-	AgentMonthlySpendingCapCents sql.NullInt64
-	AccountID                    string
-}
-
-func (q *Queries) UpdateAgentSpendingCap(ctx context.Context, arg UpdateAgentSpendingCapParams) error {
-	_, err := q.db.ExecContext(ctx, updateAgentSpendingCap, arg.AgentMonthlySpendingCapCents, arg.AccountID)
-	return err
 }
 
 const upsertAccountBranding = `-- name: UpsertAccountBranding :exec

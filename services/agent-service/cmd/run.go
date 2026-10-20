@@ -178,14 +178,10 @@ func Run(
 		return err
 	}
 
-	// Plan gate adapter (uses core client to check plan code)
-	planGate := agentgrpc.NewPlanGateAdapter(coreClient)
-
 	// Scheduler
 	scheduler := service.NewSchedulerSvc(&service.SchedulerConfig{
 		Repos:      repoFactory,
 		OutboxRepo: repoFactory.NewOutboxRepo(),
-		PlanGate:   planGate,
 		Lease:      leaseSvc,
 	})
 	if err := scheduler.Start(ctx); err != nil {
@@ -200,7 +196,6 @@ func Run(
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
-		PlanGate:        planGate,
 		CoreClient:      coreClient,
 	})
 
@@ -215,7 +210,7 @@ func Run(
 	if err != nil {
 		return err
 	}
-	agentgrpc.NewAgentHandler(server.Server(), repoFactory, agentDefSvc, planGate)
+	agentgrpc.NewAgentHandler(server.Server(), repoFactory, agentDefSvc)
 
 	logger.Info("Agent service starting", "port", cfg.Port)
 

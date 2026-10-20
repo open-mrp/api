@@ -169,82 +169,6 @@ func (x *EmailResponse) GetSuccess() bool {
 	return false
 }
 
-type EnterpriseRequestEmailRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	AccountId       string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	AccountName     string                 `protobuf:"bytes,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
-	CurrentPlanName string                 `protobuf:"bytes,3,opt,name=current_plan_name,json=currentPlanName,proto3" json:"current_plan_name,omitempty"`
-	RequesterName   string                 `protobuf:"bytes,4,opt,name=requester_name,json=requesterName,proto3" json:"requester_name,omitempty"`
-	RequesterEmail  string                 `protobuf:"bytes,5,opt,name=requester_email,json=requesterEmail,proto3" json:"requester_email,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *EnterpriseRequestEmailRequest) Reset() {
-	*x = EnterpriseRequestEmailRequest{}
-	mi := &file_notification_notification_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EnterpriseRequestEmailRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EnterpriseRequestEmailRequest) ProtoMessage() {}
-
-func (x *EnterpriseRequestEmailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EnterpriseRequestEmailRequest.ProtoReflect.Descriptor instead.
-func (*EnterpriseRequestEmailRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *EnterpriseRequestEmailRequest) GetAccountId() string {
-	if x != nil {
-		return x.AccountId
-	}
-	return ""
-}
-
-func (x *EnterpriseRequestEmailRequest) GetAccountName() string {
-	if x != nil {
-		return x.AccountName
-	}
-	return ""
-}
-
-func (x *EnterpriseRequestEmailRequest) GetCurrentPlanName() string {
-	if x != nil {
-		return x.CurrentPlanName
-	}
-	return ""
-}
-
-func (x *EnterpriseRequestEmailRequest) GetRequesterName() string {
-	if x != nil {
-		return x.RequesterName
-	}
-	return ""
-}
-
-func (x *EnterpriseRequestEmailRequest) GetRequesterEmail() string {
-	if x != nil {
-		return x.RequesterEmail
-	}
-	return ""
-}
-
 var File_notification_notification_proto protoreflect.FileDescriptor
 
 const file_notification_notification_proto_rawDesc = "" +
@@ -266,17 +190,9 @@ const file_notification_notification_proto_rawDesc = "" +
 	"\v_account_idB\r\n" +
 	"\v_sent_by_id\")\n" +
 	"\rEmailResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xdd\x01\n" +
-	"\x1dEnterpriseRequestEmailRequest\x12\x1d\n" +
-	"\n" +
-	"account_id\x18\x01 \x01(\tR\taccountId\x12!\n" +
-	"\faccount_name\x18\x02 \x01(\tR\vaccountName\x12*\n" +
-	"\x11current_plan_name\x18\x03 \x01(\tR\x0fcurrentPlanName\x12%\n" +
-	"\x0erequester_name\x18\x04 \x01(\tR\rrequesterName\x12'\n" +
-	"\x0frequester_email\x18\x05 \x01(\tR\x0erequesterEmail2\xbe\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2[\n" +
 	"\x13NotificationService\x12D\n" +
-	"\tSendEmail\x12\x1a.notification.EmailRequest\x1a\x1b.notification.EmailResponse\x12a\n" +
-	"\x15SendEnterpriseRequest\x12+.notification.EnterpriseRequestEmailRequest\x1a\x1b.notification.EmailResponseB(Z&shared/proto/notification;notificationb\x06proto3"
+	"\tSendEmail\x12\x1a.notification.EmailRequest\x1a\x1b.notification.EmailResponseB(Z&shared/proto/notification;notificationb\x06proto3"
 
 var (
 	file_notification_notification_proto_rawDescOnce sync.Once
@@ -290,19 +206,16 @@ func file_notification_notification_proto_rawDescGZIP() []byte {
 	return file_notification_notification_proto_rawDescData
 }
 
-var file_notification_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_notification_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_notification_notification_proto_goTypes = []any{
-	(*EmailRequest)(nil),                  // 0: notification.EmailRequest
-	(*EmailResponse)(nil),                 // 1: notification.EmailResponse
-	(*EnterpriseRequestEmailRequest)(nil), // 2: notification.EnterpriseRequestEmailRequest
+	(*EmailRequest)(nil),  // 0: notification.EmailRequest
+	(*EmailResponse)(nil), // 1: notification.EmailResponse
 }
 var file_notification_notification_proto_depIdxs = []int32{
 	0, // 0: notification.NotificationService.SendEmail:input_type -> notification.EmailRequest
-	2, // 1: notification.NotificationService.SendEnterpriseRequest:input_type -> notification.EnterpriseRequestEmailRequest
-	1, // 2: notification.NotificationService.SendEmail:output_type -> notification.EmailResponse
-	1, // 3: notification.NotificationService.SendEnterpriseRequest:output_type -> notification.EmailResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	1, // 1: notification.NotificationService.SendEmail:output_type -> notification.EmailResponse
+	1, // [1:2] is the sub-list for method output_type
+	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -320,7 +233,7 @@ func file_notification_notification_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notification_notification_proto_rawDesc), len(file_notification_notification_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

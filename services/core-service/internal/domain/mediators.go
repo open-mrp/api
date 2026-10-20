@@ -144,13 +144,11 @@ type SandboxMed interface {
 	// Create provisions a new sandbox account under the given owner account.
 	//
 	// 1. Verify the owner is a production account (not already a sandbox).
-	// 2. Fetch the owner's plan code and sandbox limit.
-	// 3. Check the current sandbox count against the plan limit; reject if at capacity.
-	// 4. Generate unique IDs for the new account and sandbox type.
-	// 5. Create the account record with sandbox type and the owner's plan code.
-	// 6. Create supporting records: business address, account-user link, portal, system products, and branding.
-	// 7. Insert the sandbox account record linking it to the owner.
-	// 8. Re-fetch and return the created sandbox with populated owner metadata.
+	// 2. Generate unique IDs for the new account and sandbox type.
+	// 3. Create the account record with sandbox type.
+	// 4. Create supporting records: business address, account-user link, portal, system products, and branding.
+	// 5. Insert the sandbox account record linking it to the owner.
+	// 6. Re-fetch and return the created sandbox with populated owner metadata.
 	Create(ctx context.Context, ownerAccountID, userID, name string) (*SandboxAccount, *apierror.APIError)
 
 	// Delete removes a sandbox account and its underlying account record.

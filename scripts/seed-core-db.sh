@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # Seed Core Service Database
-# Seeds static types, plans, accounts, users, items, orders, and other sample data
+# Seeds static types, accounts, users, items, orders, and other sample data
 # into the core-service MySQL database.
 #
-# Usage: ./scripts/seed-core-db.sh [--plan free|starter|pro|enterprise]
+# Usage: ./scripts/seed-core-db.sh
 #
-# Requires DB_URL to be set (or .env loaded). Default plan is enterprise.
+# Requires DB_URL to be set (or .env loaded).
 #
 # Safety: refuses to run against PlanetScale or any non-MySQL database.
 
@@ -34,42 +34,11 @@ if [ -f ".env" ]; then
     done < .env
 fi
 
-# --- Parse arguments ---
-
-PLAN_CODE="enterprise"
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --plan)
-            PLAN_CODE="${2:-}"
-            if [[ -z "$PLAN_CODE" ]]; then
-                error "Usage: $0 [--plan free|starter|pro|enterprise]"
-                exit 1
-            fi
-            shift 2
-            ;;
-        *)
-            error "Unknown argument: $1"
-            error "Usage: $0 [--plan free|starter|pro|enterprise]"
-            exit 1
-            ;;
-    esac
-done
-
-# --- Validate plan code ---
-
-case "$PLAN_CODE" in
-    free)       PLAN_ID="acpl_01seed000free00plan000000" ;;
-    starter)    PLAN_ID="acpl_01seed000starter0plan000" ;;
-    pro)        PLAN_ID="acpl_01seed000pro000plan00000" ;;
-    enterprise) PLAN_ID="acpl_01seed000enterprise00002" ;;
-    *)
-        error "Invalid plan: $PLAN_CODE. Must be one of: free, starter, pro, enterprise"
-        exit 1
-        ;;
-esac
-
-info "Using plan: $PLAN_CODE (ID: $PLAN_ID)"
+if [[ $# -gt 0 ]]; then
+    error "Unknown argument: $1"
+    error "Usage: $0"
+    exit 1
+fi
 
 # --- Validate DB_URL ---
 
@@ -166,11 +135,7 @@ for seed_file in "$SEED_DIR"/*.sql "$SEED_DIR"/dev/*.sql; do
     filename="$(basename "$seed_file")"
     info "Running $filename..."
 
-    # Substitute plan variables and pipe to mysql
-    sed -e "s/@plan_code/'$PLAN_CODE'/g" \
-        -e "s/@plan_id/'$PLAN_ID'/g" \
-        "$seed_file" \
-        | $MYSQL_CMD
+    $MYSQL_CMD < "$seed_file"
 done
 
 info "Seed complete."

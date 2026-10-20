@@ -12,7 +12,6 @@ var ServiceNames = []string{
 	"core-service",
 	"platform-service",
 	"notification-service",
-	"billing-service",
 	"agent-service",
 }
 

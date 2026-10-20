@@ -1249,7 +1249,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - `param` names the parameter or field the error is about, or is null. `errors` lists every field failure on a 422, and `param` is the first of them; `errors` is empty otherwise.
   - `is_transient` stays (a documented exception to the no-booleans rule).
   - Bulk rows and async job results use the same error object instead of a string.
-  - `request_log_url` is removed (the dashboard does not read it). `limit_exceeded` keeps its `quota` member, registered with apikit as an OpenMRP extension.
+  - `request_log_url` is removed (the dashboard does not read it).
 - [ ] **X9 Applications link any credit to any debit:** `application { source: { type: payment | credit_note, id }, target: { type: invoice | refund, id }, amount }`. Replaces the fixed `invoice` field.
 - [ ] **X10 Contract rules** (in the conventions doc):
   - **Decimal scale:** document totals 2 places; unit prices up to 6; Quantity values up to 6.
@@ -1424,9 +1424,9 @@ The cross-cutting framework changes in this review are implemented once in the k
   - Tooling: a generic OpenAPI generator (with the agent-tool catalog, optional Stainless config, public-endpoint inventory and error-code index), forge.1 conformance checks, and `txaudit`.
 - [ ] **Stays in `api`:**
   - Domain code: constants, protos, endpoint definitions, resources, request inputs, version transforms and include definitions.
-  - Auth, platform, sandbox and subscription middleware, plus auth cookies.
+  - Auth and platform middleware, plus auth cookies.
   - Migrations and seeds.
-  - Business error codes, which register as kit extensions: `limit_exceeded` with `quota`, `payment_required`, `agent_spending_cap_reached` and `registration_closed`.
+  - Business error codes, which register as kit extensions: `registration_closed`.
 - [ ] **Deferred until an API needs them:** gRPC contracts and `rpc`, `messaging` (outbox and RabbitMQ), `audit`, and the PlanetScale tools `vtparse` and `schemasplit`. They stay here, and moving them later is additive.
 - [ ] **Identity and permissions are app-defined.** The context holds the app's own identity type (`Identity[T]`). An endpoint carries an `Auth` policy value checked by an `Authorizer` the app registers. Our permission fields (`RequiredPermissions`, `CounterpartyPermissions`, `SelfPathParam`, `RequiredRoleType`) become OpenMRP's policy type.
 - [ ] **Migration at forge.1:** follow `docs/apikit-migration.md` (steps, rename map, what OpenMRP registers, client-visible changes, verification). In short: switch every import to apikit and delete the local copies. Register OpenMRP's error codes, ID prefixes, versions, sensitive-tag policies, `Authorizer` and identity type. Diff the generated OpenAPI spec and Stainless config against the pre-migration output, so the only changes are the forge.1 ones.

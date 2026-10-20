@@ -138,11 +138,6 @@ const (
 	// LoggingEventRequestLogged is an event that indicates that a request has been logged.
 	LoggingEventRequestLogged AmqpRoutingKey = "logging.event.request_logged"
 
-	// Billing
-
-	// BillingEventStripeWebhook is an event carrying a verified Stripe webhook payload for asynchronous processing.
-	BillingEventStripeWebhook AmqpRoutingKey = "billing.event.stripe_webhook"
-
 	// Agent
 
 	// AgentCmdExecuteRun is a command to execute an agent run.
@@ -159,15 +154,6 @@ const (
 	AgentEventRunCompleted AmqpRoutingKey = "agent.event.run_completed"
 	// AgentEventRunStep is an event carrying a single run step for real-time WebSocket streaming to the frontend.
 	AgentEventRunStep AmqpRoutingKey = "agent.event.run_step"
-
-	// BillingCmdReportSeatChange is a command to report a seat count change to the billing provider's usage metering system.
-	BillingCmdReportSeatChange AmqpRoutingKey = "billing.cmd.report_seat_change"
-
-	// Commands the billing provider's usage metering system to record a created invoice.
-	BillingCmdReportInvoiceCreated AmqpRoutingKey = "billing.cmd.report_invoice_created"
-
-	// Commands the billing provider's usage metering system to record a batch a scan created.
-	BillingCmdReportBatchCreated AmqpRoutingKey = "billing.cmd.report_batch_created"
 
 	// PlatformEventAuditLogged is an event that indicates an audit event has been produced and needs to be persisted by the platform-service.
 	PlatformEventAuditLogged AmqpRoutingKey = "platform.event.audit_logged"

@@ -97,9 +97,6 @@ const (
 	// CoreCmdHubspotSyncQueue carries HubSpot backfill commands (preview and execute) to the core-service, which runs the long-running matching/sync passes out-of-band. Bound to both the preview and execute routing keys; the consumer dispatches on routing key. Messages contain a HubspotSyncCommandData payload.
 	CoreCmdHubspotSyncQueue = "core_cmd_hubspot_sync"
 
-	// BillingEventStripeWebhookQueue carries verified Stripe webhook events for asynchronous processing by the billing-service. The raw event payload and metadata are enqueued immediately on receipt so the webhook endpoint can return as fast as possible.
-	BillingEventStripeWebhookQueue = "billing_event_stripe_webhook"
-
 	// AgentCmdExecuteRunQueue carries execute-run commands to the agent-service. Messages trigger an agent run for a specific account and agent configuration.
 	AgentCmdExecuteRunQueue = "agent_cmd_execute_run"
 
@@ -113,20 +110,11 @@ const (
 	// AgentCmdChatRunQueue carries chat-run commands (from notification-service) to the agent-service: create a chat-linked run and execute it.
 	AgentCmdChatRunQueue = "agent_cmd_chat_run"
 
-	// AgentEventRunCompletedQueue carries run-completed events emitted by the agent-service after an agent run finishes. It is the durable, shared work queue for billing-service token/usage aggregation (exactly-once across billing replicas). The api-gateway also consumes run-completed events for WebSocket fan-out, but via its own per-instance queue (ConsumeFanout with this base name) so every gateway replica gets a copy — it must not join this shared queue, or billing and the gateway would steal each other's events.
+	// AgentEventRunCompletedQueue is the base name for the per-instance queues that carry run-completed events from the agent-service to every api-gateway replica for WebSocket fan-out (see ConsumeFanout).
 	AgentEventRunCompletedQueue = "agent_event_run_completed"
 
 	// AgentEventRunStepQueue is the base name for the queue that carries individual run step events for real-time WebSocket streaming. Each API gateway instance appends a unique suffix to create its own exclusive auto-delete queue so that every instance receives every event via RabbitMQ fanout.
 	AgentEventRunStepQueue = "agent_event_run_step"
-
-	// BillingCmdReportSeatChangeQueue carries report-seat-change commands to the billing-service. Messages on this queue trigger a usage meter report to Stripe.
-	BillingCmdReportSeatChangeQueue = "billing_cmd_report_seat_change"
-
-	// Carries report-invoice-created commands to the billing-service; each triggers a usage meter report to Stripe.
-	BillingCmdReportInvoiceCreatedQueue = "billing_cmd_report_invoice_created"
-
-	// Carries report-batch-created commands to the billing-service; each triggers a usage meter report to Stripe.
-	BillingCmdReportBatchCreatedQueue = "billing_cmd_report_batch_created"
 
 	// NotificationCmdFanoutQueue carries alert/message fan-out intents to notification-service. It is inbox-deduped and bound to NotificationCmdFanout (and NotificationCmdSendMessage).
 	NotificationCmdFanoutQueue = "notification_cmd_fanout"
@@ -283,30 +271,6 @@ type AgentRunStepData struct {
 	Terminal bool `json:"terminal,omitempty"`
 }
 
-// SeatChangeReportData is the payload for BillingCmdReportSeatChangeQueue messages. It identifies the account whose seat count change should be reported to the billing provider's usage meters.
-type SeatChangeReportData struct {
-	// AccountID is the account whose seat count changed.
-	AccountID string `json:"account_id"`
-}
-
-// Carries a created invoice to the usage meter. The meter counts one event per message, so the
-// invoice id travels only for traceability.
-type InvoiceCreatedReportData struct {
-	// Names the account the invoice was created for.
-	AccountID string `json:"account_id"`
-	// Identifies the invoice that triggered the report.
-	InvoiceID string `json:"invoice_id"`
-}
-
-// Carries a batch a scan created to the usage meter. The meter counts one event per message, so the
-// batch id travels only for traceability.
-type BatchCreatedReportData struct {
-	// Names the account the batch belongs to.
-	AccountID string `json:"account_id"`
-	// Identifies the batch that triggered the report.
-	BatchID string `json:"batch_id"`
-}
-
 // GenerateProductionScheduleData is the payload for CoreCmdGenerateProductionScheduleQueue messages. The schedule row already exists in `generating` status when the message is published, so the consumer solves into a row that is already visible rather than creating one — a tick that enqueued and then died would otherwise leave no trace.
 type GenerateProductionScheduleData struct {
 	AccountID  string `json:"account_id"`
@@ -383,16 +347,15 @@ type HubspotSyncCommandData struct {
 	AccountID string `json:"account_id"`
 }
 
-// AgentRunCompletedData is the payload for AgentEventRunCompletedQueue messages. It carries token usage and model metadata for billing aggregation.
+// AgentRunCompletedData is the payload of an agent run-completed event. It carries the run's token usage and model.
 type AgentRunCompletedData struct {
-	AgentRunID       string `json:"agent_run_id"`
-	AccountID        string `json:"account_id"`
-	BillingAccountID string `json:"billing_account_id"`
-	InputTokens      int    `json:"input_tokens"`
-	OutputTokens     int    `json:"output_tokens"`
-	TotalTokens      int    `json:"total_tokens"`
-	LLMProvider      string `json:"llm_provider"`
-	LLMModel         string `json:"llm_model"`
+	AgentRunID   string `json:"agent_run_id"`
+	AccountID    string `json:"account_id"`
+	InputTokens  int    `json:"input_tokens"`
+	OutputTokens int    `json:"output_tokens"`
+	TotalTokens  int    `json:"total_tokens"`
+	LLMProvider  string `json:"llm_provider"`
+	LLMModel     string `json:"llm_model"`
 }
 
 // ConversationRef points a fan-out at a conversation, either directly by ID or by the resource it is anchored to (the system channel is resolved by category when nil).
@@ -402,7 +365,7 @@ type ConversationRef struct {
 	TopicResourceID   string `json:"topic_resource_id,omitempty"`
 }
 
-// AlertFanoutData is the payload for NotificationCmdFanoutQueue messages. A producer (core/agent/billing/notification-service) emits one alert/message intent; the notification-service consumer turns it into a message plus per-recipient notification rows and a realtime push. Content may be templated (TemplateKey/TemplateParams) for i18n, with Title/Body as default-locale fallbacks.
+// AlertFanoutData is the payload for NotificationCmdFanoutQueue messages. A producer (core/agent/notification-service) emits one alert/message intent; the notification-service consumer turns it into a message plus per-recipient notification rows and a realtime push. Content may be templated (TemplateKey/TemplateParams) for i18n, with Title/Body as default-locale fallbacks.
 // AgentReplyData is the payload for NotificationCmdAgentReplyQueue: an agent's reply to post into a conversation. notification-service resolves the agent participant from (ConversationID, AgentConfigID), creates a kind=agent message authored by that participant and linked to AgentRunID, and fans it out.
 // ClientMessageID makes it idempotent across redelivery.
 //
@@ -422,7 +385,7 @@ type AgentReplyData struct {
 	Phase string `json:"phase,omitempty"`
 	// Failed marks a "final" reply that resolves an errored run (the body is the user-facing error).
 	Failed bool `json:"failed,omitempty"`
-	// ErrorCode is the machine-readable api-error code for a failed reply (e.g. "agent_spending_cap_reached"), carried onto the message so the client can react (e.g. prompt to raise the spending limit). Empty for non-cap or non-failed replies.
+	// ErrorCode is the machine-readable api-error code for a failed reply (e.g. "insufficient_permissions"), carried onto the message so the client can react to it. Empty when the failure has no specific code or the reply did not fail.
 	ErrorCode string `json:"error_code,omitempty"`
 	// ReplyToMessageID threads the reply under the message that triggered the run (a mention or keyword), so it renders as a reply. Empty for continuation turns (already in a reply thread).
 	ReplyToMessageID string `json:"reply_to_message_id,omitempty"`

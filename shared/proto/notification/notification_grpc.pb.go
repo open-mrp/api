@@ -26,8 +26,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NotificationService_SendEmail_FullMethodName             = "/notification.NotificationService/SendEmail"
-	NotificationService_SendEnterpriseRequest_FullMethodName = "/notification.NotificationService/SendEnterpriseRequest"
+	NotificationService_SendEmail_FullMethodName = "/notification.NotificationService/SendEmail"
 )
 
 // NotificationServiceClient is the client API for NotificationService service.
@@ -40,10 +39,6 @@ type NotificationServiceClient interface {
 	// that need immediate send confirmation (e.g. password reset emails that
 	// are sent inline during the request).
 	SendEmail(ctx context.Context, in *EmailRequest, opts ...grpc.CallOption) (*EmailResponse, error)
-	// SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
-	// to the sales team. The notification-service fills in the email template
-	// using the provided account and requester details.
-	SendEnterpriseRequest(ctx context.Context, in *EnterpriseRequestEmailRequest, opts ...grpc.CallOption) (*EmailResponse, error)
 }
 
 type notificationServiceClient struct {
@@ -64,16 +59,6 @@ func (c *notificationServiceClient) SendEmail(ctx context.Context, in *EmailRequ
 	return out, nil
 }
 
-func (c *notificationServiceClient) SendEnterpriseRequest(ctx context.Context, in *EnterpriseRequestEmailRequest, opts ...grpc.CallOption) (*EmailResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EmailResponse)
-	err := c.cc.Invoke(ctx, NotificationService_SendEnterpriseRequest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // NotificationServiceServer is the server API for NotificationService service.
 // All implementations must embed UnimplementedNotificationServiceServer
 // for forward compatibility.
@@ -84,10 +69,6 @@ type NotificationServiceServer interface {
 	// that need immediate send confirmation (e.g. password reset emails that
 	// are sent inline during the request).
 	SendEmail(context.Context, *EmailRequest) (*EmailResponse, error)
-	// SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
-	// to the sales team. The notification-service fills in the email template
-	// using the provided account and requester details.
-	SendEnterpriseRequest(context.Context, *EnterpriseRequestEmailRequest) (*EmailResponse, error)
 	mustEmbedUnimplementedNotificationServiceServer()
 }
 
@@ -100,9 +81,6 @@ type UnimplementedNotificationServiceServer struct{}
 
 func (UnimplementedNotificationServiceServer) SendEmail(context.Context, *EmailRequest) (*EmailResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendEmail not implemented")
-}
-func (UnimplementedNotificationServiceServer) SendEnterpriseRequest(context.Context, *EnterpriseRequestEmailRequest) (*EmailResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SendEnterpriseRequest not implemented")
 }
 func (UnimplementedNotificationServiceServer) mustEmbedUnimplementedNotificationServiceServer() {}
 func (UnimplementedNotificationServiceServer) testEmbeddedByValue()                             {}
@@ -143,24 +121,6 @@ func _NotificationService_SendEmail_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NotificationService_SendEnterpriseRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EnterpriseRequestEmailRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotificationServiceServer).SendEnterpriseRequest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotificationService_SendEnterpriseRequest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotificationServiceServer).SendEnterpriseRequest(ctx, req.(*EnterpriseRequestEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // NotificationService_ServiceDesc is the grpc.ServiceDesc for NotificationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -171,10 +131,6 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendEmail",
 			Handler:    _NotificationService_SendEmail_Handler,
-		},
-		{
-			MethodName: "SendEnterpriseRequest",
-			Handler:    _NotificationService_SendEnterpriseRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

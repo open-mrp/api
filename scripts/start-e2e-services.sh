@@ -28,7 +28,6 @@ containers=(
 	openmrp-core-service-e2e
 	openmrp-notification-service-e2e
 	openmrp-auth-service-e2e
-	openmrp-billing-service-e2e
 	openmrp-agent-service-e2e
 	openmrp-api-gateway-e2e
 )

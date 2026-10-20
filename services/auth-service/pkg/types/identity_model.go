@@ -17,11 +17,10 @@ type IdentityActor struct {
 }
 
 type Identity struct {
-	Type               IdentityActorType
-	Target             *IdentityTarget
-	Actor              *IdentityActor
-	AccountMode        constants.AccountMode
-	SubscriptionStatus *string
+	Type        IdentityActorType
+	Target      *IdentityTarget
+	Actor       *IdentityActor
+	AccountMode constants.AccountMode
 	// IncludeReads marks the copy of a caller's identity that loads what an authorized request includes; set it only through ForIncludeReads.
 	IncludeReads bool `json:"IncludeReads,omitempty"`
 }
@@ -244,11 +243,10 @@ func (i *Identity) ToProto() *pb.Identity {
 	}
 
 	return &pb.Identity{
-		Type:               i.Type.toProto(),
-		Actor:              actor,
-		AccountMode:        convertAccountModeToProto(i.AccountMode),
-		SubscriptionStatus: i.SubscriptionStatus,
-		Target:             target,
+		Type:        i.Type.toProto(),
+		Actor:       actor,
+		AccountMode: convertAccountModeToProto(i.AccountMode),
+		Target:      target,
 	}
 }
 
@@ -326,11 +324,10 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 	}
 
 	return &Identity{
-		Type:               convertIdentityActorTypeFromProto(pbIdentity.Type),
-		Target:             target,
-		Actor:              actor,
-		AccountMode:        convertAccountModeFromProto(pbIdentity.AccountMode),
-		SubscriptionStatus: pbIdentity.SubscriptionStatus,
+		Type:        convertIdentityActorTypeFromProto(pbIdentity.Type),
+		Target:      target,
+		Actor:       actor,
+		AccountMode: convertAccountModeFromProto(pbIdentity.AccountMode),
 	}
 }
 

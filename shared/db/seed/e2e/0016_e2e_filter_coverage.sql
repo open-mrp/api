@@ -20,8 +20,8 @@
 -- (existing customers are all status=normal, rep=acus_s83fjhyfmqen, group=DME)
 -- ============================================================
 
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedcust3_acct000', 'Mountain West Traders', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedcust3_acct000', 'Mountain West Traders', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES
     ('gl_01seedcust3billto00', '700 Summit Blvd', 'Denver', 'CO', '80201', 'US', NOW(), NOW()),

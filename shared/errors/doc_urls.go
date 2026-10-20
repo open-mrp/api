@@ -9,8 +9,6 @@ const (
 	docURLRevokedAPIKey      = docsBaseURL + "/api/errors#api_key_revoked"
 	docURLInvalidCredentials = docsBaseURL + "/api/errors#invalid_credentials"
 	docURLInsufficientPerms  = docsBaseURL + "/api/errors#insufficient_permissions"
-	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment_required"
-	docURLAgentSpendingCap   = docsBaseURL + "/api/errors#agent_spending_cap_reached"
 
 	// Validation
 	docURLValidationFailed = docsBaseURL + "/api/errors#validation_failed"
@@ -28,7 +26,6 @@ const (
 	docURLIdempotencyInProgress = docsBaseURL + "/api/errors#idempotency_in_progress"
 
 	// Limits
-	docURLLimitExceeded      = docsBaseURL + "/api/errors#limit_exceeded"
 	docURLRegistrationClosed = docsBaseURL + "/api/errors#registration_closed"
 
 	// Rate limiting

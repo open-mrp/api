@@ -270,41 +270,6 @@ services:
     networks:
       - e2e
 
-  billing-service:
-    image: openmrp-e2e-billing-service
-    build:
-      context: .
-      dockerfile: infra/production/docker/Dockerfile
-      args:
-        SERVICE_NAME: billing-service
-    container_name: openmrp-billing-service-e2e
-    environment:
-      PLATFORM: test
-      PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
-      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
-      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
-      CORE_SERVICE_URL: core-service:9092
-      NOTIFICATION_SERVICE_URL: notification-service:9092
-      FRONTEND_URL: http://localhost:4200
-    depends_on:
-      mysql-e2e:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      core-service:
-        condition: service_healthy
-      notification-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 15
-      start_period: 10s
-    networks:
-      - e2e
-
   agent-service:
     image: openmrp-e2e-agent-service
     build:
@@ -351,7 +316,6 @@ services:
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       AUTH_SERVICE_URL: auth-service:9092
       CORE_SERVICE_URL: core-service:9092
-      BILLING_SERVICE_URL: billing-service:9092
       PLATFORM_SERVICE_URL: platform-service:9092
       AGENT_SERVICE_URL: agent-service:9092
       FRONTEND_URL: http://localhost:4200
@@ -366,8 +330,6 @@ services:
       auth-service:
         condition: service_healthy
       core-service:
-        condition: service_healthy
-      billing-service:
         condition: service_healthy
       platform-service:
         condition: service_healthy
@@ -399,6 +361,6 @@ networks:
   # as a side effect of port publishing, but none makes external integration
   # calls (the databases and object store are passive; the gateway only routes to internal
   # services). Do not
-  # attach billing/notification/agent/etc. here — they must stay fully isolated.
+  # attach notification/agent/etc. here — they must stay fully isolated.
   edge:
     driver: bridge

@@ -44,54 +44,14 @@ type TenancyCurrentAccount struct {
 	//
 	// The account is fully set up and usable once this is `active`.
 	OnboardingStatus constants.OnboardingStatus `json:"onboarding_status" validate:"required"`
-	// Code of the account's subscription plan.
-	//
-	// The same code appears as `account_plan.plan_type_code`, alongside the plan's resolved limits and features.
-	Plan constants.PlanCode `json:"plan" validate:"required"`
 	// The slug this account's customer portal is addressed by.
 	//
 	// Absent until the account enables its customer portal.
 	Slug *string `json:"slug"`
 	// The authenticated user's role in this account.
 	Role *Role `json:"role"`
-	// The Stripe customer that OpenMRP bills this account's own subscription and usage against.
-	//
-	// This is not the account's own Stripe customer for charging their customers.
-	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`
-	// Full plan details for this account, including limits and features.
-	AccountPlan *TenancyAccountPlan `json:"account_plan"`
 	// ID of the authenticated user's membership record within this account.
 	AccountUserID string `json:"account_user_id"`
-}
-
-// The resolved subscription plan for the current account, including its limits and features.
-type TenancyAccountPlan struct {
-	// Identifier of the plan definition the account is subscribed to.
-	TypeID string `json:"type_id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=account_plan"`
-	// Display name of the plan, as shown in billing.
-	Name string `json:"name" validate:"required"`
-	// Stable code for the plan tier.
-	PlanTypeCode constants.PlanCode `json:"plan_type_code" validate:"required"`
-	// Revision of the plan definition the account is on.
-	//
-	// Plans are versioned so existing subscribers keep the pricing, limits, and features they signed up under when a newer version of the same plan is published.
-	Version int32 `json:"version"`
-	// Price per seat per month in dollars.
-	PricePerSeat float64 `json:"price_per_seat"`
-	// Per-seat price override in dollars used in place of `price_per_seat` when set.
-	//
-	// The monthly bill multiplies this by the number of seats (at least `seat_minimum`). `null` or `0` falls back to `price_per_seat`.
-	PricePerMonth *float64 `json:"price_per_month"`
-	// Fewest seats the account is billed for, regardless of how many users it actually has.
-	SeatMinimum *int32 `json:"seat_minimum"`
-	// Ceilings this plan imposes, keyed by limit code (for example `seats_maximum`).
-	//
-	// A `null` value means that resource is unlimited on this plan.
-	Limits map[string]*int32 `json:"limits"`
-	// Which capabilities this plan unlocks, keyed by feature code (for example `customer_portal`).
-	Features map[string]bool `json:"features"`
 }
 
 // Sandbox account available to the user.
@@ -137,28 +97,8 @@ var SampleTenancy = &Tenancy{
 		Name:             SampleAccountName,
 		Type:             constants.AccountTypeCodeStandard,
 		OnboardingStatus: constants.OnboardingStatusActive,
-		Plan:             constants.PlanCodeStarter,
 		Role:             SampleRole,
 		AccountUserID:    SampleAccountUserID,
-		AccountPlan: &TenancyAccountPlan{
-			TypeID:        SamplePlanTypeIDStarter,
-			Object:        constants.ObjectTypeAccountPlan,
-			Name:          "Starter",
-			PlanTypeCode:  constants.PlanCodeStarter,
-			Version:       1,
-			PricePerSeat:  19,
-			PricePerMonth: new(19.0),
-			SeatMinimum:   new(int32(1)),
-			Limits: map[string]*int32{
-				"sandboxes_maximum": new(int32(3)),
-				"seats_maximum":     new(int32(5)),
-				"invoices_maximum":  nil,
-			},
-			Features: map[string]bool{
-				"customer_portal":      true,
-				"sales_rep_dashboards": false,
-			},
-		},
 	},
 	Sandboxes: NewList([]TenancySandboxAccount{}, PageInfo{}),
 	OwnerAccount: &TenancyOwnerAccount{

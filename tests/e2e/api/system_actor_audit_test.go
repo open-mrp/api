@@ -13,13 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Changes OpenMRP makes outside any request — here, linking a payment Stripe reported to the
+// Changes OpenMRP makes on its own behalf — here, linking a payment Stripe reported to the
 // order it paid — are audited with no public actor.
 
-// postCheckoutCompleted delivers a signed checkout.session.completed for orderID to the platform
-// Stripe webhook, as Stripe does when a portal customer pays an order.
+// postCheckoutCompleted delivers a checkout.session.completed for orderID to the seed account's Stripe webhook, as Stripe does when a portal customer pays an order.
 func postCheckoutCompleted(t *testing.T, orderID, paymentIntentID string) {
 	t.Helper()
+	connectSeedAccountStripe(t)
 	event := map[string]any{
 		"id":   "evt_e2e_" + paymentIntentID,
 		"type": "checkout.session.completed",
@@ -41,7 +41,7 @@ func postCheckoutCompleted(t *testing.T, orderID, paymentIntentID string) {
 	payload, err := json.Marshal(event)
 	require.NoError(t, err)
 
-	status, body, err := apiClient.PostSigned(stripeWebhookPath, StubStripeSignature, payload)
+	status, body, err := apiClient.PostSigned(stripeWebhookPath+"/accounts/"+SeedAccountID, StubStripeSignature, payload)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
@@ -90,8 +90,8 @@ func TestSystemActor_StripePaymentLinkIsAuditedWithNoActor(t *testing.T) {
 	actorValue, present := event["actor"]
 	assert.True(t, present, "actor is always present when included: %v", event)
 	assert.Nil(t, actorValue, "a background change has no public actor")
-	assert.Nil(t, event["source_ip"], "no request caused the change")
-	assert.Nil(t, event["idempotency_key"], "no request caused the change")
+	assert.NotEmpty(t, event["source_ip"], "the webhook delivery's IP is recorded")
+	assert.Nil(t, event["idempotency_key"], "Stripe sends no idempotency key")
 
 	change, _ := changeForField(jsonListData(event, "changes"), "payment_intent_ids")
 	assert.Contains(t, fmt.Sprint(change["new_value"]), paymentIntentID)

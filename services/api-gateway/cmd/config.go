@@ -16,7 +16,6 @@ var (
 	defaultInternalPort           = 8091
 	defaultAuthServiceURI         = fmt.Sprintf("auth-service:%d", contracts.GRPCPort)
 	defaultCoreServiceURI         = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
-	defaultBillingServiceURI      = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
 	defaultPlatformServiceURI     = fmt.Sprintf("platform-service:%d", contracts.GRPCPort)
 	defaultAgentServiceURI        = fmt.Sprintf("agent-service:%d", contracts.GRPCPort)
 	defaultNotificationServiceURI = fmt.Sprintf("notification-service:%d", contracts.GRPCPort)
@@ -32,7 +31,6 @@ const (
 	envInternalSvcToken       = "INTERNAL_SERVICE_TOKEN"
 	envAuthServiceURL         = "AUTH_SERVICE_URL"
 	envCoreServiceURL         = "CORE_SERVICE_URL"
-	envBillingServiceURL      = "BILLING_SERVICE_URL"
 	envPlatformServiceURL     = "PLATFORM_SERVICE_URL"
 	envAgentServiceURL        = "AGENT_SERVICE_URL"
 	envNotificationServiceURL = "NOTIFICATION_SERVICE_URL"
@@ -68,9 +66,6 @@ type config struct {
 
 	// CoreServiceURI (optional; default: "core-service:9092") is the core service address for gRPC.
 	CoreServiceURI string
-
-	// BillingServiceURI (optional; default: "billing-service:9092") is the billing service address for gRPC.
-	BillingServiceURI string
 
 	// PlatformServiceURI (optional; default: "platform-service:9092") is the platform service address for gRPC.
 	PlatformServiceURI string
@@ -144,7 +139,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		WSTicketSecret:         env.GetEnv(envWSTicketSecret, getenv),
 		AuthServiceURI:         cmp.Or(env.GetEnv(envAuthServiceURL, getenv), defaultAuthServiceURI),
 		CoreServiceURI:         cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURI),
-		BillingServiceURI:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURI),
 		PlatformServiceURI:     cmp.Or(env.GetEnv(envPlatformServiceURL, getenv), defaultPlatformServiceURI),
 		AgentServiceURI:        cmp.Or(env.GetEnv(envAgentServiceURL, getenv), defaultAgentServiceURI),
 		NotificationServiceURI: cmp.Or(env.GetEnv(envNotificationServiceURL, getenv), defaultNotificationServiceURI),

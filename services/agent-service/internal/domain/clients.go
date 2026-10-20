@@ -78,9 +78,8 @@ type UserAccess struct {
 	Permissions map[string]bool
 }
 
-// AccountContext holds billing-relevant metadata for an account.
+// AccountContext holds whether an account is a sandbox and, if so, the account that owns it.
 type AccountContext struct {
 	IsSandbox      bool
 	OwnerAccountID string
-	PlanCode       string
 }

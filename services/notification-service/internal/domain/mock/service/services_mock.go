@@ -1070,20 +1070,6 @@ func (mr *MockNotificationSvcMockRecorder) SendEmail(ctx, data any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEmail", reflect.TypeOf((*MockNotificationSvc)(nil).SendEmail), ctx, data)
 }
 
-// SendEnterpriseRequest mocks base method.
-func (m *MockNotificationSvc) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendEnterpriseRequest", ctx, req)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// SendEnterpriseRequest indicates an expected call of SendEnterpriseRequest.
-func (mr *MockNotificationSvcMockRecorder) SendEnterpriseRequest(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEnterpriseRequest", reflect.TypeOf((*MockNotificationSvc)(nil).SendEnterpriseRequest), ctx, req)
-}
-
 // MockMessagingSvc is a mock of MessagingSvc interface.
 type MockMessagingSvc struct {
 	ctrl     *gomock.Controller

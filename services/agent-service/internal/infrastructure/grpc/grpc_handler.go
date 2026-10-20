@@ -31,40 +31,21 @@ type agentHandler struct {
 	pb.UnimplementedAgentServiceServer
 	repos       domain.RepoFactory
 	agentDefSvc domain.AgentDefinitionSvc
-	planGate    *PlanGateAdapter
 }
 
-func NewAgentHandler(server *grpc.Server, repos domain.RepoFactory, agentDefSvc domain.AgentDefinitionSvc, planGate *PlanGateAdapter) *agentHandler {
+func NewAgentHandler(server *grpc.Server, repos domain.RepoFactory, agentDefSvc domain.AgentDefinitionSvc) *agentHandler {
 	handler := &agentHandler{
 		repos:       repos,
 		agentDefSvc: agentDefSvc,
-		planGate:    planGate,
 	}
 	pb.RegisterAgentServiceServer(server, handler)
 	return handler
 }
 
-// checkPlanAccess verifies that the requesting account is on a paid plan. Free plan accounts are blocked from all agent operations.
-func (h *agentHandler) checkPlanAccess(ctx context.Context) error {
-	accountID, err := getAccountIDFromContext(ctx)
-	if err != nil {
-		return err
-	}
-	if h.planGate == nil {
-		return nil
-	}
-	allowed, gateErr := h.planGate.CanUseAgents(ctx, accountID)
-	if gateErr != nil {
-		return contracts.ConvertAPIErrorToGRPC(
-			apierror.NewInternalError(gateErr, "Failed to check plan eligibility."),
-		)
-	}
-	if !allowed {
-		return contracts.ConvertAPIErrorToGRPC(
-			apierror.NewAuthorizationError("Agent features are not available on the free plan. Please upgrade to use agents."),
-		)
-	}
-	return nil
+// requireTargetAccount rejects a call whose identity names no target account.
+func requireTargetAccount(ctx context.Context) error {
+	_, err := getAccountIDFromContext(ctx)
+	return err
 }
 
 func getAccountIDFromContext(ctx context.Context) (string, error) {
@@ -79,7 +60,7 @@ func (h *agentHandler) TriggerRun(ctx context.Context, req *pb.TriggerRunRequest
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.trigger_run")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +91,7 @@ func (h *agentHandler) GetRunStatus(ctx context.Context, req *pb.GetRunStatusReq
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.get_run_status")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -159,7 +140,7 @@ func (h *agentHandler) CancelRun(ctx context.Context, req *pb.CancelRunRequest) 
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.cancel_run")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -187,7 +168,7 @@ func (h *agentHandler) ContinueRun(ctx context.Context, req *pb.ContinueRunReque
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.continue_run")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -225,7 +206,7 @@ func (h *agentHandler) RetryRun(ctx context.Context, req *pb.RetryRunRequest) (*
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.retry_run")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -255,7 +236,7 @@ func (h *agentHandler) CreateCustomAgent(ctx context.Context, req *pb.CreateCust
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.create_custom_agent")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -307,7 +288,7 @@ func (h *agentHandler) UpdateCustomAgent(ctx context.Context, req *pb.UpdateCust
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.update_custom_agent")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -357,7 +338,7 @@ func (h *agentHandler) DeleteCustomAgent(ctx context.Context, req *pb.DeleteCust
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.delete_custom_agent")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -379,7 +360,7 @@ func (h *agentHandler) GetAgentDefinition(ctx context.Context, req *pb.GetAgentD
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.get_agent_definition")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -399,7 +380,7 @@ func (h *agentHandler) ListAgentDefinitions(ctx context.Context, req *pb.ListAge
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_agent_definitions")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -438,7 +419,7 @@ func (h *agentHandler) ListAvailableTools(ctx context.Context, req *pb.ListAvail
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_available_tools")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -496,7 +477,7 @@ func (h *agentHandler) ListAvailableModels(ctx context.Context, _ *pb.ListAvaila
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_available_models")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -527,7 +508,7 @@ func (h *agentHandler) UpdateAgentAccountStatus(ctx context.Context, req *pb.Upd
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.update_agent_account_status")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -684,7 +665,7 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.get_run")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -766,7 +747,7 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_runs")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -896,7 +877,7 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_token_usage")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -1009,7 +990,7 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_agent_memories")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -1096,7 +1077,7 @@ func (h *agentHandler) GetAgentMemory(ctx context.Context, req *pb.GetAgentMemor
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.get_agent_memory")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -1140,7 +1121,7 @@ func (h *agentHandler) BatchGetAgentMemoriesByIDs(ctx context.Context, req *pb.B
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.batch_get_agent_memories_by_ids")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 	if req == nil {
@@ -1178,7 +1159,7 @@ func (h *agentHandler) CreateAgentMemory(ctx context.Context, req *pb.CreateAgen
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.create_agent_memory")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -1215,7 +1196,7 @@ func (h *agentHandler) UpdateAgentMemory(ctx context.Context, req *pb.UpdateAgen
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.update_agent_memory")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 
@@ -1252,7 +1233,7 @@ func (h *agentHandler) DeleteAgentMemory(ctx context.Context, req *pb.DeleteAgen
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.delete_agent_memory")
 	defer span.End()
 
-	if err := h.checkPlanAccess(ctx); err != nil {
+	if err := requireTargetAccount(ctx); err != nil {
 		return nil, err
 	}
 

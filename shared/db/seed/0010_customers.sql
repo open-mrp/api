@@ -2,8 +2,8 @@
 -- Seeds customer groups, customers (account relations), customer addresses, and customer users.
 
 -- Customer account (the customer is a separate account)
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01k09wm2fgevdsc344gpbcj30f', 'Global Manufacturing Solutions', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01k09wm2fgevdsc344gpbcj30f', 'Global Manufacturing Solutions', 'company', 'unclaimed', NOW(), NOW());
 
 -- Customer geolocations
 INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES

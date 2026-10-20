@@ -197,38 +197,6 @@ k8s_resource(
 )
 ### End of Logging Service ###
 
-### Billing Service ###
-
-billing_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/billing-service ./services/billing-service/cmd'
-
-local_resource(
-  'billing-service-compile',
-  billing_service_compile_cmd,
-  deps=['./services/billing-service', './shared'], labels="compiles")
-
-docker_build_with_restart(
-  'openmrp-api/billing-service',
-  '.',
-  entrypoint=['/app/build/billing-service'],
-  dockerfile='./infra/development/docker/billing-service.Dockerfile',
-  only=[
-    './build/billing-service',
-  ],
-  ignore=EDITOR_TEMP_IGNORE,
-  live_update=[
-    sync('./build/billing-service', '/app/build/billing-service'),
-  ],
-)
-
-k8s_yaml('./infra/development/kubernetes/apps/billing-service.yaml')
-k8s_resource(
-  'billing-service',
-  port_forwards='9095:9092',
-  resource_deps=['billing-service-compile', 'rabbitmq', 'local-databases'],
-  labels='services',
-)
-### End of Billing Service ###
-
 ### Agent Service ###
 
 agent_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/agent-service ./services/agent-service/cmd'

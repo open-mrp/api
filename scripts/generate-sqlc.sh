@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_SERVICES=("core-service" "auth-service" "notification-service" "platform-service" "billing-service" "agent-service" "api-gateway")
+DEFAULT_SERVICES=("core-service" "auth-service" "notification-service" "platform-service" "agent-service" "api-gateway")
 TMP_DIR=""
 
 usage() {
@@ -50,7 +50,6 @@ main() {
         auth) targets+=("auth-service") ;;
         notification) targets+=("notification-service") ;;
         logging) targets+=("platform-service") ;;
-        payment) targets+=("billing-service") ;;
         agent) targets+=("agent-service") ;;
         api) targets+=("api-gateway") ;;
         *)

@@ -37,10 +37,10 @@ func NewEditAccessMed(config *EditAccessMedConfig) domain.EditAccessMed {
 	}
 }
 
-// CheckEditAccess verifies that the actor account has edit access to the target account. Same-account access is always allowed. Cross-account access requires: the target has no active billing plan, a relation exists between the accounts, and the target has no other owner relations.
+// CheckEditAccess verifies that the actor account has edit access to the target account. Same-account access is always allowed. Cross-account access requires: the target is not self-managed, a relation exists between the accounts, and the target has no other owner relations.
 //
 //  1. Allow access when the actor and target accounts are the same.
-//  2. Reject when the target has an active billing plan.
+//  2. Reject when the target signed up to OpenMRP on its own.
 //  3. Require a relation between the actor and target accounts.
 //  4. Reject when the target has owner relations with other accounts.
 func (m *editAccessMedImpl) CheckEditAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError {
@@ -52,12 +52,12 @@ func (m *editAccessMedImpl) CheckEditAccess(ctx context.Context, actorAccountID,
 		return nil
 	}
 
-	// Target must not have an active billing plan.
-	hasPlan, apiErr := m.repos.NewAccountRepo().HasActiveBillingPlan(ctx, targetAccountID)
+	// A self-managed account is altered only by its own users.
+	selfManaged, apiErr := m.repos.NewAccountRepo().IsSelfManaged(ctx, targetAccountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if hasPlan {
+	if selfManaged {
 		return tracing.Trace(span, apierror.NewAuthorizationError("You cannot alter this account directly."))
 	}
 

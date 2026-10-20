@@ -20,7 +20,6 @@ const (
 	VocAllocation   = "al"
 	VocAssignment   = "as"
 	VocBatch        = "bt"
-	VocBilling      = "bl"
 	VocBranding     = "br"
 	VocCache        = "ca"
 	VocChange       = "ch"
@@ -46,7 +45,6 @@ const (
 	VocDraft        = "dr"
 	VocEDI          = "ed"
 	VocEmail        = "em"
-	VocEnterprise   = "en"
 	VocError        = "er"
 	VocEstimate     = "es"
 	VocEvent        = "ev"
@@ -60,7 +58,6 @@ const (
 	VocIntegration  = "ig"
 	VocImage        = "im"
 	VocInventory    = "in"
-	VocInquiry      = "ir"
 	VocIssue        = "rs" // "rs" derives from "receipt/shipment" — inventory issues are the counterpart to inventory receipts
 	VocIntent       = "ie"
 	VocItem         = "it"
@@ -92,7 +89,6 @@ const (
 	VocPriority     = "pi"
 	VocPick         = "pk"
 	VocPortal       = "po"
-	VocPlan         = "pl"
 	VocPermission   = "pm"
 	VocProduction   = "pn"
 	VocProperty     = "pp"
@@ -171,7 +167,6 @@ var (
 	// Account-related prefix values
 	AccountIDPrefix                               = composePrefix(VocAccount)
 	AccountAddressIDPrefix                        = composePrefix(VocAccount, VocAddress)
-	AccountBillingIDPrefix                        = composePrefix(VocAccount, VocBilling)
 	AccountBrandingIDPrefix                       = composePrefix(VocAccount, VocBranding)
 	AccountPortalIDPrefix                         = composePrefix(VocAccount, VocPortal)
 	AccountIntegrationIDPrefix                    = composePrefix(VocAccount, VocIntegration)
@@ -500,13 +495,6 @@ var (
 
 	// Audit-related prefix values
 	AuditEventIDPrefix = composePrefix(VocAudit, VocEvent)
-
-	// Plan-related prefix values
-	PricingPlanIDPrefix = composePrefix(VocPlan)
-	PlanChangeIDPrefix  = composePrefix(VocPlan, VocChange)
-
-	// Enterprise Inquiry-related prefix values
-	EnterpriseInquiryIDPrefix = composePrefix(VocEnterprise, VocInquiry)
 
 	// Idempotency-related prefix values
 	IdempotencyKeyIDPrefix        = composePrefix(VocIdempotency, VocKey)

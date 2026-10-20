@@ -2302,7 +2302,7 @@ type MessageInfo struct {
 	SenderDisplayName *string `protobuf:"bytes,34,opt,name=sender_display_name,json=senderDisplayName,proto3,oneof" json:"sender_display_name,omitempty"`
 	// True when this message is an agent reply that resolved a failed run (from message metadata). Lets the client flag the message as a failure.
 	AgentRunFailed bool `protobuf:"varint,35,opt,name=agent_run_failed,json=agentRunFailed,proto3" json:"agent_run_failed,omitempty"`
-	// Machine-readable api-error code for a failed agent reply (e.g. "agent_spending_cap_reached"), from message metadata. Empty when there is no specific code. Lets the client react (e.g. prompt to raise the spending limit).
+	// Machine-readable api-error code for a failed agent reply (e.g. "insufficient_permissions"), from message metadata. Empty when there is no specific code. Lets the client react to the code.
 	AgentErrorCode *string `protobuf:"bytes,36,opt,name=agent_error_code,json=agentErrorCode,proto3,oneof" json:"agent_error_code,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

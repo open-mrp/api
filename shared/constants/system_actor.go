@@ -6,7 +6,7 @@ import "strings"
 type SystemActor string
 
 const (
-	// SystemActorStripe is a Stripe webhook: a payment, payout or subscription change Stripe reported.
+	// SystemActorStripe is a Stripe webhook: a payment or payout Stripe reported.
 	SystemActorStripe SystemActor = "stripe"
 	// SystemActorScheduler is a scheduled job, such as the production schedule generation cadence.
 	SystemActorScheduler SystemActor = "scheduler"

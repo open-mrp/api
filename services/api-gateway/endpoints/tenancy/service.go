@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"maps"
-
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
@@ -168,41 +166,6 @@ func (m *tenancySvcImpl) ListCustomerAccounts(ctx context.Context, req *ListCust
 	return customerAccountListFromProto(resp), nil
 }
 
-func tenancyAccountPlanFromProto(p *pb.TenancyAccountPlanProto) *apiresource.TenancyAccountPlan {
-	if p == nil {
-		return nil
-	}
-
-	limits := make(map[string]*int32, len(p.Limits))
-	for _, entry := range p.Limits {
-		if entry == nil {
-			continue
-		}
-		if entry.Value != nil {
-			v := *entry.Value
-			limits[entry.Key] = &v
-		} else {
-			limits[entry.Key] = nil
-		}
-	}
-
-	features := make(map[string]bool, len(p.Features))
-	maps.Copy(features, p.Features)
-
-	return &apiresource.TenancyAccountPlan{
-		TypeID:        p.TypeId,
-		Object:        constants.ObjectTypeAccountPlan,
-		Name:          p.Name,
-		PlanTypeCode:  constants.PlanCode(p.PlanTypeCode),
-		Version:       p.Version,
-		PricePerSeat:  p.PricePerSeat,
-		PricePerMonth: p.PricePerMonth,
-		SeatMinimum:   p.SeatMinimum,
-		Limits:        limits,
-		Features:      features,
-	}
-}
-
 func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	if resp == nil {
 		return &apiresource.Tenancy{
@@ -218,16 +181,13 @@ func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 
 	if resp.CurrentAccount != nil {
 		ca := &apiresource.TenancyCurrentAccount{
-			ID:                       resp.CurrentAccount.Id,
-			Object:                   constants.ObjectTypeAccount,
-			Name:                     resp.CurrentAccount.Name,
-			Type:                     constants.AccountTypeCode(resp.CurrentAccount.Type),
-			OnboardingStatus:         constants.OnboardingStatus(resp.CurrentAccount.OnboardingStatus),
-			Plan:                     constants.PlanCode(resp.CurrentAccount.PlanCode),
-			Slug:                     resp.CurrentAccount.Slug,
-			InternalStripeCustomerID: resp.CurrentAccount.InternalStripeCustomerId,
-			AccountPlan:              tenancyAccountPlanFromProto(resp.CurrentAccount.AccountPlan),
-			AccountUserID:            resp.CurrentAccount.AccountUserId,
+			ID:               resp.CurrentAccount.Id,
+			Object:           constants.ObjectTypeAccount,
+			Name:             resp.CurrentAccount.Name,
+			Type:             constants.AccountTypeCode(resp.CurrentAccount.Type),
+			OnboardingStatus: constants.OnboardingStatus(resp.CurrentAccount.OnboardingStatus),
+			Slug:             resp.CurrentAccount.Slug,
+			AccountUserID:    resp.CurrentAccount.AccountUserId,
 		}
 
 		if resp.CurrentAccount.Role != nil {

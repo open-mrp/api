@@ -111,7 +111,6 @@ func TestUpdateAccountUserPassword_TargetEligibility(t *testing.T) {
 				MediatorFactory:       mediatorFactory,
 				TxManager:             &stubTxManager{factory: repoFactory},
 				NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
-				BillingPublisher:      publishermock.NewMockBillingPublisher(ctrl),
 				S3Client:              &capturingObjectStore{},
 				PlatformMode:          constants.PlatformModeTest,
 			})

@@ -2,15 +2,9 @@ package service
 
 import (
 	"bytes"
-	"cmp"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"maps"
-	"math"
-	"reflect"
-	"slices"
 	"strings"
 	"time"
 
@@ -20,11 +14,9 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/imageupload"
-	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -42,11 +34,9 @@ type accountSvcImpl struct {
 	repos               domain.RepoFactory
 	mediatorFactory     domain.MediatorFactory
 	txManager           TransactionManager
-	outboxRepo          messaging.OutboxRepo
 	s3Client            s3client.ObjectStore
 	accountPhotosBucket string
 	assetCDNBaseURL     string
-	operatorEmail       string
 }
 
 type AccountSvcConfig struct {
@@ -67,9 +57,6 @@ type AccountSvcConfig struct {
 
 	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
 	AssetCDNBaseURL string
-
-	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives plan-change alerts.
-	OperatorEmail string
 }
 
 func (c *AccountSvcConfig) validate() error {
@@ -102,11 +89,9 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 		repos:               config.RepoFactory,
 		mediatorFactory:     config.MediatorFactory,
 		txManager:           config.TxManager,
-		outboxRepo:          config.RepoFactory.NewOutboxRepo(),
 		s3Client:            config.S3Client,
 		accountPhotosBucket: config.AccountPhotosBucket,
 		assetCDNBaseURL:     config.AssetCDNBaseURL,
-		operatorEmail:       cmp.Or(config.OperatorEmail, messaging.DefaultOperatorEmail),
 	}
 }
 
@@ -312,264 +297,6 @@ func (s *accountSvcImpl) GetAdminRole(ctx context.Context) (string, *apierror.AP
 	return s.accountUserRepo.GetAdminRoleID(ctx)
 }
 
-// UpdateAccountSubscription persists subscription changes for an account and reconciles seats.
-//
-// 1. Fetch the account's current plan code to detect plan changes.
-// 2. Resolve the plan type ID from the new plan code.
-// 3. Update the account's subscription record (status, plan, Stripe IDs, period end).
-// 4. If the plan changed, publish an admin notification email via the outbox.
-// 5. Adjust active users to match the new plan's seat limit (deactivate or reactivate).
-//
-// Side effects:
-//   - Sends a plan-change alert email to admins on plan transitions.
-//   - Deactivates or reactivates account users based on the new seat limit.
-func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError {
-	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account_subscription")
-	defer span.End()
-
-	var oldPlanCode constants.PlanCode
-	var planTypeID *string
-
-	if planCode != "" {
-		oldPlanCode, _ = s.accountRepo.GetPlanCode(ctx, accountID)
-
-		resolved, apiErr := s.accountRepo.GetPlanTypeIDByCode(ctx, planCode)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-		planTypeID = &resolved
-	}
-
-	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.accountRepo.UpdateSubscription(txCtx, accountID, status, planCode, planTypeID, stripeSubID, periodEnd, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus); apiErr != nil {
-			return apiErr
-		}
-
-		// When downgrading to Free, clear subscription fields that COALESCE won't null out.
-		if planCode == string(constants.PlanCodeFree) {
-			if apiErr := txSvc.accountRepo.ClearPricingPlanSubscription(txCtx, accountID); apiErr != nil {
-				return apiErr
-			}
-		}
-
-		if planCode != "" && oldPlanCode != "" && string(oldPlanCode) != planCode {
-			txSvc.publishPlanChangeAlert(txCtx, accountID, string(oldPlanCode), planCode)
-		}
-
-		var changes []audit.FieldChange
-		if planCode != "" && string(oldPlanCode) != planCode {
-			changes = append(changes, audit.NewFieldChange("plan_code", string(oldPlanCode), planCode))
-		}
-		if status != nil {
-			changes = append(changes, audit.NewFieldChange("subscription_status", nil, *status))
-		}
-		if servicingStatus != nil {
-			changes = append(changes, audit.NewFieldChange("servicing_status", nil, *servicingStatus))
-		}
-		if collectionStatus != nil {
-			changes = append(changes, audit.NewFieldChange("collection_status", nil, *collectionStatus))
-		}
-
-		// A Stripe webhook arrives under a system identity, so its changes are attributed to Stripe like a caller's are to the caller.
-		if len(changes) > 0 {
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeAccount,
-				ResourceID:   accountID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-		}
-
-		return nil
-	})
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	if planCode != "" {
-		s.adjustAccountSeats(ctx, accountID, planCode)
-	}
-
-	return nil
-}
-
-// publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.
-func (s *accountSvcImpl) publishPlanChangeAlert(ctx context.Context, accountID, oldPlan, newPlan string) {
-	emailData := messaging.EmailSendData{
-		To:         []string{s.operatorEmail},
-		Subject:    fmt.Sprintf("[Plan Change] %s → %s", oldPlan, newPlan),
-		TemplateID: constants.EmailTemplatePlanChangeAlert,
-		Params: map[string]any{
-			"AccountID":    accountID,
-			"PreviousPlan": oldPlan,
-			"NewPlan":      newPlan,
-		},
-	}
-
-	emailJSON, err := json.Marshal(emailData)
-	if err != nil {
-		slog.WarnContext(ctx, "Failed to marshal plan change alert email data", "error", err, "account_id", accountID)
-		return
-	}
-
-	emailMsg := contracts.AmqpMessage{Data: emailJSON}
-	if _, err := s.outboxRepo.Create(ctx, messaging.OutboxMessageInput{
-		ServiceName: domain.ServiceName,
-		MessageType: string(contracts.NotificationCmdSendEmail),
-		Destination: messaging.ApplicationExchange,
-		RoutingKey:  string(contracts.NotificationCmdSendEmail),
-		Payload:     emailMsg,
-	}); err != nil {
-		slog.WarnContext(ctx, "Failed to create plan change alert outbox message", "error", err, "account_id", accountID)
-	}
-}
-
-// adjustAccountSeats reconciles active users with the new plan's seat limit, auditing every account user whose status it changes.
-// On downgrade: deactivates excess users (keeps the requesting user).
-// On upgrade: reactivates disabled users up to the new seat limit.
-// It runs in its own transaction after the subscription update: a failure is logged but not propagated, since the subscription change already stands.
-func (s *accountSvcImpl) adjustAccountSeats(ctx context.Context, accountID, planCode string) {
-	slog.InfoContext(ctx, "[seat-adjust] starting",
-		"account_id", accountID, "plan_code", planCode)
-
-	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
-		before, apiErr := txSvc.accountUserRepo.LockSeatStatuses(txCtx, accountID)
-		if apiErr != nil {
-			return apiErr
-		}
-		if apiErr := txSvc.reconcileSeats(txCtx, accountID, planCode); apiErr != nil {
-			return apiErr
-		}
-		after, apiErr := txSvc.accountUserRepo.LockSeatStatuses(txCtx, accountID)
-		if apiErr != nil {
-			return apiErr
-		}
-		return txSvc.publishSeatChanges(txCtx, planCode, before, after)
-	})
-	if apiErr != nil {
-		slog.WarnContext(ctx, "[seat-adjust] failed",
-			"account_id", accountID, "plan_code", planCode, "error", apiErr.PublicMessage)
-	}
-}
-
-// reconcileSeats deactivates or reactivates the account's users to fit the plan's seat limit.
-func (s *accountSvcImpl) reconcileSeats(ctx context.Context, accountID, planCode string) *apierror.APIError {
-	seatLimit, apiErr := s.accountRepo.GetSeatLimitByPlanCode(ctx, planCode)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	// nil means unlimited seats — reactivate any previously disabled users
-	if seatLimit == nil {
-		reactivated, apiErr := s.accountUserRepo.ReactivateUsers(ctx, accountID, math.MaxInt32)
-		if apiErr != nil {
-			return apiErr
-		}
-		if reactivated > 0 {
-			slog.InfoContext(ctx, "Reactivated all disabled users on plan upgrade",
-				"account_id", accountID, "reactivated_count", reactivated)
-		}
-		return nil
-	}
-
-	activeCount, apiErr := s.accountUserRepo.CountActive(ctx, accountID)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	limit := int64(*seatLimit)
-
-	slog.InfoContext(ctx, "[seat-adjust] computed",
-		"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
-
-	if activeCount > limit {
-		// Downgrade: we must know which user to protect. A Stripe webhook acts for nobody, so it cannot safely choose and skips deactivation. The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries the user and handles deactivation.
-		identity, ok := appctx.GetIdentityFromContext(ctx)
-		if !ok || identity == nil || identity.Actor == nil || identity.IsSystem() {
-			slog.WarnContext(ctx, "[seat-adjust] skipping deactivation — no user to keep active (webhook path)",
-				"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
-			return nil
-		}
-
-		excess := int32(min(activeCount-limit, math.MaxInt32)) // #nosec G115 -- capped at MaxInt32
-		return s.deactivateExcessUsers(ctx, accountID, identity.Actor.ID, excess)
-	}
-	if activeCount < limit {
-		slotsAvailable := int32(min(limit-activeCount, math.MaxInt32)) // #nosec G115 -- capped at MaxInt32
-		reactivated, apiErr := s.accountUserRepo.ReactivateUsers(ctx, accountID, slotsAvailable)
-		if apiErr != nil {
-			return apiErr
-		}
-		if reactivated > 0 {
-			slog.InfoContext(ctx, "[seat-adjust] reactivated users on upgrade",
-				"account_id", accountID, "reactivated_count", reactivated, "seat_limit", limit)
-		}
-	}
-	return nil
-}
-
-// deactivateExcessUsers disables `excess` account users, protecting the requesting user from deactivation. Least-recently-used users are removed first. As a safety net, the keep user is explicitly re-activated after deactivation in case the SQL exclusion didn't match (e.g. identity propagation edge cases).
-func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, keepUserID string, excess int32) *apierror.APIError {
-	slog.InfoContext(ctx, "[seat-adjust] deactivating excess users",
-		"account_id", accountID, "keep_user_id", keepUserID, "excess", excess)
-
-	deactivated, apiErr := s.accountUserRepo.DeactivateExcept(ctx, accountID, keepUserID, excess)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	slog.InfoContext(ctx, "[seat-adjust] DeactivateExcept result",
-		"account_id", accountID, "keep_user_id", keepUserID, "rows_affected", deactivated)
-
-	return s.accountUserRepo.EnsureActive(ctx, accountID, keepUserID)
-}
-
-// publishSeatChanges audits each account user whose status the seat reconciliation changed. The metadata names the plan, since the user's own record carries no trace of why it changed.
-func (s *accountSvcImpl) publishSeatChanges(ctx context.Context, planCode string, before, after map[string]constants.AccountUserStatus) *apierror.APIError {
-	for _, accountUserID := range slices.Sorted(maps.Keys(after)) {
-		old, ok := before[accountUserID]
-		if !ok || old == after[accountUserID] {
-			continue
-		}
-		if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   accountUserID,
-			Changes:      []audit.FieldChange{audit.NewFieldChange("status_code", old, after[accountUserID])},
-			Metadata:     map[string]any{"reason": "plan_seat_limit", "plan_code": planCode},
-		}); apiErr != nil {
-			return apiErr
-		}
-	}
-	return nil
-}
-
-// ClearAccountStripeCustomer removes the Stripe customer ID from an account record.
-//
-// 1. Clear the Stripe customer reference in the account repository.
-//
-// Not audited: the Stripe customer reference is billing bookkeeping that no API resource exposes.
-func (s *accountSvcImpl) ClearAccountStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
-	ctx, span := accountSvcTracer.Start(ctx, "service.account.clear_account_stripe_customer")
-	defer span.End()
-
-	return s.accountRepo.ClearStripeCustomer(ctx, accountID)
-}
-
-// GetAccountByStripeCustomerID looks up an account by its associated Stripe customer ID.
-//
-// 1. Query the account repository by Stripe customer ID and return the account ID and plan code.
-func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
-	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_by_stripe_customer_id")
-	defer span.End()
-
-	return s.accountRepo.GetByStripeCustomerID(ctx, stripeCustomerID)
-}
-
 func (s *accountSvcImpl) mediators() domain.Mediators {
 	return s.mediatorFactory.Build(s.repos)
 }
@@ -589,97 +316,12 @@ func (s *accountSvcImpl) withTx(ctx context.Context, fn func(context.Context, *a
 			repos:               f,
 			mediatorFactory:     s.mediatorFactory,
 			txManager:           s.txManager,
-			outboxRepo:          f.NewOutboxRepo(),
 			s3Client:            s.s3Client,
 			accountPhotosBucket: s.accountPhotosBucket,
 			assetCDNBaseURL:     s.assetCDNBaseURL,
-			operatorEmail:       s.operatorEmail,
 		}
 		return fn(txCtx, txSvc)
 	})
-}
-
-// agentCapUpdate is used as the idempotency cache payload for UpdateAgentSpendingCap. A wrapper struct is required so that a nil cap is round-tripped correctly through JSON.
-type agentCapUpdate struct {
-	CapCents *int64 `json:"cap_cents"`
-}
-
-func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *int64) (*int64, *apierror.APIError) {
-	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_agent_spending_cap")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainBilling, types.ActionUpdate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	accountID := identity.Target.AccountID
-
-	meds := s.mediators()
-
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
-	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[agentCapUpdate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
-		}
-		if cached.Data != nil {
-			return cached.Data.CapCents, cached.Error
-		}
-		return nil, cached.Error
-
-	case domain.RecoveryPointStarted:
-		var result *int64
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
-			oldCap, apiErr := txSvc.accountRepo.GetAgentSpendingCap(txCtx, accountID)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := txSvc.accountRepo.UpdateAgentSpendingCap(txCtx, accountID, capCents); apiErr != nil {
-				return apiErr
-			}
-
-			var changes []audit.FieldChange
-			if !reflect.DeepEqual(oldCap, capCents) {
-				changes = append(changes, audit.NewFieldChange("agent_monthly_spending_cap_cents", oldCap, capCents))
-			}
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeAccount,
-				ResourceID:   accountID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			result = capCents
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, agentCapUpdate{CapCents: capCents})
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	default:
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
-	}
 }
 
 // GetAccount returns the full account with branding and portal sub-resources.
@@ -1201,37 +843,4 @@ func (s *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, accountID str
 	}
 
 	return s.brandingAssetURL(ctx, faviconKey), nil
-}
-
-// Resolves one of the account plan's caps, returning nil when it should not be enforced — a sandbox,
-// an account on no plan, or a cap that is absent or unlimited. start is the window to count within.
-func resolveAccountPlanLimit(ctx context.Context, repos domain.RepoFactory, accountID string, key constants.AccountPlanLimitKey) (limit *int32, start time.Time, apiErr *apierror.APIError) {
-	accountRepo := repos.NewAccountRepo()
-
-	accountCtx, apiErr := accountRepo.GetAccountContext(ctx, accountID)
-	if apiErr != nil {
-		return nil, time.Time{}, apiErr
-	}
-	if accountCtx != nil && accountCtx.IsSandbox {
-		return nil, time.Time{}, nil
-	}
-
-	planID, periodEnd, apiErr := accountRepo.GetPlanIDAndPeriodEnd(ctx, accountID)
-	if apiErr != nil {
-		return nil, time.Time{}, apiErr
-	}
-	if planID == nil {
-		return nil, time.Time{}, nil
-	}
-
-	limits, apiErr := accountRepo.ListPlanLimits(ctx, *planID)
-	if apiErr != nil {
-		return nil, time.Time{}, apiErr
-	}
-	max, ok := limits[string(key)]
-	if !ok || max == nil {
-		return nil, time.Time{}, nil
-	}
-
-	return max, constants.BillingPeriodStart(periodEnd), nil
 }

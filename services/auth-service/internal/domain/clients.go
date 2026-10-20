@@ -9,10 +9,9 @@ import (
 
 // AccountContext represents the context of an account (sandbox status, mode, etc.)
 type AccountContext struct {
-	AccountID          string
-	OwnerAccountID     *string
-	AccountMode        constants.AccountMode
-	SubscriptionStatus *string
+	AccountID      string
+	OwnerAccountID *string
+	AccountMode    constants.AccountMode
 }
 
 // AccountUserAccess represents a user's access to an account

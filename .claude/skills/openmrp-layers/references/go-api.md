@@ -119,8 +119,8 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
 
 1. `router.InitEndpointGroups` (`internal/router/init_groups.go:12-76`)
    registers groups; middleware order (`:34-45`): Tracing → IPBlock →
-   Platform → Logging → CORS → RateLimit → **Auth** → Subscription →
-   SandboxBilling → Version → **Idempotency** → Recover.
+   Platform → Logging → CORS → RateLimit → **Auth** → Version →
+   **Idempotency** → Recover.
 2. Mux dispatch (`router.go:63-101`) → `APIEndpoint.Execute`
    (`api_endpoint.go:159`): bind → redact/log → decode → validate → call
    `ServiceHandler`.

@@ -16,11 +16,6 @@ service NotificationService {
   // that need immediate send confirmation (e.g. password reset emails that
   // are sent inline during the request).
   rpc SendEmail(EmailRequest) returns (EmailResponse);
-
-  // SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
-  // to the sales team. The notification-service fills in the email template
-  // using the provided account and requester details.
-  rpc SendEnterpriseRequest(EnterpriseRequestEmailRequest) returns (EmailResponse);
 }
 
 message EmailRequest {
@@ -40,12 +35,4 @@ message EmailResponse {
   // True when SES accepted the message. Does not guarantee delivery —
   // bounces and complaints arrive asynchronously via notify_email_status.
   bool success = 1;
-}
-
-message EnterpriseRequestEmailRequest {
-  string account_id = 1;
-  string account_name = 2;
-  string current_plan_name = 3;
-  string requester_name = 4;
-  string requester_email = 5;
 }

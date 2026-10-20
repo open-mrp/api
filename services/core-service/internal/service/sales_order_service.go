@@ -441,11 +441,6 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		}
 	}
 
-	// Enforce the account's invoice-count plan limit before creating the order (matches Dashboard's canCreateInvoice guard). Sandboxes are exempt.
-	if apiErr := s.checkInvoicePlanLimit(ctx, params.AccountID); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -1659,11 +1654,6 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	}
 
 	return updatedOrder, nil
-}
-
-// checkInvoicePlanLimit enforces the account's per-billing-period invoice plan limit before allowing a new sales order (which will typically generate an invoice). Sandbox accounts and accounts with no configured limit are exempt. Returns a validation error when the current count meets or exceeds the limit.
-func (s *salesOrderSvcImpl) checkInvoicePlanLimit(ctx context.Context, accountID string) *apierror.APIError {
-	return enforceInvoicesPerPeriodLimit(ctx, s.repos, accountID)
 }
 
 // synthesizeShippingLine inserts the order's shipping line using the account's "shipping" system product and a rate already estimated by the caller (see estimateOrderShippingRate), matching Dashboard behavior where every sales order carries a dedicated shipping line. The rate is computed before the transaction so the live Shippo call does not run inside it. No-ops cleanly if the account has no shipping system product configured.
@@ -3218,22 +3208,6 @@ func (s *salesOrderSvcImpl) resolveCustomerCheckoutOrder(ctx context.Context, ac
 	return order, amountCents, nil
 }
 
-// RecordOrderPayment links a Stripe payment intent to the sales order it paid, which is what makes the order read as paid. Only Stripe reports a payment, so the link is attributed to it whichever service relays it.
-func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError {
-	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.record_order_payment")
-	defer span.End()
-
-	accountID, apiErr := s.repos.NewOrderPaymentIntentRepo().GetOrderAccountID(ctx, salesOrderID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
-
-	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-		return txSvc.linkOrderPayment(txCtx, accountID, salesOrderID, paymentIntentID)
-	}))
-}
-
 // linkOrderPayment links the payment intent to the account's order and audits the order's new set of payment intents. Idempotent: a Stripe webhook can be retried, so an intent already linked to an order is left alone.
 func (s *salesOrderSvcImpl) linkOrderPayment(ctx context.Context, accountID, salesOrderID, paymentIntentID string) *apierror.APIError {
 	repo := s.repos.NewOrderPaymentIntentRepo()
@@ -3313,8 +3287,10 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 	// The event is verified as the account's own Stripe reporting it, so what it changes is attributed to Stripe.
 	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 
-	// Event coverage mirrors the retired legacy webhook: succeeded links the payment and records the receivables transaction, failed/canceled roll that back, and payout.paid stamps when funds actually land. Anything else is acknowledged without action.
+	// A paid order checkout links its payment to the order. The rest mirrors the retired legacy webhook: succeeded links the payment and records the receivables transaction, failed/canceled roll that back, and payout.paid stamps when funds actually land. Anything else is acknowledged without action.
 	switch event.Type {
+	case "checkout.session.completed":
+		return tracing.Trace(span, s.handleAccountCheckoutSessionCompleted(ctx, accountID, event.RawJSON))
 	case "payment_intent.succeeded":
 		if paymentIntent == nil || paymentIntent.ID == "" {
 			return nil
@@ -3392,6 +3368,85 @@ func (s *salesOrderSvcImpl) ReconcileAccountStripePayout(ctx context.Context, ac
 	}
 	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.checkoutClientFactory.Build(stripeCreds.PrivateKey), event))
+}
+
+// stripeCheckoutSession is the part of a Stripe checkout.session object a completed order checkout is checked against.
+type stripeCheckoutSession struct {
+	ID            string            `json:"id"`
+	PaymentIntent string            `json:"payment_intent"`
+	PaymentStatus string            `json:"payment_status"`
+	AmountTotal   int64             `json:"amount_total"`
+	Currency      string            `json:"currency"`
+	Customer      string            `json:"customer"`
+	Metadata      map[string]string `json:"metadata"`
+}
+
+// handleAccountCheckoutSessionCompleted links a paid order checkout's payment intent to the account's order. A session that is not an order checkout, is unpaid, or does not match the amount, currency and Stripe customer the checkout was created for is acknowledged without linking, so Stripe does not retry it.
+func (s *salesOrderSvcImpl) handleAccountCheckoutSessionCompleted(ctx context.Context, accountID string, rawObject []byte) *apierror.APIError {
+	if len(rawObject) == 0 {
+		return nil
+	}
+	var sess stripeCheckoutSession
+	if err := json.Unmarshal(rawObject, &sess); err != nil {
+		return apierror.NewValidationError("Failed to parse Stripe checkout session.")
+	}
+
+	orderID := sess.Metadata["orderID"]
+	if skip := checkoutSessionSkipReason(sess); skip != "" {
+		slog.InfoContext(ctx, "account stripe webhook checkout session not linked",
+			"account_id", accountID,
+			"checkout_session_id", sess.ID,
+			"order_id", orderID,
+			"reason", skip,
+		)
+		return nil
+	}
+
+	// The metadata comes from the vendor's own Stripe account, so the order is resolved within this account only.
+	if _, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, accountID, orderID); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			slog.WarnContext(ctx, "account stripe webhook checkout session references an unknown order for this account, skipping",
+				"account_id", accountID,
+				"checkout_session_id", sess.ID,
+				"order_id", orderID,
+			)
+			return nil
+		}
+		return apiErr
+	}
+
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		return txSvc.linkOrderPayment(txCtx, accountID, orderID, sess.PaymentIntent)
+	})
+}
+
+// checkoutSessionSkipReason names why a completed checkout session must not be linked to an order, or returns "" when it should be.
+func checkoutSessionSkipReason(sess stripeCheckoutSession) string {
+	if sess.Metadata["orderID"] == "" {
+		return "no_order_metadata"
+	}
+	if sess.PaymentStatus != "paid" {
+		return "not_paid"
+	}
+	if sess.PaymentIntent == "" {
+		return "no_payment_intent"
+	}
+	expectedAmount, err := strconv.ParseInt(sess.Metadata["expectedAmountCents"], 10, 64)
+	if err != nil || expectedAmount <= 0 {
+		return "invalid_expected_amount"
+	}
+	if sess.AmountTotal != expectedAmount {
+		return "amount_mismatch"
+	}
+	expectedCurrency := strings.ToLower(sess.Metadata["expectedCurrency"])
+	if expectedCurrency == "" || strings.ToLower(sess.Currency) != expectedCurrency {
+		return "currency_mismatch"
+	}
+	expectedStripeCustomerID := sess.Metadata["stripeCustomerID"]
+	if expectedStripeCustomerID == "" || sess.Customer != expectedStripeCustomerID {
+		return "customer_mismatch"
+	}
+	return ""
 }
 
 // handleAccountPaymentIntentSucceeded links the payment intent to its order and records the receivables payment transaction, mirroring the legacy webhook. Both steps are idempotent so Stripe retries and duplicate deliveries are safe.

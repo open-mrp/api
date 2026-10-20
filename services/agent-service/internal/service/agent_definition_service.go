@@ -51,15 +51,10 @@ func mergeIncludes(a, b []string) []string {
 	return out
 }
 
-type PlanGate interface {
-	CanUseAgents(ctx context.Context, accountID string) (bool, error)
-}
-
 type agentDefSvcImpl struct {
 	repos           domain.RepoFactory
 	txManager       TransactionManager
 	mediatorFactory domain.MediatorFactory
-	planGate        PlanGate
 	coreClient      domain.CoreClient
 }
 
@@ -75,9 +70,6 @@ type AgentDefinitionSvcConfig struct {
 
 	// CoreClient (required) resolves the roles attached to agents.
 	CoreClient domain.CoreClient
-
-	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
-	PlanGate PlanGate
 }
 
 func (c *AgentDefinitionSvcConfig) WithDefaults() *AgentDefinitionSvcConfig {
@@ -113,7 +105,6 @@ func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinit
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		planGate:        config.PlanGate,
 		coreClient:      config.CoreClient,
 	}
 }
@@ -128,7 +119,6 @@ func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
-			planGate:        s.planGate,
 			coreClient:      s.coreClient,
 		}
 		return fn(txCtx, txSvc)
@@ -1596,18 +1586,6 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 		return "", nil
 
 	case domain.RecoveryPointStarted:
-		if s.planGate != nil {
-			allowed, gateErr := s.planGate.CanUseAgents(ctx, accountID)
-			if gateErr != nil {
-				return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewInternalError(gateErr, "Failed to check plan eligibility."))
-			}
-			if !allowed {
-				return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewValidationError("Agent usage is not available on your current plan. Please upgrade to use agents."))
-			}
-		}
-
 		defRepo := s.repos.NewAgentDefinitionRepo()
 		configRepo := s.repos.NewAgentConfigRepo()
 

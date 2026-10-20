@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -26,7 +24,7 @@ func NewAccountRepo(queries *sqlc.Queries) domain.AccountRepo {
 	return &accountRepoImpl{queries: queries}
 }
 
-func (r *accountRepoImpl) Create(ctx context.Context, id, name string, accountTypeCode domain.AccountType, planCode constants.PlanCode) *apierror.APIError {
+func (r *accountRepoImpl) Create(ctx context.Context, id, name string, accountTypeCode domain.AccountType) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.create")
 	defer span.End()
 
@@ -41,23 +39,6 @@ func (r *accountRepoImpl) Create(ctx context.Context, id, name string, accountTy
 	}
 
 	return nil
-}
-
-func (r *accountRepoImpl) GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_plan_code")
-	defer span.End()
-
-	planCodeStr, err := r.queries.GetAccountPlanCode(ctx, id)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	planCode := constants.PlanCode(planCodeStr)
-	if !planCode.IsValid() {
-		return "", tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("Invalid plan code: %s", planCodeStr)))
-	}
-
-	return planCode, nil
 }
 
 func (r *accountRepoImpl) Delete(ctx context.Context, id string) *apierror.APIError {
@@ -95,26 +76,11 @@ func (r *accountRepoImpl) GetAccountContext(ctx context.Context, accountID strin
 		accountMode = constants.AccountModeSandbox
 	}
 
-	var subscriptionStatus *string
-	if s := db.StringFromInterface(row.SubscriptionStatus); s != "" {
-		subscriptionStatus = &s
-	}
-
-	planCode := db.StringFromInterface(row.PlanCode)
-
-	var spendingCap *int64
-	if v, ok := db.Int64FromInterface(row.AgentMonthlySpendingCapCents); ok {
-		spendingCap = &v
-	}
-
 	return &domain.AccountContext{
-		AccountID:                    row.ID,
-		IsSandbox:                    isSandbox,
-		OwnerAccountID:               db.StringFromNullString(row.OwnerAccountID),
-		AccountMode:                  accountMode,
-		SubscriptionStatus:           subscriptionStatus,
-		PlanCode:                     planCode,
-		AgentMonthlySpendingCapCents: spendingCap,
+		AccountID:      row.ID,
+		IsSandbox:      isSandbox,
+		OwnerAccountID: db.StringFromNullString(row.OwnerAccountID),
+		AccountMode:    accountMode,
 	}, nil
 }
 
@@ -138,141 +104,16 @@ func (r *accountRepoImpl) GetAccountNames(ctx context.Context, ids []string) (ma
 	return names, nil
 }
 
-func (r *accountRepoImpl) GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_plan_type_id_by_code")
+func (r *accountRepoImpl) IsSelfManaged(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.is_self_managed")
 	defer span.End()
 
-	typeID, err := r.queries.GetAccountPlanTypeIDByCode(ctx, planCode)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	return typeID, nil
-}
-
-func (r *accountRepoImpl) UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID *string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_subscription")
-	defer span.End()
-
-	err := r.queries.UpdateAccountSubscription(ctx, sqlc.UpdateAccountSubscriptionParams{
-		AccountID:                       accountID,
-		SubscriptionStatus:              db.NullStringPtr(status),
-		AccountPlanID:                   db.NullStringPtr(accountPlanID),
-		InternalStripeSubscriptionID:    db.NullStringPtr(stripeSubID),
-		SubscriptionCurrentPeriodEnd:    db.NullTimePtr(periodEnd),
-		InternalStripeCustomerID:        db.NullStringPtr(stripeCustomerID),
-		StripeBillingProfileID:          db.NullStringPtr(billingProfileID),
-		StripeBillingCadenceID:          db.NullStringPtr(billingCadenceID),
-		StripePricingPlanSubscriptionID: db.NullStringPtr(pricingPlanSubscriptionID),
-		ServicingStatus:                 db.NullStringPtr(servicingStatus),
-		CollectionStatus:                db.NullStringPtr(collectionStatus),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *accountRepoImpl) ClearStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.clear_stripe_customer")
-	defer span.End()
-
-	err := r.queries.ClearAccountStripeCustomer(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *accountRepoImpl) ClearPricingPlanSubscription(ctx context.Context, accountID string) *apierror.APIError {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.clear_pricing_plan_subscription")
-	defer span.End()
-
-	err := r.queries.ClearAccountPricingPlanSubscription(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *accountRepoImpl) GetSandboxLimit(ctx context.Context, accountID string) (*int32, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_sandbox_limit")
-	defer span.End()
-
-	result, err := r.queries.GetSandboxLimitByAccountID(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !result.Valid {
-		return nil, nil
-	}
-
-	val := result.Int32
-	return &val, nil
-}
-
-func (r *accountRepoImpl) GetSeatLimitByPlanCode(ctx context.Context, planCode string) (*int32, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_seat_limit_by_plan_code")
-	defer span.End()
-
-	result, err := r.queries.GetSeatLimitByPlanCode(ctx, planCode)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !result.Valid {
-		return nil, nil
-	}
-
-	val := result.Int32
-	return &val, nil
-}
-
-func (r *accountRepoImpl) UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_agent_spending_cap")
-	defer span.End()
-
-	err := r.queries.UpdateAgentSpendingCap(ctx, sqlc.UpdateAgentSpendingCapParams{
-		AgentMonthlySpendingCapCents: db.NullInt64Ptr(capCents),
-		AccountID:                    accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *accountRepoImpl) GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_agent_spending_cap")
-	defer span.End()
-
-	result, err := r.queries.GetAgentSpendingCap(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !result.Valid {
-		return nil, nil
-	}
-
-	return &result.Int64, nil
-}
-
-func (r *accountRepoImpl) HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.has_active_billing_plan")
-	defer span.End()
-
-	hasPlan, err := r.queries.HasActiveBillingPlan(ctx, accountID)
+	selfManaged, err := r.queries.IsAccountSelfManaged(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)
 	}
 
-	return hasPlan, nil
+	return selfManaged, nil
 }
 
 func (r *accountRepoImpl) GetName(ctx context.Context, accountID string) (string, *apierror.APIError) {
@@ -639,77 +480,4 @@ func (r *accountRepoImpl) GetBrandingFaviconKey(ctx context.Context, accountID s
 	}
 
 	return &result.String, nil
-}
-
-func (r *accountRepoImpl) GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_stripe_customer_id")
-	defer span.End()
-
-	row, err := r.queries.GetAccountByStripeCustomerID(ctx, sql.NullString{String: stripeCustomerID, Valid: true})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", "", tracing.Trace(span, apiErr)
-	}
-
-	return row.ID, row.PlanCode, nil
-}
-
-func (r *accountRepoImpl) GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (*string, *time.Time, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_plan_id_and_period_end")
-	defer span.End()
-
-	row, err := r.queries.GetAccountPlanIDAndPeriodEnd(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, nil, tracing.Trace(span, apiErr)
-	}
-
-	var planID *string
-	if row.AccountPlanID != "" {
-		v := row.AccountPlanID
-		planID = &v
-	}
-
-	var periodEnd *time.Time
-	if row.SubscriptionCurrentPeriodEnd.Valid {
-		t := row.SubscriptionCurrentPeriodEnd.Time
-		periodEnd = &t
-	}
-
-	return planID, periodEnd, nil
-}
-
-func (r *accountRepoImpl) ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.list_plan_limits")
-	defer span.End()
-
-	rows, err := r.queries.ListAccountPlanLimits(ctx, accountPlanID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	limits := make(map[string]*int32, len(rows))
-	for _, row := range rows {
-		if row.Value.Valid {
-			v := row.Value.Int32
-			limits[row.Key] = &v
-		} else {
-			limits[row.Key] = nil
-		}
-	}
-	return limits, nil
-}
-
-func (r *accountRepoImpl) ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.list_plan_features")
-	defer span.End()
-
-	rows, err := r.queries.ListAccountPlanFeatures(ctx, accountPlanID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	features := make(map[string]bool, len(rows))
-	for _, row := range rows {
-		features[row.Key] = row.Enabled
-	}
-	return features, nil
 }

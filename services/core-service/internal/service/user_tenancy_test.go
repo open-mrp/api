@@ -125,7 +125,7 @@ func TestUserSvc_UploadUserPhotoStoresOnlyImages(t *testing.T) {
 	userRepo := repositorymock.NewMockUserRepo(ctrl)
 	userRepo.EXPECT().FindByID(gomock.Any(), tenancyActorID).Return(&domain.UserRecord{ID: tenancyActorID}, nil).AnyTimes()
 	userRepo.EXPECT().UpdateImageURL(gomock.Any(), tenancyActorID, gomock.Any()).Return(nil)
-	outbox := &subscriptionOutboxRepo{}
+	outbox := &auditOutboxRepo{}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewUserRepo().Return(userRepo).AnyTimes()
 	repos.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()

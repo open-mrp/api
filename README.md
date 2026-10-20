@@ -73,7 +73,6 @@ flowchart LR
         CORE[core-service]
         AUTH[auth-service]
         NOTIF[notification-service]
-        BILL[billing-service]
         PLAT[platform-service]
         AGENT[agent-service]
     end
@@ -81,9 +80,9 @@ flowchart LR
     MQ{{"RabbitMQ<br/>outbox / inbox"}}
 
     DASH & PORTAL & SDK & MCP --> GW
-    GW --> CORE & AUTH & NOTIF & BILL & PLAT & AGENT
+    GW --> CORE & AUTH & NOTIF & PLAT & AGENT
     AGENT -- "agent tool calls" --> GW
-    CORE & AUTH & NOTIF & BILL & PLAT & AGENT <--> MQ
+    CORE & AUTH & NOTIF & PLAT & AGENT <--> MQ
 ```
 
 
@@ -98,7 +97,6 @@ Messages cross between services through the outbox and inbox tables, so a publis
 | `core-service`         | Items, production, inventory, orders    | MySQL      |
 | `auth-service`         | Identity, JWTs, API keys                | MySQL      |
 | `notification-service` | Email, messaging, notifications         | MySQL      |
-| `billing-service`      | Subscriptions, payments                 | MySQL      |
 | `platform-service`     | Audit events, request logs, idempotency | MySQL      |
 | `agent-service`        | Agent runs, tools, memories             | PostgreSQL |
 
@@ -218,7 +216,7 @@ make dev            # Spin up the environment with Tilt
 
 ### Common commands
 
-`make help` lists every target. `make sqlc` and `make mocks` take service arguments — either the full directory name (`core-service`) or its short alias (`core`, `auth`, `notification`, `logging` → platform-service, `payment` → billing-service, `agent`, `api`). With no argument they run against every service.
+`make help` lists every target. `make sqlc` and `make mocks` take service arguments — either the full directory name (`core-service`) or its short alias (`core`, `auth`, `notification`, `logging` → platform-service, `agent`, `api`). With no argument they run against every service.
 
 ```bash
 make sqlc [service]     # Generate database code from SQL queries
@@ -231,21 +229,18 @@ make lint               # gosec + staticcheck + tx audit + committed-binary chec
 make fmt                # Format Go sources
 ```
 
-**Local databases, seed data, and Stripe**
+**Local databases and seed data**
 
 `make local-db` spins up both databases in Docker containers, applies all migrations, and writes connection strings to `.env` automatically:
 
 - **MySQL 8** on port `3306` — core-service (`openmrp` database)
 - **PostgreSQL 16** on port `5432` — agent-service (`openmrp_agents` database)
 
-Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`, and — when `STRIPE_SECRET_KEY` is set — creates a matching Stripe test subscription for the seeded account. Without that variable the Stripe step is skipped with a warning; run `make seed-stripe` later to add it.
+Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`.
 
 ```bash
 # Re-seed core data (idempotent, safe to run multiple times)
 make seed-core
-
-# Seed with a specific plan (default: enterprise)
-make seed-core ARGS="--plan starter"
 
 # Seed the agent-service (PostgreSQL) database with e2e test data
 # Migrations for it already ran as part of `make local-db`
@@ -261,7 +256,7 @@ psql postgres://openmrp@localhost:5432/openmrp_agents
 # Tear down containers (data preserved)
 make local-db-down
 
-# Tear down containers, clean up Stripe test resources, and delete all data (volumes)
+# Tear down containers and delete all data (volumes)
 # Run `make local-db` after to get clean databases with fresh migrations and seed data
 make local-db-nuke
 ```

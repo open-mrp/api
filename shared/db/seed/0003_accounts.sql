@@ -1,10 +1,5 @@
 -- 0003_accounts.sql
--- Seeds main account, billing, branding, portal, addresses, and carriers.
--- Uses @plan_id variable (substituted by seed script).
-
--- Account billing record
-INSERT IGNORE INTO account_billing (id, account_plan_id, subscription_status, created_at, updated_at) VALUES
-    ('acbl_01seedacmebilling0000', @plan_id, 'active', NOW(), NOW());
+-- Seeds main account, branding, portal, addresses, and carriers.
 
 -- Geolocation for bill-to address
 INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, google_place_id, created_at, updated_at) VALUES
@@ -15,8 +10,8 @@ INSERT IGNORE INTO address (id, name, geolocation_id, created_at, updated_at) VA
     ('ad_01k0a5smf9enr81a4zvyht3zw0', 'Acme Inc.', 'gl_01seedacmegeo000000000', NOW(), NOW());
 
 -- Main account
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_billing_id, default_billing_address_id, default_shipping_address_id, created_at, updated_at) VALUES
-    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'Acme Inc.', 'company', 'active', 'acbl_01seedacmebilling0000', 'ad_01k0a5smf9enr81a4zvyht3zw0', 'ad_01k0a5smf9enr81a4zvyht3zw0', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, default_billing_address_id, default_shipping_address_id, created_at, updated_at) VALUES
+    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'Acme Inc.', 'company', 'active', 'ad_01k0a5smf9enr81a4zvyht3zw0', 'ad_01k0a5smf9enr81a4zvyht3zw0', NOW(), NOW());
 
 -- Link the default address to the account, as registration does; address reads are scoped through this junction.
 INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, updated_at) VALUES

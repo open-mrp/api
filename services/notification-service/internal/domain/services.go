@@ -215,9 +215,6 @@ type NotificationSvc interface {
 	// Behavior:
 	//   - If the email has already been logged for this message ID, the operation is a no-op.
 	LogFailedEmail(ctx context.Context, messageID string, data EmailSendData) *apierror.APIError
-
-	// SendEnterpriseRequest sends an enterprise upgrade request email to support.
-	SendEnterpriseRequest(ctx context.Context, req *EnterpriseRequestData) *apierror.APIError
 }
 
 // MessagingSvc owns the in-app notification (bell) feature. Read/mark operations are scoped to the calling actor (recipient = identity.Actor.ID). SendNotification enqueues a fan-out intent; FanOut is the consumer-side handler that materializes notification rows and emits the realtime push.
@@ -324,15 +321,6 @@ type EmailSendData struct {
 	PlainText bool     `json:"plain_text,omitempty"`
 	// InReplyToSESMessageID threads this email under one this service already sent, identified by the SES message ID that send returned.
 	InReplyToSESMessageID *string `json:"in_reply_to_ses_message_id,omitempty"`
-}
-
-// EnterpriseRequestData contains data for an enterprise upgrade request email
-type EnterpriseRequestData struct {
-	AccountID       string
-	AccountName     string
-	CurrentPlanName string
-	RequesterName   string
-	RequesterEmail  string
 }
 
 type EmailSender interface {

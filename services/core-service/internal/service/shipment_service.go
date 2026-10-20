@@ -65,7 +65,6 @@ type shipmentSvcImpl struct {
 	shippoFactory        domain.ShippoClientFactory
 	encryptionKey        []byte
 	notificationPub      domain.NotificationPublisher
-	billingPub           domain.BillingPublisher
 	s3Client             s3client.ObjectStore
 	shippingLabelsBucket string
 	portalURL            string
@@ -95,10 +94,6 @@ type ShipmentSvcConfig struct {
 	// NotificationPub (optional; default: nil) publishes notification messages to the outbox. It is not validated
 	// at construction.
 	NotificationPub domain.NotificationPublisher
-
-	// Meters the invoice a ship creates (optional; default: nil). Not validated; a nil publisher skips
-	// metering rather than failing the ship.
-	BillingPub domain.BillingPublisher
 
 	// Stores a shipped label and removes a voided one (optional; default: nil). Not validated; a nil client skips both.
 	S3Client s3client.ObjectStore
@@ -150,7 +145,6 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		shippoFactory:        config.ShippoFactory,
 		encryptionKey:        config.EncryptionKey,
 		notificationPub:      config.NotificationPub,
-		billingPub:           config.BillingPub,
 		s3Client:             config.S3Client,
 		shippingLabelsBucket: config.ShippingLabelsBucket,
 		portalURL:            config.PortalURL,
@@ -173,7 +167,6 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			shippoFactory:        s.shippoFactory,
 			encryptionKey:        s.encryptionKey,
 			notificationPub:      s.notificationPub,
-			billingPub:           s.billingPub,
 			s3Client:             s.s3Client,
 			shippingLabelsBucket: s.shippingLabelsBucket,
 			portalURL:            s.portalURL,
@@ -725,9 +718,6 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 		}
 		if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
 			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
-		}
-		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
 		}
 		if apiErr := checkInvoiceNumberFree(ctx, s.repos, shipment); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -1952,8 +1942,6 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 		return apiErr
 	}
 
-	s.meterInvoiceCreated(txCtx, shipment.AccountID, invoiceID)
-
 	// Link the shipment to its invoice so void (which finds it via shipment.invoice_id) can delete it.
 	if apiErr := s.repos.NewShipmentRepo().LinkInvoice(txCtx, shipment.AccountID, shipment.ID, invoiceID); apiErr != nil {
 		return apiErr
@@ -2006,20 +1994,6 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 	}
 
 	return nil
-}
-
-// Meters a created invoice for usage billing, best effort: metering must never fail a ship (legacy
-// swallows the reporting error). The command rides the outbox, so a rolled-back ship never meters.
-func (s *shipmentSvcImpl) meterInvoiceCreated(txCtx context.Context, accountID, invoiceID string) {
-	if s.billingPub == nil {
-		return
-	}
-	// The outbox publisher reads the RepoFactory from the context; inject the transaction's factory
-	// so the command commits with the invoice.
-	if apiErr := s.billingPub.PublishReportInvoiceCreated(event.WithRepos(txCtx, s.repos), accountID, invoiceID); apiErr != nil {
-		slog.WarnContext(txCtx, "invoice usage metering failed; shipping anyway",
-			"account_id", accountID, "invoice_id", invoiceID, "error", apiErr.Error())
-	}
 }
 
 // Renders the invoice PDF and base64-encodes it for email attachment, or returns nil on any failure

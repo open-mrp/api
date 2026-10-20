@@ -30,9 +30,7 @@ type e2eAccount struct {
 
 func (a e2eAccount) path() string { return accountsPath + "/" + a.id }
 
-// registerE2EAccount gives a test a company account of its own on the free plan, with a portal at a
-// slug made from its ID, empty branding, and a newly registered user as its admin. It is shut down
-// again at cleanup.
+// registerE2EAccount gives a test a company account of its own, with a portal at a slug made from its ID, empty branding, and a newly registered user as its admin. It is shut down again at cleanup.
 func registerE2EAccount(t *testing.T) e2eAccount {
 	t.Helper()
 
@@ -47,19 +45,14 @@ func registerE2EAccount(t *testing.T) e2eAccount {
 	token := accessTokenFromSetCookie(t, resp.Header)
 
 	accountID := mustGenID(t, id.AccountIDPrefix)
-	billingID := mustGenID(t, id.AccountBillingIDPrefix)
 	db := authDB(t)
 	for _, stmt := range []struct {
 		query string
 		args  []any
 	}{
-		{"INSERT INTO account_billing (id, account_plan_id, subscription_status, created_at, updated_at) " +
-			"SELECT ?, type_id, 'active', NOW(3), NOW(3) FROM account_plan WHERE plan_type_code = 'free' " +
-			"AND effective_at <= NOW(3) AND (expires_at IS NULL OR expires_at > NOW(3)) ORDER BY effective_at DESC, version DESC LIMIT 1",
-			[]any{billingID}},
-		{"INSERT INTO account (id, name, account_type_code, onboarding_status_code, account_billing_id, created_at, updated_at) " +
-			"VALUES (?, ?, 'company', 'active', ?, NOW(3), NOW(3))",
-			[]any{accountID, uniqueName("E2E Account"), billingID}},
+		{"INSERT INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) " +
+			"VALUES (?, ?, 'company', 'active', NOW(3), NOW(3))",
+			[]any{accountID, uniqueName("E2E Account")}},
 		{"INSERT INTO account_user (id, account_id, user_id, role_id, status_code, created_at, updated_at) " +
 			"SELECT ?, ?, ?, id, 'active', NOW(3), NOW(3) FROM role WHERE role_type_code = 'admin' AND account_id IS NULL LIMIT 1",
 			[]any{mustGenID(t, id.AccountUserIDPrefix), accountID, userID}},

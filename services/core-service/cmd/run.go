@@ -171,7 +171,6 @@ func Run(
 		S3Client:            s3Store,
 		AccountPhotosBucket: cfg.AccountPhotosBucket,
 		AssetCDNBaseURL:     cfg.AssetCDNBaseURL,
-		OperatorEmail:       cfg.OperatorEmail,
 	})
 	sandboxSvc := service.NewSandboxSvc(&service.SandboxSvcConfig{
 		Repos:           repoFactory,
@@ -247,13 +246,11 @@ func Run(
 	})
 
 	notificationPublisher := event.NewOutboxNotificationPublisher()
-	billingPublisher := event.NewOutboxBillingPublisher()
 	accountUserSvc := service.NewAccountUserSvc(&service.AccountUserSvcConfig{
 		Repos:                 repoFactory,
 		MediatorFactory:       mediatorFactory,
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
-		BillingPublisher:      billingPublisher,
 		S3Client:              s3Store,
 		UserPhotosBucket:      cfg.UserPhotosBucket,
 		Branding:              brandingAssets,
@@ -403,7 +400,6 @@ func Run(
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
-		BillingPub:      billingPublisher,
 	})
 
 	itemCategorySvc := service.NewItemCategorySvc(&service.ItemCategorySvcConfig{
@@ -741,7 +737,6 @@ func Run(
 		ShippoFactory:        shippoFactory,
 		EncryptionKey:        integrationEncryptionKey,
 		NotificationPub:      notificationPublisher,
-		BillingPub:           billingPublisher,
 		S3Client:             s3Store,
 		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
 		PortalURL:            cfg.PortalURL,

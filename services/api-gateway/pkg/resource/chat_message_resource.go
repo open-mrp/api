@@ -107,7 +107,7 @@ type Message struct {
 	AgentRunFailed bool `json:"agent_run_failed"`
 	// Machine-readable reason an agent reply failed.
 	//
-	// A client can react to the specific code rather than just showing the body — `agent_spending_cap_reached`, for example, is a cue to offer raising the agent spending limit.
+	// A client can react to the specific code rather than just showing the body — `insufficient_permissions`, for example, means the agent was not allowed to act.
 	AgentErrorCode *apierror.ErrorCode `json:"agent_error_code"`
 }
 

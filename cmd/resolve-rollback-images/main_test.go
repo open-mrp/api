@@ -69,13 +69,13 @@ func TestResolveImageTags_ReportsServiceWithNoImage(t *testing.T) {
 	lookup := fakeLookup(map[string][]string{"augno/core-service": {"v2.7.4"}})
 
 	_, unresolved, err := resolveImageTags(
-		context.Background(), "augno", []string{"core-service", "billing-service"}, candidates, lookup)
+		context.Background(), "augno", []string{"core-service", "agent-service"}, candidates, lookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !reflect.DeepEqual(unresolved, []string{"billing-service"}) {
-		t.Fatalf("unresolved mismatch: got %v want [billing-service]", unresolved)
+	if !reflect.DeepEqual(unresolved, []string{"agent-service"}) {
+		t.Fatalf("unresolved mismatch: got %v want [agent-service]", unresolved)
 	}
 }
 

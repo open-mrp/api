@@ -798,7 +798,6 @@ func TestShipShipment_DuplicateInvoiceNumberIsRefusedBeforeEnqueue(t *testing.T)
 	}, nil)
 	h.shipmentRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(h.shipment, nil)
 	h.expectAccountContext(false)
-	h.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), testLabelAccountID).Return(nil, nil, nil)
 	h.invoiceRepo.EXPECT().IsDuplicateNumber(gomock.Any(), testLabelAccountID, h.shipment.Number).Return(true, nil)
 
 	_, apiErr := svc.ShipShipment(shipmentShipCtx(testLabelAccountID), domain.ShipShipmentParams{ShipmentID: testLabelShipmentID})

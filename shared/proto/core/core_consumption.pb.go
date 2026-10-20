@@ -5501,186 +5501,22 @@ func (x *TenancyRoleProto) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type TenancyAccountPlanLimitProto struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Key   string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	// Absent means unlimited.
-	Value         *int32 `protobuf:"varint,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TenancyAccountPlanLimitProto) Reset() {
-	*x = TenancyAccountPlanLimitProto{}
-	mi := &file_core_core_consumption_proto_msgTypes[84]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TenancyAccountPlanLimitProto) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TenancyAccountPlanLimitProto) ProtoMessage() {}
-
-func (x *TenancyAccountPlanLimitProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[84]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TenancyAccountPlanLimitProto.ProtoReflect.Descriptor instead.
-func (*TenancyAccountPlanLimitProto) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{84}
-}
-
-func (x *TenancyAccountPlanLimitProto) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *TenancyAccountPlanLimitProto) GetValue() int32 {
-	if x != nil && x.Value != nil {
-		return *x.Value
-	}
-	return 0
-}
-
-type TenancyAccountPlanProto struct {
-	state         protoimpl.MessageState          `protogen:"open.v1"`
-	TypeId        string                          `protobuf:"bytes,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	Name          string                          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	PlanTypeCode  string                          `protobuf:"bytes,3,opt,name=plan_type_code,json=planTypeCode,proto3" json:"plan_type_code,omitempty"`
-	Version       int32                           `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
-	PricePerSeat  float64                         `protobuf:"fixed64,5,opt,name=price_per_seat,json=pricePerSeat,proto3" json:"price_per_seat,omitempty"`
-	PricePerMonth *float64                        `protobuf:"fixed64,6,opt,name=price_per_month,json=pricePerMonth,proto3,oneof" json:"price_per_month,omitempty"`
-	SeatMinimum   *int32                          `protobuf:"varint,7,opt,name=seat_minimum,json=seatMinimum,proto3,oneof" json:"seat_minimum,omitempty"`
-	Limits        []*TenancyAccountPlanLimitProto `protobuf:"bytes,8,rep,name=limits,proto3" json:"limits,omitempty"`
-	Features      map[string]bool                 `protobuf:"bytes,9,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TenancyAccountPlanProto) Reset() {
-	*x = TenancyAccountPlanProto{}
-	mi := &file_core_core_consumption_proto_msgTypes[85]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TenancyAccountPlanProto) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TenancyAccountPlanProto) ProtoMessage() {}
-
-func (x *TenancyAccountPlanProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[85]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TenancyAccountPlanProto.ProtoReflect.Descriptor instead.
-func (*TenancyAccountPlanProto) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{85}
-}
-
-func (x *TenancyAccountPlanProto) GetTypeId() string {
-	if x != nil {
-		return x.TypeId
-	}
-	return ""
-}
-
-func (x *TenancyAccountPlanProto) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *TenancyAccountPlanProto) GetPlanTypeCode() string {
-	if x != nil {
-		return x.PlanTypeCode
-	}
-	return ""
-}
-
-func (x *TenancyAccountPlanProto) GetVersion() int32 {
-	if x != nil {
-		return x.Version
-	}
-	return 0
-}
-
-func (x *TenancyAccountPlanProto) GetPricePerSeat() float64 {
-	if x != nil {
-		return x.PricePerSeat
-	}
-	return 0
-}
-
-func (x *TenancyAccountPlanProto) GetPricePerMonth() float64 {
-	if x != nil && x.PricePerMonth != nil {
-		return *x.PricePerMonth
-	}
-	return 0
-}
-
-func (x *TenancyAccountPlanProto) GetSeatMinimum() int32 {
-	if x != nil && x.SeatMinimum != nil {
-		return *x.SeatMinimum
-	}
-	return 0
-}
-
-func (x *TenancyAccountPlanProto) GetLimits() []*TenancyAccountPlanLimitProto {
-	if x != nil {
-		return x.Limits
-	}
-	return nil
-}
-
-func (x *TenancyAccountPlanProto) GetFeatures() map[string]bool {
-	if x != nil {
-		return x.Features
-	}
-	return nil
-}
-
 type TenancyCurrentAccountProto struct {
-	state                    protoimpl.MessageState   `protogen:"open.v1"`
-	Id                       string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Slug                     *string                  `protobuf:"bytes,2,opt,name=slug,proto3,oneof" json:"slug,omitempty"`
-	Name                     string                   `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Type                     string                   `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	OnboardingStatus         string                   `protobuf:"bytes,5,opt,name=onboarding_status,json=onboardingStatus,proto3" json:"onboarding_status,omitempty"`
-	PlanCode                 string                   `protobuf:"bytes,6,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
-	Role                     *TenancyRoleProto        `protobuf:"bytes,7,opt,name=role,proto3,oneof" json:"role,omitempty"`
-	InternalStripeCustomerId *string                  `protobuf:"bytes,8,opt,name=internal_stripe_customer_id,json=internalStripeCustomerId,proto3,oneof" json:"internal_stripe_customer_id,omitempty"`
-	AccountPlan              *TenancyAccountPlanProto `protobuf:"bytes,9,opt,name=account_plan,json=accountPlan,proto3,oneof" json:"account_plan,omitempty"`
-	AccountUserId            string                   `protobuf:"bytes,10,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Slug             *string                `protobuf:"bytes,2,opt,name=slug,proto3,oneof" json:"slug,omitempty"`
+	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Type             string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	OnboardingStatus string                 `protobuf:"bytes,5,opt,name=onboarding_status,json=onboardingStatus,proto3" json:"onboarding_status,omitempty"`
+	Role             *TenancyRoleProto      `protobuf:"bytes,7,opt,name=role,proto3,oneof" json:"role,omitempty"`
+	AccountUserId    string                 `protobuf:"bytes,10,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *TenancyCurrentAccountProto) Reset() {
 	*x = TenancyCurrentAccountProto{}
-	mi := &file_core_core_consumption_proto_msgTypes[86]
+	mi := &file_core_core_consumption_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5692,7 +5528,7 @@ func (x *TenancyCurrentAccountProto) String() string {
 func (*TenancyCurrentAccountProto) ProtoMessage() {}
 
 func (x *TenancyCurrentAccountProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[86]
+	mi := &file_core_core_consumption_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5705,7 +5541,7 @@ func (x *TenancyCurrentAccountProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TenancyCurrentAccountProto.ProtoReflect.Descriptor instead.
 func (*TenancyCurrentAccountProto) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{86}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *TenancyCurrentAccountProto) GetId() string {
@@ -5743,30 +5579,9 @@ func (x *TenancyCurrentAccountProto) GetOnboardingStatus() string {
 	return ""
 }
 
-func (x *TenancyCurrentAccountProto) GetPlanCode() string {
-	if x != nil {
-		return x.PlanCode
-	}
-	return ""
-}
-
 func (x *TenancyCurrentAccountProto) GetRole() *TenancyRoleProto {
 	if x != nil {
 		return x.Role
-	}
-	return nil
-}
-
-func (x *TenancyCurrentAccountProto) GetInternalStripeCustomerId() string {
-	if x != nil && x.InternalStripeCustomerId != nil {
-		return *x.InternalStripeCustomerId
-	}
-	return ""
-}
-
-func (x *TenancyCurrentAccountProto) GetAccountPlan() *TenancyAccountPlanProto {
-	if x != nil {
-		return x.AccountPlan
 	}
 	return nil
 }
@@ -5788,7 +5603,7 @@ type TenancyAccountSummaryProto struct {
 
 func (x *TenancyAccountSummaryProto) Reset() {
 	*x = TenancyAccountSummaryProto{}
-	mi := &file_core_core_consumption_proto_msgTypes[87]
+	mi := &file_core_core_consumption_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5800,7 +5615,7 @@ func (x *TenancyAccountSummaryProto) String() string {
 func (*TenancyAccountSummaryProto) ProtoMessage() {}
 
 func (x *TenancyAccountSummaryProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[87]
+	mi := &file_core_core_consumption_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5813,7 +5628,7 @@ func (x *TenancyAccountSummaryProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TenancyAccountSummaryProto.ProtoReflect.Descriptor instead.
 func (*TenancyAccountSummaryProto) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{87}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *TenancyAccountSummaryProto) GetId() string {
@@ -5841,7 +5656,7 @@ type TenancyOtherAccountProto struct {
 
 func (x *TenancyOtherAccountProto) Reset() {
 	*x = TenancyOtherAccountProto{}
-	mi := &file_core_core_consumption_proto_msgTypes[88]
+	mi := &file_core_core_consumption_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5853,7 +5668,7 @@ func (x *TenancyOtherAccountProto) String() string {
 func (*TenancyOtherAccountProto) ProtoMessage() {}
 
 func (x *TenancyOtherAccountProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[88]
+	mi := &file_core_core_consumption_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5866,7 +5681,7 @@ func (x *TenancyOtherAccountProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TenancyOtherAccountProto.ProtoReflect.Descriptor instead.
 func (*TenancyOtherAccountProto) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{88}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *TenancyOtherAccountProto) GetId() string {
@@ -5900,7 +5715,7 @@ type GetTenancyRequest struct {
 
 func (x *GetTenancyRequest) Reset() {
 	*x = GetTenancyRequest{}
-	mi := &file_core_core_consumption_proto_msgTypes[89]
+	mi := &file_core_core_consumption_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5912,7 +5727,7 @@ func (x *GetTenancyRequest) String() string {
 func (*GetTenancyRequest) ProtoMessage() {}
 
 func (x *GetTenancyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[89]
+	mi := &file_core_core_consumption_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5925,7 +5740,7 @@ func (x *GetTenancyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenancyRequest.ProtoReflect.Descriptor instead.
 func (*GetTenancyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{89}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *GetTenancyRequest) GetUserId() string {
@@ -5952,7 +5767,7 @@ type SwitchTenancyAccountRequest struct {
 
 func (x *SwitchTenancyAccountRequest) Reset() {
 	*x = SwitchTenancyAccountRequest{}
-	mi := &file_core_core_consumption_proto_msgTypes[90]
+	mi := &file_core_core_consumption_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5964,7 +5779,7 @@ func (x *SwitchTenancyAccountRequest) String() string {
 func (*SwitchTenancyAccountRequest) ProtoMessage() {}
 
 func (x *SwitchTenancyAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[90]
+	mi := &file_core_core_consumption_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5977,7 +5792,7 @@ func (x *SwitchTenancyAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SwitchTenancyAccountRequest.ProtoReflect.Descriptor instead.
 func (*SwitchTenancyAccountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{90}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *SwitchTenancyAccountRequest) GetUserId() string {
@@ -6007,7 +5822,7 @@ type GetTenancyResponse struct {
 
 func (x *GetTenancyResponse) Reset() {
 	*x = GetTenancyResponse{}
-	mi := &file_core_core_consumption_proto_msgTypes[91]
+	mi := &file_core_core_consumption_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6019,7 +5834,7 @@ func (x *GetTenancyResponse) String() string {
 func (*GetTenancyResponse) ProtoMessage() {}
 
 func (x *GetTenancyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[91]
+	mi := &file_core_core_consumption_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6032,7 +5847,7 @@ func (x *GetTenancyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenancyResponse.ProtoReflect.Descriptor instead.
 func (*GetTenancyResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{91}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *GetTenancyResponse) GetHasTenancy() bool {
@@ -6080,7 +5895,7 @@ type GetCurrentUserRequest struct {
 
 func (x *GetCurrentUserRequest) Reset() {
 	*x = GetCurrentUserRequest{}
-	mi := &file_core_core_consumption_proto_msgTypes[92]
+	mi := &file_core_core_consumption_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6092,7 +5907,7 @@ func (x *GetCurrentUserRequest) String() string {
 func (*GetCurrentUserRequest) ProtoMessage() {}
 
 func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_consumption_proto_msgTypes[92]
+	mi := &file_core_core_consumption_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6105,7 +5920,7 @@ func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_consumption_proto_rawDescGZIP(), []int{92}
+	return file_core_core_consumption_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *GetCurrentUserRequest) GetUserId() string {
@@ -6675,42 +6490,19 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"U\n" +
-	"\x1cTenancyAccountPlanLimitProto\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x19\n" +
-	"\x05value\x18\x02 \x01(\x05H\x00R\x05value\x88\x01\x01B\b\n" +
-	"\x06_value\"\xe8\x03\n" +
-	"\x17TenancyAccountPlanProto\x12\x17\n" +
-	"\atype_id\x18\x01 \x01(\tR\x06typeId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
-	"\x0eplan_type_code\x18\x03 \x01(\tR\fplanTypeCode\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\x05R\aversion\x12$\n" +
-	"\x0eprice_per_seat\x18\x05 \x01(\x01R\fpricePerSeat\x12+\n" +
-	"\x0fprice_per_month\x18\x06 \x01(\x01H\x00R\rpricePerMonth\x88\x01\x01\x12&\n" +
-	"\fseat_minimum\x18\a \x01(\x05H\x01R\vseatMinimum\x88\x01\x01\x12:\n" +
-	"\x06limits\x18\b \x03(\v2\".core.TenancyAccountPlanLimitProtoR\x06limits\x12G\n" +
-	"\bfeatures\x18\t \x03(\v2+.core.TenancyAccountPlanProto.FeaturesEntryR\bfeatures\x1a;\n" +
-	"\rFeaturesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B\x12\n" +
-	"\x10_price_per_monthB\x0f\n" +
-	"\r_seat_minimum\"\xde\x03\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcd\x02\n" +
 	"\x1aTenancyCurrentAccountProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04slug\x18\x02 \x01(\tH\x00R\x04slug\x88\x01\x01\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x04 \x01(\tR\x04type\x12+\n" +
-	"\x11onboarding_status\x18\x05 \x01(\tR\x10onboardingStatus\x12\x1b\n" +
-	"\tplan_code\x18\x06 \x01(\tR\bplanCode\x12/\n" +
-	"\x04role\x18\a \x01(\v2\x16.core.TenancyRoleProtoH\x01R\x04role\x88\x01\x01\x12B\n" +
-	"\x1binternal_stripe_customer_id\x18\b \x01(\tH\x02R\x18internalStripeCustomerId\x88\x01\x01\x12E\n" +
-	"\faccount_plan\x18\t \x01(\v2\x1d.core.TenancyAccountPlanProtoH\x03R\vaccountPlan\x88\x01\x01\x12&\n" +
+	"\x11onboarding_status\x18\x05 \x01(\tR\x10onboardingStatus\x12/\n" +
+	"\x04role\x18\a \x01(\v2\x16.core.TenancyRoleProtoH\x01R\x04role\x88\x01\x01\x12&\n" +
 	"\x0faccount_user_id\x18\n" +
 	" \x01(\tR\raccountUserIdB\a\n" +
 	"\x05_slugB\a\n" +
-	"\x05_roleB\x1e\n" +
-	"\x1c_internal_stripe_customer_idB\x0f\n" +
-	"\r_account_plan\"@\n" +
+	"\x05_roleJ\x04\b\x06\x10\aJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"R\tplan_codeR\x1binternal_stripe_customer_idR\faccount_plan\"@\n" +
 	"\x1aTenancyAccountSummaryProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"R\n" +
@@ -6752,7 +6544,7 @@ func file_core_core_consumption_proto_rawDescGZIP() []byte {
 	return file_core_core_consumption_proto_rawDescData
 }
 
-var file_core_core_consumption_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
+var file_core_core_consumption_proto_msgTypes = make([]protoimpl.MessageInfo, 91)
 var file_core_core_consumption_proto_goTypes = []any{
 	(*CreateConsumptionRequest)(nil),                       // 0: core.CreateConsumptionRequest
 	(*CreateConsumptionResponse)(nil),                      // 1: core.CreateConsumptionResponse
@@ -6838,107 +6630,104 @@ var file_core_core_consumption_proto_goTypes = []any{
 	(*BatchGetSysPropertiesByIDsRequest)(nil),              // 81: core.BatchGetSysPropertiesByIDsRequest
 	(*BatchGetSysPropertiesByIDsResponse)(nil),             // 82: core.BatchGetSysPropertiesByIDsResponse
 	(*TenancyRoleProto)(nil),                               // 83: core.TenancyRoleProto
-	(*TenancyAccountPlanLimitProto)(nil),                   // 84: core.TenancyAccountPlanLimitProto
-	(*TenancyAccountPlanProto)(nil),                        // 85: core.TenancyAccountPlanProto
-	(*TenancyCurrentAccountProto)(nil),                     // 86: core.TenancyCurrentAccountProto
-	(*TenancyAccountSummaryProto)(nil),                     // 87: core.TenancyAccountSummaryProto
-	(*TenancyOtherAccountProto)(nil),                       // 88: core.TenancyOtherAccountProto
-	(*GetTenancyRequest)(nil),                              // 89: core.GetTenancyRequest
-	(*SwitchTenancyAccountRequest)(nil),                    // 90: core.SwitchTenancyAccountRequest
-	(*GetTenancyResponse)(nil),                             // 91: core.GetTenancyResponse
-	(*GetCurrentUserRequest)(nil),                          // 92: core.GetCurrentUserRequest
-	nil,                                                    // 93: core.TenancyAccountPlanProto.FeaturesEntry
-	(*ConsumptionInfo)(nil),                                // 94: core.ConsumptionInfo
-	(*timestamppb.Timestamp)(nil),                          // 95: google.protobuf.Timestamp
-	(*PageInfo)(nil),                                       // 96: core.PageInfo
-	(*JobInfo)(nil),                                        // 97: core.JobInfo
-	(*StringPatch)(nil),                                    // 98: core.StringPatch
-	(*ObjectIdentifier)(nil),                               // 99: core.ObjectIdentifier
-	(*StringListPatch)(nil),                                // 100: core.StringListPatch
-	(*CustomerAddressProto)(nil),                           // 101: core.CustomerAddressProto
+	(*TenancyCurrentAccountProto)(nil),                     // 84: core.TenancyCurrentAccountProto
+	(*TenancyAccountSummaryProto)(nil),                     // 85: core.TenancyAccountSummaryProto
+	(*TenancyOtherAccountProto)(nil),                       // 86: core.TenancyOtherAccountProto
+	(*GetTenancyRequest)(nil),                              // 87: core.GetTenancyRequest
+	(*SwitchTenancyAccountRequest)(nil),                    // 88: core.SwitchTenancyAccountRequest
+	(*GetTenancyResponse)(nil),                             // 89: core.GetTenancyResponse
+	(*GetCurrentUserRequest)(nil),                          // 90: core.GetCurrentUserRequest
+	(*ConsumptionInfo)(nil),                                // 91: core.ConsumptionInfo
+	(*timestamppb.Timestamp)(nil),                          // 92: google.protobuf.Timestamp
+	(*PageInfo)(nil),                                       // 93: core.PageInfo
+	(*JobInfo)(nil),                                        // 94: core.JobInfo
+	(*StringPatch)(nil),                                    // 95: core.StringPatch
+	(*ObjectIdentifier)(nil),                               // 96: core.ObjectIdentifier
+	(*StringListPatch)(nil),                                // 97: core.StringListPatch
+	(*CustomerAddressProto)(nil),                           // 98: core.CustomerAddressProto
 }
 var file_core_core_consumption_proto_depIdxs = []int32{
-	94,  // 0: core.CreateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	94,  // 1: core.UpdateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	94,  // 2: core.DeleteConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	95,  // 3: core.ListDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	95,  // 4: core.ListDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	91,  // 0: core.CreateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	91,  // 1: core.UpdateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	91,  // 2: core.DeleteConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	92,  // 3: core.ListDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	92,  // 4: core.ListDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
 	10,  // 5: core.ListDeliveriesResponse.deliveries:type_name -> core.DeliverySummaryInfo
-	96,  // 6: core.ListDeliveriesResponse.page_info:type_name -> core.PageInfo
+	93,  // 6: core.ListDeliveriesResponse.page_info:type_name -> core.PageInfo
 	11,  // 7: core.GetDeliveryResponse.delivery:type_name -> core.DeliveryInfo
-	95,  // 8: core.DeliverySummaryInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	95,  // 9: core.DeliverySummaryInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	95,  // 10: core.DeliverySummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 11: core.DeliverySummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 8: core.DeliverySummaryInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	92,  // 9: core.DeliverySummaryInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	92,  // 10: core.DeliverySummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 11: core.DeliverySummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	12,  // 12: core.DeliverySummaryInfo.lines:type_name -> core.DeliveryLineInfo
 	12,  // 13: core.DeliveryInfo.lines:type_name -> core.DeliveryLineInfo
-	95,  // 14: core.DeliveryInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	95,  // 15: core.DeliveryInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	95,  // 16: core.DeliveryInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 17: core.DeliveryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 18: core.DeliveryLineInfo.unit_cost_created_at:type_name -> google.protobuf.Timestamp
-	95,  // 19: core.DeliveryLineInfo.unit_cost_updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 20: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	95,  // 21: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	95,  // 22: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 23: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 24: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 25: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 26: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 27: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 28: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
-	95,  // 29: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 14: core.DeliveryInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	92,  // 15: core.DeliveryInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	92,  // 16: core.DeliveryInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 17: core.DeliveryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 18: core.DeliveryLineInfo.unit_cost_created_at:type_name -> google.protobuf.Timestamp
+	92,  // 19: core.DeliveryLineInfo.unit_cost_updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 20: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	92,  // 21: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	92,  // 22: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 23: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 24: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 25: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 26: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 27: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 28: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	92,  // 29: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
 	14,  // 30: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
-	95,  // 31: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 32: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 31: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 32: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
 	15,  // 33: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	96,  // 34: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
-	97,  // 35: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
+	93,  // 34: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
+	94,  // 35: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
 	15,  // 36: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
 	15,  // 37: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	98,  // 38: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
-	98,  // 39: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
-	98,  // 40: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
+	95,  // 38: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
+	95,  // 39: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
+	95,  // 40: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
 	15,  // 41: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	99,  // 42: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
-	98,  // 43: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
-	98,  // 44: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
+	96,  // 42: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
+	95,  // 43: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
+	95,  // 44: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
 	27,  // 45: core.BulkUpsertScanningStationsRequest.scanning_stations:type_name -> core.UpsertScanningStationInput
-	97,  // 46: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
+	94,  // 46: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
 	15,  // 47: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
 	33,  // 48: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	95,  // 49: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 50: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 51: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 52: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 49: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 50: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 51: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 52: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	34,  // 53: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	96,  // 54: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	97,  // 55: core.ExportLocationsResponse.job:type_name -> core.JobInfo
+	93,  // 54: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	94,  // 55: core.ExportLocationsResponse.job:type_name -> core.JobInfo
 	34,  // 56: core.GetLocationResponse.location:type_name -> core.LocationInfo
 	34,  // 57: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	98,  // 58: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
-	100, // 59: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
+	95,  // 58: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
+	97,  // 59: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
 	34,  // 60: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
 	35,  // 61: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	96,  // 62: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	93,  // 62: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
 	35,  // 63: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
 	34,  // 64: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
-	99,  // 65: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
-	99,  // 66: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
+	96,  // 65: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
+	96,  // 66: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
 	53,  // 67: core.BulkUpsertLocationsRequest.locations:type_name -> core.BulkUpsertLocationInput
-	97,  // 68: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
-	95,  // 69: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 70: core.SupplierSummaryProto.updated_at:type_name -> google.protobuf.Timestamp
-	101, // 71: core.SupplierSummaryProto.bill_to_address:type_name -> core.CustomerAddressProto
-	101, // 72: core.SupplierSummaryProto.ship_to_address:type_name -> core.CustomerAddressProto
-	101, // 73: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	101, // 74: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	95,  // 75: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 76: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 77: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	95,  // 78: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	94,  // 68: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
+	92,  // 69: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 70: core.SupplierSummaryProto.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 71: core.SupplierSummaryProto.bill_to_address:type_name -> core.CustomerAddressProto
+	98,  // 72: core.SupplierSummaryProto.ship_to_address:type_name -> core.CustomerAddressProto
+	98,  // 73: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	98,  // 74: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	92,  // 75: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 76: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 77: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	92,  // 78: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
 	56,  // 79: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	96,  // 80: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	93,  // 80: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
 	57,  // 81: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
 	58,  // 82: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
 	58,  // 83: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
@@ -6946,28 +6735,25 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	57,  // 85: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
 	57,  // 86: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
 	56,  // 87: core.BatchGetSuppliersByIDsResponse.suppliers:type_name -> core.SupplierSummaryProto
-	95,  // 88: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 89: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 88: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 89: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
 	72,  // 90: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	96,  // 91: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	93,  // 91: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
 	72,  // 92: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
 	72,  // 93: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
 	72,  // 94: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
-	95,  // 95: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 96: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	84,  // 97: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	93,  // 98: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	83,  // 99: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	85,  // 100: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	86,  // 101: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	87,  // 102: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	87,  // 103: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	88,  // 104: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	105, // [105:105] is the sub-list for method output_type
-	105, // [105:105] is the sub-list for method input_type
-	105, // [105:105] is the sub-list for extension type_name
-	105, // [105:105] is the sub-list for extension extendee
-	0,   // [0:105] is the sub-list for field type_name
+	92,  // 95: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 96: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	83,  // 97: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	84,  // 98: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	85,  // 99: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	85,  // 100: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	86,  // 101: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	102, // [102:102] is the sub-list for method output_type
+	102, // [102:102] is the sub-list for method input_type
+	102, // [102:102] is the sub-list for extension type_name
+	102, // [102:102] is the sub-list for extension extendee
+	0,   // [0:102] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }
@@ -7008,18 +6794,16 @@ func file_core_core_consumption_proto_init() {
 	file_core_core_consumption_proto_msgTypes[73].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[77].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[84].OneofWrappers = []any{}
-	file_core_core_consumption_proto_msgTypes[85].OneofWrappers = []any{}
-	file_core_core_consumption_proto_msgTypes[86].OneofWrappers = []any{}
+	file_core_core_consumption_proto_msgTypes[87].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[89].OneofWrappers = []any{}
-	file_core_core_consumption_proto_msgTypes[91].OneofWrappers = []any{}
-	file_core_core_consumption_proto_msgTypes[92].OneofWrappers = []any{}
+	file_core_core_consumption_proto_msgTypes[90].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_consumption_proto_rawDesc), len(file_core_core_consumption_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   94,
+			NumMessages:   91,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

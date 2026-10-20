@@ -12,28 +12,6 @@ import (
 	"time"
 )
 
-const countSandboxAccounts = `-- name: CountSandboxAccounts :one
-SELECT COUNT(*) FROM sandbox_account
-JOIN account ON sandbox_account.account_id = account.id
-WHERE sandbox_account.owner_account_id = ?
-AND (
-    ? IS NULL
-    OR account.name LIKE ?
-)
-`
-
-type CountSandboxAccountsParams struct {
-	OwnerAccountID string
-	SearchQuery    sql.NullString
-}
-
-func (q *Queries) CountSandboxAccounts(ctx context.Context, arg CountSandboxAccountsParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countSandboxAccounts, arg.OwnerAccountID, arg.SearchQuery, arg.SearchQuery)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createSandboxAccount = `-- name: CreateSandboxAccount :execresult
 INSERT INTO sandbox_account (
     type_id,

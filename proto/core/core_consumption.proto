@@ -497,33 +497,16 @@ message TenancyRoleProto {
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
 }
-message TenancyAccountPlanLimitProto {
-  string key = 1;
-  // Absent means unlimited.
-  optional int32 value = 2;
-}
-message TenancyAccountPlanProto {
-  string type_id = 1;
-  string name = 2;
-  string plan_type_code = 3;
-  int32 version = 4;
-  double price_per_seat = 5;
-  optional double price_per_month = 6;
-  optional int32 seat_minimum = 7;
-  repeated TenancyAccountPlanLimitProto limits = 8;
-  map<string, bool> features = 9;
-}
 message TenancyCurrentAccountProto {
   string id = 1;
   optional string slug = 2;
   string name = 3;
   string type = 4;
   string onboarding_status = 5;
-  string plan_code = 6;
   optional TenancyRoleProto role = 7;
-  optional string internal_stripe_customer_id = 8;
-  optional TenancyAccountPlanProto account_plan = 9;
   string account_user_id = 10;
+  reserved 6, 8, 9;
+  reserved "plan_code", "internal_stripe_customer_id", "account_plan";
 }
 message TenancyAccountSummaryProto {
   string id = 1;

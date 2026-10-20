@@ -8,13 +8,6 @@ INSERT INTO account (
     updated_at
 ) VALUES (?, ?, ?, 'active', NOW(3), NOW(3));
 
--- name: GetAccountPlanCode :one
-SELECT ap.plan_type_code AS plan_code
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-WHERE a.id = ?;
-
 -- name: GetAccountNames :many
 SELECT id, name FROM account WHERE id IN (sqlc.slice('ids'));
 
@@ -28,133 +21,17 @@ DELETE FROM account WHERE id = ? AND account_type_code = 'sandbox';
 SELECT
     a.id,
     a.account_type_code,
-    sa.owner_account_id,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.subscription_status
-        ELSE ab.subscription_status
-    END AS subscription_status,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ap.plan_type_code
-        ELSE ap.plan_type_code
-    END AS plan_code,
-    CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.agent_monthly_spending_cap_cents
-        ELSE ab.agent_monthly_spending_cap_cents
-    END AS agent_monthly_spending_cap_cents
+    sa.owner_account_id
 FROM account a
-LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
-LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON a.id = sa.account_id
-LEFT JOIN account owner ON sa.owner_account_id = owner.id
-LEFT JOIN account_billing owner_ab ON owner.account_billing_id = owner_ab.id
-LEFT JOIN account_plan owner_ap ON owner_ab.account_plan_id = owner_ap.type_id
 WHERE a.id = ?;
 
--- name: GetAccountPlanIDAndPeriodEnd :one
--- Returns the account's current plan id (used with ListAccountPlanLimits) and
--- subscription period end (used to derive the billing period start for usage limits).
-SELECT ab.account_plan_id, ab.subscription_current_period_end
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-WHERE a.id = ?;
-
--- name: GetAccountPlanTypeIDByCode :one
-SELECT type_id FROM account_plan
-WHERE plan_type_code = ?
-AND effective_at <= NOW(3)
-AND (expires_at IS NULL OR expires_at > NOW(3))
-ORDER BY effective_at DESC, version DESC
-LIMIT 1;
-
--- name: GetAccountByStripeCustomerID :one
-SELECT a.id, a.name, ap.plan_type_code AS plan_code
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-WHERE ab.internal_stripe_customer_id = ?;
-
--- name: UpdateAccountSubscription :exec
-UPDATE account_billing SET
-    subscription_status = COALESCE(?, subscription_status),
-    account_plan_id = COALESCE(sqlc.narg('account_plan_id'), account_plan_id),
-    internal_stripe_subscription_id = COALESCE(?, internal_stripe_subscription_id),
-    subscription_current_period_end = COALESCE(?, subscription_current_period_end),
-    internal_stripe_customer_id = COALESCE(?, internal_stripe_customer_id),
-    stripe_billing_profile_id = COALESCE(?, stripe_billing_profile_id),
-    stripe_billing_cadence_id = COALESCE(?, stripe_billing_cadence_id),
-    stripe_pricing_plan_subscription_id = COALESCE(?, stripe_pricing_plan_subscription_id),
-    servicing_status = COALESCE(?, servicing_status),
-    collection_status = COALESCE(?, collection_status),
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = sqlc.arg(account_id));
-
--- name: GetSandboxLimitByAccountID :one
-SELECT apl.value
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan_limit apl ON apl.account_plan_id = ab.account_plan_id
-    AND apl.key = 'sandboxes_maximum'
-WHERE a.id = ?;
-
--- name: GetSeatLimitByPlanCode :one
-SELECT apl.value
-FROM account_plan ap
-JOIN account_plan_limit apl ON apl.account_plan_id = ap.type_id
-    AND apl.key = 'seats_maximum'
-WHERE ap.plan_type_code = ?
-    AND ap.effective_at <= NOW(3)
-    AND (ap.expires_at IS NULL OR ap.expires_at > NOW(3))
-ORDER BY ap.effective_at DESC, ap.version DESC
-LIMIT 1;
-
--- name: ClearAccountStripeCustomer :exec
-UPDATE account_billing SET
-    internal_stripe_customer_id = NULL,
-    internal_stripe_subscription_id = NULL,
-    subscription_status = NULL,
-    subscription_current_period_end = NULL,
-    stripe_billing_profile_id = NULL,
-    stripe_billing_cadence_id = NULL,
-    stripe_pricing_plan_subscription_id = NULL,
-    servicing_status = NULL,
-    collection_status = NULL,
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?);
-
--- name: ClearAccountPricingPlanSubscription :exec
-UPDATE account_billing SET
-    stripe_pricing_plan_subscription_id = NULL,
-    servicing_status = NULL,
-    collection_status = NULL,
-    updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?);
-
--- name: UpdateAgentSpendingCap :exec
-UPDATE account_billing SET agent_monthly_spending_cap_cents = ?, updated_at = NOW(3)
-WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = sqlc.arg(account_id));
-
--- name: GetAgentSpendingCap :one
-SELECT ab.agent_monthly_spending_cap_cents
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-WHERE a.id = ?;
-
--- name: HasActiveBillingPlan :one
+-- name: IsAccountSelfManaged :one
 SELECT EXISTS(
     SELECT 1 FROM account a
     JOIN account_billing ab ON a.account_billing_id = ab.id
     WHERE a.id = ? AND ab.account_plan_id IS NOT NULL
-) AS has_plan;
-
--- name: ListAccountPlanLimits :many
-SELECT `key`, value
-FROM account_plan_limit
-WHERE account_plan_id = ?;
-
--- name: ListAccountPlanFeatures :many
-SELECT `key`, enabled
-FROM account_plan_feature
-WHERE account_plan_id = ?;
+) AS self_managed;
 
 -- name: GetAccountNameByID :one
 SELECT name FROM account WHERE id = ?;

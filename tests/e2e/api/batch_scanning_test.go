@@ -438,7 +438,6 @@ func TestBatchScanning_ChainMovesInventoryAtEveryScan(t *testing.T) {
 	assert.Equal(t, c.a.id, jsonField(evt, "item_id"))
 	assertDecimalEqual(t, "10", jsonField(evt, "measure"), "event measure")
 	assert.Equal(t, unitEach, jsonField(evt, "unit_id"))
-	assert.Empty(t, scanEvents(t, "billing.cmd.report_batch_created", planned), "initializing creates no batch to meter")
 
 	// Initializing twice is refused.
 	requireScanError(t, "initialize", map[string]any{"batch_id": planned, "scanning_station_id": c.initStation},
@@ -457,7 +456,6 @@ func TestBatchScanning_ChainMovesInventoryAtEveryScan(t *testing.T) {
 	waitForOnHand(t, c.a.id, "0")
 	waitForOnHand(t, c.material.id, "970")
 	requireOneBatchScanned(t, movedID)
-	require.Len(t, scanEvents(t, "billing.cmd.report_batch_created", movedID), 1, "a created batch is metered once")
 
 	// The source is used up, so moving it again finds nothing waiting at the step.
 	requireScanError(t, "move", map[string]any{"batch_ids": []string{planned}, "production_step_id": c.moveStep, "scanning_station_id": c.moveStation},

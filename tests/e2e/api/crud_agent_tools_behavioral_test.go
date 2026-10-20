@@ -93,8 +93,8 @@ func TestAgentDefinitions_CreateRoundTripsEndpointToolSlugs(t *testing.T) {
 		"endpoint_tool_slugs round-trips through the agent config")
 }
 
-// An agent reads costs when its role grants costs:read, so the cost reports are offered as tools; the agent spending cap stays behind billing.
-func TestAgentTools_CatalogOffersCostReportsAndGatesAgentSpend(t *testing.T) {
+// An agent reads costs when its role grants costs:read, so the cost reports are offered as tools.
+func TestAgentTools_CatalogOffersCostReports(t *testing.T) {
 	t.Parallel()
 
 	list, code, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
@@ -113,6 +113,4 @@ func TestAgentTools_CatalogOffersCostReportsAndGatesAgentSpend(t *testing.T) {
 		require.Contains(t, perms, slug, "%s is offered as a tool", slug)
 		assert.Contains(t, perms[slug], any("costs:read"), "%s requires costs:read", slug)
 	}
-	assert.Equal(t, []any{"billing:read"}, perms["get_spending_cap"])
-	assert.Equal(t, []any{"billing:update"}, perms["set_spending_cap"])
 }

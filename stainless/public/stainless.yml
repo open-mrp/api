@@ -228,7 +228,6 @@ resources:
           job_export: '#/components/schemas/JobExport'
           job_result: '#/components/schemas/JobResult'
           list_job_result: '#/components/schemas/List_JobResult'
-          quota_info: '#/components/schemas/QuotaInfo'
           response_error: '#/components/schemas/ResponseError'
       analytics:
         methods:

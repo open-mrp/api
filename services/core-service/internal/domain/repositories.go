@@ -15,24 +15,13 @@ import (
 )
 
 type AccountRepo interface {
-	Create(ctx context.Context, id, name string, accountTypeCode AccountType, planCode constants.PlanCode) *apierror.APIError
-	GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError)
+	Create(ctx context.Context, id, name string, accountTypeCode AccountType) *apierror.APIError
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, *apierror.APIError)
 	// GetAccountNames resolves account IDs to their display names. IDs with no matching account are omitted from the result.
 	GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
-	// GetPlanIDAndPeriodEnd returns the account's active plan id (for limit lookups) and current subscription period end (for deriving billing-period start).
-	GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (planID *string, periodEnd *time.Time, apiErr *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError
-	GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError)
-	UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID *string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
-	ClearStripeCustomer(ctx context.Context, accountID string) *apierror.APIError
-	ClearPricingPlanSubscription(ctx context.Context, accountID string) *apierror.APIError
-	GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (accountID string, planCode string, err *apierror.APIError)
-	GetSandboxLimit(ctx context.Context, accountID string) (*int32, *apierror.APIError)
-	GetSeatLimitByPlanCode(ctx context.Context, planCode string) (*int32, *apierror.APIError)
-	UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError
-	GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError)
-	HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError)
+	// IsSelfManaged reports whether the account signed up to OpenMRP on its own rather than being set up by a seller, which the billing record it was given at sign-up shows.
+	IsSelfManaged(ctx context.Context, accountID string) (bool, *apierror.APIError)
 	GetName(ctx context.Context, accountID string) (string, *apierror.APIError)
 	GetPortalSlug(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetByID(ctx context.Context, accountID string) (*Account, *apierror.APIError)
@@ -55,8 +44,6 @@ type AccountRepo interface {
 	// UpdateBrandingFaviconURL points the account's branding at an uploaded favicon, creating the branding row when the account has none.
 	UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError
 	GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
-	ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError)
-	ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError)
 }
 
 type AccountUserRepo interface {
@@ -67,12 +54,6 @@ type AccountUserRepo interface {
 	FindLastUsedAccountID(ctx context.Context, userID string) (string, *apierror.APIError)
 	UpdateLastUsedAt(ctx context.Context, accountUserID string, lastUsedAt time.Time) *apierror.APIError
 	GetAdminRoleID(ctx context.Context) (string, *apierror.APIError)
-	DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError)
-	EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError
-	CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError)
-	ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError)
-	// LockSeatStatuses returns the status of each of the account's active and disabled users by account_user id, locking those rows for the rest of the transaction.
-	LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError)
 	List(ctx context.Context, params ListAccountUsersParams) (*ListAccountUsersResult, *apierror.APIError)
 	GetDetail(ctx context.Context, accountID, userID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
@@ -108,7 +89,6 @@ type SandboxAccountRepo interface {
 	GetByTypeIDs(ctx context.Context, ownerAccountID string, typeIDs []string) ([]*SandboxAccount, *apierror.APIError)
 	List(ctx context.Context, ownerAccountID string, cursor *string, limit int32, query *string, includes []string) (*ListSandboxAccountsResult, *apierror.APIError)
 	Create(ctx context.Context, typeID, ownerAccountID, accountID string) *apierror.APIError
-	CountByOwnerAccountID(ctx context.Context, ownerAccountID string) (int64, *apierror.APIError)
 	DeleteByID(ctx context.Context, id int64) *apierror.APIError
 }
 
@@ -599,8 +579,6 @@ type BatchRepo interface {
 	RevertCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]BatchCountAdjustment, *apierror.APIError)
 	// HasScanReceipt reports whether a scan of the batch put anything into inventory. A scan recorded without its materials writes nothing.
 	HasScanReceipt(ctx context.Context, accountID, batchID string) (bool, *apierror.APIError)
-	// CountScannedSince counts the batches the account has scanned since the given time.
-	CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	Delete(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	DeleteMany(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
 	// CountDownstreamBatches reports how many batches were fed by this one. A batch something downstream still feeds on cannot be undone.
@@ -1621,7 +1599,6 @@ type PermissionGroupRepo interface {
 type InvoiceRepo interface {
 	List(ctx context.Context, params ListInvoicesParams) (*ListInvoicesResult, *apierror.APIError)
 	Get(ctx context.Context, params GetInvoiceParams) (*Invoice, *apierror.APIError)
-	CountSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	GetLines(ctx context.Context, invoiceID string) ([]*InvoiceLine, *apierror.APIError)
 	GetAllocations(ctx context.Context, invoiceID string) ([]*InvoiceAllocation, *apierror.APIError)
 	GetAllocationsForInvoices(ctx context.Context, invoiceIDs []string) (map[string][]*InvoiceAllocation, *apierror.APIError)
@@ -1850,8 +1827,6 @@ type OrderPaymentIntentRepo interface {
 	Create(ctx context.Context, id, paymentIntentID, salesOrderID string) *apierror.APIError
 	FindByPaymentIntentID(ctx context.Context, paymentIntentID string) (*OrderPaymentIntent, *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError
-	// GetOrderAccountID returns the account that owns the sales order, which a Stripe payment names only by order.
-	GetOrderAccountID(ctx context.Context, salesOrderID string) (string, *apierror.APIError)
 }
 
 type ShipmentRepo interface {

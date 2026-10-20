@@ -71,9 +71,9 @@ func (*CreateAccountUserRequest) SchemaExample() any {
 
 // Adds a user to the account you are acting in.
 //
-// If no user with the given email or username exists, a new user is created; a user created with an email address is sent a welcome email containing a generated password and a link to sign in, unless they are being added to a supplier account, since suppliers have no portal to sign in to. A user added to a customer account signs in through your customer portal, on its verified custom domain when you have one. If a matching user already exists, that user is added to the account instead, and a user you previously removed is restored rather than duplicated. Adding a user to your own account consumes a seat and is rejected once your plan's seat limit is reached.
+// If no user with the given email or username exists, a new user is created; a user created with an email address is sent a welcome email containing a generated password and a link to sign in, unless they are being added to a supplier account, since suppliers have no portal to sign in to. A user added to a customer account signs in through your customer portal, on its verified custom domain when you have one. If a matching user already exists, that user is added to the account instead, and a user you previously removed is restored rather than duplicated.
 //
-// You can add users to a customer or supplier account only while you manage it alone: an account that runs its own OpenMRP subscription, or that another account also has as a customer or supplier, manages its own users, and the request is refused.
+// You can add users to a customer or supplier account only while you manage it alone: an account that signed up to OpenMRP on its own, or that another account also has as a customer or supplier, manages its own users, and the request is refused.
 type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {

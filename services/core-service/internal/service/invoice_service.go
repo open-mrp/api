@@ -354,21 +354,3 @@ func checkInvoiceAccess(identity *types.Identity, action types.Action) *apierror
 	}
 	return identity.CheckHasPermission(types.PermissionDomainInvoices, action)
 }
-
-// Rejects an invoice that would exceed the account plan's per-billing-period invoice cap. Sandboxes,
-// accounts on no plan, and plans with no cap are exempt.
-func enforceInvoicesPerPeriodLimit(ctx context.Context, repos domain.RepoFactory, accountID string) *apierror.APIError {
-	max, start, apiErr := resolveAccountPlanLimit(ctx, repos, accountID, constants.AccountPlanLimitInvoicesMaximum)
-	if apiErr != nil || max == nil {
-		return apiErr
-	}
-
-	count, apiErr := repos.NewInvoiceRepo().CountSince(ctx, accountID, start)
-	if apiErr != nil {
-		return apiErr
-	}
-	if count >= int64(*max) {
-		return apierror.NewValidationError(fmt.Sprintf("Your plan allows a maximum of %d invoices per billing period.", *max))
-	}
-	return nil
-}

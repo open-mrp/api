@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestAPIErrorResponse_SchemaExample(t *testing.T) {
@@ -200,40 +199,37 @@ func TestAPIError_Stack_SurvivesJSONRoundTrip(t *testing.T) {
 func TestGetHTTPStatusCode(t *testing.T) {
 	t.Parallel()
 	statuses := map[ErrorCode]int{
-		ErrorCodeExpiredToken:            http.StatusUnauthorized,
-		ErrorCodeExpiredAPIKey:           http.StatusUnauthorized,
-		ErrorCodeRevokedAPIKey:           http.StatusUnauthorized,
-		ErrorCodeInvalidCredentials:      http.StatusUnauthorized,
-		ErrorCodeInsufficientPerms:       http.StatusForbidden,
-		ErrorCodeLimitExceeded:           http.StatusForbidden,
-		ErrorCodeRegistrationClosed:      http.StatusForbidden,
-		ErrorCodePaymentRequired:         http.StatusPaymentRequired,
-		ErrorCodeAgentSpendingCapReached: http.StatusPaymentRequired,
-		ErrorCodeValidationFailed:        http.StatusBadRequest,
-		ErrorCodeMissingField:            http.StatusBadRequest,
-		ErrorCodeInvalidFormat:           http.StatusBadRequest,
-		ErrorCodeParameterMissing:        http.StatusBadRequest,
-		ErrorCodeParameterInvalid:        http.StatusBadRequest,
-		ErrorCodeParameterUnknown:        http.StatusBadRequest,
-		ErrorCodeParametersExclusive:     http.StatusBadRequest,
-		ErrorCodeAPIVersionRequired:      http.StatusBadRequest,
-		ErrorCodeAPIVersionInvalid:       http.StatusBadRequest,
-		ErrorCodeAPIVersionTooOld:        http.StatusBadRequest,
-		ErrorCodeMethodNotAllowed:        http.StatusMethodNotAllowed,
-		ErrorCodeRequestTooLarge:         http.StatusRequestEntityTooLarge,
-		ErrorCodeResourceNotFound:        http.StatusNotFound,
-		ErrorCodeResourceGone:            http.StatusGone,
-		ErrorCodeResourceExists:          http.StatusConflict,
-		ErrorCodeResourceConflict:        http.StatusConflict,
-		ErrorCodeIdempotencyInProgress:   http.StatusConflict,
-		ErrorCodeRateLimitExceeded:       http.StatusTooManyRequests,
-		ErrorCodeSvcUnavailable:          http.StatusServiceUnavailable,
-		ErrorCodeExternalSvcError:        http.StatusBadGateway,
-		ErrorCodeConnectionError:         http.StatusBadGateway,
-		ErrorCodeTimeout:                 http.StatusGatewayTimeout,
-		ErrorCodeRequestTimeout:          http.StatusGatewayTimeout,
-		ErrorCodeClientClosedRequest:     499,
-		ErrorCodeInternalError:           http.StatusInternalServerError,
+		ErrorCodeExpiredToken:          http.StatusUnauthorized,
+		ErrorCodeExpiredAPIKey:         http.StatusUnauthorized,
+		ErrorCodeRevokedAPIKey:         http.StatusUnauthorized,
+		ErrorCodeInvalidCredentials:    http.StatusUnauthorized,
+		ErrorCodeInsufficientPerms:     http.StatusForbidden,
+		ErrorCodeRegistrationClosed:    http.StatusForbidden,
+		ErrorCodeValidationFailed:      http.StatusBadRequest,
+		ErrorCodeMissingField:          http.StatusBadRequest,
+		ErrorCodeInvalidFormat:         http.StatusBadRequest,
+		ErrorCodeParameterMissing:      http.StatusBadRequest,
+		ErrorCodeParameterInvalid:      http.StatusBadRequest,
+		ErrorCodeParameterUnknown:      http.StatusBadRequest,
+		ErrorCodeParametersExclusive:   http.StatusBadRequest,
+		ErrorCodeAPIVersionRequired:    http.StatusBadRequest,
+		ErrorCodeAPIVersionInvalid:     http.StatusBadRequest,
+		ErrorCodeAPIVersionTooOld:      http.StatusBadRequest,
+		ErrorCodeMethodNotAllowed:      http.StatusMethodNotAllowed,
+		ErrorCodeRequestTooLarge:       http.StatusRequestEntityTooLarge,
+		ErrorCodeResourceNotFound:      http.StatusNotFound,
+		ErrorCodeResourceGone:          http.StatusGone,
+		ErrorCodeResourceExists:        http.StatusConflict,
+		ErrorCodeResourceConflict:      http.StatusConflict,
+		ErrorCodeIdempotencyInProgress: http.StatusConflict,
+		ErrorCodeRateLimitExceeded:     http.StatusTooManyRequests,
+		ErrorCodeSvcUnavailable:        http.StatusServiceUnavailable,
+		ErrorCodeExternalSvcError:      http.StatusBadGateway,
+		ErrorCodeConnectionError:       http.StatusBadGateway,
+		ErrorCodeTimeout:               http.StatusGatewayTimeout,
+		ErrorCodeRequestTimeout:        http.StatusGatewayTimeout,
+		ErrorCodeClientClosedRequest:   499,
+		ErrorCodeInternalError:         http.StatusInternalServerError,
 	}
 
 	for _, value := range ErrorCode("").EnumValues() {
@@ -505,14 +501,11 @@ func TestAPIErrorFromJSON_UnknownCode(t *testing.T) {
 	}
 }
 
-func TestAPIError_JSONRoundTrip_PreservesQuotaAndFields(t *testing.T) {
+func TestAPIError_JSONRoundTrip_PreservesFields(t *testing.T) {
 	t.Parallel()
-	resetAt := time.Date(2026, 3, 1, 12, 30, 0, 0, time.UTC)
-	original := NewLimitExceededError("Sandbox limit reached.").
-		WithParam("plan").
-		WithInternal(errors.New("account at cap")).
-		WithQuota(5, 5, &resetAt)
-	original.InternalMessage = "sandbox quota exhausted"
+	original := NewValidationErrorWithParam("Name is too long.", "name").
+		WithInternal(errors.New("name over limit"))
+	original.InternalMessage = "name length check failed"
 
 	data, err := original.ToJSON()
 	if err != nil {
@@ -524,32 +517,23 @@ func TestAPIError_JSONRoundTrip_PreservesQuotaAndFields(t *testing.T) {
 		t.Fatalf("APIErrorFromJSON: %v", err)
 	}
 
-	if restored.Quota == nil {
-		t.Fatal("Quota = nil after round trip, want the plan limit details")
-	}
-	if restored.Quota.Limit != 5 || restored.Quota.Used != 5 {
-		t.Errorf("Quota = %+v, want limit 5 used 5", *restored.Quota)
-	}
-	if restored.Quota.ResetAt == nil || !restored.Quota.ResetAt.Equal(resetAt) {
-		t.Errorf("Quota.ResetAt = %v, want %v", restored.Quota.ResetAt, resetAt)
-	}
 	if restored.Code != original.Code || restored.Type != original.Type {
 		t.Errorf("code/type = %q/%q, want %q/%q", restored.Code, restored.Type, original.Code, original.Type)
 	}
-	if restored.Param != "plan" || restored.DocURL != original.DocURL {
-		t.Errorf("param/doc_url = %q/%q, want %q/%q", restored.Param, restored.DocURL, "plan", original.DocURL)
+	if restored.Param != "name" || restored.DocURL != original.DocURL {
+		t.Errorf("param/doc_url = %q/%q, want %q/%q", restored.Param, restored.DocURL, "name", original.DocURL)
 	}
-	if restored.InternalMessage != "sandbox quota exhausted" {
-		t.Errorf("InternalMessage = %q, want %q", restored.InternalMessage, "sandbox quota exhausted")
+	if restored.InternalMessage != "name length check failed" {
+		t.Errorf("InternalMessage = %q, want %q", restored.InternalMessage, "name length check failed")
 	}
 	// The wrapped error crosses the wire as flattened text, not as the original type.
-	if restored.Internal == nil || restored.Internal.Error() != "account at cap" {
-		t.Errorf("Internal = %v, want an error reading %q", restored.Internal, "account at cap")
+	if restored.Internal == nil || restored.Internal.Error() != "name over limit" {
+		t.Errorf("Internal = %v, want an error reading %q", restored.Internal, "name over limit")
 	}
 }
 
-// Quota is absent from the wire when unset, so the receiver must not invent an empty one.
-func TestAPIError_JSONRoundTrip_NilQuota(t *testing.T) {
+// An error with no wrapped cause comes back without one.
+func TestAPIError_JSONRoundTrip_NoInternal(t *testing.T) {
 	t.Parallel()
 	data, err := NewValidationError("bad input").ToJSON()
 	if err != nil {
@@ -559,9 +543,6 @@ func TestAPIError_JSONRoundTrip_NilQuota(t *testing.T) {
 	restored, err := APIErrorFromJSON(data)
 	if err != nil {
 		t.Fatalf("APIErrorFromJSON: %v", err)
-	}
-	if restored.Quota != nil {
-		t.Errorf("Quota = %+v, want nil", *restored.Quota)
 	}
 	if restored.Internal != nil {
 		t.Errorf("Internal = %v, want nil", restored.Internal)
@@ -728,8 +709,6 @@ func TestNewAPIError_CapturesOwnStackWhenWrappedErrorHasNone(t *testing.T) {
 
 func TestAPIError_ToResponseError(t *testing.T) {
 	t.Parallel()
-	resetAt := time.Date(2026, 3, 1, 12, 30, 0, 0, time.UTC)
-
 	t.Run("nil receiver yields the zero response", func(t *testing.T) {
 		t.Parallel()
 		var apiErr *APIError
@@ -752,9 +731,6 @@ func TestAPIError_ToResponseError(t *testing.T) {
 		if resp.DocURL != nil {
 			t.Errorf("DocURL = %q, want nil", *resp.DocURL)
 		}
-		if resp.Quota != nil {
-			t.Errorf("Quota = %+v, want nil", *resp.Quota)
-		}
 		if resp.RequestLogURL != nil {
 			t.Errorf("RequestLogURL = %q, want nil", *resp.RequestLogURL)
 		}
@@ -763,7 +739,7 @@ func TestAPIError_ToResponseError(t *testing.T) {
 		if err != nil {
 			t.Fatalf("marshal: %v", err)
 		}
-		for _, field := range []string{`"param":null`, `"doc_url":null`, `"quota":null`} {
+		for _, field := range []string{`"param":null`, `"doc_url":null`} {
 			if !strings.Contains(string(data), field) {
 				t.Errorf("expected %s in %s", field, data)
 			}
@@ -772,29 +748,21 @@ func TestAPIError_ToResponseError(t *testing.T) {
 
 	t.Run("populated fields are carried through", func(t *testing.T) {
 		t.Parallel()
-		apiErr := NewLimitExceededError("Sandbox limit reached.").
-			WithParam("plan").
-			WithQuota(5, 5, &resetAt)
+		apiErr := NewValidationErrorWithParam("Name is too long.", "name")
 		apiErr.IsTransient = true
 
 		resp := apiErr.ToResponseError()
-		if resp.Code != ErrorCodeLimitExceeded || resp.Type != ErrorTypeInvalidRequest {
-			t.Errorf("code/type = %q/%q, want %q/%q", resp.Code, resp.Type, ErrorCodeLimitExceeded, ErrorTypeInvalidRequest)
+		if resp.Code != ErrorCodeValidationFailed || resp.Type != ErrorTypeInvalidRequest {
+			t.Errorf("code/type = %q/%q, want %q/%q", resp.Code, resp.Type, ErrorCodeValidationFailed, ErrorTypeInvalidRequest)
 		}
-		if resp.Message != "Sandbox limit reached." {
-			t.Errorf("Message = %q, want %q", resp.Message, "Sandbox limit reached.")
+		if resp.Message != "Name is too long." {
+			t.Errorf("Message = %q, want %q", resp.Message, "Name is too long.")
 		}
-		if resp.Param == nil || *resp.Param != "plan" {
-			t.Errorf("Param = %v, want %q", resp.Param, "plan")
+		if resp.Param == nil || *resp.Param != "name" {
+			t.Errorf("Param = %v, want %q", resp.Param, "name")
 		}
-		if resp.DocURL == nil || *resp.DocURL != docURLLimitExceeded {
-			t.Errorf("DocURL = %v, want %q", resp.DocURL, docURLLimitExceeded)
-		}
-		if resp.Quota == nil || resp.Quota.Limit != 5 || resp.Quota.Used != 5 {
-			t.Errorf("Quota = %v, want limit 5 used 5", resp.Quota)
-		}
-		if resp.Quota != nil && (resp.Quota.ResetAt == nil || !resp.Quota.ResetAt.Equal(resetAt)) {
-			t.Errorf("Quota.ResetAt = %v, want %v", resp.Quota.ResetAt, resetAt)
+		if resp.DocURL == nil || *resp.DocURL != docURLValidationFailed {
+			t.Errorf("DocURL = %v, want %q", resp.DocURL, docURLValidationFailed)
 		}
 		if !resp.IsTransient {
 			t.Error("IsTransient = false, want true")

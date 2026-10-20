@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit audit-gaps test-ledger test-plans test-verbose test-sql-prepare-smoke vitess-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit audit-gaps test-ledger test-plans test-verbose test-sql-prepare-smoke vitess-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos fmt stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -153,11 +153,6 @@ buf-lint: ## Run buf lint (requires: make install-tools, buf.work.yaml at repo r
 
 local-db: ## Start local databases, apply migrations, and seed data
 	@./scripts/setup-local-db.sh
-	@if [ -n "$(STRIPE_SECRET_KEY)" ]; then \
-		./scripts/seed-stripe-subscription.sh; \
-	else \
-		echo "\033[0;33m[WARN]\033[0m STRIPE_SECRET_KEY not set — skipping Stripe subscription seed. Run 'make seed-stripe' later."; \
-	fi
 
 local-db-cli: ## Open MySQL CLI to the local core database (uses DB_URL from .env)
 	@./scripts/local-db-cli.sh $(ARGS)
@@ -165,10 +160,7 @@ local-db-cli: ## Open MySQL CLI to the local core database (uses DB_URL from .en
 local-db-down: ## Tear down local database containers (data preserved)
 	@docker compose down
 
-local-db-nuke: ## Tear down local databases, clean up Stripe resources, and delete all data
-	@if [ -n "$(STRIPE_SECRET_KEY)" ]; then \
-		./scripts/teardown-stripe-subscription.sh || true; \
-	fi
+local-db-nuke: ## Tear down local databases and delete all data
 	@docker compose down -v --remove-orphans
 
 setup: ## Start minikube and local databases
@@ -226,19 +218,10 @@ seed-agent-db: ## Seed agent-service DB with e2e test data
 		goose -table goose_db_version_seeds -dir services/agent-service/db/seeds up
 
 seed-core: ## Seed core-service DB with sample data
-	@./scripts/seed-core-db.sh $(ARGS)
+	@./scripts/seed-core-db.sh
 
 seed-user-photos: ## Upload seeded account-users' avatar images to the user-photos S3 bucket
 	@./scripts/seed-user-photos.sh
-
-seed-stripe: ## Create Stripe test subscription for seeded account
-	@./scripts/seed-stripe-subscription.sh
-
-teardown-stripe: ## Delete Stripe test resources and clear local DB fields
-	@./scripts/teardown-stripe-subscription.sh
-
-teardown-all-stripe: ## Cancel all subscriptions and delete all customers in Stripe
-	@./scripts/teardown-all-stripe.sh
 
 test: ## Run tests
 	@echo "Running tests..."
@@ -260,7 +243,6 @@ test-sql-prepare-smoke: ## Run sqlc Prepare smoke tests for MySQL services (requ
 	@time go test -tags integration -v -count=1 -timeout 120s \
 		./services/api-gateway/internal/infrastructure/sqlc \
 		./services/auth-service/internal/infrastructure/sqlc \
-		./services/billing-service/internal/infrastructure/sqlc \
 		./services/core-service/internal/infrastructure/sqlc \
 		./services/notification-service/internal/infrastructure/sqlc \
 		./services/platform-service/internal/infrastructure/sqlc
@@ -354,14 +336,11 @@ fmt: ## Format Go source code
 		goimports -w .; \
 	fi
 
-stripe-webhook: ## Run the Stripe webhook listener
-	@stripe listen --forward-to localhost:8081/v1/webhooks/stripe
-
 # Defaults to the seeded Acme Inc. vendor account (shared/db/seed/0003_accounts.sql).
 stripe-webhook-account: ACCOUNT ?= ac_01k0a5smf9ekb8rqg12555zjqa
 stripe-webhook-account: ## Forward a vendor account's Stripe webhooks to the per-account endpoint. Usage: make stripe-webhook-account [ACCOUNT=<account_id>] [API_KEY=sk_test_...]
 	@echo "Forwarding Stripe webhooks for account $(ACCOUNT)"
-	@stripe listen $(if $(API_KEY),--api-key $(API_KEY)) --events payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled,payout.paid --forward-to localhost:8081/v1/webhooks/stripe/accounts/$(ACCOUNT)
+	@stripe listen $(if $(API_KEY),--api-key $(API_KEY)) --events checkout.session.completed,payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled,payout.paid --forward-to localhost:8081/v1/webhooks/stripe/accounts/$(ACCOUNT)
 
 check-format: ## Check formatting
 	@echo "Checking formatting..."

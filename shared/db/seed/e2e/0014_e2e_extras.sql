@@ -10,8 +10,8 @@
 -- SECOND CUSTOMER (for pagination on /v1/sales/customers)
 -- ============================================================
 
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedcustomer2_acct0', 'Pacific Coast Distributors', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedcustomer2_acct0', 'Pacific Coast Distributors', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES
     ('gl_01seedcust2billto000', '100 Market St', 'Los Angeles', 'CA', '90001', 'US', NOW(), NOW()),
@@ -63,9 +63,9 @@ INSERT IGNORE INTO registration_flow (id, name, account_id, created_at, updated_
 -- SUPPLIERS (2 account_relation rows with role='supplier', for pagination)
 -- ============================================================
 
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedsupplier_acct0', 'Yarn Supply Co', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01seedsupplier_acct1', 'Dye Supply Co', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedsupplier_acct0', 'Yarn Supply Co', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01seedsupplier_acct1', 'Dye Supply Co', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO geolocation (id, street_line_1, locality, state, postal_code, country, created_at, updated_at) VALUES
     ('gl_01seedsuppliergeo000', '500 Industrial Blvd', 'Charlotte', 'NC', '28201', 'US', NOW(), NOW()),
@@ -766,15 +766,15 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
     ('acre_01seedhouseacct0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'customer', 'HOUSE-001', 'normal', 'normal', 'commission_exempt', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
 
 -- Child account 1
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedchild_acct0001', 'East Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedchild_acct0001', 'East Division', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedchild_rel001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedchild_acct0001', 'customer', 'CHILD-001', 'acre_01seedhouseacct0000', 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
 
 -- Child account 2 (for pagination)
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedchild_acct0002', 'West Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedchild_acct0002', 'West Division', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedchild_rel002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedchild_acct0002', 'customer', 'CHILD-002', 'acre_01seedhouseacct0000', 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
@@ -960,9 +960,9 @@ INSERT IGNORE INTO account_relation_price_group (id, account_relation_id, accoun
 -- Child customer accounts rooted at SeedCustomer (distinct from the HOUSE
 -- children in the block above; gives `?include=child_accounts` a non-empty
 -- list when the caller targets SeedCustomerAccountID).
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01seedcustchild00001', 'GMS East Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01seedcustchild00002', 'GMS West Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01seedcustchild00001', 'GMS East Division', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01seedcustchild00002', 'GMS West Division', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedcustchildr01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcustchild00001', 'customer', 'GMS-CHILD-001', 'acre_01seedcustomer00000', 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW()),
@@ -1941,13 +1941,13 @@ INSERT IGNORE INTO carrier (id, name, code, account_id, shippo_carrier_account_i
 INSERT IGNORE INTO account_group (id, owner_account_id, name, account_group_type_code, commission_status_code, freight_status_code, default_lead_time_days, created_at, updated_at) VALUES
     ('acgp_01e2eltgroup00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'E2E Lead Time Group', 'type_group', 'commission_applied', 'billed_freight', 21, NOW(), NOW());
 
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01e2eltparent00001', 'E2E Lead Time Head Office', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltparent00002', 'E2E Lead Time Head Office (No Lead Time)', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltchild000001', 'E2E Lead Time Location A', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltchild000002', 'E2E Lead Time Location B', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltchild000003', 'E2E Lead Time Location C', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltchild000004', 'E2E Lead Time Location D', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01e2eltparent00001', 'E2E Lead Time Head Office', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltparent00002', 'E2E Lead Time Head Office (No Lead Time)', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltchild000001', 'E2E Lead Time Location A', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltchild000002', 'E2E Lead Time Location B', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltchild000003', 'E2E Lead Time Location C', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltchild000004', 'E2E Lead Time Location D', 'company', 'unclaimed', NOW(), NOW());
 
 -- The parents. The second carries no lead time of its own, which is what proves a parent
 -- that has set nothing does not shadow the group its children belong to.
@@ -1988,9 +1988,9 @@ INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, produ
 -- A third head office, reserved for the test that sets and clears a lead time through the
 -- API. It starts with none so the write path is what puts one there, and nothing else
 -- resolves this pair — a shared fixture would flap depending on which test was mid-flight.
-INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
-    ('ac_01e2eltparent00003', 'E2E Lead Time Head Office (Mutable)', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
-    ('ac_01e2eltchild000005', 'E2E Lead Time Location E', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, created_at, updated_at) VALUES
+    ('ac_01e2eltparent00003', 'E2E Lead Time Head Office (Mutable)', 'company', 'unclaimed', NOW(), NOW()),
+    ('ac_01e2eltchild000005', 'E2E Lead Time Location E', 'company', 'unclaimed', NOW(), NOW());
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, default_lead_time_days, created_at, updated_at) VALUES
     ('acre_01e2eltparent003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltparent00003', 'customer', 'E2E-LT-PARENT-3', 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', NULL, NOW(), NOW());

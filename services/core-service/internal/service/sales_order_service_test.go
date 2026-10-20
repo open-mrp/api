@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -329,15 +330,6 @@ func (suite *SalesOrderSvcTestSuite) expectReadAccessAllowed(actorAccountID, tar
 	suite.readAccessMed.EXPECT().
 		CheckCounterpartyReadAccess(gomock.Any(), actorAccountID, targetAccountID).
 		Return(nil).
-		Times(1)
-}
-
-// expectPlanLimitAllows stubs the account-plan invoice-limit guard to let the
-// order through (either sandbox or no configured limit).
-func (suite *SalesOrderSvcTestSuite) expectPlanLimitAllows() {
-	suite.accountRepo.EXPECT().
-		GetAccountContext(gomock.Any(), gomock.Any()).
-		Return(&domain.AccountContext{IsSandbox: true}, nil).
 		Times(1)
 }
 
@@ -785,7 +777,6 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID s
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_Success_SynthesizesShippingLineAtZero() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderHappyRepoChain("ac_test")
 	suite.expectCacheSuccess()
@@ -842,26 +833,17 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOr
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
 		Return(&domain.Customer{}, nil).Times(1)
 
-	// Plan limit exceeded → rejected AFTER authorization, on the target account.
-	planID := "plan_basic"
-	periodEnd := time.Now().Add(15 * 24 * time.Hour)
-	max := int32(10)
-	suite.accountRepo.EXPECT().GetAccountContext(gomock.Any(), "ac_target").
-		Return(&domain.AccountContext{IsSandbox: false}, nil).Times(1)
-	suite.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), "ac_target").
-		Return(&planID, &periodEnd, nil).Times(1)
-	suite.accountRepo.EXPECT().ListPlanLimits(gomock.Any(), planID).
-		Return(map[string]*int32{string(constants.AccountPlanLimitInvoicesMaximum): &max}, nil).Times(1)
-	suite.invoiceRepo.EXPECT().CountSince(gomock.Any(), "ac_target", gomock.Any()).
-		Return(int64(10), nil).Times(1)
+	// Idempotency fails → rejected AFTER authorization.
+	suite.idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewInternalError(errors.New("boom"), "boom")).Times(1)
 
 	params := baseCreateOrderParams()
 	params.BuyerAccountID = "ac_customer"
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
-	// Not an auth rejection — we reached and failed the plan-limit check.
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	// Not an auth rejection — we reached and failed the idempotency step.
+	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrderDiscount() {
@@ -872,7 +854,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrd
 
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
 		Return(&domain.Customer{}, nil).Times(1)
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCacheError()
 
@@ -896,32 +877,9 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrd
 	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
 }
 
-func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonSandbox() {
-	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
-
-	// Non-sandbox + subscribed account with a configured invoice limit; usage is at the cap.
-	planID := "plan_basic"
-	periodEnd := time.Now().Add(15 * 24 * time.Hour)
-	max := int32(10)
-
-	suite.accountRepo.EXPECT().GetAccountContext(gomock.Any(), "ac_test").
-		Return(&domain.AccountContext{IsSandbox: false}, nil).Times(1)
-	suite.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), "ac_test").
-		Return(&planID, &periodEnd, nil).Times(1)
-	suite.accountRepo.EXPECT().ListPlanLimits(gomock.Any(), planID).
-		Return(map[string]*int32{string(constants.AccountPlanLimitInvoicesMaximum): &max}, nil).Times(1)
-	suite.invoiceRepo.EXPECT().CountSince(gomock.Any(), "ac_test", gomock.Any()).
-		Return(int64(10), nil).Times(1) // at the cap
-
-	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
-	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
-}
-
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
 	// The order number is allocated inside the write transaction (after the read-only resolution above), so a duplicate auto-generated number is detected there and rolls the transaction back instead of consuming the number.
@@ -947,7 +905,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber()
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureDoesNotConsumeOrderNumber() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
 	// Bill-to address fails validation → the create aborts before the write transaction.
@@ -966,7 +923,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureD
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONumber() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
 	// The customer-PO duplicate check runs up front (before the order number is allocated inside the transaction), so it fails fast without ever reaching number allocation or the resolution/Shippo work.
@@ -991,7 +947,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 	// fall through to zipcode / state lookups. This locks in the short-circuit.
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
@@ -1053,7 +1008,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_AppliesCustomerDefaultsWhenOmitted() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.expectCreateOrderReferenceValidationMocks("ac_test")
@@ -1098,7 +1052,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_AppliesCustomerDefault
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideCustomerDefaults() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.expectCreateOrderReferenceValidationMocks("ac_test")
@@ -1141,7 +1094,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideC
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutCustomerDefault_Rejected() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
@@ -1167,7 +1119,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutC
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOffTheCarrier() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_default"}).Return([]*domain.Carrier{{ID: "cr_default"}}, nil)
@@ -1186,7 +1137,6 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOf
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesACarrierOutsideTheAccount() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
-	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_foreign"}).Return(nil, nil)

@@ -29,9 +29,6 @@ type BaseConfig struct {
 	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 
-	// BillingClient (required) is the billing-service gRPC client.
-	BillingClient *grpcclient.BillingServiceClient
-
 	// PlatformClient (required) is the platform-service gRPC client.
 	PlatformClient *grpcclient.PlatformServiceClient
 
@@ -80,7 +77,6 @@ func (c *BaseConfig) WithDefaults() *BaseConfig {
 		LogWriter:           c.LogWriter,
 		AuthClient:          c.AuthClient,
 		CoreClient:          c.CoreClient,
-		BillingClient:       c.BillingClient,
 		PlatformClient:      c.PlatformClient,
 		AgentClient:         c.AgentClient,
 		NotificationClient:  c.NotificationClient,
@@ -98,9 +94,6 @@ func (c *BaseConfig) validate() error {
 	}
 	if c.CoreClient == nil {
 		return fmt.Errorf("base config: core client is required")
-	}
-	if c.BillingClient == nil {
-		return fmt.Errorf("base config: billing client is required")
 	}
 	if c.PlatformClient == nil {
 		return fmt.Errorf("base config: platform client is required")
@@ -182,7 +175,6 @@ func BuildBaseConfig(
 	logPrefix string,
 	authClient *grpcclient.AuthServiceClient,
 	coreClient *grpcclient.CoreServiceClient,
-	billingClient *grpcclient.BillingServiceClient,
 	platformClient *grpcclient.PlatformServiceClient,
 	agentClient *grpcclient.AgentServiceClient,
 	notificationClient *grpcclient.NotificationServiceClient,
@@ -197,7 +189,6 @@ func BuildBaseConfig(
 		LogWriter:           logWriter,
 		AuthClient:          authClient,
 		CoreClient:          coreClient,
-		BillingClient:       billingClient,
 		PlatformClient:      platformClient,
 		AgentClient:         agentClient,
 		NotificationClient:  notificationClient,

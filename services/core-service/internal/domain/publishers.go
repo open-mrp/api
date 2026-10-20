@@ -31,16 +31,6 @@ type HubspotSyncPublisher interface {
 	PublishExecute(ctx context.Context, data messaging.HubspotSyncCommandData) *apierror.APIError
 }
 
-// BillingPublisher publishes billing-related commands via the outbox pattern.
-type BillingPublisher interface {
-	// PublishReportSeatChange writes a report-seat-change command to the outbox for usage metering with the billing provider.
-	PublishReportSeatChange(ctx context.Context, accountID string) *apierror.APIError
-	// Writes a report-invoice-created command to the outbox for usage metering with the billing provider.
-	PublishReportInvoiceCreated(ctx context.Context, accountID, invoiceID string) *apierror.APIError
-	// PublishReportBatchCreated meters a batch a scan created for usage billing.
-	PublishReportBatchCreated(ctx context.Context, accountID, batchID string) *apierror.APIError
-}
-
 // ProductionScheduleEnqueuer publishes a generate command. The cadence tick uses it so
 // the solve happens out of band rather than inside the scheduler lease.
 type ProductionScheduleEnqueuer interface {

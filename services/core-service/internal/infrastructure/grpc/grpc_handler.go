@@ -18,7 +18,6 @@ import (
 
 type gRPCHandler struct {
 	pb.UnimplementedCoreServiceServer
-	pb.UnimplementedCoreAccountServiceServer
 
 	accountSvc                       domain.AccountSvc
 	sandboxSvc                       domain.SandboxSvc
@@ -308,7 +307,6 @@ func RegisterAccountService(server *grpc.Server, accountSvc domain.AccountSvc, s
 
 	// RegisterAccountService is called last — register the core service handler.
 	pb.RegisterCoreServiceServer(server, handler)
-	pb.RegisterCoreAccountServiceServer(server, handler)
 }
 
 func (h *gRPCHandler) GetAccountContext(ctx context.Context, req *pb.GetAccountContextRequest) (*pb.GetAccountContextResponse, error) {
@@ -332,12 +330,9 @@ func (h *gRPCHandler) GetAccountContext(ctx context.Context, req *pb.GetAccountC
 	}
 
 	return &pb.GetAccountContextResponse{
-		IsSandbox:                    accountContext.IsSandbox,
-		OwnerAccountId:               accountContext.OwnerAccountID,
-		AccountMode:                  accountMode,
-		SubscriptionStatus:           accountContext.SubscriptionStatus,
-		PlanCode:                     accountContext.PlanCode,
-		AgentMonthlySpendingCapCents: accountContext.AgentMonthlySpendingCapCents,
+		IsSandbox:      accountContext.IsSandbox,
+		OwnerAccountId: accountContext.OwnerAccountID,
+		AccountMode:    accountMode,
 	}, nil
 }
 
@@ -663,78 +658,6 @@ func sandboxToProto(s *domain.SandboxAccount) *pb.SandboxInfo {
 		info.OwnerAccountUpdatedAt = timestamppb.New(*s.OwnerAccountUpdatedAt)
 	}
 	return info
-}
-
-func (h *gRPCHandler) UpdateAccountSubscription(ctx context.Context, req *pb.UpdateAccountSubscriptionRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	var periodEnd *time.Time
-	if req.CurrentPeriodEnd != nil {
-		t := req.CurrentPeriodEnd.AsTime()
-		periodEnd = &t
-	}
-
-	apiErr := h.accountSvc.UpdateAccountSubscription(ctx, req.AccountId, req.SubscriptionStatus, req.PlanCode, req.StripeSubscriptionId, periodEnd, req.StripeCustomerId, req.BillingProfileId, req.BillingCadenceId, req.PricingPlanSubscriptionId, req.ServicingStatus, req.CollectionStatus)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (h *gRPCHandler) ClearAccountStripeCustomer(ctx context.Context, req *pb.ClearAccountStripeCustomerRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	apiErr := h.accountSvc.ClearAccountStripeCustomer(ctx, req.AccountId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (h *gRPCHandler) UpdateAgentSpendingCap(ctx context.Context, req *pb.UpdateAgentSpendingCapRequest) (*pb.UpdateAgentSpendingCapResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	capCents, apiErr := h.accountSvc.UpdateAgentSpendingCap(ctx, req.CapCents)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.UpdateAgentSpendingCapResponse{
-		CapCents: capCents,
-	}, nil
-}
-
-func (h *gRPCHandler) GetAccountByStripeCustomerID(ctx context.Context, req *pb.GetAccountByStripeCustomerIDRequest) (*pb.GetAccountByStripeCustomerIDResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	accountID, planCode, apiErr := h.accountSvc.GetAccountByStripeCustomerID(ctx, req.StripeCustomerId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.GetAccountByStripeCustomerIDResponse{
-		AccountId: accountID,
-		PlanCode:  planCode,
-	}, nil
 }
 
 func unitToProto(u *domain.Unit) *pb.UnitInfo {

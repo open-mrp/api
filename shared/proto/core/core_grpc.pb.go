@@ -43,10 +43,6 @@ const (
 	CoreService_GetSandbox_FullMethodName                                 = "/core.CoreService/GetSandbox"
 	CoreService_DeleteSandbox_FullMethodName                              = "/core.CoreService/DeleteSandbox"
 	CoreService_BatchGetSandboxesByIDs_FullMethodName                     = "/core.CoreService/BatchGetSandboxesByIDs"
-	CoreService_UpdateAccountSubscription_FullMethodName                  = "/core.CoreService/UpdateAccountSubscription"
-	CoreService_ClearAccountStripeCustomer_FullMethodName                 = "/core.CoreService/ClearAccountStripeCustomer"
-	CoreService_UpdateAgentSpendingCap_FullMethodName                     = "/core.CoreService/UpdateAgentSpendingCap"
-	CoreService_GetAccountByStripeCustomerID_FullMethodName               = "/core.CoreService/GetAccountByStripeCustomerID"
 	CoreService_ListUnits_FullMethodName                                  = "/core.CoreService/ListUnits"
 	CoreService_GetUnit_FullMethodName                                    = "/core.CoreService/GetUnit"
 	CoreService_CreateUnit_FullMethodName                                 = "/core.CoreService/CreateUnit"
@@ -477,14 +473,6 @@ type CoreServiceClient interface {
 	DeleteSandbox(ctx context.Context, in *DeleteSandboxRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Returns sandboxes by ID for the api-gateway include resolver.
 	BatchGetSandboxesByIDs(ctx context.Context, in *BatchGetSandboxesByIDsRequest, opts ...grpc.CallOption) (*BatchGetSandboxesByIDsResponse, error)
-	// Updates subscription fields (plan, status, Stripe ID, period end) from billing webhooks.
-	UpdateAccountSubscription(ctx context.Context, in *UpdateAccountSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Removes all Stripe-related fields from an account.
-	ClearAccountStripeCustomer(ctx context.Context, in *ClearAccountStripeCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Sets or removes the monthly agent LLM spending cap.
-	UpdateAgentSpendingCap(ctx context.Context, in *UpdateAgentSpendingCapRequest, opts ...grpc.CallOption) (*UpdateAgentSpendingCapResponse, error)
-	// Resolves an account from a Stripe customer ID.
-	GetAccountByStripeCustomerID(ctx context.Context, in *GetAccountByStripeCustomerIDRequest, opts ...grpc.CallOption) (*GetAccountByStripeCustomerIDResponse, error)
 	// Returns a paginated list of units (account-specific and system) with filtering support.
 	ListUnits(ctx context.Context, in *ListUnitsRequest, opts ...grpc.CallOption) (*ListUnitsResponse, error)
 	// Returns a single unit by ID (account-owned or system).
@@ -1270,46 +1258,6 @@ func (c *coreServiceClient) BatchGetSandboxesByIDs(ctx context.Context, in *Batc
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BatchGetSandboxesByIDsResponse)
 	err := c.cc.Invoke(ctx, CoreService_BatchGetSandboxesByIDs_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UpdateAccountSubscription(ctx context.Context, in *UpdateAccountSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_UpdateAccountSubscription_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) ClearAccountStripeCustomer(ctx context.Context, in *ClearAccountStripeCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_ClearAccountStripeCustomer_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UpdateAgentSpendingCap(ctx context.Context, in *UpdateAgentSpendingCapRequest, opts ...grpc.CallOption) (*UpdateAgentSpendingCapResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateAgentSpendingCapResponse)
-	err := c.cc.Invoke(ctx, CoreService_UpdateAgentSpendingCap_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) GetAccountByStripeCustomerID(ctx context.Context, in *GetAccountByStripeCustomerIDRequest, opts ...grpc.CallOption) (*GetAccountByStripeCustomerIDResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetAccountByStripeCustomerIDResponse)
-	err := c.cc.Invoke(ctx, CoreService_GetAccountByStripeCustomerID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5236,14 +5184,6 @@ type CoreServiceServer interface {
 	DeleteSandbox(context.Context, *DeleteSandboxRequest) (*emptypb.Empty, error)
 	// Returns sandboxes by ID for the api-gateway include resolver.
 	BatchGetSandboxesByIDs(context.Context, *BatchGetSandboxesByIDsRequest) (*BatchGetSandboxesByIDsResponse, error)
-	// Updates subscription fields (plan, status, Stripe ID, period end) from billing webhooks.
-	UpdateAccountSubscription(context.Context, *UpdateAccountSubscriptionRequest) (*emptypb.Empty, error)
-	// Removes all Stripe-related fields from an account.
-	ClearAccountStripeCustomer(context.Context, *ClearAccountStripeCustomerRequest) (*emptypb.Empty, error)
-	// Sets or removes the monthly agent LLM spending cap.
-	UpdateAgentSpendingCap(context.Context, *UpdateAgentSpendingCapRequest) (*UpdateAgentSpendingCapResponse, error)
-	// Resolves an account from a Stripe customer ID.
-	GetAccountByStripeCustomerID(context.Context, *GetAccountByStripeCustomerIDRequest) (*GetAccountByStripeCustomerIDResponse, error)
 	// Returns a paginated list of units (account-specific and system) with filtering support.
 	ListUnits(context.Context, *ListUnitsRequest) (*ListUnitsResponse, error)
 	// Returns a single unit by ID (account-owned or system).
@@ -5922,18 +5862,6 @@ func (UnimplementedCoreServiceServer) DeleteSandbox(context.Context, *DeleteSand
 }
 func (UnimplementedCoreServiceServer) BatchGetSandboxesByIDs(context.Context, *BatchGetSandboxesByIDsRequest) (*BatchGetSandboxesByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetSandboxesByIDs not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateAccountSubscription(context.Context, *UpdateAccountSubscriptionRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateAccountSubscription not implemented")
-}
-func (UnimplementedCoreServiceServer) ClearAccountStripeCustomer(context.Context, *ClearAccountStripeCustomerRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method ClearAccountStripeCustomer not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateAgentSpendingCap(context.Context, *UpdateAgentSpendingCapRequest) (*UpdateAgentSpendingCapResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateAgentSpendingCap not implemented")
-}
-func (UnimplementedCoreServiceServer) GetAccountByStripeCustomerID(context.Context, *GetAccountByStripeCustomerIDRequest) (*GetAccountByStripeCustomerIDResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetAccountByStripeCustomerID not implemented")
 }
 func (UnimplementedCoreServiceServer) ListUnits(context.Context, *ListUnitsRequest) (*ListUnitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUnits not implemented")
@@ -7404,78 +7332,6 @@ func _CoreService_BatchGetSandboxesByIDs_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).BatchGetSandboxesByIDs(ctx, req.(*BatchGetSandboxesByIDsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UpdateAccountSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateAccountSubscriptionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateAccountSubscription(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateAccountSubscription_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateAccountSubscription(ctx, req.(*UpdateAccountSubscriptionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_ClearAccountStripeCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClearAccountStripeCustomerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).ClearAccountStripeCustomer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_ClearAccountStripeCustomer_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).ClearAccountStripeCustomer(ctx, req.(*ClearAccountStripeCustomerRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UpdateAgentSpendingCap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateAgentSpendingCapRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateAgentSpendingCap(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateAgentSpendingCap_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateAgentSpendingCap(ctx, req.(*UpdateAgentSpendingCapRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_GetAccountByStripeCustomerID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAccountByStripeCustomerIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).GetAccountByStripeCustomerID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_GetAccountByStripeCustomerID_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).GetAccountByStripeCustomerID(ctx, req.(*GetAccountByStripeCustomerIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14534,22 +14390,6 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetSandboxesByIDs",
 			Handler:    _CoreService_BatchGetSandboxesByIDs_Handler,
-		},
-		{
-			MethodName: "UpdateAccountSubscription",
-			Handler:    _CoreService_UpdateAccountSubscription_Handler,
-		},
-		{
-			MethodName: "ClearAccountStripeCustomer",
-			Handler:    _CoreService_ClearAccountStripeCustomer_Handler,
-		},
-		{
-			MethodName: "UpdateAgentSpendingCap",
-			Handler:    _CoreService_UpdateAgentSpendingCap_Handler,
-		},
-		{
-			MethodName: "GetAccountByStripeCustomerID",
-			Handler:    _CoreService_GetAccountByStripeCustomerID_Handler,
 		},
 		{
 			MethodName: "ListUnits",

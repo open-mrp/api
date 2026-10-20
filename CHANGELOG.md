@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.0.0](https://github.com/open-mrp/api/compare/v5.1.0...v6.0.0) (2026-10-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **db:** the listed tables and account columns are removed.
+
+### Features
+
+* **db:** drop unused billing and registration schema ([#354](https://github.com/open-mrp/api/issues/354)) ([2cb52a4](https://github.com/open-mrp/api/commit/2cb52a48f96696185819e5b0338225c701334cb0))
+
+
+### Bug Fixes
+
+* **tracing:** skip OTLP export when no endpoint is configured ([#352](https://github.com/open-mrp/api/issues/352)) ([9618cef](https://github.com/open-mrp/api/commit/9618cef38d885eef74128ea88f72b476e3be7128))
+
 ## [5.1.0](https://github.com/open-mrp/api/compare/v5.0.0...v5.1.0) (2026-10-20)
 
 

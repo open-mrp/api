@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -162,16 +163,34 @@ func TestQuarterlyOrdersQuery_EmitsOnlyTheFiltersSet(t *testing.T) {
 	t.Parallel()
 
 	from := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	query, args := quarterlyOrdersQuery("sales_order_owner_type_issued_idx", "ac_1", from, nil, false, nil, nil, nil)
-	requireBindsMatch(t, query, args)
-	assert.Equal(t, []any{"ac_1", from}, args)
-	assert.Contains(t, query, "so.issued_at >= ?", "the bound also keeps estimates, which have no issue date, out")
-	assert.Contains(t, query, "so.sales_order_type_code = 'sales_order'")
-	assert.NotContains(t, query, "sales_order_status_code", "an order counts whatever its status now")
+	for _, copies := range []bool{false, true} {
+		query, args := quarterlyOrdersQuery("sales_order_owner_type_issued_idx", "ac_1", from, nil, false, nil, nil, nil, copies)
+		requireBindsMatch(t, query, args)
+		assert.Equal(t, []any{"ac_1", from}, args)
+		assert.Contains(t, query, "so.issued_at >= ?", "the bound also keeps estimates, which have no issue date, out")
+		assert.Contains(t, query, "so.sales_order_type_code = 'sales_order'")
+		assert.NotContains(t, query, "sales_order_status_code", "an order counts whatever its status now")
+		requireReadsValuesFrom(t, query, copies)
 
-	query, args = quarterlyOrdersQuery("sales_order_owner_buyer_created_idx", "ac_1", from, []string{"b_1"}, true, []string{"r_1"}, []string{"pl_1"}, []string{"it_1"})
-	requireBindsMatch(t, query, args)
-	assert.Equal(t, []any{"ac_1", from, "b_1", "r_1", "pl_1", "it_1"}, args)
+		query, args = quarterlyOrdersQuery("sales_order_owner_buyer_created_idx", "ac_1", from, []string{"b_1"}, true, []string{"r_1"}, []string{"pl_1"}, []string{"it_1"}, copies)
+		requireBindsMatch(t, query, args)
+		assert.Equal(t, []any{"ac_1", from, "b_1", "r_1", "pl_1", "it_1"}, args)
+	}
+}
+
+// requireReadsValuesFrom requires a query to read its line values from the copies the lines carry, through
+// their keys, or from the quantity and rate rows, never both.
+func requireReadsValuesFrom(t *testing.T, query string, copies bool) {
+	t.Helper()
+	rows := regexp.MustCompile(`\b(q_ord|q_in|r_price)\.|JOIN (quantity|rate) `)
+	if copies {
+		assert.NotRegexp(t, rows, query, "a copy read names a row it copies")
+		assert.Contains(t, query, "FORCE INDEX (sales_order_line_order_copies_idx)")
+		return
+	}
+	assert.Regexp(t, rows, query)
+	assert.NotContains(t, query, "_copies_idx")
+	assert.NotRegexp(t, `\.(quantity|unit_price)_value`, query)
 }
 
 func TestAddQuarter_TotalsTheQuartersInOrder(t *testing.T) {
@@ -208,23 +227,31 @@ func TestDemandForecastQueries_PushFiltersDown(t *testing.T) {
 	start, end := time.Date(2024, 10, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	w := domain.GetDemandForecastWindowParams{AccountID: "ac_1", StartDate: start, EndDate: end}
 
-	query, args := demandForecastDemandQuery(w)
-	requireBindsMatch(t, query, args)
-	assert.Contains(t, query, "so.sales_order_type_code = 'sales_order'")
-	assert.NotContains(t, query, "fg.product_line_id IN")
-
-	query, args = demandForecastRevenueQuery(w)
-	requireBindsMatch(t, query, args)
-	assert.Contains(t, query, "inv.account_id = ?")
-	assert.Contains(t, query, "FORCE INDEX (invoice_account_created_idx)")
-
-	w.ProductLineIDs, w.ItemIDs = []string{"pl_1"}, []string{"it_1", "it_2"}
-	for _, build := range []func(domain.GetDemandForecastWindowParams) (string, []any){demandForecastDemandQuery, demandForecastRevenueQuery} {
-		query, args = build(w)
+	for _, copies := range []bool{false, true} {
+		w := w
+		query, args := demandForecastDemandQuery(w, copies)
 		requireBindsMatch(t, query, args)
-		assert.Contains(t, query, "fg.product_line_id IN (?)")
-		assert.Contains(t, query, "pb.id IN (?,?)")
-		assert.Equal(t, []any{"ac_1", start, end, "pl_1", "it_1", "it_2"}, args)
+		assert.Contains(t, query, "so.sales_order_type_code = 'sales_order'")
+		assert.NotContains(t, query, "fg.product_line_id IN")
+		requireReadsValuesFrom(t, query, copies)
+
+		query, args = demandForecastRevenueQuery(w, copies)
+		requireBindsMatch(t, query, args)
+		assert.Contains(t, query, "inv.account_id = ?")
+		assert.Contains(t, query, "FORCE INDEX (invoice_account_created_idx)")
+		requireReadsValuesFrom(t, query, copies)
+		if copies {
+			assert.Contains(t, query, "FORCE INDEX (invoice_line_invoice_copies_idx)")
+		}
+
+		w.ProductLineIDs, w.ItemIDs = []string{"pl_1"}, []string{"it_1", "it_2"}
+		for _, build := range []func(domain.GetDemandForecastWindowParams, bool) (string, []any){demandForecastDemandQuery, demandForecastRevenueQuery} {
+			query, args = build(w, copies)
+			requireBindsMatch(t, query, args)
+			assert.Contains(t, query, "fg.product_line_id IN (?)")
+			assert.Contains(t, query, "pb.id IN (?,?)")
+			assert.Equal(t, []any{"ac_1", start, end, "pl_1", "it_1", "it_2"}, args)
+		}
 	}
 }
 

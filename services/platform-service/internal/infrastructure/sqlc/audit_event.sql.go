@@ -189,7 +189,7 @@ func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventPara
 
 const deleteExpiredAuditEvents = `-- name: DeleteExpiredAuditEvents :execresult
 DELETE FROM audit_event
-WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 12 MONTH)
 LIMIT ?
 `
 

@@ -59,7 +59,7 @@ WHERE ae.resource_type = sqlc.arg('resource_type')
 
 -- name: DeleteExpiredAuditEvents :execresult
 DELETE FROM audit_event
-WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 12 MONTH)
 LIMIT ?;
 
 -- name: CreateAuditEvent :exec

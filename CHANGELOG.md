@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0](https://github.com/open-mrp/api/compare/v5.0.0...v5.1.0) (2026-10-20)
+
+
+### Features
+
+* **platform:** keep audit events for 12 months instead of 7 years ([#350](https://github.com/open-mrp/api/issues/350)) ([c3ec3af](https://github.com/open-mrp/api/commit/c3ec3af5a5e5b6b6a2ecb8c3d5da6c7835412804))
+
 ## [5.0.0](https://github.com/open-mrp/api/compare/v4.10.3...v5.0.0) (2026-10-20)
 
 

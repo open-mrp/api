@@ -263,7 +263,6 @@ func (s *InboxLifecycleTestSuite) SetupTest() {
 
 	batchRepo := repositorymock.NewMockBatchRepo(s.ctrl)
 	batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-	batchRepo.EXPECT().FindCountAdjustmentsByClosingBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	batchRepo.EXPECT().LockScan(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(context.Context, string, string) (*time.Time, bool, *apierror.APIError) {
 			return s.batchScannedAt, s.batchExists, nil

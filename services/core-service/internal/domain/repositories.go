@@ -565,20 +565,9 @@ type BatchRepo interface {
 	ConnectManyToOne(ctx context.Context, accountID string, sourceBatchIDs []string, targetBatchID string, autoClose bool) *apierror.APIError
 	Close(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	CloseIfLastStep(ctx context.Context, accountID, batchID, productionStepID string) *apierror.APIError
-	// CloseIfFullyUsed closes a batch once what has been split off it accounts for all it makes at the step, and reports whether it did.
-	CloseIfFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) (bool, *apierror.APIError)
+	CloseIfFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
 	// RemainingToSplit is a batch's expected output at a step less what has already been split off it — firsts, seconds and waste — both in producedUnit. It is a validation error for producedUnit not to be the step's production unit.
 	RemainingToSplit(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError)
-	// SplitTally is a batch's expected output at a step and what has been split off it — firsts, seconds and waste — both in producedUnit, under the same rules as RemainingToSplit.
-	SplitTally(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) (expected, used decimal.Decimal, apiErr *apierror.APIError)
-	// CreateCountAdjustment moves a batch's quantity to its counted measure and records the change against the split that closed it.
-	CreateCountAdjustment(ctx context.Context, params CreateBatchCountAdjustmentParams) (*BatchCountAdjustment, *apierror.APIError)
-	// FindCountAdjustmentsByClosingBatch lists the recounts a split caused.
-	FindCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]BatchCountAdjustment, *apierror.APIError)
-	// RevertCountAdjustmentsByClosingBatch puts back the quantity of every batch a split recounted and drops the records.
-	RevertCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]BatchCountAdjustment, *apierror.APIError)
-	// HasScanReceipt reports whether a scan of the batch put anything into inventory. A scan recorded without its materials writes nothing.
-	HasScanReceipt(ctx context.Context, accountID, batchID string) (bool, *apierror.APIError)
 	Delete(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	DeleteMany(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
 	// CountDownstreamBatches reports how many batches were fed by this one. A batch something downstream still feeds on cannot be undone.

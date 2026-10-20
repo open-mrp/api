@@ -80,8 +80,6 @@ type BatchUndoTestSuite struct {
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
 	runActivity       *mediatormock.MockProductionRunActivityMed
 	outbox            *recordingOutboxRepo
-	// recounts is what the undone batch recounted when it closed its source; none unless a test says so.
-	recounts []domain.BatchCountAdjustment
 }
 
 func (s *BatchUndoTestSuite) SetupTest() {
@@ -95,11 +93,6 @@ func (s *BatchUndoTestSuite) SetupTest() {
 	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
 	s.runActivity = mediatormock.NewMockProductionRunActivityMed(s.ctrl)
 	s.outbox = &recordingOutboxRepo{}
-	s.recounts = nil
-	s.batchRepo.EXPECT().FindCountAdjustmentsByClosingBatch(gomock.Any(), undoAccountID, gomock.Any()).
-		DoAndReturn(func(context.Context, string, string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
-			return s.recounts, nil
-		}).AnyTimes()
 
 	repoFactory := factorymock.NewMockRepoFactory(s.ctrl)
 	repoFactory.EXPECT().NewBatchRepo().Return(s.batchRepo).AnyTimes()
@@ -395,41 +388,4 @@ func (s *BatchUndoTestSuite) TestRefusesABatchScannedAgainWhileTheUndoWaited() {
 	s.Require().NotNil(apiErr)
 	s.Equal("This batch changed while it was being undone. Refresh and try again.", apiErr.PublicMessage)
 	s.Empty(s.outbox.undoEvents())
-}
-
-// Undoing the split that closed and recounted its source puts the source's recorded quantity back
-// before the source is measured for reopening, so it reopens with what it was recorded as left.
-func (s *BatchUndoTestSuite) TestUndoingARecountingSplitRestoresItsSourceBeforeReopening() {
-	batch := scannedBatch("bt_1")
-	source := scannedBatch("bt_src")
-	s.recounts = []domain.BatchCountAdjustment{{
-		ID:              "btaj_1",
-		BatchID:         source.ID,
-		ClosingBatchID:  batch.ID,
-		PreviousMeasure: decimal.NewFromInt(60),
-		CountedMeasure:  decimal.NewFromInt(65),
-		UnitID:          "each",
-	}}
-
-	s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, batch.ID).Return(batch, nil)
-	s.batchRepo.EXPECT().FindInputBatchIDs(gomock.Any(), batch.ID).Return([]string{source.ID}, nil)
-	s.expectNoShortfall(batch.ID)
-	s.stepRepo.EXPECT().FindProducedUnit(gomock.Any(), undoAccountID, undoStepID).Return(&domain.LightUnit{ID: "each"}, nil)
-	s.batchRepo.EXPECT().LockScan(gomock.Any(), undoAccountID, gomock.Any()).Return(batch.ScannedAt, true, nil).Times(2)
-	s.batchRepo.EXPECT().CountDownstreamBatches(gomock.Any(), batch.ID).Return(int64(0), nil)
-	s.inventoryMutRepo.EXPECT().CountAllocatedReceiptsForBatch(gomock.Any(), undoAccountID, batch.ID).Return(int64(0), nil)
-	s.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), batch.ID, undoAccountID, gomock.Any()).Return(nil)
-	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
-	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
-
-	s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, source.ID).Return(source, nil).AnyTimes()
-	gomock.InOrder(
-		s.batchRepo.EXPECT().RevertCountAdjustmentsByClosingBatch(gomock.Any(), undoAccountID, batch.ID).Return(s.recounts, nil),
-		s.batchRepo.EXPECT().ReopenIfNotFullyUsed(gomock.Any(), undoAccountID, gomock.Any(), gomock.Any(), undoStepID).Return(nil),
-	)
-
-	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
-
-	s.Require().Nil(apiErr)
-	s.Require().Len(s.outbox.undoEvents(), 1)
 }

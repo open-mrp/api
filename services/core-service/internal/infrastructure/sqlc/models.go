@@ -432,17 +432,6 @@ type Batch struct {
 	LocationID        sql.NullString
 }
 
-type BatchCountAdjustment struct {
-	ID             string
-	AccountID      string
-	BatchID        string
-	ClosingBatchID string
-	PreviousValue  string
-	CountedValue   string
-	UnitID         string
-	CreatedAt      time.Time
-}
-
 type BatchFlow struct {
 	A string
 	B string

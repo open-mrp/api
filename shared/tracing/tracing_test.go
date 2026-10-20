@@ -862,3 +862,29 @@ func fakeGetenv(env map[string]string) func(string) string {
 		return env[key]
 	}
 }
+
+func TestInitProviderWithoutEndpointExportsNothing(t *testing.T) {
+	// Not parallel: mutates the global otel tracer provider and propagator.
+	origTP := otel.GetTracerProvider()
+	origMP := otel.GetMeterProvider()
+	origProp := otel.GetTextMapPropagator()
+	defer func() {
+		otel.SetTracerProvider(origTP)
+		otel.SetMeterProvider(origMP)
+		otel.SetTextMapPropagator(origProp)
+	}()
+
+	shutdown, err := InitProvider(context.Background(), "svc", fakeGetenv(map[string]string{
+		envEnvironment: string(constants.PlatformModeTest),
+	}))
+	require.NoError(t, err)
+
+	_, span := GetTracer("test").Start(context.Background(), "op")
+	span.End()
+	require.True(t, span.SpanContext().IsValid(), "spans still carry IDs for logs")
+	require.Equal(t, origMP, otel.GetMeterProvider(), "no meter provider is installed without a collector")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	require.NoError(t, shutdown(ctx), "nothing to flush, so shutdown is clean")
+}

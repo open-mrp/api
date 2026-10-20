@@ -164,6 +164,17 @@ func InitProvider(ctx context.Context, serviceName string, getenv func(string) s
 		return nil, err
 	}
 
+	// With no collector configured, spans still get IDs for logs but nothing is exported.
+	if cfg.Endpoint == "" {
+		traceProvider, err := newTraceProvider(ctx, cfg, nil)
+		if err != nil {
+			return nil, err
+		}
+		otel.SetTracerProvider(traceProvider)
+		otel.SetTextMapPropagator(newPropagator())
+		return traceProvider.Shutdown, nil
+	}
+
 	traceExporter, err := cfg.newExporter(ctx)
 	if err != nil {
 		return nil, err
@@ -213,9 +224,13 @@ func NewWorkerTracerProvider(ctx context.Context, baseServiceName string, getenv
 		return nil, err
 	}
 
-	exporter, err := cfg.newExporter(ctx)
-	if err != nil {
-		return nil, err
+	var exporter sdktrace.SpanExporter
+	if cfg.Endpoint != "" {
+		var err error
+		exporter, err = cfg.newExporter(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	provider, err := newTraceProvider(ctx, cfg, exporter)
@@ -426,11 +441,14 @@ func newTraceProvider(ctx context.Context, cfg *Config, exporter sdktrace.SpanEx
 
 	sampler := newSampler(cfg)
 
-	traceProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+	opts := []sdktrace.TracerProviderOption{
 		sdktrace.WithResource(res),
 		sdktrace.WithSampler(sampler),
-	)
+	}
+	if exporter != nil {
+		opts = append(opts, sdktrace.WithBatcher(exporter))
+	}
+	traceProvider := sdktrace.NewTracerProvider(opts...)
 
 	return traceProvider, nil
 }
